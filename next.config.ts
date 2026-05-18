@@ -66,7 +66,7 @@ const nextConfig: NextConfig = {
               // removed without a nonce-based CSP refactor. 'strict-dynamic' is added
               // to restrict dynamically-inserted scripts to those loaded by trusted
               // scripts, partially mitigating the risk of 'unsafe-inline'.
-              "script-src 'self' 'unsafe-inline' 'strict-dynamic'",
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' https: data: blob:",
               "font-src 'self'",
