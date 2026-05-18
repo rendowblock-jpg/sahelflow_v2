@@ -1,0 +1,10 @@
+# SahelFlow — Dashboard Application
+# No public pages to index (this is a private SaaS dashboard)
+
+User-agent: *
+Disallow: /
+
+# Allow health check for monitoring
+Allow: /api/health
+
+Sitemap: https://sahelflow.com/sitemap.xml

@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "type": "TODO",
+      "message": "Cross-seller faux commande detection removed — per-client deployment model",
+      "file": "src\\lib\\ai\\risk-engine.ts",
+      "line": 356,
+      "column": 4
+    }
+  ]
+}

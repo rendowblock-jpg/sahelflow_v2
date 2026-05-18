@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/delivery/sync-tracking",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/webhooks/retry",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+# SahelFlow pre-commit quality gate
+# Blocks commits if TypeScript has errors or tests fail
+
+echo "🔍 Running TypeScript check..."
+npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript errors found. Fix them before committing."
+  exit 1
+fi
+
+echo "🧪 Running tests..."
+npx vitest run
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Fix them before committing."
+  exit 1
+fi
+
+echo "✅ All checks passed!"

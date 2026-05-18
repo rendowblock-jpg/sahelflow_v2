@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Next.js build output
+.next
+out
+build
+dist
+
+# Environment files
+.env.local
+.env.*.local
+.env
+
+# TypeScript
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Logs
+*.log
+logs
+build.log
+
+# Coverage
+coverage
+.nyc_output
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Vercel
+.vercel
+.env.vercel

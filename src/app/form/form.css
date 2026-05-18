@@ -1,0 +1,373 @@
+/* ── Public Order Form ── Scoped styles using sf-form-* prefix */
+
+.sf-form-page {
+	max-width: 640px;
+	margin: 0 auto;
+	padding: var(--space-6) var(--space-4) var(--space-15);
+	min-height: 100vh;
+}
+
+/* Header */
+.sf-form-header {
+	text-align: center;
+	margin-bottom: var(--space-8);
+}
+
+.sf-form-brand {
+	font-size: var(--font-size-xl);
+	font-weight: 700;
+	margin-bottom: var(--space-1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+}
+
+.sf-form-subtitle {
+	color: var(--color-content-secondary);
+	font-size: var(--font-size-sm);
+}
+
+/* Section headings */
+.sf-form-section-title {
+	font-size: var(--font-size-md);
+	font-weight: 600;
+	margin-bottom: var(--space-3);
+	display: flex;
+	align-items: center;
+	gap: var(--space-1-5);
+	color: var(--color-content-primary);
+}
+
+/* Product cards */
+.sf-form-products {
+	display: grid;
+	gap: var(--space-3);
+	margin-bottom: var(--space-8);
+}
+
+.sf-form-product {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-3);
+	border-radius: var(--radius-lg);
+	border: 1px solid var(--color-line-primary);
+	background: var(--color-surface-secondary);
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
+}
+
+.sf-form-product:hover {
+	border-color: var(--color-line-accent);
+}
+
+.sf-form-product-image {
+	width: 56px;
+	height: 56px;
+	border-radius: var(--radius-md);
+	background: var(--color-surface-tertiary);
+	overflow: hidden;
+	flex-shrink: 0;
+	position: relative;
+}
+
+.sf-form-product-image img {
+	object-fit: cover;
+	width: 100%;
+	height: 100%;
+}
+
+.sf-form-product-image-fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--color-content-tertiary);
+}
+
+.sf-form-product-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.sf-form-product-name {
+	font-weight: 600;
+	font-size: var(--font-size-sm);
+	margin-bottom: 2px;
+	color: var(--color-content-primary);
+}
+
+.sf-form-product-price {
+	font-size: var(--font-size-xs);
+	color: var(--color-accent-500);
+	font-weight: 500;
+}
+
+.sf-form-product-sku {
+	font-size: 11px;
+	color: var(--color-content-tertiary);
+}
+
+.sf-form-product-qty {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.sf-form-qty-btn {
+	width: 28px;
+	height: 28px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-line-primary);
+	background: var(--color-surface-primary);
+	color: var(--color-content-primary);
+	cursor: pointer;
+	font-size: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.15s;
+}
+
+.sf-form-qty-btn:hover {
+	background: var(--color-surface-tertiary);
+}
+
+.sf-form-qty-btn-add {
+	background: var(--color-content-primary);
+	color: var(--color-content-inverse);
+	border-color: var(--color-content-primary);
+}
+
+.sf-form-qty-btn-add:hover {
+	background: var(--color-content-secondary);
+}
+
+.sf-form-qty-value {
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	min-width: 20px;
+	text-align: center;
+	color: var(--color-content-primary);
+}
+
+/* Sticky cart bar */
+.sf-form-cart {
+	position: sticky;
+	bottom: var(--space-3);
+	background: var(--color-content-primary);
+	color: var(--color-content-inverse);
+	padding: var(--space-3-5) var(--space-4-5);
+	border-radius: var(--radius-xl);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--space-6);
+	z-index: 10;
+	box-shadow: var(--shadow-lg);
+}
+
+.sf-form-cart-info {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	font-weight: 600;
+}
+
+.sf-form-cart-total {
+	font-weight: 700;
+	font-size: var(--font-size-md);
+}
+
+/* Delivery form */
+.sf-form-fieldset {
+	display: grid;
+	gap: var(--space-4);
+	margin-bottom: var(--space-6);
+}
+
+.sf-form-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.sf-form-label {
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: var(--color-content-secondary);
+}
+
+.sf-form-label-required::after {
+	content: " *";
+	color: var(--color-danger-500);
+}
+
+.sf-form-input,
+.sf-form-select,
+.sf-form-textarea {
+	width: 100%;
+	padding: var(--space-2-5) var(--space-3);
+	border-radius: var(--radius-md);
+	border: 1px solid var(--color-line-primary);
+	background: var(--color-surface-primary);
+	color: var(--color-content-primary);
+	font-size: var(--font-size-sm);
+	font-family: inherit;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
+}
+
+.sf-form-input:focus,
+.sf-form-select:focus,
+.sf-form-textarea:focus {
+	outline: none;
+	border-color: var(--color-brand-400);
+	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.sf-form-select {
+	appearance: auto;
+	cursor: pointer;
+}
+
+.sf-form-input-wrap {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.sf-form-input-wrap .sf-form-input {
+	flex: 1;
+}
+
+.sf-form-input-icon {
+	color: var(--color-content-tertiary);
+	flex-shrink: 0;
+}
+
+/* Error banner */
+.sf-form-error {
+	padding: var(--space-2-5);
+	background: rgba(239, 68, 68, 0.06);
+	border-radius: var(--radius-md);
+	color: var(--color-danger-500);
+	font-size: var(--font-size-xs);
+	border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+/* Submit button */
+.sf-form-submit {
+	width: 100%;
+	padding: var(--space-3-5);
+	border-radius: var(--radius-lg);
+	border: none;
+	background: var(--color-content-primary);
+	color: var(--color-content-inverse);
+	font-size: var(--font-size-md);
+	font-weight: 700;
+	cursor: pointer;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: var(--space-2);
+	transition:
+		background 0.15s,
+		transform 0.1s;
+}
+
+.sf-form-submit:hover:not(:disabled) {
+	background: var(--color-content-secondary);
+}
+
+.sf-form-submit:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.sf-form-submit:disabled {
+	background: var(--color-content-tertiary);
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+/* Loading state */
+.sf-form-loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	color: var(--color-content-tertiary);
+}
+
+/* Error state */
+.sf-form-fatal {
+	max-width: 480px;
+	margin: 60px auto;
+	padding: var(--space-6);
+	text-align: center;
+}
+
+.sf-form-fatal-title {
+	color: var(--color-danger-500);
+	margin-bottom: var(--space-3);
+	font-size: var(--font-size-xl);
+}
+
+.sf-form-fatal-text {
+	color: var(--color-content-secondary);
+}
+
+/* Success state */
+.sf-form-success {
+	max-width: 480px;
+	margin: 60px auto;
+	padding: var(--space-6);
+	text-align: center;
+}
+
+.sf-form-success-icon {
+	color: var(--color-accent-500);
+	margin-bottom: var(--space-4);
+}
+
+.sf-form-success-title {
+	font-size: var(--font-size-xl);
+	margin-bottom: var(--space-2);
+	color: var(--color-content-primary);
+}
+
+.sf-form-success-desc {
+	color: var(--color-content-secondary);
+}
+
+/* Footer */
+.sf-form-footer {
+	text-align: center;
+	margin-top: var(--space-10);
+	font-size: var(--font-size-xs);
+	color: var(--color-content-tertiary);
+}
+
+.sf-form-footer strong {
+	color: var(--color-content-secondary);
+}
+
+/* Animations */
+@keyframes sf-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.sf-form-spin {
+	animation: sf-spin 1s linear infinite;
+}
+
+/* Custom fields */
+.sf-form-custom-fields {
+	display: grid;
+	gap: var(--space-4);
+}

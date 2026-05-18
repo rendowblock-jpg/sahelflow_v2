@@ -1,0 +1,47 @@
+{
+  "name": "sahelflow",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run",
+    "test:unit": "vitest run",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@sentry/nextjs": "^10.47.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "clsx": "^2.1.1",
+    "es-toolkit": "^1.40.0",
+    "framer-motion": "^11.18.2",
+    "lucide-react": "^0.564.0",
+    "next": "16.2.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "^3.8.1",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "husky": "^9.1.7",
+    "typescript": "^5",
+    "vitest": "^4.1.2"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  }
+}
