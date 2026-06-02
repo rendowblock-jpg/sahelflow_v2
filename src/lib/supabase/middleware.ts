@@ -142,16 +142,19 @@ export async function updateSession(request: NextRequest) {
 }
 
 /**
- * Phase 6.15: Content-Security-Policy with strict-dynamic
- * Applied to all HTML responses via Next.js middleware headers.
+ * Content-Security-Policy
+ * NOTE: strict-dynamic CANNOT be used without nonces in Next.js App Router —
+ * it blocks the inline RSC payload scripts (self.__next_f.push) that Next.js
+ * uses for React hydration, permanently freezing the page on the loading spinner.
+ * Using 'unsafe-inline' instead to allow Next.js streaming scripts.
  */
 const CSP_HEADER = [
 	`default-src 'self'`,
-	`script-src 'self' 'strict-dynamic' https://cdn.sentry.io`,
-	`style-src 'self' 'unsafe-inline'`, // Tailwind/styled-jsx require inline
+	`script-src 'self' 'unsafe-inline' https://cdn.sentry.io`,
+	`style-src 'self' 'unsafe-inline'`,
 	`img-src 'self' blob: data: https://*.supabase.co https://*.googleusercontent.com`,
 	`font-src 'self' https://fonts.gstatic.com`,
-	`connect-src 'self' https://*.supabase.co https://o*.ingest.sentry.io https://api.groq.com`,
+	`connect-src 'self' https://*.supabase.co wss://*.supabase.co https://o*.ingest.sentry.io https://api.groq.com`,
 	`frame-ancestors 'none'`,
 	`base-uri 'self'`,
 	`form-action 'self'`,
