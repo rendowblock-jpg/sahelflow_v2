@@ -108,7 +108,7 @@ export default function CreateOrderModal({
                 onChange={(e) => handleWilayaChange(e.target.value)}
               >
                 <option value="">—</option>
-                {WILAYA_NAMES.map((w) => (
+                {WILAYA_NAMES.map((w: string) => (
                   <option key={w} value={w}>
                     {w}
                   </option>

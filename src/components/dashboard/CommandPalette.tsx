@@ -229,7 +229,7 @@ export default function CommandPalette() {
       }
     }, 300);
     return () => clearTimeout(debounceRef.current);
-  }, [query, open, isOrderSearch]);
+  }, [query, open, isOrderSearch, supabase]);
 
   // Build flat list for keyboard nav
   const flatList: Array<{

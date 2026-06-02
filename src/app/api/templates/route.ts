@@ -39,11 +39,11 @@ const updateSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export const GET = withAuthAndRateLimit(async (_req, { user, supabase }) => {
+export const GET = withAuthAndRateLimit(async (_req, { sellerId, supabase }) => {
   const { data, error } = await supabase
     .from("whatsapp_templates")
     .select("*")
-    .eq("seller_id", user.id)
+    .eq("seller_id", sellerId)
     .order("category", { ascending: true });
 
   if (error)
@@ -52,10 +52,10 @@ export const GET = withAuthAndRateLimit(async (_req, { user, supabase }) => {
 });
 
 export const POST = withAuthAndRateLimit(
-  async (_req, { user, supabase, body }) => {
+  async (_req, { sellerId, supabase, body }) => {
     const { data, error } = await supabase
       .from("whatsapp_templates")
-      .insert({ ...body, seller_id: user.id })
+      .insert({ ...body, seller_id: sellerId })
       .select()
       .single();
 
@@ -74,7 +74,7 @@ export const POST = withAuthAndRateLimit(
 );
 
 export const PUT = withAuthAndRateLimit(
-  async (_req, { user, supabase, body }) => {
+  async (_req, { sellerId, supabase, body }) => {
     const { id, ...updates } = body as Record<string, unknown>;
 
     if (!id || typeof id !== "string") {
@@ -88,7 +88,7 @@ export const PUT = withAuthAndRateLimit(
       .from("whatsapp_templates")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .select()
       .single();
 
@@ -111,7 +111,7 @@ export const PUT = withAuthAndRateLimit(
   { schema: z.object({ id: z.string().uuid(), ...updateSchema.shape }) },
 );
 
-export const DELETE = withAuthAndRateLimit(async (req, { user, supabase }) => {
+export const DELETE = withAuthAndRateLimit(async (req, { sellerId, supabase }) => {
   const id = new URL(req.url).searchParams.get("id");
 
   if (!id)
@@ -130,7 +130,7 @@ export const DELETE = withAuthAndRateLimit(async (req, { user, supabase }) => {
     .from("whatsapp_templates")
     .delete()
     .eq("id", id)
-    .eq("seller_id", user.id);
+    .eq("seller_id", sellerId);
 
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });

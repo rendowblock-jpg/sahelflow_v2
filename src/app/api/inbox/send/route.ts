@@ -8,7 +8,7 @@ import { withAuthAndRateLimit } from '@/lib/api-wrapper'
  * Sends a WhatsApp message via Evolution API and stores it in DB.
  */
 export const POST = withAuthAndRateLimit(
-  async (req, { user, supabase, body }) => {
+  async (req, { user: _user, sellerId, supabase, body }) => {
     const { conversationId, text, replyToId, quotedText } = body!
 
     // Get conversation with channel info
@@ -23,7 +23,7 @@ export const POST = withAuthAndRateLimit(
     }
 
     // Verify ownership
-    if (convo.seller_id !== user.id) {
+    if (convo.seller_id !== sellerId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

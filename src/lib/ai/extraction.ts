@@ -40,7 +40,6 @@ const WILAYA_ALIASES: Record<string, string> = {
   tiaret: "Tiaret",
   "tizi ouzou": "Tizi Ouzou",
   tizi: "Tizi Ouzou",
-  to: "Tizi Ouzou",
   bejaia: "Béjaïa",
   bgayet: "Béjaïa",
   bjaia: "Béjaïa",
@@ -149,8 +148,16 @@ function extractWilaya(text: string): string | undefined {
 
   // Check for known wilayas/communes
   for (const [alias, wilaya] of Object.entries(WILAYA_ALIASES)) {
-    if (normalizedText.includes(alias)) {
-      return wilaya;
+    const isWord = /^[a-z0-9]+$/i.test(alias);
+    if (isWord) {
+      const regex = new RegExp(`\\b${alias}\\b`, "i");
+      if (regex.test(normalizedText)) {
+        return wilaya;
+      }
+    } else {
+      if (normalizedText.includes(alias)) {
+        return wilaya;
+      }
     }
   }
 
@@ -174,31 +181,8 @@ interface ProductMention {
 }
 
 function extractProducts(text: string): ProductMention[] {
-  const products: ProductMention[] = [];
+  const _products: ProductMention[] = [];
 
-  // Quantity patterns (Arabic numerals, French, Darija)
-  const qtyPatterns = [
-    /(\d+)\s*(?:pièces?|pieces?|pc|حبات?|حبة|قطعة|قطع)/gi,
-    /(?:bghit|nabghi|je\s+veux|send)\s*(\d+)/gi,
-    /(\d+)\s+(?:de|du|des|d'|dial|dyal|ديال)/gi,
-  ];
-
-  let totalQty = 1;
-  for (const pattern of qtyPatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const num = parseInt(match[0].match(/\d+/)?.[0] || "1");
-      if (num > 0 && num < 100) totalQty = num;
-    }
-  }
-
-  // Size extraction
-  const sizeMatch = text.match(
-    /(?:taille|size|مقاس)\s*(XS|S|M|L|XL|XXL|XXXL|\d{2})/i,
-  );
-  const size = sizeMatch ? sizeMatch[1].toUpperCase() : undefined;
-
-  // Color extraction
   const colorPatterns: Record<string, string> = {
     noir: "Noir",
     noire: "Noir",
@@ -232,50 +216,134 @@ function extractProducts(text: string): ProductMention[] {
     beige: "Beige",
   };
 
-  let color: string | undefined;
+  const qtyPatterns = [
+    /(\d+)\s*(?:pièces?|pieces?|pc|حبات?|حبة|قطعة|قطع)/gi,
+    /(?:bghit|nabghi|je\s+veux|send)\s*(\d+)/gi,
+    /(\d+)\s+(?:de|du|des|d'|dial|dyal|ديال)/gi,
+  ];
+
   const lowerText = text.toLowerCase();
-  for (const [key, value] of Object.entries(colorPatterns)) {
-    if (lowerText.includes(key)) {
-      color = value;
-      break;
+
+  // Find all matches of product keywords
+  const matchedKeywords: { index: number; length: number; standard: string }[] = [];
+  for (const [darija, standard] of Object.entries(DARIJA_PRODUCT_KEYWORDS)) {
+    const regex = new RegExp(`\\b${darija}\\b`, "gi");
+    let match;
+    while ((match = regex.exec(lowerText)) !== null) {
+      matchedKeywords.push({
+        index: match.index,
+        length: match[0].length,
+        standard,
+      });
     }
   }
 
-  const variant = [size, color].filter(Boolean).join(" / ") || undefined;
+  // Sort by index
+  matchedKeywords.sort((a, b) => a.index - b.index);
 
-  const matchedProducts = new Map<
-    string,
-    { name: string; quantity: number; variant?: string }
-  >();
-
-  for (const [darija, standard] of Object.entries(DARIJA_PRODUCT_KEYWORDS)) {
-    if (lowerText.match(new RegExp(`\\b${darija}\\b`, "i"))) {
-      if (!matchedProducts.has(standard)) {
-        matchedProducts.set(standard, {
-          name: standard,
-          quantity: totalQty,
-          variant,
-        });
+  if (matchedKeywords.length === 0) {
+    // Fallback: search for quantity/variant globally
+    let totalQty = 1;
+    for (const pattern of qtyPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const num = parseInt(match[0].match(/\d+/)?.[0] || "1");
+        if (num > 0 && num < 100) totalQty = num;
       }
     }
-  }
-
-  if (matchedProducts.size === 0) {
-    // If quantity > 1 OR a variant (color/size) was detected, the message has
-    // real order intent even though no product keyword matched.
-    // Return a generic placeholder so the confidence reflects the signal.
+    const sizeMatch = text.match(
+      /(?:taille|size|مقاس)\s*(XS|S|M|L|XL|XXL|XXXL|\d{2})/i,
+    );
+    const size = sizeMatch ? sizeMatch[1].toUpperCase() : undefined;
+    let color: string | undefined;
+    for (const [key, value] of Object.entries(colorPatterns)) {
+      if (lowerText.includes(key)) {
+        color = value;
+        break;
+      }
+    }
+    const variant = [size, color].filter(Boolean).join(" / ") || undefined;
     if (totalQty > 1 || variant) {
       return [{ name: "", quantity: totalQty, variant }];
     }
-    // Truly no signal — return empty to keep confidence low
     return [];
   }
 
-  for (const product of matchedProducts.values()) {
-    products.push(product);
+  // Segment the text
+  const segments: { text: string; standard: string }[] = [];
+  for (let i = 0; i < matchedKeywords.length; i++) {
+    const current = matchedKeywords[i];
+    let start = 0;
+    let end = text.length;
+
+    if (i > 0) {
+      const prev = matchedKeywords[i - 1];
+      start = Math.floor((prev.index + prev.length + current.index) / 2);
+    }
+    if (i < matchedKeywords.length - 1) {
+      const next = matchedKeywords[i + 1];
+      end = Math.floor((current.index + current.length + next.index) / 2);
+    }
+
+    segments.push({
+      text: text.slice(start, end),
+      standard: current.standard,
+    });
   }
 
-  return products;
+  // Parse quantity and variant for each segment
+  const uniqueProducts = new Map<string, ProductMention>();
+
+  for (const seg of segments) {
+    const segText = seg.text;
+    const segLower = segText.toLowerCase();
+
+    let qty = 1;
+    for (const pattern of qtyPatterns) {
+      const match = segText.match(pattern);
+      if (match) {
+        const num = parseInt(match[0].match(/\d+/)?.[0] || "1");
+        if (num > 0 && num < 100) {
+          qty = num;
+          break;
+        }
+      }
+    }
+    if (qty === 1) {
+      const simpleNumMatch = segText.match(/\b([1-9])\b/);
+      if (simpleNumMatch) {
+        qty = parseInt(simpleNumMatch[1]);
+      }
+    }
+
+    const sizeMatch = segText.match(
+      /(?:taille|size|مقاس)\s*(XS|S|M|L|XL|XXL|XXXL|\d{2})/i,
+    );
+    const size = sizeMatch ? sizeMatch[1].toUpperCase() : undefined;
+
+    let color: string | undefined;
+    for (const [key, value] of Object.entries(colorPatterns)) {
+      if (segLower.includes(key)) {
+        color = value;
+        break;
+      }
+    }
+
+    const variant = [size, color].filter(Boolean).join(" / ") || undefined;
+    const key = `${seg.standard}::${variant || ""}`;
+
+    if (uniqueProducts.has(key)) {
+      uniqueProducts.get(key)!.quantity += qty;
+    } else {
+      uniqueProducts.set(key, {
+        name: seg.standard,
+        quantity: qty,
+        variant,
+      });
+    }
+  }
+
+  return Array.from(uniqueProducts.values());
 }
 
 // ---- Address Extraction ----
@@ -449,7 +517,7 @@ function normalizeDarija(text: string): string {
     .replace(/[\u064B-\u0652]/g, "")
     // Replace Franco-Arab numerals with Arabic letters ONLY if adjacent to letters (avoids phone number/product number corruption)
     .replace(
-      /(?<=[a-zA-Z])[379582]|[379582](?=[a-zA-Z])/g,
+      /(?<!\d)(?<=[a-zA-Z])[379582](?!\d)|(?<!\d)[379582](?=[a-zA-Z])(?!\d)/g,
       (m) => FRANCO_ARAB_MAP[m] || m,
     )
     .toLowerCase()

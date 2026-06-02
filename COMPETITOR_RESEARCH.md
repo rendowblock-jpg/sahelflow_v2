@@ -297,21 +297,21 @@ This phase documents every feature gap, defines our differentiation narrative, a
 | ------------------------ | ------------------------------------ | --------------------------------- | ------------- |
 | **Pricing (entry)**      | 4,500 DZD/mo                         | **0 DZD (free tier)**             | 🟢 SahelFlow  |
 | **Pricing (pro)**        | 9,500–24,500 DZD/mo                  | **1,500–3,500 DZD/mo**            | 🟢 SahelFlow  |
-| **AI & Automation**      | ❌ None                              | ✅ 5-model router, 23 tools       | 🟢 SahelFlow  |
+| **AI & Automation**      | ❌ None                              | ✅ 5-model router, 30 tools       | 🟢 SahelFlow  |
 | **WhatsApp Inbox**       | ❌ None                              | ✅ Real-time, AI extraction       | 🟢 SahelFlow  |
 | **Darija Support**       | ❌ None                              | ✅ Understands + responds in فصحة | 🟢 SahelFlow  |
 | **YouCan Integration**   | ❌ None                              | ✅ Full sync + webhooks           | 🟢 SahelFlow  |
 | **Embeddable Forms**     | ❌ None                              | ✅ Public order form              | 🟢 SahelFlow  |
 | **Multi-Source Import**  | CSV/Sheets                           | ✅ CSV + XLSX + Sheets + mapping  | 🟢 SahelFlow  |
 | **Order Confirmation**   | ✅ Agent dispatch, SMS, traceability | ✅ AI risk + guided panel         | 🟡 Tie        |
-| **Delivery Partners**    | ✅ 60+                               | ⚠️ 3 (1 verified)                 | 🔴 ECOMANAGER |
+| **Delivery Partners**    | ✅ 60+                               | ✅ 3 (all verified)               | 🔴 ECOMANAGER |
 | **Delivery Agent App**   | ✅ Mobile app                        | ❌ None                           | 🔴 ECOMANAGER |
-| **Accounting**           | ✅ Full (general + product-level)    | ❌ None                           | 🔴 ECOMANAGER |
-| **After-Sales**          | ✅ Complaints, exchanges, refunds    | ❌ None                           | 🔴 ECOMANAGER |
-| **Stock Management**     | ✅ Full with employee traceability   | ✅ Basic CRUD + alerts            | 🟡 Tie        |
-| **Analytics**            | ✅ 360° statistics + daily reports   | ✅ Dashboard + charts             | 🟡 Tie        |
+| **Accounting**           | ✅ Full (general + product-level)    | ✅ Ledger-based (expenses & P&L)  | 🟡 Tie        |
+| **After-Sales**          | ✅ Complaints, exchanges, refunds    | ✅ Return & Exchange lifecycle    | 🟡 Tie        |
+| **Stock Management**     | ✅ Full with employee traceability   | ✅ Basic CRUD + auto-adjust + alerts| 🟡 Tie        |
+| **Analytics**            | ✅ 360° statistics + daily reports   | ✅ Dashboard + daily summary cron | 🟡 Tie        |
 | **Multi-Shop**           | ✅ Native                            | ❌ None (per-client design)       | 🔴 ECOMANAGER |
-| **Multi-User**           | ✅ Up to 20 users                    | ❌ Single seller                  | 🔴 ECOMANAGER |
+| **Multi-User**           | ✅ Up to 20 users                    | ✅ RLS Roles (5 roles + invites)  | 🟡 Tie        |
 | **Online Store**         | ✅ Built-in shop builder             | ❌ Dashboard-only                 | 🔴 ECOMANAGER |
 | **Barcode Support**      | ✅ Scanner integration               | ❌ None                           | 🔴 ECOMANAGER |
 | **SMS Notifications**    | ✅ 5.5 DZD/SMS                       | ❌ WhatsApp only                  | 🟡 Tie        |
@@ -325,13 +325,13 @@ This phase documents every feature gap, defines our differentiation narrative, a
 
 | Category                | ECOMANAGER.dz  | SahelFlow v2  |
 | ----------------------- | -------------- | ------------- |
-| **Operational Depth**   | 18/18 features | 9/18 features |
+| **Operational Depth**   | 18/18 features | 12/18 features|
 | **AI & Automation**     | 0/8 features   | 8/8 features  |
 | **Price Value**         | 2/5 stars      | 5/5 stars     |
 | **Modern UX**           | 2/5 stars      | 5/5 stars     |
 | **Algerian Market Fit** | 4/5 stars      | 5/5 stars     |
 
-**Interpretation:** ECOMANAGER is a mature operational platform with deep back-office features. SahelFlow is a modern, AI-native platform that automates the hardest parts of Algerian e-commerce (WhatsApp extraction, confirmation risk, Darija understanding) at a fraction of the cost. The ideal seller uses **SahelFlow for order intake + AI automation** and may still need external tools for accounting until SahelFlow closes that gap.
+**Interpretation:** ECOMANAGER is a mature operational platform with deep back-office features and massive delivery carrier support. SahelFlow is a modern, AI-native platform that automates the hardest parts of Algerian e-commerce (WhatsApp extraction, confirmation risk, Darija understanding) at a fraction of the cost, and now covers key operational areas like ledger accounting, returns/exchanges, and multi-user roles out-of-the-box.
 
 ---
 

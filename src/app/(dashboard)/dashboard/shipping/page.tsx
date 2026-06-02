@@ -5,7 +5,7 @@ import { Save, ChevronDown, ChevronUp } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/dashboard/ToastProvider";
 import { createClient } from "@/lib/supabase/client";
-import { WILAYAS, ZONE_PRICES } from "@/lib/data/wilayas";
+import { WILAYAS, ZONE_PRICES, getWilayaName } from "@/lib/data/wilayas";
 import { PageTransition } from "@/components/ui/motion";
 
 const ZONE_COLORS: Record<string, string> = {
@@ -20,7 +20,7 @@ const ZONE_COLORS: Record<string, string> = {
 type RateMap = Record<number, { home: number; desk: number; express: boolean }>;
 
 export default function ShippingPage() {
-	const { t } = useI18n();
+	const { t, locale } = useI18n();
 	const { toast } = useToast();
 	const supabase = createClient();
 
@@ -198,7 +198,7 @@ export default function ShippingPage() {
 									className="sf-zone-dot-sm"
 									style={{ background: zoneColor }}
 								/>
-								<span className="sf-text-13">{w.name}</span>
+								<span className="sf-text-13">{getWilayaName(w.name, locale)}</span>
 							</div>
 							<input
 								type="number"

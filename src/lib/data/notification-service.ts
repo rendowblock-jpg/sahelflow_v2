@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
+import { getActiveSellerId } from "./auth-service";
 
 export interface NotificationInput {
 	type: "order" | "low_stock" | "risk" | "automation" | "system" | "welcome";
@@ -70,13 +71,12 @@ export async function dismissNotification(id: string) {
 }
 
 export async function createNotification(input: NotificationInput) {
-	const { data: user } = await getSupabase().auth.getUser();
-	if (!user.user) throw new Error("Not authenticated");
+	const sellerId = await getActiveSellerId();
 
 	const { data, error } = await getSupabase()
 		.from("notifications")
 		.insert({
-			seller_id: user.user.id,
+			seller_id: sellerId,
 			...input,
 		})
 		.select()

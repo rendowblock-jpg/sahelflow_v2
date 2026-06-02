@@ -11,6 +11,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
 import { useToast } from "@/components/dashboard/ToastProvider";
+import { getWilayaName } from "@/lib/data/wilayas";
 import { PageLoader } from "@/components/dashboard/PageLoader";
 import { SearchInput } from "@/components/dashboard/SearchInput";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -30,7 +31,7 @@ interface ProviderInfo {
 }
 
 export default function DeliveryPage() {
-	const { t, formatTimeAgo } = useI18n();
+	const { t, formatTimeAgo, locale } = useI18n();
 	const { isMobile } = useLayout();
 	const { toast } = useToast();
 	const PAGE_SIZE = 50;
@@ -385,7 +386,8 @@ export default function DeliveryPage() {
 								{d.order?.customer?.name || "—"}
 							</p>
 							<p className="sf-text-xs-secondary">
-								{d.order?.wilaya || ""} • {d.provider || "—"}
+								{d.order?.wilaya ? getWilayaName(d.order.wilaya, locale) : ""} •{" "}
+								{d.provider || "—"}
 							</p>
 							{!d.tracking_number && d.order?.id && (
 								<button
@@ -428,7 +430,9 @@ export default function DeliveryPage() {
 										</td>
 										<td>{d.order?.customer?.name || "—"}</td>
 										<td className="sf-text-secondary">
-											{d.order?.wilaya || "—"}
+											{d.order?.wilaya
+												? getWilayaName(d.order.wilaya, locale)
+												: "—"}
 										</td>
 										<td className="sf-text-secondary">{d.provider || "—"}</td>
 										<td>
@@ -472,8 +476,18 @@ export default function DeliveryPage() {
 
 			{/* Shipment Provider Selection Modal */}
 			{shipmentModal && (
-				<div className="sf-delivery-modal-backdrop">
-					<div className="sf-delivery-modal">
+				<div
+					className="sf-delivery-modal-backdrop sf-animate-fade"
+					style={{ animationDuration: "0.25s" }}
+				>
+					<div
+						className="sf-delivery-modal sf-animate-fade"
+						style={{
+							animationDuration: "0.2s",
+							transform: "scale(1)",
+							transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+						}}
+					>
 						<div className="sf-delivery-modal__header">
 							<h2 className="sf-delivery-modal__title">
 								{t.delivery.createShipment}
@@ -496,30 +510,49 @@ export default function DeliveryPage() {
 							{t.delivery.provider}
 						</label>
 						<div className="sf-delivery-provider-list">
-							{providers.map((p) => (
-								<button
-									key={p.id}
-									onClick={() => handleProviderSelect(p.id)}
-									className={`sf-delivery-provider ${selectedProvider === p.id ? "is-active" : ""} ${p.isSkeleton ? "is-disabled" : ""}`}
-								>
-									<span className="sf-delivery-provider__logo">{p.logo}</span>
-									<div className="sf-delivery-provider__content">
-										<p className="sf-delivery-provider__name">{p.name}</p>
-										{p.isSkeleton && (
-											<p className="sf-delivery-provider__hint">
-												{t.delivery.apiComingSoonUseCsv}
-											</p>
+							{providers.map((p) => {
+								const isActive = selectedProvider === p.id;
+								return (
+									<button
+										key={p.id}
+										onClick={() => handleProviderSelect(p.id)}
+										className={`sf-delivery-provider ${isActive ? "is-active" : ""} ${p.isSkeleton ? "is-disabled" : ""} sf-card-interactive`}
+										style={{
+											transition: "all 0.2s ease",
+											border: isActive
+												? "2px solid var(--sf-accent-solid)"
+												: "1px solid var(--sf-border-subtle)",
+											boxShadow: isActive
+												? "0 0 12px var(--sf-accent-muted)"
+												: "none",
+											transform: isActive ? "translateY(-2px)" : "none",
+										}}
+									>
+										<span className="sf-delivery-provider__logo">{p.logo}</span>
+										<div className="sf-delivery-provider__content">
+											<p className="sf-delivery-provider__name">{p.name}</p>
+											{p.isSkeleton && (
+												<p className="sf-delivery-provider__hint">
+													{t.delivery.apiComingSoonUseCsv}
+												</p>
+											)}
+										</div>
+										{isActive && !p.isSkeleton && (
+											<span
+												className="sf-delivery-provider__dot"
+												style={{ background: "var(--sf-accent-solid)" }}
+											/>
 										)}
-									</div>
-									{selectedProvider === p.id && !p.isSkeleton && (
-										<span className="sf-delivery-provider__dot" />
-									)}
-								</button>
-							))}
+									</button>
+								);
+							})}
 						</div>
 
 						{costLoading && (
-							<p className="sf-delivery-modal__meta">
+							<p
+								className="sf-delivery-modal__meta sf-animate-fade"
+								style={{ animationDuration: "0.2s" }}
+							>
 								<Loader2
 									size={12}
 									className="sf-animate-spin sf-align-middle"
@@ -528,10 +561,20 @@ export default function DeliveryPage() {
 							</p>
 						)}
 						{estimatedCost !== null && !costLoading && (
-							<p className="sf-delivery-modal__estimate">
+							<p
+								className="sf-delivery-modal__estimate sf-animate-fade"
+								style={{ animationDuration: "0.2s" }}
+							>
 								{t.delivery.estimatedCost}:{" "}
 								<span className="sf-delivery-modal__estimate-value">
-									{estimatedCost.toLocaleString("fr-DZ")} DA
+									{estimatedCost.toLocaleString(
+										locale === "ar"
+											? "ar-DZ"
+											: locale === "en"
+												? "en-US"
+												: "fr-DZ",
+									)}{" "}
+									DA
 								</span>
 							</p>
 						)}

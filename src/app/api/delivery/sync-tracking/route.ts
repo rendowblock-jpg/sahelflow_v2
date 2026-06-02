@@ -38,17 +38,20 @@ export async function GET(req: Request) {
     });
   }
 
-  const byProvider = new Map<string, typeof deliveries>();
+  // Group by (provider, seller_id) to ensure correct credential isolation
+  const byProviderSeller = new Map<string, typeof deliveries>();
   for (const d of deliveries) {
-    const list = byProvider.get(d.provider) || [];
+    const key = `${d.provider}::${d.seller_id}`;
+    const list = byProviderSeller.get(key) || [];
     list.push(d);
-    byProvider.set(d.provider, list);
+    byProviderSeller.set(key, list);
   }
 
   let synced = 0;
   let errors = 0;
 
-  for (const [provider, providerDeliveries] of byProvider) {
+  for (const [key, groupDeliveries] of byProviderSeller) {
+    const [provider, sellerId] = key.split("::");
     const adapter = getDeliveryAdapter(provider);
     if (!adapter) continue;
 
@@ -56,13 +59,14 @@ export async function GET(req: Request) {
       .from("integrations")
       .select("credentials")
       .eq("platform", provider)
+      .eq("seller_id", sellerId)
       .eq("is_active", true)
       .limit(1)
       .single();
 
     if (!integration) continue;
 
-    for (const delivery of providerDeliveries) {
+    for (const delivery of groupDeliveries) {
       if (!delivery.tracking_number) continue;
 
       try {

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	ArrowRight,
 	ArrowLeft,
@@ -15,10 +15,11 @@ import {
 	Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { updateSellerProfile } from "@/lib/data/service";
+import { updateSellerProfile, getSellerProfile } from "@/lib/data/service";
 import { WILAYA_NAMES } from "@/lib/data/wilayas";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/dashboard/ToastProvider";
+import { createClient } from "@/lib/supabase/client";
 
 export default function OnboardingPage() {
 	const { t } = useI18n();
@@ -36,6 +37,40 @@ export default function OnboardingPage() {
 	]);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		let active = true;
+		async function init() {
+			try {
+				setLoading(true);
+				const profile = await getSellerProfile();
+				if (!active) return;
+				if (profile) {
+					if (profile.business_name) setStoreName(profile.business_name);
+					if (profile.phone) setPhone(profile.phone);
+					if (profile.wilaya) setWilaya(profile.wilaya);
+					if (profile.categories && Array.isArray(profile.categories) && profile.categories.length > 0) {
+						setSelectedCategories(profile.categories);
+					}
+					if (profile.delivery_partners && Array.isArray(profile.delivery_partners) && profile.delivery_partners.length > 0) {
+						setSelectedDelivery(profile.delivery_partners);
+					}
+					if (profile.order_sources && Array.isArray(profile.order_sources) && profile.order_sources.length > 0) {
+						setSelectedSources(profile.order_sources);
+					}
+				}
+			} catch (err) {
+				console.error("Failed to load seller profile during onboarding:", err);
+			} finally {
+				if (active) setLoading(false);
+			}
+		}
+		init();
+		return () => {
+			active = false;
+		};
+	}, []);
 
 	const steps = [
 		{
@@ -176,6 +211,9 @@ export default function OnboardingPage() {
 				order_sources: selectedSources,
 				onboarding_completed: true,
 			});
+			// Refresh session to update JWT claims in cookies/client state immediately
+			const supabase = createClient();
+			await supabase.auth.refreshSession();
 			setStep(4);
 		} catch (e) {
 			const msg =
@@ -201,6 +239,39 @@ export default function OnboardingPage() {
 			: step === 1
 				? selectedCategories.length > 0
 				: true;
+
+	if (loading) {
+		return (
+			<div
+				style={{
+					minHeight: "100vh",
+					background: "var(--color-surface-primary)",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "40px 20px",
+				}}
+			>
+				<Loader2
+					size={40}
+					style={{
+						color: "var(--color-brand-400)",
+						animation: "spin 1s linear infinite",
+						marginBottom: "16px",
+					}}
+				/>
+				<p
+					style={{
+						fontSize: "var(--font-size-sm)",
+						color: "var(--color-content-secondary)",
+					}}
+				>
+					{t.common?.loading || "Loading..."}
+				</p>
+			</div>
+		);
+	}
 
 	return (
 		<div
@@ -390,7 +461,7 @@ export default function OnboardingPage() {
 									style={{ width: "100%", appearance: "auto" }}
 								>
 									<option value="">{t.onboarding.selectWilaya}</option>
-									{WILAYA_NAMES.map((w) => (
+									{WILAYA_NAMES.map((w: string) => (
 										<option key={w} value={w}>
 											{w}
 										</option>

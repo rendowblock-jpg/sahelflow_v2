@@ -11,6 +11,7 @@
 
 import { callLLMJson } from "./groq";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { OrderAgentConfig, DEFAULT_ORDER_AGENT_CONFIG } from "./types";
 
 // We use the service role client so agent operations bypass RLS
 function getServiceSupabase() {
@@ -51,24 +52,6 @@ interface CustomerHistory {
   returned_count: number;
   refused_count: number;
 }
-
-// ======= Agent Config Defaults =======
-
-export interface OrderAgentConfig {
-  enabled: boolean;
-  auto_confirm_threshold: number; // risk score below this → auto-confirm
-  auto_reject_threshold: number; // risk score above this → auto-reject
-  require_full_address: boolean;
-}
-
-export const DEFAULT_ORDER_AGENT_CONFIG: OrderAgentConfig = {
-  enabled: true,
-  auto_confirm_threshold: 30,
-  auto_reject_threshold: 85,
-  require_full_address: true,
-};
-
-// ======= Core Logic =======
 
 /**
  * Fetch customer order history for risk calculation
@@ -309,10 +292,10 @@ export async function processOrder(
   // 4. Take action based on config thresholds
   let action: "confirmed" | "flagged" | "rejected";
 
-  if (
-    assessment.risk_score <= cfg.auto_confirm_threshold &&
-    assessment.recommendation === "auto_confirm"
-  ) {
+  if (assessment.risk_score <= cfg.auto_confirm_threshold) {
+    if (assessment.recommendation !== "auto_confirm") {
+      console.warn(`[OrderAgent] Recommendation mismatch: risk score is low (${assessment.risk_score}) but AI recommended '${assessment.recommendation}'`);
+    }
     // Auto-confirm
     await supabase
       .from("orders")
@@ -341,10 +324,10 @@ export async function processOrder(
     }
 
     action = "confirmed";
-  } else if (
-    assessment.risk_score >= cfg.auto_reject_threshold &&
-    assessment.recommendation === "auto_reject"
-  ) {
+  } else if (assessment.risk_score >= cfg.auto_reject_threshold) {
+    if (assessment.recommendation !== "auto_reject") {
+      console.warn(`[OrderAgent] Recommendation mismatch: risk score is high (${assessment.risk_score}) but AI recommended '${assessment.recommendation}'`);
+    }
     // Auto-reject / cancel
     await supabase
       .from("orders")

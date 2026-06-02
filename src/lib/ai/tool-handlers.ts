@@ -10,12 +10,27 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getDeliveryAdapter } from "@/lib/delivery/adapters";
 
-const ALGERIAN_PHONE_REGEX = /^(05|06|07)[0-9]{8}$/;
+/**
+ * Escape special characters in ilike/like patterns to prevent wildcard injection.
+ * Postgres LIKE/ILIKE treats % and _ as wildcards.
+ * Users sending "100%" or "test_product" could match unintended rows.
+ */
+function escapeLike(str: string): string {
+	return str.replace(/[%_\\]/g, "\\$&");
+}
+import { createShipmentForOrder } from "@/lib/delivery/shipment-service";
+import { normalizeWilayaName } from "@/lib/data/wilayas";
+import { calculateDeliveryCost } from "@/lib/data/shipping-calculator";
+import { isValidAlgerianPhone, toLocalFormat } from "@/lib/phone-utils";
+
+// Phase 6.16: Replaced inline regex with centralized phone-utils
+function cleanAlgerianPhone(phone: string): string {
+	return toLocalFormat(phone) || phone;
+}
 
 function validateAlgerianPhone(phone: string): boolean {
-	return ALGERIAN_PHONE_REGEX.test(phone);
+	return isValidAlgerianPhone(phone);
 }
 
 export async function handleUpdateOrderStatus(
@@ -35,7 +50,10 @@ export async function handleUpdateOrderStatus(
 		.single();
 
 	if (orderError) {
-		console.error(`[handleUpdateOrderStatus] Supabase error:`, orderError.message);
+		console.error(
+			`[handleUpdateOrderStatus] Supabase error:`,
+			orderError.message,
+		);
 		return { error: `Database error: ${orderError.message}` };
 	}
 
@@ -76,6 +94,16 @@ export async function handleCreateOrder(
 	sellerId: string,
 	supabase: SupabaseClient,
 ) {
+	if (params.phone) {
+		params.phone = cleanAlgerianPhone(params.phone);
+	}
+	if (params.wilaya) {
+		const normalized = normalizeWilayaName(params.wilaya);
+		if (normalized) {
+			params.wilaya = normalized;
+		}
+	}
+
 	if (
 		!params.customer_name ||
 		!params.phone ||
@@ -156,33 +184,12 @@ export async function handleCreateOrder(
 		0,
 	);
 
-	let deliveryCost = 400;
-	try {
-		const { data: seller } = await supabase
-			.from("sellers")
-			.select("shipping_rates")
-			.eq("id", sellerId)
-			.single();
-
-		if (seller?.shipping_rates) {
-			const rates = seller.shipping_rates as Record<
-				string,
-				{ home: number; desk: number }
-			>;
-			const { WILAYAS, ZONE_PRICES } = await import("@/lib/data/wilayas");
-			const wilaya = WILAYAS.find(
-				(w) => w.name.toLowerCase() === params.wilaya!.toLowerCase(),
-			);
-			if (wilaya && rates[wilaya.code]) {
-				deliveryCost = rates[wilaya.code].home;
-			} else if (wilaya) {
-				const zonePrice = ZONE_PRICES[wilaya.zone];
-				if (zonePrice) deliveryCost = zonePrice.home;
-			}
-		}
-	} catch (err) {
-		console.error(`[handleCreateOrder] Shipping rate lookup failed:`, err);
-	}
+	const deliveryCost = await calculateDeliveryCost(
+		supabase,
+		sellerId,
+		params.wilaya,
+		"home",
+	);
 
 	const { data, error } = await supabase.rpc("atomic_create_order", {
 		p_seller_id: sellerId,
@@ -199,6 +206,7 @@ export async function handleCreateOrder(
 		p_commune: params.commune || null,
 		p_address: params.address || null,
 		p_source: "ai",
+		p_external_id: null,
 		p_notes: params.notes || null,
 		p_delivery_type: "home",
 		p_status: "pending",
@@ -328,11 +336,14 @@ export async function handleUpdateProduct(
 		.from("products")
 		.select("id, name")
 		.eq("seller_id", sellerId)
-		.ilike("name", params.name)
+		.ilike("name", escapeLike(params.name))
 		.single();
 
 	if (productError) {
-		console.error(`[handleUpdateProduct] Supabase error:`, productError.message);
+		console.error(
+			`[handleUpdateProduct] Supabase error:`,
+			productError.message,
+		);
 		return { error: `Database error: ${productError.message}` };
 	}
 
@@ -380,6 +391,16 @@ export async function handleUpdateCustomer(
 	sellerId: string,
 	supabase: SupabaseClient,
 ) {
+	if (params.phone) {
+		params.phone = cleanAlgerianPhone(params.phone);
+	}
+	if (params.wilaya) {
+		const normalized = normalizeWilayaName(params.wilaya);
+		if (normalized) {
+			params.wilaya = normalized;
+		}
+	}
+
 	if (!params.phone && !params.name) {
 		return { error: "Either phone or name is required to find the customer." };
 	}
@@ -390,15 +411,18 @@ export async function handleUpdateCustomer(
 		.eq("seller_id", sellerId);
 
 	if (params.phone) {
-		query = query.ilike("phone", `%${String(params.phone).slice(-9)}`);
+		query = query.eq("phone", params.phone);
 	} else {
-		query = query.ilike("name", params.name!);
+		query = query.ilike("name", escapeLike(params.name!));
 	}
 
-	const { data: customer, error: customerError } = await query.single();
+	const { data: customer, error: customerError } = await query.maybeSingle();
 
 	if (customerError) {
-		console.error(`[handleUpdateCustomer] Supabase error:`, customerError.message);
+		console.error(
+			`[handleUpdateCustomer] Supabase error:`,
+			customerError.message,
+		);
 		return { error: `Database error: ${customerError.message}` };
 	}
 
@@ -450,7 +474,7 @@ export async function handleDeleteOrder(
 	if (!data) return { error: "Order not found" };
 	const { error: deleteError } = await supabase
 		.from("orders")
-		.delete()
+		.update({ deleted_at: new Date().toISOString() })
 		.eq("id", data.id);
 	if (deleteError) {
 		return { error: `Failed to delete order: ${deleteError.message}` };
@@ -469,7 +493,7 @@ export async function handleDeleteProduct(
 		.from("products")
 		.select("id, name")
 		.eq("seller_id", sellerId)
-		.ilike("name", params.name)
+		.ilike("name", escapeLike(params.name))
 		.limit(2);
 	if (lookupError) {
 		console.error(`[handleDeleteProduct] Supabase error:`, lookupError.message);
@@ -484,7 +508,7 @@ export async function handleDeleteProduct(
 	}
 	const { error: deleteError } = await supabase
 		.from("products")
-		.delete()
+		.update({ deleted_at: new Date().toISOString() })
 		.eq("id", data[0].id);
 	if (deleteError) {
 		return { error: `Failed to delete product: ${deleteError.message}` };
@@ -499,9 +523,13 @@ export async function handleUpdateShippingRate(
 ) {
 	if (!params.wilaya || params.home_price === undefined)
 		return { error: "wilaya and home_price required" };
+
+	const normalized = normalizeWilayaName(params.wilaya);
+	const targetWilaya = normalized || params.wilaya;
+
 	const { WILAYAS } = await import("@/lib/data/wilayas");
 	const w = WILAYAS.find(
-		(x) => x.name.toLowerCase() === String(params.wilaya).toLowerCase(),
+		(x) => x.name.toLowerCase() === String(targetWilaya).toLowerCase(),
 	);
 	if (!w) return { error: "Invalid wilaya name" };
 
@@ -511,7 +539,10 @@ export async function handleUpdateShippingRate(
 		.eq("id", sellerId)
 		.single();
 	if (lookupError) {
-		console.error(`[handleUpdateShippingRate] Supabase error:`, lookupError.message);
+		console.error(
+			`[handleUpdateShippingRate] Supabase error:`,
+			lookupError.message,
+		);
 		return { error: `Database error: ${lookupError.message}` };
 	}
 	const rates = (data?.shipping_rates || {}) as Record<
@@ -544,10 +575,13 @@ export async function handleToggleAutomation(
 		.from("automations")
 		.select("id")
 		.eq("seller_id", sellerId)
-		.ilike("name", params.name)
+		.ilike("name", escapeLike(params.name))
 		.single();
 	if (lookupError) {
-		console.error(`[handleToggleAutomation] Supabase error:`, lookupError.message);
+		console.error(
+			`[handleToggleAutomation] Supabase error:`,
+			lookupError.message,
+		);
 		return { error: `Database error: ${lookupError.message}` };
 	}
 	if (!data) return { error: "Automation not found" };
@@ -598,83 +632,433 @@ export async function handleCreateShipment(
 		};
 	}
 
-	const { data: integration, error: integrationError } = await supabase
-		.from("integrations")
-		.select("credentials")
-		.eq("seller_id", sellerId)
-		.eq("platform", "yalidine")
-		.eq("is_active", true)
-		.single();
+	const customer = order.customer as unknown as Record<string, string> | null;
+  const shipmentItems = (order.items as Array<Record<string, unknown>>) || [];
 
-	if (integrationError) {
-		console.error(`[handleCreateShipment] Supabase error:`, integrationError.message);
-		return { error: `Database error: ${integrationError.message}` };
+  const result = await createShipmentForOrder({
+    supabase,
+    sellerId,
+    orderId: order.id,
+    orderNumber: order.order_number,
+    totalPrice: Number(order.total_price),
+    customer: {
+      name: customer?.name || "Unknown",
+      phone: customer?.phone || "",
+      wilaya: customer?.wilaya || order.wilaya || "",
+      commune: customer?.commune || order.commune || "",
+      address: customer?.address || order.address || "",
+    },
+    items: shipmentItems.map((i) => ({
+      product_name: String(i.product_name || i.name || "Item"),
+      quantity: Number(i.quantity || 1),
+      unit_price: Number(i.unit_price || i.price || 0),
+      weight: Number(i.weight || 0),
+    })),
+  });
+
+  if (!result.success) {
+    return { error: "Shipment creation failed: " + result.error };
+  }
+
+  await supabase
+    .from("orders")
+    .update({
+      tracking_id: result.trackingId,
+      delivery_company: "yalidine",
+    })
+    .eq("id", order.id);
+
+  return {
+    success: true,
+    order_number: params.order_number,
+    tracking_id: result.trackingId,
+    provider: "yalidine",
+    estimated_delivery: result.estimatedDelivery,
+  };
+}
+
+export async function handleListReturns(
+	params: { status?: string },
+	sellerId: string,
+	supabase: SupabaseClient,
+) {
+	let query = supabase
+		.from("returns")
+		.select("*, order:orders(order_number, customer:customers(name, phone))")
+		.eq("seller_id", sellerId)
+		.order("created_at", { ascending: false })
+		.limit(10);
+
+	if (params.status && params.status !== "all") {
+		query = query.eq("status", params.status);
 	}
 
-	if (!integration) {
+	const { data, error } = await query;
+	if (error) {
+		console.error(`[handleListReturns] Supabase error:`, error.message);
+		return { error: `Database error: ${error.message}` };
+	}
+
+	if (!data || data.length === 0) {
 		return {
-			error:
-				"Yalidine integration not configured. Connect Yalidine in Settings → Integrations first.",
+			message:
+				"لم يتم العثور على طلبات إرجاع / Aucun retour trouvé / No return requests found.",
+			returns: [],
 		};
 	}
 
-	const adapter = getDeliveryAdapter("yalidine");
-	if (!adapter) {
-		return { error: "Yalidine delivery adapter not available." };
+	return data.map((r) => ({
+		return_number: r.return_number,
+		order_number:
+			((r.order as Record<string, unknown>)?.order_number as string) ||
+			"Unknown",
+		customer_name:
+			((
+				(r.order as Record<string, unknown>)?.customer as Record<
+					string,
+					unknown
+				>
+			)?.name as string) || "Unknown",
+		status: r.status,
+		reason: r.reason,
+		resolution_type: r.resolution_type,
+		refund_amount: r.refund_amount,
+		created_at: r.created_at,
+	}));
+}
+
+export async function handleCreateReturn(
+	params: {
+		order_number?: string;
+		type?: "return" | "exchange" | "refund";
+		reason?: string;
+		reason_details?: string;
+		resolution_type?: "refund" | "exchange" | "credit" | "reject";
+		refund_amount?: number;
+	},
+	sellerId: string,
+	supabase: SupabaseClient,
+) {
+	if (!params.order_number || !params.type || !params.reason) {
+		return { error: "order_number, type, and reason are required." };
 	}
 
-	const customer = order.customer as unknown as Record<string, string> | null;
-	const shipmentItems = (order.items as Array<Record<string, unknown>>) || [];
-
-	const result = await adapter.createShipment(
-		{
-			orderId: order.id,
-			orderNumber: order.order_number,
-			customer: {
-				name: customer?.name || "Unknown",
-				phone: customer?.phone || "",
-				wilaya: customer?.wilaya || order.wilaya || "",
-				commune: customer?.commune || order.commune || "",
-				address: customer?.address || order.address || "",
-			},
-			items: shipmentItems.map((i) => ({
-				name: String(i.product_name || i.name || "Item"),
-				quantity: Number(i.quantity || 1),
-				unitPrice: Number(i.unit_price || i.price || 0),
-			})),
-			totalPrice: Number(order.total_price),
-			weight: 0.5,
-			notes: "",
-		},
-		integration.credentials as Record<string, unknown>,
-	);
-
-	if (!result.success) {
-		return { error: `Shipment creation failed: ${result.error}` };
-	}
-
-	await supabase.from("deliveries").insert({
-		order_id: order.id,
-		seller_id: sellerId,
-		provider: "yalidine",
-		tracking_number: result.trackingId,
-		status: "created",
-		raw_response: result as unknown as Record<string, unknown>,
-	});
-
-	await supabase
+	// 1. Find the original order
+	const { data: order, error: orderError } = await supabase
 		.from("orders")
-		.update({
-			tracking_id: result.trackingId,
-			delivery_company: "yalidine",
+		.select("id, items, total_price, customer_id")
+		.eq("seller_id", sellerId)
+		.eq("order_number", params.order_number)
+		.single();
+
+	if (orderError || !order) {
+		return { error: `Original order #${params.order_number} not found.` };
+	}
+
+	// 2. Map items from original order
+	const orderItems = (order.items as Array<Record<string, unknown>>) || [];
+	const returnItems = orderItems.map((item) => ({
+		product_id: item.product_id || item.id,
+		product_name: item.product_name || item.name || "Item",
+		quantity: Number(item.quantity || 1),
+		price: Number(item.price || item.unit_price || 0),
+		cost_price: Number(item.cost_price || 0),
+	}));
+
+	const resType =
+		params.resolution_type ||
+		(params.type === "refund"
+			? "refund"
+			: params.type === "exchange"
+				? "exchange"
+				: "credit");
+	const refAmount =
+		params.refund_amount !== undefined
+			? params.refund_amount
+			: resType === "refund"
+				? Number(order.total_price || 0)
+				: 0;
+
+	// 3. Create return request
+	const { data: retObj, error: insertError } = await supabase
+		.from("returns")
+		.insert({
+			seller_id: sellerId,
+			order_id: order.id,
+			customer_id: order.customer_id,
+			reason: params.reason,
+			reason_details: params.reason_details || null,
+			resolution_type: resType,
+			refund_amount: refAmount,
+			items: returnItems,
+			status: "requested",
 		})
-		.eq("id", order.id);
+		.select()
+		.single();
+
+	if (insertError) {
+		console.error(`[handleCreateReturn] Insert error:`, insertError.message);
+		return { error: `Failed to create return: ${insertError.message}` };
+	}
+
+	// 4. Create initial timeline log
+	await supabase.from("return_notes").insert({
+		return_id: retObj.id,
+		author_id: sellerId,
+		type: "system",
+		content: `Return request created via AI. Type: ${params.type}. Reason: ${params.reason}.`,
+	});
 
 	return {
 		success: true,
+		return_number: retObj.return_number,
 		order_number: params.order_number,
-		tracking_id: result.trackingId,
-		provider: "yalidine",
-		estimated_delivery: result.estimatedDelivery,
+		type: params.type,
+		resolution_type: resType,
+		refund_amount: refAmount,
+	};
+}
+
+export async function handleUpdateReturnStatus(
+	params: {
+		return_number?: string;
+		new_status?: string;
+		notes?: string;
+	},
+	sellerId: string,
+	supabase: SupabaseClient,
+) {
+	if (!params.return_number || !params.new_status) {
+		return { error: "Both return_number and new_status are required." };
+	}
+
+	// 1. Fetch return details
+	const { data: returnObj, error: fetchError } = await supabase
+		.from("returns")
+		.select("*")
+		.eq("seller_id", sellerId)
+		.eq("return_number", params.return_number)
+		.single();
+
+	if (fetchError || !returnObj) {
+		return { error: `Return request ${params.return_number} not found.` };
+	}
+
+	const rawUpdates: Record<string, unknown> = {
+		status: params.new_status,
+		updated_at: new Date().toISOString(),
+	};
+
+	if (params.new_status === "approved" && returnObj.status === "requested") {
+		rawUpdates.approved_at = new Date().toISOString();
+	} else if (
+		params.new_status === "received" &&
+		returnObj.status !== "received"
+	) {
+		rawUpdates.received_at = new Date().toISOString();
+	} else if (
+		["refunded", "exchanged", "closed", "rejected"].includes(
+			params.new_status,
+		) &&
+		!returnObj.resolved_at
+	) {
+		rawUpdates.resolved_at = new Date().toISOString();
+	}
+
+	// Auto-create exchange order if status changes to exchanged and exchange_order_id not set
+	if (params.new_status === "exchanged" && !returnObj.exchange_order_id) {
+		// Fetch original order details
+		const { data: originalOrder, error: orderError } = await supabase
+			.from("orders")
+			.select("*")
+			.eq("id", returnObj.order_id)
+			.single();
+
+		if (!orderError && originalOrder) {
+			const exchangeItems = (
+				returnObj.items as Array<Record<string, unknown>>
+			).map((item) => ({
+				name: String(item.product_name ?? item.name ?? "Item"),
+				quantity: Number(item.quantity ?? 1),
+				price: Number(item.price ?? item.unit_price ?? 0),
+				product_id: String(item.product_id ?? item.id ?? ""),
+				variant: String(item.variant_id ?? item.variant ?? "") || undefined,
+			}));
+
+			const exchangeTotal =
+				returnObj.resolution_type === "exchange"
+					? 0
+					: returnObj.refund_amount || 0;
+
+			// Create new order
+			const { data: newOrder, error: insertOrderError } = await supabase
+				.from("orders")
+				.insert({
+					seller_id: sellerId,
+					customer_id: originalOrder.customer_id,
+					items: exchangeItems,
+					total_price: exchangeTotal,
+					delivery_cost: await calculateDeliveryCost(supabase, sellerId, originalOrder.wilaya as string | null, (originalOrder.delivery_type as "home" | "desk") || "home"),
+					wilaya: originalOrder.wilaya,
+					commune: originalOrder.commune,
+					address: originalOrder.address,
+					notes: `طلب استبدال للطلب رقم #${originalOrder.order_number} (RET: ${returnObj.return_number})`,
+					status: "pending",
+					confirmation_status: "confirmed",
+				})
+				.select()
+				.single();
+
+			if (!insertOrderError && newOrder) {
+				rawUpdates.exchange_order_id = newOrder.id;
+
+				// Add timeline log for auto-created order
+				await supabase.from("return_notes").insert({
+					return_id: returnObj.id,
+					author_id: sellerId,
+					type: "system",
+					content: `تم إنشاء طلب استبدال جديد برقم #${newOrder.order_number} تلقائياً.`,
+				});
+			}
+		}
+	}
+
+	// 2. Perform DB update
+	const { data: _updatedReturn, error: updateError } = await supabase
+		.from("returns")
+		.update(rawUpdates)
+		.eq("id", returnObj.id)
+		.select()
+		.single();
+
+	if (updateError) {
+		return { error: `Failed to update return: ${updateError.message}` };
+	}
+
+	// 3. Add custom note if provided
+	if (params.notes) {
+		await supabase.from("return_notes").insert({
+			return_id: returnObj.id,
+			author_id: sellerId,
+			type: "note",
+			content: params.notes,
+		});
+	}
+
+	return {
+		success: true,
+		return_number: params.return_number,
+		previous_status: returnObj.status,
+		new_status: params.new_status,
+		exchange_order_id: rawUpdates.exchange_order_id || null,
+	};
+}
+
+export async function handleGetPnL(
+	params: { period?: string },
+	sellerId: string,
+	supabase: SupabaseClient,
+) {
+	const period = params.period || "30d";
+	const { data, error } = await supabase.rpc("get_pnl_summary", {
+		p_period: period,
+	});
+
+	if (error) {
+		console.error(`[handleGetPnL] RPC error:`, error.message);
+		return { error: `Failed to fetch P&L summary: ${error.message}` };
+	}
+
+	return {
+		success: true,
+		period,
+		...(data as Record<string, unknown>),
+	};
+}
+
+export async function handleListExpenses(
+	params: { category?: string },
+	sellerId: string,
+	supabase: SupabaseClient,
+) {
+	let query = supabase
+		.from("expenses")
+		.select("*")
+		.eq("seller_id", sellerId)
+		.order("expense_date", { ascending: false })
+		.limit(20);
+
+	if (params.category && params.category !== "all") {
+		query = query.eq("category", params.category);
+	}
+
+	const { data, error } = await query;
+	if (error) {
+		console.error(`[handleListExpenses] Supabase error:`, error.message);
+		return { error: `Failed to fetch expenses: ${error.message}` };
+	}
+
+	return {
+		success: true,
+		expenses: data || [],
+	};
+}
+
+export async function handleAddExpense(
+	params: {
+		amount?: number;
+		category?: string;
+		description?: string;
+		expense_date?: string;
+	},
+	sellerId: string,
+	supabase: SupabaseClient,
+) {
+	if (params.amount === undefined || !params.category) {
+		return { error: "Both amount and category are required." };
+	}
+
+	const categoryEnum = [
+		"ads",
+		"packaging",
+		"delivery_fees",
+		"returns",
+		"supplies",
+		"salary",
+		"rent",
+		"other",
+	];
+
+	if (!categoryEnum.includes(params.category)) {
+		return {
+			error: `Invalid category: "${params.category}". Supported: ${categoryEnum.join(", ")}`,
+		};
+	}
+
+	const { data, error } = await supabase
+		.from("expenses")
+		.insert({
+			seller_id: sellerId,
+			amount: Number(params.amount),
+			category: params.category,
+			description: params.description || null,
+			expense_date:
+				params.expense_date || new Date().toISOString().split("T")[0],
+		})
+		.select()
+		.single();
+
+	if (error) {
+		console.error(`[handleAddExpense] Supabase error:`, error.message);
+		return { error: `Failed to create expense: ${error.message}` };
+	}
+
+	return {
+		success: true,
+		id: data.id,
+		amount: data.amount,
+		category: data.category,
+		description: data.description,
+		expense_date: data.expense_date,
 	};
 }

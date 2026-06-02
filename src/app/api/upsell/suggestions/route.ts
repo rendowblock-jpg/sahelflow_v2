@@ -8,14 +8,14 @@ const schema = z.object({
 });
 
 export const POST = withAuthAndRateLimit(
-  async (_req, { user, supabase, body }) => {
+  async (_req, { sellerId, supabase, body }) => {
     const { order_id } = body as z.infer<typeof schema>;
 
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .select("id, items, seller_id")
       .eq("id", order_id)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .single();
 
     if (orderErr || !order) {
@@ -25,7 +25,7 @@ export const POST = withAuthAndRateLimit(
     const { data: products, error: prodErr } = await supabase
       .from("products")
       .select("id, name, price, cost_price, stock, category_id, image_url, active, categories(name)")
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .eq("active", true)
       .gt("stock", 0);
 

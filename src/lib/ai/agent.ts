@@ -3,7 +3,7 @@
  * Tool-calling agent that queries real Supabase data and performs actions
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getAlgerianLanguagePrompt } from "@/lib/ai/prompts/algerian";
 import { ChatMessage } from "@/lib/agents/groq";
 import {
@@ -14,6 +14,12 @@ import {
 } from "@/lib/ai/models";
 import { isModelHealthy } from "@/lib/ai/models/health";
 import { sanitizeDarijaLeaks } from "@/lib/ai/sanitizer";
+
+/** Escape special LIKE/ILIKE wildcard characters to prevent injection */
+function escapeLike(str: string): string {
+	return str.replace(/[%_\\]/g, "\\$&");
+}
+
 import {
 	handleUpdateOrderStatus,
 	handleCreateOrder,
@@ -25,6 +31,12 @@ import {
 	handleUpdateShippingRate,
 	handleToggleAutomation,
 	handleCreateShipment,
+	handleListReturns,
+	handleCreateReturn,
+	handleUpdateReturnStatus,
+	handleGetPnL,
+	handleListExpenses,
+	handleAddExpense,
 } from "@/lib/ai/tool-handlers";
 
 // ===== TOOL DEFINITIONS =====
@@ -41,7 +53,18 @@ export interface AgentTool {
 }
 
 async function getSupabase() {
-	return await createClient();
+	try {
+		const client = await createClient();
+		const {
+			data: { user },
+		} = await client.auth.getUser();
+		if (user) {
+			return client;
+		}
+	} catch {
+		// Fallback to admin client if cookies aren't available or auth fails
+	}
+	return createAdminClient();
 }
 
 function getPeriodFilter(period?: string): string {
@@ -752,10 +775,10 @@ export const tools: AgentTool[] = [
 				.from("customers")
 				.select("id")
 				.eq("seller_id", sellerId)
-				.ilike("phone", `%${String(params.phone).slice(-9)}`)
-				.single();
+				.eq("phone", params.phone as string)
+				.maybeSingle();
 
-			if (dupError && dupError.code !== "PGRST116") {
+			if (dupError) {
 				console.error(
 					`[Tool create_customer] Supabase error:`,
 					dupError.message,
@@ -914,10 +937,17 @@ export const tools: AgentTool[] = [
 				.from("customers")
 				.select("id")
 				.eq("seller_id", sellerId);
-			if (params.phone)
-				query = query.ilike("phone", `%${String(params.phone).slice(-9)}`);
-			else query = query.ilike("name", params.name as string);
-			const { data: customer, error: customerError } = await query.single();
+			if (params.phone) {
+				const cleanPhone = String(params.phone)
+					.replace(/[\s.-]/g, "")
+					.replace(/^(\+213|00213|213)/, "0");
+				query = query.eq("phone", cleanPhone);
+			} else {
+				query = query.ilike("name", escapeLike(params.name as string));
+			}
+			const { data: customer, error: customerError } = await query
+				.limit(1)
+				.maybeSingle();
 			if (customerError) {
 				console.error(
 					`[Tool get_customer_orders] Supabase error:`,
@@ -1040,6 +1070,213 @@ export const tools: AgentTool[] = [
 			);
 		},
 	},
+	{
+		name: "list_returns",
+		description:
+			"عرض طلبات الإرجاع والاستبدال / List return, exchange, or refund requests",
+		parameters:
+			"status (optional): filter by 'requested', 'approved', 'pickup', 'received', 'inspected', 'refunded', 'exchanged', 'rejected', 'closed'",
+		schema: {
+			type: "object",
+			properties: { status: { type: "string" } },
+		},
+		async execute(params, sellerId) {
+			const supabase = await getSupabase();
+			return handleListReturns(
+				{ status: params.status as string | undefined },
+				sellerId,
+				supabase,
+			);
+		},
+	},
+	{
+		name: "create_return",
+		description:
+			"إنشاء طلب استرجاع أو استبدال / Create a return, refund, or exchange request for an order number. Default to returning all items in the order.",
+		parameters:
+			"order_number (required), type (required: 'return' | 'exchange' | 'refund'), reason (required: 'wrong_product', 'damaged', 'changed_mind', 'not_as_described', 'wrong_size', 'defective', 'late_delivery', 'other'), reason_details (optional), resolution_type (optional: 'refund' | 'exchange' | 'credit'), refund_amount (optional)",
+		schema: {
+			type: "object",
+			properties: {
+				order_number: { type: "string" },
+				type: { type: "string", enum: ["return", "exchange", "refund"] },
+				reason: {
+					type: "string",
+					enum: [
+						"wrong_product",
+						"damaged",
+						"changed_mind",
+						"not_as_described",
+						"wrong_size",
+						"defective",
+						"late_delivery",
+						"other",
+					],
+				},
+				reason_details: { type: "string" },
+				resolution_type: {
+					type: "string",
+					enum: ["refund", "exchange", "credit"],
+				},
+				refund_amount: { type: "number" },
+			},
+			required: ["order_number", "type", "reason"],
+		},
+		async execute(params, sellerId) {
+			const supabase = await getSupabase();
+			return handleCreateReturn(
+				{
+					order_number: params.order_number as string,
+					type: params.type as "return" | "exchange" | "refund",
+					reason: params.reason as string,
+					reason_details: params.reason_details as string | undefined,
+					resolution_type: params.resolution_type as
+						| "refund"
+						| "exchange"
+						| "credit"
+						| undefined,
+					refund_amount: params.refund_amount as number | undefined,
+				},
+				sellerId,
+				supabase,
+			);
+		},
+	},
+	{
+		name: "update_return_status",
+		description:
+			"تحديث حالة طلب الإرجاع والاستبدال / Update return request status and optionally add notes.",
+		parameters:
+			"return_number (required), new_status (required: 'approved', 'pickup', 'received', 'inspected', 'refunded', 'exchanged', 'rejected', 'closed'), notes (optional)",
+		schema: {
+			type: "object",
+			properties: {
+				return_number: { type: "string" },
+				new_status: {
+					type: "string",
+					enum: [
+						"approved",
+						"pickup",
+						"received",
+						"inspected",
+						"refunded",
+						"exchanged",
+						"rejected",
+						"closed",
+					],
+				},
+				notes: { type: "string" },
+			},
+			required: ["return_number", "new_status"],
+		},
+		async execute(params, sellerId) {
+			const supabase = await getSupabase();
+			return handleUpdateReturnStatus(
+				{
+					return_number: params.return_number as string,
+					new_status: params.new_status as string,
+					notes: params.notes as string | undefined,
+				},
+				sellerId,
+				supabase,
+			);
+		},
+	},
+	{
+		name: "get_pnl",
+		description:
+			"عرض ملخص الأرباح والخسائر / Get Profit & Loss (P&L) summary including revenue, cost of goods, delivery fees, expenses, return losses, and net profit.",
+		parameters: "period (optional): '7d' | '30d' | '90d' | 'year'",
+		schema: {
+			type: "object",
+			properties: {
+				period: { type: "string", enum: ["7d", "30d", "90d", "year"] },
+			},
+		},
+		async execute(params, sellerId) {
+			const supabase = await getSupabase();
+			return handleGetPnL(
+				{ period: params.period as string | undefined },
+				sellerId,
+				supabase,
+			);
+		},
+	},
+	{
+		name: "list_expenses",
+		description:
+			"عرض قائمة المصاريف / List recent business expenses, optionally filtered by category.",
+		parameters:
+			"category (optional): 'ads' | 'packaging' | 'delivery_fees' | 'returns' | 'supplies' | 'salary' | 'rent' | 'other'",
+		schema: {
+			type: "object",
+			properties: {
+				category: {
+					type: "string",
+					enum: [
+						"ads",
+						"packaging",
+						"delivery_fees",
+						"returns",
+						"supplies",
+						"salary",
+						"rent",
+						"other",
+					],
+				},
+			},
+		},
+		async execute(params, sellerId) {
+			const supabase = await getSupabase();
+			return handleListExpenses(
+				{ category: params.category as string | undefined },
+				sellerId,
+				supabase,
+			);
+		},
+	},
+	{
+		name: "add_expense",
+		description:
+			"إضافة مصاريف جديدة / Add a new business expense (e.g. advertising ads, packaging, rent, salaries).",
+		parameters:
+			"amount (required), category (required: 'ads' | 'packaging' | 'delivery_fees' | 'returns' | 'supplies' | 'salary' | 'rent' | 'other'), description (optional), expense_date (optional: 'YYYY-MM-DD')",
+		schema: {
+			type: "object",
+			properties: {
+				amount: { type: "number" },
+				category: {
+					type: "string",
+					enum: [
+						"ads",
+						"packaging",
+						"delivery_fees",
+						"returns",
+						"supplies",
+						"salary",
+						"rent",
+						"other",
+					],
+				},
+				description: { type: "string" },
+				expense_date: { type: "string" },
+			},
+			required: ["amount", "category"],
+		},
+		async execute(params, sellerId) {
+			const supabase = await getSupabase();
+			return handleAddExpense(
+				{
+					amount: params.amount as number,
+					category: params.category as string,
+					description: params.description as string | undefined,
+					expense_date: params.expense_date as string | undefined,
+				},
+				sellerId,
+				supabase,
+			);
+		},
+	},
 ];
 
 // ===== AGENT EXECUTION =====
@@ -1105,6 +1342,7 @@ CAPABILITIES YOU MUST LEVERAGE:
 - ⚙️ Operations: get_automations, toggle_automation, get_shipping_rates, update_shipping_rate
 - 🏪 Store: get_store_info, update_store_info
 - 💰 Finance: get_cod_cashflow — track money in transit, collected, and returns
+- ↩️ Returns: list_returns, create_return, update_return_status — manage customer returns, refunds, and exchange orders
 
 BEHAVIORAL RULES:
 1. ALWAYS call tools before answering data questions. NEVER guess or hallucinate numbers. You have the real data — use it.
@@ -1299,6 +1537,13 @@ PERSONALITY:
 								type: "success",
 								title: `Shipment created for ${res2.order_number}`,
 								description: `Tracking: ${res2.tracking_id} via ${res2.provider}`,
+							});
+						}
+						if (tool.name === "add_expense" && res2?.success) {
+							actionCards.push({
+								type: "success",
+								title: `Expense added: ${res2.amount} DA`,
+								description: `Category: ${res2.category} - ${res2.description || ""}`,
 							});
 						}
 					} catch (toolErr) {

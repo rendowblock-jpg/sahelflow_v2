@@ -3,6 +3,8 @@
 import { useEffect, useState, memo } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+import { getLocaleTag } from "@/components/ui/charts/chart-utils";
 
 interface AnimatedStatCardProps {
 	label: string;
@@ -30,6 +32,7 @@ function AnimatedStatCardComponent({
 	icon: Icon,
 	delay = 0,
 }: AnimatedStatCardProps) {
+	const { locale } = useI18n();
 	const [displayValue, setDisplayValue] = useState("0");
 	const { prefix, num, suffix } = parseNumericValue(value);
 
@@ -47,7 +50,9 @@ function AnimatedStatCardComponent({
 			const t = Math.min(elapsed / duration, 1);
 			const eased = 1 - Math.pow(1 - t, 3);
 			const current = Math.round(eased * num);
-			setDisplayValue(`${prefix}${current.toLocaleString("fr-DZ")}${suffix}`);
+			setDisplayValue(
+				`${prefix}${current.toLocaleString(getLocaleTag(locale))}${suffix}`,
+			);
 			if (t < 1) raf = requestAnimationFrame(tick);
 		};
 
@@ -59,7 +64,7 @@ function AnimatedStatCardComponent({
 			clearTimeout(timer);
 			if (raf) cancelAnimationFrame(raf);
 		};
-	}, [num, prefix, suffix, delay, value]);
+	}, [num, prefix, suffix, delay, value, locale]);
 
 	return (
 		<motion.div

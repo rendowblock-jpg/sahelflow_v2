@@ -348,7 +348,7 @@ export default function PublicOrderForm() {
               onChange={(e) => setWilaya(e.target.value)}
             >
               <option value="">{t.publicForm.selectWilaya}</option>
-              {WILAYA_NAMES.map((w) => (
+              {WILAYA_NAMES.map((w: string) => (
                 <option key={w} value={w}>
                   {w}
                 </option>

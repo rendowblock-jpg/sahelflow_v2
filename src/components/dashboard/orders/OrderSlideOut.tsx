@@ -9,6 +9,7 @@ import {
 	MessageCircle,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { getWilayaName } from "@/lib/data/wilayas";
 import type { Order } from "./types";
 
 interface Props {
@@ -36,7 +37,7 @@ export default function OrderSlideOut({
 	onConfirmDelete,
 	onCancelDelete,
 }: Props) {
-	const { t, formatCurrency } = useI18n();
+	const { t, formatCurrency, locale } = useI18n();
 
 	if (!order) return null;
 
@@ -97,7 +98,7 @@ export default function OrderSlideOut({
 							)}
 							{order.wilaya && (
 								<span className="sf-orders-slideout__meta">
-									<MapPin size={14} /> {order.wilaya}
+									<MapPin size={14} /> {getWilayaName(order.wilaya, locale)}
 									{order.commune ? `, ${order.commune}` : ""}
 								</span>
 							)}
@@ -115,7 +116,7 @@ export default function OrderSlideOut({
 							{(order.items || []).map((item, i) => (
 								<div key={i} className="sf-orders-slideout__row">
 									<span className="sf-orders-slideout__row-text">
-										{item.quantity}x {item.product_name}
+										{item.quantity}x {item.product_name || item.name}
 									</span>
 									<span className="sf-orders-slideout__row-value">
 										{formatCurrency(item.quantity * item.unit_price)}

@@ -15,6 +15,8 @@ export interface CommAgentConfig {
   enabled: boolean;
   auto_extract: boolean;
   suggest_replies: boolean;
+  auto_send: boolean;
+  language_preference: "auto" | "ar" | "fr" | "en";
 }
 
 export interface AgentConfig {
@@ -33,6 +35,8 @@ export const DEFAULT_COMM_AGENT_CONFIG: CommAgentConfig = {
   enabled: true,
   auto_extract: true,
   suggest_replies: true,
+  auto_send: false,
+  language_preference: "auto",
 };
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {

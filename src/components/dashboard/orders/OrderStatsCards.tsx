@@ -2,6 +2,9 @@
 
 import { useI18n } from "@/lib/i18n";
 import type { OrderStats } from "./types";
+import { AnimatedStatCard } from "@/components/ui/AnimatedStatCard";
+import { ShoppingCart, AlertTriangle, TrendingUp, DollarSign } from "lucide-react";
+import { StaggerContainer, StaggerItem } from "@/components/ui/motion";
 
 interface Props {
 	stats: OrderStats;
@@ -15,33 +18,51 @@ export default function OrderStatsCards({ stats, draftCount }: Props) {
 	const nonDraft = stats.total - draftCount;
 	const confirmedTotal = stats.confirmed + stats.shipped + stats.delivered;
 	const rate = nonDraft > 0 ? Math.round((confirmedTotal / nonDraft) * 100) : 0;
-	const rateClass =
+	const rateVariant =
 		rate >= 85
-			? "sf-orders-stat-value--success"
+			? ("success" as const)
 			: rate >= 70
-				? "sf-orders-stat-value--warn"
-				: "sf-orders-stat-value--danger";
+				? ("warning" as const)
+				: ("danger" as const);
 
 	return (
-		<div className="sf-orders-stats-grid">
-			<div className="sf-card sf-orders-stat-card">
-				<p className="sf-orders-stat-label">{t.orders.totalOrders}</p>
-				<p className="sf-orders-stat-value">{stats.total}</p>
-			</div>
-			<div className="sf-card sf-orders-stat-card">
-				<p className="sf-orders-stat-label">{t.orders.pendingCount}</p>
-				<p className="sf-orders-stat-value sf-orders-stat-value--warn">
-					{stats.pending}
-				</p>
-			</div>
-			<div className="sf-card sf-orders-stat-card">
-				<p className="sf-orders-stat-label">{t.orders.confirmationRate}</p>
-				<p className={`sf-orders-stat-value ${rateClass}`}>{rate}%</p>
-			</div>
-			<div className="sf-card sf-orders-stat-card">
-				<p className="sf-orders-stat-label">{t.dashboard.revenue}</p>
-				<p className="sf-orders-stat-value">{formatCurrency(stats.revenue)}</p>
-			</div>
-		</div>
+		<StaggerContainer className="sf-orders-stats-grid sf-grid-4 sf-gap-md" stagger={0.05}>
+			<StaggerItem>
+				<AnimatedStatCard
+					label={t.orders.totalOrders}
+					value={String(stats.total)}
+					variant="brand"
+					icon={ShoppingCart}
+					delay={0}
+				/>
+			</StaggerItem>
+			<StaggerItem>
+				<AnimatedStatCard
+					label={t.orders.pendingCount}
+					value={String(stats.pending)}
+					variant="warning"
+					icon={AlertTriangle}
+					delay={80}
+				/>
+			</StaggerItem>
+			<StaggerItem>
+				<AnimatedStatCard
+					label={t.orders.confirmationRate}
+					value={`${rate}%`}
+					variant={rateVariant}
+					icon={TrendingUp}
+					delay={160}
+				/>
+			</StaggerItem>
+			<StaggerItem>
+				<AnimatedStatCard
+					label={t.dashboard.revenue}
+					value={formatCurrency(stats.revenue)}
+					variant="success"
+					icon={DollarSign}
+					delay={240}
+				/>
+			</StaggerItem>
+		</StaggerContainer>
 	);
 }

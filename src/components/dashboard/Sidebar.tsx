@@ -8,6 +8,8 @@ import {
   Users,
   Package,
   Truck,
+  RotateCcw,
+  Wallet,
   BarChart3,
   LogOut,
   Bot,
@@ -18,10 +20,12 @@ import {
   MessageCircle,
   Zap,
   Import,
+  Shield,
 } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const navIcons = {
   dashboard: LayoutDashboard,
@@ -30,12 +34,15 @@ const navIcons = {
   customers: Users,
   products: Package,
   delivery: Truck,
+  returns: RotateCcw,
+  accounting: Wallet,
   shipping: Map,
   agents: Bot,
   automations: Zap,
   analytics: BarChart3,
   integrations: Plug,
   imports: Import,
+  team: Shield,
   settings: Settings,
 };
 
@@ -46,19 +53,42 @@ const navRoutes: { key: keyof typeof navIcons; href: string }[] = [
   { key: "customers", href: "/dashboard/customers" },
   { key: "products", href: "/dashboard/products" },
   { key: "delivery", href: "/dashboard/delivery" },
+  { key: "returns", href: "/dashboard/returns" },
+  { key: "accounting", href: "/dashboard/accounting" },
   { key: "shipping", href: "/dashboard/shipping" },
   { key: "agents", href: "/dashboard/agents" },
   { key: "automations", href: "/dashboard/automations" },
   { key: "analytics", href: "/dashboard/analytics" },
   { key: "integrations", href: "/dashboard/integrations" },
   { key: "imports", href: "/dashboard/imports" },
+  { key: "team", href: "/dashboard/settings/team" },
   { key: "settings", href: "/dashboard/settings" },
 ];
+
+const routePermissions: Record<keyof typeof navIcons, string> = {
+  dashboard: "dashboard:view",
+  orders: "orders:view",
+  inbox: "inbox:view",
+  customers: "customers:view",
+  products: "products:view",
+  delivery: "orders:view",
+  returns: "returns:view",
+  accounting: "accounting:view",
+  shipping: "settings:view",
+  agents: "ai:chat",
+  automations: "automations:view",
+  analytics: "dashboard:view",
+  integrations: "settings:view",
+  imports: "products:manage",
+  team: "team:view",
+  settings: "dashboard:view",
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { t } = useI18n();
   const { isMobile, isTablet, sidebarOpen, closeSidebar } = useLayout();
+  const { hasPermission, loading } = usePermissions();
   const isMobileOrTablet = isMobile || isTablet;
 
   // Compact (icon-only) mode is not yet implemented; kept as explicit false so
@@ -122,7 +152,12 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="sf-sidebar-nav">
-          {navRoutes.map((item) => {
+          {!loading && navRoutes.map((item) => {
+            const permission = routePermissions[item.key];
+            if (!hasPermission(permission)) {
+              return null;
+            }
+
             const Icon = navIcons[item.key];
             const label = t.nav[item.key];
             const isActive =

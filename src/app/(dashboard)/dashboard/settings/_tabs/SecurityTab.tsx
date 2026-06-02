@@ -2,6 +2,7 @@
 
 import { Lock, Shield, Loader2, Check, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import type { TeamRole } from "@/lib/auth/permissions";
 
 interface SecurityTabProps {
 	passwords: { current: string; new: string };
@@ -13,6 +14,7 @@ interface SecurityTabProps {
 	wiping: boolean;
 	onPasswordChange: () => void;
 	onWipeClick: () => void;
+	role?: TeamRole | null;
 }
 
 export default function SecurityTab({
@@ -23,6 +25,7 @@ export default function SecurityTab({
 	wiping,
 	onPasswordChange,
 	onWipeClick,
+	role,
 }: SecurityTabProps) {
 	const { t } = useI18n();
 
@@ -89,31 +92,33 @@ export default function SecurityTab({
 				</div>
 			</div>
 
-			<div className="sf-settings-danger-zone sf-mt-lg">
-				<div className="sf-flex-between sf-items-start">
-					<div>
-						<p className="sf-settings-danger-title">Danger Zone</p>
-						<p className="sf-settings-danger-desc">
-							{t.settings.wipeDataDesc ||
-								"Clear all test data including orders, customers, messages, and automation activity."}
-						</p>
+			{role === "owner" && (
+				<div className="sf-settings-danger-zone sf-mt-lg">
+					<div className="sf-flex-between sf-items-start">
+						<div>
+							<p className="sf-settings-danger-title">{t.settings.dangerZone}</p>
+							<p className="sf-settings-danger-desc">
+								{t.settings.wipeDataDesc ||
+									"Clear all test data including orders, customers, messages, and automation activity."}
+							</p>
+						</div>
+						<button
+							className="sf-btn sf-btn-danger"
+							onClick={onWipeClick}
+							disabled={wiping}
+						>
+							{wiping ? (
+								<Loader2 size={16} className="sf-animate-spin" />
+							) : (
+								<AlertTriangle size={16} />
+							)}
+							{wiping
+								? t.common.loading
+								: t.settings.wipeData || t.common.error}
+						</button>
 					</div>
-					<button
-						className="sf-btn sf-btn-danger"
-						onClick={onWipeClick}
-						disabled={wiping}
-					>
-						{wiping ? (
-							<Loader2 size={16} className="sf-animate-spin" />
-						) : (
-							<AlertTriangle size={16} />
-						)}
-						{wiping
-							? t.common.loading
-							: t.settings.wipeData || t.common.error}
-					</button>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 }

@@ -1,10 +1,10 @@
 /**
  * SahelFlow Product Service
  * Product and category CRUD operations.
+ * All mutations are seller-scoped to prevent cross-tenant data leakage.
  */
-
 import { getSupabase } from "./supabase-helpers";
-import { getCurrentUser } from "./auth-service";
+import { getActiveSellerId } from "./auth-service";
 import type { Product, Category } from "@/types/database";
 
 // ===== CATEGORIES =====
@@ -23,11 +23,10 @@ export async function createCategory(category: {
 	slug: string;
 	sort_order?: number;
 }) {
-	const user = await getCurrentUser();
-	if (!user) throw new Error("Not authenticated");
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("categories")
-		.insert({ ...category, seller_id: user.id })
+		.insert({ ...category, seller_id: sellerId })
 		.select()
 		.single();
 	if (error) throw error;
@@ -38,10 +37,12 @@ export async function updateCategory(
 	id: string,
 	updates: Partial<Pick<Category, "name" | "slug" | "sort_order">>,
 ) {
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("categories")
 		.update(updates)
 		.eq("id", id)
+		.eq("seller_id", sellerId)
 		.select()
 		.single();
 	if (error) throw error;
@@ -49,10 +50,12 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: string) {
+	const sellerId = await getActiveSellerId();
 	const { error } = await getSupabase()
 		.from("categories")
 		.delete()
-		.eq("id", id);
+		.eq("id", id)
+		.eq("seller_id", sellerId);
 	if (error) throw error;
 }
 
@@ -75,7 +78,8 @@ export async function getProducts(options?: {
 		.range(offset, offset + limit - 1);
 
 	if (options?.search) {
-		query = query.ilike("name", `%${options.search}%`);
+		const escapedSearch = options.search.replace(/[%_]/g, "\\$&");
+		query = query.ilike("name", `%${escapedSearch}%`);
 	}
 	if (options?.category) {
 		query = query.eq("category_id", options.category);
@@ -86,11 +90,14 @@ export async function getProducts(options?: {
 	return { data: data || [], total: count ?? 0 };
 }
 
+/** F-7: Added seller_id scoping */
 export async function getProduct(id: string) {
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("products")
 		.select("*")
 		.eq("id", id)
+		.eq("seller_id", sellerId)
 		.is("deleted_at", null)
 		.single();
 	if (error) throw error;
@@ -108,17 +115,17 @@ export async function createProduct(product: {
 	image_url?: string;
 	category_id?: string | null;
 }) {
-	const user = await getCurrentUser();
-	if (!user) throw new Error("Not authenticated");
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("products")
-		.insert({ ...product, seller_id: user.id })
+		.insert({ ...product, seller_id: sellerId })
 		.select()
 		.single();
 	if (error) throw error;
 	return data;
 }
 
+/** F-7: Added seller_id scoping */
 export async function updateProduct(
 	id: string,
 	updates: Partial<
@@ -137,10 +144,12 @@ export async function updateProduct(
 		>
 	>,
 ) {
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("products")
 		.update(updates)
 		.eq("id", id)
+		.eq("seller_id", sellerId)
 		.is("deleted_at", null)
 		.select()
 		.single();
@@ -148,20 +157,26 @@ export async function updateProduct(
 	return data;
 }
 
+/** F-7: Added seller_id scoping */
 export async function deleteProduct(id: string) {
+	const sellerId = await getActiveSellerId();
 	const { error } = await getSupabase()
 		.from("products")
 		.update({ deleted_at: new Date().toISOString() })
 		.eq("id", id)
+		.eq("seller_id", sellerId)
 		.is("deleted_at", null);
 	if (error) throw error;
 }
 
+/** F-7: Added seller_id scoping */
 export async function restoreProduct(id: string) {
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("products")
 		.update({ deleted_at: null })
 		.eq("id", id)
+		.eq("seller_id", sellerId)
 		.not("deleted_at", "is", null)
 		.select()
 		.single();

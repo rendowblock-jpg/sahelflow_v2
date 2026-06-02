@@ -11,8 +11,9 @@ import {
   Users,
   DollarSign,
   ArrowUpRight,
+  Wallet,
 } from "lucide-react";
-import { getDashboardStats, getOrders } from "@/lib/data/service";
+import { getDashboardStats, getOrders, getAnalyticsData } from "@/lib/data/service";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/dashboard/ToastProvider";
@@ -25,7 +26,9 @@ import {
   StaggerItem,
 } from "@/components/ui/motion";
 import { AnimatedStatCard } from "@/components/ui/AnimatedStatCard";
+import { ChartContainer, RevenueChart } from "@/components/ui/charts";
 import type { DashboardStats } from "@/types/database";
+import { getWilayaName } from "@/lib/data/wilayas";
 
 type DashboardData = DashboardStats;
 
@@ -40,21 +43,26 @@ interface RecentOrder {
 }
 
 export default function DashboardPage() {
-  const { t, formatCurrency } = useI18n();
+  const { t, formatCurrency, locale } = useI18n();
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardData | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [revenueByDay, setRevenueByDay] = useState<{ day: string; revenue: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [dashStats, ordersResult] = await Promise.all([
+      const [dashStats, ordersResult, analyticsResult] = await Promise.all([
         getDashboardStats(),
         getOrders({ limit: 5 }),
+        getAnalyticsData("30d").catch(() => null),
       ]);
       setStats(dashStats as DashboardData);
       setRecentOrders(ordersResult.data as RecentOrder[]);
+      if (analyticsResult && analyticsResult.revenueByDay) {
+        setRevenueByDay(analyticsResult.revenueByDay);
+      }
     } catch {
       toast({
         type: "error",
@@ -168,6 +176,11 @@ export default function DashboardPage() {
     },
     { label: t.dashboard.customers, icon: Users, href: "/dashboard/customers" },
     {
+      label: t.nav.accounting,
+      icon: Wallet,
+      href: "/dashboard/accounting",
+    },
+    {
       label: t.dashboard.revenue,
       icon: TrendingUp,
       href: "/dashboard/analytics",
@@ -235,38 +248,62 @@ export default function DashboardPage() {
         ))}
       </StaggerContainer>
 
-      {/* Cash Flow */}
-      <div>
-        <h2 className="sf-section-title">{t.dashboard.cashFlow}</h2>
-        <div className="sf-grid-4">
-          {cashFlowItems.map((item) => (
-            <div className="sf-card sf-cashflow-card" key={item.label}>
-              <p className="sf-cashflow-label">{item.label}</p>
-              <p className={`sf-cashflow-value ${item.colorClass}`}>
-                {formatCurrency(item.value)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Interactive Sales Chart & Side Highlights */}
+      <div className="sf-grid-2 sf-align-start sf-gap-xl">
+        {/* Left Column: Revenue Trend Chart & Cash Flow Summary */}
+        <div className="sf-flex-col sf-gap-lg sf-flex-1">
+          <ChartContainer
+            title={t.analytics.revenueLast7Days ? t.analytics.revenueLast7Days.replace("7", "30") : "Revenue Trend (30 Days)"}
+            empty={revenueByDay.length === 0}
+            emptyTitle={t.analytics.noDataYet}
+            emptyDescription={t.analytics.noDataDesc}
+            height={320}
+          >
+            <RevenueChart data={revenueByDay} />
+          </ChartContainer>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="sf-section-title">{t.dashboard.quickActions}</h2>
-        <div className="sf-card sf-action-list">
-          {quickActions.map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="sf-action-row"
-            >
-              <div className="sf-action-icon sf-action-icon--brand">
-                <action.icon size={15} strokeWidth={1.75} />
-              </div>
-              <span className="sf-action-label">{action.label}</span>
-              <ArrowUpRight size={14} className="sf-action-arrow" />
-            </Link>
-          ))}
+          {/* Cash Flow */}
+          <div className="sf-card sf-card-padded">
+            <h2 className="sf-section-title sf-section-title--flush sf-mb-md">{t.dashboard.cashFlow}</h2>
+            <div className="sf-grid-2 sf-gap-md">
+              {cashFlowItems.map((item) => (
+                <div className="sf-card sf-cashflow-card sf-card-interactive sf-p-sm" key={item.label}>
+                  <p className="sf-cashflow-label">{item.label}</p>
+                  <p className={`sf-cashflow-value ${item.colorClass}`} style={{ fontSize: "1.15rem", marginTop: "4px" }}>
+                    {formatCurrency(item.value)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Quick Actions */}
+        <div className="sf-flex-col sf-gap-lg">
+          <div className="sf-card sf-card-padded">
+            <h2 className="sf-section-title sf-section-title--flush sf-mb-md">{t.dashboard.quickActions}</h2>
+            <div className="sf-action-list" style={{ border: "none", boxShadow: "none", background: "transparent", padding: 0 }}>
+              {quickActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="sf-action-row sf-card-interactive sf-animate-fade"
+                  style={{
+                    background: "var(--sf-bg-surface)",
+                    borderRadius: "var(--sf-radius-lg)",
+                    marginBottom: "10px",
+                    padding: "12px 16px",
+                  }}
+                >
+                  <div className="sf-action-icon sf-action-icon--brand" style={{ background: "var(--sf-accent-muted)", color: "var(--sf-accent-primary)" }}>
+                    <action.icon size={16} strokeWidth={2} />
+                  </div>
+                  <span className="sf-action-label" style={{ color: "var(--sf-text-primary)", fontWeight: 510 }}>{action.label}</span>
+                  <ArrowUpRight size={14} className="sf-action-arrow" style={{ color: "var(--sf-text-tertiary)" }} />
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -316,7 +353,7 @@ export default function DashboardPage() {
                         {order.customer?.name || "—"}
                       </td>
                       <td className="sf-hide-mobile sf-text-tertiary">
-                        {order.wilaya || "—"}
+                        {order.wilaya ? getWilayaName(order.wilaya, locale) : "—"}
                       </td>
                       <td>
                         <span

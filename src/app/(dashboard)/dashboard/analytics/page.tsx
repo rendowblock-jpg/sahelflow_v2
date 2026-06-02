@@ -21,7 +21,6 @@ import {
 	RevenueChart,
 	StatusDonut,
 	WilayaBarChart,
-	ProductBarChart,
 } from "@/components/ui/charts";
 import {
 	PageTransition,
@@ -379,15 +378,73 @@ export default function AnalyticsPage() {
 					<WilayaBarChart data={topWilayas} />
 				</ChartContainer>
 
-				<ChartContainer
-					title={t.analytics.topProductsByOrders}
-					empty={topProducts.length === 0}
-					emptyTitle={t.analytics.noProductData}
-					emptyDescription={t.analytics.noDataDesc}
-					height={320}
+				<div
+					className="sf-card sf-card-padded sf-flex-col sf-gap-md"
+					style={{
+						flex: 1,
+						minHeight: 320,
+						background: "var(--sf-bg-panel)",
+						border: "1px solid var(--sf-border-subtle)",
+					}}
 				>
-					<ProductBarChart data={topProducts} soldLabel={t.analytics.sold} />
-				</ChartContainer>
+					<h3 className="sf-section-title sf-section-title--flush">
+						{t.analytics.topProductsByOrders}
+					</h3>
+					{topProducts.length === 0 ? (
+						<div className="sf-empty sf-p-xl">
+							<p className="sf-empty-title">{t.analytics.noProductData}</p>
+							<p className="sf-empty-desc">{t.analytics.noDataDesc}</p>
+						</div>
+					) : (
+						<div className="sf-flex-col sf-gap-lg sf-mt-sm">
+							{topProducts.slice(0, 5).map((p, idx) => {
+								const maxQty = Math.max(
+									...topProducts.map((tp) => tp.quantity),
+									1,
+								);
+								const pct = Math.round((p.quantity / maxQty) * 100);
+								return (
+									<div key={p.name} className="sf-flex-col sf-gap-xs">
+										<div className="sf-flex-between">
+											<div className="sf-flex sf-gap-sm sf-items-center">
+												<span
+													className="sf-text-xs sf-font-semibold sf-text-tertiary"
+													style={{ width: 18 }}
+												>
+													#{idx + 1}
+												</span>
+												<span className="sf-text-sm sf-font-medium sf-text-primary">
+													{p.name}
+												</span>
+											</div>
+											<span
+												className="sf-text-sm sf-font-bold sf-text-brand sf-text-tabular"
+												style={{ color: "var(--sf-accent-primary)" }}
+											>
+												{p.quantity} {t.analytics.sold}
+											</span>
+										</div>
+										<div
+											className="sf-profit-bar"
+											style={{ height: 6, background: "var(--sf-bg-elevated)" }}
+										>
+											<div
+												className="sf-profit-bar-fill"
+												style={{
+													width: `${pct}%`,
+													background:
+														"linear-gradient(to right, var(--sf-accent-solid), var(--sf-accent-primary))",
+													borderRadius: "var(--sf-radius-full)",
+													height: "100%",
+												}}
+											/>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					)}
+				</div>
 			</div>
 
 			{/* Wilaya Table */}

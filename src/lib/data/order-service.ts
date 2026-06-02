@@ -5,7 +5,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase-helpers";
-import { getCurrentUser } from "./auth-service";
+import { getCurrentUser, getActiveSellerId } from "./auth-service";
 import { executeRecipes } from "@/lib/automation/executor";
 import type { Order, OrderStatus } from "@/types/database";
 
@@ -99,11 +99,10 @@ export async function createOrder(order: {
   address?: string;
   notes?: string;
 }) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  const sellerId = await getActiveSellerId();
   const { data, error } = await getSupabase()
     .from("orders")
-    .insert({ ...order, seller_id: user.id })
+    .insert({ ...order, seller_id: sellerId })
     .select("*, customer:customers(id, name, phone, wilaya, commune)")
     .single();
   if (error) throw error;

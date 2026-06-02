@@ -8,7 +8,7 @@ export interface Order {
 	commune?: string;
 	address?: string;
 	notes?: string;
-	items?: { product_name: string; quantity: number; unit_price: number }[];
+	items?: { product_name?: string; name?: string; quantity: number; unit_price: number }[];
 	customer?: { name?: string; phone?: string } | null;
 	customer_id?: string;
 	created_at: string;

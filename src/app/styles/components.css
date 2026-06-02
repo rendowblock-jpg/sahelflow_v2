@@ -1,0 +1,421 @@
+/* ═══════════════════════════════════════════════
+   COMPONENT CLASSES
+   ═══════════════════════════════════════════════ */
+
+/* ── Cards ── */
+.sf-card {
+	background: var(--color-surface-secondary);
+	border: none;
+	border-radius: var(--radius-lg);
+	padding: var(--space-5);
+	box-shadow: var(--shadow-card);
+	transition: box-shadow 0.2s ease;
+	position: relative;
+}
+/* No decorative ::before overlay — clean card surfaces */
+.sf-card-hover:hover {
+	box-shadow: var(--shadow-md);
+	/* No transform. No gradient. Cards don't fly. */
+}
+
+/* ── Buttons ── */
+.sf-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 18px;
+	border-radius: var(--radius-md);
+	font-size: 13px;
+	font-weight: 500; /* Vercel/Linear: 500, not 600. Confidence, not shout. */
+	letter-spacing: 0.01em;
+	font-family: inherit;
+	cursor: pointer;
+	border: none;
+	transition:
+		background 0.15s ease,
+		box-shadow 0.15s ease,
+		opacity 0.15s ease;
+	white-space: nowrap;
+	min-height: 40px;
+}
+.sf-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+/* PRIMARY — flat solid color. No gradients. Ever. (Stripe × Linear × Vercel × ALL) */
+.sf-btn-primary {
+	background: var(--color-brand-500);
+	color: white;
+	box-shadow: 0 0 0 1px rgba(59, 158, 255, 0.2);
+}
+.sf-btn-primary:hover:not(:disabled) {
+	background: var(--color-brand-600);
+	box-shadow: 0 0 0 1px rgba(59, 158, 255, 0.3);
+}
+.sf-btn-primary:active:not(:disabled) {
+	opacity: 0.9;
+}
+/* GHOST — ring-border (Vercel shadow-as-border) */
+.sf-btn-ghost {
+	background: transparent;
+	color: var(--color-content-secondary);
+	box-shadow: 0 0 0 1px var(--color-line-primary);
+}
+.sf-btn-ghost:hover:not(:disabled) {
+	background: var(--color-surface-hover);
+	color: var(--color-content-primary);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+.sf-btn-danger {
+	background: rgba(239, 68, 68, 0.08);
+	color: var(--color-danger-400);
+	box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18);
+}
+.sf-btn-danger:hover:not(:disabled) {
+	background: rgba(239, 68, 68, 0.14);
+}
+.sf-modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	animation: sf-fade-in 0.15s ease-out;
+}
+.sf-modal-confirm {
+	background: var(--color-surface-secondary);
+	border-radius: var(--radius-lg, 12px);
+	padding: var(--space-6, 24px);
+	max-width: 400px;
+	width: 90%;
+	box-shadow: var(--shadow-elevated, 0 8px 30px rgba(0, 0, 0, 0.12));
+}
+.sf-modal-confirm h3 {
+	margin: 0 0 8px;
+}
+.sf-modal-confirm p {
+	color: var(--color-content-secondary);
+	margin: 4px 0;
+}
+.sf-modal-actions {
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	margin-top: 20px;
+}
+.sf-modal-actions .sf-btn-danger {
+	background: var(--color-danger-500, #ef4444);
+	color: #fff;
+	border: none;
+	padding: 8px 16px;
+	border-radius: var(--radius-md, 8px);
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 13px;
+}
+.sf-modal-actions .sf-btn-danger:hover {
+	opacity: 0.9;
+}
+.sf-btn-success {
+	background: rgba(16, 185, 129, 0.08);
+	color: var(--color-accent-400);
+	box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.18);
+}
+
+/* ── Inputs ── */
+.sf-input {
+	width: 100%;
+	padding: 10px 14px;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--color-line-primary);
+	background: var(--color-surface-primary);
+	color: var(--color-content-primary);
+	font-size: 14px;
+	font-family: inherit;
+	outline: none;
+	transition:
+		border-color 0.2s ease,
+		box-shadow 0.2s ease;
+	min-height: 42px;
+}
+.sf-input:focus {
+	border-color: var(--color-brand-500);
+	box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.12);
+}
+.sf-input::placeholder {
+	color: var(--color-content-tertiary);
+}
+.sf-input:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.sf-textarea {
+	width: 100%;
+	padding: 10px 14px;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--color-line-primary);
+	background: var(--color-surface-primary);
+	color: var(--color-content-primary);
+	font-size: 14px;
+	font-family: inherit;
+	outline: none;
+	resize: vertical;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
+}
+.sf-textarea:focus {
+	border-color: var(--color-brand-500);
+	box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.12);
+}
+
+.sf-label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-content-secondary);
+	margin-bottom: 6px;
+}
+
+/* ── Badges ── */
+.sf-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 10px;
+	border-radius: 20px;
+	font-size: 11px;
+	font-weight: 600;
+	white-space: nowrap;
+	background: var(--color-surface-tertiary);
+	color: var(--color-content-secondary);
+}
+.sf-badge-brand {
+	background: rgba(59, 158, 255, 0.1);
+	color: var(--color-brand-500);
+}
+.sf-badge-success {
+	background: rgba(16, 185, 129, 0.1);
+	color: var(--color-accent-400);
+}
+.sf-badge-warning {
+	background: rgba(251, 191, 36, 0.1);
+	color: var(--color-warn-400);
+}
+.sf-badge-danger {
+	background: rgba(244, 63, 94, 0.1);
+	color: var(--color-danger-400);
+}
+
+/* ── Stat Cards ── */
+.sf-stat {
+	position: relative;
+	overflow: hidden;
+}
+.sf-stat::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	inset-inline-end: 0;
+	width: 100px;
+	height: 100%;
+	opacity: 0.04;
+	border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+.sf-stat-brand::after {
+	background: linear-gradient(135deg, var(--color-brand-400), transparent);
+}
+.sf-stat-success::after {
+	background: linear-gradient(135deg, var(--color-accent-400), transparent);
+}
+.sf-stat-warning::after {
+	background: linear-gradient(135deg, var(--color-warn-400), transparent);
+}
+.sf-stat-danger::after {
+	background: linear-gradient(135deg, var(--color-danger-400), transparent);
+}
+
+/* ── Tables ── */
+.sf-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+.sf-table th {
+	text-align: start;
+	padding: 12px 16px;
+	font-size: 11px;
+	font-weight: 500; /* Vercel: 500 not 600. Refined, not loud. */
+	color: var(--color-content-tertiary);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	border-bottom: 1px solid var(--color-line-primary);
+}
+.sf-table td {
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--color-line-primary);
+	/* Tabular numerals: numbers align in columns (Stripe × Vercel) */
+	font-feature-settings:
+		"cv01" 1,
+		"ss03" 1,
+		"tnum" 1;
+}
+.sf-table tr:last-child td {
+	border-bottom: none;
+}
+.sf-table tr:hover td {
+	background: var(--color-surface-hover);
+}
+
+/* ── Modals ── */
+.sf-modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: var(--color-surface-overlay);
+	backdrop-filter: blur(4px);
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	animation: sf-fade-in 0.2s ease;
+}
+.sf-modal {
+	background: var(--color-surface-secondary);
+	border: none;
+	border-radius: var(--radius-xl); /* 16px — refined, not 20px */
+	padding: 24px;
+	max-width: 560px;
+	width: calc(100% - 32px);
+	max-height: 90vh;
+	overflow: auto;
+	box-shadow: var(--shadow-elevated);
+	animation: sf-scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Brand Utils ── */
+/* .sf-gradient-brand — flat brand color (gradient BGs removed per design system) */
+.sf-gradient-brand {
+	background: var(
+		--color-brand-500
+	); /* flat — gradient backgrounds are AI slop */
+}
+/* Gradient TEXT is acceptable (Linear/Stripe use it on display text only) */
+.sf-gradient-text {
+	background: linear-gradient(
+		135deg,
+		var(--color-brand-400),
+		var(--color-brand-600)
+	);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* ── Toggle Switch ── */
+.sf-toggle {
+	position: relative;
+	width: 44px;
+	height: 24px;
+	border-radius: 12px;
+	background: var(--color-surface-tertiary);
+	border: 1px solid var(--color-line-primary);
+	cursor: pointer;
+	transition: background 0.3s ease;
+	flex-shrink: 0;
+}
+.sf-toggle.sf-toggle-active {
+	background: var(--color-brand-500);
+	border-color: var(--color-brand-500);
+}
+.sf-toggle::after {
+	content: "";
+	position: absolute;
+	top: 2px;
+	inset-inline-start: 2px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: white;
+	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.sf-toggle.sf-toggle-active::after {
+	transform: translateX(20px);
+}
+[dir="rtl"] .sf-toggle.sf-toggle-active::after {
+	transform: translateX(-20px);
+}
+
+/* ── Section Header ── */
+.sf-section-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--color-content-tertiary);
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+}
+
+/* Section title — refined (Linear: 13px/600, Vercel: subtle tracking) */
+.sf-section-title {
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--color-content-primary);
+	margin: 0 0 12px 0;
+}
+
+/* ── Skeleton Loading ── */
+.sf-skeleton {
+	background: linear-gradient(
+		90deg,
+		var(--color-surface-tertiary) 0%,
+		var(--color-surface-hover) 40%,
+		var(--color-surface-tertiary) 100%
+	);
+	background-size: 200% 100%;
+	animation: sf-shimmer 1.5s ease-in-out infinite;
+	border-radius: var(--radius-sm);
+}
+
+/* ── Progress Bar ── */
+.sf-progress {
+	height: 6px;
+	background: var(--color-surface-tertiary);
+	border-radius: 3px;
+	overflow: hidden;
+}
+.sf-progress-bar {
+	height: 100%;
+	border-radius: 3px;
+	transition: width 0.5s ease;
+}
+
+/* ── Tooltip ── */
+.sf-tooltip {
+	position: relative;
+}
+.sf-tooltip::after {
+	content: attr(data-tooltip);
+	position: absolute;
+	bottom: calc(100% + 8px);
+	inset-inline-start: 50%;
+	transform: translateX(-50%);
+	padding: 6px 10px;
+	border-radius: var(--radius-sm);
+	background: var(--color-content-primary);
+	color: var(--color-content-inverse);
+	font-size: 11px;
+	font-weight: 500;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s;
+}
+.sf-tooltip:hover::after {
+	opacity: 1;
+}
+

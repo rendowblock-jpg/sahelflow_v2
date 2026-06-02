@@ -171,11 +171,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Update customer order count (async, best effort)
-  await supabase.rpc("atomic_update_customer_stats", {
-    p_customer_id: customerId,
-  });
-
   return NextResponse.json({
     success: true,
     orderId: order.id,

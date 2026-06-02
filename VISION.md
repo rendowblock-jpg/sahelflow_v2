@@ -97,13 +97,13 @@ The AI never sends messages to customers directly. It drafts suggestions. The se
 
 Every client deployment should run on free tiers as long as possible. Supabase free tier (500MB, 50K monthly users), Vercel free tier (100GB bandwidth), shared Evolution API instance, 5 Groq API keys (free tier). This keeps our costs near zero per client during early growth.
 
-### 5. "No Complexity Theater"
+### 5. "Structured but Lean Operations"
 
-We don't build features just because "mature SaaS platforms have them." No complex permissions system. No multi-user roles. No elaborate settings pages. Algerian sellers are one-person operations or small teams. Keep it simple.
+- Keep administrative overhead minimal. While we support structured roles (Owner, Admin, Confirmer, Packer, Viewer) with custom RLS protection, we keep permissions and workflows practical and focused on the core COD roles. No unnecessary enterprise bloat.
 
 ### 6. "Understand Darija, Display Arabic"
 
-Our AI understands Algerian Darija, Franco-Arab, French, Arabic, and English — because that's how customers actually write. But the system **never displays** dialect. All UI, notifications, and AI responses are in standard Arabic (فصحة) by default, or French/English if selected. Professional output from informal input.
+- Our AI understands Algerian Darija, Franco-Arab, French, Arabic, and English — because that's how customers actually write. But the system **never displays** dialect. All UI, notifications, and AI responses are in standard Arabic (فصحة) by default, or French/English if selected. Professional output from informal input.
 
 ---
 
@@ -143,12 +143,18 @@ Revenue also from:
 
 ## Where It's Going
 
-### Near-Term (Current — Phase 1)
+### Near-Term (Current — Production Hardened)
 
 - ✅ Dashboard, orders, customers, products, analytics
 - ✅ AI WhatsApp extraction + draft orders
 - ✅ Confirmation workflow with call scripts
-- ✅ Shopify + WooCommerce catalog sync
+- ✅ Shopify + WooCommerce + YouCan catalog sync and webhook ingestion
+- ✅ All 3 delivery adapters (Yalidine, Maystro, ZR Express) fully integrated and verified
+- ✅ Multi-user team roles & custom RLS permissions (Owner, Admin, Confirmer, Packer, Viewer)
+- ✅ Ledger-based accounting: profit and loss, variant unit product costs, expense tracking
+- ✅ Complete returns and exchanges tracker with history timeline logs
+- ✅ Server-side persisted AI chat sessions and messages
+- ✅ Daily reports automated summary cron (WhatsApp + Database stats)
 - ✅ Persistent notifications
 - ✅ Per-model AI keys with fallback
 - ✅ Arabic (فصحة) default, pure Arabic display
@@ -157,8 +163,7 @@ Revenue also from:
 
 - **Facebook/Instagram integration** — Ad-to-order tracking. UTM-tagged links. ROI per ad campaign.
 - **TikTok pixel** — Track conversions from TikTok Shop content.
-- **ZR Express direct API** — When stable docs are available, upgrade from Procolis adapter.
-- **Multi-user access** — Allow sellers to add team members (confirmer, packer, delivery coordinator).
+- **ZR Express direct API** — Upgrade from Procolis adapter when official direct API is stable.
 - **Mobile app** — React Native app for order management on the go.
 
 ### Long-Term

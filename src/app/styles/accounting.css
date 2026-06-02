@@ -1,0 +1,355 @@
+/* ═══════════════════════════════════════════════
+   PHASE 5: ACCOUNTING & EXPENSE STYLING
+   ═══════════════════════════════════════════════ */
+
+/* --- Expense Category Badges --- */
+.sf-badge-expense-ads {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.sf-badge-expense-packaging {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.sf-badge-expense-delivery_fees {
+  background: rgba(236, 72, 153, 0.12);
+  color: #ec4899;
+}
+
+.sf-badge-expense-returns {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger-400);
+}
+
+.sf-badge-expense-supplies {
+  background: rgba(6, 182, 212, 0.12);
+  color: #06b6d4;
+}
+
+.sf-badge-expense-salary {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-accent-400);
+}
+
+.sf-badge-expense-rent {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warn-400);
+}
+
+.sf-badge-expense-other {
+  background: rgba(156, 163, 175, 0.12);
+  color: var(--color-content-tertiary);
+}
+
+/* --- P&L Dashboard Layout --- */
+.sf-accounting-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+/* --- Premium P&L Metrics Grid --- */
+.sf-pnl-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  .sf-pnl-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .sf-pnl-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Premium P&L Summary Cards --- */
+.sf-pnl-card {
+  position: relative;
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-line-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: all var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+}
+
+.sf-pnl-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-line-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.sf-pnl-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: transparent;
+}
+
+.sf-pnl-card.is-revenue::before {
+  background: linear-gradient(90deg, #6366f1, #3b82f6);
+}
+
+.sf-pnl-card.is-expenses::before {
+  background: linear-gradient(90deg, #ec4899, #ef4444);
+}
+
+.sf-pnl-card.is-profit::before {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.sf-pnl-card-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-content-tertiary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sf-pnl-card-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-content-primary);
+  letter-spacing: -0.5px;
+  margin-block: var(--space-1);
+}
+
+.sf-pnl-card-meta {
+  font-size: 12px;
+  color: var(--color-content-tertiary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sf-pnl-card-trend {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sf-pnl-card-trend.is-up {
+  color: var(--color-accent-400);
+}
+
+.sf-pnl-card-trend.is-down {
+  color: var(--color-danger-400);
+}
+
+/* --- Profitability Charts & Tables --- */
+.sf-accounting-panels {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  .sf-accounting-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sf-panel {
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-line-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sf-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-content-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sf-panel-subtitle {
+  font-size: 12px;
+  color: var(--color-content-tertiary);
+  margin-top: -8px;
+}
+
+/* --- Expenses & Products lists --- */
+.sf-expense-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--color-surface-tertiary);
+  border: 1px solid var(--color-line-secondary);
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast) ease;
+}
+
+.sf-expense-row:hover {
+  background: var(--color-surface-hover);
+}
+
+.sf-expense-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sf-expense-description {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-content-primary);
+}
+
+.sf-expense-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 12px;
+  color: var(--color-content-tertiary);
+}
+
+.sf-expense-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-content-primary);
+}
+
+/* --- Product Profitability row --- */
+.sf-profitability-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-line-secondary);
+  align-items: center;
+}
+
+.sf-profitability-row:last-child {
+  border-bottom: none;
+}
+
+.sf-profitability-row.is-header {
+  font-weight: 600;
+  color: var(--color-content-tertiary);
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-line-primary);
+  background: transparent;
+}
+
+.sf-profitability-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sf-profitability-stat {
+  font-size: 13px;
+  color: var(--color-content-secondary);
+  text-align: end;
+}
+
+.sf-profitability-profit {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent-400);
+  text-align: end;
+}
+
+.sf-profitability-rate {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-content-secondary);
+  background: var(--color-surface-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  width: fit-content;
+  margin-inline-start: auto;
+}
+
+.sf-profitability-rate.is-high {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-accent-400);
+}
+
+.sf-profitability-rate.is-medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--color-warn-400);
+}
+
+.sf-profitability-rate.is-low {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger-400);
+}
+
+/* --- Interactive Elements --- */
+.sf-period-filter-bar {
+  display: flex;
+  background: var(--color-surface-tertiary);
+  border: 1px solid var(--color-line-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  width: fit-content;
+}
+
+.sf-period-btn {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-content-tertiary);
+  padding: 6px var(--space-4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.sf-period-btn:hover {
+  color: var(--color-content-primary);
+}
+
+.sf-period-btn.is-active {
+  background: var(--color-surface-secondary);
+  color: var(--color-content-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Mini Receipt Preview --- */
+.sf-receipt-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-tertiary);
+  border: 1px dashed var(--color-line-primary);
+  color: var(--color-content-tertiary);
+  transition: all var(--duration-fast) ease;
+  cursor: pointer;
+}
+
+.sf-receipt-preview:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-content-primary);
+}

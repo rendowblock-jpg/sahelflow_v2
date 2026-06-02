@@ -11,14 +11,14 @@ const createShipmentSchema = z.object({
 const SKELETON_PROVIDERS = new Set<string>([])
 
 export const POST = withAuthAndRateLimit(
-  async (req, { user, supabase, body }) => {
+  async (req, { user: _user, sellerId, supabase, body }) => {
     const { orderId, provider } = body!
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('id, order_number, status, items, total_price, wilaya, commune, address, customer:customers(name, phone, wilaya, commune, address)')
       .eq('id', orderId)
-      .eq('seller_id', user.id)
+      .eq('seller_id', sellerId)
       .single()
 
     if (orderError || !order) {
@@ -49,7 +49,7 @@ export const POST = withAuthAndRateLimit(
     const { data: integration } = await supabase
       .from('integrations')
       .select('credentials')
-      .eq('seller_id', user.id)
+      .eq('seller_id', sellerId)
       .eq('platform', provider)
       .eq('is_active', true)
       .single()
@@ -96,7 +96,7 @@ export const POST = withAuthAndRateLimit(
 
     const { error: deliveryError } = await supabase.from('deliveries').insert({
       order_id: order.id,
-      seller_id: user.id,
+      seller_id: sellerId,
       provider,
       tracking_number: result.trackingId,
       status: 'created',

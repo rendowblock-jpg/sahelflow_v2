@@ -23,6 +23,7 @@ import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
 import { useToast } from "@/components/dashboard/ToastProvider";
 import { PageTransition } from "@/components/ui/motion";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import ProfileTab from "./_tabs/ProfileTab";
 import ChannelsTab from "./_tabs/ChannelsTab";
@@ -62,6 +63,7 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const { isMobile } = useLayout();
   const { toast } = useToast();
+  const { role } = usePermissions();
   const [activeTab, setActiveTab] = useState<string>("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -554,6 +556,7 @@ export default function SettingsPage() {
               wiping={wiping}
               onPasswordChange={handlePasswordChange}
               onWipeClick={() => setShowWipeConfirm(true)}
+              role={role}
             />
           )}
           {activeTab === "integrations" && <IntegrationsTab />}

@@ -13,6 +13,7 @@ import {
 	MapPin,
 	Clock,
 	PackageCheck,
+	RotateCcw,
 } from "lucide-react";
 import {
 	getOrders,
@@ -24,13 +25,16 @@ import {
 	getWhatsAppTemplate,
 	getProducts,
 } from "@/lib/data/service";
+import ReturnModal from "@/components/returns/ReturnModal";
 import { exportOrdersCSV } from "@/lib/data/export";
 import { createClient } from "@/lib/supabase/client";
 import { WILAYA_NAMES } from "@/lib/data/wilayas";
+import OrderSlideOut from "@/components/dashboard/orders/OrderSlideOut";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
 import { useToast } from "@/components/dashboard/ToastProvider";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { usePermissions } from "@/hooks/usePermissions";
 import dynamic from "next/dynamic";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/motion";
@@ -60,6 +64,7 @@ export default function OrdersPage() {
 	const { t, formatCurrency } = useI18n();
 	const { isMobile } = useLayout();
 	const { toast } = useToast();
+	const { hasPermission, canDeleteData, sellerId: activeSellerId } = usePermissions();
 	const PAGE_SIZE = 50;
 	const [orders, setOrders] = useState<Order[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -95,13 +100,28 @@ export default function OrdersPage() {
 		setSelectedOrder(null),
 	);
 	const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
+	const [showReturnModal, setShowReturnModal] = useState<Order | null>(null);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
 		null,
 	);
 	const [deleting, setDeleting] = useState(false);
 
-	const [form, setForm] = useState({
+	const [form, setForm] = useState<{
+		customerName: string;
+		phone: string;
+		wilaya: string;
+		commune: string;
+		address: string;
+		items: Array<{
+			product_name: string;
+			quantity: number;
+			unit_price: number;
+			product_id?: string;
+		}>;
+		deliveryCost: number;
+		notes: string;
+	}>({
 		customerName: "",
 		phone: "",
 		wilaya: "",
@@ -142,11 +162,13 @@ export default function OrdersPage() {
 	}
 
 	const loadStats = useCallback(async () => {
+		if (!activeSellerId) return;
 		try {
 			const supabase = createClient();
 			const { data } = await supabase
 				.from("orders")
 				.select("status, total_price")
+				.eq("seller_id", activeSellerId)
 				.is("deleted_at", null);
 			if (data) {
 				const stats: OrderStats = {
@@ -173,7 +195,7 @@ export default function OrdersPage() {
 		} catch {
 			/* stats are supplementary */
 		}
-	}, []);
+	}, [activeSellerId]);
 
 	const loadData = useCallback(async () => {
 		try {
@@ -212,12 +234,18 @@ export default function OrdersPage() {
 	};
 
 	useEffect(() => {
+		if (!activeSellerId) return;
 		const supabase = createClient();
 		const channel = supabase
 			.channel("orders-realtime")
 			.on(
 				"postgres_changes",
-				{ event: "*", schema: "public", table: "orders" },
+				{
+					event: "*",
+					schema: "public",
+					table: "orders",
+					filter: `seller_id=eq.${activeSellerId}`,
+				},
 				() => {
 					loadData();
 				},
@@ -226,7 +254,7 @@ export default function OrdersPage() {
 		return () => {
 			supabase.removeChannel(channel);
 		};
-	}, [loadData]);
+	}, [loadData, activeSellerId]);
 
 	const statusColor: Record<string, string> = {
 		draft: "sf-badge-draft",
@@ -307,11 +335,16 @@ export default function OrdersPage() {
 			address: (data.address as string) || "",
 			items:
 				items.length > 0
-					? items.map((i) => ({
-							product_name: (i.product_name as string) || "",
-							quantity: (i.quantity as number) || 1,
-							unit_price: 0,
-						}))
+					? items.map((i) => {
+							const name = (i.product_name as string) || "";
+							const matched = products.find((p) => p.name === name);
+							return {
+								product_name: name,
+								quantity: (i.quantity as number) || 1,
+								unit_price: matched ? matched.price : 0,
+								product_id: matched ? matched.id : undefined,
+							};
+					  })
 					: [{ product_name: "", quantity: 1, unit_price: 0 }],
 			deliveryCost: 0,
 			notes: "",
@@ -413,18 +446,22 @@ export default function OrdersPage() {
 					>
 						<Download size={16} />
 					</button>
-					<button
-						className="sf-btn sf-btn-ghost"
-						onClick={() => setShowImport(true)}
-					>
-						<Sparkles size={16} /> {t.orders.importFromWhatsapp}
-					</button>
-					<button
-						className="sf-btn sf-btn-primary"
-						onClick={() => setShowCreate(true)}
-					>
-						<Plus size={16} /> {t.orders.newOrder}
-					</button>
+					{hasPermission("orders:manage") && (
+						<>
+							<button
+								className="sf-btn sf-btn-ghost"
+								onClick={() => setShowImport(true)}
+							>
+								<Sparkles size={16} /> {t.orders.importFromWhatsapp}
+							</button>
+							<button
+								className="sf-btn sf-btn-primary"
+								onClick={() => setShowCreate(true)}
+							>
+								<Plus size={16} /> {t.orders.newOrder}
+							</button>
+						</>
+					)}
 				</div>
 			</div>
 
@@ -466,72 +503,91 @@ export default function OrdersPage() {
 						{selectedIds.size} {t.orders.selected}
 					</span>
 					<div className="sf-orders-bulkbar__actions">
-						<button
-							className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--soft"
-							onClick={async () => {
-								for (const id of selectedIds) {
-									const order = orders.find((o) => o.id === id);
-									if (order && order.status === "pending")
-										await handleStatusUpdate(id, "confirmed");
-								}
-								setSelectedIds(new Set());
-								toast({
-									type: "success",
-									title: `${selectedIds.size} ${t.orders.bulkConfirmed}`,
-								});
-							}}
-						>
-							{t.orders.confirmSelected}
-						</button>
-						<button
-							className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--soft"
-							onClick={async () => {
-								for (const id of selectedIds) {
-									const order = orders.find((o) => o.id === id);
-									if (order && order.status === "confirmed")
-										await handleStatusUpdate(id, "shipped");
-								}
-								setSelectedIds(new Set());
-								toast({
-									type: "success",
-									title: `${selectedIds.size} ${t.orders.bulkShipped}`,
-								});
-							}}
-						>
-							{t.orders.shipSelected}
-						</button>
-						<button
-							className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--muted"
-							onClick={async () => {
-								for (const id of selectedIds)
-									await handleStatusUpdate(id, "cancelled");
-								setSelectedIds(new Set());
-								toast({
-									type: "success",
-									title: `${selectedIds.size} ${t.orders.bulkCancelled}`,
-								});
-							}}
-						>
-							{t.orders.cancelSelected}
-						</button>
-						<button
-							className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--danger"
-							onClick={async () => {
-								try {
-									for (const id of selectedIds) await deleteOrder(id);
+						{hasPermission("orders:confirm") && (
+							<button
+								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--soft"
+								onClick={async () => {
+                  const ids = Array.from(selectedIds);
+                  const results = await Promise.allSettled(
+                    ids.map(async (id) => {
+                      const order = orders.find((o) => o.id === id);
+                      if (order && order.status === "pending")
+                        await handleStatusUpdate(id, "confirmed");
+                    })
+                  );
+                  const succeeded = results.filter((r) => r.status === "fulfilled").length;
+                  const failed = results.filter((r) => r.status === "rejected").length;
+                  setSelectedIds(new Set());
+                  if (failed === 0) {
+                    toast({ type: "success", title: succeeded + " " + t.orders.bulkConfirmed });
+                  } else {
+                    toast({ type: "warning", title: succeeded + " succeeded, " + failed + " failed" });
+                  }
+                }}
+							>
+								{t.orders.confirmSelected}
+							</button>
+						)}
+						{hasPermission("orders:manage") && (
+							<button
+								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--soft"
+								onClick={async () => {
+                  const ids = Array.from(selectedIds);
+                  const results = await Promise.allSettled(
+                    ids.map(async (id) => {
+                      const order = orders.find((o) => o.id === id);
+                      if (order && order.status === "confirmed")
+                        await handleStatusUpdate(id, "shipped");
+                    })
+                  );
+                  const succeeded = results.filter((r) => r.status === "fulfilled").length;
+                  const failed = results.filter((r) => r.status === "rejected").length;
+                  setSelectedIds(new Set());
+                  toast({
+										type: "success",
+										title: `${selectedIds.size} ${t.orders.bulkShipped}`,
+									});
+								}}
+							>
+								{t.orders.shipSelected}
+							</button>
+						)}
+						{hasPermission("orders:manage") && (
+							<button
+								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--muted"
+								onClick={async () => {
+									for (const id of selectedIds)
+										await handleStatusUpdate(id, "cancelled");
 									setSelectedIds(new Set());
-									loadData();
 									toast({
 										type: "success",
-										title: `${selectedIds.size} ${t.orders.orderDeleted}`,
+										title: `${selectedIds.size} ${t.orders.bulkCancelled}`,
 									});
-								} catch (e) {
-									toast({ type: "error", title: (e as Error).message });
-								}
-							}}
-						>
-							{t.common.delete}
-						</button>
+								}}
+							>
+								{t.orders.cancelSelected}
+							</button>
+						)}
+						{canDeleteData && (
+							<button
+								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--danger"
+								onClick={async () => {
+									try {
+										for (const id of selectedIds) await deleteOrder(id);
+										setSelectedIds(new Set());
+										loadData();
+										toast({
+											type: "success",
+											title: `${selectedIds.size} ${t.orders.orderDeleted}`,
+										});
+									} catch (e) {
+										toast({ type: "error", title: (e as Error).message });
+									}
+								}}
+							>
+								{t.common.delete}
+							</button>
+						)}
 						<button
 							className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--ghost"
 							onClick={() => setSelectedIds(new Set())}
@@ -553,12 +609,14 @@ export default function OrdersPage() {
 				<div className="sf-card sf-orders-empty">
 					<p className="sf-orders-empty__title">{t.orders.noOrdersTitle}</p>
 					<p className="sf-orders-empty__desc">{t.orders.noOrdersDesc}</p>
-					<button
-						className="sf-btn sf-btn-primary"
-						onClick={() => setShowCreate(true)}
-					>
-						<Plus size={16} /> {t.orders.createFirstOrder}
-					</button>
+					{hasPermission("orders:manage") && (
+						<button
+							className="sf-btn sf-btn-primary"
+							onClick={() => setShowCreate(true)}
+						>
+							<Plus size={16} /> {t.orders.createFirstOrder}
+						</button>
+					)}
 				</div>
 			)}
 
@@ -570,8 +628,10 @@ export default function OrdersPage() {
 					onSelectAll={handleSelectAll}
 					onSelectOne={handleSelectOne}
 					onOpenDetail={setSelectedOrder}
-					onStatusUpdate={handleStatusUpdate}
+					onStatusUpdate={(id: string, status: string) => handleStatusUpdate(id, status as import("@/types/database").OrderStatus)}
 					onOpenWhatsApp={openWhatsApp}
+					canManageOrders={hasPermission("orders:manage")}
+					canConfirmOrders={hasPermission("orders:confirm")}
 				/>
 			)}
 
@@ -582,6 +642,8 @@ export default function OrdersPage() {
 					onOpenDetail={setSelectedOrder}
 					onStatusUpdate={handleStatusUpdate}
 					onOpenWhatsApp={openWhatsApp}
+					canManageOrders={hasPermission("orders:manage")}
+					canConfirmOrders={hasPermission("orders:confirm")}
 				/>
 			)}
 
@@ -635,7 +697,7 @@ export default function OrdersPage() {
 										onChange={(e) => handleWilayaChange(e.target.value)}
 									>
 										<option value="">—</option>
-										{WILAYA_NAMES.map((w) => (
+										{WILAYA_NAMES.map((w: string) => (
 											<option key={w} value={w}>
 												{w}
 											</option>
@@ -680,6 +742,9 @@ export default function OrdersPage() {
 												);
 												if (matchedProduct) {
 													items[idx].unit_price = matchedProduct.price;
+													items[idx].product_id = matchedProduct.id;
+												} else {
+													delete items[idx].product_id;
 												}
 												setForm((f) => ({ ...f, items }));
 											}}
@@ -812,208 +877,21 @@ export default function OrdersPage() {
 
 			{/* Order Detail Slide-Out */}
 			{selectedOrder && (
-				<div
-					className="sf-slideout-backdrop"
-					onClick={() => setSelectedOrder(null)}
-					role="presentation"
-				>
-					<div
-						ref={orderPanelRef}
-						className="sf-slideout"
-						onClick={(e) => e.stopPropagation()}
-						role="dialog"
-						aria-modal="true"
-						aria-label={t.orders.orderDetails}
-					>
-						<div className="sf-slideout__header">
-							<div>
-								<h2 className="sf-orders-slideout__number">
-									{selectedOrder.order_number}
-								</h2>
-								<span
-									className={`sf-badge ${statusColor[selectedOrder.status] || ""}`}
-								>
-									{translateStatus(selectedOrder.status)}
-								</span>
-							</div>
-							<button
-								onClick={() => setSelectedOrder(null)}
-								aria-label={t.common.closePanel}
-								className="sf-orders-slideout__close"
-							>
-								<X size={20} />
-							</button>
-						</div>
-						<div className="sf-slideout__body">
-							<div className="sf-slideout__section">
-								<h4 className="sf-section-label">{t.orders.customerInfo}</h4>
-								<div className="sf-orders-slideout__stack">
-									<span className="sf-orders-slideout__customer-name">
-										{selectedOrder.customer?.name || "—"}
-									</span>
-									{selectedOrder.customer?.phone && (
-										<a
-											href={`tel:${selectedOrder.customer.phone}`}
-											className="sf-orders-slideout__contact-link"
-										>
-											<Phone size={14} /> {selectedOrder.customer.phone}
-										</a>
-									)}
-									{selectedOrder.wilaya && (
-										<span className="sf-orders-slideout__meta">
-											<MapPin size={14} /> {selectedOrder.wilaya}
-											{selectedOrder.commune
-												? `, ${selectedOrder.commune}`
-												: ""}
-										</span>
-									)}
-									{selectedOrder.address && (
-										<span className="sf-orders-slideout__address">
-											{selectedOrder.address}
-										</span>
-									)}
-								</div>
-							</div>
-							<div className="sf-slideout__section">
-								<h4 className="sf-section-label">{t.orders.items}</h4>
-								<div className="sf-orders-slideout__items">
-									{(selectedOrder.items || []).map((item, i) => (
-										<div key={i} className="sf-orders-slideout__row">
-											<span className="sf-orders-slideout__row-text">
-												{item.quantity}x {item.product_name}
-											</span>
-											<span className="sf-orders-slideout__row-value">
-												{formatCurrency(item.quantity * item.unit_price)}
-											</span>
-										</div>
-									))}
-									<div className="sf-orders-slideout__row sf-orders-slideout__row-muted">
-										<span>{t.orders.deliveryCost}</span>
-										<span>
-											{formatCurrency(Number(selectedOrder.delivery_cost || 0))}
-										</span>
-									</div>
-									<div className="sf-orders-slideout__total">
-										<span>{t.dashboard.total}</span>
-										<span className="sf-orders-slideout__total-value">
-											{formatCurrency(Number(selectedOrder.total_price))}
-										</span>
-									</div>
-								</div>
-							</div>
-							{selectedOrder.notes && (
-								<div className="sf-slideout__section">
-									<h4 className="sf-section-label">{t.orders.notes}</h4>
-									<p className="sf-orders-slideout__note">
-										{selectedOrder.notes}
-									</p>
-								</div>
-							)}
-							<div className="sf-slideout__section">
-								<h4 className="sf-section-label">{t.orders.timeline}</h4>
-								<div className="sf-orders-slideout__timeline">
-									<Clock size={14} /> {t.orders.created}:{" "}
-									{new Date(selectedOrder.created_at).toLocaleString()}
-								</div>
-							</div>
-							<div className="sf-slideout__section sf-orders-slideout__actions">
-								{selectedOrder.status === "draft" && (
-									<>
-										<button
-											className="sf-btn sf-btn-primary sf-orders-slideout__full-btn"
-											onClick={() => {
-												handleStatusUpdate(selectedOrder.id, "pending");
-												setSelectedOrder(null);
-											}}
-										>
-											<PackageCheck size={16} /> {t.orders.confirmOrder}
-										</button>
-										<button
-											className="sf-btn sf-btn-ghost sf-orders-slideout__full-btn"
-											onClick={() => {
-												handleStatusUpdate(selectedOrder.id, "cancelled");
-												setSelectedOrder(null);
-											}}
-										>
-											{t.orders.discard}
-										</button>
-									</>
-								)}
-								{selectedOrder.status === "pending" && (
-									<button
-										className="sf-btn sf-btn-success sf-orders-slideout__full-btn"
-										onClick={() => {
-											setConfirmOrder(selectedOrder);
-											setSelectedOrder(null);
-										}}
-									>
-										<Phone size={16} /> {t.confirmationFlow.title}
-									</button>
-								)}
-								{selectedOrder.status === "confirmed" && (
-									<button
-										className="sf-btn sf-btn-primary sf-orders-slideout__full-btn"
-										onClick={() => {
-											handleStatusUpdate(selectedOrder.id, "shipped");
-											setSelectedOrder(null);
-										}}
-									>
-										{t.orders.shipOrder}
-									</button>
-								)}
-								{selectedOrder.customer?.phone && (
-									<>
-										<button
-											className="sf-btn sf-btn-ghost sf-orders-slideout__wa-btn"
-											onClick={() => openWhatsApp(selectedOrder)}
-										>
-											<MessageCircle size={16} /> {t.orders.confirmViaWhatsapp}
-										</button>
-										<a
-											href={`tel:${selectedOrder.customer.phone}`}
-											className="sf-btn sf-btn-ghost sf-orders-slideout__call-btn"
-										>
-											<Phone size={16} /> {t.orders.callToConfirm}
-										</a>
-									</>
-								)}
-								{showDeleteConfirm === selectedOrder.id ? (
-									<div className="sf-orders-slideout__delete-confirm">
-										<p className="sf-orders-slideout__delete-text">
-											{t.orders.deleteOrderWarning}
-										</p>
-										<div className="sf-orders-slideout__delete-actions">
-											<button
-												className="sf-btn sf-btn-danger"
-												disabled={deleting}
-												onClick={() => handleDeleteOrder(selectedOrder.id)}
-											>
-												{deleting ? t.common.loading : t.common.delete}
-											</button>
-											<button
-												className="sf-btn sf-btn-ghost"
-												onClick={() => setShowDeleteConfirm(null)}
-											>
-												{t.common.cancel}
-											</button>
-										</div>
-									</div>
-								) : (
-									<button
-										className="sf-btn sf-btn-ghost sf-orders-slideout__delete-btn"
-										onClick={() => setShowDeleteConfirm(selectedOrder.id)}
-									>
-										<X size={16} /> {t.common.delete}
-									</button>
-								)}
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
+          <OrderSlideOut
+            order={selectedOrder}
+            showDeleteConfirm={showDeleteConfirm}
+            deleting={deleting}
+            onClose={() => setSelectedOrder(null)}
+            onStatusUpdate={(id: string, s: string) => handleStatusUpdate(id, s as "confirmed" | "pending" | "shipped" | "delivered" | "returned" | "refused" | "draft")}
+            onConfirmOrder={(order) => setConfirmOrder(order)}
+            onOpenWhatsApp={openWhatsApp}
+            onDeleteClick={(id) => setShowDeleteConfirm(id)}
+            onConfirmDelete={handleDeleteOrder}
+            onCancelDelete={() => setShowDeleteConfirm(null)}
+          />
+        )}
 
-			{/* Confirmation Panel */}
-			{confirmOrder && (
+        {confirmOrder && (
 				<div
 					className="sf-slideout-backdrop"
 					onClick={() => setConfirmOrder(null)}
@@ -1053,6 +931,20 @@ export default function OrdersPage() {
 						</div>
 					</div>
 				</div>
+			)}
+
+			{showReturnModal && (
+				<ReturnModal
+					order={showReturnModal}
+					onClose={() => setShowReturnModal(null)}
+					onSuccess={(newReturn) => {
+						toast({
+							type: "success",
+							title: `Return request ${newReturn.return_number} created successfully`,
+						});
+						loadData();
+					}}
+				/>
 			)}
 
 			{/* Load More */}

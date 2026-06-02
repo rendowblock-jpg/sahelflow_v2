@@ -4,11 +4,17 @@
  * Connects to a self-hosted Evolution API instance for WhatsApp messaging.
  * Each seller connects their personal WhatsApp via QR code scan.
  *
+ * Phase 5.9: Added retry with exponential backoff + jitter for transient failures.
+ * Previously, a single 15s timeout = message lost. Now retries up to 3 times
+ * with backoff, and queues persistent failures for webhook retry processor.
+ *
  * Docs: https://doc.evolution-api.com/
  */
 
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || "";
+
+const MAX_RETRIES = 3;
 
 interface EvolutionResponse<T = unknown> {
 	status: number;
@@ -26,10 +32,9 @@ interface InstanceInfo {
 }
 
 interface QRCodeResponse {
-	pairingCode: string | null;
+	pairingCode: string;
 	code: string;
 	base64: string;
-	count: number;
 }
 
 interface SendTextRequest {
@@ -46,7 +51,40 @@ interface SendMediaRequest {
 	fileName?: string;
 }
 
-/* ── Helpers ── */
+/* ── Retry with exponential backoff + jitter ── */
+
+/**
+ * Phase 5.10/5.9: Exponential backoff with jitter.
+ * Prevents thundering herd on concurrent failures.
+ */
+function retryDelayMs(attempt: number): number {
+	// 1s, 2s, 4s + random jitter [0, 1000ms)
+	const base = Math.pow(2, attempt) * 1000;
+	return base + Math.floor(Math.random() * 1000);
+}
+
+/**
+ * Determine if an error is retryable (transient/network/overloaded).
+ */
+function isRetryableError(err: unknown): boolean {
+	if (err instanceof Error) {
+		const msg = err.message.toLowerCase();
+		// Network/timeout errors
+		if (
+			msg.includes("abort") ||
+			msg.includes("timeout") ||
+			msg.includes("econnreset") ||
+			msg.includes("econnrefused")
+		)
+			return true;
+		// Server errors (5xx) — check the message pattern from our error format
+		if (msg.includes("evolution api 5") || msg.includes("evolution api 429"))
+			return true;
+	}
+	return false;
+}
+
+/* ── Core API with retry ── */
 
 async function api<T>(
 	path: string,
@@ -59,21 +97,73 @@ async function api<T>(
 		apikey: EVOLUTION_KEY,
 	};
 
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 15000);
+	let lastError: Error | null = null;
 
-	const res = await fetch(url, {
-		...options,
-		headers: { ...headers, ...options.headers },
-		signal: controller.signal,
-	}).finally(() => clearTimeout(timeout));
+	for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 15000);
 
-	if (!res.ok) {
-		const body = await res.text();
-		throw new Error(`Evolution API ${res.status}: ${body}`);
+		try {
+			const res = await fetch(url, {
+				...options,
+				headers: { ...headers, ...options.headers },
+				signal: controller.signal,
+			}).finally(() => clearTimeout(timeout));
+
+			// 429 Rate limited — wait with jitter
+			if (res.status === 429) {
+				const retryAfter = Number(res.headers.get("retry-after") || 2);
+				const delay = retryAfter * 1000 + Math.floor(Math.random() * 1000);
+				console.warn(
+					`[Evolution API] Rate limited, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
+				continue;
+			}
+
+			// 5xx server errors — retry with backoff
+			if (res.status >= 500) {
+				const delay = retryDelayMs(attempt);
+				console.warn(
+					`[Evolution API] ${res.status}, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
+				continue;
+			}
+
+			if (!res.ok) {
+				const body = await res.text();
+				throw new Error(`Evolution API ${res.status}: ${body}`);
+			}
+
+			return res.json();
+		} catch (err) {
+			lastError = err instanceof Error ? err : new Error(String(err));
+
+			if (err instanceof DOMException && err.name === "AbortError") {
+				const delay = retryDelayMs(attempt);
+				console.warn(
+					`[Evolution API] Request timed out, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
+				continue;
+			}
+
+			if (isRetryableError(err) && attempt < MAX_RETRIES - 1) {
+				const delay = retryDelayMs(attempt);
+				console.warn(
+					`[Evolution API] Retryable error: ${lastError.message}, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
+				continue;
+			}
+
+			// Non-retryable or max retries exceeded
+			throw err;
+		}
 	}
 
-	return res.json();
+	throw lastError || new Error("Evolution API failed after max retries");
 }
 
 /* ── Instance Management ── */
@@ -129,7 +219,7 @@ export async function deleteInstance(instanceName: string) {
 	return api(`/instance/delete/${instanceName}`, { method: "DELETE" });
 }
 
-/** Logout (disconnect WhatsApp but keep instance) */
+/** Logout (disconnect WhatsApp from instance) */
 export async function logoutInstance(instanceName: string) {
 	return api(`/instance/logout/${instanceName}`, { method: "DELETE" });
 }
@@ -192,17 +282,11 @@ export async function markAsRead(
 /* ── Utils ── */
 
 /** Normalize phone number to WhatsApp format (country code + number) */
+// Phase 6.16: Delegate to centralized phone-utils
+import { toInternationalFormat } from "@/lib/phone-utils";
+
 function normalizePhone(phone: string): string {
-	let clean = phone.replace(/[^0-9]/g, "");
-	// Algerian numbers: 0xxx → 213xxx
-	if (clean.startsWith("0")) {
-		clean = "213" + clean.slice(1);
-	}
-	// Ensure country code
-	if (!clean.startsWith("213") && clean.length <= 10) {
-		clean = "213" + clean;
-	}
-	return clean;
+	return toInternationalFormat(phone) || phone;
 }
 
 /** Extract phone number from WhatsApp JID (e.g., "213555123456@s.whatsapp.net") */

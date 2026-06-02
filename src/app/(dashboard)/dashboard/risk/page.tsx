@@ -107,14 +107,18 @@ export default function RiskPage() {
 	const blockedCount = customers.filter((c) => c.is_blocked).length;
 
 	const riskColor = (level: string) =>
-		level === "high" ? "#ef4444" : level === "medium" ? "#f59e0b" : "#10b981";
+		level === "high"
+			? "var(--sf-color-danger)"
+			: level === "medium"
+				? "var(--sf-color-warning)"
+				: "var(--sf-color-success)";
 
 	const riskBg = (level: string) =>
 		level === "high"
-			? "rgba(239,68,68,0.1)"
+			? "var(--sf-color-danger-bg)"
 			: level === "medium"
-				? "rgba(245,158,11,0.1)"
-				: "rgba(16,185,129,0.1)";
+				? "var(--sf-color-warning-bg)"
+				: "var(--sf-color-success-bg)";
 
 	return (
 		<PageTransition className="sf-flex-col sf-gap-xl">
@@ -179,16 +183,42 @@ export default function RiskPage() {
 							onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
 							className="sf-risk-row"
 						>
-							{/* Risk Score Circle */}
+							{/* Risk Score Circle SVG radial ring */}
 							<div
-								className="sf-risk-score"
-								style={{
-									background: riskBg(c.risk.level),
-									borderColor: riskColor(c.risk.level),
-									color: riskColor(c.risk.level),
-								}}
+								className="sf-relative sf-flex sf-items-center sf-justify-center sf-flex-shrink-0"
+								style={{ width: 44, height: 44, marginRight: "16px" }}
 							>
-								{c.risk.score}
+								<svg style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+									{/* Background ring */}
+									<circle
+										cx="22"
+										cy="22"
+										r="18"
+										fill="transparent"
+										stroke="var(--sf-border-strong)"
+										strokeWidth="3"
+									/>
+									{/* Foreground animated ring */}
+									<circle
+										cx="22"
+										cy="22"
+										r="18"
+										fill="transparent"
+										stroke={riskColor(c.risk.level)}
+										strokeWidth="3"
+										strokeDasharray={2 * Math.PI * 18}
+										strokeDashoffset={2 * Math.PI * 18 * (1 - c.risk.score / 100)}
+										strokeLinecap="round"
+										style={{ transition: "stroke-dashoffset 0.6s ease" }}
+									/>
+								</svg>
+								{/* Centered score text */}
+								<span
+									className="sf-absolute sf-text-xs sf-font-bold sf-text-tabular"
+									style={{ color: riskColor(c.risk.level), position: "absolute" }}
+								>
+									{c.risk.score}
+								</span>
 							</div>
 
 							{/* Info */}
@@ -227,7 +257,7 @@ export default function RiskPage() {
 
 						{/* Expanded Details */}
 						{expandedId === c.id && (
-							<div className="sf-risk-expanded">
+							<div className="sf-risk-expanded sf-animate-fade" style={{ animationDuration: "0.2s" }}>
 								<p className="sf-risk-factors-title">{t.risk.riskFactors}</p>
 								<div className="sf-risk-factor-list">
 									{c.risk.factors.map((f, i) => (

@@ -4,8 +4,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
-import { getCurrentUser } from "./auth-service";
-import { getSellerProfile } from "./auth-service";
+import { getSellerProfile, getActiveSellerId } from "./auth-service";
 
 // ===== LEGACY SINGLE TEMPLATE =====
 
@@ -19,12 +18,11 @@ export async function getWhatsAppTemplate(): Promise<string> {
 // ===== TEMPLATES CRUD =====
 
 export async function getWhatsAppTemplates() {
-	const user = await getCurrentUser();
-	if (!user) throw new Error("Not authenticated");
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("whatsapp_templates")
 		.select("*")
-		.eq("seller_id", user.id)
+		.eq("seller_id", sellerId)
 		.order("category", { ascending: true });
 	if (error) throw error;
 	return data || [];
@@ -37,11 +35,10 @@ export async function createWhatsAppTemplate(template: {
 	category: string;
 	language: string;
 }) {
-	const user = await getCurrentUser();
-	if (!user) throw new Error("Not authenticated");
+	const sellerId = await getActiveSellerId();
 	const { data, error } = await getSupabase()
 		.from("whatsapp_templates")
-		.insert({ ...template, seller_id: user.id })
+		.insert({ ...template, seller_id: sellerId })
 		.select()
 		.single();
 	if (error) throw error;

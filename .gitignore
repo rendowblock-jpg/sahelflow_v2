@@ -39,3 +39,12 @@ Thumbs.db
 # Vercel
 .vercel
 .env.vercel
+
+# Scratch & Temporary files
+scratch/
+nul
+*.jsonl
+eslint-output*.json
+eslint*.json
+.pi-lens/
+

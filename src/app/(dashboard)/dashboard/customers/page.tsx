@@ -29,6 +29,7 @@ import { useToast } from "@/components/dashboard/ToastProvider";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/motion";
+import { getWilayaName } from "@/lib/data/wilayas";
 
 interface EnrichedCustomer extends Customer {
 	ordersCount: number;
@@ -42,7 +43,7 @@ interface EnrichedCustomer extends Customer {
 }
 
 export default function CustomersPage() {
-	const { t, formatCurrency, formatTimeAgo } = useI18n();
+	const { t, formatCurrency, formatTimeAgo, locale } = useI18n();
 	const { isMobile } = useLayout();
 	const [customers, setCustomers] = useState<Customer[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -477,7 +478,7 @@ export default function CustomersPage() {
 								{c.phone || "—"}
 							</p>
 							<p className="sf-text-xs-tertiary">
-								{c.wilaya || ""}
+								{c.wilaya ? getWilayaName(c.wilaya, locale) : ""}
 								{c.commune ? `, ${c.commune}` : ""}
 							</p>
 							<div className="sf-flex-between sf-mt-sm">
@@ -550,7 +551,7 @@ export default function CustomersPage() {
 											{c.phone || "—"}
 										</td>
 										<td className="sf-text-secondary">
-											{c.wilaya || "—"}
+											{c.wilaya ? getWilayaName(c.wilaya, locale) : "—"}
 											{c.commune ? `, ${c.commune}` : ""}
 										</td>
 										<td className="sf-text-center">
@@ -624,7 +625,7 @@ export default function CustomersPage() {
 									)}
 									{selectedCustomer.wilaya && (
 										<span className="sf-contact-meta">
-											<MapPin size={14} /> {selectedCustomer.wilaya}
+											<MapPin size={14} /> {getWilayaName(selectedCustomer.wilaya, locale)}
 											{selectedCustomer.commune
 												? `, ${selectedCustomer.commune}`
 												: ""}
@@ -726,7 +727,7 @@ export default function CustomersPage() {
 																		: "sf-status-pending"
 															}`}
 														>
-															{order.status}
+															{t.status[order.status as keyof typeof t.status] || order.status}
 														</p>
 													</div>
 												</div>

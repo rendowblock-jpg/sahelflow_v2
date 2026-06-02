@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { linkUserToInvitations } from "@/lib/data/team-service";
 
 export interface AuthResult {
   error?: string;
@@ -24,7 +25,7 @@ export async function signUp(formData: FormData): Promise<AuthResult> {
     return { error: "Password must be at least 8 characters" };
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -37,6 +38,12 @@ export async function signUp(formData: FormData): Promise<AuthResult> {
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (data?.user) {
+    await linkUserToInvitations(data.user.id, email).catch((err) => {
+      console.error("Failed to link invitations on signup:", err);
+    });
   }
 
   redirect("/dashboard");
@@ -52,13 +59,19 @@ export async function signIn(formData: FormData): Promise<AuthResult> {
     return { error: "Email and password are required" };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (data?.user) {
+    await linkUserToInvitations(data.user.id, email).catch((err) => {
+      console.error("Failed to link invitations on signin:", err);
+    });
   }
 
   redirect("/dashboard");

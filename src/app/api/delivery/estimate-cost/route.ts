@@ -10,7 +10,7 @@ const schema = z.object({
 });
 
 export const POST = withAuthAndRateLimit(
-  async (req, { user, supabase, body }) => {
+  async (req, { user: _user, sellerId, supabase, body }) => {
     const { orderId, provider } = body!;
 
     const adapter = getDeliveryAdapter(provider);
@@ -25,7 +25,7 @@ export const POST = withAuthAndRateLimit(
       .from("orders")
       .select("id, wilaya")
       .eq("id", orderId)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .single();
 
     if (!order) {
@@ -38,7 +38,7 @@ export const POST = withAuthAndRateLimit(
     const { data: integration } = await supabase
       .from("integrations")
       .select("credentials")
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .eq("platform", provider)
       .eq("is_active", true)
       .single();
@@ -46,7 +46,7 @@ export const POST = withAuthAndRateLimit(
     const { data: seller } = await supabase
       .from("sellers")
       .select("wilaya")
-      .eq("id", user.id)
+      .eq("id", sellerId)
       .single();
 
     const fromWilaya = seller?.wilaya || "Alger";

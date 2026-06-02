@@ -1,0 +1,1062 @@
+/* ═══════════════════════════════════════════════
+   A+ FINISH — Phase 4b: Remaining Inline Styles
+   Covers: products, integrations, automations,
+   shipping, automation, risk, delivery, inbox,
+   settings tabs
+   ═══════════════════════════════════════════════ */
+
+/* ── Skeleton helpers ── */
+.sf-skeleton-title {
+	width: 160px;
+	height: 28px;
+	border-radius: var(--radius-sm);
+	margin-bottom: 8px;
+}
+
+/* ── Search ── */
+.sf-search-wrap {
+	position: relative;
+	max-width: 400px;
+}
+.sf-search-icon {
+	position: absolute;
+	inset-inline-start: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--color-content-tertiary);
+	pointer-events: none;
+}
+.sf-search-input {
+	padding-inline-start: 36px;
+}
+
+/* ── Empty states ── */
+.sf-empty-xl {
+	padding: 60px;
+	text-align: center;
+}
+.sf-empty-icon-lg {
+	color: var(--color-content-tertiary);
+	margin-bottom: 16px;
+}
+.sf-empty-title {
+	font-size: 18px;
+	font-weight: 600;
+	margin-bottom: 8px;
+}
+.sf-empty-desc {
+	color: var(--color-content-secondary);
+	max-width: 400px;
+	margin-bottom: 24px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/* ── Modal sizing ── */
+.sf-modal-sm {
+	max-width: 400px;
+}
+.sf-modal-md {
+	max-width: 480px;
+}
+.sf-modal-header {
+	margin-bottom: 20px;
+}
+.sf-modal-title {
+	font-size: 18px;
+	font-weight: 600;
+}
+.sf-modal-title-sm {
+	font-size: 15px;
+	font-weight: 600;
+}
+.sf-modal-desc {
+	font-size: 13px;
+	color: var(--color-content-secondary);
+}
+.sf-modal-target {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+/* ── Close / icon buttons ── */
+.sf-btn-close {
+	background: none;
+	border: none;
+	color: var(--color-content-tertiary);
+	cursor: pointer;
+	padding: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.sf-btn-close-danger {
+	background: none;
+	border: none;
+	color: var(--color-danger-400);
+	cursor: pointer;
+	padding: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* ── Button sizes ── */
+.sf-btn-xs {
+	padding: 2px 8px;
+	min-height: 24px;
+	font-size: 11px;
+}
+.sf-btn-sm {
+	padding: 4px 10px;
+	min-height: 28px;
+	font-size: 12px;
+}
+.sf-btn-compress {
+	padding: 4px 8px;
+	min-height: 30px;
+}
+.sf-btn-compress-sm {
+	padding: 4px 8px;
+	min-height: 28px;
+}
+
+/* ── Table cells ── */
+.sf-td-name {
+	font-weight: 500;
+	font-size: 13px;
+}
+.sf-td-mono {
+	font-family: monospace;
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	color: var(--color-content-tertiary);
+}
+.sf-td-price {
+	text-align: end;
+	font-weight: 600;
+	font-feature-settings: "tnum" 1;
+	letter-spacing: -0.01em;
+}
+.sf-td-num {
+	text-align: end;
+	font-feature-settings: "tnum" 1;
+	color: var(--color-content-secondary);
+}
+
+/* ── Form helpers ── */
+.sf-input-sm {
+	min-height: 34px;
+	font-size: 13px;
+}
+.sf-input-grow {
+	flex: 1;
+}
+.sf-label-inline {
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.sf-m-0 {
+	margin: 0;
+}
+
+/* ── Section borders ── */
+.sf-border-top-pt {
+	border-top: 1px solid var(--color-line-primary);
+	padding-top: 16px;
+}
+.sf-border-top-pt-sm {
+	border-top: 1px solid var(--color-line-primary);
+	padding-top: 12px;
+}
+
+/* ── List items ── */
+.sf-list-item-muted {
+	padding: 6px 10px;
+	background: var(--color-surface-tertiary);
+	border-radius: 6px;
+}
+
+/* ── Text helpers ── */
+.sf-text-hint {
+	font-size: 12px;
+	color: var(--color-content-tertiary);
+	padding: 8px 0;
+}
+.sf-text-13 {
+	font-size: 13px;
+}
+.sf-sku {
+	font-size: 11px;
+	color: var(--color-content-tertiary);
+	font-family: monospace;
+}
+.sf-name {
+	font-weight: 600;
+	font-size: 14px;
+}
+
+/* ── Card padding override ── */
+.sf-card-p-0 {
+	padding: 0;
+}
+
+/* ── Settings tabs ── */
+.sf-card-muted {
+	background: var(--color-surface-tertiary);
+}
+.sf-channel-box {
+	background: var(--color-surface-tertiary);
+}
+.sf-qr-frame {
+	background: #fff;
+	border-radius: 12px;
+	border: 2px solid var(--color-brand-500);
+	padding: var(--space-md);
+}
+.sf-settings-hint {
+	font-size: 13px;
+	color: var(--color-content-secondary);
+	margin-bottom: var(--space-sm);
+}
+.sf-settings-meta {
+	font-size: 12px;
+	color: var(--color-content-tertiary);
+	margin-top: 2px;
+}
+.sf-settings-block {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	padding: var(--space-md) 0;
+	border-bottom: 1px solid var(--color-line-primary);
+}
+.sf-settings-block:last-child {
+	border-bottom: none;
+}
+.sf-settings-block-label {
+	font-weight: 500;
+	font-size: 14px;
+}
+.sf-settings-block-desc {
+	font-size: 12px;
+	color: var(--color-content-tertiary);
+	margin-top: 2px;
+}
+.sf-settings-card-title {
+	font-size: 16px;
+	font-weight: 600;
+	margin-bottom: var(--space-md);
+}
+.sf-toggle {
+	width: 44px;
+	height: 24px;
+	border-radius: 12px;
+	background: var(--color-surface-tertiary);
+	border: 1px solid var(--color-line-primary);
+	position: relative;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+.sf-toggle::after {
+	content: "";
+	position: absolute;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--color-content-secondary);
+	top: 1px;
+	inset-inline-start: 1px;
+	transition:
+		transform 0.2s,
+		background 0.2s;
+}
+.sf-toggle-active {
+	background: var(--color-brand-500);
+	border-color: var(--color-brand-500);
+}
+.sf-toggle-active::after {
+	transform: translateX(20px);
+	background: #fff;
+}
+.sf-settings-danger-zone {
+	border: 1px solid rgba(239, 68, 68, 0.2);
+	border-radius: var(--radius-md);
+	padding: var(--space-lg);
+	background: rgba(239, 68, 68, 0.04);
+}
+.sf-settings-danger-title {
+	font-weight: 600;
+	color: var(--color-danger-400);
+	font-size: 14px;
+}
+.sf-settings-danger-desc {
+	font-size: 12px;
+	color: var(--color-content-secondary);
+	margin-top: 4px;
+}
+
+/* ── Width util ── */
+.sf-w-full {
+	width: 100%;
+}
+
+/* ── Info box ── */
+.sf-info-box {
+	padding: var(--space-sm);
+	background: var(--color-surface-tertiary);
+	border-radius: var(--radius-sm);
+	font-size: 12px;
+	color: var(--color-content-secondary);
+}
+
+/* ── Settings nav ── */
+.sf-settings-nav {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+.sf-settings-nav--mobile {
+	display: flex;
+	gap: var(--space-sm);
+	overflow-x: auto;
+	padding-bottom: var(--space-sm);
+	scrollbar-width: none;
+}
+.sf-settings-nav--mobile::-webkit-scrollbar {
+	display: none;
+}
+.sf-settings-nav-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-sm) var(--space-md);
+	border-radius: var(--radius-sm);
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--color-content-secondary);
+	background: none;
+	border: none;
+	cursor: pointer;
+	transition: all 0.15s;
+	text-align: start;
+	white-space: nowrap;
+}
+.sf-settings-nav-item:hover {
+	background: var(--color-surface-hover);
+	color: var(--color-content-primary);
+}
+.sf-settings-nav-item.active {
+	background: var(--color-surface-active);
+	color: var(--color-brand-400);
+}
+.sf-settings-nav-item--mobile {
+	padding: var(--space-sm);
+	font-size: 12px;
+}
+
+/* ── Settings content ── */
+.sf-settings-content {
+	flex: 1;
+	min-width: 0;
+}
+
+/* ── Integrations page ── */
+.sf-integration-card {
+	padding: var(--space-lg);
+	border: 1px solid var(--color-line-primary);
+	border-radius: var(--radius-md);
+	background: var(--color-surface-secondary);
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
+}
+.sf-integration-card:hover {
+	border-color: var(--color-line-accent);
+}
+.sf-integration-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+}
+.sf-integration-status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+.sf-integration-status-dot--connected {
+	background: var(--color-accent-500);
+}
+.sf-integration-status-dot--disconnected {
+	background: var(--color-content-tertiary);
+}
+.sf-integration-credential {
+	font-family: monospace;
+	font-size: 12px;
+	background: var(--color-surface-tertiary);
+	padding: 8px 12px;
+	border-radius: 6px;
+	color: var(--color-content-secondary);
+	word-break: break-all;
+}
+
+/* ── Delivery page ── */
+.sf-delivery-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-md);
+	background: var(--color-surface-secondary);
+	border-radius: var(--radius-md);
+	border: 1px solid var(--color-line-primary);
+}
+
+/* ── Shipping page ── */
+.sf-shipping-card {
+	padding: var(--space-lg);
+	background: var(--color-surface-secondary);
+	border: 1px solid var(--color-line-primary);
+	border-radius: var(--color-radius-md);
+}
+.sf-shipping-rate-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-sm) 0;
+	border-bottom: 1px solid var(--color-line-primary);
+}
+.sf-shipping-rate-row:last-child {
+	border-bottom: none;
+}
+
+/* ── Automation page ── */
+.sf-automation-card {
+	padding: var(--space-lg);
+	background: var(--color-surface-secondary);
+	border: 1px solid var(--color-line-primary);
+	border-radius: var(--radius-md);
+}
+.sf-automation-toggle-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	padding: var(--space-md) 0;
+	border-bottom: 1px solid var(--color-line-primary);
+}
+.sf-automation-toggle-row:last-child {
+	border-bottom: none;
+}
+
+/* ── Risk page ── */
+.sf-risk-badge {
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+.sf-risk-badge--low {
+	background: rgba(16, 185, 129, 0.12);
+	color: var(--color-accent-400);
+}
+.sf-risk-badge--medium {
+	background: rgba(251, 191, 36, 0.12);
+	color: var(--color-warn-400);
+}
+.sf-risk-badge--high {
+	background: rgba(239, 68, 68, 0.12);
+	color: var(--color-danger-400);
+}
+
+/* ── Inbox page ── */
+.sf-inbox-msg-row {
+	padding: var(--space-sm) var(--space-md);
+	border-bottom: 1px solid var(--color-line-primary);
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.sf-inbox-msg-row:hover {
+	background: var(--color-surface-hover);
+}
+.sf-inbox-msg-row.active {
+	background: var(--color-surface-active);
+}
+.sf-inbox-avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--color-brand-500);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+	flex-shrink: 0;
+}
+.sf-inbox-preview {
+	font-size: 13px;
+	color: var(--color-content-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 200px;
+}
+
+/* ── Products page extras ── */
+.sf-product-card-padded {
+	padding: 14px;
+}
+.sf-product-grid-gap {
+	gap: 10px;
+}
+.sf-variant-card {
+	background: var(--color-surface-tertiary);
+	padding: 12px;
+	border-radius: var(--radius-sm);
+}
+
+/* ═══════════════════════════════════════════════
+   A+ FINISH — Phase 4c: Integration & misc utilities
+   ═══════════════════════════════════════════════ */
+
+/* ── Width / flex util ── */
+.sf-flex-1 {
+	flex: 1;
+}
+.sf-flex-shrink-0 {
+	flex-shrink: 0;
+}
+.sf-self-start {
+	align-self: flex-start;
+}
+
+/* ── Text sizes ── */
+.sf-text-2xl {
+	font-size: 24px;
+}
+.sf-text-xl {
+	font-size: 20px;
+}
+.sf-text-xs-secondary {
+	font-size: 12px;
+	color: var(--color-content-secondary);
+}
+
+/* ── Section title ── */
+.sf-section-title {
+	font-weight: 600;
+	font-size: 14px;
+	letter-spacing: -0.01em;
+}
+
+/* ── Stats ── */
+.sf-stat-value-lg {
+	font-size: 28px;
+	font-weight: 700;
+	font-feature-settings: "tnum" 1;
+	letter-spacing: -0.03em;
+}
+
+/* ── Input mono ── */
+.sf-input-mono {
+	font-family: monospace;
+	font-size: 11px;
+}
+.sf-input-mono-sm {
+	font-family: monospace;
+	font-size: 12px;
+}
+
+/* ── Grid auto ── */
+.sf-grid-auto {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: var(--space-xl);
+}
+.sf-grid-auto-sm {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: var(--space-lg);
+}
+
+/* ── Steps list ── */
+.sf-steps-list {
+	padding-inline-start: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.sf-step-text {
+	font-size: 13px;
+	color: var(--color-content-secondary);
+	line-height: 1.6;
+}
+
+/* ── Card brand accent ── */
+.sf-card-brand {
+	background: rgba(99, 102, 241, 0.06);
+	border-color: var(--color-brand-500);
+	border-width: 1px;
+	border-style: solid;
+}
+
+/* ── Button pill ── */
+.sf-btn-pill {
+	font-size: 13px;
+	padding: 6px 14px;
+}
+
+/* ── Integration section ── */
+.sf-integration-section {
+	margin-top: var(--space-sm);
+}
+
+/* ── Items start ── */
+.sf-items-start {
+	align-items: flex-start;
+}
+
+/* ═══════════════════════════════════════════════
+   A+ FINISH — Phase 4d: Risk, Automation, Delivery, Inbox, Shipping
+   ═══════════════════════════════════════════════ */
+
+/* ── Risk page ── */
+.sf-risk-filter-row {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+.sf-risk-filter-btn {
+	padding: 3px 12px;
+	border-radius: 9999px;
+	font-size: 11px;
+	font-weight: 500;
+	background: transparent;
+	color: var(--color-content-tertiary);
+	border: none;
+	box-shadow: 0 0 0 1px var(--color-line-primary);
+	cursor: pointer;
+	font-family: inherit;
+	transition: all 0.12s ease;
+	text-transform: capitalize;
+}
+.sf-risk-filter-btn:hover {
+	background: var(--color-surface-hover);
+}
+.sf-risk-filter-btn-active {
+	background: rgba(99, 102, 241, 0.12);
+	color: var(--color-brand-400);
+	box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+.sf-risk-card-p-0 {
+	padding: 0;
+	overflow: hidden;
+}
+.sf-risk-row {
+	padding: 12px 18px;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	cursor: pointer;
+	transition: background 0.1s;
+}
+.sf-risk-row:hover {
+	background: var(--color-surface-hover);
+}
+.sf-risk-score {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	border-width: 2px;
+	border-style: solid;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+	font-weight: 700;
+	font-feature-settings: "tnum" 1;
+}
+.sf-risk-info {
+	flex: 1;
+	min-width: 0;
+}
+.sf-risk-name-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.sf-risk-name {
+	font-weight: 500;
+	font-size: 13px;
+	color: var(--color-content-primary);
+}
+.sf-risk-meta {
+	font-size: 12px;
+	color: var(--color-content-secondary);
+	margin-top: 2px;
+	font-feature-settings: "tnum" 1;
+}
+.sf-risk-badge-blocked {
+	font-size: 10px;
+	padding: 2px 8px;
+	border-radius: 6px;
+	background: rgba(239, 68, 68, 0.15);
+	color: #ef4444;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+.sf-risk-badge-level {
+	font-size: 10px;
+	padding: 3px 10px;
+	border-radius: 6px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.sf-risk-expanded {
+	padding: 14px 18px 16px;
+	border-top: 1px solid var(--color-line-secondary);
+}
+.sf-risk-factors-title {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--color-content-tertiary);
+	margin-bottom: 8px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.sf-risk-factor-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.sf-risk-factor-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+}
+.sf-risk-factor-dot {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+.sf-risk-factor-text {
+	color: var(--color-content-primary);
+}
+.sf-risk-action-btn {
+	margin-top: 14px;
+	font-size: 12px;
+	padding: 6px 16px;
+}
+.sf-risk-empty {
+	padding: 40px;
+	color: var(--color-content-tertiary);
+}
+
+/* ── Automation / Confirmations page ── */
+.sf-auto-empty-state {
+	padding: 60px;
+	text-align: center;
+}
+.sf-auto-empty-icon {
+	color: var(--color-accent-400);
+	margin-bottom: 16px;
+}
+.sf-auto-card-padded {
+	padding: 16px;
+}
+.sf-auto-order-row {
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--color-line-primary);
+}
+.sf-auto-order-row:last-child {
+	border-bottom: none;
+}
+
+/* ── Shipping page ── */
+.sf-shipping-w-100 {
+	width: 100px;
+}
+.sf-shipping-card-p-0 {
+	padding: 0;
+	overflow: hidden;
+}
+.sf-shipping-wilaya-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* ── Inbox page ── */
+.sf-inbox-draft-actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+/* ── Delivery page ── */
+.sf-delivery-empty-flex {
+	display: flex;
+	justify-content: center;
+}
+.sf-delivery-scale-sm {
+	transform: scale(0.8);
+}
+
+/* ── Loading page ── */
+.sf-loading-page {
+	min-height: 400px;
+	color: var(--color-content-secondary);
+}
+
+/* ── Flex utilities ── */
+.sf-flex-wrap {
+	flex-wrap: wrap;
+}
+.sf-items-center {
+	align-items: center;
+}
+
+/* ── Text color ── */
+.sf-text-secondary {
+	color: var(--color-content-secondary);
+}
+
+/* ── Button icon margin ── */
+.sf-btn-icon {
+	margin-inline-end: 6px;
+}
+
+/* ── Shipping table ── */
+.sf-shipping-table-header {
+	display: grid;
+	grid-template-columns: 2rem 1fr 110px 110px 70px;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--color-line-primary);
+	background: var(--color-surface-secondary);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-content-secondary);
+	gap: 8px;
+}
+.sf-table-header-cell {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-content-tertiary);
+}
+.sf-shipping-table-row {
+	display: grid;
+	grid-template-columns: 2rem 1fr 110px 110px 70px;
+	padding: 8px 16px;
+	gap: 8px;
+	align-items: center;
+	border-bottom: 1px solid var(--color-line-primary);
+}
+.sf-shipping-table-row:last-child {
+	border-bottom: none;
+}
+.sf-td-mono-sm {
+	font-size: 11px;
+	color: var(--color-content-tertiary);
+	font-family: monospace;
+	letter-spacing: 0.03em;
+}
+.sf-zone-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+.sf-zone-dot-sm {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+.sf-input-compressed {
+	padding: 4px 8px;
+	font-size: 13px;
+}
+.sf-flex-center {
+	display: flex;
+	justify-content: center;
+}
+.sf-items-end {
+	align-items: flex-end;
+}
+
+/* ── Delivery page extras ── */
+.sf-text-center {
+	text-align: center;
+}
+.sf-p-lg {
+	padding: var(--space-lg);
+}
+.sf-p-xl {
+	padding: var(--space-xl);
+}
+.sf-font-medium {
+	font-weight: 500;
+}
+.sf-text-danger {
+	color: var(--color-danger-400);
+}
+
+/* ── Automation page ── */
+.sf-ml-auto {
+	margin-inline-start: auto;
+}
+.sf-justify-end {
+	justify-content: flex-end;
+}
+.sf-w-120 {
+	width: 120px;
+}
+.sf-automation-card {
+	padding: 0;
+	overflow: hidden;
+	transition: opacity 0.2s;
+}
+.sf-automation-card-header {
+	padding: 14px 20px;
+}
+.sf-automation-title-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 6px;
+}
+.sf-automation-title {
+	font-weight: 500;
+	font-size: 13px;
+	flex: 1;
+	letter-spacing: -0.005em;
+}
+.sf-automation-config-btn {
+	background: var(--color-surface-tertiary);
+	border: 1px solid var(--color-line-primary);
+	border-radius: 6px;
+	padding: 2px 8px;
+	font-size: 11px;
+	color: var(--color-content-secondary);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-family: inherit;
+	transition: all 0.15s;
+	flex-shrink: 0;
+}
+.sf-automation-desc {
+	font-size: 12px;
+	color: var(--color-content-secondary);
+	margin-bottom: 10px;
+	line-height: 1.5;
+	padding-inline-start: 30px;
+}
+.sf-automation-meta-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	padding-inline-start: 30px;
+}
+.sf-automation-config-panel {
+	border-top: 1px solid var(--color-line-primary);
+	background: var(--color-surface-tertiary);
+	padding: 16px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+.sf-automation-config-label {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--color-content-primary);
+}
+.sf-automation-config-value {
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--color-brand-400);
+	font-feature-settings: "tnum" 1;
+	background: var(--color-surface-secondary);
+	padding: 2px 8px;
+	border-radius: 6px;
+	border: 1px solid var(--color-line-primary);
+}
+
+/* ── Inbox extras ── */
+.sf-opacity-20 {
+	opacity: 0.2;
+}
+.sf-opacity-15 {
+	opacity: 0.15;
+}
+.sf-text-lg {
+	font-size: 1.1rem;
+}
+.sf-font-bold {
+	font-weight: 700;
+}
+.sf-px-md {
+	padding-inline: var(--space-md);
+}
+.sf-pb-sm {
+	padding-bottom: var(--space-sm);
+}
+
+/* ── Text brand ── */
+.sf-text-brand {
+	color: var(--color-brand-400);
+}
+
+/* ── WhatsApp icon ── */
+.sf-wa-icon {
+	border-radius: 12px;
+	background: #25D366;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+}
+
+/* ── QR image ── */
+.sf-qr-img {
+	width: 240px;
+	height: 240px;
+}
+
+/* ── Misc utilities ── */
+.sf-card-brand-border {
+	border: 1px solid var(--color-brand-500);
+}
+.sf-capitalize {
+	text-transform: capitalize;
+}
+.sf-pre-wrap {
+	white-space: pre-wrap;
+	line-height: 1.5;
+}
+
+/* ── Alert backgrounds ── */
+.sf-bg-success-10 {
+	background: rgba(16, 185, 129, 0.1);
+}
+.sf-bg-danger-10 {
+	background: rgba(239, 68, 68, 0.1);
+}
+

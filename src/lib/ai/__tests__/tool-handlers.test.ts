@@ -135,7 +135,7 @@ describe("tool-handlers", () => {
 		});
 
 		it("deletes order when found", async () => {
-			const deleteEqMock = vi
+			const updateEqMock = vi
 				.fn()
 				.mockResolvedValue({ data: null, error: null });
 			const supabase: any = {
@@ -149,7 +149,7 @@ describe("tool-handlers", () => {
 							}),
 						}),
 					}),
-					delete: () => ({ eq: deleteEqMock }),
+					update: () => ({ eq: updateEqMock }),
 				}),
 			};
 			const result = (await handleDeleteOrder(
@@ -197,7 +197,7 @@ describe("tool-handlers", () => {
 		});
 
 		it("deletes product when found", async () => {
-			const deleteEqMock = vi
+			const updateEqMock = vi
 				.fn()
 				.mockResolvedValue({ data: null, error: null });
 			const supabase: any = {
@@ -212,7 +212,7 @@ describe("tool-handlers", () => {
 							}),
 						}),
 					}),
-					delete: () => ({ eq: deleteEqMock }),
+					update: () => ({ eq: updateEqMock }),
 				}),
 			};
 			const result = (await handleDeleteProduct(

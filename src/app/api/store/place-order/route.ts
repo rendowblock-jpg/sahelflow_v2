@@ -128,6 +128,7 @@ export const POST = withAuthAndRateLimit(
         p_commune: form.commune,
         p_address: form.address,
         p_source: "webstore",
+        p_external_id: null,
         p_notes: form.notes || null,
         p_delivery_type: deliveryType || "home",
         p_status: "pending",

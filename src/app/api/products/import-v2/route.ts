@@ -45,14 +45,14 @@ async function fetchExistingSkus(
 
 // PREVIEW endpoint
 export const POST = withAuthAndRateLimit(
-	async (_req, { user, supabase, body }) => {
+	async (_req, { user: _user, sellerId, supabase, body }) => {
 		const { headers, rows, mapping, source, filename } = body as z.infer<
 			typeof previewSchema
 		>;
 
 		const resolvedMapping: ColumnMapping =
 			mapping ?? (autoMapColumns(headers) as ColumnMapping);
-		const existingSkus = await fetchExistingSkus(supabase, user.id);
+		const existingSkus = await fetchExistingSkus(supabase, sellerId);
 
 		const result = runValidation(
 			rows as RawRow[],
@@ -64,7 +64,7 @@ export const POST = withAuthAndRateLimit(
 		const { data: batch, error: batchError } = await supabase
 			.from("import_batches")
 			.insert({
-				seller_id: user.id,
+				seller_id: sellerId,
 				source,
 				filename: filename || null,
 				row_count: result.summary.total,
@@ -99,7 +99,7 @@ export const POST = withAuthAndRateLimit(
 
 // COMMIT endpoint: receives rows again, validates, inserts
 export const PATCH = withAuthAndRateLimit(
-	async (_req, { user, supabase, body }) => {
+	async (_req, { user: _user, sellerId, supabase, body }) => {
 		const { batchId, rows, mapping, rowIndices } = body as z.infer<
 			typeof commitSchema
 		>;
@@ -108,7 +108,7 @@ export const PATCH = withAuthAndRateLimit(
 			.from("import_batches")
 			.select("id, status")
 			.eq("id", batchId)
-			.eq("seller_id", user.id)
+			.eq("seller_id", sellerId)
 			.single();
 
 		if (batchErr || !batch) {
@@ -123,7 +123,7 @@ export const PATCH = withAuthAndRateLimit(
 		}
 
 		// Validate
-		const existingSkus = await fetchExistingSkus(supabase, user.id);
+		const existingSkus = await fetchExistingSkus(supabase, sellerId);
 		const result = runValidation(
 			rows as RawRow[],
 			mapping as ColumnMapping,
@@ -150,7 +150,7 @@ export const PATCH = withAuthAndRateLimit(
 				const { data: existing } = await supabase
 					.from("categories")
 					.select("id")
-					.eq("seller_id", user.id)
+					.eq("seller_id", sellerId)
 					.ilike("name", cat)
 					.limit(1)
 					.single();
@@ -166,7 +166,7 @@ export const PATCH = withAuthAndRateLimit(
 								.toLowerCase()
 								.replace(/[^a-z0-9\u0600-\u06FF]+/g, "-")
 								.replace(/(^-|-$)/g, ""),
-							seller_id: user.id,
+							seller_id: sellerId,
 							sort_order: 999,
 						})
 						.select("id")
@@ -177,7 +177,7 @@ export const PATCH = withAuthAndRateLimit(
 		}
 
 		// Insert products
-		const products = generateImportProducts(targetRows, user.id).map((p) => ({
+		const products = generateImportProducts(targetRows, sellerId).map((p) => ({
 			...p,
 			category_id: p.category
 				? categoriesToCreate.get(p.category) || null

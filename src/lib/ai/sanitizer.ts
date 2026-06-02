@@ -51,15 +51,16 @@ const DARIJA_LEAK_MAP: Record<string, { ar: string; fr: string; en: string }> = 
  */
 export function sanitizeDarijaLeaks(text: string, locale: 'ar' | 'fr' | 'en'): string {
   if (!text) return text
+  // Arabic locale: skip sanitization - Darija words overlap with valid MSA Arabic
+  // Arabic responses rely on prompt engineering instead
+  if (locale === 'ar') return text
 
   let result = text
-
   for (const [darija, replacements] of Object.entries(DARIJA_LEAK_MAP)) {
-    // Use word-boundary-aware replacement for Arabic script
-    const regex = new RegExp(darija, 'g')
+    // Use word-boundary-aware replacement to avoid partial word matches
+    const regex = new RegExp('(?<=^|\s)' + darija + '(?=$|\s|[,.;!?])', 'gu')
     const replacement = replacements[locale] || replacements.en
     result = result.replace(regex, replacement)
   }
-
   return result
 }

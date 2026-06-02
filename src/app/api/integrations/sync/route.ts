@@ -68,7 +68,7 @@ function mapWooCommerceProduct(
     category_id: null,
     stock,
     price,
-    cost_price: 0,
+    cost_price: null,
     image_url: imageUrl,
     active: true,
   };
@@ -105,7 +105,7 @@ function mapShopifyProduct(shopifyProduct: ShopifyProduct, sellerId: string) {
     category_id: null,
     stock,
     price,
-    cost_price: 0,
+    cost_price: null,
     image_url: imageUrl,
     active: true,
   };
@@ -157,21 +157,21 @@ function mapYouCanProduct(youcanProduct: YouCanProduct, sellerId: string) {
     category_id: null,
     stock,
     price,
-    cost_price: 0,
+    cost_price: null,
     image_url: imageUrl,
     active: true,
   };
 }
 
 export const POST = withAuthAndRateLimit(
-  async (_req, { user, supabase, body }) => {
+  async (_req, { user: _user, sellerId, supabase, body }) => {
     const { platform } = body!;
 
     // Look up the seller's integration credentials
     const { data: integration, error: intError } = await supabase
       .from("integrations")
       .select("*")
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .eq("platform", platform)
       .eq("is_active", true)
       .single();
@@ -235,7 +235,7 @@ export const POST = withAuthAndRateLimit(
       }
 
       // Map to SahelFlow Product schema
-      const mapped = products.map((p) => mapShopifyProduct(p, user.id));
+      const mapped = products.map((p) => mapShopifyProduct(p, sellerId));
 
       // Bulk upsert into products table (match on seller_id + name)
       const { data: upserted, error: upsertError } = await supabase
@@ -330,7 +330,7 @@ export const POST = withAuthAndRateLimit(
 
       // Map to SahelFlow Product schema
       const mapped = allWooProducts.map((p) =>
-        mapWooCommerceProduct(p, user.id),
+        mapWooCommerceProduct(p, sellerId),
       );
 
       // Bulk upsert into products table (match on seller_id + name)
@@ -407,7 +407,7 @@ export const POST = withAuthAndRateLimit(
         return NextResponse.json({ success: true, count: 0 });
       }
 
-      const mapped = products.map((p) => mapYouCanProduct(p, user.id));
+      const mapped = products.map((p) => mapYouCanProduct(p, sellerId));
 
       const { data: upserted, error: upsertError } = await supabase
         .from("products")

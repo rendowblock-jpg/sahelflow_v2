@@ -62,6 +62,8 @@ export function AIAssistant() {
 	);
 	const [thinkingStage, setThinkingStage] = useState(0);
 	const [lastModelUsed, setLastModelUsed] = useState<string | null>(null);
+	const [_sessionId, setSessionId] = useState<string | null>(null);
+	const sessionIdRef = useRef<string | null>(null);
 
 	useEffect(() => {
 		if (!isLoading) {
@@ -74,40 +76,105 @@ export function AIAssistant() {
 		return () => clearInterval(interval);
 	}, [isLoading]);
 
-	// LocalStorage persistence
+	// Server-side session persistence with localStorage fallback
 	useEffect(() => {
-		try {
-			const saved = localStorage.getItem("sahelflow_ai_chat");
-			const savedLang = localStorage.getItem("sahelflow_ai_lang");
-			if (saved) {
-				const parsed = JSON.parse(saved);
-				const revived = (parsed as ChatMessageItem[]).map((m) => ({
-					...m,
-					timestamp: new Date(m.timestamp),
-				}));
-				if (revived.length > 0) setMessages(revived);
-			} else {
-				setMessages([
-					{
-						id: "welcome",
-						role: "assistant",
-						content: t.ai.welcomeMessage,
-						timestamp: new Date(),
-					},
-				]);
+		async function initChat() {
+			try {
+				// Try loading last session from server
+				const res = await fetch("/api/ai/sessions");
+				if (res.ok) {
+					const { sessions } = await res.json();
+					if (sessions && sessions.length > 0) {
+						const lastSession = sessions[0];
+						setSessionId(lastSession.id);
+						sessionIdRef.current = lastSession.id;
+						// Load messages for last session
+						const msgRes = await fetch(`/api/ai/sessions/${lastSession.id}`);
+						if (msgRes.ok) {
+							const { messages: serverMsgs } = await msgRes.json();
+							if (serverMsgs && serverMsgs.length > 0) {
+								setMessages(
+									serverMsgs.map(
+										(m: {
+											id: string;
+											role: string;
+											content: string;
+											action_cards: unknown;
+											created_at: string;
+										}) => ({
+											id: m.id,
+											role: m.role as "user" | "assistant",
+											content: m.content,
+											timestamp: new Date(m.created_at),
+											actionCards:
+												m.action_cards as ChatMessageItem["actionCards"],
+										}),
+									),
+								);
+								// Migrate: clear old localStorage since server has data
+								localStorage.removeItem("sahelflow_ai_chat");
+								return;
+							}
+						}
+					}
+					// No server messages — check for localStorage migration
+					const saved = localStorage.getItem("sahelflow_ai_chat");
+					if (saved) {
+						const parsed = JSON.parse(saved);
+						const revived = (parsed as ChatMessageItem[]).map((m) => ({
+							...m,
+							timestamp: new Date(m.timestamp),
+						}));
+						if (revived.length > 0) setMessages(revived);
+						localStorage.removeItem("sahelflow_ai_chat");
+						return;
+					}
+				}
+			} catch {
+				// Fallback: load from localStorage
+				try {
+					const saved = localStorage.getItem("sahelflow_ai_chat");
+					if (saved) {
+						const parsed = JSON.parse(saved);
+						const revived = (parsed as ChatMessageItem[]).map((m) => ({
+							...m,
+							timestamp: new Date(m.timestamp),
+						}));
+						if (revived.length > 0) {
+							setMessages(revived);
+							return;
+						}
+					}
+				} catch (_e) {
+					/* localStorage fallback may fail */
+				}
 			}
-			if (savedLang) setDetectedLang(savedLang);
-		} catch {
-			// fallback
+			// Default welcome message
+			setMessages([
+				{
+					id: "welcome",
+					role: "assistant",
+					content: t.ai.welcomeMessage,
+					timestamp: new Date(),
+				},
+			]);
 		}
-	}, [t.ai.welcomeMessage]);
+		initChat();
+		// Load saved language preference
+		const savedLang = localStorage.getItem("sahelflow_ai_lang");
+		if (savedLang) setDetectedLang(savedLang);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
+	// Save messages to localStorage as fallback cache
 	useEffect(() => {
 		if (messages.length > 0) {
 			try {
 				const toSave = messages.slice(-50);
 				localStorage.setItem("sahelflow_ai_chat", JSON.stringify(toSave));
-			} catch {}
+			} catch (_e) {
+				/* localStorage may be unavailable */
+			}
 		}
 	}, [messages]);
 
@@ -118,6 +185,52 @@ export function AIAssistant() {
 			localStorage.removeItem("sahelflow_ai_lang");
 		}
 	}, [detectedLang]);
+
+	// Helper: persist a message to the server session
+	const persistMessage = useCallback(
+		async (
+			role: "user" | "assistant",
+			content: string,
+			actionCards?: unknown[],
+			isFirst = false,
+		) => {
+			let sid = sessionIdRef.current;
+			// Create session on first message if none exists
+			if (!sid) {
+				try {
+					const res = await fetch("/api/ai/sessions", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({}),
+					});
+					if (res.ok) {
+						const { session } = await res.json();
+						sid = session.id;
+						setSessionId(session.id);
+						sessionIdRef.current = session.id;
+					}
+				} catch (_e) {
+					/* session init may fail */
+				}
+			}
+			if (!sid) return;
+			try {
+				await fetch(`/api/ai/sessions/${sid}/messages`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						role,
+						content,
+						actionCards,
+						isFirstMessage: isFirst,
+					}),
+				});
+			} catch (_e) {
+				/* message persist may fail */
+			}
+		},
+		[],
+	);
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -176,6 +289,10 @@ export function AIAssistant() {
 			setIsLoading(true);
 			setLastFailedMessage(null);
 
+			// Persist user message to server
+			const isFirst = messages.filter((m) => m.role === "user").length === 0;
+			persistMessage("user", text.trim(), undefined, isFirst);
+
 			if (!detectedLang) {
 				const detected = detectLanguage(text);
 				setDetectedLang(detected);
@@ -227,18 +344,21 @@ export function AIAssistant() {
 						},
 					]);
 				} else {
+					const aiContent = data.answer || t.ai.error;
 					setMessages((prev) => [
 						...prev,
 						{
 							id: `ai_${Date.now()}`,
 							role: "assistant",
-							content: data.answer || t.ai.error,
+							content: aiContent,
 							timestamp: new Date(),
 							actionCards: data.actionCards,
 							modelUsed: data.modelUsed,
 						},
 					]);
 					if (data.modelUsed) setLastModelUsed(data.modelUsed);
+					// Persist assistant response to server
+					persistMessage("assistant", aiContent, data.actionCards);
 				}
 			} catch {
 				setLastFailedMessage(text.trim());
@@ -263,6 +383,7 @@ export function AIAssistant() {
 			t.ai.error,
 			locale,
 			getLanguageInstruction,
+			persistMessage,
 		],
 	);
 
@@ -278,6 +399,9 @@ export function AIAssistant() {
 		setDetectedLang(null);
 		setLastFailedMessage(null);
 		setLastModelUsed(null);
+		// Create a new server session
+		setSessionId(null);
+		sessionIdRef.current = null;
 	}
 
 	const QUICK_PROMPTS = [

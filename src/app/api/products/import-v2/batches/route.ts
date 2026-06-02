@@ -8,7 +8,7 @@ const querySchema = z.object({
 });
 
 export const GET = withAuthAndRateLimit(
-	async (req, { user, supabase }) => {
+	async (req, { user: _user, sellerId, supabase }) => {
 		const { searchParams } = new URL(req.url);
 		const { limit, offset } = querySchema.parse(
 			Object.fromEntries(searchParams),
@@ -20,7 +20,7 @@ export const GET = withAuthAndRateLimit(
 				"id, source, filename, row_count, created_count, skipped_count, error_count, status, column_mapping, validation_errors, created_at, committed_at",
 				{ count: "exact" },
 			)
-			.eq("seller_id", user.id)
+			.eq("seller_id", sellerId)
 			.order("created_at", { ascending: false })
 			.range(offset, offset + limit - 1);
 

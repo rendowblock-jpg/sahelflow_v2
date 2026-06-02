@@ -1,0 +1,147 @@
+/* ═══════════════════════════════════════════════
+   PHASE 7: DASHBOARD HOME PAGE UTILITY CLASSES
+   ═══════════════════════════════════════════════ */
+
+/* Skeleton loading overrides */
+.sf-skeleton-title {
+	width: 200px;
+	height: 24px;
+	border-radius: var(--radius-sm);
+	margin-bottom: 6px;
+}
+
+.sf-skeleton-subtitle {
+	width: 280px;
+	height: 13px;
+	border-radius: var(--radius-sm);
+}
+
+/* Stat icon color variants */
+/* Phase 6.11: color-mix() with rgba fallback for older browsers */
+.sf-stat-icon--brand {
+	background: rgba(59, 158, 255, 0.1);
+	color: var(--color-brand-400);
+}
+@supports (color: color-mix(in srgb, red 10%, transparent)) {
+	.sf-stat-icon--brand { background: color-mix(in srgb, var(--color-brand-400) 10%, transparent); }
+}
+
+.sf-stat-icon--accent {
+	background: rgba(52, 211, 153, 0.1);
+	color: var(--color-accent-400);
+}
+@supports (color: color-mix(in srgb, red 10%, transparent)) {
+	.sf-stat-icon--accent { background: color-mix(in srgb, var(--color-accent-400) 10%, transparent); }
+}
+
+.sf-stat-icon--warn {
+	background: rgba(251, 191, 36, 0.1);
+	color: var(--color-warn-400);
+}
+@supports (color: color-mix(in srgb, red 10%, transparent)) {
+	.sf-stat-icon--warn { background: color-mix(in srgb, var(--color-warn-400) 10%, transparent); }
+}
+
+.sf-stat-icon--danger {
+	background: rgba(248, 113, 113, 0.1);
+	color: var(--color-danger-400);
+}
+@supports (color: color-mix(in srgb, red 10%, transparent)) {
+	.sf-stat-icon--danger { background: color-mix(in srgb, var(--color-danger-400) 10%, transparent); }
+}
+
+/* Cash flow value color variants */
+.sf-cashflow-value--brand {
+	color: var(--color-brand-400);
+}
+
+.sf-cashflow-value--accent {
+	color: var(--color-accent-400);
+}
+
+.sf-cashflow-value--warn {
+	color: var(--color-warn-400);
+}
+
+.sf-cashflow-value--danger {
+	color: var(--color-danger-400);
+}
+
+/* Action icon brand variant */
+.sf-action-icon--brand {
+	color: var(--color-brand-400);
+}
+
+.sf-action-arrow {
+	color: var(--color-content-tertiary);
+	opacity: 0.5;
+}
+
+/* Card padding variants */
+.sf-card-padded {
+	padding: 16px 20px;
+}
+
+.sf-card-flat {
+	padding: 0;
+}
+
+/* Alignment utilities */
+.sf-align-start {
+	align-items: start;
+}
+
+/* Section title flush */
+.sf-section-title--flush {
+	margin: 0;
+}
+
+/* Table heading right-aligned */
+.sf-table-th-end {
+	text-align: end;
+}
+
+/* Empty table cell state */
+.sf-empty-cell {
+	padding: 32px 16px;
+	text-align: center;
+	color: var(--color-content-tertiary);
+	font-size: 13px;
+}
+
+/* Brand link in tables */
+.sf-link-brand {
+	color: var(--color-brand-400);
+}
+
+/* Order number display (monospace, scan-friendly) */
+.sf-order-number {
+	font-weight: 500;
+	font-family: monospace;
+	font-size: 12px;
+	letter-spacing: 0.03em;
+	color: var(--color-content-primary);
+}
+
+/* Muted text */
+.sf-text-muted {
+	color: var(--color-content-secondary);
+	font-size: 13px;
+}
+
+/* Tertiary text */
+.sf-text-tertiary {
+	color: var(--color-content-tertiary);
+	font-size: 13px;
+}
+
+/* Price cell (tnum aligned) */
+.sf-price-cell {
+	text-align: end;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--color-content-primary);
+	font-feature-settings: "tnum" 1;
+	letter-spacing: -0.01em;
+}
+

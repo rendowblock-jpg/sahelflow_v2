@@ -482,22 +482,30 @@ export function getAllWilayaRisks(): WilayaRiskProfile[] {
 }
 
 // ===== DYNAMIC WILAYA RISK PROFILES =====
+// Phase 5.8: Dual-layer cache
+// 1st layer: in-memory TTL cache (fast, per-instance)
+// 2nd layer: wilaya_risk_profiles DB table (survives cold starts)
+// If both miss, compute from orders and persist to DB.
 
 // In-memory TTL cache: sellerId → { data, expiresAt } (1 hour)
 const _wilayaProfileCache = new Map<
 	string,
 	{ data: Record<string, WilayaRiskProfile>; expiresAt: number }
 >();
-const WILAYA_CACHE_TTL_MS = 60 * 60 * 1000;
+const WILAYA_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour in-memory TTL
+const WILAYA_DB_STALE_MS = 4 * 60 * 60 * 1000; // 4 hours — recompute if DB data older
 
 /**
  * Compute wilaya risk profiles from a seller's actual order data.
- * Falls back to static defaults for wilayas with no orders.
- * Results are cached for 1 hour per seller to avoid repeated full-table scans.
+ *
+ * Phase 5.8: Uses materialized wilaya_risk_profiles DB table
+ * so cold starts don't require full table scans.
+ * Falls back to in-memory cache → DB → fresh computation.
  */
 export async function computeDynamicWilayaProfiles(
 	sellerId: string,
 ): Promise<Record<string, WilayaRiskProfile>> {
+	// Layer 1: In-memory cache (fastest)
 	const cached = _wilayaProfileCache.get(sellerId);
 	if (cached && cached.expiresAt > Date.now()) {
 		return cached.data;
@@ -506,6 +514,44 @@ export async function computeDynamicWilayaProfiles(
 	const { createClient } = await import("@/lib/supabase/server");
 	const supabase = await createClient();
 
+	// Layer 2: Check materialized DB table (survives cold starts)
+	const { data: dbProfiles } = await supabase
+		.from("wilaya_risk_profiles")
+		.select(
+			"wilaya, total_orders, return_rate, avg_delivery_days, risk_multiplier, updated_at",
+		)
+		.eq("seller_id", sellerId);
+
+	if (dbProfiles && dbProfiles.length > 0) {
+		const newestUpdate = Math.max(
+			...dbProfiles.map((p) => new Date(p.updated_at).getTime()),
+		);
+
+		// If DB profiles are fresh enough (< 4 hours), use them directly
+		if (Date.now() - newestUpdate < WILAYA_DB_STALE_MS) {
+			const profiles: Record<string, WilayaRiskProfile> = {};
+			for (const p of dbProfiles) {
+				profiles[p.wilaya] = {
+					wilaya: p.wilaya,
+					totalOrders: p.total_orders,
+					returnRate: Number(p.return_rate),
+					avgDeliveryTime: p.avg_delivery_days,
+					riskMultiplier: Number(p.risk_multiplier),
+				};
+			}
+			// Fill missing wilayas with static defaults
+			for (const [name, profile] of Object.entries(WILAYA_RISK_PROFILES)) {
+				if (!profiles[name]) profiles[name] = profile;
+			}
+			_wilayaProfileCache.set(sellerId, {
+				data: profiles,
+				expiresAt: Date.now() + WILAYA_CACHE_TTL_MS,
+			});
+			return profiles;
+		}
+	}
+
+	// Layer 3: Fresh computation from orders (slowest, but accurate)
 	const { data: orders } = await supabase
 		.from("orders")
 		.select("wilaya, status")
@@ -535,7 +581,16 @@ export async function computeDynamicWilayaProfiles(
 		}
 	}
 
-	// Build dynamic profiles
+	// Build dynamic profiles + collect rows for DB persistence
+	const upsertRows: Array<{
+		seller_id: string;
+		wilaya: string;
+		total_orders: number;
+		return_rate: number;
+		avg_delivery_days: number;
+		risk_multiplier: number;
+	}> = [];
+
 	for (const [wilaya, stats] of Object.entries(byWilaya)) {
 		const staticProfile = WILAYA_RISK_PROFILES[wilaya];
 		const returnRate = stats.total > 0 ? stats.returned / stats.total : 0;
@@ -551,19 +606,54 @@ export async function computeDynamicWilayaProfiles(
 			Math.min(2.0, blendedReturnRate / 0.15),
 		);
 
+		const roundedReturnRate = Math.round(blendedReturnRate * 100) / 100;
+		const roundedRiskMultiplier = Math.round(riskMultiplier * 100) / 100;
+
 		profiles[wilaya] = {
 			wilaya,
 			totalOrders: stats.total,
-			returnRate: Math.round(blendedReturnRate * 100) / 100,
+			returnRate: roundedReturnRate,
 			avgDeliveryTime: staticProfile?.avgDeliveryTime || 3,
-			riskMultiplier: Math.round(riskMultiplier * 100) / 100,
+			riskMultiplier: roundedRiskMultiplier,
 		};
+
+		upsertRows.push({
+			seller_id: sellerId,
+			wilaya,
+			total_orders: stats.total,
+			return_rate: roundedReturnRate,
+			avg_delivery_days: staticProfile?.avgDeliveryTime || 3,
+			risk_multiplier: roundedRiskMultiplier,
+		});
 	}
 
 	// Fill in missing wilayas with static defaults
 	for (const [name, profile] of Object.entries(WILAYA_RISK_PROFILES)) {
 		if (!profiles[name]) {
 			profiles[name] = profile;
+		}
+	}
+
+	// Persist computed profiles to DB for cold-start resilience
+	if (upsertRows && upsertRows.length > 0) {
+		try {
+			const { createAdminClient } = await import("@/lib/supabase/server");
+			const adminClient = createAdminClient();
+			const { error: upsertErr } = await adminClient
+				.from("wilaya_risk_profiles")
+				.upsert(upsertRows, { onConflict: "seller_id,wilaya" });
+			if (upsertErr) {
+				console.error(
+					"[risk-engine] Failed to persist wilaya profiles for seller",
+					sellerId,
+					upsertErr,
+				);
+			}
+		} catch (persistErr) {
+			console.error(
+				"[risk-engine] Exception persisting wilaya profiles:",
+				persistErr,
+			);
 		}
 	}
 

@@ -35,12 +35,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Rate limiting — 10 requests per minute per IP
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] ||
-      request.headers.get("x-real-ip") ||
-      "anonymous";
-    const limit = await rateLimit(`ai:${ip}`, 10, 60000);
+    const { getUserSellerContext } = await import("@/lib/data/team-service");
+    const teamCtx = await getUserSellerContext(user.id);
+    if (teamCtx && teamCtx.status === "suspended") {
+      return NextResponse.json(
+        { error: "Forbidden: Your team member account has been suspended" },
+        { status: 403 },
+      );
+    }
+    const sellerId = teamCtx ? teamCtx.sellerId : user.id;
+
+    // Rate limiting — 10 requests per minute per user
+    const limit = await rateLimit(`ai:${user.id}`, 10, 60000);
     if (!limit.allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -123,31 +129,6 @@ export async function POST(request: Request) {
             { error: "question is required" },
             { status: 400 },
           );
-
-        // Try to get seller ID for full agentic mode
-        let sellerId: string | null = null;
-        try {
-          const supabase = await createClient();
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-
-          if (user) {
-            // sellers.id = auth.users.id (same UUID)
-            sellerId = user.id;
-
-            // Rate limiting — 10 requests per minute per user
-            const rl = await rateLimit(`ai:${user.id}`, 10, 60000);
-            if (!rl.allowed) {
-              return NextResponse.json(
-                { error: "Too many requests" },
-                { status: 429, headers: rateLimitHeaders(rl) },
-              );
-            }
-          }
-        } catch {
-          // Auth failed — continue without seller
-        }
 
         // STREAMING MODE: return SSE if client requests it
         if (body.stream && sellerId) {

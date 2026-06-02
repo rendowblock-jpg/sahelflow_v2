@@ -21,12 +21,12 @@ SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce se
 | -------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | **Framework**  | Next.js 16 (App Router, Turbopack)                | React 19, TypeScript 5 strict                                                                  |
 | **Database**   | Supabase (PostgreSQL + Auth + Realtime + Storage) | RLS policies per-seller, SECURITY DEFINER RPCs for atomic operations                           |
-| **Styling**    | Vanilla CSS (`sf-` prefix)                        | **No Tailwind.** All utility classes in `globals.css` + `inbox.css`                            |
+| **Styling**    | Vanilla CSS (`sf-` prefix)                        | **No Tailwind.** Reorganized split CSS architecture under `src/app/styles/`                    |
 | **Charts**     | Recharts                                          | 6 chart components, RTL-aware axes, `prefers-reduced-motion` support                           |
 | **Animation**  | Framer Motion                                     | PageTransition, StaggerContainer, StaggerItem, FadeIn, SlideIn, AnimatedCard, AnimatedStatCard |
-| **AI**         | Groq API (multi-model router)                     | 5 specialized models with per-model API keys and fallback chains                               |
+| **AI**         | Groq API (multi-model router)                     | 5 specialized models with per-model API keys, 30 active tools, and fallback chains             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp)              | Per-client Railway deployment; QR-code connection                                              |
-| **Delivery**   | Yalidine (live), Maystro, ZR Express (Procolis)   | Adapter registry pattern with multi-provider shipment creation                                 |
+| **Delivery**   | Yalidine, Maystro, ZR Express (Procolis)          | Adapter registry pattern; all three adapters verified via unit tests                           |
 | **Validation** | Zod                                               | All public API routes validated                                                                |
 | **Testing**    | Vitest                                            | **354 unit tests** across **32 test files**                                                    |
 | **i18n**       | Custom TypeScript-inferred system                 | 3 locales: `en`, `fr`, `ar` (RTL supported). Arabic is default.                                |
@@ -49,15 +49,19 @@ sahelflow/
 │   │   │       ├── customers/       # Customer list + risk scores
 │   │   │       ├── inbox/           # WhatsApp split-pane inbox (real-time)
 │   │   │       ├── analytics/       # Charts & stats (server-side RPC)
+│   │   │       ├── accounting/      # [NEW] P&L overview, expenses, variant costs
+│   │   │       ├── returns/         # [NEW] Return status logs and exchange flows
 │   │   │       ├── delivery/        # Tracking + multi-provider shipment
 │   │   │       ├── shipping/        # Wilaya-based shipping rates
 │   │   │       ├── automations/     # Recipe-based automation engine
 │   │   │       ├── agents/          # AI agent configuration UI
-│   │   │       ├── settings/        # Profile, channels, templates, integrations (9 tabs)
+│   │   │       ├── settings/        # Profile, channels, templates, integrations (including Team tab)
 │   │   │       └── integrations/    # Shopify/WooCommerce/YouCan webhook setup
 │   │   ├── api/                 # API routes (see §4)
 │   │   ├── form/                # Embeddable public order form (per-seller slug)
-│   │   ├── globals.css          # Dashboard styles (all sf-* classes)
+│   │   ├── styles/              # [NEW] Split CSS architecture (layout, base, accounting, returns, etc.)
+│   │   ├── globals.css          # Core CSS loader
+│   │   ├── tokens.css           # Global design system color/spacing tokens
 │   │   └── inbox.css            # Split-pane inbox styles
 │   ├── components/
 │   │   ├── dashboard/           # Sidebar, TopBar, AIAssistant, ToastProvider, NotificationCenter
@@ -66,7 +70,7 @@ sahelflow/
 │   │   └── ui/                  # ErrorBoundary, EmptyState, Toast, Skeleton, charts, motion
 │   └── lib/
 │       ├── agents/              # Orchestrator + Order/Communication agents
-│       ├── ai/                  # AI engine (23 tools), tool-handlers, upsell, extraction
+│       ├── ai/                  # AI engine (30 tools), tool-handlers, upsell, extraction
 │       ├── automation/          # Recipe runner + definitions
 │       ├── channels/            # Evolution API client + template interpolation
 │       ├── data/                # Supabase CRUD services (decomposed modules)
@@ -86,6 +90,14 @@ sahelflow/
 │   │   ├── 003_select_rls_and_cleanup.sql
 │   │   ├── 004_delivery_status_constraint_and_webhook_dedup.sql
 │   │   ├── 005_import_history.sql
+│   │   ├── 006_audit_fixes.sql
+│   │   ├── 006_rls_insert_hardening.sql
+│   │   ├── 007_ai_chat_persistence.sql
+│   │   ├── 007_rebuild_analytics_with_soft_delete.sql
+│   │   ├── 008_after_sales_returns.sql
+│   │   ├── 009_accounting.sql
+│   │   ├── 010_team_access.sql
+│   │   ├── 011_daily_reports.sql
 │   │   ├── 020_soft_delete.sql
 │   │   ├── archive/             # Historical migrations 001–029
 │   │   └── seeds/
@@ -108,22 +120,31 @@ sahelflow/
 
 ```
 api/
+├── accounting/
+│   ├── pnl/               # [NEW] GET P&L overview stats (revenue, profit, marketing, delivery costs)
+│   └── products/          # [NEW] GET product profitability stats (unit margins, variants)
 ├── agents/
 │   ├── config/            # GET/POST agent configuration
 │   ├── health/            # GET model health status
 │   └── process-order/     # POST trigger order agent manually
 ├── ai/
 │   ├── chat/              # POST AI assistant chat (streaming via SSE)
-│   └── extract/           # POST extract order from WhatsApp text
+│   ├── extract/           # POST extract order from WhatsApp text
+│   └── sessions/          # [NEW] GET/POST chat sessions
+│       └── [id]/          # [NEW] GET/PATCH/DELETE session, POST message to /messages
 ├── analytics/             # GET analytics data (service_role RPC proxy)
 ├── channels/
 │   └── connect/           # POST WhatsApp QR code / status
+├── cron/
+│   └── daily-report/      # [NEW] GET cron endpoint to trigger and distribute daily WhatsApp metrics
 ├── dashboard/
 │   └── stats/             # GET dashboard aggregates (service_role RPC proxy)
 ├── delivery/
 │   ├── create-shipment/   # POST create shipment (multi-provider)
 │   ├── estimate-cost/     # POST estimate delivery cost
 │   └── sync-tracking/     # GET cron endpoint for tracking sync
+├── expenses/              # [NEW] GET/POST expense list
+│   └── [id]/              # [NEW] GET/PATCH/DELETE expense detail
 ├── form/
 │   └── submit/            # POST public order form submission (rate limited)
 ├── inbox/
@@ -134,6 +155,10 @@ api/
 ├── notifications/         # GET / PATCH / DELETE — persistent notifications
 ├── products/
 │   └── import/            # POST product import (CSV / XLSX / Google Sheets)
+├── returns/               # [NEW] GET/POST return orders list
+│   └── [id]/              # [NEW] GET/PATCH/DELETE return status, POST notes to /notes
+├── team/                  # [NEW] GET members list, POST invite member
+│   └── [id]/              # [NEW] PATCH update member role/status, DELETE remove member
 ├── templates/             # WhatsApp template CRUD
 ├── upsell/                # Upsell suggestion engine
 ├── health/                # GET health check (fail-closed)
@@ -157,29 +182,44 @@ api/
 - `003_select_rls_and_cleanup.sql` — SELECT RLS policies for products/categories
 - `004_delivery_status_constraint_and_webhook_dedup.sql` — Fixed `deliveries.status` CHECK + `webhook_events` dedup table
 - `005_import_history.sql` — Import batches and history tracking
+- `006_audit_fixes.sql` — DB schema fixes & alignment (2026-05-12 audit)
+- `006_rls_insert_hardening.sql` — Harden insert RLS policies for sellers and customers
+- `007_ai_chat_persistence.sql` — Persistent sessions & messages tables for AI assistant
+- `007_rebuild_analytics_with_soft_delete.sql` — Rebuild statistics to support soft deleted models
+- `008_after_sales_returns.sql` — After-sales returns tracking schema and triggers
+- `009_accounting.sql` — Ledger tables: expenses, returns, variant cost mappings
+- `010_team_access.sql` — Team member management table, roles and updated team-aware RLS
+- `011_daily_reports.sql` — Daily analytics reports tables for cron metrics
 - `020_soft_delete.sql` — Soft delete triggers and restore support
 
-All tables use **RLS** scoped to `seller_id = auth.uid()`.
+All tables use **RLS** scoped via the helper function `public.check_user_seller_access(seller_id)` to support team members.
 
-| Table                 | Key Columns & Notes                                                                                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sellers`             | Extends `auth.users`. Profile, settings, webhook config, shipping rates, notification settings, onboarding flags                            |
-| `channels`            | WhatsApp instances (Evolution API). `active`, `credentials` JSONB                                                                           |
-| `customers`           | Risk scores, order history, `deleted_at` (soft delete)                                                                                      |
-| `conversations`       | Chat threads. `is_pinned`, `is_archived`, `labels[]`, `unread_count`, `status`                                                              |
-| `messages`            | `direction` (inbound/outbound), `content_type` (text/image/audio/video/file), `reply_to_id`                                                 |
-| `products`            | Variants, categories, images, stock. `deleted_at` (soft delete)                                                                             |
-| `categories`          | Seller-scoped product categories                                                                                                            |
-| `orders`              | Full lifecycle: draft → pending → confirmed → shipped → delivered/returned. `confirmation_status`, `deleted_at` (soft delete)               |
-| `deliveries`          | Shipment tracking per provider (tracking_number, status, provider)                                                                          |
-| `automations`         | Recipe triggers + actions. `trigger_config` JSONB for customizable parameters                                                               |
-| `agent_activity`      | AI action log for activity feed                                                                                                             |
-| `whatsapp_templates`  | Reusable message templates with `{{variable}}` interpolation                                                                                |
-| `integrations`        | External platform credentials (Shopify, WooCommerce, YouCan, Yalidine, etc.)                                                                |
-| `webhook_retry_queue` | Idempotent retry queue for failed dispatches (`idempotency_key` unique)                                                                     |
-| `notifications`       | Persistent notifications: type, title, message, link, read, dismissed, metadata JSONB. Indexed for fast unread queries                      |
-| `webhook_events`      | Deduplication for store webhooks — tracks Shopify `X-Shopify-Event-Id`, WooCommerce `X-WC-Webhook-Delivery-ID`, YouCan event IDs per seller |
-| `import_batches`      | Import history: source, file_name, row_count, success_count, error_log, status                                                              |
+| Table                      | Key Columns & Notes                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sellers`                  | Extends `auth.users`. Profile, settings, webhook config, shipping rates, notification settings, onboarding flags                            |
+| `team_members`             | [NEW] Multi-user invitations, roles (owner, admin, confirmer, packer, viewer), and active status                                            |
+| `channels`                 | WhatsApp instances (Evolution API). `active`, `credentials` JSONB                                                                           |
+| `customers`                | Risk scores, order history, `deleted_at` (soft delete)                                                                                      |
+| `conversations`            | Chat threads. `is_pinned`, `is_archived`, `labels[]`, `unread_count`, `status`                                                              |
+| `messages`                 | `direction` (inbound/outbound), `content_type` (text/image/audio/video/file), `reply_to_id`                                                 |
+| `products`                 | Variants, categories, images, stock. `deleted_at` (soft delete)                                                                             |
+| `categories`               | Seller-scoped product categories                                                                                                            |
+| `orders`                   | Full lifecycle: draft → pending → confirmed → shipped → delivered/returned. `confirmation_status`, `deleted_at` (soft delete)               |
+| `deliveries`               | Shipment tracking per provider (tracking_number, status, provider)                                                                          |
+| `automations`              | Recipe triggers + actions. `trigger_config` JSONB for customizable parameters                                                               |
+| `agent_activity`           | AI action log for activity feed                                                                                                             |
+| `whatsapp_templates`       | Reusable message templates with `{{variable}}` interpolation                                                                                |
+| `integrations`             | External platform credentials (Shopify, WooCommerce, YouCan, Yalidine, etc.)                                                                |
+| `webhook_retry_queue`      | Idempotent retry queue for failed dispatches (`idempotency_key` unique)                                                                     |
+| `notifications`            | Persistent notifications: type, title, message, link, read, dismissed, metadata JSONB. Indexed for fast unread queries                      |
+| `webhook_events`           | Deduplication for store webhooks — tracks Shopify `X-Shopify-Event-Id`, WooCommerce `X-WC-Webhook-Delivery-ID`, YouCan event IDs per seller |
+| `import_batches`           | Import history: source, file_name, row_count, success_count, error_log, status                                                              |
+| `expenses`                 | [NEW] Accounting expense ledger: amount, category, date, description, and marketing cost linkages                                           |
+| `returns`                  | [NEW] Returns tracker: status, reason, refund amount, stock adjustment flags, and notes                                                     |
+| `return_notes`             | [NEW] Timeline notes/comments for return lifecycle events                                                                                   |
+| `ai_chat_sessions`         | [NEW] Persisted sessions for AI Copilot chat dashboard interface                                                                            |
+| `ai_chat_messages`         | [NEW] Persisted chat messages for Copilot history timeline                                                                                  |
+| `daily_analytics_reports`  | [NEW] Daily snapshot of orders, delivery performance, revenue, and top products                                                             |
 
 ### Custom Functions (RPC)
 
@@ -252,7 +292,7 @@ Simple in-memory rate limiting via `src/lib/rate-limit.ts`. Uses `Map<string, co
 
 ### 6.10 Delivery Adapters
 
-Registry pattern with `getAllDeliveryAdapters()`. Each adapter implements `createParcel()`, `trackParcel()`, `getRates()`. Yalidine is fully live. Maystro and ZR Express (Procolis) use real API endpoints but are hidden from the UI until verified.
+Registry pattern with `getAllDeliveryAdapters()`. Each adapter implements `createParcel()`, `trackParcel()`, `getRates()`. Yalidine, Maystro, and ZR Express (Procolis) are all fully verified via unit tests and integrated into the delivery and order confirmation workflows.
 
 ### 6.11 Notification System
 
@@ -351,7 +391,7 @@ See [`SETUP.md`](./SETUP.md) for full descriptions and `.env.local` template.
 | File                                              | Purpose                                                            |
 | ------------------------------------------------- | ------------------------------------------------------------------ |
 | `src/lib/agents/groq.ts`                          | LLM API wrapper. Only file that calls Groq.                        |
-| `src/lib/ai/agent.ts`                             | AI chat engine with 23 specialized tools.                          |
+| `src/lib/ai/agent.ts`                             | AI chat engine with 30 specialized tools.                          |
 | `src/lib/ai/tool-handlers.ts`                     | AI tool delegation layer (dependency-injected Supabase).           |
 | `src/lib/ai/models/router.ts`                     | Multi-model selection logic.                                       |
 | `src/lib/ai/models/executor.ts`                   | Executes model calls with per-model API keys.                      |
@@ -363,6 +403,9 @@ See [`SETUP.md`](./SETUP.md) for full descriptions and `.env.local` template.
 | `src/lib/data/order-service.ts`                   | Order CRUD + soft delete + restore.                                |
 | `src/lib/data/product-service.ts`                 | Product CRUD + soft delete + restore.                              |
 | `src/lib/data/customer-service.ts`                | Customer CRUD + soft delete + restore.                             |
+| `src/lib/data/expense-service.ts`                 | [NEW] Expense management, marketing linkages, and custom profit.  |
+| `src/lib/data/team-service.ts`                    | [NEW] Team member lists, role management, and invitation flows.    |
+| `src/lib/data/chat-service.ts`                    | [NEW] Server-side AI Copilot chat sessions and messages ledger.     |
 | `src/lib/data/notification-service.ts`            | Persistent notification CRUD.                                      |
 | `src/lib/rate-limit.ts`                           | In-memory rate limiting (simple, 0 dependencies).                  |
 | `src/lib/webhook-verify.ts`                       | Shopify + WooCommerce + YouCan HMAC verification.                  |
@@ -375,9 +418,11 @@ See [`SETUP.md`](./SETUP.md) for full descriptions and `.env.local` template.
 | `src/app/api/dashboard/stats/route.ts`            | Service_role proxy for `get_dashboard_aggregates` RPC.             |
 | `src/app/api/analytics/route.ts`                  | Service_role proxy for `get_analytics_data` RPC.                   |
 | `src/app/api/form/submit/route.ts`                | Public order form submission (rate limited, Zod validated).        |
+| `src/app/api/cron/daily-report/route.ts`          | [NEW] Scheduled aggregation route for daily WhatsApp metrics.      |
 | `next.config.ts`                                  | Next.js config + CSP security headers + HSTS + Permissions-Policy. |
+| `src/app/globals.css`                             | Loader for design tokens (`tokens.css`) and split layout CSS.      |
 | `supabase/migrations/000_baseline.sql`            | Comprehensive schema migration.                                    |
 
 ---
 
-_Last updated: 2026-05-12_
+_Last updated: 2026-05-20_

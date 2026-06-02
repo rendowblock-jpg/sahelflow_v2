@@ -2,6 +2,13 @@
   "items": [
     {
       "type": "TODO",
+      "message": "Integrate error reporting (Sentry)",
+      "file": "src\\components\\providers\\UserProvider.tsx",
+      "line": 50,
+      "column": 21
+    },
+    {
+      "type": "TODO",
       "message": "Cross-seller faux commande detection removed — per-client deployment model",
       "file": "src\\lib\\ai\\risk-engine.ts",
       "line": 356,

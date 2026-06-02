@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
+import { createAdminClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/dashboard/stats
@@ -7,10 +8,11 @@ import { withAuthAndRateLimit } from "@/lib/api-wrapper";
  * Uses service_role client to call the SECURITY DEFINER RPC.
  */
 export const GET = withAuthAndRateLimit(
-	async (_req, { user: _user, supabase }) => {
-		const { data, error } = await supabase.rpc(
+	async (_req, { user: _user, sellerId }) => {
+		const adminClient = createAdminClient();
+		const { data, error } = await adminClient.rpc(
 			"get_dashboard_aggregates",
-			{},
+			{ p_seller_id: sellerId },
 			{ head: false },
 		);
 		if (error) {
@@ -29,3 +31,4 @@ export const GET = withAuthAndRateLimit(
 	},
 	{ requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );
+

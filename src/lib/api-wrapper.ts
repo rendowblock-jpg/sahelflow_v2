@@ -3,12 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { z } from "zod";
 
+/** Resolved params record passed to handlers after awaiting the Next.js Promise. */
+type ResolvedParams = Record<string, string | string[] | undefined>;
+
 type ApiHandler<T = unknown> = (
 	req: NextRequest,
 	ctx: {
 		user: { id: string; email?: string };
+		sellerId: string;
 		supabase: Awaited<ReturnType<typeof createClient>>;
 		body?: T;
+		params: ResolvedParams;
 	},
 ) => Promise<NextResponse>;
 
@@ -29,13 +34,21 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 	handler: ApiHandler<z.infer<T>>,
 	options: WrapperOptions<T> = {},
 ) {
-	return async (req: NextRequest) => {
+	return async (
+		req: NextRequest,
+		context?: { params?: Promise<ResolvedParams> },
+	) => {
 		try {
 			const {
 				requireAuth = true,
 				schema,
 				rateLimitConfig = { maxRequests: 60, windowMs: 60000 },
 			} = options;
+
+			// Resolve async params from Next.js 15 route context
+			const resolvedParams: ResolvedParams = context?.params
+				? await context.params
+				: {};
 
 			const supabase = await createClient();
 			let user = null;
@@ -48,6 +61,24 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 					return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 				}
 				user = authData.user;
+			}
+
+			// Resolve active sellerId if authenticated
+			let sellerId = "";
+			if (user) {
+				const { getUserSellerContext } = await import("@/lib/data/team-service");
+				const teamCtx = await getUserSellerContext(user.id);
+				if (teamCtx) {
+					if (teamCtx.status === "suspended") {
+						return NextResponse.json(
+							{ error: "Forbidden: Your team member account has been suspended" },
+							{ status: 403 },
+						);
+					}
+					sellerId = teamCtx.sellerId;
+				} else {
+					sellerId = user.id;
+				}
 			}
 
 			// 2. Rate Limiting Check
@@ -103,8 +134,10 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 			// 4. Execute Handler
 			const response = await handler(req, {
 				user: user as { id: string; email?: string }, // Only non-null if requireAuth is true
+				sellerId,
 				supabase,
 				body: validatedBody,
+				params: resolvedParams,
 			});
 
 			// Add rate limit headers to successful response

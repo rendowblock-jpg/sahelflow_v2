@@ -33,9 +33,17 @@ function chain(selectResult: any) {
 vi.mock("@/lib/data/supabase-helpers", () => ({
 	getSupabase: vi.fn(),
 }));
-vi.mock("@/lib/data/auth-service", () => ({
-	getCurrentUser: vi.fn(),
-}));
+vi.mock("@/lib/data/auth-service", () => {
+	const mockGetCurrentUser = vi.fn();
+	return {
+		getCurrentUser: mockGetCurrentUser,
+		getActiveSellerId: vi.fn(async () => {
+			const user = await mockGetCurrentUser();
+			if (!user) throw new Error("Not authenticated");
+			return user.id;
+		}),
+	};
+});
 
 import { getSupabase } from "@/lib/data/supabase-helpers";
 import { getCurrentUser } from "@/lib/data/auth-service";
@@ -43,6 +51,7 @@ import { getCurrentUser } from "@/lib/data/auth-service";
 describe("product-service", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(getCurrentUser).mockResolvedValue({ id: "seller-1" } as any);
 	});
 
 	describe("getCategories", () => {
@@ -88,10 +97,9 @@ describe("product-service", () => {
 
 	describe("deleteCategory", () => {
 		it("deletes without error", async () => {
-			const eqMock = vi.fn().mockResolvedValue({ error: null });
-			vi.mocked(getSupabase).mockReturnValue({
-				from: () => ({ delete: () => ({ eq: eqMock }) }),
-			} as any);
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ error: null }),
+			);
 			await expect(deleteCategory("cat1")).resolves.toBeUndefined();
 		});
 	});
@@ -171,12 +179,9 @@ describe("product-service", () => {
 
 	describe("deleteProduct", () => {
 		it("soft-deletes without error", async () => {
-			const eqMock = vi.fn().mockReturnValue({
-				is: vi.fn().mockResolvedValue({ error: null }),
-			});
-			vi.mocked(getSupabase).mockReturnValue({
-				from: () => ({ update: () => ({ eq: eqMock }) }),
-			} as any);
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ error: null }),
+			);
 			await expect(deleteProduct("p1")).resolves.toBeUndefined();
 		});
 	});

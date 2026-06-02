@@ -15,6 +15,7 @@ export {
   getCurrentUser,
   getSellerProfile,
   updateSellerProfile,
+  getActiveSellerId,
 } from "./auth-service";
 
 // Products & Categories

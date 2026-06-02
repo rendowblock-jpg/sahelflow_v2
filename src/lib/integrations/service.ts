@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { getCurrentUser } from "@/lib/data/service";
+import { getActiveSellerId } from "@/lib/data/service";
 import type { Integration } from "@/types/database";
 
 let _client: ReturnType<typeof createClient> | null = null;
@@ -21,13 +21,12 @@ export async function saveIntegration(
   platform: string,
   credentials: Record<string, string>,
 ): Promise<Integration> {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  const sellerId = await getActiveSellerId();
   const { data, error } = await getSupabase()
     .from("integrations")
     .upsert(
       {
-        seller_id: user.id,
+        seller_id: sellerId,
         platform,
         credentials,
         is_active: true,

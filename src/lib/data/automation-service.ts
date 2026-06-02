@@ -4,7 +4,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
-import { getCurrentUser } from "./auth-service";
+import { getActiveSellerId } from "./auth-service";
 import type { Automation } from "@/types/database";
 
 export async function getAutomations() {
@@ -25,11 +25,10 @@ export async function createAutomation(automation: {
   action_config?: unknown;
   active?: boolean;
 }) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  const sellerId = await getActiveSellerId();
   const { data, error } = await getSupabase()
     .from("automations")
-    .insert({ ...automation, seller_id: user.id })
+    .insert({ ...automation, seller_id: sellerId })
     .select()
     .single();
   if (error) throw error;

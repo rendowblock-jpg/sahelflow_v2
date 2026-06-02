@@ -4,7 +4,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
-import { getCurrentUser } from "./auth-service";
+import { getActiveSellerId } from "./auth-service";
 
 export async function getDeliveries(options?: { limit?: number; offset?: number }) {
   const limit = options?.limit ?? 50
@@ -26,11 +26,10 @@ export async function createDelivery(delivery: {
   provider: string;
   tracking_number?: string;
 }) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  const sellerId = await getActiveSellerId();
   const { data, error } = await getSupabase()
     .from("deliveries")
-    .insert({ ...delivery, seller_id: user.id })
+    .insert({ ...delivery, seller_id: sellerId })
     .select()
     .single();
   if (error) throw error;

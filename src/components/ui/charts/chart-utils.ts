@@ -44,16 +44,20 @@ export const THEME_COLORS = {
 	},
 } as const;
 
-/** Status color mapping for charts — matches dashboard badges */
+/**
+ * Status color mapping for charts — Phase 6.7
+ * Now uses CSS custom properties for theme consistency instead of hardcoded hex.
+ * Falls back to hex for Recharts SVG fills that can't resolve CSS vars at render time.
+ */
 export const STATUS_COLORS: Record<string, string> = {
-	pending: "#f59e0b",
-	confirmed: "#6366f1",
-	shipped: "#3b82f6",
-	delivered: "#10b981",
-	returned: "#ef4444",
-	refused: "#dc2626",
-	cancelled: "#6b7280",
-	draft: "#8b5cf6",
+	pending: "var(--color-warn-500, #f59e0b)",
+	confirmed: "var(--color-brand-500, #6366f1)",
+	shipped: "var(--color-brand-400, #3b82f6)",
+	delivered: "var(--color-accent-500, #10b981)",
+	returned: "var(--color-danger-500, #ef4444)",
+	refused: "var(--color-danger-400, #dc2626)",
+	cancelled: "var(--color-content-tertiary, #6b7280)",
+	draft: "var(--color-brand-300, #8b5cf6)",
 };
 
 /** Generic palette for when status isn't known */
@@ -102,14 +106,76 @@ export const axisTickStyle = {
 
 export const axisLineStyle = { stroke: "var(--color-line-primary)" };
 
-/** Format a number as compact (e.g. 12k, 1.5M) */
+/**
+ * Format a number as compact (e.g. 12k, 1.5M).
+ * Kept single-param for Recharts tickFormatter compatibility.
+ */
 export function formatCompact(value: number): string {
-	if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-	if (value >= 1_000) return `${Math.round(value / 1_000)}k`;
-	return String(value);
+	return formatCompactLocale(value);
 }
 
-/** Currency formatter for tooltips */
-export function formatCurrencyTooltip(value: number, currency = "DZD"): string {
-	return `${value.toLocaleString("fr-DZ")} ${currency}`;
+/**
+ * Locale-aware compact formatter (e.g. 12k, ١٢ألف, 1.5M, ١٫٥م).
+ * Phase 6.5: Supports Arabic-Indic numerals.
+ */
+export function formatCompactLocale(value: number, locale: string = "fr"): string {
+	if (value >= 1_000_000) {
+		const formatted = (value / 1_000_000).toFixed(1);
+		return locale === "ar"
+			? `${toArabicNumerals(formatted)}م`
+			: `${formatted}M`;
+	}
+	if (value >= 1_000) {
+		const rounded = Math.round(value / 1_000);
+		return locale === "ar"
+			? `${toArabicNumerals(String(rounded))}ألف`
+			: `${rounded}k`;
+	}
+	return locale === "ar" ? toArabicNumerals(String(value)) : String(value);
+}
+
+/** Convert Western digits to Arabic-Indic numerals */
+function toArabicNumerals(str: string): string {
+	const map: Record<string, string> = {
+		"0": "٠",
+		"1": "١",
+		"2": "٢",
+		"3": "٣",
+		"4": "٤",
+		"5": "٥",
+		"6": "٦",
+		"7": "٧",
+		"8": "٨",
+		"9": "٩",
+	};
+	return str.replace(/[0-9]/g, (d) => map[d] || d);
+}
+
+/**
+ * Get the BCP 47 locale tag for Number.toLocaleString from app locale.
+ * Phase 6.6: Maps app locale to proper BCP 47 tags.
+ */
+export function getLocaleTag(locale: string): string {
+	switch (locale) {
+		case "ar":
+			return "ar-DZ";
+		case "fr":
+			return "fr-DZ";
+		case "en":
+			return "en-US";
+		default:
+			return "fr-DZ";
+	}
+}
+
+/**
+ * Currency formatter for tooltips.
+ * Phase 6.5: Accepts locale for proper numeral formatting.
+ */
+export function formatCurrencyTooltip(
+	value: number,
+	currency = "DZD",
+	locale: string = "fr",
+): string {
+	return `${value.toLocaleString(getLocaleTag(locale))} ${currency}`;
 }

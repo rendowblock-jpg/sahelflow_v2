@@ -11,6 +11,7 @@
  */
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
 export const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 export interface ChatMessage {
@@ -48,8 +49,18 @@ export interface GroqOptions {
 }
 
 /**
+ * Phase 5.10: Exponential backoff with jitter.
+ * Prevents thundering herd when multiple concurrent requests hit rate limits
+ * or server errors — they no longer all retry at the same exact moment.
+ */
+function retryDelay(attempt: number, baseMs: number = 1500): number {
+	// Exponential backoff: 1.5s, 3s, 4.5s + random jitter [0, 1000ms)
+	return attempt * baseMs + Math.floor(Math.random() * 1000);
+}
+
+/**
  * Call Groq with messages and return the raw text response.
- * Includes retry logic with backoff for rate limits and transient errors.
+ * Includes retry logic with exponential backoff + jitter for rate limits and transient errors.
  */
 export async function callLLM(
 	messages: ChatMessage[],
@@ -105,16 +116,20 @@ export async function callLLM(
 
 			if (res.status === 429) {
 				const retryAfter = Number(res.headers.get("retry-after") || 2);
+				const delay = retryAfter * 1000 + Math.floor(Math.random() * 1000);
 				console.warn(
-					`[Groq] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1})`,
+					`[Groq] Rate limited, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
 				);
-				await new Promise((r) => setTimeout(r, retryAfter * 1000));
+				await new Promise((r) => setTimeout(r, delay));
 				continue;
 			}
 
 			if (res.status === 502 || res.status === 503) {
-				console.warn(`[Groq] ${res.status}, retrying (attempt ${attempt + 1})`);
-				await new Promise((r) => setTimeout(r, (attempt + 1) * 1500));
+				const delay = retryDelay(attempt + 1);
+				console.warn(
+					`[Groq] ${res.status}, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
 				continue;
 			}
 
@@ -132,9 +147,16 @@ export async function callLLM(
 			}
 			return content;
 		} catch (err) {
-			if (err instanceof DOMException && err.name === "AbortError") {
+			if (
+				(err instanceof DOMException && err.name === "AbortError") ||
+				(err instanceof Error && err.name === "AbortError")
+			) {
 				console.warn(`[Groq] Request timed out (attempt ${attempt + 1})`);
-				if (attempt < maxRetries - 1) continue;
+				if (attempt < maxRetries - 1) {
+					const delay = retryDelay(attempt + 1);
+					await new Promise((r) => setTimeout(r, delay));
+					continue;
+				}
 			}
 			if (attempt >= maxRetries - 1) throw err;
 		}
@@ -200,19 +222,23 @@ export async function callLLMWithTools(
 			clearTimeout(timeout);
 
 			if (res.status === 429) {
-				// Rate limited — wait and retry
+				// Rate limited — wait with jitter and retry
 				const retryAfter = Number(res.headers.get("retry-after") || 2);
+				const delay = retryAfter * 1000 + Math.floor(Math.random() * 1000);
 				console.warn(
-					`[Groq] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1})`,
+					`[Groq] Rate limited, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
 				);
-				await new Promise((r) => setTimeout(r, retryAfter * 1000));
+				await new Promise((r) => setTimeout(r, delay));
 				continue;
 			}
 
 			if (res.status === 503 || res.status === 502) {
-				// Server overloaded — retry with backoff
-				console.warn(`[Groq] ${res.status}, retrying (attempt ${attempt + 1})`);
-				await new Promise((r) => setTimeout(r, (attempt + 1) * 1500));
+				// Server overloaded — retry with exponential backoff + jitter
+				const delay = retryDelay(attempt + 1);
+				console.warn(
+					`[Groq] ${res.status}, retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
 				continue;
 			}
 
@@ -225,9 +251,16 @@ export async function callLLMWithTools(
 			const data = await res.json();
 			return data.choices?.[0]?.message || { content: "" };
 		} catch (err) {
-			if (err instanceof DOMException && err.name === "AbortError") {
+			if (
+				(err instanceof DOMException && err.name === "AbortError") ||
+				(err instanceof Error && err.name === "AbortError")
+			) {
 				console.warn(`[Groq] Request timed out (attempt ${attempt + 1})`);
-				if (attempt < maxRetries - 1) continue;
+				if (attempt < maxRetries - 1) {
+					const delay = retryDelay(attempt + 1);
+					await new Promise((r) => setTimeout(r, delay));
+					continue;
+				}
 			}
 			throw err;
 		}

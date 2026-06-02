@@ -79,7 +79,7 @@ export const WILAYAS: Wilaya[] = [
 ];
 
 /** Sorted wilaya names for dropdown lists */
-export const WILAYA_NAMES = WILAYAS.map((w) => w.name).sort();
+export const WILAYA_NAMES: string[] = WILAYAS.map((w: Wilaya) => w.name).sort();
 
 /** Zone-based default delivery prices (DA) */
 export const ZONE_PRICES: Record<WilayaZone, { home: number; desk: number }> = {
@@ -90,3 +90,269 @@ export const ZONE_PRICES: Record<WilayaZone, { home: number; desk: number }> = {
   highPlateaux: { home: 600, desk: 450 },
   south: { home: 750, desk: 600 },
 };
+
+export const WILAYA_ALIASES: Record<string, string> = {
+  // French aliases
+  alger: "Alger",
+  algiers: "Alger",
+  algers: "Alger",
+  oran: "Oran",
+  wahran: "Oran",
+  constantine: "Constantine",
+  qacentina: "Constantine",
+  qsantina: "Constantine",
+  annaba: "Annaba",
+  "3annaba": "Annaba",
+  blida: "Blida",
+  "el blida": "Blida",
+  setif: "Sétif",
+  stif: "Sétif",
+  setiff: "Sétif",
+  batna: "Batna",
+  djelfa: "Djelfa",
+  jilfa: "Djelfa",
+  "sidi bel abbes": "Sidi Bel Abbès",
+  sba: "Sidi Bel Abbès",
+  biskra: "Biskra",
+  tebessa: "Tébessa",
+  tbessa: "Tébessa",
+  tiaret: "Tiaret",
+  "tizi ouzou": "Tizi Ouzou",
+  tizi: "Tizi Ouzou",
+  to: "Tizi Ouzou",
+  bejaia: "Béjaïa",
+  bgayet: "Béjaïa",
+  bjaia: "Béjaïa",
+  bouira: "Bouira",
+  tlemcen: "Tlemcen",
+  tilimsen: "Tlemcen",
+  jijel: "Jijel",
+  skikda: "Skikda",
+  mostaganem: "Mostaganem",
+  mostaghanem: "Mostaganem",
+  msila: "M'Sila",
+  "m'sila": "M'Sila",
+  chlef: "Chlef",
+  chelef: "Chlef",
+  medea: "Médéa",
+  mascara: "Mascara",
+  ouargla: "Ouargla",
+  wargla: "Ouargla",
+  bechar: "Béchar",
+  ghardaia: "Ghardaïa",
+  ghardaya: "Ghardaïa",
+  "el oued": "El Oued",
+  "oued souf": "El Oued",
+  boumerdes: "Boumerdès",
+  tipaza: "Tipaza",
+  tipasa: "Tipaza",
+  "ain temouchent": "Aïn Témouchent",
+  "ain defla": "Aïn Defla",
+  relizane: "Relizane",
+  "bordj bou arreridj": "Bordj Bou Arréridj",
+  bba: "Bordj Bou Arréridj",
+  khenchela: "Khenchela",
+  "souk ahras": "Souk Ahras",
+  mila: "Mila",
+  naama: "Naâma",
+  saida: "Saïda",
+  adrar: "Adrar",
+  tamanrasset: "Tamanrasset",
+  tam: "Tamanrasset",
+  laghouat: "Laghouat",
+  "oum el bouaghi": "Oum El Bouaghi",
+  "el bayadh": "El Bayadh",
+  illizi: "Illizi",
+  tindouf: "Tindouf",
+  tissemsilt: "Tissemsilt",
+  "el tarf": "El Tarf",
+  "el m'ghair": "El M'Ghair",
+  "el meniaa": "El Meniaa",
+  "ouled djellal": "Ouled Djellal",
+  "bordj baji mokhtar": "Bordj Baji Mokhtar",
+  "beni abbes": "Béni Abbès",
+  timimoun: "Timimoun",
+  touggourt: "Touggourt",
+  djanet: "Djanet",
+  "in salah": "In Salah",
+  "in guezzam": "In Guezzam",
+
+  // Arabic aliases
+  "أدرار": "Adrar",
+  "الشلف": "Chlef",
+  "شلف": "Chlef",
+  "الأغواط": "Laghouat",
+  "أغواط": "Laghouat",
+  "اغواط": "Laghouat",
+  "أم البواقي": "Oum El Bouaghi",
+  "ام البواقي": "Oum El Bouaghi",
+  "باتنة": "Batna",
+  "بجاية": "Béjaïa",
+  "بسكرة": "Biskra",
+  "بشار": "Béchar",
+  "البليدة": "Blida",
+  "بليدة": "Blida",
+  "البويرة": "Bouira",
+  "بويرة": "Bouira",
+  "تمنراست": "Tamanrasset",
+  "تبسة": "Tébessa",
+  "تلمسان": "Tlemcen",
+  "تيارت": "Tiaret",
+  "تيزي وزو": "Tizi Ouzou",
+  "تيزي": "Tizi Ouzou",
+  "الجزائر": "Alger",
+  "العاصمة": "Alger",
+  "دزاير": "Alger",
+  "الجلفة": "Djelfa",
+  "جلفة": "Djelfa",
+  "جيجل": "Jijel",
+  "سطيف": "Sétif",
+  "سعيدة": "Saïda",
+  "سكيكدة": "Skikda",
+  "سيدي بلعباس": "Sidi Bel Abbès",
+  "عنابة": "Annaba",
+  "قالمة": "Guelma",
+  "قسنطينة": "Constantine",
+  "المدية": "Médéa",
+  "مدية": "Médéa",
+  "مستغانم": "Mostaganem",
+  "المسيلة": "M'Sila",
+  "مسيلة": "M'Sila",
+  "معسكر": "Mascara",
+  "ورقلة": "Ouargla",
+  "وهران": "Oran",
+  "البيض": "El Bayadh",
+  "إليزي": "Illizi",
+  "اليـزي": "Illizi",
+  "اليزي": "Illizi",
+  "برج بوعريريج": "Bordj Bou Arréridj",
+  "برج": "Bordj Bou Arréridj",
+  "بومرداس": "Boumerdès",
+  "الطارف": "El Tarf",
+  "طارف": "El Tarf",
+  "تندوف": "Tindouf",
+  "تيسمسيلت": "Tissemsilt",
+  "الوادي": "El Oued",
+  "وادي سوف": "El Oued",
+  "خنشلة": "Khenchela",
+  "سوق أهراس": "Souk Ahras",
+  "سوق اهراس": "Souk Ahras",
+  "تيبازة": "Tipaza",
+  "ميلة": "Mila",
+  "عين الدفلى": "Aïn Defla",
+  "عين الدفله": "Aïn Defla",
+  "النعامة": "Naâma",
+  "نعامة": "Naâma",
+  "عين تموشنت": "Aïn Témouchent",
+  "غرداية": "Ghardaïa",
+  "غليزان": "Relizane",
+  "المغير": "El M'Ghair",
+  "المنيعة": "El Meniaa",
+  "أولاد جلال": "Ouled Djellal",
+  "اولاد جلال": "Ouled Djellal",
+  "برج باجي مختار": "Bordj Baji Mokhtar",
+  "بني عباس": "Béni Abbès",
+  "تيميمون": "Timimoun",
+  "تقرت": "Touggourt",
+  "جانت": "Djanet",
+  "عين صالح": "In Salah",
+  "عين قزام": "In Guezzam",
+};
+
+export function normalizeWilayaName(name: string): string | undefined {
+  if (!name) return undefined;
+  const clean = name.trim().toLowerCase();
+
+  // Try direct alias match
+  if (WILAYA_ALIASES[clean]) {
+    return WILAYA_ALIASES[clean];
+  }
+
+  // Try case-insensitive lookup in WILAYAS list or by matching code
+  const found = WILAYAS.find(
+    (w) =>
+      w.name.toLowerCase() === clean ||
+      String(w.code) === clean ||
+      w.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === clean
+  );
+  if (found) return found.name;
+
+  // Try substring matching (e.g. if name is "wilaya of alger" or "الجزائر العاصمة")
+  for (const [alias, official] of Object.entries(WILAYA_ALIASES)) {
+    if (clean.includes(alias) || alias.includes(clean)) {
+      return official;
+    }
+  }
+
+  return undefined;
+}
+
+export const WILAYA_ARABIC_NAMES: Record<string, string> = {
+  "Adrar": "أدرار",
+  "Chlef": "الشلف",
+  "Laghouat": "الأغواط",
+  "Oum El Bouaghi": "أم البواقي",
+  "Batna": "باتنة",
+  "Béjaïa": "بجاية",
+  "Biskra": "بسكرة",
+  "Béchar": "بشار",
+  "Blida": "البليدة",
+  "Bouira": "البويرة",
+  "Tamanrasset": "تمنراست",
+  "Tébessa": "تبسة",
+  "Tlemcen": "تلمسان",
+  "Tiaret": "تيارت",
+  "Tizi Ouzou": "تيزي وزو",
+  "Alger": "الجزائر",
+  "Djelfa": "الجلفة",
+  "Jijel": "جيجل",
+  "Sétif": "سطيف",
+  "Saïda": "سعيدة",
+  "Skikda": "سكيكدة",
+  "Sidi Bel Abbès": "سيدي بلعباس",
+  "Annaba": "عنابة",
+  "Guelma": "قالمة",
+  "Constantine": "قسنطينة",
+  "Médéa": "المدية",
+  "Mostaganem": "مستغانم",
+  "M'Sila": "المسيلة",
+  "Mascara": "معسكر",
+  "Ouargla": "ورقلة",
+  "Oran": "وهران",
+  "El Bayadh": "البيض",
+  "Illizi": "إليزي",
+  "Bordj Bou Arréridj": "برج بوعريريج",
+  "Boumerdès": "بومرداس",
+  "El Tarf": "الطارف",
+  "Tindouf": "تندوف",
+  "Tissemsilt": "تيسمسيلت",
+  "El Oued": "الوادي",
+  "Khenchela": "خنشلة",
+  "Souk Ahras": "سوق أهراس",
+  "Tipaza": "تيبازة",
+  "Mila": "ميلة",
+  "Aïn Defla": "عين الدفلى",
+  "Naâma": "النعامة",
+  "Aïn Témouchent": "عين تموشنت",
+  "Ghardaïa": "غرداية",
+  "Relizane": "غليزان",
+  "El M'Ghair": "المغير",
+  "El Meniaa": "المنيعة",
+  "Ouled Djellal": "أولاد جلال",
+  "Bordj Baji Mokhtar": "برج باجي مختار",
+  "Béni Abbès": "بني عباس",
+  "Timimoun": "تيميمون",
+  "Touggourt": "تقرت",
+  "Djanet": "جانت",
+  "In Salah": "عين صالح",
+  "In Guezzam": "عين قزام",
+};
+
+export function getWilayaName(name: string | null | undefined, locale: string): string {
+  if (!name) return "";
+  const normalized = normalizeWilayaName(name) || name;
+  if (locale === "ar" && WILAYA_ARABIC_NAMES[normalized]) {
+    return WILAYA_ARABIC_NAMES[normalized];
+  }
+  return normalized;
+}

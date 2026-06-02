@@ -16,10 +16,12 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
 import { useToast } from "@/components/dashboard/ToastProvider";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Product, ProductVariant, Category } from "@/types/database";
 import ImageUploader from "@/components/dashboard/ImageUploader";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/motion";
+import ImportModal from "@/components/products/ImportModal";
 
 interface VariantDraft {
 	id: string;
@@ -31,6 +33,7 @@ export default function ProductsPage() {
 	const { t, formatCurrency } = useI18n();
 	const { isMobile } = useLayout();
 	const { toast } = useToast();
+	const { hasPermission } = usePermissions();
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
@@ -57,6 +60,7 @@ export default function ProductsPage() {
 		name: string;
 		type: "product" | "category";
 	} | null>(null);
+	const [showImport, setShowImport] = useState(false);
 
 	const loadData = useCallback(async () => {
 		try {
@@ -268,9 +272,22 @@ export default function ProductsPage() {
 						{products.length} {t.products.title.toLowerCase()}
 					</p>
 				</div>
-				<button className="sf-btn sf-btn-primary" onClick={openNew}>
-					<Plus size={16} /> {t.products.addProduct}
-				</button>
+				<div className="sf-flex sf-gap-sm sf-items-center">
+					{hasPermission("products:manage") && (
+						<>
+							<button
+								className="sf-btn sf-btn-ghost"
+								onClick={() => setShowImport(true)}
+								style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+							>
+								<Layers size={16} /> {t.imports.title}
+							</button>
+							<button className="sf-btn sf-btn-primary" onClick={openNew}>
+								<Plus size={16} /> {t.products.addProduct}
+							</button>
+						</>
+					)}
+				</div>
 			</div>
 
 			{/* Stats */}
@@ -319,9 +336,11 @@ export default function ProductsPage() {
 					<Package size={48} className="sf-empty-icon-lg" />
 					<h3 className="sf-empty-title">{t.products.noProductsTitle}</h3>
 					<p className="sf-empty-desc">{t.products.noProductsDesc}</p>
-					<button className="sf-btn sf-btn-primary" onClick={openNew}>
-						<Plus size={16} /> {t.products.addFirstProduct}
-					</button>
+					{hasPermission("products:manage") && (
+						<button className="sf-btn sf-btn-primary" onClick={openNew}>
+							<Plus size={16} /> {t.products.addFirstProduct}
+						</button>
+					)}
 				</div>
 			) : isMobile ? (
 				<div className="sf-flex-col sf-gap-md">
@@ -348,20 +367,22 @@ export default function ProductsPage() {
 									<span className="sf-font-semibold">
 										{formatCurrency(p.price)}
 									</span>
-									<div className="sf-flex-gap-xs">
-										<button
-											className="sf-btn sf-btn-ghost sf-btn-compress"
-											onClick={() => openEdit(p)}
-										>
-											<Edit size={14} />
-										</button>
-										<button
-											className="sf-btn sf-btn-danger sf-btn-compress"
-											onClick={() => handleDelete(p.id)}
-										>
-											<Trash2 size={14} />
-										</button>
-									</div>
+									{hasPermission("products:manage") && (
+										<div className="sf-flex-gap-xs">
+											<button
+												className="sf-btn sf-btn-ghost sf-btn-compress"
+												onClick={() => openEdit(p)}
+											>
+												<Edit size={14} />
+											</button>
+											<button
+												className="sf-btn sf-btn-danger sf-btn-compress"
+												onClick={() => handleDelete(p.id)}
+											>
+												<Trash2 size={14} />
+											</button>
+										</div>
+									)}
 								</div>
 							</div>
 						);
@@ -379,7 +400,7 @@ export default function ProductsPage() {
 									<th className="sf-text-end">{t.products.cost}</th>
 									<th className="sf-text-center">{t.products.stock}</th>
 									<th className="sf-text-end">{t.products.value}</th>
-									<th>{t.common.actions}</th>
+									{hasPermission("products:manage") && <th>{t.common.actions}</th>}
 								</tr>
 							</thead>
 							<tbody>
@@ -406,22 +427,24 @@ export default function ProductsPage() {
 											<td className="sf-td-num">
 												{formatCurrency(p.price * (p.stock || 0))}
 											</td>
-											<td>
-												<div className="sf-flex-gap-xs">
-													<button
-														className="sf-btn sf-btn-ghost sf-btn-compress-sm"
-														onClick={() => openEdit(p)}
-													>
-														<Edit size={14} />
-													</button>
-													<button
-														className="sf-btn sf-btn-danger sf-btn-compress-sm"
-														onClick={() => handleDelete(p.id)}
-													>
-														<Trash2 size={14} />
-													</button>
-												</div>
-											</td>
+											{hasPermission("products:manage") && (
+												<td>
+													<div className="sf-flex-gap-xs">
+														<button
+															className="sf-btn sf-btn-ghost sf-btn-compress-sm"
+															onClick={() => openEdit(p)}
+														>
+															<Edit size={14} />
+														</button>
+														<button
+															className="sf-btn sf-btn-danger sf-btn-compress-sm"
+															onClick={() => handleDelete(p.id)}
+														>
+															<Trash2 size={14} />
+														</button>
+													</div>
+												</td>
+											)}
 										</tr>
 									);
 								})}
@@ -778,6 +801,15 @@ export default function ProductsPage() {
 						</div>
 					</div>
 				</div>
+			)}
+			{showImport && (
+				<ImportModal
+					onClose={() => setShowImport(false)}
+					onImported={() => {
+						setShowImport(false);
+						loadData();
+					}}
+				/>
 			)}
 		</PageTransition>
 	);

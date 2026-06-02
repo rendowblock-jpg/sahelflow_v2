@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 interface FadeInProps {
 	children: ReactNode;
@@ -12,6 +12,10 @@ interface FadeInProps {
 	distance?: number;
 }
 
+/**
+ * Phase 6.10: FadeIn now subscribes to document.dir changes via MutationObserver
+ * so it re-renders when the locale switches between LTR and RTL.
+ */
 export function FadeIn({
 	children,
 	delay = 0,
@@ -20,8 +24,29 @@ export function FadeIn({
 	direction = "up",
 	distance = 12,
 }: FadeInProps) {
-	const dir =
-		typeof document !== "undefined" && document.dir === "rtl" ? "rtl" : "ltr";
+	const [dir, setDir] = useState<"ltr" | "rtl">(() => {
+		if (typeof document === "undefined") return "ltr";
+		return document.dir === "rtl" ? "rtl" : "ltr";
+	});
+
+	useEffect(() => {
+		if (typeof document === "undefined") return;
+
+		// Sync initial value
+		setDir(document.dir === "rtl" ? "rtl" : "ltr");
+
+		// Observe <html> dir attribute changes (triggered by locale switch)
+		const observer = new MutationObserver(() => {
+			setDir(document.dir === "rtl" ? "rtl" : "ltr");
+		});
+
+		observer.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["dir"],
+		});
+
+		return () => observer.disconnect();
+	}, []);
 
 	const initial: Record<string, number> = { opacity: 0 };
 	if (direction === "up") initial["y"] = distance;

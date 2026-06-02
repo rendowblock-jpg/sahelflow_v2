@@ -1,0 +1,267 @@
+/* ═══════════════════════════════════════════════
+   SahelFlow Design System v3.0
+   Linear × Stripe × Vercel DNA
+   Dark/Light Theme • RTL • Mobile-First
+   ═══════════════════════════════════════════════ */
+
+/* ═══ DARK THEME (Default) ═══ */
+[data-theme="dark"],
+:root {
+	/* Brand — Sahel Teal (the SahelFlow identity) */
+	--color-brand-50: #eff8ff;
+	--color-brand-100: #dbeeff;
+	--color-brand-200: #b9ddff;
+	--color-brand-300: #7ec4ff;
+	--color-brand-400: #5ab2ff;
+	--color-brand-500: #3b9eff;
+	--color-brand-600: #2a7ad4;
+	--color-brand-700: #1e5fa8;
+
+	/* Surfaces — Linear-inspired luminance stacking */
+	--color-surface-primary: #09090b;
+	--color-surface-secondary: #111113;
+	--color-surface-tertiary: #1a1a1f;
+	--color-surface-active: rgba(59, 158, 255, 0.08);
+	--color-surface-hover: rgba(255, 255, 255, 0.03);
+	--color-surface-overlay: rgba(0, 0, 0, 0.65);
+	--color-surface-card: rgba(17, 17, 19, 0.9);
+
+	/* Content */
+	--color-content-primary: #ededed;
+	--color-content-secondary: #a1a1aa;
+	--color-content-tertiary: #71717a;
+	--color-content-inverse: #09090b;
+
+	/* Lines — whisper borders (Linear pattern) */
+	--color-line-primary: rgba(255, 255, 255, 0.06);
+	--color-line-secondary: rgba(255, 255, 255, 0.03);
+	--color-line-accent: rgba(59, 158, 255, 0.15);
+
+	/* Accent colors */
+	--color-accent-400: #34d399;
+	--color-accent-500: #10b981;
+	--color-warn-400: #fbbf24;
+	--color-warn-500: #f59e0b;
+	--color-danger-400: #f87171;
+	--color-danger-500: #ef4444;
+
+	/* Shadows — multi-layer ring + contact + ambient (Vercel × Cal.com) */
+	--shadow-xs:
+		0 0 0 1px rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.25);
+	--shadow-sm:
+		0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.2);
+	--shadow-md:
+		0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 4px rgba(0, 0, 0, 0.15),
+		0 8px 16px -8px rgba(0, 0, 0, 0.25);
+	--shadow-lg:
+		0 0 0 1px rgba(255, 255, 255, 0.07), 0 4px 8px rgba(0, 0, 0, 0.2),
+		0 16px 32px -8px rgba(0, 0, 0, 0.35);
+	--shadow-brand:
+		0 0 0 1px rgba(59, 158, 255, 0.2), 0 2px 8px rgba(59, 158, 255, 0.1);
+	--shadow-card:
+		0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.18),
+		0 8px 16px -8px rgba(0, 0, 0, 0.22);
+	--shadow-elevated:
+		0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 16px rgba(0, 0, 0, 0.25),
+		0 24px 48px -12px rgba(0, 0, 0, 0.4);
+	--shadow-float:
+		0 0 0 1px rgba(255, 255, 255, 0.09), 0 16px 32px rgba(0, 0, 0, 0.3),
+		0 40px 80px -20px rgba(0, 0, 0, 0.5);
+
+	/* Glass */
+	--glass-bg: rgba(17, 17, 19, 0.85);
+	--glass-blur: 20px;
+
+	/* Spacing Scale */
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 20px;
+	--space-6: 24px;
+	--space-7: 32px;
+	--space-8: 40px;
+	--space-9: 48px;
+	--space-10: 64px;
+
+	/* Typography */
+	--font-size-xs: 11px;
+	--font-size-sm: 13px;
+	--font-size-base: 14px;
+	--font-size-md: 16px;
+	--font-size-lg: 18px;
+	--font-size-xl: 22px;
+	--font-size-2xl: 28px;
+	--font-size-3xl: 36px;
+	--letter-spacing-display: -0.035em;
+	--letter-spacing-heading: -0.025em;
+	--letter-spacing-tight: -0.02em;
+	--letter-spacing-normal: -0.01em;
+	--letter-spacing-ui: 0.005em;
+	--letter-spacing-wide: 0.05em;
+	--letter-spacing-caps: 0.06em;
+	--line-height-tight: 1.2;
+	--line-height-normal: 1.5;
+	--line-height-relaxed: 1.65;
+
+	/* Motion */
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	--duration-fast: 150ms;
+	--duration-normal: 250ms;
+	--duration-slow: 400ms;
+
+	/* Layout */
+	--sidebar-width: 240px;
+	--sidebar-collapsed: 64px;
+	--topbar-height: 56px;
+	--mobile-nav-height: 56px;
+
+	/* Border Radius — 4-value system (Linear × Vercel × Cal.com) */
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--radius-pill: 9999px;
+}
+
+/* ═══ LIGHT THEME ═══ */
+[data-theme="light"] {
+	/* Surfaces — Vercel/Notion inspired crisp light palette */
+	--color-surface-primary: #fafafa;
+	--color-surface-secondary: #ffffff;
+	--color-surface-tertiary: #f4f4f5;
+	--color-surface-active: rgba(59, 158, 255, 0.07);
+	--color-surface-hover: rgba(0, 0, 0, 0.03);
+	--color-surface-overlay: rgba(0, 0, 0, 0.35);
+	--color-surface-card: rgba(255, 255, 255, 1);
+
+	/* Content */
+	--color-content-primary: #18181b;
+	--color-content-secondary: #52525b;
+	--color-content-tertiary: #71717a;
+	--color-content-inverse: #ffffff;
+
+	/* Lines — whisper borders (Vercel pattern) */
+	--color-line-primary: rgba(0, 0, 0, 0.06);
+	--color-line-secondary: rgba(0, 0, 0, 0.03);
+	--color-line-accent: rgba(59, 158, 255, 0.12);
+
+	/* Accent */
+	--color-accent-400: #10b981;
+	--color-accent-500: #059669;
+	--color-warn-400: #f59e0b;
+	--color-warn-500: #d97706;
+	--color-danger-400: #ef4444;
+	--color-danger-500: #dc2626;
+
+	/* Shadows — multi-layer Vercel × Cal.com system for light mode */
+	--shadow-xs: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+	--shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+	--shadow-md:
+		0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04),
+		0 8px 16px -8px rgba(0, 0, 0, 0.06);
+	--shadow-lg:
+		0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.05),
+		0 16px 32px -8px rgba(0, 0, 0, 0.08);
+	--shadow-brand:
+		0 0 0 1px rgba(59, 158, 255, 0.15), 0 2px 8px rgba(59, 158, 255, 0.1);
+	--shadow-card:
+		0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03),
+		0 8px 16px -8px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(250, 250, 250, 1);
+	--shadow-elevated:
+		0 0 0 1px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.07),
+		0 24px 48px -12px rgba(0, 0, 0, 0.08);
+	--shadow-float:
+		0 0 0 1px rgba(0, 0, 0, 0.06), 0 16px 32px rgba(0, 0, 0, 0.08),
+		0 40px 80px -20px rgba(0, 0, 0, 0.1);
+
+	/* Glass */
+	--glass-bg: rgba(255, 255, 255, 0.88);
+	--glass-blur: 24px;
+}
+
+/* ── Semantic aliases — new code uses --sf-*, existing code uses --color-* ── */
+/* Both systems resolve to the same computed values after Phase 2 migration.   */
+:root {
+	--sf-accent-primary: var(--color-brand-500);
+	--sf-accent-hover: var(--color-brand-400);
+	--sf-accent-muted: rgba(59, 158, 255, 0.12);
+	--sf-accent-solid: var(--color-brand-600);
+
+	--sf-bg-canvas: var(--color-surface-primary);
+	--sf-bg-panel: var(--color-surface-secondary);
+	--sf-bg-surface: var(--color-surface-tertiary);
+
+	--sf-text-primary: var(--color-content-primary);
+	--sf-text-secondary: var(--color-content-secondary);
+	--sf-text-tertiary: var(--color-content-tertiary);
+
+	--sf-border-subtle: var(--color-line-secondary);
+	--sf-border-standard: var(--color-line-primary);
+
+	--sf-color-success: var(--color-accent-400);
+	--sf-color-warning: var(--color-warn-400);
+	--sf-color-danger: var(--color-danger-400);
+}
+
+/* ── Global focus ring — keyboard navigation ── */
+:focus-visible {
+	outline: 2px solid var(--color-brand-500);
+	outline-offset: 2px;
+}
+
+/* ═══ BASE ═══ */
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html {
+	font-family: var(
+		--font-inter,
+		"Inter",
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		sans-serif
+	);
+	/* OpenType features: Linear (cv01, ss03) + Raycast (calt, kern) */
+	font-feature-settings:
+		"cv01" 1,
+		"ss03" 1,
+		"calt" 1,
+		"kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	scroll-behavior: smooth;
+	-webkit-tap-highlight-color: transparent;
+}
+
+body {
+	background: var(--color-surface-primary);
+	color: var(--color-content-primary);
+	line-height: 1.6;
+	overflow-x: hidden;
+	transition:
+		background 0.3s ease,
+		color 0.3s ease;
+}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--color-line-primary);
+	border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-content-tertiary);
+}

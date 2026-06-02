@@ -7,7 +7,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
-import { getCurrentUser } from "./auth-service";
+import { getActiveSellerId } from "./auth-service";
 
 async function apiGet(path: string) {
   const res = await fetch(path, { credentials: "same-origin" });
@@ -62,10 +62,9 @@ export async function logAgentActivity(
   description?: string,
   metadata?: Record<string, unknown>,
 ) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  const sellerId = await getActiveSellerId();
   const { error } = await getSupabase().from("agent_activity").insert({
-    seller_id: user.id,
+    seller_id: sellerId,
     type,
     title,
     description: description || null,

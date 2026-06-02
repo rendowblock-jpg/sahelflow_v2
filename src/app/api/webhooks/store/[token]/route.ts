@@ -102,13 +102,23 @@ export async function POST(
 			const wcSecret = wcIntegration?.credentials?.webhook_secret as
 				| string
 				| undefined;
-			if (wcSecret && wcSignature) {
-				if (!verifyWooCommerceHmac(rawBody, wcSignature, wcSecret)) {
-					return NextResponse.json(
-						{ error: "Invalid WooCommerce signature" },
-						{ status: 401 },
-					);
-				}
+			if (!wcSecret || !wcSignature || !verifyWooCommerceHmac(rawBody, wcSignature, wcSecret)) {
+				await supabase.from("agent_activity").insert({
+					seller_id: seller.id,
+					type: "alert",
+					title: "WooCommerce Webhook Signature Failed",
+					description: !wcSecret
+						? "WooCommerce integration is active but webhook_secret is not configured."
+						: !wcSignature
+						? "WooCommerce signature header is missing."
+						: "WooCommerce webhook signature verification failed.",
+					metadata: { platform: "woocommerce", has_secret: !!wcSecret, has_signature: !!wcSignature }
+				});
+
+				return NextResponse.json(
+					{ error: "Invalid WooCommerce signature" },
+					{ status: 401 },
+				);
 			}
 		}
 
@@ -126,13 +136,23 @@ export async function POST(
 			const youcanSecret = youcanIntegration?.credentials?.webhook_secret as
 				| string
 				| undefined;
-			if (youcanSecret && youcanSignature) {
-				if (!verifyYouCanHmac(rawBody, youcanSignature, youcanSecret)) {
-					return NextResponse.json(
-						{ error: "Invalid YouCan signature" },
-						{ status: 401 },
-					);
-				}
+			if (!youcanSecret || !youcanSignature || !verifyYouCanHmac(rawBody, youcanSignature, youcanSecret)) {
+				await supabase.from("agent_activity").insert({
+					seller_id: seller.id,
+					type: "alert",
+					title: "YouCan Webhook Signature Failed",
+					description: !youcanSecret
+						? "YouCan integration is active but webhook_secret is not configured."
+						: !youcanSignature
+						? "YouCan signature header is missing."
+						: "YouCan webhook signature verification failed.",
+					metadata: { platform: "youcan", has_secret: !!youcanSecret, has_signature: !!youcanSignature }
+				});
+
+				return NextResponse.json(
+					{ error: "Invalid YouCan signature" },
+					{ status: 401 },
+				);
 			}
 		}
 
@@ -147,21 +167,30 @@ export async function POST(
 			platformEventId = body.id ? String(body.id) : null;
 		}
 
-		// Deduplicate by event ID before any processing
-		if (platformEventId) {
-			const { data: existingEvent } = await supabase
-				.from("webhook_events")
-				.select("id")
-				.eq("seller_id", seller.id)
-				.eq("platform", detectedPlatform)
-				.eq("event_id", platformEventId)
-				.maybeSingle();
+		const webhookTopic =
+			request.headers.get("X-Shopify-Topic") ||
+			request.headers.get("X-WC-Webhook-Topic") ||
+			null;
 
-			if (existingEvent) {
-				return NextResponse.json({
-					success: true,
-					message: "Event already processed",
+		// Deduplicate by event ID atomically by attempting to insert first
+		if (platformEventId) {
+			const { error: insertError } = await supabase
+				.from("webhook_events")
+				.insert({
+					seller_id: seller.id,
+					platform: detectedPlatform,
+					event_id: platformEventId,
+					topic: webhookTopic,
 				});
+
+			if (insertError) {
+				if (insertError.code === "23505") {
+					return NextResponse.json({
+						success: true,
+						message: "Event already processed",
+					});
+				}
+				console.error("[Webhook Deduplication] Failed to insert event ID:", insertError.message);
 			}
 		}
 
@@ -175,10 +204,6 @@ export async function POST(
 		}
 
 		const { customer_info, order_data } = normalizedData;
-		const webhookTopic =
-			request.headers.get("X-Shopify-Topic") ||
-			request.headers.get("X-WC-Webhook-Topic") ||
-			null;
 
 		// 1. Deduplicate by external_id as secondary guard
 		if (order_data.external_id) {
@@ -216,14 +241,14 @@ export async function POST(
 				p_customer_name: customer_info.name || "",
 				p_customer_phone: customer_info.phone || "",
 				p_customer_wilaya: customer_info.wilaya || null,
-				p_customer_commune: null,
+				p_customer_commune: customer_info.commune || null,
 				p_customer_address: customer_info.address || null,
 				p_items: order_data.items,
 				p_total_price: (order_data.total_price as number) || 0,
 				p_delivery_cost: (order_data.delivery_cost as number) || 0,
 				p_net_profit: (order_data.total_price as number) || 0,
 				p_wilaya: (order_data.wilaya as string) || null,
-				p_commune: null,
+				p_commune: (order_data.commune as string) || null,
 				p_address: (order_data.address as string) || null,
 				p_source: order_data.source as string,
 				p_external_id: (order_data.external_id as string) || null,
@@ -257,19 +282,7 @@ export async function POST(
 			});
 		}
 
-		// 3. Record webhook event for deduplication (ignore race-condition duplicates)
-		if (platformEventId) {
-			try {
-				await supabase.from("webhook_events").insert({
-					seller_id: seller.id,
-					platform: detectedPlatform,
-					event_id: platformEventId,
-					topic: webhookTopic,
-				});
-			} catch {
-				/* unique-violation = already recorded by concurrent handler */
-			}
-		}
+
 
 		// 4. Update sync stats
 		await supabase
@@ -319,6 +332,7 @@ function normalizeOrder(
 					name: `${shipping.first_name || ""} ${shipping.last_name || ""}`.trim(),
 					phone: (shipping.phone || customer?.phone || "") as string,
 					wilaya: (shipping.province || shipping.city || "") as string,
+					commune: (shipping.city || "") as string,
 					address: `${shipping.address1 || ""} ${shipping.city || ""}`.trim(),
 				},
 				order_data: {
@@ -326,6 +340,7 @@ function normalizeOrder(
 					status: "pending",
 					source: "shopify",
 					wilaya: (shipping.province || shipping.city || "") as string,
+					commune: (shipping.city || "") as string,
 					address: `${shipping.address1 || ""} ${shipping.city || ""}`.trim(),
 					items: lineItems.map((item) => ({
 						product_name: item.title, // Fixed to product_name
@@ -352,6 +367,7 @@ function normalizeOrder(
 					name: `${billing.first_name || ""} ${billing.last_name || ""}`.trim(),
 					phone: (billing.phone || "") as string,
 					wilaya: (billing.state || billing.city || "") as string,
+					commune: (billing.city || "") as string,
 					address: `${billing.address_1 || ""} ${billing.city || ""}`.trim(),
 				},
 				order_data: {
@@ -359,6 +375,7 @@ function normalizeOrder(
 					status: "pending",
 					source: "woocommerce",
 					wilaya: (billing.state || billing.city || "") as string,
+					commune: (billing.city || "") as string,
 					address: `${billing.address_1 || ""} ${billing.city || ""}`.trim(),
 					items: lineItems.map((item) => ({
 						product_name: item.name, // Fixed to product_name
@@ -389,11 +406,17 @@ function normalizeOrder(
 
 			const customerSource = shippingAddress || paymentAddress || {};
 
+			let commune = "";
+			if (customerSource.city && customerSource.state && customerSource.city !== customerSource.state) {
+				commune = customerSource.city as string;
+			}
+
 			return {
 				customer_info: {
 					name: `${customerSource.name || ""}`.trim(),
 					phone: (customerSource.phone || "") as string,
 					wilaya: (customerSource.city || customerSource.state || "") as string,
+					commune,
 					address:
 						`${customerSource.address || customerSource.address_1 || ""} ${customerSource.city || ""}`.trim(),
 				},
@@ -402,6 +425,7 @@ function normalizeOrder(
 					status: "pending",
 					source: "youcan",
 					wilaya: (customerSource.city || customerSource.state || "") as string,
+					commune,
 					address:
 						`${customerSource.address || customerSource.address_1 || ""} ${customerSource.city || ""}`.trim(),
 					items: variants.map((v) => {
@@ -428,6 +452,7 @@ function normalizeOrder(
 					name: (body.customer_name || "") as string,
 					phone: (body.phone || "") as string,
 					wilaya: (body.wilaya || "") as string,
+					commune: (body.commune || "") as string,
 					address: (body.address || "") as string,
 				},
 				order_data: {
@@ -435,6 +460,7 @@ function normalizeOrder(
 					status: "pending",
 					source: "custom",
 					wilaya: (body.wilaya || "") as string,
+					commune: (body.commune || "") as string,
 					address: (body.address || "") as string,
 					items: (body.items as Array<Record<string, unknown>>) || [],
 					total_price: (body.total || 0) as number,

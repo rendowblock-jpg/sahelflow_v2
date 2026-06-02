@@ -28,6 +28,16 @@ export async function uploadProductImage(file: File): Promise<string> {
 export async function clearTestData(): Promise<void> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Not authenticated");
+
+  const { data: seller } = await getSupabase()
+    .from("sellers")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!seller) {
+    throw new Error("Forbidden: Only organization owners can clear test data.");
+  }
   
   // Because of foreign keys, delete in specific order
   // Deliveries -> Agent Activity -> Messages -> Conversations -> Orders -> Customers

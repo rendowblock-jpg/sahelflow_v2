@@ -91,7 +91,15 @@ Apply the patch migrations in order:
 3. `003_select_rls_and_cleanup.sql`
 4. `004_delivery_status_constraint_and_webhook_dedup.sql`
 5. `005_import_history.sql`
-6. `020_soft_delete.sql`
+6. `006_audit_fixes.sql`
+7. `006_rls_insert_hardening.sql`
+8. `007_ai_chat_persistence.sql`
+9. `007_rebuild_analytics_with_soft_delete.sql`
+10. `008_after_sales_returns.sql`
+11. `009_accounting.sql`
+12. `010_team_access.sql`
+13. `011_daily_reports.sql`
+14. `020_soft_delete.sql`
 
 Historical migrations are archived in `supabase/migrations/archive/`.
 
@@ -99,14 +107,12 @@ To set up a new database, run all migrations in order in your Supabase SQL Edito
 
 ### WhatsApp Template Seeds
 
-After creating the schema, optionally run:
+SahelFlow **automatically seeds** 4 default Arabic templates (`welcome`, `followup`, `confirmation`, `upsell`) upon seller onboarding completion. If you need to manually seed them, you can execute the seed script:
 
 ```sql
--- Run this in Supabase SQL Editor after migrations
+-- Optional manual seed run in Supabase SQL Editor
 \i supabase/migrations/seeds/whatsapp_templates.sql
 ```
-
-This creates 4 default templates (`welcome`, `followup`, `confirmation`, `upsell`) in Arabic for all existing sellers.
 
 ---
 
@@ -128,7 +134,8 @@ npm run dev
 
 - **Tailwind is BANNED.** SahelFlow uses custom vanilla CSS.
 - All utility classes prefixed with `sf-` (e.g., `sf-card`, `sf-btn-primary`, `sf-flex-center`).
-- Core dashboard styles → `src/app/globals.css`
+- Design Tokens are defined in `src/app/tokens.css`.
+- Core dashboard styles are modularly split under `src/app/styles/` (base, layout, components, accounting, returns, UI overhaul, accessibility, utilities, etc.) and imported as a barrel in `src/app/globals.css`.
 - Core inbox styles → `src/app/inbox.css`
 
 ### ESLint

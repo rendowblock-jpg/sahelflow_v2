@@ -91,17 +91,18 @@ export function useI18n() {
   if (!ctx) {
     // Fallback for components outside provider (e.g., during SSR)
     return {
-      locale: 'en' as Locale,
-      dir: 'ltr' as Direction,
-      t: en,
+      locale: 'ar' as Locale,
+      dir: 'rtl' as Direction,
+      t: ar,
       setLocale: () => {},
-      formatCurrency: (n: number) => `${n.toLocaleString('fr-DZ')} DA`,
+      formatCurrency: (n: number) => `${n.toLocaleString('ar-DZ')} د.ج`,
       formatTimeAgo: (d: string) => {
         const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000)
-        if (mins < 60) return `${mins}m ago`
+        if (mins < 1) return ar.time.justNow
+        if (mins < 60) return ar.time.minutesAgo.replace('{n}', String(mins))
         const hours = Math.floor(mins / 60)
-        if (hours < 24) return `${hours}h ago`
-        return `${Math.floor(hours / 24)}d ago`
+        if (hours < 24) return ar.time.hoursAgo.replace('{n}', String(hours))
+        return ar.time.daysAgo.replace('{n}', String(Math.floor(hours / 24)))
       },
     }
   }

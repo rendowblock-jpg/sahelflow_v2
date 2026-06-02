@@ -13,7 +13,7 @@ const aiSuggestSchema = z.object({
  * for a given conversation. Called when the seller clicks the ✨ button.
  */
 export const POST = withAuthAndRateLimit(
-  async (req, { user, supabase, body }) => {
+  async (req, { user: _user, sellerId, supabase, body }) => {
     const { conversationId } = body!;
 
     // Verify the conversation belongs to this seller
@@ -21,7 +21,7 @@ export const POST = withAuthAndRateLimit(
       .from("conversations")
       .select("id, seller_id")
       .eq("id", conversationId)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .single();
 
     if (!conv) {
@@ -29,7 +29,7 @@ export const POST = withAuthAndRateLimit(
     }
 
     // Run the Communication Agent
-    const result = await processIncomingMessage(conversationId, user.id);
+    const result = await processIncomingMessage(conversationId, sellerId);
 
     return NextResponse.json({
       classification: result.classification,

@@ -23,6 +23,8 @@ interface Props {
     newStatus: import("@/types/database").OrderStatus,
   ) => void;
   onOpenWhatsApp: (order: Order) => void;
+  canManageOrders?: boolean;
+  canConfirmOrders?: boolean;
 }
 
 export default function OrderMobileCards({
@@ -30,11 +32,15 @@ export default function OrderMobileCards({
   onOpenDetail,
   onStatusUpdate,
   onOpenWhatsApp,
+  canManageOrders = true,
+  canConfirmOrders = true,
 }: Props) {
   const { t, formatCurrency, formatTimeAgo } = useI18n();
 
   const translateStatus = (s: string) =>
     (t.status as Record<string, string>)[s] || s;
+
+  const hasAnyActionPermission = canManageOrders || canConfirmOrders;
 
   return (
     <div className="sf-flex-col sf-gap-md">
@@ -65,33 +71,38 @@ export default function OrderMobileCards({
               {formatCurrency(Number(o.total_price))}
             </span>
           </div>
-          {(o.status === "draft" ||
-            o.status === "pending" ||
-            o.status === "confirmed") && (
-            <div className="sf-orders-mobile-card__actions">
+          {hasAnyActionPermission &&
+            (o.status === "draft" ||
+              o.status === "pending" ||
+              o.status === "confirmed") && (
+            <div className="sf-orders-mobile-card__actions" onClick={(e) => e.stopPropagation()}>
               {o.status === "draft" && (
                 <>
-                  <button
-                    className="sf-btn sf-btn-primary sf-orders-mobile-card__btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onStatusUpdate(o.id, "pending");
-                    }}
-                  >
-                    {t.orders.confirmOrder}
-                  </button>
-                  <button
-                    className="sf-btn sf-btn-ghost sf-orders-mobile-card__btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onStatusUpdate(o.id, "cancelled");
-                    }}
-                  >
-                    {t.orders.discard}
-                  </button>
+                  {canConfirmOrders && (
+                    <button
+                      className="sf-btn sf-btn-primary sf-orders-mobile-card__btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStatusUpdate(o.id, "pending");
+                      }}
+                    >
+                      {t.orders.confirmOrder}
+                    </button>
+                  )}
+                  {canManageOrders && (
+                    <button
+                      className="sf-btn sf-btn-ghost sf-orders-mobile-card__btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStatusUpdate(o.id, "cancelled");
+                      }}
+                    >
+                      {t.orders.discard}
+                    </button>
+                  )}
                 </>
               )}
-              {o.status === "pending" && (
+              {o.status === "pending" && canConfirmOrders && (
                 <button
                   className="sf-btn sf-btn-success sf-orders-mobile-card__btn"
                   onClick={(e) => {
@@ -102,7 +113,7 @@ export default function OrderMobileCards({
                   {t.orders.confirmOrder}
                 </button>
               )}
-              {o.status === "confirmed" && (
+              {o.status === "confirmed" && canManageOrders && (
                 <button
                   className="sf-btn sf-btn-primary sf-orders-mobile-card__btn"
                   onClick={(e) => {
@@ -113,7 +124,7 @@ export default function OrderMobileCards({
                   {t.orders.shipOrder}
                 </button>
               )}
-              {o.customer?.phone && (
+              {o.customer?.phone && (canConfirmOrders || canManageOrders) && (
                 <button
                   className="sf-btn sf-btn-ghost sf-orders-mobile-card__wa-btn"
                   onClick={(e) => {

@@ -19,6 +19,7 @@ import {
 	axisLineStyle,
 	formatCompact,
 	formatCurrencyTooltip,
+  getLocaleTag,
 } from "./chart-utils";
 
 interface DayEntry {
@@ -28,16 +29,18 @@ interface DayEntry {
 
 interface RevenueChartProps {
 	data: DayEntry[];
+  locale?: string; // Phase 6.4: App locale for date/number formatting
 }
 
-export function RevenueChart({ data }: RevenueChartProps) {
+export function RevenueChart({ data, locale = "fr" }: RevenueChartProps) {
 	const prefersReducedMotion = useReducedMotion();
 	const isRtl = typeof document !== "undefined" && document.dir === "rtl";
+	const dateLocale = getLocaleTag(locale);
 
 	const formatted = data.map((d) => ({
 		...d,
 		label: new Date(d.day + "T00:00:00").toLocaleDateString(
-			typeof navigator !== "undefined" ? navigator.language : "en",
+			dateLocale,
 			{ weekday: "short" },
 		),
 	}));
@@ -86,7 +89,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
 					labelStyle={tooltipLabelStyle}
 					itemStyle={tooltipItemStyle}
 					formatter={(value) => [
-						formatCurrencyTooltip(Number(value)),
+						formatCurrencyTooltip(Number(value), "DZD", locale),
 						"Revenue",
 					]}
 					separator=": "

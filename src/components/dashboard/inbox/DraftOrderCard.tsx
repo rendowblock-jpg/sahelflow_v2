@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function DraftOrderCard({ draftOrder, onConfirm, onDiscard }: Props) {
-	const { t } = useI18n();
+	const { t, locale } = useI18n();
 	const items = Array.isArray(draftOrder.items) ? draftOrder.items : [];
 
 	return (
@@ -40,7 +40,10 @@ export function DraftOrderCard({ draftOrder, onConfirm, onDiscard }: Props) {
 						color: "var(--color-brand-400)",
 					}}
 				>
-					{draftOrder.total_price?.toLocaleString("fr-DZ")} DA
+					{draftOrder.total_price?.toLocaleString(
+						locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-DZ",
+					)}{" "}
+					DA
 				</span>
 			</div>
 			<div
@@ -53,7 +56,10 @@ export function DraftOrderCard({ draftOrder, onConfirm, onDiscard }: Props) {
 				{items.map((item, i) => (
 					<div key={i}>
 						{item.quantity}x {item.name} —{" "}
-						{(item.quantity * item.price).toLocaleString("fr-DZ")} DA
+						{(item.quantity * item.price).toLocaleString(
+							locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-DZ",
+						)}{" "}
+						DA
 					</div>
 				))}
 			</div>
@@ -74,7 +80,11 @@ export function DraftOrderCard({ draftOrder, onConfirm, onDiscard }: Props) {
 						color: "var(--color-content-tertiary)",
 					}}
 				>
-					🚚 {draftOrder.delivery_cost?.toLocaleString("fr-DZ")} DA
+					🚚{" "}
+					{draftOrder.delivery_cost?.toLocaleString(
+						locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-DZ",
+					)}{" "}
+					DA
 				</span>
 				<div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
 					<button
