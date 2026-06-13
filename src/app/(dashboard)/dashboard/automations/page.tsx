@@ -363,27 +363,36 @@ export default function AutomationsPage() {
 					<h1 className="sf-page-title">{t.recipes.title}</h1>
 					<p className="sf-page-subtitle">{t.recipes.subtitle}</p>
 				</div>
+				<div
+					style={{
+						padding: "6px 14px",
+						background: "rgba(59,158,255,0.08)",
+						border: "1px solid rgba(59,158,255,0.2)",
+						borderRadius: "var(--radius-pill)",
+						fontSize: 12,
+						fontWeight: 600,
+						color: "var(--color-brand-400)",
+					}}
+				>
+					{automations.filter((a) => a.active).length} / {RECIPES.length} active
+				</div>
 			</div>
 
-			{/* Category filter tabs */}
-			<div className="sf-flex sf-gap-sm sf-flex-wrap">
+			{/* Category filter — sf-seg tabs */}
+			<div className="sf-seg">
 				{CATEGORIES.map((cat) => (
 					<button
 						key={cat}
 						onClick={() => setActiveCategory(cat)}
-						className={
-							activeCategory === cat
-								? "sf-risk-filter-btn sf-risk-filter-btn-active"
-								: "sf-risk-filter-btn"
-						}
+						className={`sf-seg-btn ${activeCategory === cat ? "sf-seg-btn--active" : ""}`}
 					>
 						{t.recipes[cat as keyof typeof t.recipes] || cat}
 					</button>
 				))}
 			</div>
 
-			{/* Recipe cards */}
-			<div className="sf-slide-up sf-flex-col sf-gap-md">
+				{/* Recipe cards */}
+			<div className="sf-flex-col sf-gap-md">
 				{filteredRecipes.map((recipe) => {
 					const row = getAutomationForRecipe(recipe);
 					const isActive = row?.active ?? recipe.default_active;
@@ -399,76 +408,84 @@ export default function AutomationsPage() {
 					return (
 						<div
 							key={recipe.id}
-							className="sf-card sf-automation-card"
+							className="sf-settings-section"
 							style={{
-								borderLeft: `3px solid ${catColor}`,
+								borderInlineStart: `3px solid ${catColor}`,
 								opacity: isActive ? 1 : 0.6,
+								transition: "opacity 0.2s ease",
 							}}
 						>
-							{/* Card header row */}
-							<div className="sf-automation-card-header">
-								<div className="sf-automation-title-row">
-									<Icon size={20} style={{ color: catColor }} />
-									<span className="sf-automation-title">
-										{(t.recipes as Record<string, string>)[recipe.name_key] ||
-											recipe.id}
-									</span>
+							{/* Card Header Row */}
+							<div
+								className="sf-settings-section-header"
+								style={{ cursor: "default" }}
+							>
+								<div className="sf-flex sf-items-center sf-gap-md" style={{ flex: 1 }}>
+									<div
+										style={{
+											width: 36,
+											height: 36,
+											borderRadius: "var(--radius-md)",
+											background: `${catColor}15`,
+											color: catColor,
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											flexShrink: 0,
+										}}
+									>
+										<Icon size={18} />
+									</div>
+									<div style={{ flex: 1 }}>
+										<div className="sf-flex sf-items-center sf-gap-sm">
+											<p className="sf-font-semibold sf-text-sm">
+												{(t.recipes as Record<string, string>)[recipe.name_key] || recipe.id}
+											</p>
+											<span
+												className="sf-badge"
+												style={{ background: `${catColor}15`, color: catColor, border: `1px solid ${catColor}30`, fontSize: 10 }}
+											>
+												{(t.recipes as Record<string, string>)[recipe.category] || recipe.category}
+											</span>
+										</div>
+										<p className="sf-text-xs sf-text-tertiary" style={{ marginTop: 2 }}>
+											{(t.recipes as Record<string, string>)[recipe.description_key] || ""}
+										</p>
+									</div>
+								</div>
 
+								{/* Right controls */}
+								<div className="sf-flex sf-items-center sf-gap-md">
 									{isActive && configFields.length > 0 && (
 										<button
-											onClick={() =>
-												setExpandedRecipe(isExpanded ? null : recipe.id)
-											}
-											className="sf-automation-config-btn"
+											onClick={() => setExpandedRecipe(isExpanded ? null : recipe.id)}
+											className="sf-btn sf-btn-ghost"
+											style={{ padding: "4px 10px", minHeight: 28, fontSize: 12 }}
 										>
-											{isExpanded ? (
-												<ChevronUp size={12} />
-											) : (
-												<ChevronDown size={12} />
-											)}
+											{isExpanded ? <ChevronUp size={12} style={{ marginInlineEnd: 4 }} /> : <ChevronDown size={12} style={{ marginInlineEnd: 4 }} />}
 											Configure
 										</button>
 									)}
-
 									<div
 										className={`sf-toggle ${isActive ? "sf-toggle-active" : ""}`}
 										onClick={() => handleToggle(row?.id, isActive, recipe)}
 									/>
 								</div>
+							</div>
 
-								{/* Description */}
-								<p className="sf-automation-desc">
-									{(t.recipes as Record<string, string>)[
-										recipe.description_key
-									] || ""}
-								</p>
-
-								{/* Bottom row: badge + run stats */}
-								<div className="sf-automation-meta-row">
-									<span
-										className="sf-badge"
-										style={{
-											background: `${catColor}15`,
-											color: catColor,
-											border: `1px solid ${catColor}30`,
-											fontSize: 11,
-										}}
-									>
-										{(t.recipes as Record<string, string>)[recipe.category] ||
-											recipe.category}
-									</span>
-									<span className="sf-text-xs-tertiary">
-										{t.recipes.runCount.replace("{count}", String(runCount))}
-									</span>
-									<span className="sf-text-xs-tertiary sf-ml-auto">
-										{lastRun
-											? t.recipes.lastRun.replace(
-													"{time}",
-													formatTimeAgo(lastRun),
-												)
-											: t.recipes.neverRun}
-									</span>
-								</div>
+							{/* Meta row */}
+							<div
+								className="sf-flex sf-items-center sf-gap-md"
+								style={{ padding: "6px 20px 14px", borderBottom: isExpanded ? "1px solid var(--color-line-secondary)" : "none" }}
+							>
+								<span className="sf-text-xs sf-text-tertiary">
+									{t.recipes.runCount.replace("{count}", String(runCount))}
+								</span>
+								<span className="sf-text-xs sf-text-tertiary" style={{ marginInlineStart: "auto" }}>
+									{lastRun
+										? t.recipes.lastRun.replace("{time}", formatTimeAgo(lastRun))
+										: t.recipes.neverRun}
+								</span>
 							</div>
 
 							{/* Inline config panel */}

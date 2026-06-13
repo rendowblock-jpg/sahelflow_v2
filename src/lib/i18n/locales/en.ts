@@ -25,6 +25,11 @@ const en = {
     logOut: "Log Out",
     collapse: "Collapse",
     more: "More",
+    groupWorkspace: "Workspace",
+    groupOperations: "Operations",
+    groupAiAutomation: "AI & Automation",
+    groupFinanceInsights: "Finance & Insights",
+    groupAdministration: "Administration",
   },
 
   // Common

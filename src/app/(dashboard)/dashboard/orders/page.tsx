@@ -8,12 +8,6 @@ import {
 	Search,
 	Download,
 	Sparkles,
-	MessageCircle,
-	Phone,
-	MapPin,
-	Clock,
-	PackageCheck,
-	RotateCcw,
 } from "lucide-react";
 import {
 	getOrders,
@@ -22,7 +16,6 @@ import {
 	deleteOrder,
 	findOrCreateCustomer,
 	getShippingCostForWilaya,
-	getWhatsAppTemplate,
 	getProducts,
 } from "@/lib/data/service";
 import ReturnModal from "@/components/returns/ReturnModal";
@@ -61,10 +54,14 @@ const STATUSES = [
 ];
 
 export default function OrdersPage() {
-	const { t, formatCurrency } = useI18n();
+	const { t } = useI18n();
 	const { isMobile } = useLayout();
 	const { toast } = useToast();
-	const { hasPermission, canDeleteData, sellerId: activeSellerId } = usePermissions();
+	const {
+		hasPermission,
+		canDeleteData,
+		sellerId: activeSellerId,
+	} = usePermissions();
 	const PAGE_SIZE = 50;
 	const [orders, setOrders] = useState<Order[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -96,7 +93,7 @@ export default function OrdersPage() {
 		}>
 	>([]);
 	const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-	const orderPanelRef = useFocusTrap(!!selectedOrder, () =>
+	const _orderPanelRef = useFocusTrap(!!selectedOrder, () =>
 		setSelectedOrder(null),
 	);
 	const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
@@ -131,13 +128,7 @@ export default function OrdersPage() {
 		deliveryCost: 0,
 		notes: "",
 	});
-	const [whatsappTemplate, setWhatsappTemplate] = useState("");
-
-	useEffect(() => {
-		getWhatsAppTemplate()
-			.then(setWhatsappTemplate)
-			.catch((e) => toast({ type: "error", title: (e as Error).message }));
-	}, [toast]);
+	const whatsappTemplate = "";
 
 	useEffect(() => {
 		getProducts()
@@ -256,17 +247,6 @@ export default function OrdersPage() {
 		};
 	}, [loadData, activeSellerId]);
 
-	const statusColor: Record<string, string> = {
-		draft: "sf-badge-draft",
-		pending: "sf-badge-warning",
-		confirmed: "sf-badge-brand",
-		shipped: "sf-badge-brand",
-		delivered: "sf-badge-success",
-		returned: "sf-badge-danger",
-		cancelled: "sf-badge-danger",
-		refused: "sf-badge-danger",
-	};
-
 	const translateStatus = (s: string) =>
 		(t.status as Record<string, string>)[s] || s;
 
@@ -344,7 +324,7 @@ export default function OrdersPage() {
 								unit_price: matched ? matched.price : 0,
 								product_id: matched ? matched.id : undefined,
 							};
-					  })
+						})
 					: [{ product_name: "", quantity: 1, unit_price: 0 }],
 			deliveryCost: 0,
 			notes: "",
@@ -376,13 +356,26 @@ export default function OrdersPage() {
 		orderId: string,
 		newStatus: import("@/types/database").OrderStatus,
 	) {
+		const previousOrders = [...orders];
+		// Optimistic update
+		setOrders((prev) =>
+			prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
+		);
 		try {
 			await updateOrderStatus(orderId, newStatus);
-			loadData();
+			loadStats();
 		} catch (e) {
+			// Rollback
+			setOrders(previousOrders);
 			toast({ type: "error", title: (e as Error).message });
 		}
 	}
+
+	const getStatusCount = (s: string) => {
+		if (s === "all") return orderStats.total;
+		if (s === "draft") return orders.filter((o) => o.status === "draft").length;
+		return (orderStats as unknown as Record<string, number>)[s] || 0;
+	};
 
 	async function handleDeleteOrder(orderId: string) {
 		setDeleting(true);
@@ -465,6 +458,12 @@ export default function OrdersPage() {
 				</div>
 			</div>
 
+			{/* Stats Cards */}
+			<OrderStatsCards
+				stats={orderStats}
+				draftCount={orders.filter((o) => o.status === "draft").length}
+			/>
+
 			{/* Filters */}
 			<div className="sf-orders-filters">
 				<div
@@ -478,52 +477,70 @@ export default function OrdersPage() {
 						onChange={(e) => setSearch(e.target.value)}
 					/>
 				</div>
-				<div className="sf-orders-status-filters">
-					{STATUSES.map((s) => (
-						<button
-							key={s}
-							className={`sf-badge ${filter === s ? "sf-badge-brand" : ""}`}
-							onClick={() => handleFilterChange(s)}
-							type="button"
-						>
-							{s === "all"
-								? t.common.all
-								: s === "draft"
-									? t.orders.drafts
-									: translateStatus(s)}
-						</button>
-					))}
+				<div className="sf-seg">
+					{STATUSES.map((s) => {
+						const isActive = filter === s;
+						const count = getStatusCount(s);
+						return (
+							<button
+								key={s}
+								className={`sf-seg-btn ${isActive ? "sf-seg-btn--active" : ""}`}
+								onClick={() => handleFilterChange(s)}
+								type="button"
+							>
+								<span>
+									{s === "all"
+										? t.common.all
+										: s === "draft"
+											? t.orders.drafts
+											: translateStatus(s)}
+								</span>
+								{count > 0 && <span className="sf-seg-count">{count}</span>}
+							</button>
+						);
+					})}
 				</div>
 			</div>
 
 			{/* Bulk Action Bar */}
 			{selectedIds.size > 0 && (
-				<div className="sf-card sf-orders-bulkbar">
-					<span className="sf-orders-bulkbar__count">
+				<div className="sf-bulk-bar">
+					<span className="sf-bulk-bar__count">
 						{selectedIds.size} {t.orders.selected}
 					</span>
+					<div className="sf-bulk-bar__divider" />
 					<div className="sf-orders-bulkbar__actions">
 						{hasPermission("orders:confirm") && (
 							<button
 								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--soft"
 								onClick={async () => {
-                  const ids = Array.from(selectedIds);
-                  const results = await Promise.allSettled(
-                    ids.map(async (id) => {
-                      const order = orders.find((o) => o.id === id);
-                      if (order && order.status === "pending")
-                        await handleStatusUpdate(id, "confirmed");
-                    })
-                  );
-                  const succeeded = results.filter((r) => r.status === "fulfilled").length;
-                  const failed = results.filter((r) => r.status === "rejected").length;
-                  setSelectedIds(new Set());
-                  if (failed === 0) {
-                    toast({ type: "success", title: succeeded + " " + t.orders.bulkConfirmed });
-                  } else {
-                    toast({ type: "warning", title: succeeded + " succeeded, " + failed + " failed" });
-                  }
-                }}
+									const ids = Array.from(selectedIds);
+									const results = await Promise.allSettled(
+										ids.map(async (id) => {
+											const order = orders.find((o) => o.id === id);
+											if (order && order.status === "pending")
+												await handleStatusUpdate(id, "confirmed");
+										}),
+									);
+									const succeeded = results.filter(
+										(r) => r.status === "fulfilled",
+									).length;
+									const failed = results.filter(
+										(r) => r.status === "rejected",
+									).length;
+									setSelectedIds(new Set());
+									if (failed === 0) {
+										toast({
+											type: "success",
+											title: succeeded + " " + t.orders.bulkConfirmed,
+										});
+									} else {
+										toast({
+											type: "warning",
+											title: succeeded + " succeeded, " + failed + " failed",
+										});
+									}
+								}}
 							>
 								{t.orders.confirmSelected}
 							</button>
@@ -532,21 +549,34 @@ export default function OrdersPage() {
 							<button
 								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--soft"
 								onClick={async () => {
-                  const ids = Array.from(selectedIds);
-                  const results = await Promise.allSettled(
-                    ids.map(async (id) => {
-                      const order = orders.find((o) => o.id === id);
-                      if (order && order.status === "confirmed")
-                        await handleStatusUpdate(id, "shipped");
-                    })
-                  );
-                  const succeeded = results.filter((r) => r.status === "fulfilled").length;
-                  const failed = results.filter((r) => r.status === "rejected").length;
-                  setSelectedIds(new Set());
-                  toast({
-										type: "success",
-										title: `${selectedIds.size} ${t.orders.bulkShipped}`,
-									});
+									const ids = Array.from(selectedIds);
+									const count = ids.length;
+									const results = await Promise.allSettled(
+										ids.map(async (id) => {
+											const order = orders.find((o) => o.id === id);
+											if (order && order.status === "confirmed")
+												await handleStatusUpdate(id, "shipped");
+										}),
+									);
+									const succeeded = results.filter(
+										(r) => r.status === "fulfilled",
+									).length;
+									const failed = results.filter(
+										(r) => r.status === "rejected",
+									).length;
+									setSelectedIds(new Set());
+									if (failed === 0) {
+										toast({
+											type: "success",
+											title: succeeded + " " + t.orders.bulkShipped,
+										});
+									} else {
+										toast({
+											type: "warning",
+											title: succeeded + " shipped, " + failed + " failed",
+										});
+									}
+									void count;
 								}}
 							>
 								{t.orders.shipSelected}
@@ -556,13 +586,28 @@ export default function OrdersPage() {
 							<button
 								className="sf-btn sf-orders-bulkbar__btn sf-orders-bulkbar__btn--muted"
 								onClick={async () => {
-									for (const id of selectedIds)
-										await handleStatusUpdate(id, "cancelled");
+									const ids = Array.from(selectedIds);
+									const results = await Promise.allSettled(
+										ids.map((id) => handleStatusUpdate(id, "cancelled")),
+									);
+									const succeeded = results.filter(
+										(r) => r.status === "fulfilled",
+									).length;
+									const failed = results.filter(
+										(r) => r.status === "rejected",
+									).length;
 									setSelectedIds(new Set());
-									toast({
-										type: "success",
-										title: `${selectedIds.size} ${t.orders.bulkCancelled}`,
-									});
+									if (failed === 0) {
+										toast({
+											type: "success",
+											title: succeeded + " " + t.orders.bulkCancelled,
+										});
+									} else {
+										toast({
+											type: "warning",
+											title: succeeded + " cancelled, " + failed + " failed",
+										});
+									}
 								}}
 							>
 								{t.orders.cancelSelected}
@@ -598,12 +643,6 @@ export default function OrdersPage() {
 				</div>
 			)}
 
-			{/* Stats Cards */}
-			<OrderStatsCards
-				stats={orderStats}
-				draftCount={orders.filter((o) => o.status === "draft").length}
-			/>
-
 			{/* Empty state */}
 			{filtered.length === 0 && (
 				<div className="sf-card sf-orders-empty">
@@ -628,7 +667,12 @@ export default function OrdersPage() {
 					onSelectAll={handleSelectAll}
 					onSelectOne={handleSelectOne}
 					onOpenDetail={setSelectedOrder}
-					onStatusUpdate={(id: string, status: string) => handleStatusUpdate(id, status as import("@/types/database").OrderStatus)}
+					onStatusUpdate={(id: string, status: string) =>
+						handleStatusUpdate(
+							id,
+							status as import("@/types/database").OrderStatus,
+						)
+					}
 					onOpenWhatsApp={openWhatsApp}
 					canManageOrders={hasPermission("orders:manage")}
 					canConfirmOrders={hasPermission("orders:confirm")}
@@ -725,6 +769,7 @@ export default function OrdersPage() {
 									}
 								/>
 							</div>
+							<hr className="sf-divider" />
 							<p className="sf-section-label">{t.orders.items}</p>
 							{form.items.map((item, idx) => (
 								<div key={idx} className="sf-orders-modal__item-row">
@@ -800,6 +845,26 @@ export default function OrdersPage() {
 											}}
 										/>
 									</div>
+									{/* Fix #19: Remove item button — only show when more than 1 item */}
+									{form.items.length > 1 && (
+										<button
+											type="button"
+											className="sf-btn sf-btn-ghost sf-icon-box-sm"
+											style={{
+												alignSelf: "flex-end",
+												color: "var(--color-error-500, #ef4444)",
+											}}
+											aria-label={t.publicForm.removeItem}
+											onClick={() =>
+												setForm((f) => ({
+													...f,
+													items: f.items.filter((_, i) => i !== idx),
+												}))
+											}
+										>
+											<X size={14} />
+										</button>
+									)}
 								</div>
 							))}
 							<button
@@ -816,6 +881,7 @@ export default function OrdersPage() {
 							>
 								{t.orders.addItem}
 							</button>
+							<hr className="sf-divider" />
 							<div className="sf-grid-2">
 								<div>
 									<label className="sf-label">{t.orders.deliveryCost}</label>
@@ -877,21 +943,33 @@ export default function OrdersPage() {
 
 			{/* Order Detail Slide-Out */}
 			{selectedOrder && (
-          <OrderSlideOut
-            order={selectedOrder}
-            showDeleteConfirm={showDeleteConfirm}
-            deleting={deleting}
-            onClose={() => setSelectedOrder(null)}
-            onStatusUpdate={(id: string, s: string) => handleStatusUpdate(id, s as "confirmed" | "pending" | "shipped" | "delivered" | "returned" | "refused" | "draft")}
-            onConfirmOrder={(order) => setConfirmOrder(order)}
-            onOpenWhatsApp={openWhatsApp}
-            onDeleteClick={(id) => setShowDeleteConfirm(id)}
-            onConfirmDelete={handleDeleteOrder}
-            onCancelDelete={() => setShowDeleteConfirm(null)}
-          />
-        )}
+				<OrderSlideOut
+					order={selectedOrder}
+					showDeleteConfirm={showDeleteConfirm}
+					deleting={deleting}
+					onClose={() => setSelectedOrder(null)}
+					onStatusUpdate={(id: string, s: string) =>
+						handleStatusUpdate(
+							id,
+							s as
+								| "confirmed"
+								| "pending"
+								| "shipped"
+								| "delivered"
+								| "returned"
+								| "refused"
+								| "draft",
+						)
+					}
+					onConfirmOrder={(order) => setConfirmOrder(order)}
+					onOpenWhatsApp={openWhatsApp}
+					onDeleteClick={(id) => setShowDeleteConfirm(id)}
+					onConfirmDelete={handleDeleteOrder}
+					onCancelDelete={() => setShowDeleteConfirm(null)}
+				/>
+			)}
 
-        {confirmOrder && (
+			{confirmOrder && (
 				<div
 					className="sf-slideout-backdrop"
 					onClick={() => setConfirmOrder(null)}
@@ -940,7 +1018,7 @@ export default function OrdersPage() {
 					onSuccess={(newReturn) => {
 						toast({
 							type: "success",
-							title: `Return request ${newReturn.return_number} created successfully`,
+							title: `${newReturn.return_number} — ${t.returns.successExchangeCreated.split("!")[0]}`,
 						});
 						loadData();
 					}}

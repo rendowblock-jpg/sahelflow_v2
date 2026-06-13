@@ -9,7 +9,7 @@
  * NOTE: These tests are scaffolded and need a real Supabase test project to execute.
  * In CI, use the Supabase CLI to spin up a local instance.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 
 // Placeholder — these would be real Supabase clients authenticated as different users
 const createClient = (role: "seller_a" | "seller_b") => {
@@ -18,9 +18,9 @@ const createClient = (role: "seller_a" | "seller_b") => {
 	const mySellerId =
 		role === "seller_a" ? "test-seller-a-id" : "test-seller-b-id";
 	return {
-		from: (table: string) => ({
-			select: (cols?: string) => ({
-				eq: (col: string, val: unknown) =>
+		from: (_table: string) => ({
+			select: (_cols?: string) => ({
+				eq: (_col: string, _val: unknown) =>
 					Promise.resolve({ data: [], error: null }),
 			}),
 			insert: (rows: any[]) => {
@@ -40,14 +40,10 @@ const createClient = (role: "seller_a" | "seller_b") => {
 
 describe("RLS Policy Verification", () => {
 	let sellerA: ReturnType<typeof createClient>;
-	let sellerB: ReturnType<typeof createClient>;
-	let sellerAId: string;
 	let sellerBId: string;
 
 	beforeAll(async () => {
 		sellerA = createClient("seller_a");
-		sellerB = createClient("seller_b");
-		sellerAId = "test-seller-a-id";
 		sellerBId = "test-seller-b-id";
 	});
 

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/accounting/trend — get daily/monthly P&L trend for the charts
 export const GET = withAuthAndRateLimit(
 	async (req, { supabase, sellerId }) => {

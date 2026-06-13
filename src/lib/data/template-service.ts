@@ -4,16 +4,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
-import { getSellerProfile, getActiveSellerId } from "./auth-service";
-
-// ===== LEGACY SINGLE TEMPLATE =====
-
-export async function getWhatsAppTemplate(): Promise<string> {
-	const profile = await getSellerProfile();
-	// Default template is handled by the caller (UI layer) using i18n.
-	// Data layer returns empty string so the UI can inject locale-aware fallback.
-	return profile?.whatsapp_template || "";
-}
+import { getActiveSellerId } from "./auth-service";
 
 // ===== TEMPLATES CRUD =====
 

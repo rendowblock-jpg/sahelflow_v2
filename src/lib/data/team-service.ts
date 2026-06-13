@@ -248,6 +248,6 @@ export async function linkUserToInvitations(
 			})
 			.eq("id", invite.id);
 
-		if (error) console.error("Error auto-linking invitation:", error);
+		if (error) console.log(JSON.stringify({ type: "team_invitation_link_error", error: error.message }));
 	}
 }

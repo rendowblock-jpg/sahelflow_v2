@@ -13,6 +13,13 @@
       "file": "src\\lib\\ai\\risk-engine.ts",
       "line": 356,
       "column": 4
+    },
+    {
+      "type": "TODO",
+      "message": "Phase 5.3 — Scale): Replace with @upstash/ratelimit when upgrading to",
+      "file": "src\\lib\\rate-limit.ts",
+      "line": 6,
+      "column": 3
     }
   ]
 }

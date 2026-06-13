@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Truck, Loader2, Download, X, Trash2 } from "lucide-react";
+import { Truck, Loader2, Download, X, Trash2, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
 import { getDeliveries, deleteDelivery } from "@/lib/data/service";
 import {
 	exportDeliveryBulkCSV,
@@ -12,10 +12,10 @@ import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
 import { useToast } from "@/components/dashboard/ToastProvider";
 import { getWilayaName } from "@/lib/data/wilayas";
-import { PageLoader } from "@/components/dashboard/PageLoader";
 import { SearchInput } from "@/components/dashboard/SearchInput";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { AnimatedStatCard } from "@/components/ui/AnimatedStatCard";
 import { PageTransition } from "@/components/ui/motion";
+import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import type { Delivery, Order, Customer } from "@/types/database";
 
 interface DeliveryWithOrder extends Delivery {
@@ -184,7 +184,20 @@ export default function DeliveryPage() {
 	);
 
 	if (loading) {
-		return <PageLoader />;
+		return (
+			<div className="sf-flex-col sf-gap-xl sf-animate-fade">
+				<div>
+					<div className="sf-skeleton sf-orders-skeleton-title" />
+					<div className="sf-skeleton sf-orders-skeleton-subtitle" />
+				</div>
+				<div className="sf-stats-grid">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<SkeletonCard key={i} />
+					))}
+				</div>
+				<SkeletonTable rows={6} />
+			</div>
+		);
 	}
 
 	const statusColors: Record<string, string> = {
@@ -295,26 +308,33 @@ export default function DeliveryPage() {
 
 			{/* Stats */}
 			<div className="sf-stats-grid">
-				<StatCard
+				<AnimatedStatCard
 					label={t.delivery.inTransit}
 					value={String(inTransit)}
 					variant="brand"
 					icon={Truck}
+					delay={0}
 				/>
-				<StatCard
+				<AnimatedStatCard
 					label={t.delivery.deliveredToday}
 					value={String(deliveredToday)}
 					variant="success"
+					icon={CheckCircle2}
+					delay={60}
 				/>
-				<StatCard
+				<AnimatedStatCard
 					label={t.delivery.returnedToday}
 					value={String(returnedToday)}
 					variant="danger"
+					icon={AlertCircle}
+					delay={120}
 				/>
-				<StatCard
+				<AnimatedStatCard
 					label={t.delivery.successRate}
 					value={`${successRate}%`}
 					variant={successRate >= 80 ? "success" : "warning"}
+					icon={TrendingUp}
+					delay={180}
 				/>
 			</div>
 

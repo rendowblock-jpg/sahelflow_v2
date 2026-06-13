@@ -572,16 +572,12 @@ export default function InboxPage() {
             aria-label="Search conversations"
           />
         </div>
-        <div className="sf-flex sf-gap-sm sf-flex-wrap sf-px-md sf-pb-sm">
+        <div className="inbox-filter-bar">
           <button
             onClick={() => setShowArchived(!showArchived)}
-            className={
-              showArchived
-                ? "sf-risk-filter-btn sf-risk-filter-btn-active"
-                : "sf-risk-filter-btn"
-            }
+            className={`inbox-filter-pill ${showArchived ? "inbox-filter-pill--active" : ""}`}
           >
-            <Archive size={12} className="sf-align-middle sf-mr-sm" />
+            <Archive size={11} />
             {showArchived ? t.inbox.hideArchived : t.inbox.showArchived}
           </button>
           {allLabels.map((label) => (
@@ -590,13 +586,9 @@ export default function InboxPage() {
               onClick={() =>
                 setLabelFilter(labelFilter === label ? "all" : label)
               }
-              className={
-                labelFilter === label
-                  ? "sf-risk-filter-btn sf-risk-filter-btn-active"
-                  : "sf-risk-filter-btn"
-              }
+              className={`inbox-filter-pill ${labelFilter === label ? "inbox-filter-pill--active" : ""}`}
             >
-              <Tag size={12} className="sf-align-middle sf-mr-sm" />
+              <Tag size={11} />
               {label}
             </button>
           ))}
@@ -788,24 +780,8 @@ export default function InboxPage() {
             )}
             {/* AI Reply Suggestions */}
             {suggestedReplies.length > 0 && (
-              <div
-                style={{
-                  padding: "8px 16px",
-                  background: "var(--color-surface-secondary)",
-                  borderTop: "1px solid var(--color-line-primary)",
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "var(--color-content-tertiary)",
-                    marginRight: 4,
-                  }}
-                >
+              <div className="inbox-ai-suggestions-container">
+                <span className="inbox-ai-suggestions-label">
                   ✨ {t.inbox.suggestedReplies || "Suggested:"}
                 </span>
                 {suggestedReplies.map((reply, i) => (
@@ -827,14 +803,7 @@ export default function InboxPage() {
                 ))}
                 <button
                   onClick={() => setSuggestedReplies([])}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: 11,
-                    color: "var(--color-content-tertiary)",
-                    cursor: "pointer",
-                    marginLeft: "auto",
-                  }}
+                  className="inbox-ai-suggestions-close"
                 >
                   ✕
                 </button>

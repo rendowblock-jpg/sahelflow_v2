@@ -111,39 +111,40 @@ export default function ChatMessageComponent({
 	onRetry,
 }: ChatMessageProps) {
 	return (
-		<div>
-			<div
-				className={`sf-ai-msg-row ${role === "user" ? "sf-ai-msg-row--user" : ""}`}
-			>
-				{role === "assistant" && (
+		<div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+			{role === "user" ? (
+				<div className="sf-ai-msg-user">
+					<div className="sf-ai-msg-user-bubble">{content}</div>
+				</div>
+			) : (
+				<div className="sf-ai-msg-assistant">
 					<div
 						className={`sf-ai-msg-avatar ${isError ? "sf-ai-msg-avatar--error" : "sf-ai-msg-avatar--assistant"}`}
 					>
 						<Bot size={14} color="white" />
 					</div>
-				)}
-				<div
-					className={`sf-ai-msg-bubble ${role === "user" ? "sf-ai-msg-bubble--user" : isError ? "sf-ai-msg-bubble--error" : "sf-ai-msg-bubble--assistant"}`}
-				>
-					{role === "assistant" ? renderMarkdown(content) : content}
+					<div className="sf-ai-msg-assistant-bubble" style={isError ? { borderInlineStartColor: "var(--color-danger-400)" } : {}}>
+						{renderMarkdown(content)}
+						{isError && lastFailedMessage && (
+							<button
+								className="sf-ai-retry-btn"
+								onClick={() => onRetry(lastFailedMessage)}
+								style={{ marginTop: "8px" }}
+							>
+								<RotateCcw size={12} /> Retry
+							</button>
+						)}
+					</div>
 				</div>
-			</div>
-
-			{isError && lastFailedMessage && (
-				<button
-					className="sf-ai-retry-btn"
-					onClick={() => onRetry(lastFailedMessage)}
-				>
-					<RotateCcw size={12} /> Retry
-				</button>
 			)}
 
 			{actionCards?.map((card, i) => (
 				<div
 					key={i}
 					className={`sf-ai-action-card ${card.type === "success" ? "sf-ai-action-card--success" : ""}`}
+					style={{ marginInlineStart: "36px" }}
 				>
-					<div className="sf-flex-center-gap-sm sf-mb-sm">
+					<div className="sf-flex sf-items-center sf-gap-sm" style={{ marginBottom: "4px" }}>
 						<span className="sf-text-base">
 							{card.type === "success"
 								? "✅"
@@ -151,12 +152,10 @@ export default function ChatMessageComponent({
 									? "📊"
 									: "ℹ️"}
 						</span>
-						<span className="sf-font-semibold sf-text-primary">
-							{card.title}
-						</span>
+						<span className="sf-font-semibold sf-text-primary sf-text-sm">{card.title}</span>
 					</div>
 					{card.description && (
-						<p className="sf-text-xs-tertiary">{card.description}</p>
+						<p className="sf-text-xs sf-text-tertiary">{card.description}</p>
 					)}
 				</div>
 			))}

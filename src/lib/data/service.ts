@@ -92,7 +92,6 @@ export {
 
 // WhatsApp Templates
 export {
-  getWhatsAppTemplate,
   getWhatsAppTemplates,
   createWhatsAppTemplate,
   updateWhatsAppTemplate,

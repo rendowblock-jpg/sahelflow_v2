@@ -9,7 +9,7 @@
  * NOTE: These are scaffolded tests. Full integration requires a Supabase instance
  * with the atomic_update_order_status RPC function deployed.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // Valid order status transitions per the DB function
 const VALID_TRANSITIONS: Record<string, string[]> = {

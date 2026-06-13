@@ -62,7 +62,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **AI**         | Groq API (5-model router with per-model API keys and cascading fallback, 30 tools)             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp via Baileys)                                               |
 | **Validation** | Zod (all public API routes)                                                                    |
-| **Testing**    | Vitest (355 unit tests across 33 test files)                                                   |
+| **Testing**    | Vitest (360 unit tests across 34 test files)                                                   |
 | **Hosting**    | Vercel (per-client deployment via CLI)                                                         |
 
 ---
@@ -115,7 +115,14 @@ A single comprehensive baseline migration is maintained at `supabase/migrations/
 - `009_accounting.sql` — Ledger tables: expenses, returns, variant cost mappings
 - `010_team_access.sql` — Team member management table, roles and updated team-aware RLS
 - `011_daily_reports.sql` — Daily analytics reports tables for cron metrics
+- `012_security_lockdown.sql` — Security hardening, dropping auth.email(), restricting functions
+- `013_data_integrity.sql` — Data integrity constraints, checks, and cleanup
+- `014_types_alignment.sql` — Types alignment fixes (e.g. ReturnReason enum mapping)
 - `020_soft_delete.sql` — Soft delete triggers and restore functions
+- `021_performance_indexes.sql` — Composite indexes, FK indexes, wilaya_risk_profiles table
+- `022_seller_locale.sql` — default_locale column added to sellers
+- `023_audit_security_grants.sql` — Revoke over-broad EXECUTE grants (PUBLIC/anon/authenticated)
+- `024_schema_cleanup.sql` — Fix default_locale default, drop duplicate slug constraint, fix cost_price default, drop legacy columns
 
 Historical migrations are archived in `supabase/migrations/archive/`.
 
@@ -138,7 +145,7 @@ Each client gets their own Vercel app + Supabase project + Railway Evolution API
 ## Build & Test Gate
 
 - ✅ `next build` — compiles all routes, zero errors, zero warnings
-- ✅ `npx vitest run` — **355/355** passing across 33 test files
+- ✅ `npx vitest run` — **360/360** passing across 34 test files
 - ✅ `npx tsc --noEmit` — strict mode, zero errors
 - ✅ Security headers complete (CSP + HSTS + Permissions-Policy + XFO + XCTO + RP)
 - ✅ Zero English leakage in Arabic mode

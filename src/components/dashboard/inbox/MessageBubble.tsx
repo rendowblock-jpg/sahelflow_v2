@@ -24,22 +24,7 @@ export function MessageBubble({ message, onDoubleClick, onForward }: Props) {
 			title={t.inbox.replyHint || "Double-click to reply"}
 		>
 			{message.quoted_text && (
-				<div
-					style={{
-						borderInlineStart: "3px solid var(--color-brand-400)",
-						padding: "4px 8px",
-						margin: "0 0 4px 0",
-						background: "rgba(99,102,241,0.06)",
-						borderRadius: 4,
-						fontSize: 12,
-						color: "var(--color-content-secondary)",
-						fontStyle: "italic",
-						maxWidth: 240,
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-					}}
-				>
+				<div className="inbox-quoted-text">
 					{message.quoted_text}
 				</div>
 			)}
@@ -81,11 +66,7 @@ export function MessageBubble({ message, onDoubleClick, onForward }: Props) {
 					href={message.media_url}
 					target="_blank"
 					rel="noopener noreferrer"
-					style={{
-						fontSize: 13,
-						color: "var(--color-brand-400)",
-						textDecoration: "none",
-					}}
+					className="inbox-download-link"
 				>
 					<FileText
 						size={14}
@@ -120,15 +101,7 @@ export function MessageBubble({ message, onDoubleClick, onForward }: Props) {
 						e.stopPropagation();
 						onForward();
 					}}
-					style={{
-						background: "none",
-						border: "none",
-						cursor: "pointer",
-						color: "var(--color-content-tertiary)",
-						padding: 2,
-						marginInlineStart: 4,
-						opacity: 0.5,
-					}}
+					className="inbox-msg-forward-btn"
 					title={t.inbox.forward || "Forward"}
 				>
 					<Forward size={12} />

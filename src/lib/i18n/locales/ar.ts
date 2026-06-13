@@ -27,6 +27,11 @@ const ar: TranslationKeys = {
     logOut: "تسجيل الخروج",
     collapse: "طي",
     more: "المزيد",
+    groupWorkspace: "مساحة العمل",
+    groupOperations: "العمليات",
+    groupAiAutomation: "الذكاء الاصطناعي والأتمتة",
+    groupFinanceInsights: "المالية والتحليلات",
+    groupAdministration: "الإدارة",
   },
 
   // Common

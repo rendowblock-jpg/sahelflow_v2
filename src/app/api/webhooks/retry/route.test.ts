@@ -4,34 +4,9 @@
  * Tests that webhook events exceeding max retry attempts get dead-lettered,
  * and successful retries update the event status.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 const MAX_ATTEMPTS = 5;
-
-// Mock Supabase client
-const createMockSupabase = (events: any[]) => ({
-	from: vi.fn((table: string) => {
-		if (table === "webhook_events") {
-			return {
-				select: vi.fn(() => ({
-					eq: vi.fn(() => ({
-						lt: vi.fn(() => Promise.resolve({ data: events, error: null })),
-					})),
-				})),
-				update: vi.fn(() => ({
-					eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-				})),
-				insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-			};
-		}
-		if (table === "dead_letters") {
-			return {
-				insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-			};
-		}
-		return { select: vi.fn(), update: vi.fn(), insert: vi.fn() };
-	}),
-});
 
 describe("Retry Queue Processor", () => {
 	it("marks events as dead-lettered after MAX_ATTEMPTS failures", async () => {

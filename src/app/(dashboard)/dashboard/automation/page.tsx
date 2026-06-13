@@ -12,7 +12,6 @@ import {
 import {
   getOrders,
   updateOrderStatus,
-  getSellerProfile,
 } from "@/lib/data/service";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/dashboard/ToastProvider";
@@ -40,22 +39,16 @@ export default function ConfirmationPage() {
     {},
   );
   const [batchLoading, setBatchLoading] = useState(false);
-  const [whatsappTemplate, setWhatsappTemplate] = useState("");
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [refusedCount, setRefusedCount] = useState(0);
+  const whatsappTemplate = "";
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [pendingOrdersResult, profile] = await Promise.all([
-        getOrders({ status: "pending", limit: 200 }),
-        getSellerProfile(),
-      ]);
+      const pendingOrdersResult = await getOrders({ status: "pending", limit: 200 });
       const pendingOrders = pendingOrdersResult.data;
       setOrders(pendingOrders as Order[]);
-      if (profile?.whatsapp_template) {
-        setWhatsappTemplate(profile.whatsapp_template);
-      }
     } catch {
       toast({
         type: "error",

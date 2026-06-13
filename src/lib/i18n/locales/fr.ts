@@ -27,6 +27,11 @@ const fr: TranslationKeys = {
     logOut: "Déconnexion",
     collapse: "Réduire",
     more: "Plus",
+    groupWorkspace: "Espace de travail",
+    groupOperations: "Opérations",
+    groupAiAutomation: "IA & Automatisation",
+    groupFinanceInsights: "Finances & Analyses",
+    groupAdministration: "Administration",
   },
 
   // Common

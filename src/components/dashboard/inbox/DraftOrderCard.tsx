@@ -14,45 +14,19 @@ export function DraftOrderCard({ draftOrder, onConfirm, onDiscard }: Props) {
 	const items = Array.isArray(draftOrder.items) ? draftOrder.items : [];
 
 	return (
-		<div
-			style={{
-				borderLeft: "4px solid var(--color-brand-500)",
-				background: "var(--color-surface-secondary)",
-				borderRadius: "var(--radius-md)",
-				padding: "12px 16px",
-				margin: "0 16px",
-			}}
-		>
-			<div
-				style={{
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-					marginBottom: 8,
-				}}
-			>
+		<div className="inbox-draft-card">
+			<div className="inbox-draft-header">
 				<span style={{ fontSize: 14, fontWeight: 600 }}>
 					📦 <strong>{draftOrder.order_number}</strong>
 				</span>
-				<span
-					style={{
-						fontWeight: 700,
-						color: "var(--color-brand-400)",
-					}}
-				>
+				<span className="inbox-draft-total">
 					{draftOrder.total_price?.toLocaleString(
 						locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-DZ",
 					)}{" "}
 					DA
 				</span>
 			</div>
-			<div
-				style={{
-					fontSize: 13,
-					color: "var(--color-content-secondary)",
-					marginBottom: 8,
-				}}
-			>
+			<div className="inbox-draft-items">
 				{items.map((item, i) => (
 					<div key={i}>
 						{item.quantity}x {item.name} —{" "}
@@ -63,23 +37,11 @@ export function DraftOrderCard({ draftOrder, onConfirm, onDiscard }: Props) {
 					</div>
 				))}
 			</div>
-			<div
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: 8,
-					flexWrap: "wrap",
-				}}
-			>
+			<div className="inbox-draft-footer">
 				{draftOrder.wilaya && (
 					<span className="sf-badge">{draftOrder.wilaya}</span>
 				)}
-				<span
-					style={{
-						fontSize: 12,
-						color: "var(--color-content-tertiary)",
-					}}
-				>
+				<span className="inbox-draft-delivery">
 					🚚{" "}
 					{draftOrder.delivery_cost?.toLocaleString(
 						locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-DZ",

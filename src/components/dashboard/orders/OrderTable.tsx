@@ -50,7 +50,7 @@ export default function OrderTable({
 	return (
 		<div className="sf-card sf-orders-table-card">
 			<div className="sf-table-wrap">
-				<table className="sf-table">
+				<table className="sf-table-aaa">
 					<thead>
 						<tr>
 							{hasAnyActionPermission && (
@@ -114,7 +114,7 @@ export default function OrderTable({
 								</td>
 								{hasAnyActionPermission && (
 									<td>
-										<div className="sf-orders-row-actions" onClick={(e) => e.stopPropagation()}>
+										<div className="sf-row-actions" onClick={(e) => e.stopPropagation()}>
 											{o.status === "draft" && (
 												<>
 													{canConfirmOrders && (

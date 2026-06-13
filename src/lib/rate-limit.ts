@@ -2,6 +2,15 @@
  * SahelFlow Rate Limiter
  * Simple in-memory rate limiting for single-seller deployments.
  * Limits reset on cold starts, which is acceptable for Algerian COD e-commerce scale.
+ *
+ * TODO (Phase 5.3 — Scale): Replace with @upstash/ratelimit when upgrading to
+ * multi-instance Vercel deployments. The current in-memory Map resets on cold
+ * starts and is NOT shared across serverless instances.
+ * Migration path: https://github.com/upstash/ratelimit
+ * Pattern:
+ *   import { Ratelimit } from "@upstash/ratelimit";
+ *   import { Redis } from "@upstash/redis";
+ *   const ratelimit = new Ratelimit({ redis: Redis.fromEnv(), limiter: Ratelimit.slidingWindow(10, "1m") });
  */
 
 interface RateLimitResult {

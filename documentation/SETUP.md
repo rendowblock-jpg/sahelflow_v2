@@ -99,7 +99,14 @@ Apply the patch migrations in order:
 11. `009_accounting.sql`
 12. `010_team_access.sql`
 13. `011_daily_reports.sql`
-14. `020_soft_delete.sql`
+14. `012_security_lockdown.sql`
+15. `013_data_integrity.sql`
+16. `014_types_alignment.sql`
+17. `020_soft_delete.sql`
+18. `021_performance_indexes.sql`
+19. `022_seller_locale.sql`
+20. `023_audit_security_grants.sql`
+21. `024_schema_cleanup.sql`
 
 Historical migrations are archived in `supabase/migrations/archive/`.
 
@@ -187,7 +194,7 @@ npm run test:watch
 npm run test:coverage
 ```
 
-Current suite: **354 tests** across **32 test files**.
+Current suite: **360 tests** across **34 test files**.
 
 ---
 
@@ -224,4 +231,4 @@ For each new seller client:
 
 ---
 
-_Last updated: 2026-05-12_
+_Last updated: 2026-06-04_

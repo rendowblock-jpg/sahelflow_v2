@@ -156,22 +156,28 @@ export default function AnalyticsPage() {
 					<h1 className="sf-page-title">{t.analytics.title}</h1>
 					<p className="sf-page-subtitle">{t.analytics.overview}</p>
 				</div>
-				<div className="sf-range-filters">
-					{(["today", "7d", "30d", "all"] as const).map((r) => (
-						<button
-							key={r}
-							onClick={() => setRange(r)}
-							className={`sf-range-filter ${range === r ? "is-active" : ""}`}
-						>
-							{r === "today"
-								? t.analytics.today
-								: r === "7d"
-									? t.analytics.last7Days
-									: r === "30d"
-										? t.analytics.last30Days
-										: t.common.all}
-						</button>
-					))}
+				<div className="sf-range-filters" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+					<div className="sf-seg">
+						{(["today", "7d", "30d", "all"] as const).map((r) => {
+							const isActive = range === r;
+							return (
+								<button
+									key={r}
+									onClick={() => setRange(r)}
+									className={`sf-seg-btn ${isActive ? "sf-seg-btn--active" : ""}`}
+									type="button"
+								>
+									{r === "today"
+										? t.analytics.today
+										: r === "7d"
+											? t.analytics.last7Days
+											: r === "30d"
+												? t.analytics.last30Days
+												: t.common.all}
+								</button>
+							);
+						})}
+					</div>
 					<button
 						className="sf-btn sf-btn-ghost"
 						onClick={() =>
@@ -205,19 +211,21 @@ export default function AnalyticsPage() {
 			</div>
 
 			{/* Key Metrics Row */}
-			<StaggerContainer className="sf-stats-grid" stagger={0.05}>
+			<StaggerContainer className="sf-grid-4" stagger={0.05}>
 				{[
 					{
 						label: t.dashboard.totalOrders,
 						value: String(m.totalOrders),
 						icon: ShoppingCart,
 						variant: "brand" as const,
+						pct: 100,
 					},
 					{
 						label: t.dashboard.revenue,
 						value: formatCurrency(m.totalRevenue),
 						icon: DollarSign,
 						variant: "success" as const,
+						pct: 100,
 					},
 					{
 						label: t.analytics.confirmationRate,
@@ -229,18 +237,21 @@ export default function AnalyticsPage() {
 								: m.confirmationRate >= 70
 									? ("warning" as const)
 									: ("danger" as const),
+						pct: m.confirmationRate,
 					},
 					{
 						label: t.analytics.avgOrderValue,
 						value: formatCurrency(m.avgOrderValue),
 						icon: TrendingUp,
 						variant: "warning" as const,
+						pct: Math.min(100, (m.avgOrderValue / 6000) * 100),
 					},
 					{
 						label: t.dashboard.customers,
 						value: String(m.totalCustomers || 0),
 						icon: Users,
 						variant: "brand" as const,
+						pct: 100,
 					},
 					{
 						label: t.analytics.deliveryRate,
@@ -250,6 +261,7 @@ export default function AnalyticsPage() {
 							m.deliveryRate >= 70
 								? ("success" as const)
 								: ("warning" as const),
+						pct: m.deliveryRate,
 					},
 					{
 						label: t.analytics.lowStockItems,
@@ -259,6 +271,7 @@ export default function AnalyticsPage() {
 							m.lowStockProducts > 0
 								? ("danger" as const)
 								: ("success" as const),
+						pct: m.lowStockProducts > 0 ? 30 : 100,
 					},
 				].map((s, i) => (
 					<StaggerItem key={s.label}>
@@ -268,6 +281,7 @@ export default function AnalyticsPage() {
 							variant={s.variant}
 							icon={s.icon}
 							delay={i * 80}
+							sparklinePercent={s.pct}
 						/>
 					</StaggerItem>
 				))}
@@ -277,7 +291,7 @@ export default function AnalyticsPage() {
 			<StaggerContainer className="sf-chart-row sf-items-start" stagger={0.1}>
 				<StaggerItem>
 					<ChartContainer
-						title={t.analytics.revenueLast7Days}
+						title={t.analytics.revenueLast7Days ? t.analytics.revenueLast7Days.replace("7", range === "7d" ? "7" : range === "today" ? "1" : "30") : "Revenue Trend"}
 						empty={revenueByDay.length === 0}
 						emptyTitle={t.analytics.noDataYet}
 						emptyDescription={t.analytics.noDataDesc}
@@ -303,66 +317,51 @@ export default function AnalyticsPage() {
 				</StaggerItem>
 			</StaggerContainer>
 
-			{/* Profit Overview */}
-			<div className="sf-card">
+			{/* Profit Waterfall Section */}
+			<div className="sf-card sf-card-padded">
 				<h3 className="sf-section-title">{t.analytics.profitOverview}</h3>
-				<div className="sf-flex-col sf-gap-md">
-					<div>
-						<div className="sf-profit-row">
-							<span className="sf-text-sm sf-font-medium">
-								{t.dashboard.revenue}
-							</span>
-							<span className="sf-text-sm sf-font-bold sf-text-success sf-text-tabular">
-								{formatCurrency(m.totalRevenue)}
-							</span>
-						</div>
-						<div className="sf-profit-bar">
-							<div
-								className="sf-profit-bar-fill"
-								style={{
-									width: "100%",
-									background: "linear-gradient(to right, #10b981, #34d399)",
-								}}
-							/>
+				<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginTop: "16px" }}>
+					{/* Revenue (Add) */}
+					<div style={{ background: "var(--color-surface-tertiary)", padding: "16px", borderRadius: "8px", border: "1px solid var(--color-line-primary)" }}>
+						<span style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-content-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+							{t.dashboard.revenue}
+						</span>
+						<h2 style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-accent-400)", marginTop: "6px" }}>
+							+ {formatCurrency(m.totalRevenue)}
+						</h2>
+						<div style={{ height: "4px", background: "var(--color-accent-500)", borderRadius: "2px", marginTop: "12px" }} />
+					</div>
+
+					{/* Delivery Cost (Subtract) */}
+					<div style={{ background: "var(--color-surface-tertiary)", padding: "16px", borderRadius: "8px", border: "1px solid var(--color-line-primary)" }}>
+						<span style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-content-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+							{t.analytics.deliveryCosts}
+						</span>
+						<h2 style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-danger-400)", marginTop: "6px" }}>
+							- {formatCurrency(m.totalDeliveryCost)}
+						</h2>
+						<div style={{ height: "4px", background: "var(--color-surface-hover)", borderRadius: "2px", marginTop: "12px" }}>
+							<div style={{ height: "100%", background: "var(--color-danger-500)", borderRadius: "2px", width: m.totalRevenue > 0 ? `${Math.min(100, (m.totalDeliveryCost / m.totalRevenue) * 100)}%` : "0%" }} />
 						</div>
 					</div>
-					<div>
-						<div className="sf-profit-row">
-							<span className="sf-text-sm sf-font-medium">
-								{t.analytics.deliveryCosts}
-							</span>
-							<span className="sf-text-sm sf-font-bold sf-text-warning sf-text-tabular">
-								{formatCurrency(m.totalDeliveryCost)}
-							</span>
-						</div>
-						<div className="sf-profit-bar">
-							<div
-								className="sf-profit-bar-fill"
-								style={{
-									width:
-										m.totalRevenue > 0
-											? `${(m.totalDeliveryCost / m.totalRevenue) * 100}%`
-											: "0%",
-									background: "linear-gradient(to right, #f59e0b, #fbbf24)",
-								}}
-							/>
-						</div>
-					</div>
-					<div className="sf-profit-summary">
-						<span className="sf-text-md sf-font-bold">
+
+					{/* Net Profit (Result) */}
+					<div style={{ background: "var(--gradient-brand-subtle)", padding: "16px", borderRadius: "8px", border: "1px solid rgba(59, 158, 255, 0.15)" }}>
+						<span style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-brand-400)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
 							{t.analytics.netProfit}
 						</span>
-						<span
-							className={`sf-metric ${m.netProfit >= 0 ? "sf-text-success" : "sf-text-danger"}`}
-						>
+						<h2 style={{ fontSize: "24px", fontWeight: 700, color: m.netProfit >= 0 ? "var(--color-accent-400)" : "var(--color-danger-400)", marginTop: "6px" }}>
 							{formatCurrency(m.netProfit)}
-						</span>
+						</h2>
+						<div style={{ height: "4px", background: "var(--color-surface-hover)", borderRadius: "2px", marginTop: "12px" }}>
+							<div style={{ height: "100%", background: m.netProfit >= 0 ? "var(--color-accent-500)" : "var(--color-danger-500)", borderRadius: "2px", width: m.totalRevenue > 0 ? `${Math.min(100, Math.max(0, m.netProfit / m.totalRevenue) * 100)}%` : "0%" }} />
+						</div>
 					</div>
-					<div className="sf-flex-center">
-						<span className="sf-text-xs-tertiary">
-							{t.analytics.profitMargin}: {m.profitMargin}%
-						</span>
-					</div>
+				</div>
+				<div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+					<span className="sf-text-xs-tertiary">
+						{t.analytics.profitMargin}: {m.profitMargin}%
+					</span>
 				</div>
 			</div>
 
@@ -453,7 +452,7 @@ export default function AnalyticsPage() {
 					{t.ai.topWilayas}
 				</h3>
 				<div className="sf-table-wrap">
-					<table className="sf-table">
+					<table className="sf-table-aaa">
 						<thead>
 							<tr>
 								<th>#</th>
@@ -469,12 +468,24 @@ export default function AnalyticsPage() {
 							{topWilayas.map((w, i) => {
 								const successRate =
 									w.orders > 0 ? Math.round((w.delivered / w.orders) * 100) : 0;
+								const maxWilayaRevenue = Math.max(...topWilayas.map((w) => w.revenue), 1);
+								const pct = Math.round((w.revenue / maxWilayaRevenue) * 100);
 								return (
 									<tr key={w.wilaya}>
 										<td className="sf-font-semibold sf-text-tertiary sf-text-tabular">
 											{i + 1}
 										</td>
-										<td className="sf-font-medium">{w.wilaya}</td>
+										<td>
+											<div className="sf-flex-col sf-gap-xs">
+												<span className="sf-font-medium">{w.wilaya}</span>
+												<div className="sf-progress" style={{ height: 4, width: 120 }}>
+													<div
+														className="sf-progress-bar"
+														style={{ width: `${pct}%`, background: "var(--color-brand-400)" }}
+													/>
+												</div>
+											</div>
+										</td>
 										<td className="sf-text-center sf-text-tabular">
 											{w.orders}
 										</td>
@@ -514,3 +525,4 @@ export default function AnalyticsPage() {
 		</PageTransition>
 	);
 }
+

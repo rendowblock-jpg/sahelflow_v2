@@ -33,7 +33,6 @@ export async function updateSellerProfile(
 			| "phone"
 			| "settings"
 			| "shipping_rates"
-			| "whatsapp_template"
 			| "notification_settings"
 			| "webhook_token"
 			| "wilaya"

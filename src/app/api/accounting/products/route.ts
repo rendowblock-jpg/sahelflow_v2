@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/accounting/products — get per-product profitability ranking
 export const GET = withAuthAndRateLimit(
   async (req, { supabase }) => {

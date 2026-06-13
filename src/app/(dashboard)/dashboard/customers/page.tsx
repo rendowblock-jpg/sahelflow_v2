@@ -12,6 +12,7 @@ import {
 	MessageCircle,
 	Ban,
 	TrendingUp,
+	ShoppingBag,
 	Loader2,
 } from "lucide-react";
 import {
@@ -29,6 +30,7 @@ import { useToast } from "@/components/dashboard/ToastProvider";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/motion";
+import { AnimatedStatCard } from "@/components/ui/AnimatedStatCard";
 import { getWilayaName } from "@/lib/data/wilayas";
 
 interface EnrichedCustomer extends Customer {
@@ -328,40 +330,38 @@ export default function CustomersPage() {
 
 			{/* Stats */}
 			<div className="sf-stats-grid">
-				{[
-					{
-						label: t.customers.totalCustomers,
-						value: String(totalCustomers),
-						variant: "brand",
-					},
-					{
-						label: t.customers.totalOrders,
-						value: String(totalOrdersCount),
-						variant: "success",
-					},
-					{
-						label: t.customers.totalSpent,
-						value: formatCurrency(totalSpent),
-						variant: "warning",
-					},
-					{
-						label: t.customers.avgOrder,
-						value: formatCurrency(
-							totalOrdersCount > 0
-								? Math.round(totalSpent / totalOrdersCount)
-								: 0,
-						),
-						variant: "brand",
-					},
-				].map((s, i) => (
-					<div
-						key={s.label}
-						className={`sf-card sf-stat sf-stat-${s.variant} sf-animate-in sf-stagger-${i + 1}`}
-					>
-						<p className="sf-stat-label">{s.label}</p>
-						<p className="sf-stat-value sf-text-tabular">{s.value}</p>
-					</div>
-				))}
+				<AnimatedStatCard
+					label={t.customers.totalCustomers}
+					value={String(totalCustomers)}
+					variant="brand"
+					icon={Users}
+					delay={0}
+				/>
+				<AnimatedStatCard
+					label={t.customers.totalOrders}
+					value={String(totalOrdersCount)}
+					variant="success"
+					icon={ShoppingBag}
+					delay={60}
+				/>
+				<AnimatedStatCard
+					label={t.customers.totalSpent}
+					value={formatCurrency(totalSpent)}
+					variant="warning"
+					icon={DollarSign}
+					delay={120}
+				/>
+				<AnimatedStatCard
+					label={t.customers.avgOrder}
+					value={formatCurrency(
+						totalOrdersCount > 0
+							? Math.round(totalSpent / totalOrdersCount)
+							: 0,
+					)}
+					variant="brand"
+					icon={TrendingUp}
+					delay={180}
+				/>
 			</div>
 
 			{/* Search */}
@@ -376,7 +376,7 @@ export default function CustomersPage() {
 			</div>
 
 			{/* Segment Tabs */}
-			<div className="sf-segment-pills">
+			<div className="sf-seg">
 				{(
 					[
 						{ key: "all", label: t.common.all, count: enriched.length },
@@ -403,15 +403,20 @@ export default function CustomersPage() {
 							count: enriched.filter((c) => c.is_blocked).length,
 						},
 					] as const
-				).map((tab) => (
-					<button
-						key={tab.key}
-						onClick={() => setSegment(tab.key)}
-						className={`sf-segment-pill ${segment === tab.key ? "sf-segment-pill--active" : ""}`}
-					>
-						{tab.label} ({tab.count})
-					</button>
-				))}
+				).map((tab) => {
+					const isActive = segment === tab.key;
+					return (
+						<button
+							key={tab.key}
+							onClick={() => setSegment(tab.key)}
+							className={`sf-seg-btn ${isActive ? "sf-seg-btn--active" : ""}`}
+							type="button"
+						>
+							<span>{tab.label}</span>
+							{tab.count > 0 && <span className="sf-seg-count">{tab.count}</span>}
+						</button>
+					);
+				})}
 			</div>
 
 			{/* Empty */}
@@ -499,7 +504,7 @@ export default function CustomersPage() {
 				/* Desktop: Table */
 				<div className="sf-card" style={{ padding: 0 }}>
 					<div className="sf-table-wrap">
-						<table className="sf-table">
+						<table className="sf-table-aaa">
 							<thead>
 								<tr>
 									<th>{t.customers.name}</th>
@@ -512,61 +517,101 @@ export default function CustomersPage() {
 								</tr>
 							</thead>
 							<tbody>
-								{filtered.map((c) => (
-									<tr
-										key={c.id}
-										onClick={() => selectCustomer(c)}
-										className="sf-cursor-pointer"
-									>
-										<td className="sf-font-medium">{c.name || "—"}</td>
-										<td>
-											<span
-												className={`sf-risk-badge ${
-													c.riskLevel === "blocked"
-														? "sf-risk-badge--blocked"
+								{filtered.map((c) => {
+									const initials = c.name
+										? c.name
+												.split(" ")
+												.map((w) => w[0])
+												.slice(0, 2)
+												.join("")
+												.toUpperCase()
+										: "U";
+									return (
+										<tr
+											key={c.id}
+											onClick={() => selectCustomer(c)}
+											className="sf-cursor-pointer"
+										>
+											<td>
+												<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+													<div className={`sf-avatar ${
+														c.is_blocked 
+															? "sf-avatar--teal" 
+															: c.riskLevel === "high" 
+																? "sf-avatar--orange" 
+																: c.total_spent >= 10000 
+																	? "sf-avatar--green" 
+																	: "sf-avatar--purple"
+													}`}>
+														{initials}
+													</div>
+													<span className="sf-font-medium">{c.name || "—"}</span>
+												</div>
+											</td>
+											<td>
+												<span
+													className={`sf-risk-badge ${
+														c.riskLevel === "blocked"
+															? "sf-risk-badge--blocked"
+															: c.riskLevel === "high"
+																? "sf-risk-badge--high"
+																: c.riskLevel === "medium"
+																	? "sf-risk-badge--medium"
+																	: c.riskLevel === "new"
+																		? "sf-risk-badge--new"
+																		: "sf-risk-badge--low"
+													}`}
+												>
+													{c.riskLevel === "blocked"
+														? "🚫"
 														: c.riskLevel === "high"
-															? "sf-risk-badge--high"
+															? "🔴"
 															: c.riskLevel === "medium"
-																? "sf-risk-badge--medium"
+																? "🟡"
 																: c.riskLevel === "new"
-																	? "sf-risk-badge--new"
-																	: "sf-risk-badge--low"
-												}`}
-											>
-												{c.riskLevel === "blocked"
-													? "🚫"
-													: c.riskLevel === "high"
-														? "🔴"
-														: c.riskLevel === "medium"
-															? "🟡"
-															: c.riskLevel === "new"
-																? "🆕"
-																: "🟢"}{" "}
-												{c.riskLevel === "new"
-													? t.customers.newCustomers
-													: c.riskLevel}
-											</span>
-										</td>
-										<td className="sf-text-mono sf-text-xs" dir="ltr">
-											{c.phone || "—"}
-										</td>
-										<td className="sf-text-secondary">
-											{c.wilaya ? getWilayaName(c.wilaya, locale) : "—"}
-											{c.commune ? `, ${c.commune}` : ""}
-										</td>
-										<td className="sf-text-center">
-											<span className="sf-badge sf-badge-brand">
-												{c.ordersCount}
-											</span>
-										</td>
-										<td className="sf-text-end sf-font-semibold sf-text-tabular">
-											{formatCurrency(c.totalSpent)}
-										</td>
-										<td className="sf-text-xs-tertiary">
-											{c.lastOrder ? formatTimeAgo(c.lastOrder) : "—"}
-										</td>
-									</tr>
-								))}
+																	? "🆕"
+																	: "🟢"}{" "}
+													{c.riskLevel === "new"
+														? t.customers.newCustomers
+														: c.riskLevel}
+												</span>
+											</td>
+											<td className="sf-text-mono sf-text-xs" dir="ltr">
+												{c.phone || "—"}
+											</td>
+											<td className="sf-text-secondary">
+												{c.wilaya ? getWilayaName(c.wilaya, locale) : "—"}
+												{c.commune ? `, ${c.commune}` : ""}
+											</td>
+											<td className="sf-text-center">
+												<span className="sf-badge sf-badge-brand">
+													{c.ordersCount}
+												</span>
+											</td>
+											<td className="sf-text-end sf-font-semibold sf-text-tabular">
+												<span style={{
+													padding: "4px 8px",
+													borderRadius: "4px",
+													background: c.totalSpent >= 10000 
+														? "rgba(16, 185, 129, 0.1)" 
+														: c.totalSpent >= 3000 
+															? "rgba(59, 158, 255, 0.1)" 
+															: "transparent",
+													color: c.totalSpent >= 10000 
+														? "var(--color-accent-400)" 
+														: c.totalSpent >= 3000 
+															? "var(--color-brand-400)" 
+															: "var(--color-content-primary)"
+												}}>
+													{formatCurrency(c.totalSpent)}
+												</span>
+											</td>
+											<td className="sf-text-xs-tertiary">
+												{c.lastOrder ? formatTimeAgo(c.lastOrder) : "—"}
+											</td>
+										</tr>
+									);
+								})}
 							</tbody>
 						</table>
 					</div>
@@ -589,15 +634,47 @@ export default function CustomersPage() {
 						aria-label="Customer details"
 					>
 						<div className="sf-slideout__header">
-							<div>
-								<h2 className="sf-heading-sm">
-									{selectedCustomer.name || "—"}
-								</h2>
-								{selectedCustomer.is_blocked && (
-									<span className="sf-risk-badge sf-risk-badge--blocked">
-										{t.customers.blocked}
-									</span>
-								)}
+							<div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+								<div className={`sf-avatar sf-avatar--lg ${
+									selectedCustomer.is_blocked 
+										? "sf-avatar--teal" 
+										: selectedCustomer.riskLevel === "high" 
+											? "sf-avatar--orange" 
+											: selectedCustomer.totalSpent >= 10000 
+												? "sf-avatar--green" 
+												: "sf-avatar--purple"
+								}`}>
+									{selectedCustomer.name ? selectedCustomer.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() : "U"}
+								</div>
+								<div>
+									<h2 className="sf-heading-sm" style={{ fontSize: "16px", fontWeight: 750, color: "var(--color-content-primary)", letterSpacing: "-0.02em" }}>
+										{selectedCustomer.name || "—"}
+									</h2>
+									<div style={{ display: "flex", gap: "6px", marginTop: "4px", alignItems: "center" }}>
+										<span
+											className={`sf-risk-badge ${
+												selectedCustomer.riskLevel === "blocked"
+													? "sf-risk-badge--blocked"
+													: selectedCustomer.riskLevel === "high"
+														? "sf-risk-badge--high"
+														: selectedCustomer.riskLevel === "medium"
+															? "sf-risk-badge--medium"
+															: selectedCustomer.riskLevel === "new"
+																? "sf-risk-badge--new"
+																: "sf-risk-badge--low"
+											}`}
+										>
+											{selectedCustomer.riskLevel === "new"
+												? t.customers.newCustomers
+												: selectedCustomer.riskLevel === "blocked"
+													? t.customers.blocked
+													: selectedCustomer.riskLevel}
+										</span>
+										<span className="sf-badge sf-badge-brand" style={{ fontSize: "10px", padding: "1px 6px" }}>
+											LTV: {formatCurrency(selectedCustomer.totalSpent)}
+										</span>
+									</div>
+								</div>
 							</div>
 							<button
 								onClick={() => setSelectedCustomer(null)}

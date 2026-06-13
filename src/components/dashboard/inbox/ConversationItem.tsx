@@ -20,19 +20,7 @@ export function ConversationItem({ conversation, isActive, onClick }: Props) {
 			className={`inbox-convo ${isActive ? "inbox-convo--active" : ""}`}
 			onClick={onClick}
 		>
-			<div
-				className="inbox-convo__avatar"
-				style={{
-					background: conversation.is_pinned
-						? "var(--color-brand-500)"
-						: "var(--color-surface-tertiary)",
-					color: conversation.is_pinned
-						? "white"
-						: "var(--color-content-secondary)",
-					fontSize: 16,
-					fontWeight: 700,
-				}}
-			>
+			<div className="inbox-convo__avatar">
 				{initial}
 			</div>
 			<div className="inbox-convo__info">
@@ -46,17 +34,7 @@ export function ConversationItem({ conversation, isActive, onClick }: Props) {
 					</span>
 				</div>
 				<div className="inbox-convo__bottom">
-					<span
-						className="inbox-convo__preview"
-						style={{
-							fontSize: 12,
-							color: "var(--color-content-tertiary)",
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-							whiteSpace: "nowrap",
-							flex: 1,
-						}}
-					>
+					<span className="inbox-convo__preview">
 						{conversation.last_message_preview
 							? conversation.last_message_preview.length > 40
 								? conversation.last_message_preview.substring(0, 40) + "..."
@@ -64,16 +42,7 @@ export function ConversationItem({ conversation, isActive, onClick }: Props) {
 							: conversation.customer?.phone || ""}
 					</span>
 					{(conversation.labels || []).length > 0 && (
-						<span
-							style={{
-								fontSize: 10,
-								padding: "1px 6px",
-								borderRadius: 4,
-								background: "rgba(99,102,241,0.1)",
-								color: "var(--color-brand-400)",
-								marginInlineEnd: 4,
-							}}
-						>
+						<span className="inbox-convo__label">
 							{(conversation.labels || [])[0]}
 						</span>
 					)}

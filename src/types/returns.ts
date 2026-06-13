@@ -54,6 +54,7 @@ export interface Return {
 	approved_at: string | null;
 	received_at: string | null;
 	resolved_at: string | null;
+	deleted_at: string | null;
 	created_at: string;
 	updated_at: string;
 	// Joined relations (from Supabase select with joins)

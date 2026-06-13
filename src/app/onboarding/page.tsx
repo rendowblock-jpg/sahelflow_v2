@@ -61,7 +61,10 @@ export default function OnboardingPage() {
 					}
 				}
 			} catch (err) {
-				console.error("Failed to load seller profile during onboarding:", err);
+				toast({
+					type: "error",
+					title: t.common.error || (err instanceof Error ? err.message : "Failed to load profile"),
+				});
 			} finally {
 				if (active) setLoading(false);
 			}
@@ -70,7 +73,7 @@ export default function OnboardingPage() {
 		return () => {
 			active = false;
 		};
-	}, []);
+	}, [toast, t.common.error]);
 
 	const steps = [
 		{

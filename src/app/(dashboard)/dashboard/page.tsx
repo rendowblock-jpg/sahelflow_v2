@@ -39,7 +39,23 @@ interface RecentOrder {
   status: string;
   total_price: number;
   created_at: string;
+  source: string | null;
   customer?: { name: string | null } | null;
+}
+
+function getGreeting(locale: string) {
+  const hour = new Date().getHours();
+  if (locale === "ar") {
+    if (hour < 12) return "صباح الخير";
+    return "مساء الخير";
+  }
+  if (locale === "fr") {
+    if (hour < 12) return "Bonjour";
+    return "Bonsoir";
+  }
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export default function DashboardPage() {
@@ -55,7 +71,7 @@ export default function DashboardPage() {
       setLoading(true);
       const [dashStats, ordersResult, analyticsResult] = await Promise.all([
         getDashboardStats(),
-        getOrders({ limit: 5 }),
+        getOrders({ limit: 5 }).catch(() => ({ data: [] })),
         getAnalyticsData("30d").catch(() => null),
       ]);
       setStats(dashStats as DashboardData);
@@ -102,12 +118,12 @@ export default function DashboardPage() {
   if (loading && !stats) {
     return (
       <div className="sf-flex-col sf-gap-xl sf-animate-fade">
-        <div>
-          <div className="sf-skeleton sf-skeleton-title" />
-          <div className="sf-skeleton sf-skeleton-subtitle" />
+        <div className="sf-greeting-hero">
+          <div className="sf-skeleton sf-skeleton-title" style={{ width: "240px", height: "28px" }} />
+          <div className="sf-skeleton sf-skeleton-subtitle" style={{ width: "160px", height: "16px", marginTop: "8px" }} />
         </div>
-        <div className="sf-stats-grid">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="sf-grid-4">
+          {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </div>
@@ -127,16 +143,16 @@ export default function DashboardPage() {
       variant: "brand" as const,
     },
     {
-      label: t.dashboard.totalProducts,
-      value: String(stats?.totalProducts || 0),
-      icon: Package,
-      variant: "success" as const,
-    },
-    {
       label: t.dashboard.revenue,
       value: formatCurrency(stats?.totalRevenue || 0),
       icon: DollarSign,
       variant: "warning" as const,
+    },
+    {
+      label: t.dashboard.totalProfit || "Net Profit",
+      value: formatCurrency(stats?.totalProfit || 0),
+      icon: Wallet,
+      variant: "success" as const,
     },
     {
       label: t.dashboard.pending,
@@ -145,9 +161,9 @@ export default function DashboardPage() {
       variant: "danger" as const,
     },
     {
-      label: t.dashboard.customers,
-      value: String(stats?.totalCustomers || 0),
-      icon: Users,
+      label: t.analytics.confirmationRate || "Confirmation Rate",
+      value: `${stats?.confirmationRate || 0}%`,
+      icon: TrendingUp,
       variant: "brand" as const,
     },
     {
@@ -155,6 +171,18 @@ export default function DashboardPage() {
       value: `${stats?.deliveryRate || 0}%`,
       icon: Truck,
       variant: "success" as const,
+    },
+    {
+      label: t.dashboard.customers,
+      value: String(stats?.totalCustomers || 0),
+      icon: Users,
+      variant: "brand" as const,
+    },
+    {
+      label: t.products.totalStock,
+      value: String(stats?.totalStock || 0),
+      icon: Package,
+      variant: "warning" as const,
     },
   ];
 
@@ -191,24 +219,34 @@ export default function DashboardPage() {
     {
       label: t.dashboard.inTransit,
       value: stats?.codInTransit || 0,
-      colorClass: "sf-cashflow-value--brand",
+      colorClass: "sf-text-brand",
+      barColor: "var(--color-brand-400)",
     },
     {
       label: t.dashboard.clearedFunds,
       value: stats?.codCleared || 0,
-      colorClass: "sf-cashflow-value--accent",
+      colorClass: "sf-text-success",
+      barColor: "var(--color-accent-400)",
     },
     {
       label: t.dashboard.pendingCollection,
       value: stats?.codPendingCollection || 0,
-      colorClass: "sf-cashflow-value--warn",
+      colorClass: "sf-text-warning",
+      barColor: "var(--color-warn-400)",
     },
     {
       label: t.dashboard.atRisk,
       value: stats?.codAtRisk || 0,
-      colorClass: "sf-cashflow-value--danger",
+      colorClass: "sf-text-danger",
+      barColor: "var(--color-danger-400)",
     },
   ];
+
+  const totalCod = (stats?.codInTransit || 0) + (stats?.codCleared || 0) + (stats?.codPendingCollection || 0) + (stats?.codAtRisk || 0);
+  const getPercentage = (val: number) => {
+    if (totalCod === 0) return 0;
+    return Math.round((val / totalCod) * 100);
+  };
 
   const statusColors: Record<string, string> = {
     pending: "sf-badge-warning",
@@ -220,21 +258,82 @@ export default function DashboardPage() {
     cancelled: "sf-badge-warning",
   };
 
+  const total30DRevenue = revenueByDay.reduce((sum, d) => sum + d.revenue, 0);
+
   return (
     <PageTransition className="sf-flex-col sf-gap-xl">
-      {/* Page Header */}
-      <div>
-        <h1 className="sf-page-title">{t.dashboard.title}</h1>
-        <p className="sf-page-subtitle">
-          {t.dashboard.welcomeBack} {t.dashboard.overview}
+      {/* AAA Greeting Hero */}
+      <div className="sf-greeting-hero">
+        <h1 className="sf-greeting-text">
+          {getGreeting(locale)}, <span className="sf-gradient-text">{t.common.myStore}</span> 👋
+        </h1>
+        <p className="sf-greeting-meta">
+          {new Date().toLocaleDateString(locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
         </p>
       </div>
+
+      {/* Database Limit Warning Bar */}
+      {stats && stats.totalOrders >= 12750 && (
+        <div 
+          id="database-usage-warning-bar"
+          className="sf-card sf-card-padded"
+          style={{
+            background: stats.totalOrders >= 14250 
+              ? "var(--sf-color-danger-bg)" 
+              : "var(--sf-color-warning-bg)",
+            border: stats.totalOrders >= 14250 
+              ? "1px solid var(--sf-color-danger)" 
+              : "1px solid var(--sf-color-warning)",
+            borderRadius: "var(--sf-radius-lg)",
+            padding: "16px",
+            marginBottom: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <AlertTriangle 
+                className={stats.totalOrders >= 14250 ? "sf-text-danger" : "sf-text-warning"} 
+                style={{ color: stats.totalOrders >= 14250 ? "var(--sf-color-danger)" : "var(--sf-color-warning)" }}
+                size={18} 
+              />
+              <span style={{ fontWeight: 600, color: "var(--sf-text-primary)" }}>
+                {stats.totalOrders >= 15000 
+                  ? "Database capacity blocked! Clean up immediately." 
+                  : stats.totalOrders >= 14250 
+                    ? "Critical warning: Database capacity almost full!" 
+                    : "Warning: Database capacity usage warning"}
+              </span>
+            </div>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--sf-text-primary)" }}>
+              Orders: {stats.totalOrders.toLocaleString()} / 15,000 ({Math.min(100, Math.round((stats.totalOrders / 15000) * 100))}%)
+            </span>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.06)", height: "8px", borderRadius: "var(--sf-radius-full)", overflow: "hidden" }}>
+            <div 
+              style={{
+                width: `${Math.min(100, (stats.totalOrders / 15000) * 100)}%`,
+                height: "100%",
+                background: stats.totalOrders >= 14250 ? "var(--sf-color-danger)" : "var(--sf-color-warning)",
+                borderRadius: "var(--sf-radius-full)"
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Getting Started */}
       <GettingStarted />
 
       {/* Stats Grid */}
-      <StaggerContainer className="sf-stats-grid" stagger={0.05}>
+      <StaggerContainer className="sf-grid-4" stagger={0.05}>
         {statCards.map((stat, index) => (
           <StaggerItem key={stat.label}>
             <AnimatedStatCard
@@ -257,23 +356,44 @@ export default function DashboardPage() {
             empty={revenueByDay.length === 0}
             emptyTitle={t.analytics.noDataYet}
             emptyDescription={t.analytics.noDataDesc}
-            height={320}
+            height={380}
           >
-            <RevenueChart data={revenueByDay} />
+            <div style={{ marginBottom: "16px" }}>
+              <span style={{ fontSize: "11px", color: "var(--color-content-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                {t.dashboard.revenue || "Total Revenue"} (30D)
+              </span>
+              <h2 style={{ fontSize: "28px", fontWeight: 700, color: "var(--color-content-primary)", letterSpacing: "-0.03em", marginTop: "4px" }}>
+                {formatCurrency(total30DRevenue)}
+              </h2>
+            </div>
+            <RevenueChart data={revenueByDay} locale={locale} />
           </ChartContainer>
 
-          {/* Cash Flow */}
+          {/* Cash Flow Ledger */}
           <div className="sf-card sf-card-padded">
             <h2 className="sf-section-title sf-section-title--flush sf-mb-md">{t.dashboard.cashFlow}</h2>
-            <div className="sf-grid-2 sf-gap-md">
-              {cashFlowItems.map((item) => (
-                <div className="sf-card sf-cashflow-card sf-card-interactive sf-p-sm" key={item.label}>
-                  <p className="sf-cashflow-label">{item.label}</p>
-                  <p className={`sf-cashflow-value ${item.colorClass}`} style={{ fontSize: "1.15rem", marginTop: "4px" }}>
-                    {formatCurrency(item.value)}
-                  </p>
-                </div>
-              ))}
+            <div className="sf-cashflow-ledger">
+              {cashFlowItems.map((item) => {
+                const pct = getPercentage(item.value);
+                return (
+                  <div className="sf-cashflow-ledger-cell" key={item.label}>
+                    <span className="sf-cashflow-ledger-label">{item.label}</span>
+                    <span className={`sf-cashflow-ledger-value ${item.colorClass}`}>
+                      {formatCurrency(item.value)}
+                    </span>
+                    <div className="sf-cashflow-ledger-bar">
+                      <div
+                        className="sf-cashflow-ledger-bar-fill"
+                        style={{
+                          background: item.barColor,
+                          width: `${pct}%`,
+                          "--bar-width": `${pct}%`,
+                        } as React.CSSProperties}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -282,24 +402,18 @@ export default function DashboardPage() {
         <div className="sf-flex-col sf-gap-lg">
           <div className="sf-card sf-card-padded">
             <h2 className="sf-section-title sf-section-title--flush sf-mb-md">{t.dashboard.quickActions}</h2>
-            <div className="sf-action-list" style={{ border: "none", boxShadow: "none", background: "transparent", padding: 0 }}>
+            <div className="sf-quick-grid">
               {quickActions.map((action) => (
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="sf-action-row sf-card-interactive sf-animate-fade"
-                  style={{
-                    background: "var(--sf-bg-surface)",
-                    borderRadius: "var(--sf-radius-lg)",
-                    marginBottom: "10px",
-                    padding: "12px 16px",
-                  }}
+                  className="sf-quick-card"
                 >
-                  <div className="sf-action-icon sf-action-icon--brand" style={{ background: "var(--sf-accent-muted)", color: "var(--sf-accent-primary)" }}>
+                  <div className="sf-quick-card-icon">
                     <action.icon size={16} strokeWidth={2} />
                   </div>
-                  <span className="sf-action-label" style={{ color: "var(--sf-text-primary)", fontWeight: 510 }}>{action.label}</span>
-                  <ArrowUpRight size={14} className="sf-action-arrow" style={{ color: "var(--sf-text-tertiary)" }} />
+                  <span className="sf-quick-card-label">{action.label}</span>
+                  <ArrowUpRight size={14} className="sf-quick-card-arrow" />
                 </Link>
               ))}
             </div>
@@ -348,7 +462,31 @@ export default function DashboardPage() {
                 ) : (
                   recentOrders.map((order) => (
                     <tr key={order.id}>
-                      <td className="sf-order-number">{order.order_number}</td>
+                      <td className="sf-order-number">
+                        <div className="sf-flex-center-gap-sm" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <span>{order.order_number}</span>
+                          <span className={`sf-source-badge sf-source-badge--${order.source || "manual"}`} style={{
+                            fontSize: "10px",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.02em",
+                            background: order.source === "whatsapp" 
+                              ? "rgba(37, 211, 102, 0.15)" 
+                              : order.source === "store" 
+                                ? "rgba(99, 102, 241, 0.15)" 
+                                : "rgba(255, 255, 255, 0.08)",
+                            color: order.source === "whatsapp" 
+                              ? "#25D366" 
+                              : order.source === "store" 
+                                ? "#818cf8" 
+                                : "var(--color-content-tertiary)",
+                          }}>
+                            {order.source || "manual"}
+                          </span>
+                        </div>
+                      </td>
                       <td className="sf-text-muted">
                         {order.customer?.name || "—"}
                       </td>
@@ -377,3 +515,4 @@ export default function DashboardPage() {
     </PageTransition>
   );
 }
+

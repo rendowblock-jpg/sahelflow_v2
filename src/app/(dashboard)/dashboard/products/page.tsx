@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Package, Trash2, Edit, X, Layers } from "lucide-react";
+import { Plus, Search, Package, Trash2, Edit, X, Layers, AlertTriangle, DollarSign } from "lucide-react";
 import {
 	getProducts,
 	createProduct,
@@ -20,8 +20,9 @@ import { usePermissions } from "@/hooks/usePermissions";
 import type { Product, ProductVariant, Category } from "@/types/database";
 import ImageUploader from "@/components/dashboard/ImageUploader";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
-import { PageTransition } from "@/components/ui/motion";
+import { PageTransition, StaggerContainer, StaggerItem } from "@/components/ui/motion";
 import ImportModal from "@/components/products/ImportModal";
+import { AnimatedStatCard } from "@/components/ui/AnimatedStatCard";
 
 interface VariantDraft {
 	id: string;
@@ -291,33 +292,42 @@ export default function ProductsPage() {
 			</div>
 
 			{/* Stats */}
-			<div className="sf-stats-grid">
+			<StaggerContainer className="sf-grid-3" stagger={0.05}>
 				{[
 					{
 						label: t.products.totalStock,
 						value: String(totalStock),
+						icon: Package,
 						variant: "brand" as const,
+						pct: 100,
 					},
 					{
 						label: t.products.inventoryValue,
 						value: formatCurrency(inventoryValue),
+						icon: DollarSign,
 						variant: "success" as const,
+						pct: 100,
 					},
 					{
 						label: t.products.lowStock,
 						value: String(lowStockCount),
-						variant: lowStockCount > 0 ? "danger" : ("brand" as const),
+						icon: AlertTriangle,
+						variant: lowStockCount > 0 ? ("danger" as const) : ("brand" as const),
+						pct: lowStockCount > 0 ? 30 : 100,
 					},
 				].map((s, i) => (
-					<div
-						key={s.label}
-						className={`sf-card sf-stat sf-stat-${s.variant} sf-animate-in sf-stagger-${i + 1}`}
-					>
-						<p className="sf-stat-label">{s.label}</p>
-						<p className="sf-stat-value">{s.value}</p>
-					</div>
+					<StaggerItem key={s.label}>
+						<AnimatedStatCard
+							label={s.label}
+							value={s.value}
+							variant={s.variant}
+							icon={s.icon}
+							delay={i * 80}
+							sparklinePercent={s.pct}
+						/>
+					</StaggerItem>
 				))}
-			</div>
+			</StaggerContainer>
 
 			{/* Search */}
 			<div className="sf-search-wrap">
@@ -391,7 +401,7 @@ export default function ProductsPage() {
 			) : (
 				<div className="sf-card sf-card-p-0">
 					<div className="sf-table-wrap">
-						<table className="sf-table">
+						<table className="sf-table-aaa">
 							<thead>
 								<tr>
 									<th>{t.products.product}</th>
@@ -405,26 +415,48 @@ export default function ProductsPage() {
 							</thead>
 							<tbody>
 								{filtered.map((p) => {
-									const stockStatus =
-										p.stock <= 0
-											? "danger"
-											: p.stock <= 5
-												? "warning"
-												: "success";
+									const initials = p.name ? p.name[0].toUpperCase() : "P";
 									return (
 										<tr key={p.id}>
-											<td className="sf-td-name">{p.name}</td>
+											<td>
+												<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+													<div className={`sf-avatar ${
+														p.stock <= 0 
+															? "sf-avatar--teal" 
+															: p.stock <= 5 
+																? "sf-avatar--orange" 
+																: "sf-avatar--purple"
+													}`}>
+														{initials}
+													</div>
+													<span className="sf-font-medium">{p.name}</span>
+												</div>
+											</td>
 											<td className="sf-td-mono">{p.sku || "—"}</td>
-											<td className="sf-td-price">{formatCurrency(p.price)}</td>
-											<td className="sf-td-num">
+											<td className="sf-td-price sf-text-end sf-font-semibold sf-text-tabular">{formatCurrency(p.price)}</td>
+											<td className="sf-td-num sf-text-end sf-text-tabular">
 												{p.cost_price ? formatCurrency(p.cost_price) : "—"}
 											</td>
 											<td className="sf-text-center">
-												<span className={`sf-badge sf-badge-${stockStatus}`}>
-													{p.stock}
-												</span>
+												<div className="sf-stock-bar" style={{ justifyContent: "center" }}>
+													<div className="sf-stock-bar__track">
+														<div
+															className={`sf-stock-bar__fill ${
+																p.stock <= 0 
+																	? "sf-stock-bar__fill--out" 
+																	: p.stock <= 5 
+																		? "sf-stock-bar__fill--low" 
+																		: "sf-stock-bar__fill--ok"
+															}`}
+															style={{ width: `${Math.min(100, (p.stock / 20) * 100)}%` }}
+														/>
+													</div>
+													<span style={{ fontSize: "12px", minWidth: "24px" }} className="sf-text-tabular">
+														{p.stock}
+													</span>
+												</div>
 											</td>
-											<td className="sf-td-num">
+											<td className="sf-td-num sf-text-end sf-font-semibold sf-text-tabular">
 												{formatCurrency(p.price * (p.stock || 0))}
 											</td>
 											{hasPermission("products:manage") && (
@@ -460,6 +492,7 @@ export default function ProductsPage() {
 					<div
 						className="sf-modal sf-modal-md"
 						onClick={(e) => e.stopPropagation()}
+						style={{ maxWidth: "820px" }}
 					>
 						<div className="sf-flex-between sf-modal-header">
 							<h2 className="sf-modal-title">
@@ -473,115 +506,129 @@ export default function ProductsPage() {
 							</button>
 						</div>
 						<div className="sf-flex-col sf-gap-md">
+							<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+								{/* Left Column — Info */}
+								<div className="sf-flex-col sf-gap-md">
+									<div>
+										<label className="sf-label">{t.products.productName}</label>
+										<input
+											className="sf-input"
+											value={formData.name}
+											onChange={(e) =>
+												setFormData({ ...formData, name: e.target.value })
+											}
+										/>
+									</div>
+									<div>
+										<label className="sf-label">{t.products.description}</label>
+										<textarea
+											className="sf-textarea"
+											rows={4}
+											value={formData.description}
+											onChange={(e) =>
+												setFormData({ ...formData, description: e.target.value })
+											}
+										/>
+									</div>
+									<div>
+										<div className="sf-flex-between sf-mb-xs">
+											<label className="sf-label sf-m-0">
+												{t.products.category}
+											</label>
+											<button
+												className="sf-btn sf-btn-ghost sf-btn-xs"
+												onClick={openNewCat}
+												type="button"
+											>
+												<Plus size={10} /> {t.categories.addCategory}
+											</button>
+										</div>
+										<select
+											className="sf-input"
+											value={formData.category_id}
+											onChange={(e) =>
+												setFormData({ ...formData, category_id: e.target.value })
+											}
+										>
+											<option value="">{t.products.noCategory}</option>
+											{categories.map((c) => (
+												<option key={c.id} value={c.id}>
+													{c.name}
+												</option>
+											))}
+										</select>
+									</div>
+								</div>
+
+								{/* Right Column — Image & Pricing */}
+								<div className="sf-flex-col sf-gap-md">
+									<div>
+										<label className="sf-label">Product Image</label>
+										<ImageUploader
+											value={formData.image_url}
+											onChange={(url) => setFormData({ ...formData, image_url: url })}
+											onUpload={uploadProductImage}
+										/>
+									</div>
+
+									<div className="sf-grid-2 sf-product-grid-gap">
+										<div>
+											<label className="sf-label">{t.products.sellPrice}</label>
+											<input
+												className="sf-input"
+												type="number"
+												value={formData.price || ""}
+												onChange={(e) =>
+													setFormData({ ...formData, price: +e.target.value })
+												}
+											/>
+										</div>
+										<div>
+											<label className="sf-label">{t.products.costPrice}</label>
+											<input
+												className="sf-input"
+												type="number"
+												value={formData.cost_price || ""}
+												onChange={(e) =>
+													setFormData({ ...formData, cost_price: +e.target.value })
+												}
+											/>
+										</div>
+										<div>
+											<label className="sf-label">{t.products.stockQty}</label>
+											<input
+												className="sf-input"
+												type="number"
+												value={formData.stock || ""}
+												onChange={(e) =>
+													setFormData({ ...formData, stock: +e.target.value })
+												}
+											/>
+										</div>
+										<div>
+											<label className="sf-label">{t.products.sku}</label>
+											<input
+												className="sf-input"
+												value={formData.sku}
+												onChange={(e) =>
+													setFormData({ ...formData, sku: e.target.value })
+												}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<hr className="sf-divider" />
+
 							<div>
-								<label className="sf-label">{t.products.productName}</label>
-								<input
-									className="sf-input"
-									value={formData.name}
-									onChange={(e) =>
-										setFormData({ ...formData, name: e.target.value })
-									}
-								/>
-							</div>
-							<div>
-								<label className="sf-label">{t.products.description}</label>
-								<textarea
-									className="sf-textarea"
-									rows={3}
-									value={formData.description}
-									onChange={(e) =>
-										setFormData({ ...formData, description: e.target.value })
-									}
-								/>
-							</div>
-
-							<ImageUploader
-								value={formData.image_url}
-								onChange={(url) => setFormData({ ...formData, image_url: url })}
-								onUpload={uploadProductImage}
-							/>
-
-							<div className="sf-grid-2 sf-product-grid-gap">
-								<div>
-									<label className="sf-label">{t.products.sellPrice}</label>
-									<input
-										className="sf-input"
-										type="number"
-										value={formData.price || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, price: +e.target.value })
-										}
-									/>
-								</div>
-								<div>
-									<label className="sf-label">{t.products.costPrice}</label>
-									<input
-										className="sf-input"
-										type="number"
-										value={formData.cost_price || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, cost_price: +e.target.value })
-										}
-									/>
-								</div>
-								<div>
-									<label className="sf-label">{t.products.stockQty}</label>
-									<input
-										className="sf-input"
-										type="number"
-										value={formData.stock || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, stock: +e.target.value })
-										}
-									/>
-								</div>
-								<div>
-									<label className="sf-label">{t.products.sku}</label>
-									<input
-										className="sf-input"
-										value={formData.sku}
-										onChange={(e) =>
-											setFormData({ ...formData, sku: e.target.value })
-										}
-									/>
-								</div>
-							</div>
-
-							<div>
-								<div className="sf-flex-between sf-mb-xs">
-									<label className="sf-label sf-m-0">
-										{t.products.category}
-									</label>
-									<button
-										className="sf-btn sf-btn-ghost sf-btn-xs"
-										onClick={openNewCat}
-									>
-										<Plus size={10} /> {t.categories.addCategory}
-									</button>
-								</div>
-								<select
-									className="sf-input"
-									value={formData.category_id}
-									onChange={(e) =>
-										setFormData({ ...formData, category_id: e.target.value })
-									}
-								>
-									<option value="">{t.products.noCategory}</option>
-									{categories.map((c) => (
-										<option key={c.id} value={c.id}>
-											{c.name}
-										</option>
-									))}
-								</select>
-							</div>
-
-							<div className="sf-border-top-pt">
 								<div className="sf-flex-between sf-mb-md">
 									<label className="sf-label sf-label-inline">
 										<Layers size={14} /> {t.products.variantTitle}
 									</label>
 									<button
 										className="sf-btn sf-btn-ghost sf-btn-sm"
+										type="button"
 										onClick={() =>
 											setVariantDrafts((prev) => [
 												...prev,
@@ -620,6 +667,7 @@ export default function ProductsPage() {
 												/>
 												<button
 													className="sf-btn-close-danger"
+													type="button"
 													onClick={() =>
 														setVariantDrafts((prev) =>
 															prev.filter((v) => v.id !== vd.id),

@@ -4,7 +4,7 @@
  * Tests tool routing, parameter extraction, action card generation,
  * and error recovery for the AI agent's tool definitions.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // Mock tool definitions from the agent
 const TOOLS = [

@@ -74,15 +74,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const event = ((parsed.data.event as string) || "").toLowerCase();
-    const instanceName = parsed.data.instance as string;
-
-    if (!event || !instanceName) {
-      return NextResponse.json(
-        { error: "Missing event or instance" },
-        { status: 400 },
-      );
-    }
+    const event = parsed.data.event.toLowerCase();
+    const instanceName = parsed.data.instance;
 
     // Rate limiting — 60 requests per minute per instance
     const rl = await rateLimit(`evo:${instanceName}`, 60, 60000);

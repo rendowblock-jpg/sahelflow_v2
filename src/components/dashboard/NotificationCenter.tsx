@@ -152,6 +152,7 @@ export default function NotificationCenter() {
         <Bell size={18} />
         {unreadCount > 0 && (
           <span
+            className="sf-scale-pop"
             style={{
               position: "absolute",
               top: -4,

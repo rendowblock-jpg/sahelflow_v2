@@ -252,7 +252,7 @@ export default function ConfirmationPanel({
 				}
 			}
 
-			onStatusChange(order.id, "returned", { return_reason: returnReason });
+			onStatusChange(order.id, "returned", {});
 		} catch (err: unknown) {
 			const msg =
 				err instanceof Error

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 import { createExpenseSchema } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/expenses — list expenses for authenticated seller
 export const GET = withAuthAndRateLimit(
   async (req, { user: _user, sellerId, supabase }) => {

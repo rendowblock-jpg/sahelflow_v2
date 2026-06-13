@@ -1,19 +1,17 @@
 -- SahelFlow v2 Comprehensive Baseline Schema
--- Generated from live DB state after storefront removal and security hardening
--- Contains all tables, indexes, constraints, functions, triggers, RLS policies, and grants
+-- Consolidated from baseline and all patch migrations (001 - 024)
+-- Contains all tables, indexes, constraints, functions, triggers, RLS policies, and grants.
 
 -- ============================================================
--- 1. EXTENSIONS
+-- 1. EXTENSIONS & SEQUENCES
 -- ============================================================
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ============================================================
--- 2. SEQUENCES
--- ============================================================
 CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS return_number_seq START 1000;
 
 -- ============================================================
--- 3. TABLES
+-- 2. TABLES
 -- ============================================================
 
 -- sellers (linked to auth.users)
@@ -33,27 +31,64 @@ CREATE TABLE IF NOT EXISTS public.sellers (
   order_sources TEXT[] DEFAULT '{}',
   onboarding_completed BOOLEAN DEFAULT false,
   shipping_rates JSONB DEFAULT '{}',
-  webhook_token TEXT,
+  webhook_token TEXT NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex'),
   webhook_orders_count INTEGER DEFAULT 0,
   webhook_last_sync TIMESTAMPTZ,
-  whatsapp_template TEXT,
-  notification_settings JSONB DEFAULT '{}'
+  notification_settings JSONB DEFAULT '{"newOrders":true,"confirmations":true,"highRisk":true,"lowStock":true,"delivery":true,"weekly":true}'::jsonb,
+  slug TEXT UNIQUE,
+  form_enabled BOOLEAN DEFAULT false,
+  form_config JSONB DEFAULT '{"showNotes": true, "showPrices": true, "showWilaya": true, "showAddress": true, "showCommune": true, "customFields": [], "requirePhone": true}'::jsonb,
+  default_locale TEXT NOT NULL DEFAULT 'ar' CHECK (default_locale IN ('ar', 'fr', 'en'))
+);
+
+-- team_members
+CREATE TABLE IF NOT EXISTS public.team_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'confirmer', 'packer', 'viewer')),
+  status TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'suspended')),
+  invited_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  invited_at TIMESTAMPTZ DEFAULT now(),
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- categories
 CREATE TABLE IF NOT EXISTS public.categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   slug TEXT NOT NULL,
   sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- products
+CREATE TABLE IF NOT EXISTS public.products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  sku TEXT,
+  description TEXT,
+  variants JSONB DEFAULT '[]',
+  stock INTEGER DEFAULT 0,
+  price NUMERIC NOT NULL DEFAULT 0,
+  cost_price NUMERIC,
+  image_url TEXT,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL
+);
+
 -- customers
 CREATE TABLE IF NOT EXISTS public.customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   name TEXT,
   phone TEXT,
   wilaya TEXT,
@@ -66,34 +101,61 @@ CREATE TABLE IF NOT EXISTS public.customers (
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
-  deleted_at TIMESTAMPTZ
+  deleted_at TIMESTAMPTZ,
+  UNIQUE (seller_id, phone)
 );
 
--- products
-CREATE TABLE IF NOT EXISTS public.products (
+-- channels
+CREATE TABLE IF NOT EXISTS public.channels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  sku TEXT,
-  description TEXT,
-  variants JSONB DEFAULT '[]',
-  stock INTEGER DEFAULT 0,
-  price NUMERIC NOT NULL DEFAULT 0,
-  cost_price NUMERIC DEFAULT 0,
-  image_url TEXT,
-  active BOOLEAN DEFAULT true,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('whatsapp', 'messenger', 'instagram', 'telegram')),
+  name TEXT,
+  credentials JSONB DEFAULT '{}',
+  active BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- conversations
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  channel_id UUID REFERENCES public.channels(id) ON DELETE SET NULL,
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  platform_thread_id TEXT,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed', 'archived')),
+  unread_count INTEGER DEFAULT 0,
+  last_message_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  deleted_at TIMESTAMPTZ,
-  category_id UUID REFERENCES categories(id) ON DELETE SET NULL
+  metadata JSONB DEFAULT '{}',
+  last_message_preview TEXT DEFAULT '',
+  is_pinned BOOLEAN NOT NULL DEFAULT false,
+  is_archived BOOLEAN NOT NULL DEFAULT false,
+  labels TEXT[] NOT NULL DEFAULT '{}'
+);
+
+-- messages
+CREATE TABLE IF NOT EXISTS public.messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  direction TEXT NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+  content TEXT,
+  content_type TEXT DEFAULT 'text' CHECK (content_type IN ('text', 'image', 'audio', 'video', 'file')),
+  media_url TEXT,
+  ai_extraction JSONB,
+  is_ai_reply BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  platform_message_id TEXT,
+  reply_to_id UUID REFERENCES public.messages(id) ON DELETE SET NULL,
+  quoted_text TEXT
 );
 
 -- orders
 CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
-  customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
-  conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  conversation_id UUID REFERENCES public.conversations(id) ON DELETE SET NULL,
   order_number TEXT,
   status TEXT DEFAULT 'pending' CHECK (status IN ('draft', 'pending', 'confirmed', 'shipped', 'delivered', 'returned', 'refused', 'cancelled')),
   items JSONB DEFAULT '[]',
@@ -112,27 +174,27 @@ CREATE TABLE IF NOT EXISTS public.orders (
   delivered_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
-  source TEXT DEFAULT 'manual',
+  source TEXT DEFAULT 'manual' CHECK (source IN ('draft', 'manual', 'shopify', 'woocommerce', 'youcan', 'custom', 'ai', 'messenger', 'form', 'whatsapp', 'store')),
   external_id TEXT,
   delivery_type TEXT DEFAULT 'home' CHECK (delivery_type IN ('home', 'desk')),
   confirmation_status TEXT,
   confirmation_attempts INTEGER DEFAULT 0,
   confirmation_notes TEXT,
-  return_reason TEXT,
   upsell_offered BOOLEAN DEFAULT false,
   upsell_accepted BOOLEAN DEFAULT false,
   deleted_at TIMESTAMPTZ,
+  form_metadata JSONB,
   UNIQUE (seller_id, order_number)
 );
 
 -- deliveries
 CREATE TABLE IF NOT EXISTS public.deliveries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   provider TEXT NOT NULL CHECK (provider IN ('yalidine', 'zrexpress', 'maystro', 'manual')),
   tracking_number TEXT,
-  status TEXT DEFAULT 'created' CHECK (status IN ('pending', 'created', 'picked_up', 'in_transit', 'delivered', 'returned', 'failed')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'created', 'picked_up', 'in_transit', 'delivered', 'returned', 'failed')),
   raw_response JSONB DEFAULT '{}',
   last_sync TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now()
@@ -141,7 +203,7 @@ CREATE TABLE IF NOT EXISTS public.deliveries (
 -- automations
 CREATE TABLE IF NOT EXISTS public.automations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
   trigger_type TEXT,
@@ -155,55 +217,10 @@ CREATE TABLE IF NOT EXISTS public.automations (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- channels
-CREATE TABLE IF NOT EXISTS public.channels (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('whatsapp', 'messenger', 'instagram', 'telegram')),
-  name TEXT,
-  credentials JSONB DEFAULT '{}',
-  active BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- conversations
-CREATE TABLE IF NOT EXISTS public.conversations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
-  channel_id UUID REFERENCES channels(id) ON DELETE SET NULL,
-  customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
-  platform_thread_id TEXT,
-  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed', 'archived')),
-  unread_count INTEGER DEFAULT 0,
-  last_message_at TIMESTAMPTZ DEFAULT now(),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  metadata JSONB DEFAULT '{}',
-  last_message_preview TEXT DEFAULT '',
-  is_pinned BOOLEAN NOT NULL DEFAULT false,
-  is_archived BOOLEAN NOT NULL DEFAULT false,
-  labels TEXT[] NOT NULL DEFAULT '{}'
-);
-
--- messages
-CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  direction TEXT NOT NULL CHECK (direction IN ('inbound', 'outbound')),
-  content TEXT,
-  content_type TEXT DEFAULT 'text' CHECK (content_type IN ('text', 'image', 'audio', 'video', 'file')),
-  media_url TEXT,
-  ai_extraction JSONB,
-  is_ai_reply BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  platform_message_id TEXT,
-  reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL,
-  quoted_text TEXT
-);
-
 -- integrations
 CREATE TABLE IF NOT EXISTS public.integrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   platform TEXT NOT NULL,
   credentials JSONB NOT NULL DEFAULT '{}',
   is_active BOOLEAN DEFAULT true,
@@ -215,7 +232,7 @@ CREATE TABLE IF NOT EXISTS public.integrations (
 -- agent_activity
 CREATE TABLE IF NOT EXISTS public.agent_activity (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
@@ -226,7 +243,7 @@ CREATE TABLE IF NOT EXISTS public.agent_activity (
 -- whatsapp_templates
 CREATE TABLE IF NOT EXISTS public.whatsapp_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   slug TEXT NOT NULL,
   content TEXT NOT NULL,
@@ -244,7 +261,7 @@ CREATE TABLE IF NOT EXISTS public.webhook_retry_queue (
   idempotency_key TEXT NOT NULL UNIQUE,
   event_type TEXT NOT NULL,
   payload JSONB NOT NULL,
-  seller_id UUID REFERENCES sellers(id),
+  seller_id UUID REFERENCES public.sellers(id),
   attempts INTEGER DEFAULT 0,
   max_attempts INTEGER DEFAULT 3,
   next_retry_at TIMESTAMPTZ DEFAULT now(),
@@ -257,10 +274,21 @@ CREATE TABLE IF NOT EXISTS public.webhook_retry_queue (
   locked_until TIMESTAMPTZ
 );
 
+-- webhook_events (store webhooks deduplication)
+CREATE TABLE IF NOT EXISTS public.webhook_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  event_id TEXT NOT NULL,
+  topic TEXT,
+  received_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (seller_id, platform, event_id)
+);
+
 -- notifications
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('order', 'low_stock', 'risk', 'automation', 'system', 'welcome')),
   title TEXT NOT NULL,
   message TEXT NOT NULL,
@@ -271,65 +299,141 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ============================================================
--- 4. INDEXES
--- ============================================================
-CREATE INDEX IF NOT EXISTS idx_categories_seller ON categories (seller_id);
-CREATE INDEX IF NOT EXISTS idx_customers_seller ON customers (seller_id);
-CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers (seller_id, phone);
-CREATE INDEX IF NOT EXISTS idx_products_seller ON products (seller_id);
-CREATE INDEX IF NOT EXISTS idx_products_category ON products (category_id);
-CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders (seller_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (seller_id, status);
-CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders (seller_id, status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders (customer_id);
-CREATE INDEX IF NOT EXISTS idx_orders_external_id ON orders (external_id);
-CREATE INDEX IF NOT EXISTS idx_orders_conversation_id ON orders (conversation_id) WHERE conversation_id IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_seller_external_id ON orders (seller_id, external_id) WHERE external_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_orders_pending_by_phone ON orders (seller_id, created_at DESC) WHERE status = ANY (ARRAY['draft', 'pending']);
-CREATE INDEX IF NOT EXISTS idx_deliveries_seller_id ON deliveries (seller_id);
-CREATE INDEX IF NOT EXISTS idx_deliveries_order ON deliveries (order_id);
-CREATE INDEX IF NOT EXISTS idx_automations_seller ON automations (seller_id);
-CREATE INDEX IF NOT EXISTS idx_automations_active ON automations (seller_id, active, trigger_type) WHERE active = true;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_automations_recipe_unique ON automations (seller_id, trigger_type, (trigger_config ->> 'recipe_id')) WHERE (trigger_config ->> 'recipe_id') IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_channels_seller ON channels (seller_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_seller ON conversations (seller_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_customer ON conversations (customer_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_channel_thread ON conversations (channel_id, platform_thread_id) WHERE platform_thread_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_conversations_pinned ON conversations (seller_id, last_message_at DESC) WHERE is_pinned = true;
-CREATE INDEX IF NOT EXISTS idx_conversations_archived ON conversations (seller_id, is_archived, last_message_at DESC);
-CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages (conversation_id);
-CREATE INDEX IF NOT EXISTS idx_messages_created ON messages (created_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_dedup ON messages (conversation_id, platform_message_id) WHERE platform_message_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_messages_reply_to ON messages (reply_to_id) WHERE reply_to_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_agent_activity_seller ON agent_activity (seller_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_seller ON whatsapp_templates (seller_id, category);
-CREATE INDEX IF NOT EXISTS idx_retry_queue_status ON webhook_retry_queue (status, next_retry_at);
-CREATE INDEX IF NOT EXISTS idx_retry_queue_pending ON webhook_retry_queue (status, next_retry_at) WHERE status = ANY (ARRAY['pending', 'processing']);
-CREATE INDEX IF NOT EXISTS idx_retry_queue_seller_id ON webhook_retry_queue (seller_id) WHERE seller_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_retry_queue_claimed_by ON webhook_retry_queue (claimed_by) WHERE claimed_by IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_retry_queue_locked_until ON webhook_retry_queue (locked_until) WHERE locked_until IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_notifications_seller ON notifications (seller_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications (seller_id, read) WHERE read = false;
-CREATE INDEX IF NOT EXISTS idx_notifications_active ON notifications (seller_id, dismissed, created_at DESC) WHERE dismissed = false;
+-- import_batches
+CREATE TABLE IF NOT EXISTS public.import_batches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  source TEXT NOT NULL CHECK (source IN ('csv', 'xlsx', 'sheets', 'form', 'manual', 'youcan', 'shopify', 'woocommerce')),
+  filename TEXT,
+  row_count INTEGER DEFAULT 0,
+  processed_count INTEGER DEFAULT 0,
+  created_count INTEGER DEFAULT 0,
+  skipped_count INTEGER DEFAULT 0,
+  error_count INTEGER DEFAULT 0,
+  column_mapping JSONB DEFAULT '{}',
+  validation_errors JSONB DEFAULT '[]',
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'preview', 'processing', 'completed', 'failed', 'cancelled')),
+  committed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ai_chat_sessions
+CREATE TABLE IF NOT EXISTS public.ai_chat_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT 'محادثة جديدة',
+  message_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ai_chat_messages
+CREATE TABLE IF NOT EXISTS public.ai_chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES public.ai_chat_sessions(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+  tool_calls JSONB,
+  action_cards JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- returns
+CREATE TABLE IF NOT EXISTS public.returns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  customer_id UUID REFERENCES public.customers(id),
+  return_number TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'pickup', 'received', 'inspected', 'refunded', 'exchanged', 'rejected', 'closed')),
+  reason TEXT NOT NULL CHECK (reason IN ('wrong_product', 'damaged', 'changed_mind', 'not_as_described', 'wrong_size', 'defective', 'late_delivery', 'other')),
+  reason_details TEXT,
+  resolution_type TEXT DEFAULT 'refund' CHECK (resolution_type IN ('refund', 'exchange', 'credit', 'reject')),
+  refund_amount NUMERIC(12,2) DEFAULT 0,
+  exchange_order_id UUID REFERENCES public.orders(id),
+  items JSONB NOT NULL DEFAULT '[]',
+  photos TEXT[] DEFAULT '{}',
+  return_tracking_id TEXT,
+  return_delivery_company TEXT,
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  approved_at TIMESTAMPTZ,
+  received_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
+);
+
+-- return_notes
+CREATE TABLE IF NOT EXISTS public.return_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  return_id UUID NOT NULL REFERENCES public.returns(id) ON DELETE CASCADE,
+  author_id UUID REFERENCES public.sellers(id),
+  type TEXT NOT NULL DEFAULT 'note' CHECK (type IN ('note', 'status_change', 'system', 'customer')),
+  content TEXT NOT NULL,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- expenses
+CREATE TABLE IF NOT EXISTS public.expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK (category IN ('ads', 'packaging', 'delivery_fees', 'returns', 'supplies', 'salary', 'rent', 'other')),
+  amount NUMERIC NOT NULL CHECK (amount > 0),
+  description TEXT,
+  receipt_url TEXT,
+  expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- daily_analytics_reports
+CREATE TABLE IF NOT EXISTS public.daily_analytics_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  report_date DATE NOT NULL,
+  total_orders INTEGER NOT NULL DEFAULT 0,
+  confirmed_orders INTEGER NOT NULL DEFAULT 0,
+  shipped_orders INTEGER NOT NULL DEFAULT 0,
+  delivered_orders INTEGER NOT NULL DEFAULT 0,
+  returned_orders INTEGER NOT NULL DEFAULT 0,
+  refused_orders INTEGER NOT NULL DEFAULT 0,
+  revenue NUMERIC NOT NULL DEFAULT 0.00,
+  top_products JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- wilaya_risk_profiles
+CREATE TABLE IF NOT EXISTS public.wilaya_risk_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
+  wilaya TEXT NOT NULL,
+  total_orders INTEGER NOT NULL DEFAULT 0,
+  return_rate NUMERIC(5,4) NOT NULL DEFAULT 0,
+  avg_delivery_days INTEGER NOT NULL DEFAULT 3,
+  risk_multiplier NUMERIC(4,2) NOT NULL DEFAULT 1.00,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (seller_id, wilaya)
+);
 
 -- ============================================================
--- 5. FUNCTIONS
+-- 3. FUNCTIONS & ROUTINES
 -- ============================================================
 
--- Updated-at trigger helper
+-- update_updated_at trigger function
 CREATE OR REPLACE FUNCTION public.update_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
 BEGIN
-  NEW.updated_at = NOW();
+  NEW.updated_at = now();
   RETURN NEW;
 END;
 $$;
 
--- Order number generator
+-- generate_order_number trigger function
 CREATE OR REPLACE FUNCTION public.generate_order_number()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -337,13 +441,74 @@ SET search_path = ''
 AS $$
 BEGIN
   IF NEW.order_number IS NULL THEN
-    NEW.order_number := 'SF-' || TO_CHAR(NOW(), 'YYMMDD') || '-' || LPAD(nextval('public.order_number_seq')::TEXT, 5, '0');
+    NEW.order_number := 'SF-' || upper(substring(to_char(now(), 'YYYYMMDDHH24MISS'), 1, 10)) || '-' || upper(substring(md5(random()::text), 1, 4));
   END IF;
   RETURN NEW;
 END;
 $$;
 
--- Auth user → seller auto-create
+-- generate_return_number trigger function
+CREATE OR REPLACE FUNCTION public.generate_return_number()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.return_number IS NULL OR NEW.return_number = '' THEN
+    NEW.return_number := 'RET-' || LPAD(nextval('public.return_number_seq')::text, 5, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- generate_seller_slug trigger function
+CREATE OR REPLACE FUNCTION public.generate_seller_slug()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.slug IS NULL AND NEW.business_name IS NOT NULL THEN
+    NEW.slug := lower(regexp_replace(NEW.business_name, '[^a-zA-Z0-9\u0600-\u06FF]+', '-', 'g'));
+    NEW.slug := regexp_replace(NEW.slug, '^-+|-+$', '', 'g');
+    -- Ensure uniqueness by appending random suffix if conflict
+    IF EXISTS (SELECT 1 FROM public.sellers WHERE slug = NEW.slug AND id != NEW.id) THEN
+      NEW.slug := NEW.slug || '-' || substr(md5(random()::text), 1, 6);
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- increment_session_message_count trigger function
+CREATE OR REPLACE FUNCTION public.increment_session_message_count()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.ai_chat_sessions SET message_count = message_count + 1, updated_at = now() WHERE id = NEW.session_id;
+  RETURN NEW;
+END;
+$$;
+
+-- log_return_status_change trigger function
+CREATE OR REPLACE FUNCTION public.log_return_status_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF OLD.status IS DISTINCT FROM NEW.status THEN
+    INSERT INTO public.return_notes (return_id, type, content, metadata)
+    VALUES (NEW.id, 'status_change', 'Status changed from ' || OLD.status || ' to ' || NEW.status,
+      jsonb_build_object('from', OLD.status, 'to', NEW.status));
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- handle_new_user trigger function
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -351,57 +516,160 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  INSERT INTO public.sellers (id, email, full_name, business_name)
+  -- Insert into sellers
+  INSERT INTO public.sellers (id, email, full_name, business_name, phone)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'business_name', '')
+    NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
+    NULLIF(NEW.raw_user_meta_data->>'business_name', ''),
+    NULLIF(NEW.raw_user_meta_data->>'phone', '')
   );
+
+  -- Insert into team_members as owner
+  INSERT INTO public.team_members (seller_id, user_id, role, status, invited_by)
+  VALUES (NEW.id, NEW.id, 'owner', 'active', NEW.id);
+
+  -- Set custom app claim onboarding_completed = false
+  UPDATE auth.users
+  SET raw_app_meta_data =
+    COALESCE(raw_app_meta_data, '{}') ||
+    jsonb_build_object('onboarding_completed', false)
+  WHERE id = NEW.id;
+
   RETURN NEW;
 END;
 $$;
 
--- Dashboard aggregates RPC (safe for empty sellers — COALESCE-wrapped individual subqueries)
-CREATE OR REPLACE FUNCTION public.get_dashboard_aggregates()
+-- update_onboarding_claim trigger function
+CREATE OR REPLACE FUNCTION public.update_onboarding_claim()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.onboarding_completed IS DISTINCT FROM OLD.onboarding_completed THEN
+    UPDATE auth.users
+    SET raw_app_meta_data =
+      COALESCE(raw_app_meta_data, '{}') ||
+      jsonb_build_object('onboarding_completed', NEW.onboarding_completed)
+    WHERE id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- check_user_seller_access helper function
+CREATE OR REPLACE FUNCTION public.check_user_seller_access(p_seller_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF auth.uid() = p_seller_id THEN
+    RETURN TRUE;
+  END IF;
+
+  RETURN EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE seller_id = p_seller_id
+      AND user_id = auth.uid()
+      AND status = 'active'
+  );
+END;
+$$;
+
+-- get_dashboard_aggregates RPC
+CREATE OR REPLACE FUNCTION public.get_dashboard_aggregates(p_seller_id UUID DEFAULT NULL)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = 'public'
+SET search_path = ''
 AS $$
 DECLARE
-  v_seller_id UUID := auth.uid();
+  v_seller_id UUID;
   v_result JSONB;
   v_first_of_month TIMESTAMPTZ;
   v_thirty_days_ago TIMESTAMPTZ;
 BEGIN
+  IF p_seller_id IS NOT NULL THEN
+    IF p_seller_id != auth.uid() AND current_setting('request.jwt.claim.role', true) != 'service_role' THEN
+      RAISE EXCEPTION 'Unauthorized: seller_id mismatch';
+    END IF;
+    v_seller_id := p_seller_id;
+  ELSE
+    v_seller_id := auth.uid();
+  END IF;
+
   v_first_of_month := date_trunc('month', now());
   v_thirty_days_ago := now() - interval '30 days';
 
+  WITH order_stats AS (
+    SELECT
+      COUNT(*) AS total_orders,
+      COALESCE(SUM(total_price), 0) AS total_revenue,
+      COALESCE(SUM(net_profit), 0) AS total_profit,
+      COUNT(*) FILTER (WHERE status = 'delivered') AS delivered_orders,
+      COUNT(*) FILTER (WHERE status IN ('returned', 'refused')) AS returned_orders,
+      COUNT(*) FILTER (WHERE status = 'pending') AS pending_orders,
+      COUNT(*) FILTER (WHERE status = 'confirmed') AS confirmed_orders,
+      COUNT(*) FILTER (WHERE status = 'shipped') AS shipped_orders,
+      COUNT(*) FILTER (WHERE status = 'draft') AS draft_orders,
+      COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_orders,
+      COUNT(*) FILTER (WHERE status = 'refused') AS refused_orders,
+      COALESCE(SUM(total_price) FILTER (WHERE status = 'shipped'), 0) AS cod_in_transit,
+      COALESCE(SUM(total_price) FILTER (WHERE status = 'delivered'), 0) AS cod_cleared,
+      COALESCE(SUM(total_price) FILTER (WHERE status = 'confirmed'), 0) AS cod_pending_collection,
+      COALESCE(SUM(total_price) FILTER (WHERE status IN ('returned', 'refused') AND created_at > v_thirty_days_ago), 0) AS cod_at_risk,
+      COALESCE(SUM(total_price) FILTER (WHERE status = 'shipped'), 0) AS money_in_transit,
+      COUNT(*) FILTER (WHERE status = 'shipped') AS packages_at_depot,
+      COUNT(*) FILTER (WHERE status IN ('returned', 'refused') AND created_at >= v_first_of_month) AS returns_this_month,
+      COALESCE(SUM(total_price) FILTER (WHERE status = 'delivered' AND COALESCE(delivered_at, created_at) >= v_first_of_month), 0) AS collected_this_month
+    FROM public.orders
+    WHERE seller_id = v_seller_id AND deleted_at IS NULL
+  ),
+  product_stats AS (
+    SELECT
+      COUNT(*) AS total_products,
+      COALESCE(SUM(stock), 0) AS total_stock
+    FROM public.products
+    WHERE seller_id = v_seller_id AND deleted_at IS NULL
+  ),
+  customer_stats AS (
+    SELECT
+      COUNT(*) AS total_customers
+    FROM public.customers
+    WHERE seller_id = v_seller_id AND deleted_at IS NULL
+  )
   SELECT jsonb_build_object(
-    'totalOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id), 0),
-    'totalRevenue', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id), 0),
-    'totalProfit', COALESCE((SELECT SUM(net_profit) FROM orders WHERE seller_id = v_seller_id), 0),
-    'deliveredOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'delivered'), 0),
-    'returnedOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status IN ('returned', 'refused')), 0),
-    'pendingOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'pending'), 0),
-    'confirmedOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'confirmed'), 0),
-    'shippedOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'shipped'), 0),
-    'draftOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'draft'), 0),
-    'cancelledOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'cancelled'), 0),
-    'refusedOrders', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'refused'), 0),
-    'codInTransit', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id AND status = 'shipped'), 0),
-    'codCleared', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id AND status = 'delivered'), 0),
-    'codPendingCollection', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id AND status = 'confirmed'), 0),
-    'codAtRisk', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id AND status IN ('returned', 'refused') AND created_at > v_thirty_days_ago), 0),
-    'moneyInTransit', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id AND status = 'shipped'), 0),
-    'packagesAtDepot', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status = 'shipped'), 0),
-    'returnsThisMonth', COALESCE((SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND status IN ('returned', 'refused') AND created_at >= v_first_of_month), 0),
-    'collectedThisMonth', COALESCE((SELECT SUM(total_price) FROM orders WHERE seller_id = v_seller_id AND status = 'delivered' AND COALESCE(delivered_at, created_at) >= v_first_of_month), 0),
-    'totalProducts', (SELECT COUNT(*) FROM products WHERE seller_id = v_seller_id),
-    'totalCustomers', (SELECT COUNT(*) FROM customers WHERE seller_id = v_seller_id),
-    'totalStock', (SELECT COALESCE(SUM(stock), 0) FROM products WHERE seller_id = v_seller_id)
-  ) INTO v_result;
+    'totalOrders', os.total_orders,
+    'totalRevenue', os.total_revenue,
+    'totalProfit', os.total_profit,
+    'deliveredOrders', os.delivered_orders,
+    'returnedOrders', os.returned_orders,
+    'pendingOrders', os.pending_orders,
+    'confirmedOrders', os.confirmed_orders,
+    'shippedOrders', os.shipped_orders,
+    'draftOrders', os.draft_orders,
+    'cancelledOrders', os.cancelled_orders,
+    'refusedOrders', os.refused_orders,
+    'codInTransit', os.cod_in_transit,
+    'codCleared', os.cod_cleared,
+    'codPendingCollection', os.cod_pending_collection,
+    'codAtRisk', os.cod_at_risk,
+    'moneyInTransit', os.money_in_transit,
+    'packagesAtDepot', os.packages_at_depot,
+    'returnsThisMonth', os.returns_this_month,
+    'collectedThisMonth', os.collected_this_month,
+    'totalProducts', ps.total_products,
+    'totalCustomers', cs.total_customers,
+    'totalStock', ps.total_stock
+  ) INTO v_result
+  FROM order_stats os
+  CROSS JOIN product_stats ps
+  CROSS JOIN customer_stats cs;
 
   v_result := v_result || jsonb_build_object(
     'deliveryRate', CASE
@@ -416,7 +684,8 @@ BEGIN
     END,
     'confirmationRate', CASE
       WHEN ((v_result->>'pendingOrders')::int + (v_result->>'confirmedOrders')::int + (v_result->>'shippedOrders')::int + (v_result->>'deliveredOrders')::int) > 0
-      THEN ROUND(((v_result->>'confirmedOrders')::numeric + (v_result->>'shippedOrders')::numeric + (v_result->>'deliveredOrders')::numeric) / ((v_result->>'pendingOrders')::numeric + (v_result->>'confirmedOrders')::numeric + (v_result->>'shippedOrders')::numeric + (v_result->>'deliveredOrders')::numeric) * 100)
+      THEN ROUND(((v_result->>'confirmedOrders')::numeric + (v_result->>'shippedOrders')::numeric + (v_result->>'deliveredOrders')::numeric) /
+        ((v_result->>'pendingOrders')::numeric + (v_result->>'confirmedOrders')::numeric + (v_result->>'shippedOrders')::numeric + (v_result->>'deliveredOrders')::numeric) * 100)
       ELSE 0
     END
   );
@@ -425,22 +694,31 @@ BEGIN
 END;
 $$;
 
--- Analytics data RPC
-CREATE OR REPLACE FUNCTION public.get_analytics_data(p_range TEXT DEFAULT '30d')
+-- get_analytics_data RPC
+CREATE OR REPLACE FUNCTION public.get_analytics_data(p_range TEXT DEFAULT '30d', p_seller_id UUID DEFAULT NULL)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = 'public'
+SET search_path = ''
 AS $$
 DECLARE
-  v_seller_id UUID := auth.uid();
+  v_seller_id UUID;
   v_start TIMESTAMPTZ;
   v_result JSONB;
 BEGIN
+  IF p_seller_id IS NOT NULL THEN
+    IF p_seller_id != auth.uid() AND current_setting('request.jwt.claim.role', true) != 'service_role' THEN
+      RAISE EXCEPTION 'Unauthorized: seller_id mismatch';
+    END IF;
+    v_seller_id := p_seller_id;
+  ELSE
+    v_seller_id := auth.uid();
+  END IF;
+
   CASE p_range
     WHEN 'today' THEN v_start := date_trunc('day', now());
-    WHEN '7d' THEN v_start := now() - interval '7 days';
-    WHEN '30d' THEN v_start := now() - interval '30 days';
+    WHEN '7d'    THEN v_start := now() - interval '7 days';
+    WHEN '30d'   THEN v_start := now() - interval '30 days';
     ELSE v_start := '1970-01-01'::timestamptz;
   END CASE;
 
@@ -453,14 +731,22 @@ BEGIN
       COUNT(*) FILTER (WHERE status = 'delivered') AS delivered_count,
       COUNT(*) FILTER (WHERE status IN ('returned','refused')) AS returned_count,
       COUNT(*) FILTER (WHERE status = 'confirmed') AS confirmed_count,
+      COUNT(*) FILTER (WHERE status = 'shipped') AS shipped_count,
       COUNT(*) FILTER (WHERE status != 'draft') AS non_draft_count,
       COUNT(DISTINCT customer_id) AS total_customers
-    FROM orders
-    WHERE seller_id = v_seller_id AND created_at >= v_start
+    FROM public.orders
+    WHERE seller_id = v_seller_id
+      AND created_at >= v_start
+      AND deleted_at IS NULL
   ),
   status_dist AS (
     SELECT jsonb_agg(jsonb_build_object('status', status, 'count', cnt)) AS data
-    FROM (SELECT status, COUNT(*) AS cnt FROM orders WHERE seller_id = v_seller_id AND created_at >= v_start GROUP BY status) s
+    FROM (
+      SELECT status, COUNT(*) AS cnt
+      FROM public.orders
+      WHERE seller_id = v_seller_id AND created_at >= v_start AND deleted_at IS NULL
+      GROUP BY status
+    ) s
   ),
   wilaya_stats AS (
     SELECT jsonb_agg(jsonb_build_object(
@@ -471,11 +757,15 @@ BEGIN
       'returned', returned_count
     )) AS data
     FROM (
-      SELECT wilaya, COUNT(*) AS orders_count, COALESCE(SUM(total_price),0)::numeric AS revenue,
-        COUNT(*) FILTER (WHERE status='delivered') AS delivered_count,
+      SELECT
+        wilaya,
+        COUNT(*) AS orders_count,
+        COALESCE(SUM(total_price), 0)::numeric AS revenue,
+        COUNT(*) FILTER (WHERE status = 'delivered') AS delivered_count,
         COUNT(*) FILTER (WHERE status IN ('returned','refused')) AS returned_count
-      FROM orders
-      WHERE seller_id = v_seller_id AND created_at >= v_start AND wilaya IS NOT NULL
+      FROM public.orders
+      WHERE seller_id = v_seller_id AND created_at >= v_start
+        AND deleted_at IS NULL AND wilaya IS NOT NULL
       GROUP BY wilaya
       ORDER BY orders_count DESC
       LIMIT 10
@@ -484,9 +774,11 @@ BEGIN
   revenue_by_day AS (
     SELECT jsonb_agg(jsonb_build_object('day', day, 'revenue', revenue)) AS data
     FROM (
-      SELECT TO_CHAR(created_at::date, 'YYYY-MM-DD') AS day, COALESCE(SUM(total_price),0)::numeric AS revenue
-      FROM orders
-      WHERE seller_id = v_seller_id AND created_at >= v_start
+      SELECT
+        TO_CHAR(created_at::date, 'YYYY-MM-DD') AS day,
+        COALESCE(SUM(total_price), 0)::numeric AS revenue
+      FROM public.orders
+      WHERE seller_id = v_seller_id AND created_at >= v_start AND deleted_at IS NULL
       GROUP BY created_at::date
       ORDER BY created_at::date
       LIMIT 30
@@ -495,16 +787,21 @@ BEGIN
   top_prods AS (
     SELECT jsonb_agg(jsonb_build_object('name', name, 'quantity', qty)) AS data
     FROM (
-      SELECT (item->>'name') AS name, COALESCE(SUM((item->>'quantity')::int), 0) AS qty
-      FROM orders, jsonb_array_elements(items) AS item
-      WHERE seller_id = v_seller_id AND created_at >= v_start
+      SELECT
+        (item->>'name') AS name,
+        COALESCE(SUM((item->>'quantity')::int), 0) AS qty
+      FROM public.orders, jsonb_array_elements(items) AS item
+      WHERE seller_id = v_seller_id AND created_at >= v_start AND deleted_at IS NULL
       GROUP BY (item->>'name')
       ORDER BY qty DESC
       LIMIT 10
     ) p
   ),
   low_stock AS (
-    SELECT COUNT(*) AS cnt FROM products WHERE seller_id = v_seller_id AND stock <= 5 AND stock > 0 AND active = true
+    SELECT COUNT(*) AS cnt
+    FROM public.products
+    WHERE seller_id = v_seller_id
+      AND stock <= 5 AND stock > 0 AND active = true AND deleted_at IS NULL
   )
   SELECT jsonb_build_object(
     'keyMetrics', jsonb_build_object(
@@ -518,7 +815,9 @@ BEGIN
       'avgOrderValue', CASE WHEN os.total_orders > 0 THEN ROUND(os.total_revenue / os.total_orders, 2) ELSE 0 END,
       'deliveryRate', CASE WHEN os.non_draft_count > 0 THEN ROUND((os.delivered_count::numeric / os.non_draft_count) * 100) ELSE 0 END,
       'returnRate', CASE WHEN os.non_draft_count > 0 THEN ROUND((os.returned_count::numeric / os.non_draft_count) * 100) ELSE 0 END,
-      'confirmationRate', CASE WHEN (os.total_orders - os.delivered_count) > 0 THEN ROUND(((os.confirmed_count + os.delivered_count)::numeric / NULLIF(os.total_orders - (SELECT COUNT(*) FROM orders WHERE seller_id = v_seller_id AND created_at >= v_start AND status='draft'), 0)) * 100) ELSE 0 END,
+      'confirmationRate', CASE WHEN os.non_draft_count > 0
+        THEN ROUND(((os.confirmed_count + os.shipped_count + os.delivered_count)::numeric / os.non_draft_count) * 100)
+        ELSE 0 END,
       'netProfit', os.net_profit,
       'profitMargin', CASE WHEN os.total_revenue > 0 THEN ROUND(((os.net_profit / os.total_revenue) * 100), 2) ELSE 0 END,
       'totalCustomers', os.total_customers,
@@ -541,7 +840,125 @@ BEGIN
 END;
 $$;
 
--- Atomic order creation (stock-aware)
+-- get_pnl_summary RPC
+CREATE OR REPLACE FUNCTION public.get_pnl_summary(p_period TEXT DEFAULT '30d')
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_seller_id UUID := auth.uid();
+  v_start DATE;
+  v_result JSONB;
+BEGIN
+  IF v_seller_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: not authenticated';
+  END IF;
+
+  v_start := CASE p_period
+    WHEN '7d'  THEN CURRENT_DATE - INTERVAL '7 days'
+    WHEN '30d' THEN CURRENT_DATE - INTERVAL '30 days'
+    WHEN '90d' THEN CURRENT_DATE - INTERVAL '90 days'
+    WHEN 'year' THEN DATE_TRUNC('year', CURRENT_DATE)::date
+    ELSE CURRENT_DATE - INTERVAL '30 days'
+  END;
+
+  SELECT jsonb_build_object(
+    'revenue', COALESCE((
+      SELECT SUM(total_price) FROM public.orders
+      WHERE seller_id = v_seller_id AND status = 'delivered'
+        AND delivered_at::date >= v_start AND deleted_at IS NULL
+    ), 0)::numeric,
+    'cost_of_goods', COALESCE((
+      SELECT SUM(
+        COALESCE(
+          (item->>'cost_price')::numeric,
+          (SELECT cost_price FROM public.products WHERE id = (item->>'product_id')::uuid AND seller_id = v_seller_id),
+          0
+        ) * (item->>'quantity')::integer
+      )
+      FROM public.orders, jsonb_array_elements(items) AS item
+      WHERE seller_id = v_seller_id AND status = 'delivered'
+        AND delivered_at::date >= v_start AND deleted_at IS NULL
+    ), 0)::numeric,
+    'delivery_costs', COALESCE((
+      SELECT SUM(delivery_cost) FROM public.orders
+      WHERE seller_id = v_seller_id AND status IN ('delivered', 'returned', 'refused')
+        AND created_at::date >= v_start AND deleted_at IS NULL
+    ), 0)::numeric,
+    'return_losses', COALESCE((
+      SELECT SUM(delivery_cost) FROM public.orders
+      WHERE seller_id = v_seller_id AND status IN ('returned', 'refused')
+        AND created_at::date >= v_start AND deleted_at IS NULL
+    ), 0)::numeric,
+    'expenses', COALESCE((
+      SELECT SUM(amount) FROM public.expenses
+      WHERE seller_id = v_seller_id AND expense_date >= v_start
+    ), 0)::numeric,
+    'refunds', COALESCE((
+      SELECT SUM(refund_amount) FROM public.returns
+      WHERE seller_id = v_seller_id AND status = 'refunded'
+        AND resolved_at::date >= v_start AND deleted_at IS NULL
+    ), 0)::numeric,
+    'orders_delivered', COALESCE((
+      SELECT COUNT(*) FROM public.orders
+      WHERE seller_id = v_seller_id AND status = 'delivered'
+        AND delivered_at::date >= v_start AND deleted_at IS NULL
+    ), 0),
+    'orders_returned', COALESCE((
+      SELECT COUNT(*) FROM public.orders
+      WHERE seller_id = v_seller_id AND status IN ('returned', 'refused')
+        AND created_at::date >= v_start AND deleted_at IS NULL
+    ), 0)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$$;
+
+-- get_product_profitability RPC
+CREATE OR REPLACE FUNCTION public.get_product_profitability()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_seller_id UUID := auth.uid();
+BEGIN
+  IF v_seller_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: not authenticated';
+  END IF;
+
+  RETURN COALESCE((
+    SELECT jsonb_agg(row_to_json(t))
+    FROM (
+      SELECT
+        p.id, p.name, p.price, p.cost_price,
+        COUNT(DISTINCT o.id) FILTER (WHERE o.status = 'delivered') as units_sold,
+        COALESCE(SUM(o.total_price) FILTER (WHERE o.status = 'delivered'), 0)::numeric as total_revenue,
+        COALESCE(SUM(o.net_profit) FILTER (WHERE o.status = 'delivered'), 0)::numeric as total_profit,
+        COUNT(DISTINCT o.id) FILTER (WHERE o.status IN ('returned', 'refused')) as units_returned,
+        ROUND(
+          CASE WHEN COUNT(DISTINCT o.id) > 0
+            THEN COUNT(DISTINCT o.id) FILTER (WHERE o.status = 'delivered')::numeric / COUNT(DISTINCT o.id) * 100
+            ELSE 0 END, 1
+        ) as delivery_rate
+      FROM public.products p
+      LEFT JOIN public.orders o ON EXISTS (
+        SELECT 1 FROM jsonb_array_elements(o.items) AS item
+        WHERE item->>'product_id' = p.id::text
+      ) AND o.seller_id = v_seller_id AND o.deleted_at IS NULL
+      WHERE p.seller_id = v_seller_id AND p.deleted_at IS NULL
+      GROUP BY p.id, p.name, p.price, p.cost_price
+      ORDER BY total_profit DESC
+    ) t
+  ), '[]'::jsonb);
+END;
+$$;
+
+-- atomic_create_order RPC
 CREATE OR REPLACE FUNCTION public.atomic_create_order(
   p_seller_id UUID, p_customer_name TEXT, p_customer_phone TEXT,
   p_customer_wilaya TEXT, p_customer_commune TEXT, p_customer_address TEXT,
@@ -565,6 +982,11 @@ DECLARE
   v_current_stock INT;
   v_seller_wilaya TEXT;
   v_role TEXT;
+  v_cost_price NUMERIC;
+  v_total_cost_of_goods NUMERIC := 0;
+  v_enriched_item JSONB;
+  v_enriched_items JSONB := '[]'::jsonb;
+  v_net_profit NUMERIC;
 BEGIN
   BEGIN
     v_role := current_setting('request.jwt.claims', true)::jsonb->>'role';
@@ -579,13 +1001,13 @@ BEGIN
   END IF;
 
   IF p_customer_phone IS NOT NULL AND p_customer_phone != '' THEN
-    INSERT INTO customers (seller_id, name, phone, wilaya, commune, address)
+    INSERT INTO public.customers (seller_id, name, phone, wilaya, commune, address)
     VALUES (p_seller_id, p_customer_name, p_customer_phone, p_customer_wilaya, p_customer_commune, p_customer_address)
     ON CONFLICT (seller_id, phone) DO UPDATE SET
-      name = COALESCE(EXCLUDED.name, customers.name),
-      wilaya = COALESCE(EXCLUDED.wilaya, customers.wilaya),
-      commune = COALESCE(EXCLUDED.commune, customers.commune),
-      address = COALESCE(EXCLUDED.address, customers.address),
+      name = COALESCE(NULLIF(EXCLUDED.name, ''), customers.name),
+      wilaya = COALESCE(NULLIF(EXCLUDED.wilaya, ''), customers.wilaya),
+      commune = COALESCE(NULLIF(EXCLUDED.commune, ''), customers.commune),
+      address = COALESCE(NULLIF(EXCLUDED.address, ''), customers.address),
       updated_at = now()
     RETURNING id INTO v_customer_id;
   END IF;
@@ -594,36 +1016,50 @@ BEGIN
   LOOP
     v_product_id := NULL;
     v_quantity := COALESCE((v_item->>'quantity')::INT, 1);
+    v_cost_price := NULL;
+
     BEGIN
       v_product_id := (v_item->>'product_id')::UUID;
     EXCEPTION WHEN others THEN
       v_product_id := NULL;
     END;
+
     IF v_product_id IS NOT NULL AND v_quantity > 0 THEN
-      SELECT stock INTO v_current_stock
-      FROM products
+      SELECT stock, cost_price INTO v_current_stock, v_cost_price
+      FROM public.products
       WHERE id = v_product_id AND seller_id = p_seller_id
       FOR UPDATE;
+
       IF v_current_stock IS NOT NULL AND v_current_stock < v_quantity THEN
         RAISE EXCEPTION 'Insufficient stock for product %. Available: %, Requested: %', v_product_id, v_current_stock, v_quantity;
       END IF;
+
       IF p_status = 'confirmed' AND v_current_stock IS NOT NULL THEN
-        UPDATE products SET stock = stock - v_quantity, updated_at = now()
+        UPDATE public.products SET stock = stock - v_quantity, updated_at = now()
         WHERE id = v_product_id AND seller_id = p_seller_id;
       END IF;
     END IF;
+
+    v_total_cost_of_goods := v_total_cost_of_goods + (v_quantity * COALESCE(v_cost_price, 0));
+    v_enriched_item := v_item || jsonb_build_object('cost_price', v_cost_price);
+    v_enriched_items := v_enriched_items || jsonb_build_object(v_enriched_item);
   END LOOP;
 
-  v_order_number := 'SF-' || upper(substring(to_char(now(), 'YYYYMMDDHH24MISS'), 1, 10)) || '-' || upper(substring(md5(random()::text), 1, 4));
-  SELECT wilaya INTO v_seller_wilaya FROM sellers WHERE id = p_seller_id;
+  v_net_profit := p_net_profit;
+  IF v_net_profit IS NULL OR v_net_profit = 0 OR (p_total_price > 0 AND v_net_profit = p_total_price) THEN
+    v_net_profit := p_total_price - v_total_cost_of_goods - p_delivery_cost;
+  END IF;
 
-  INSERT INTO orders (
+  v_order_number := 'SF-' || upper(substring(to_char(now(), 'YYYYMMDDHH24MISS'), 1, 10)) || '-' || upper(substring(md5(random()::text), 1, 4));
+  SELECT wilaya INTO v_seller_wilaya FROM public.sellers WHERE id = p_seller_id;
+
+  INSERT INTO public.orders (
     seller_id, customer_id, order_number, status, source, external_id,
     items, total_price, delivery_cost, net_profit,
     wilaya, commune, address, notes, delivery_type, risk_score
   ) VALUES (
     p_seller_id, v_customer_id, v_order_number, p_status, p_source, p_external_id,
-    p_items, p_total_price, p_delivery_cost, p_net_profit,
+    v_enriched_items, p_total_price, p_delivery_cost, v_net_profit,
     p_wilaya, p_commune, p_address, p_notes, p_delivery_type, 0
   ) RETURNING id INTO v_order_id;
 
@@ -634,7 +1070,7 @@ BEGIN
 END;
 $$;
 
--- Atomic order status update (stock rollback)
+-- atomic_update_order_status RPC
 CREATE OR REPLACE FUNCTION public.atomic_update_order_status(
   p_order_id UUID,
   p_new_status TEXT
@@ -658,7 +1094,7 @@ DECLARE
 BEGIN
   SELECT status, seller_id, customer_id, items, total_price
   INTO v_current_status, v_seller_id, v_customer_id, v_items, v_total_price
-  FROM orders WHERE id = p_order_id FOR UPDATE;
+  FROM public.orders WHERE id = p_order_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Order not found';
   END IF;
@@ -677,7 +1113,7 @@ BEGIN
   END IF;
 
   IF v_current_status = p_new_status THEN
-    SELECT row_to_json(orders.*) INTO v_result FROM orders WHERE id = p_order_id;
+    SELECT row_to_json(public.orders.*) INTO v_result FROM public.orders WHERE id = p_order_id;
     RETURN v_result;
   END IF;
 
@@ -687,7 +1123,7 @@ BEGIN
       v_product_id := (v_item->>'product_id')::UUID;
       v_quantity := (v_item->>'quantity')::INT;
       IF v_product_id IS NOT NULL AND v_quantity IS NOT NULL THEN
-        UPDATE products SET stock = GREATEST(0, stock - v_quantity)
+        UPDATE public.products SET stock = GREATEST(0, stock - v_quantity)
         WHERE id = v_product_id AND seller_id = v_seller_id;
       END IF;
     END LOOP;
@@ -699,13 +1135,13 @@ BEGIN
       v_product_id := (v_item->>'product_id')::UUID;
       v_quantity := (v_item->>'quantity')::INT;
       IF v_product_id IS NOT NULL AND v_quantity IS NOT NULL THEN
-        UPDATE products SET stock = stock + v_quantity
+        UPDATE public.products SET stock = stock + v_quantity
         WHERE id = v_product_id AND seller_id = v_seller_id;
       END IF;
     END LOOP;
   END IF;
 
-  UPDATE orders SET
+  UPDATE public.orders SET
     status = p_new_status,
     confirmed_at = CASE WHEN p_new_status = 'confirmed' THEN now() ELSE confirmed_at END,
     shipped_at = CASE WHEN p_new_status = 'shipped' THEN now() ELSE shipped_at END,
@@ -714,180 +1150,325 @@ BEGIN
   WHERE id = p_order_id;
 
   IF v_customer_id IS NOT NULL AND p_new_status = 'delivered' AND v_current_status != 'delivered' THEN
-    UPDATE customers SET
+    UPDATE public.customers SET
       order_count = COALESCE(order_count, 0) + 1,
       total_spent = COALESCE(total_spent, 0) + COALESCE(v_total_price, 0)
     WHERE id = v_customer_id;
   END IF;
 
-  SELECT row_to_json(orders.*) INTO v_result FROM orders WHERE id = p_order_id;
+  SELECT row_to_json(public.orders.*) INTO v_result FROM public.orders WHERE id = p_order_id;
   RETURN v_result;
 END;
 $$;
 
 -- ============================================================
--- 6. TRIGGERS
+-- 4. TRIGGERS
 -- ============================================================
--- Synced to live trigger name (was handle_new_user_trigger)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
 
-DROP TRIGGER IF EXISTS update_sellers_updated_at ON sellers;
+DROP TRIGGER IF EXISTS update_sellers_updated_at ON public.sellers;
 CREATE TRIGGER update_sellers_updated_at
-  BEFORE UPDATE ON sellers
+  BEFORE UPDATE ON public.sellers
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at();
 
-DROP TRIGGER IF EXISTS update_customers_updated_at ON customers;
+DROP TRIGGER IF EXISTS update_customers_updated_at ON public.customers;
 CREATE TRIGGER update_customers_updated_at
-  BEFORE UPDATE ON customers
+  BEFORE UPDATE ON public.customers
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at();
 
-DROP TRIGGER IF EXISTS update_products_updated_at ON products;
+DROP TRIGGER IF EXISTS update_products_updated_at ON public.products;
 CREATE TRIGGER update_products_updated_at
-  BEFORE UPDATE ON products
+  BEFORE UPDATE ON public.products
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at();
 
-DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
+DROP TRIGGER IF EXISTS update_orders_updated_at ON public.orders;
 CREATE TRIGGER update_orders_updated_at
-  BEFORE UPDATE ON orders
+  BEFORE UPDATE ON public.orders
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at();
 
-DROP TRIGGER IF EXISTS set_order_number ON orders;
+DROP TRIGGER IF EXISTS set_order_number ON public.orders;
 CREATE TRIGGER set_order_number
-  BEFORE INSERT ON orders
+  BEFORE INSERT ON public.orders
   FOR EACH ROW
   EXECUTE FUNCTION public.generate_order_number();
 
+DROP TRIGGER IF EXISTS trigger_generate_seller_slug ON public.sellers;
+CREATE TRIGGER trigger_generate_seller_slug
+  BEFORE INSERT OR UPDATE OF business_name ON public.sellers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.generate_seller_slug();
+
+DROP TRIGGER IF EXISTS update_ai_sessions_updated_at ON public.ai_chat_sessions;
+CREATE TRIGGER update_ai_sessions_updated_at
+  BEFORE UPDATE ON public.ai_chat_sessions
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at();
+
+DROP TRIGGER IF EXISTS update_session_on_message ON public.ai_chat_messages;
+CREATE TRIGGER update_session_on_message
+  AFTER INSERT ON public.ai_chat_messages
+  FOR EACH ROW
+  EXECUTE FUNCTION public.increment_session_message_count();
+
+DROP TRIGGER IF EXISTS set_return_number ON public.returns;
+CREATE TRIGGER set_return_number
+  BEFORE INSERT ON public.returns
+  FOR EACH ROW
+  EXECUTE FUNCTION public.generate_return_number();
+
+DROP TRIGGER IF EXISTS update_returns_updated_at ON public.returns;
+CREATE TRIGGER update_returns_updated_at
+  BEFORE UPDATE ON public.returns
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at();
+
+DROP TRIGGER IF EXISTS log_return_status ON public.returns;
+CREATE TRIGGER log_return_status
+  AFTER UPDATE ON public.returns
+  FOR EACH ROW
+  EXECUTE FUNCTION public.log_return_status_change();
+
+DROP TRIGGER IF EXISTS update_expenses_updated_at ON public.expenses;
+CREATE TRIGGER update_expenses_updated_at
+  BEFORE UPDATE ON public.expenses
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at();
+
+DROP TRIGGER IF EXISTS update_team_members_updated_at ON public.team_members;
+CREATE TRIGGER update_team_members_updated_at
+  BEFORE UPDATE ON public.team_members
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at();
+
+DROP TRIGGER IF EXISTS onboarding_claim_sync ON public.sellers;
+CREATE TRIGGER onboarding_claim_sync
+  AFTER UPDATE OF onboarding_completed ON public.sellers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_onboarding_claim();
+
 -- ============================================================
--- 7. RLS POLICIES
+-- 5. INDEXES
 -- ============================================================
-ALTER TABLE sellers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE automations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE channels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE agent_activity ENABLE ROW LEVEL SECURITY;
-ALTER TABLE whatsapp_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE webhook_retry_queue ENABLE ROW LEVEL SECURITY;
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_categories_seller ON public.categories (seller_id);
+CREATE INDEX IF NOT EXISTS idx_customers_seller ON public.customers (seller_id);
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON public.customers (seller_id, phone);
+CREATE INDEX IF NOT EXISTS idx_products_seller ON public.products (seller_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON public.products (category_id);
+CREATE INDEX IF NOT EXISTS idx_orders_seller ON public.orders (seller_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders (seller_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_status_created ON public.orders (seller_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_customer ON public.orders (customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_external_id ON public.orders (external_id);
+CREATE INDEX IF NOT EXISTS idx_orders_conversation_id ON public.orders (conversation_id) WHERE conversation_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_seller_external_id ON public.orders (seller_id, external_id) WHERE external_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_pending_by_phone ON public.orders (seller_id, created_at DESC) WHERE status = ANY (ARRAY['draft', 'pending']);
+CREATE INDEX IF NOT EXISTS idx_deliveries_seller_id ON public.deliveries (seller_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_order ON public.deliveries (order_id);
+CREATE INDEX IF NOT EXISTS idx_automations_seller ON public.automations (seller_id);
+CREATE INDEX IF NOT EXISTS idx_automations_active ON public.automations (seller_id, active, trigger_type) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_automations_recipe_unique ON public.automations (seller_id, trigger_type, (trigger_config ->> 'recipe_id')) WHERE (trigger_config ->> 'recipe_id') IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_channels_seller ON public.channels (seller_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_seller ON public.conversations (seller_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_customer ON public.conversations (customer_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_channel_thread ON public.conversations (channel_id, platform_thread_id) WHERE platform_thread_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_conversations_pinned ON public.conversations (seller_id, last_message_at DESC) WHERE is_pinned = true;
+CREATE INDEX IF NOT EXISTS idx_conversations_archived ON public.conversations (seller_id, is_archived, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON public.messages (conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON public.messages (created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_dedup ON public.messages (conversation_id, platform_message_id) WHERE platform_message_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_messages_reply_to ON public.messages (reply_to_id) WHERE reply_to_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_agent_activity_seller ON public.agent_activity (seller_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_seller ON public.whatsapp_templates (seller_id, category);
+CREATE INDEX IF NOT EXISTS idx_retry_queue_status ON public.webhook_retry_queue (status, next_retry_at);
+CREATE INDEX IF NOT EXISTS idx_retry_queue_pending ON public.webhook_retry_queue (status, next_retry_at) WHERE status = ANY (ARRAY['pending', 'processing']);
+CREATE INDEX IF NOT EXISTS idx_retry_queue_seller_id ON public.webhook_retry_queue (seller_id) WHERE seller_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_retry_queue_claimed_by ON public.webhook_retry_queue (claimed_by) WHERE claimed_by IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_retry_queue_locked_until ON public.webhook_retry_queue (locked_until) WHERE locked_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_seller ON public.notifications (seller_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON public.notifications (seller_id, read) WHERE read = false;
+CREATE INDEX IF NOT EXISTS idx_notifications_active ON public.notifications (seller_id, dismissed, created_at DESC) WHERE dismissed = false;
+
+-- Composite indexes from migration 021
+CREATE INDEX IF NOT EXISTS idx_orders_seller_status_deleted ON public.orders (seller_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_seller_created_at ON public.orders (seller_id, created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_seller_created_deleted ON public.orders (seller_id, created_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_products_seller_deleted ON public.products (seller_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_customers_seller_phone ON public.customers (seller_id, phone);
+CREATE INDEX IF NOT EXISTS idx_notifications_seller_created ON public.notifications (seller_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_reports_seller_date ON public.daily_analytics_reports (seller_id, report_date DESC);
+CREATE INDEX IF NOT EXISTS idx_deliveries_provider_seller ON public.deliveries (provider, seller_id);
+CREATE INDEX IF NOT EXISTS idx_channels_seller_type ON public.channels (seller_id, type);
+CREATE INDEX IF NOT EXISTS idx_return_notes_author_id ON public.return_notes (author_id);
+CREATE INDEX IF NOT EXISTS idx_returns_customer_id ON public.returns (customer_id);
+CREATE INDEX IF NOT EXISTS idx_returns_exchange_order_id ON public.returns (exchange_order_id);
+CREATE INDEX IF NOT EXISTS idx_team_members_invited_by ON public.team_members (invited_by);
+CREATE INDEX IF NOT EXISTS idx_agent_activity_seller_id ON public.agent_activity (seller_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_seller_id ON public.expenses (seller_id);
+CREATE INDEX IF NOT EXISTS idx_ai_messages_session_id ON public.ai_chat_messages (session_id);
+CREATE INDEX IF NOT EXISTS idx_wilaya_risk_profiles_seller ON public.wilaya_risk_profiles (seller_id, wilaya);
+
+-- ============================================================
+-- 6. ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================================
+ALTER TABLE public.sellers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.channels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.automations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.integrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.agent_activity ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.whatsapp_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.webhook_retry_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.import_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_chat_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.returns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.return_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_analytics_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wilaya_risk_profiles ENABLE ROW LEVEL SECURITY;
 
 -- sellers
-CREATE POLICY "sellers_own_data" ON sellers FOR ALL
-  USING (auth.uid() = id);
+CREATE POLICY "sellers_public_select" ON public.sellers FOR SELECT TO anon USING (form_enabled = true);
+CREATE POLICY "sellers_team_access" ON public.sellers FOR ALL TO public USING (public.check_user_seller_access(id));
 
--- customers
-CREATE POLICY "customers_seller_only" ON customers FOR ALL
-  USING (auth.uid() = seller_id);
-
--- products (split for Supabase)
-CREATE POLICY "products_seller_write" ON products FOR INSERT
-  WITH CHECK (auth.uid() = seller_id);
-CREATE POLICY "products_seller_update" ON products FOR UPDATE
-  USING (auth.uid() = seller_id);
-CREATE POLICY "products_seller_delete" ON products FOR DELETE
-  USING (auth.uid() = seller_id);
-CREATE POLICY "products_seller_select" ON products FOR SELECT
-  USING (auth.uid() = seller_id);
-
--- orders
-CREATE POLICY "orders_seller_only" ON orders FOR ALL
-  USING (auth.uid() = seller_id);
-
--- deliveries
-CREATE POLICY "deliveries_seller_only" ON deliveries FOR ALL
-  USING (auth.uid() = seller_id);
-
--- automations
-CREATE POLICY "automations_seller_only" ON automations FOR ALL
-  USING (auth.uid() = seller_id);
-
--- channels
-CREATE POLICY "channels_seller_only" ON channels FOR ALL
-  USING (auth.uid() = seller_id);
-
--- conversations
-CREATE POLICY "conversations_seller_only" ON conversations FOR ALL
-  USING (auth.uid() = seller_id);
-
--- messages
-CREATE POLICY "messages_seller_only" ON messages FOR ALL
-  USING (conversation_id IN (
-    SELECT id FROM conversations WHERE seller_id = auth.uid()
-  ));
-
--- integrations
-CREATE POLICY "Sellers manage own integrations" ON integrations FOR ALL
-  USING (auth.uid() = seller_id);
-
--- agent_activity
-CREATE POLICY "Sellers see own activity" ON agent_activity FOR SELECT
-  USING (auth.uid() = seller_id);
-CREATE POLICY "System inserts activity" ON agent_activity FOR INSERT
-  WITH CHECK (auth.uid() = seller_id);
-
--- whatsapp_templates
-CREATE POLICY "Sellers can view own templates" ON whatsapp_templates FOR SELECT
-  USING (auth.uid() = seller_id);
-CREATE POLICY "Sellers can insert own templates" ON whatsapp_templates FOR INSERT
-  WITH CHECK (auth.uid() = seller_id);
-CREATE POLICY "Sellers can update own templates" ON whatsapp_templates FOR UPDATE
-  USING (auth.uid() = seller_id);
-CREATE POLICY "Sellers can delete own templates" ON whatsapp_templates FOR DELETE
-  USING (auth.uid() = seller_id);
-
--- webhook_retry_queue
-CREATE POLICY "Sellers can view own retry events" ON webhook_retry_queue FOR SELECT
-  USING (auth.uid() = seller_id);
+-- team_members
+CREATE POLICY "team_members_manage" ON public.team_members FOR ALL TO public USING (
+  (auth.uid() = seller_id) OR
+  (EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.seller_id = team_members.seller_id AND tm.user_id = (SELECT auth.uid()) AND tm.role = 'admin' AND tm.status = 'active'))
+) WITH CHECK (
+  (auth.uid() = seller_id) OR
+  (EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.seller_id = team_members.seller_id AND tm.user_id = (SELECT auth.uid()) AND tm.role = 'admin' AND tm.status = 'active'))
+);
 
 -- categories
-CREATE POLICY "categories_seller_write" ON categories FOR INSERT
-  WITH CHECK (auth.uid() = seller_id);
-CREATE POLICY "categories_seller_update" ON categories FOR UPDATE
-  USING (auth.uid() = seller_id);
-CREATE POLICY "categories_seller_delete" ON categories FOR DELETE
-  USING (auth.uid() = seller_id);
-CREATE POLICY "categories_seller_select" ON categories FOR SELECT
-  USING (auth.uid() = seller_id);
+CREATE POLICY "categories_team_access" ON public.categories FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- products
+CREATE POLICY "products_public_select" ON public.products FOR SELECT TO anon USING (
+  EXISTS (SELECT 1 FROM public.sellers s WHERE s.id = products.seller_id AND s.form_enabled = true) AND active = true AND stock > 0 AND deleted_at IS NULL
+);
+CREATE POLICY "products_team_access" ON public.products FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- customers
+CREATE POLICY "customers_team_access" ON public.customers FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- channels
+CREATE POLICY "channels_team_access" ON public.channels FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- conversations
+CREATE POLICY "conversations_team_access" ON public.conversations FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- messages
+CREATE POLICY "messages_team_access" ON public.messages FOR ALL TO public USING (
+  EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = conversation_id AND public.check_user_seller_access(c.seller_id))
+);
+
+-- orders
+CREATE POLICY "orders_team_access" ON public.orders FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- deliveries
+CREATE POLICY "deliveries_team_access" ON public.deliveries FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- automations
+CREATE POLICY "automations_team_access" ON public.automations FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- integrations
+CREATE POLICY "integrations_team_access" ON public.integrations FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- agent_activity
+CREATE POLICY "agent_activity_all" ON public.agent_activity FOR ALL TO public USING (
+  ((SELECT auth.uid()) = seller_id) OR public.check_user_seller_access(seller_id)
+) WITH CHECK (
+  ((SELECT auth.uid()) = seller_id) OR public.check_user_seller_access(seller_id)
+);
+
+-- whatsapp_templates
+CREATE POLICY "whatsapp_templates_team_access" ON public.whatsapp_templates FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- webhook_retry_queue
+CREATE POLICY "webhook_retry_queue_team_access" ON public.webhook_retry_queue FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- webhook_events
+CREATE POLICY "webhook_events_service_all" ON public.webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "webhook_events_team_access" ON public.webhook_events FOR SELECT TO public USING (public.check_user_seller_access(seller_id));
 
 -- notifications
-CREATE POLICY "notifications_seller_select" ON notifications FOR SELECT
-  USING ((select auth.uid()) = seller_id);
-CREATE POLICY "notifications_seller_insert" ON notifications FOR INSERT
-  WITH CHECK ((select auth.uid()) = seller_id);
-CREATE POLICY "notifications_seller_update" ON notifications FOR UPDATE
-  USING ((select auth.uid()) = seller_id);
-CREATE POLICY "notifications_seller_delete" ON notifications FOR DELETE
-  USING ((select auth.uid()) = seller_id);
+CREATE POLICY "notifications_team_access" ON public.notifications FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- import_batches
+CREATE POLICY "import_batches_team_access" ON public.import_batches FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- ai_chat_sessions
+CREATE POLICY "ai_chat_sessions_access" ON public.ai_chat_sessions FOR ALL TO public USING (
+  ((SELECT auth.uid()) = seller_id) OR public.check_user_seller_access(seller_id)
+) WITH CHECK (
+  ((SELECT auth.uid()) = seller_id) OR public.check_user_seller_access(seller_id)
+);
+
+-- ai_chat_messages
+CREATE POLICY "ai_chat_messages_access" ON public.ai_chat_messages FOR ALL TO public USING (
+  EXISTS (SELECT 1 FROM public.ai_chat_sessions s WHERE s.id = ai_chat_messages.session_id AND (((SELECT auth.uid()) = s.seller_id) OR public.check_user_seller_access(s.seller_id)))
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM public.ai_chat_sessions s WHERE s.id = ai_chat_messages.session_id AND (((SELECT auth.uid()) = s.seller_id) OR public.check_user_seller_access(s.seller_id)))
+);
+
+-- returns
+CREATE POLICY "returns_team_access" ON public.returns FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- return_notes
+CREATE POLICY "return_notes_team_access" ON public.return_notes FOR ALL TO public USING (
+  EXISTS (SELECT 1 FROM public.returns r WHERE r.id = return_id AND public.check_user_seller_access(r.seller_id))
+);
+
+-- expenses
+CREATE POLICY "expenses_team_access" ON public.expenses FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+
+-- daily_analytics_reports
+CREATE POLICY "service_role_all" ON public.daily_analytics_reports FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "view_own_reports" ON public.daily_analytics_reports FOR SELECT TO authenticated USING (public.check_user_seller_access(seller_id));
+
+-- wilaya_risk_profiles
+CREATE POLICY "Sellers can read own wilaya risk profiles" ON public.wilaya_risk_profiles FOR SELECT TO public USING (seller_id = (SELECT auth.uid()));
+CREATE POLICY "Service role can manage wilaya risk profiles" ON public.wilaya_risk_profiles FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ============================================================
--- 9. SECURITY DEFINER HARDENING (Grants)
+-- 7. SECURITY & GRANTS
 -- ============================================================
-REVOKE ALL ON FUNCTION public.atomic_create_order(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,JSONB,NUMERIC,NUMERIC,NUMERIC,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.atomic_update_order_status(UUID,TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_dashboard_aggregates() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_analytics_data(TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
 
+-- Revoke EXECUTE from authenticated/anon/public on sensitive definer routines
+REVOKE ALL ON FUNCTION public.get_dashboard_aggregates(UUID) FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.get_analytics_data(TEXT, UUID) FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.get_pnl_summary(TEXT) FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.get_product_profitability() FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.check_user_seller_access(UUID) FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.atomic_create_order(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,JSONB,NUMERIC,NUMERIC,NUMERIC,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.atomic_update_order_status(UUID, TEXT) FROM authenticated, anon, public;
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM authenticated, anon, public;
+
+-- Grant EXECUTE to proper roles
+GRANT EXECUTE ON FUNCTION public.get_dashboard_aggregates(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_analytics_data(TEXT, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_pnl_summary(TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_product_profitability() TO service_role;
+GRANT EXECUTE ON FUNCTION public.check_user_seller_access(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.atomic_create_order(UUID,TEXT,TEXT,TEXT,TEXT,TEXT,JSONB,NUMERIC,NUMERIC,NUMERIC,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.atomic_update_order_status(UUID,TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.get_dashboard_aggregates() TO service_role;
-GRANT EXECUTE ON FUNCTION public.get_analytics_data(TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.atomic_update_order_status(UUID, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
-
--- handle_new_user trigger still needs authenticated for auth.users trigger path
-GRANT EXECUTE ON FUNCTION public.handle_new_user() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_analytics_data(TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO authenticated; -- needed by trigger path

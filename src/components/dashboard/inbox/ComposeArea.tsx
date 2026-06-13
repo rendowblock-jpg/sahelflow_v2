@@ -35,27 +35,9 @@ export function ComposeArea({
 	return (
 		<div className="inbox-chat__compose">
 			{replyTo && (
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 8,
-						padding: "6px 12px",
-						background: "var(--color-surface-secondary)",
-						borderBlockEnd: "1px solid var(--color-line-primary)",
-						fontSize: 12,
-						color: "var(--color-content-secondary)",
-					}}
-				>
+				<div className="inbox-compose-reply-bar">
 					<Reply size={14} />
-					<span
-						style={{
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-							whiteSpace: "nowrap",
-							flex: 1,
-						}}
-					>
+					<span className="inbox-compose-reply-preview">
 						{replyTo.content
 							? replyTo.content.length > 60
 								? replyTo.content.substring(0, 60) + "..."
@@ -64,13 +46,7 @@ export function ComposeArea({
 					</span>
 					<button
 						onClick={onClearReply}
-						style={{
-							background: "none",
-							border: "none",
-							cursor: "pointer",
-							color: "var(--color-content-tertiary)",
-							padding: 2,
-						}}
+						className="inbox-compose-reply-close"
 					>
 						<X size={14} />
 					</button>
@@ -88,17 +64,16 @@ export function ComposeArea({
 				dir="auto"
 			/>
 			<button
-				className="inbox-chat__send"
+				className={`inbox-chat__send ${
+					sendStatus === "success"
+						? "inbox-chat__send--success"
+						: sendStatus === "error"
+							? "inbox-chat__send--error"
+							: ""
+				}`}
 				onClick={onSend}
 				disabled={!value.trim() || sending || !channelOnline}
 				aria-label={t.common.sendMessage}
-				style={
-					sendStatus === "success"
-						? { background: "#22c55e" }
-						: sendStatus === "error"
-							? { background: "#ef4444" }
-							: undefined
-				}
 			>
 				{sending ? (
 					<Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />

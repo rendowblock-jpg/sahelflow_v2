@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,11 +22,13 @@ import {
   Zap,
   Import,
   Shield,
+  ChevronDown,
 } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/components/providers/Providers";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSeller } from "@/components/providers/SellerProvider";
 
 const navIcons = {
   dashboard: LayoutDashboard,
@@ -46,23 +49,48 @@ const navIcons = {
   settings: Settings,
 };
 
-const navRoutes: { key: keyof typeof navIcons; href: string }[] = [
-  { key: "dashboard", href: "/dashboard" },
-  { key: "orders", href: "/dashboard/orders" },
-  { key: "inbox", href: "/dashboard/inbox" },
-  { key: "customers", href: "/dashboard/customers" },
-  { key: "products", href: "/dashboard/products" },
-  { key: "delivery", href: "/dashboard/delivery" },
-  { key: "returns", href: "/dashboard/returns" },
-  { key: "accounting", href: "/dashboard/accounting" },
-  { key: "shipping", href: "/dashboard/shipping" },
-  { key: "agents", href: "/dashboard/agents" },
-  { key: "automations", href: "/dashboard/automations" },
-  { key: "analytics", href: "/dashboard/analytics" },
-  { key: "integrations", href: "/dashboard/integrations" },
-  { key: "imports", href: "/dashboard/imports" },
-  { key: "team", href: "/dashboard/settings/team" },
-  { key: "settings", href: "/dashboard/settings" },
+const navGroups = [
+  {
+    titleKey: "groupWorkspace" as const,
+    items: [
+      { key: "dashboard" as const, href: "/dashboard" },
+      { key: "orders" as const, href: "/dashboard/orders" },
+      { key: "inbox" as const, href: "/dashboard/inbox" },
+      { key: "customers" as const, href: "/dashboard/customers" },
+    ],
+  },
+  {
+    titleKey: "groupOperations" as const,
+    items: [
+      { key: "products" as const, href: "/dashboard/products" },
+      { key: "delivery" as const, href: "/dashboard/delivery" },
+      { key: "returns" as const, href: "/dashboard/returns" },
+      { key: "shipping" as const, href: "/dashboard/shipping" },
+    ],
+  },
+  {
+    titleKey: "groupAiAutomation" as const,
+    items: [
+      { key: "agents" as const, href: "/dashboard/agents" },
+      { key: "automations" as const, href: "/dashboard/automations" },
+      { key: "imports" as const, href: "/dashboard/imports" },
+    ],
+  },
+  {
+    titleKey: "groupFinanceInsights" as const,
+    items: [
+      { key: "accounting" as const, href: "/dashboard/accounting" },
+      { key: "analytics" as const, href: "/dashboard/analytics" },
+    ],
+  },
+  {
+    titleKey: "groupAdministration" as const,
+    items: [
+      { key: "integrations" as const, href: "/dashboard/integrations" },
+      { key: "team" as const, href: "/dashboard/settings/team" },
+      { key: "settings" as const, href: "/dashboard/settings" },
+    ],
+  },
 ];
 
 const routePermissions: Record<keyof typeof navIcons, string> = {
@@ -89,10 +117,27 @@ export default function Sidebar() {
   const { t } = useI18n();
   const { isMobile, isTablet, sidebarOpen, closeSidebar } = useLayout();
   const { hasPermission, loading } = usePermissions();
+  const { displayName: storeName, initials } = useSeller();
   const isMobileOrTablet = isMobile || isTablet;
+  const [waConnected, setWaConnected] = useState<boolean>(false);
 
-  // Compact (icon-only) mode is not yet implemented; kept as explicit false so
-  // the collapsed CSS class is never applied and the sidebar always shows labels.
+  useEffect(() => {
+    async function checkWhatsApp() {
+      try {
+        const res = await fetch("/api/channels/connect", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          setWaConnected(data.status === "connected");
+        }
+      } catch {
+        // fail silently
+      }
+    }
+    checkWhatsApp();
+    const interval = setInterval(checkWhatsApp, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const sidebarClass = `sf-sidebar ${isMobileOrTablet ? (sidebarOpen ? "mobile-open" : "") : ""}`;
 
   return (
@@ -102,13 +147,13 @@ export default function Sidebar() {
       )}
 
       <aside className={sidebarClass}>
-        {/* Logo — 32px, 6px radius, weight 600 (Linear standard) */}
-        <div className="sf-sidebar-logo">
+        {/* Logo Row */}
+        <div className="sf-sidebar-logo" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             style={{
               width: 28,
               height: 28,
-              borderRadius: 6,
+              borderRadius: 7,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -116,7 +161,7 @@ export default function Sidebar() {
               fontWeight: 700,
               color: "white",
               flexShrink: 0,
-              background: "var(--color-brand-500)",
+              background: "var(--gradient-brand)",
               letterSpacing: "-0.02em",
             }}
           >
@@ -125,18 +170,25 @@ export default function Sidebar() {
           <span
             style={{
               fontSize: 15,
-              fontWeight: 600,
-              letterSpacing: "-0.03em",
+              fontWeight: 700,
+              letterSpacing: "-0.04em",
               color: "var(--color-content-primary)",
+              flex: 1,
             }}
           >
             SahelFlow
           </span>
+
+          {/* WhatsApp status dot */}
+          <div
+            className={waConnected ? "sf-wa-status-dot sf-wa-status-dot--connected" : "sf-wa-status-dot"}
+            title={waConnected ? "WhatsApp Connected" : "WhatsApp Offline"}
+          />
+
           {isMobileOrTablet && (
             <button
               onClick={closeSidebar}
               style={{
-                marginInlineStart: "auto",
                 background: "none",
                 border: "none",
                 color: "var(--color-content-tertiary)",
@@ -150,40 +202,75 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="sf-sidebar-nav">
-          {!loading && navRoutes.map((item) => {
-            const permission = routePermissions[item.key];
-            if (!hasPermission(permission)) {
-              return null;
-            }
+        {/* Workspace Header */}
+        <div className="sf-sidebar-workspace">
+          <div className="sf-sidebar-workspace-avatar">
+            {initials || "S"}
+          </div>
+          <span className="sf-sidebar-workspace-name">
+            {storeName || t.common.myStore}
+          </span>
+          <div className="sf-sidebar-workspace-badge">Pro</div>
+          <ChevronDown size={12} style={{ color: "var(--color-content-tertiary)", flexShrink: 0 }} />
+        </div>
 
-            const Icon = navIcons[item.key];
-            const label = t.nav[item.key];
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        {/* Navigation */}
+        <nav className="sf-sidebar-nav" style={{ padding: "12px 8px", gap: "16px" }}>
+          {!loading && navGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => {
+              const permission = routePermissions[item.key];
+              return hasPermission(permission);
+            });
+
+            if (visibleItems.length === 0) return null;
 
             return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={`sf-nav-link ${isActive ? "active" : ""}`}
-                onClick={() => {
-                  if (isMobileOrTablet) closeSidebar();
-                }}
-              >
-                {/* Icons: 18px (Linear standard), white when active */}
-                <Icon
-                  size={18}
-                  strokeWidth={isActive ? 2 : 1.75}
+              <div key={group.titleKey} className="sf-nav-group" style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                <span
+                  className="sf-nav-group-title"
                   style={{
-                    flexShrink: 0,
-                    opacity: isActive ? 1 : 0.65,
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
+                    color: "var(--color-content-tertiary)",
+                    padding: "0 10px",
+                    marginBottom: "4px",
+                    opacity: 0.5,
                   }}
-                />
-                <span>{label}</span>
-              </Link>
+                >
+                  {t.nav[group.titleKey]}
+                </span>
+                {visibleItems.map((item) => {
+                  const Icon = navIcons[item.key];
+                  const label = t.nav[item.key];
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      className={`sf-nav-link ${isActive ? "active" : ""}`}
+                      onClick={() => {
+                        if (isMobileOrTablet) closeSidebar();
+                      }}
+                    >
+                      <Icon
+                        size={16}
+                        strokeWidth={isActive ? 2.2 : 1.8}
+                        style={{
+                          flexShrink: 0,
+                          opacity: isActive ? 1 : 0.6,
+                          transition: "opacity 0.1s ease",
+                        }}
+                      />
+                      <span>{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -199,12 +286,13 @@ export default function Sidebar() {
               border: "none",
               cursor: "pointer",
               fontFamily: "inherit",
+              color: "var(--color-content-tertiary)",
             }}
           >
             <LogOut
-              size={18}
-              strokeWidth={1.75}
-              style={{ flexShrink: 0, opacity: 0.65 }}
+              size={16}
+              strokeWidth={1.8}
+              style={{ flexShrink: 0, opacity: 0.6 }}
             />
             <span>{t.nav.logOut}</span>
           </button>

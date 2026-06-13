@@ -88,6 +88,16 @@ export const POST = withAuthAndRateLimit(
     )
 
     if (!result.success) {
+      const idempotencyKey = `delivery:${order.id}:${Date.now()}`;
+      await supabase.from('webhook_retry_queue').insert({
+        idempotency_key: idempotencyKey,
+        event_type: 'delivery.create',
+        payload: { orderId: order.id, provider },
+        seller_id: sellerId,
+        error: result.error || 'Unknown delivery failure',
+        status: 'pending',
+      });
+
       return NextResponse.json(
         { error: `Shipment failed: ${result.error}` },
         { status: 502 },

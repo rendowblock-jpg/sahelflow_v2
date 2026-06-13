@@ -1,6 +1,6 @@
 {
-  "signature": "src/lib/__tests__/rls-integration.test.ts::ℹ️ Advisory — no action required this turn:\nCode-quality warnings introduced/touched this turn: 2 across 1 file(s).\nTop rules: no-any-type×2\nDetails written to .pi-lens/cache/code-quality-warnings.json\nNo action required unless you are already refactoring these areas.",
-  "sessionId": "lens-mpue1ecx-1c45fef3",
-  "projectSeqStart": 153,
-  "projectSeqEnd": 154
+  "signature": "tests/magic-moment.spec.ts::🕸️ Impact cascade from edited file:\nRisk: high fanout\n📐 Cascade errors in 1 neighbor file(s) — fix before finishing turn:\n<diagnostics file=\"src/app/(dashboard)/dashboard/orders/page.tsx\" reason=\"fallback\">\n  line 394, col 11 rule=cascade:2352: Conversion of type 'OrderStats' to type 'Record<string, number>' may be a mistake because neither ty\n</diagnostics>",
+  "sessionId": "lens-mq5ox77k-d8cd9690",
+  "projectSeqStart": 186,
+  "projectSeqEnd": 187
 }

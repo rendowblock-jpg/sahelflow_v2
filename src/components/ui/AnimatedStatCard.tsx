@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, memo } from "react";
-import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { getLocaleTag } from "@/components/ui/charts/chart-utils";
@@ -12,6 +11,7 @@ interface AnimatedStatCardProps {
 	variant: "brand" | "success" | "warning" | "danger";
 	icon?: LucideIcon;
 	delay?: number;
+	sparklinePercent?: number;
 }
 
 function parseNumericValue(str: string): {
@@ -31,10 +31,17 @@ function AnimatedStatCardComponent({
 	variant,
 	icon: Icon,
 	delay = 0,
+	sparklinePercent,
 }: AnimatedStatCardProps) {
 	const { locale } = useI18n();
 	const [displayValue, setDisplayValue] = useState("0");
+	const [mounted, setMounted] = useState(false);
 	const { prefix, num, suffix } = parseNumericValue(value);
+
+	useEffect(() => {
+		const t = setTimeout(() => setMounted(true), delay);
+		return () => clearTimeout(t);
+	}, [delay]);
 
 	useEffect(() => {
 		if (num === 0) {
@@ -66,31 +73,38 @@ function AnimatedStatCardComponent({
 		};
 	}, [num, prefix, suffix, delay, value, locale]);
 
+	// Compute sparkline % from value if not provided
+	const spark = sparklinePercent !== undefined
+		? Math.min(100, Math.max(0, sparklinePercent))
+		: Math.min(100, (num / Math.max(num * 1.2, 1)) * 100);
+
 	return (
-		<motion.div
-			className={`sf-card sf-stat sf-stat-${variant}`}
-			initial={{ opacity: 0, y: 12 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{
-				duration: 0.4,
-				delay: delay / 1000,
-				ease: [0.16, 1, 0.3, 1],
+		<div
+			className={`sf-stat-card-aaa sf-stat-card-aaa--${variant}`}
+			style={{
+				opacity: mounted ? 1 : 0,
+				transform: mounted ? "translateY(0)" : "translateY(8px)",
+				transition: `opacity 0.35s ease ${delay}ms, transform 0.35s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
 			}}
 		>
-			<div className="sf-flex-between">
+			<div className="sf-stat-card-aaa__header">
 				<div>
-					<p className="sf-stat-label">{label}</p>
-					<p className="sf-stat-value sf-text-tabular">{displayValue}</p>
+					<p className="sf-stat-card-aaa__label">{label}</p>
+					<p className="sf-stat-card-aaa__value sf-text-tabular">{displayValue}</p>
 				</div>
 				{Icon && (
-					<Icon
-						size={20}
-						className="sf-text-tertiary"
-						style={{ opacity: 0.5 }}
-					/>
+					<div className="sf-stat-card-aaa__icon">
+						<Icon size={18} strokeWidth={2} />
+					</div>
 				)}
 			</div>
-		</motion.div>
+			<div className="sf-stat-card-aaa__sparkline">
+				<div
+					className="sf-stat-card-aaa__sparkline-fill"
+					style={{ width: `${spark}%` }}
+				/>
+			</div>
+		</div>
 	);
 }
 

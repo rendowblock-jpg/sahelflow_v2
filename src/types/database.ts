@@ -38,7 +38,6 @@ export interface Seller {
 	webhook_token: string | null;
 	webhook_orders_count: number;
 	webhook_last_sync: string | null;
-	whatsapp_template: string | null;
 	notification_settings: NotificationSettings | null;
 	wilaya: string | null;
 	categories: string[] | null;
@@ -180,7 +179,6 @@ export interface Order {
 	confirmation_status: ConfirmationStatus | null;
 	confirmation_attempts: number;
 	confirmation_notes: string | null;
-	return_reason: ReturnReason | null;
 	upsell_offered: boolean;
 	upsell_accepted: boolean;
 	conversation_id: string | null;
@@ -247,6 +245,7 @@ export interface DashboardStats {
 	codCleared: number;
 	codPendingCollection: number;
 	codAtRisk: number;
+	confirmationRate: number;
 }
 
 // ===== COD CASH FLOW STATS =====
@@ -345,99 +344,21 @@ export interface AIExtraction {
 }
 
 // ===== RETURNS =====
-export type ReturnStatus =
-	| "requested"
-	| "approved"
-	| "pickup"
-	| "received"
-	| "inspected"
-	| "refunded"
-	| "exchanged"
-	| "rejected"
-	| "closed";
-
-export type ReturnResolutionType = "refund" | "exchange" | "credit" | "reject";
-
+// Canonical definitions live in @/types/returns — re-exported here for backward compatibility
+export type {
+	ReturnStatus,
+	ReturnReason as _ReturnReason,
+	ReturnResolutionType,
+	ReturnItem,
+	Return,
+	ReturnNote,
+} from './returns';
+// ReturnNoteType is inlined into ReturnNote.type in returns.ts
 export type ReturnNoteType = "note" | "status_change" | "system" | "customer";
 
-export interface Return {
-	id: string;
-	seller_id: string;
-	order_id: string;
-	customer_id: string | null;
-	return_number: string;
-	status: ReturnStatus;
-	reason: ReturnReason;
-	reason_details: string | null;
-	resolution_type: ReturnResolutionType | null;
-	refund_amount: number;
-	exchange_order_id: string | null;
-	items: OrderItem[];
-	photos: string[] | null;
-	return_tracking_id: string | null;
-	return_delivery_company: string | null;
-	requested_at: string;
-	approved_at: string | null;
-	received_at: string | null;
-	resolved_at: string | null;
-	deleted_at: string | null;
-	created_at: string;
-	updated_at: string;
-	// Joined relations (from Supabase select with joins)
-	notes?: ReturnNote[];
-	order?: {
-		id: string;
-		order_number: string;
-		items?: OrderItem[];
-		total_price: number;
-		customer?: {
-			id: string;
-			name: string | null;
-			phone: string | null;
-			wilaya?: string | null;
-			commune?: string | null;
-			address?: string | null;
-		} | null;
-	} | null;
-	customer?: {
-		id: string;
-		name: string | null;
-		phone: string | null;
-	} | null;
-}
-
-export interface ReturnNote {
-	id: string;
-	return_id: string;
-	author_id: string | null;
-	type: ReturnNoteType;
-	content: string;
-	metadata: Record<string, unknown> | null;
-	created_at: string;
-}
-
 // ===== EXPENSES =====
-export type ExpenseCategory =
-	| "ads"
-	| "packaging"
-	| "delivery_fees"
-	| "returns"
-	| "supplies"
-	| "salary"
-	| "rent"
-	| "other";
-
-export interface Expense {
-	id: string;
-	seller_id: string;
-	category: ExpenseCategory;
-	amount: number;
-	description: string | null;
-	receipt_url: string | null;
-	expense_date: string;
-	created_at: string;
-	updated_at: string;
-}
+// Canonical definitions live in @/types/accounting — re-exported here for backward compatibility
+export type { ExpenseCategory, Expense } from './accounting';
 
 // ===== TEAM MEMBERS =====
 export type TeamRole = "owner" | "admin" | "confirmer" | "packer" | "viewer";

@@ -38,9 +38,9 @@ export async function getOrders(options?: {
   limit?: number;
   offset?: number;
 }) {
-  const status = typeof options === "string" ? options : options?.status;
-  const limit = typeof options === "object" ? (options?.limit ?? 50) : 50;
-  const offset = typeof options === "object" ? (options?.offset ?? 0) : 0;
+  const status = options?.status;
+  const limit = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
 
   let query = getSupabase()
     .from("orders")
@@ -53,7 +53,7 @@ export async function getOrders(options?: {
   if (status && status !== "all") query = query.eq("status", status);
   const { data, error, count } = await query;
   if (error) throw error;
-  return { data: (data || []).filter((o) => !o.deleted_at), total: count ?? 0 };
+  return { data: data || [], total: count ?? 0 };
 }
 
 export async function getOrder(id: string) {
@@ -220,7 +220,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
       refused: "order.returned",
       cancelled: "order.cancelled",
     };
-    const triggerType = statusTriggerMap[status] || "order.created";
+    const triggerType = statusTriggerMap[status];
 
     const currentUser = await getCurrentUser();
     const sellerId = currentUser?.id;

@@ -145,7 +145,7 @@ export function AIAssistant() {
 							return;
 						}
 					}
-				} catch (_e) {
+				} catch {
 					/* localStorage fallback may fail */
 				}
 			}
@@ -172,7 +172,7 @@ export function AIAssistant() {
 			try {
 				const toSave = messages.slice(-50);
 				localStorage.setItem("sahelflow_ai_chat", JSON.stringify(toSave));
-			} catch (_e) {
+			} catch {
 				/* localStorage may be unavailable */
 			}
 		}
@@ -209,7 +209,7 @@ export function AIAssistant() {
 						setSessionId(session.id);
 						sessionIdRef.current = session.id;
 					}
-				} catch (_e) {
+				} catch {
 					/* session init may fail */
 				}
 			}
@@ -225,7 +225,7 @@ export function AIAssistant() {
 						isFirstMessage: isFirst,
 					}),
 				});
-			} catch (_e) {
+			} catch {
 				/* message persist may fail */
 			}
 		},
@@ -505,10 +505,15 @@ export function AIAssistant() {
 
 	return (
 		<>
-			{/* Floating Button */}
+			{/* Floating Action Button — gradient sphere with pulse */}
 			{!isOpen && (
-				<button className="sf-ai-fab" onClick={() => setIsOpen(true)}>
-					<Sparkles size={24} />
+				<button className="sf-ai-fab-aaa" onClick={() => setIsOpen(true)} aria-label="Open AI Assistant">
+					<Sparkles size={22} />
+					{messages.filter(m => m.role === 'assistant' && m.id !== 'welcome').length > 0 && (
+						<span className="sf-ai-fab-badge">
+							{Math.min(messages.filter(m => m.role === 'assistant' && m.id !== 'welcome').length, 9)}
+						</span>
+					)}
 				</button>
 			)}
 
@@ -524,40 +529,38 @@ export function AIAssistant() {
 					)}
 
 					<div style={popupStyle}>
-						{/* Header */}
-						<div className="sf-ai-chat-header">
-							<div className="sf-flex-center-gap-md">
+						{/* Header — AAA frosted glass with 3px brand accent bar */}
+						<div className="sf-ai-window-header">
+							<div className="sf-flex sf-items-center sf-gap-md">
 								<div
 									className="sf-ai-msg-avatar"
 									style={{ background: "rgba(255,255,255,0.2)" }}
 								>
-									<Bot size={18} />
+									<Bot size={16} />
 								</div>
 								<div>
-									<div className="sf-flex-center-gap-sm">
-										<p
-											style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}
-										>
+									<div className="sf-flex sf-items-center sf-gap-sm">
+										<p style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>
 											{t.ai.title}
 										</p>
-										{detectedLang && (
-											<span className="sf-ai-header-badge">{detectedLang}</span>
-										)}
 										{lastModelUsed && (
 											<span
-												className="sf-ai-header-badge"
+												className="sf-ai-model-badge"
 												title={lastModelUsed}
 											>
 												⚡ {getModelBadge(lastModelUsed)}
 											</span>
 										)}
+										{!lastModelUsed && (
+											<span className="sf-ai-model-badge">⚡ Sahara-Brain</span>
+										)}
 									</div>
-									<p style={{ fontSize: 10, opacity: 0.85, lineHeight: 1.2 }}>
+									<p style={{ fontSize: 10, opacity: 0.75, lineHeight: 1.2, marginTop: 2 }}>
 										{t.ai.subtitle}
 									</p>
 								</div>
 							</div>
-							<div className="sf-flex-center-gap-xs">
+							<div className="sf-flex sf-items-center sf-gap-sm">
 								<button
 									onClick={clearChat}
 									title={t.common.clearConversation}
@@ -606,47 +609,44 @@ export function AIAssistant() {
 							<div ref={messagesEndRef} />
 						</div>
 
-						{/* Quick Prompts */}
+						{/* Quick Prompts — 2×3 icon card grid */}
 						{messages.length <= 1 && (
-							<div
-								className="sf-ai-input-area sf-px-md sf-pb-sm sf-gap-sm"
-								style={{ borderTop: "none", paddingTop: 0, flexWrap: "wrap" }}
-							>
+							<div className="sf-ai-quick-grid">
 								{QUICK_PROMPTS.map((q) => (
 									<button
 										key={q.label}
 										onClick={() => sendMessage(q.prompt)}
-										className="sf-ai-quick-btn"
+										className="sf-ai-quick-card"
 									>
-										<q.icon size={12} />
+										<div className="sf-ai-quick-card-icon">
+											<q.icon size={13} />
+										</div>
 										{q.label}
 									</button>
 								))}
 							</div>
 						)}
 
-						{/* Input */}
-						<div className="sf-ai-input-area">
+						{/* Input — pill-shaped with integrated send button */}
+						<div className="sf-ai-input-pill">
 							<input
 								ref={inputRef}
 								value={input}
 								onChange={(e) => setInput(e.target.value)}
 								onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
 								placeholder={t.ai.placeholder}
-								className="sf-input"
-								style={{ flex: 1, minHeight: 40 }}
 								disabled={isLoading}
 								dir="auto"
 							/>
 							<button
+								className="sf-ai-send"
 								onClick={() => sendMessage(input)}
 								disabled={!input.trim() || isLoading}
-								className={`sf-ai-send-btn ${input.trim() ? "sf-ai-send-btn--active" : "sf-ai-send-btn--disabled"}`}
 							>
 								{isLoading ? (
-									<Loader2 size={16} className="sf-animate-spin" />
+									<Loader2 size={15} className="sf-animate-spin" />
 								) : (
-									<Send size={16} />
+									<Send size={15} />
 								)}
 							</button>
 						</div>

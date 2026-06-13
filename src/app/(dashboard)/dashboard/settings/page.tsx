@@ -20,7 +20,6 @@ import {
 } from "@/lib/data/service";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useLayout } from "@/components/providers/Providers";
 import { useToast } from "@/components/dashboard/ToastProvider";
 import { PageTransition } from "@/components/ui/motion";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -61,7 +60,6 @@ const TAB_ICONS: Record<string, typeof User> = {
 
 export default function SettingsPage() {
   const { t } = useI18n();
-  const { isMobile } = useLayout();
   const { toast } = useToast();
   const { role } = usePermissions();
   const [activeTab, setActiveTab] = useState<string>("profile");
@@ -476,26 +474,23 @@ export default function SettingsPage() {
         <p className="sf-page-subtitle">{t.settings.subtitle}</p>
       </div>
 
-      <div
-        className={`sf-flex ${isMobile ? "sf-flex-col sf-gap-md" : "sf-gap-xl"}`}
-      >
+      <div className="sf-settings-layout">
         {/* Tab Nav */}
-        <div
-          className={isMobile ? "sf-settings-nav--mobile" : "sf-settings-nav"}
-          style={isMobile ? {} : { width: 200, flexShrink: 0 }}
-        >
+        <div className="sf-settings-rail">
           {TABS.map((tab) => {
             const Icon = TAB_ICONS[tab];
             const label =
               t.settings[tab as keyof typeof t.settings] ||
               (tab === "channels" ? "Channels" : tab);
+            const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`sf-settings-nav-item ${activeTab === tab ? "active" : ""} ${isMobile ? "sf-settings-nav-item--mobile" : ""}`}
+                className={`sf-settings-rail-item ${isActive ? "active" : ""}`}
+                type="button"
               >
-                <Icon size={16} className="sf-flex-shrink-0" />
+                <Icon size={15} className="sf-flex-shrink-0" />
                 <span>{label}</span>
               </button>
             );
@@ -503,7 +498,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="sf-settings-content">
+        <div className="sf-settings-content-area">
           {activeTab === "profile" && (
             <ProfileTab
               formData={formData}

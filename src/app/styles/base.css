@@ -21,9 +21,12 @@
 	--color-surface-primary: #09090b;
 	--color-surface-secondary: #111113;
 	--color-surface-tertiary: #1a1a1f;
+	--color-surface-elevated: #16161a;
+	--color-surface-inset: rgba(0, 0, 0, 0.3);
+	--color-surface-glass: rgba(13, 13, 15, 0.88);
 	--color-surface-active: rgba(59, 158, 255, 0.08);
 	--color-surface-hover: rgba(255, 255, 255, 0.03);
-	--color-surface-overlay: rgba(0, 0, 0, 0.65);
+	--color-surface-overlay: rgba(0, 0, 0, 0.72);
 	--color-surface-card: rgba(17, 17, 19, 0.9);
 
 	/* Content */
@@ -44,6 +47,29 @@
 	--color-warn-500: #f59e0b;
 	--color-danger-400: #f87171;
 	--color-danger-500: #ef4444;
+
+	/* Status semantic tokens — order pipeline */
+	--status-pending: #fbbf24;
+	--status-pending-bg: rgba(251, 191, 36, 0.1);
+	--status-confirmed: #60a5fa;
+	--status-confirmed-bg: rgba(96, 165, 250, 0.1);
+	--status-shipped: #a78bfa;
+	--status-shipped-bg: rgba(167, 139, 250, 0.1);
+	--status-delivered: #34d399;
+	--status-delivered-bg: rgba(52, 211, 153, 0.1);
+	--status-returned: #f87171;
+	--status-returned-bg: rgba(248, 113, 113, 0.1);
+	--status-cancelled: #71717a;
+	--status-cancelled-bg: rgba(113, 113, 122, 0.1);
+	--status-draft: #71717a;
+	--status-draft-bg: rgba(113, 113, 122, 0.08);
+
+	/* Brand gradient */
+	--gradient-brand: linear-gradient(135deg, #3b9eff 0%, #2a7ad4 100%);
+	--gradient-brand-subtle: linear-gradient(135deg, rgba(59, 158, 255, 0.15) 0%, rgba(42, 122, 212, 0.05) 100%);
+	--gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	--gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+	--gradient-canvas: radial-gradient(ellipse 800px 600px at 50% 0%, rgba(59, 158, 255, 0.04), transparent);
 
 	/* Shadows — multi-layer ring + contact + ambient (Vercel × Cal.com) */
 	--shadow-xs:
@@ -69,8 +95,9 @@
 		0 40px 80px -20px rgba(0, 0, 0, 0.5);
 
 	/* Glass */
-	--glass-bg: rgba(17, 17, 19, 0.85);
-	--glass-blur: 20px;
+	--glass-bg: rgba(13, 13, 15, 0.88);
+	--glass-blur: 24px;
+	--glass-border: rgba(255, 255, 255, 0.06);
 
 	/* Spacing Scale */
 	--space-1: 4px;
@@ -113,16 +140,20 @@
 	--duration-slow: 400ms;
 
 	/* Layout */
-	--sidebar-width: 240px;
-	--sidebar-collapsed: 64px;
-	--topbar-height: 56px;
+	--sidebar-width: 220px;
+	--sidebar-collapsed: 60px;
+	--topbar-height: 52px;
 	--mobile-nav-height: 56px;
+	--content-max: 1280px;
+	--settings-nav-width: 168px;
 
-	/* Border Radius — 4-value system (Linear × Vercel × Cal.com) */
+	/* Border Radius — 6-value system */
 	--radius-sm: 6px;
 	--radius-md: 8px;
 	--radius-lg: 12px;
 	--radius-xl: 16px;
+	--radius-2xl: 20px;
+	--radius-3xl: 24px;
 	--radius-pill: 9999px;
 }
 
@@ -132,9 +163,12 @@
 	--color-surface-primary: #fafafa;
 	--color-surface-secondary: #ffffff;
 	--color-surface-tertiary: #f4f4f5;
+	--color-surface-elevated: #f8f8fa;
+	--color-surface-inset: rgba(0, 0, 0, 0.04);
+	--color-surface-glass: rgba(250, 250, 250, 0.9);
 	--color-surface-active: rgba(59, 158, 255, 0.07);
 	--color-surface-hover: rgba(0, 0, 0, 0.03);
-	--color-surface-overlay: rgba(0, 0, 0, 0.35);
+	--color-surface-overlay: rgba(0, 0, 0, 0.4);
 	--color-surface-card: rgba(255, 255, 255, 1);
 
 	/* Content */
@@ -178,8 +212,9 @@
 		0 40px 80px -20px rgba(0, 0, 0, 0.1);
 
 	/* Glass */
-	--glass-bg: rgba(255, 255, 255, 0.88);
+	--glass-bg: rgba(255, 255, 255, 0.9);
 	--glass-blur: 24px;
+	--glass-border: rgba(0, 0, 0, 0.06);
 }
 
 /* ── Semantic aliases — new code uses --sf-*, existing code uses --color-* ── */

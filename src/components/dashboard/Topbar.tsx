@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Menu, Sun, Moon, Globe, Check } from "lucide-react";
+import Link from "next/link";
+import { Search, Menu, Sun, Moon, Globe, Check, User, LogOut, Settings, Shield } from "lucide-react";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useLayout } from "@/components/providers/Providers";
 import { useSeller } from "@/components/providers/SellerProvider";
 import NotificationCenter from "@/components/dashboard/NotificationCenter";
+import { signOut } from "@/lib/auth/actions";
 
 const LANGUAGES: { code: Locale; label: string; flag: string }[] = [
 	{ code: "ar", label: "العربية", flag: "🇩🇿" },
@@ -18,8 +20,9 @@ export default function Topbar() {
 	const { t, locale, setLocale } = useI18n();
 	const { theme, toggleTheme } = useTheme();
 	const { isMobile, isTablet, openSidebar } = useLayout();
-	const { displayName: sellerName, initials } = useSeller();
+	const { displayName: sellerName, initials, profile } = useSeller();
 	const [langOpen, setLangOpen] = useState(false);
+	const [userMenuOpen, setUserMenuOpen] = useState(false);
 
 	const isMobileOrTablet = isMobile || isTablet;
 
@@ -36,13 +39,12 @@ export default function Topbar() {
 						<Menu size={18} />
 					</button>
 				)}
-				<div className="sf-topbar-search">
+				<div className="sf-topbar-search-pill">
 					<Search size={14} className="sf-topbar-search-icon" />
 					<input
 						type="text"
 						readOnly
 						placeholder={t.common.searchPlaceholder}
-						className="sf-input sf-topbar-search-input"
 						onClick={() =>
 							window.dispatchEvent(new Event("open-command-palette"))
 						}
@@ -110,14 +112,111 @@ export default function Topbar() {
 
 				<NotificationCenter />
 
-				{/* User button — pure CSS hover via .sf-topbar-user-btn */}
-				<button className="sf-topbar-user-btn sf-hide-mobile">
-					<div className="sf-topbar-user-avatar">{initials}</div>
-					<span className="sf-topbar-user-name">
-						{sellerName || t.common.myStore}
-					</span>
-				</button>
+				{/* User profile dropdown */}
+				<div className="sf-user-menu-wrapper" style={{ position: "relative" }}>
+					<button
+						className="sf-topbar-user-btn sf-hide-mobile"
+						onClick={() => setUserMenuOpen(!userMenuOpen)}
+						aria-expanded={userMenuOpen}
+						style={{ position: "relative", zIndex: userMenuOpen ? 100 : 1 }}
+					>
+						<div className="sf-topbar-user-ring">{initials}</div>
+						<span className="sf-topbar-user-name">
+							{sellerName || t.common.myStore}
+						</span>
+					</button>
+
+					{userMenuOpen && (
+						<>
+							<div
+								style={{ position: "fixed", inset: 0, zIndex: 99 }}
+								onClick={() => setUserMenuOpen(false)}
+							/>
+							<div
+								className="sf-lang-dropdown"
+								style={{
+									position: "absolute",
+									top: "calc(100% + 8px)",
+									insetInlineEnd: 0,
+									minWidth: "200px",
+									padding: "6px",
+									display: "flex",
+									flexDirection: "column",
+									gap: "2px",
+								}}
+							>
+								{/* Info Header */}
+								<div style={{ padding: "8px 10px", borderBottom: "1px solid var(--color-line-primary)", marginBottom: "4px" }}>
+									<p style={{ fontSize: "13px", fontWeight: 600, color: "var(--color-content-primary)" }}>{sellerName || t.common.myStore}</p>
+									{profile?.email && (
+										<p style={{ fontSize: "11px", color: "var(--color-content-tertiary)", marginTop: "2px" }}>{profile.email}</p>
+									)}
+								</div>
+
+								{/* Profile */}
+								<Link
+									href="/dashboard/settings"
+									className="sf-lang-option"
+									style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}
+									onClick={() => setUserMenuOpen(false)}
+								>
+									<User size={14} style={{ opacity: 0.7 }} />
+									<span>{t.settings.profile || "Profile"}</span>
+								</Link>
+
+								{/* Team */}
+								<Link
+									href="/dashboard/settings/team"
+									className="sf-lang-option"
+									style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}
+									onClick={() => setUserMenuOpen(false)}
+								>
+									<Shield size={14} style={{ opacity: 0.7 }} />
+									<span>{t.nav.team || "Team"}</span>
+								</Link>
+
+								{/* Settings */}
+								<Link
+									href="/dashboard/settings"
+									className="sf-lang-option"
+									style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}
+									onClick={() => setUserMenuOpen(false)}
+								>
+									<Settings size={14} style={{ opacity: 0.7 }} />
+									<span>{t.nav.settings || "Settings"}</span>
+								</Link>
+
+								<div style={{ height: "1px", background: "var(--color-line-secondary)", margin: "4px 0" }} />
+
+								{/* Logout */}
+								<button
+									onClick={() => {
+										setUserMenuOpen(false);
+										signOut();
+									}}
+									className="sf-lang-option"
+									style={{
+										width: "100%",
+										background: "transparent",
+										border: "none",
+										cursor: "pointer",
+										fontFamily: "inherit",
+										color: "var(--color-danger-400)",
+										display: "flex",
+										alignItems: "center",
+										gap: "8px",
+										textAlign: "start",
+									}}
+								>
+									<LogOut size={14} style={{ color: "var(--color-danger-400)" }} />
+									<span>{t.nav.logOut}</span>
+								</button>
+							</div>
+						</>
+					)}
+				</div>
 			</div>
 		</header>
 	);
 }
+

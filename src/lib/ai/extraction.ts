@@ -112,7 +112,7 @@ function extractPhoneNumbers(text: string): string[] {
         const cleaned = match
           .replace(/[\s.-]/g, "")
           .replace(/^(\+213|00213)/, "0");
-        if (cleaned.length === 10) phones.add(cleaned);
+        phones.add(cleaned);
       }
     }
   }
@@ -133,7 +133,7 @@ function extractName(text: string): string | undefined {
     if (match) {
       const name = match[1].trim();
       // Filter out common false positives
-      if (name.length > 2 && !name.match(/^\d+$/)) {
+      if (name.length > 2) {
         return name;
       }
     }
@@ -247,7 +247,7 @@ function extractProducts(text: string): ProductMention[] {
     for (const pattern of qtyPatterns) {
       const match = text.match(pattern);
       if (match) {
-        const num = parseInt(match[0].match(/\d+/)?.[0] || "1");
+        const num = parseInt(match[0].match(/\d+/)![0]);
         if (num > 0 && num < 100) totalQty = num;
       }
     }
@@ -302,7 +302,7 @@ function extractProducts(text: string): ProductMention[] {
     for (const pattern of qtyPatterns) {
       const match = segText.match(pattern);
       if (match) {
-        const num = parseInt(match[0].match(/\d+/)?.[0] || "1");
+        const num = parseInt(match[0].match(/\d+/)![0]);
         if (num > 0 && num < 100) {
           qty = num;
           break;
@@ -518,7 +518,7 @@ function normalizeDarija(text: string): string {
     // Replace Franco-Arab numerals with Arabic letters ONLY if adjacent to letters (avoids phone number/product number corruption)
     .replace(
       /(?<!\d)(?<=[a-zA-Z])[379582](?!\d)|(?<!\d)[379582](?=[a-zA-Z])(?!\d)/g,
-      (m) => FRANCO_ARAB_MAP[m] || m,
+      (m) => FRANCO_ARAB_MAP[m],
     )
     .toLowerCase()
     .trim();
@@ -574,8 +574,7 @@ export function matchProductToCatalog(
     const matchingWords = mentionWords.filter((w) =>
       productWords.some((pw) => pw.includes(w) || w.includes(pw)),
     );
-    const score =
-      mentionWords.length > 0 ? matchingWords.length / mentionWords.length : 0;
+    const score = matchingWords.length / mentionWords.length;
 
     if (score > bestScore) {
       bestScore = score;

@@ -117,10 +117,10 @@ export async function createReturn(params: {
 
 	if (error) throw error;
 
-	// Add initial timeline log
+	// Add initial timeline log (locale-neutral structured entry)
 	await addReturnNote(
 		data.id,
-		`Return request created of type: ${params.type}. Resolution: ${params.resolution_type}.`,
+		`return_created:type=${params.type}:resolution=${params.resolution_type}`,
 		"system",
 	).catch(() => {});
 
@@ -205,6 +205,9 @@ export async function createExchangeOrder(returnId: string): Promise<string> {
 	const user = await getCurrentUser();
 	if (!user) throw new Error("Not authenticated");
 
+	// Resolve sellerId once — reused below to avoid redundant DB round-trips
+	const sellerId = await getActiveSellerId();
+
 	// Get full original order data to copy details
 	const { data: orderDetails, error: detailsError } = await getSupabase()
 		.from("orders")
@@ -230,13 +233,12 @@ export async function createExchangeOrder(returnId: string): Promise<string> {
 	// Calculate delivery cost from seller shipping rates
 	const deliveryCost = await calculateDeliveryCost(
 		getSupabase(),
-		await getActiveSellerId(),
+		sellerId,
 		orderDetails.wilaya as string | null,
 		(orderDetails.delivery_type as "home" | "desk") || "home",
 	);
 
 	// Insert new order
-	const sellerId = await getActiveSellerId();
 	const { data: newOrder, error: insertError } = await getSupabase()
 		.from("orders")
 		.insert({

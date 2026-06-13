@@ -32,8 +32,8 @@ export function ForwardModal({
 				onClick={(e) => e.stopPropagation()}
 				style={{ maxWidth: 400, maxHeight: "70vh" }}
 			>
-				<div className="sf-flex-between" style={{ marginBottom: 16 }}>
-					<h2 style={{ fontSize: 16, fontWeight: 700 }}>{t.inbox.forwardTo}</h2>
+				<div className="inbox-forward-modal-header">
+					<h2 className="inbox-forward-modal-title">{t.inbox.forwardTo}</h2>
 					<button
 						onClick={onClose}
 						className="sf-btn sf-btn-ghost"
@@ -42,15 +42,7 @@ export function ForwardModal({
 						<X size={18} />
 					</button>
 				</div>
-				<div
-					style={{
-						maxHeight: 300,
-						overflow: "auto",
-						display: "flex",
-						flexDirection: "column",
-						gap: 2,
-					}}
-				>
+				<div className="inbox-forward-modal-list">
 					{conversations
 						.filter((c) => c.id !== activeConvoId && !c.is_archived)
 						.map((c) => (
@@ -61,50 +53,16 @@ export function ForwardModal({
 									await onForward(c.id, text);
 									onClose();
 								}}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 10,
-									padding: "8px 12px",
-									borderRadius: 8,
-									border: "none",
-									background: "transparent",
-									cursor: "pointer",
-									fontFamily: "inherit",
-									textAlign: "start",
-									width: "100%",
-								}}
+								className="inbox-forward-recipient-btn"
 							>
-								<div
-									style={{
-										width: 32,
-										height: 32,
-										borderRadius: "50%",
-										background: "var(--color-surface-tertiary)",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										fontSize: 13,
-										fontWeight: 700,
-										color: "var(--color-content-secondary)",
-										flexShrink: 0,
-									}}
-								>
+								<div className="inbox-forward-recipient-avatar">
 									{getContactName(c).charAt(0).toUpperCase()}
 								</div>
 								<div style={{ minWidth: 0 }}>
-									<p style={{ fontWeight: 500, fontSize: 13 }}>
+									<p className="inbox-forward-recipient-name">
 										{getContactName(c)}
 									</p>
-									<p
-										style={{
-											fontSize: 11,
-											color: "var(--color-content-tertiary)",
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-										}}
-									>
+									<p className="inbox-forward-recipient-preview">
 										{c.last_message_preview?.substring(0, 40) ||
 											c.customer?.phone ||
 											""}

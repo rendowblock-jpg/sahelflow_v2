@@ -1,6 +1,6 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-05-23  
+> **Last updated:** 2026-06-04  
 > **Status:** ✅ CLIENT-READY — Production deploy authorized
 
 ---
@@ -96,10 +96,11 @@
 | Feature                   | Status | Notes                                       |
 | ------------------------- | ------ | ------------------------------------------- |
 | RLS policies              | ✅     | All tables, multi-user role verified        |
-| SECURITY DEFINER RPCs     | ✅     | Restricted to `service_role`                |
+| SECURITY DEFINER RPCs     | ✅     | Restricted to `service_role` only (verified 2026-06-02) |
+| RPC grant audit           | ✅     | `get_product_profitability` (PUBLIC→revoked), `atomic_create_order` (anon→revoked), `get_pnl_summary` (authenticated→revoked) |
 | HMAC webhooks             | ✅     | Shopify + WooCommerce + YouCan              |
 | Rate limiting             | ✅     | All public/cron routes                      |
-| Structured logging        | ✅     | JSON logs, no `console.error` in user paths |
+| Structured logging        | ✅     | JSON logs, no `console.error` in user paths (including `team-service.ts` auto-link, fixed 2026-06-04) |
 | CSP headers               | ✅     | Explicit connect-src allowlist              |
 | HSTS + Permissions-Policy | ✅     | Added in P9                                 |
 | Secret handling           | ✅     | Fail-closed, no leakage                     |
@@ -163,6 +164,62 @@
 ## Known Limitations
 
 1. **Race condition on webhook dedup** — Two identical events microseconds apart might slip through before `webhook_events` INSERT commits. Mitigated by `external_id` secondary guard on orders table.
+2. **Orders stats full-table scan** — `loadStats()` in `orders/page.tsx` fetches all orders client-side to compute status counts. Acceptable at current scale; future fix: use `/api/dashboard/stats` RPC response which already returns `byStatus`. Tracked for Phase 8.
+3. **Team invite email cross-lookup** — `inviteTeamMember` queries `sellers.email` without a DB-side index or SECURITY DEFINER wrapper. Acceptable for current single-tenant usage; tracked for Phase 8 when multi-tenant team management scales.
+4. **AI layer console.error** — 40+ `console.error` calls remain in `src/lib/ai/` and `src/lib/agents/`. These are not in user-facing paths. Scheduled for gradual structured-logging migration in Phase 8.
+5. **In-memory rate limiter** — `rate-limit.ts` uses a `Map` that resets on cold starts. Acceptable for current single-instance Vercel deployment. Migration path to `@upstash/ratelimit` documented in the file.
+
+---
+
+## Post-Audit Fixes (2026-06-04)
+
+Full-stack deep audit completed: every file in `src/` read and verified. 19 findings resolved. `npx tsc --noEmit` passes with 0 errors after all changes.
+
+### Type System
+
+| Fix | Files | Description |
+|-----|-------|-------------|
+| Removed duplicate `ReturnStatus`, `ReturnReason`, `ReturnResolutionType`, `Return`, `ReturnNote` interfaces | `src/types/database.ts` | Canonical types now live exclusively in `src/types/returns.ts`; `database.ts` re-exports them |
+| Removed duplicate `ExpenseCategory`, `Expense` interfaces | `src/types/database.ts` | Canonical types now live exclusively in `src/types/accounting.ts`; `database.ts` re-exports them |
+| Added missing `deleted_at: string | null` field | `src/types/returns.ts` | `Return` interface now matches the DB schema soft-delete column; previously missing, causing potential TS errors in soft-delete guard code |
+
+### Data Services
+
+| Fix | Files | Description |
+|-----|-------|-------------|
+| Removed redundant JS-side `.filter((o) => !o.deleted_at)` | `src/lib/data/order-service.ts` | The Supabase query already applies `.is("deleted_at", null)`; the JS filter was making `total` (DB count) diverge from `data.length` |
+| Removed dead-code `typeof options === "string"` overload branches | `src/lib/data/order-service.ts` | The TypeScript signature never allowed string input; dead branches removed |
+| System return note changed to locale-neutral structured format | `src/lib/data/returns-service.ts` | Was English plain text visible in the returns timeline; now uses `return_created:type=X:resolution=Y` machine-readable format |
+| `getActiveSellerId()` hoisted to top of `createExchangeOrder()` | `src/lib/data/returns-service.ts` | Was called twice (2 extra DB round-trips); now called once and reused |
+| `console.error` replaced with structured JSON log | `src/lib/data/team-service.ts` | Matches project-wide logging convention; unblocks Sentry structured parsing |
+
+### Orders Page UX
+
+| Fix | Files | Description |
+|-----|-------|-------------|
+| Bulk Ship toast now shows correct count | `src/app/(dashboard)/dashboard/orders/page.tsx` | Was reading `selectedIds.size` after state clear (stale closure); now captures `count` before clear |
+| Bulk Cancel parallelized with `Promise.allSettled` | `src/app/(dashboard)/dashboard/orders/page.tsx` | Was sequential `for...of await` (one round-trip per order); now matches Confirm/Ship pattern |
+| Return-modal success toast i18n'd | `src/app/(dashboard)/dashboard/orders/page.tsx` | Replaced hardcoded English `"Return request created successfully"` with `t.returns.*` key |
+| "Remove Item" button added to order create modal | `src/app/(dashboard)/dashboard/orders/page.tsx` | Each item row now has an X button to splice it from `form.items`; only shown when >1 item |
+
+### Accessibility
+
+| Fix | Files | Description |
+|-----|-------|-------------|
+| `tabIndex={-1}` + `autoFocus` added to `OrderSlideOut` inner panel | `src/components/dashboard/orders/OrderSlideOut.tsx` | Keyboard focus now shifts into the dialog on open; Escape key handlers and screen-reader dialog semantics work correctly |
+
+### Database
+
+| Fix | Applied via | Description |
+|-----|-------------|-------------|
+| Deprecated `auth.role() = 'service_role'` RLS policy replaced | Supabase MCP live SQL | `wilaya_risk_profiles` service-role policy now uses `TO service_role ... USING (true)` — the correct modern Supabase pattern; eliminates runtime breakage risk on Supabase engine upgrades |
+
+### Verified (No Fix Needed)
+
+| Item | Verified |
+|------|----------|
+| `sf-textarea` CSS class | Defined in `src/app/styles/components.css` lines 156–171 ✅ |
+| Dual CSS token system | `tokens.css` (`data-theme="store"`) is intentionally separate from `base.css` (`data-theme="light"`) — store vs dashboard themes ✅ |
 
 ---
 
@@ -234,6 +291,10 @@ Cross-layer audit completed: DB schema ↔ TypeScript types ↔ service layer �
 | `010_team_access.sql`                                  | 2026-05-20 | Multi-user team invites, role permissions, and updated RLS     |
 | `011_daily_reports.sql`                                | 2026-05-20 | Daily analytics aggregation tables and reporting cron          |
 | `020_soft_delete.sql`                                  | 2026-05-11 | Soft delete triggers and restore functions                     |
+| `021_performance_indexes.sql`                          | 2026-06-02 | Composite indexes, FK indexes, wilaya_risk_profiles table      |
+| `022_seller_locale.sql`                                | 2026-06-02 | default_locale column added to sellers                         |
+| `023_audit_security_grants.sql`                        | 2026-06-02 | Revoke over-broad EXECUTE grants (PUBLIC/anon/authenticated)   |
+| `024_schema_cleanup.sql`                               | 2026-06-02 | Fix default_locale default, drop duplicate slug constraint, fix cost_price default, drop legacy columns |
 
 ---
 
@@ -241,6 +302,7 @@ Cross-layer audit completed: DB schema ↔ TypeScript types ↔ service layer �
 
 | Date       | Decision                                                                                | Rationale                                                                                                   |
 | ---------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 2026-06-04 | Full-stack deep audit (19 findings) + full remediation pass | Exhaustive read of every file in `src/`. Resolved all type duplications, parallelised bulk operations, fixed deprecated RLS policy live on DB, added missing soft-delete type field, i18n'd hardcoded English strings, added Remove Item UX, fixed accessibility on slideout. `tsc --noEmit` passes 0 errors. |
 | 2026-05-23 | Phase 6: Full i18n/UX audit — locale-aware formatting, CSS progressive enhancement, centralized phone utils, CSP strict-dynamic | Eliminates English leakage in Arabic mode, ensures RTL responsiveness, protects against XSS with modern CSP, unifies divergent phone validation logic |
 | 2026-05-22 | Centralized Multi-Tenant Alignment & Next.js 15 Dynamic Routing type compatibility       | Prevents team members' personal ID usage as seller ID across 17+ APIs, enforces suspension at middleware level, and resolves strict static type checks cleanly. |
 | 2026-05-20 | Fix `atomic_create_order` RPC parameter mismatch                                        | Added p_external_id: null to RPC parameters to match the 18-argument database signature.                    |

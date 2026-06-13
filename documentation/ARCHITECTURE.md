@@ -98,7 +98,14 @@ sahelflow/
 │   │   ├── 009_accounting.sql
 │   │   ├── 010_team_access.sql
 │   │   ├── 011_daily_reports.sql
+│   │   ├── 012_security_lockdown.sql
+│   │   ├── 013_data_integrity.sql
+│   │   ├── 014_types_alignment.sql
 │   │   ├── 020_soft_delete.sql
+│   │   ├── 021_performance_indexes.sql
+│   │   ├── 022_seller_locale.sql
+│   │   ├── 023_audit_security_grants.sql
+│   │   ├── 024_schema_cleanup.sql
 │   │   ├── archive/             # Historical migrations 001–029
 │   │   └── seeds/
 │   │       └── whatsapp_templates.sql
@@ -190,13 +197,20 @@ api/
 - `009_accounting.sql` — Ledger tables: expenses, returns, variant cost mappings
 - `010_team_access.sql` — Team member management table, roles and updated team-aware RLS
 - `011_daily_reports.sql` — Daily analytics reports tables for cron metrics
+- `012_security_lockdown.sql` — Security hardening, dropping auth.email(), restricting functions
+- `013_data_integrity.sql` — Data integrity constraints, checks, and cleanup
+- `014_types_alignment.sql` — Types alignment fixes (e.g. ReturnReason enum mapping)
 - `020_soft_delete.sql` — Soft delete triggers and restore support
+- `021_performance_indexes.sql` — Composite indexes, FK indexes, wilaya_risk_profiles table
+- `022_seller_locale.sql` — default_locale column added to sellers
+- `023_audit_security_grants.sql` — Revoke over-broad EXECUTE grants (PUBLIC/anon/authenticated)
+- `024_schema_cleanup.sql` — Fix default_locale default, drop duplicate slug constraint, fix cost_price default, drop legacy columns
 
 All tables use **RLS** scoped via the helper function `public.check_user_seller_access(seller_id)` to support team members.
 
 | Table                      | Key Columns & Notes                                                                                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sellers`                  | Extends `auth.users`. Profile, settings, webhook config, shipping rates, notification settings, onboarding flags                            |
+| `sellers`                  | Extends `auth.users`. Profile, settings, webhook config, shipping rates, notification settings, onboarding flags. Default locale: `ar` |
 | `team_members`             | [NEW] Multi-user invitations, roles (owner, admin, confirmer, packer, viewer), and active status                                            |
 | `channels`                 | WhatsApp instances (Evolution API). `active`, `credentials` JSONB                                                                           |
 | `customers`                | Risk scores, order history, `deleted_at` (soft delete)                                                                                      |
@@ -425,4 +439,4 @@ See [`SETUP.md`](./SETUP.md) for full descriptions and `.env.local` template.
 
 ---
 
-_Last updated: 2026-05-20_
+_Last updated: 2026-06-04_

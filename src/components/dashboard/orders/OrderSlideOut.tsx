@@ -49,6 +49,9 @@ export default function OrderSlideOut({
 				role="dialog"
 				aria-modal="true"
 				aria-label={t.orders.orderDetails}
+				tabIndex={-1}
+				 
+				autoFocus
 			>
 				<div className="sf-slideout__header">
 					<div>

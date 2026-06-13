@@ -35,7 +35,7 @@ export default function ProductProfitabilityPage() {
 	const isFr = locale === "fr";
 
 	// Translation dictionary
-	const dict = {
+	const dict = useMemo(() => ({
 		title: isAr
 			? "ربحية المنتجات"
 			: isFr
@@ -96,7 +96,7 @@ export default function ProductProfitabilityPage() {
 				: "Avg. Delivery Rate",
 		returned: isAr ? "المرتجع" : isFr ? "Retours" : "Returns",
 		units: isAr ? "وحدة" : isFr ? "unités" : "units",
-	};
+	}), [isAr, isFr]);
 
 	const loadData = useCallback(async () => {
 		try {

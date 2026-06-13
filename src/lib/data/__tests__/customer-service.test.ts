@@ -5,6 +5,7 @@ import {
 	createCustomer,
 	updateCustomer,
 	deleteCustomer,
+	restoreCustomer,
 	findOrCreateCustomer,
 	getOrdersByCustomer,
 } from "@/lib/data/customer-service";
@@ -61,6 +62,22 @@ describe("customer-service", () => {
 			expect(result.data).toEqual([{ id: "c1" }]);
 			expect(result.total).toBe(1);
 		});
+
+		it("returns empty array and 0 total when data is null", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: null, count: null }),
+			);
+			const result = await getCustomers();
+			expect(result.data).toEqual([]);
+			expect(result.total).toBe(0);
+		});
+
+		it("throws on error", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("fetch fail") }),
+			);
+			await expect(getCustomers()).rejects.toThrow("fetch fail");
+		});
 	});
 
 	describe("getCustomer", () => {
@@ -99,6 +116,14 @@ describe("customer-service", () => {
 			});
 			expect(result.id).toBe("c1");
 		});
+
+		it("throws on error", async () => {
+			vi.mocked(getCurrentUser).mockResolvedValue({ id: "seller-1" } as any);
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("create fail") }),
+			);
+			await expect(createCustomer({ name: "Ahmed" })).rejects.toThrow("create fail");
+		});
 	});
 
 	describe("updateCustomer", () => {
@@ -109,6 +134,13 @@ describe("customer-service", () => {
 			const result = await updateCustomer("c1", { name: "Updated" });
 			expect(result.name).toBe("Updated");
 		});
+
+		it("throws on error", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("update fail") }),
+			);
+			await expect(updateCustomer("c1", { name: "Updated" })).rejects.toThrow("update fail");
+		});
 	});
 
 	describe("deleteCustomer", () => {
@@ -118,6 +150,30 @@ describe("customer-service", () => {
 			);
 			await expect(deleteCustomer("c1")).resolves.toBeUndefined();
 		});
+
+		it("throws on error", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ error: new Error("delete fail") }),
+			);
+			await expect(deleteCustomer("c1")).rejects.toThrow("delete fail");
+		});
+	});
+
+	describe("restoreCustomer", () => {
+		it("restores customer successfully", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: { id: "c1", name: "Ahmed", deleted_at: null }, error: null }),
+			);
+			const result = await restoreCustomer("c1");
+			expect(result.id).toBe("c1");
+		});
+
+		it("throws on error", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("restore fail") }),
+			);
+			await expect(restoreCustomer("c1")).rejects.toThrow("restore fail");
+		});
 	});
 
 	describe("findOrCreateCustomer", () => {
@@ -126,6 +182,23 @@ describe("customer-service", () => {
 			await expect(
 				findOrCreateCustomer({ phone: "0555123456" }),
 			).rejects.toThrow("Not authenticated");
+		});
+
+		it("inserts when phone is missing or empty", async () => {
+			vi.mocked(getCurrentUser).mockResolvedValue({ id: "seller-1" } as any);
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: { id: "c1", phone: null }, error: null }),
+			);
+			const result = await findOrCreateCustomer({ name: "No Phone" });
+			expect(result.id).toBe("c1");
+		});
+
+		it("throws when phone is missing and insert fails", async () => {
+			vi.mocked(getCurrentUser).mockResolvedValue({ id: "seller-1" } as any);
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("insert fail") }),
+			);
+			await expect(findOrCreateCustomer({ name: "No Phone" })).rejects.toThrow("insert fail");
 		});
 
 		it("upserts customer atomically", async () => {
@@ -148,6 +221,14 @@ describe("customer-service", () => {
 			});
 			expect(upsertArgs[1]).toMatchObject({ onConflict: "seller_id,phone" });
 		});
+
+		it("throws when upsert fails", async () => {
+			vi.mocked(getCurrentUser).mockResolvedValue({ id: "seller-1" } as any);
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("upsert fail") }),
+			);
+			await expect(findOrCreateCustomer({ phone: "0555123456" })).rejects.toThrow("upsert fail");
+		});
 	});
 
 	describe("getOrdersByCustomer", () => {
@@ -157,6 +238,21 @@ describe("customer-service", () => {
 			);
 			const result = await getOrdersByCustomer("c1");
 			expect(result).toEqual([{ id: "o1" }]);
+		});
+
+		it("returns empty array when data is null", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: null }),
+			);
+			const result = await getOrdersByCustomer("c1");
+			expect(result).toEqual([]);
+		});
+
+		it("throws on error", async () => {
+			vi.mocked(getSupabase).mockReturnValue(
+				chain({ data: null, error: new Error("fetch fail") }),
+			);
+			await expect(getOrdersByCustomer("c1")).rejects.toThrow("fetch fail");
 		});
 	});
 });

@@ -1,7 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, RefreshCw, Truck, Package } from "lucide-react";
+import {
+	Copy,
+	Check,
+	RefreshCw,
+	Truck,
+	Package,
+	Webhook,
+	Zap,
+	Globe,
+	Link2,
+	ArrowRight,
+	ShoppingBag,
+	ShoppingCart,
+} from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import { getIntegrations, saveIntegration } from "@/lib/integrations/service";
@@ -58,9 +71,18 @@ const STORES = [
 	},
 ];
 
+const TABS = [
+	{ id: "webhook", label: "Webhook Credentials", icon: Webhook },
+	{ id: "delivery", label: "Delivery Connections", icon: Truck },
+	{ id: "sync", label: "Store Sync", icon: Package },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
 export default function IntegrationsPage() {
 	const { t } = useI18n();
 	const { toast } = useToast();
+	const [activeTab, setActiveTab] = useState<TabId>("webhook");
 
 	const [webhookToken, setWebhookToken] = useState<string>("");
 	const [copied, setCopied] = useState<"url" | "secret" | null>(null);
@@ -175,65 +197,45 @@ export default function IntegrationsPage() {
 	async function handleSaveYalidine() {
 		setSavingDelivery(true);
 		try {
-			await saveIntegration("yalidine", {
-				api_id: yalidineApiId,
-				api_token: yalidineApiToken,
-			});
+			await saveIntegration("yalidine", { api_id: yalidineApiId, api_token: yalidineApiToken });
 			toast({ type: "success", title: t.integrations.saved });
 		} catch {
 			toast({ type: "error", title: t.integrations.saveFailed });
-		} finally {
-			setSavingDelivery(false);
-		}
+		} finally { setSavingDelivery(false); }
 	}
 
 	async function handleSaveZr() {
 		setSavingZr(true);
 		try {
-			await saveIntegration("zrexpress", {
-				api_id: zrApiId,
-				api_key: zrApiKey,
-			});
+			await saveIntegration("zrexpress", { api_id: zrApiId, api_key: zrApiKey });
 			toast({ type: "success", title: t.integrations.saved });
 		} catch {
 			toast({ type: "error", title: t.integrations.saveFailed });
-		} finally {
-			setSavingZr(false);
-		}
+		} finally { setSavingZr(false); }
 	}
 
 	async function handleSaveMaystro() {
 		setSavingMaystro(true);
 		try {
-			await saveIntegration("maystro", {
-				api_token: maystroApiToken,
-			});
+			await saveIntegration("maystro", { api_token: maystroApiToken });
 			toast({ type: "success", title: t.integrations.saved });
 		} catch {
 			toast({ type: "error", title: t.integrations.saveFailed });
-		} finally {
-			setSavingMaystro(false);
-		}
+		} finally { setSavingMaystro(false); }
 	}
 
 	async function handleSaveShopify() {
 		setSavingShopify(true);
 		try {
-			await saveIntegration("shopify", {
-				shop_url: shopifyStoreUrl,
-				access_token: shopifyAdminToken,
-			});
+			await saveIntegration("shopify", { shop_url: shopifyStoreUrl, access_token: shopifyAdminToken });
 			toast({ type: "success", title: t.integrations.saved });
 		} catch {
 			toast({ type: "error", title: t.integrations.saveFailed });
-		} finally {
-			setSavingShopify(false);
-		}
+		} finally { setSavingShopify(false); }
 	}
 
 	async function handleSync() {
-		setSyncing(true);
-		setSyncResult(null);
+		setSyncing(true); setSyncResult(null);
 		try {
 			const res = await fetch("/api/integrations/sync", {
 				method: "POST",
@@ -243,39 +245,26 @@ export default function IntegrationsPage() {
 			const data = await res.json();
 			if (res.ok && data.success) {
 				setSyncResult(data.count);
-				toast({
-					type: "success",
-					title: t.integrations.syncSuccess.replace("{n}", String(data.count)),
-				});
+				toast({ type: "success", title: t.integrations.syncSuccess.replace("{n}", String(data.count)) });
 			} else {
 				toast({ type: "error", title: data.error || t.common.error });
 			}
-		} catch {
-			toast({ type: "error", title: "Sync failed" });
-		} finally {
-			setSyncing(false);
-		}
+		} catch { toast({ type: "error", title: "Sync failed" });
+		} finally { setSyncing(false); }
 	}
 
 	async function handleSaveYouCan() {
 		setSavingYouCan(true);
 		try {
-			await saveIntegration("youcan", {
-				store_url: youcanStoreUrl,
-				access_token: youcanAccessToken,
-				webhook_secret: youcanWebhookSecret,
-			});
+			await saveIntegration("youcan", { store_url: youcanStoreUrl, access_token: youcanAccessToken, webhook_secret: youcanWebhookSecret });
 			toast({ type: "success", title: t.integrations.saved });
 		} catch {
 			toast({ type: "error", title: t.integrations.saveFailed });
-		} finally {
-			setSavingYouCan(false);
-		}
+		} finally { setSavingYouCan(false); }
 	}
 
 	async function handleYouCanSync() {
-		setYoucanSyncing(true);
-		setYoucanSyncResult(null);
+		setYoucanSyncing(true); setYoucanSyncResult(null);
 		try {
 			const res = await fetch("/api/integrations/sync", {
 				method: "POST",
@@ -285,40 +274,24 @@ export default function IntegrationsPage() {
 			const data = await res.json();
 			if (res.ok && data.success) {
 				setYoucanSyncResult(data.count);
-				toast({
-					type: "success",
-					title: t.integrations.syncSuccess.replace("{n}", String(data.count)),
-				});
-			} else {
-				toast({ type: "error", title: data.error || "Sync failed" });
-			}
-		} catch {
-			toast({ type: "error", title: "Sync failed" });
-		} finally {
-			setYoucanSyncing(false);
-		}
+				toast({ type: "success", title: t.integrations.syncSuccess.replace("{n}", String(data.count)) });
+			} else { toast({ type: "error", title: data.error || "Sync failed" }); }
+		} catch { toast({ type: "error", title: "Sync failed" });
+		} finally { setYoucanSyncing(false); }
 	}
 
 	async function handleSaveWooCommerce() {
 		setSavingWoo(true);
 		try {
-			await saveIntegration("woocommerce", {
-				store_url: wooStoreUrl,
-				consumer_key: wooConsumerKey,
-				consumer_secret: wooConsumerSecret,
-				webhook_secret: wooWebhookSecret,
-			});
+			await saveIntegration("woocommerce", { store_url: wooStoreUrl, consumer_key: wooConsumerKey, consumer_secret: wooConsumerSecret, webhook_secret: wooWebhookSecret });
 			toast({ type: "success", title: t.integrations.saved });
 		} catch {
 			toast({ type: "error", title: t.integrations.saveFailed });
-		} finally {
-			setSavingWoo(false);
-		}
+		} finally { setSavingWoo(false); }
 	}
 
 	async function handleWooSync() {
-		setWooSyncing(true);
-		setWooSyncResult(null);
+		setWooSyncing(true); setWooSyncResult(null);
 		try {
 			const res = await fetch("/api/integrations/sync", {
 				method: "POST",
@@ -328,18 +301,10 @@ export default function IntegrationsPage() {
 			const data = await res.json();
 			if (res.ok && data.success) {
 				setWooSyncResult(data.count);
-				toast({
-					type: "success",
-					title: t.integrations.syncSuccess.replace("{n}", String(data.count)),
-				});
-			} else {
-				toast({ type: "error", title: data.error || "Sync failed" });
-			}
-		} catch {
-			toast({ type: "error", title: "Sync failed" });
-		} finally {
-			setWooSyncing(false);
-		}
+				toast({ type: "success", title: t.integrations.syncSuccess.replace("{n}", String(data.count)) });
+			} else { toast({ type: "error", title: data.error || "Sync failed" }); }
+		} catch { toast({ type: "error", title: "Sync failed" });
+		} finally { setWooSyncing(false); }
 	}
 
 	const webhookUrl = webhookToken
@@ -354,21 +319,15 @@ export default function IntegrationsPage() {
 	}
 
 	async function handleTest() {
-		setTesting(true);
-		setTestResult(null);
+		setTesting(true); setTestResult(null);
 		try {
 			const res = await fetch(`/api/webhooks/store/${webhookToken}`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-SahelFlow-Token": webhookToken,
-					"X-SahelFlow-Test": "true",
-				},
+				headers: { "Content-Type": "application/json", "X-SahelFlow-Token": webhookToken, "X-SahelFlow-Test": "true" },
 				body: JSON.stringify({ test: true }),
 			});
 			setTestResult(res.ok ? "ok" : "fail");
-		} catch {
-			setTestResult("fail");
+		} catch { setTestResult("fail");
 		} finally {
 			setTesting(false);
 			setTimeout(() => setTestResult(null), 4000);
@@ -379,492 +338,475 @@ export default function IntegrationsPage() {
 
 	return (
 		<PageTransition className="sf-flex-col sf-gap-xl">
-			{/* Header */}
-			<div>
-				<h1 className="sf-page-title">{t.integrations.title}</h1>
-				<p className="sf-page-subtitle">{t.integrations.subtitle}</p>
+			{/* Page Header */}
+			<div className="sf-page-header">
+				<div>
+					<h1 className="sf-page-title">{t.integrations.title}</h1>
+					<p className="sf-page-subtitle">{t.integrations.subtitle}</p>
+				</div>
+				{ordersReceived > 0 && (
+					<div className="sf-integrations-header-stats">
+						<div className="sf-integrations-status-dot" />
+						<div>
+							<p className="sf-text-xs sf-text-tertiary">{t.integrations.ordersReceived}</p>
+							<p className="sf-font-semibold sf-text-sm" style={{ color: "var(--color-content-primary)", marginTop: 1 }}>{ordersReceived} orders synced</p>
+						</div>
+						{lastSync && (
+							<>
+								<div className="sf-integrations-divider" />
+								<div>
+									<p className="sf-text-xs sf-text-tertiary">{t.integrations.lastSync}</p>
+									<p className="sf-font-semibold sf-text-sm" style={{ marginTop: 1 }}>{new Date(lastSync).toLocaleString()}</p>
+								</div>
+							</>
+						)}
+					</div>
+				)}
 			</div>
 
-			{/* No RC needed banner */}
-			<div className="sf-card sf-card-brand">
-				<div className="sf-flex sf-gap-md sf-items-start">
-					<span className="sf-text-2xl">✅</span>
-					<div>
-						<p className="sf-font-semibold sf-text-sm">
-							No RC or Meta approval needed
-						</p>
-						<p className="sf-text-sm-secondary sf-mt-xs">
-							{t.integrations.noApiRequired}
-						</p>
+			{/* Side-Rail Layout */}
+			<div className="sf-settings-layout">
+				{/* Left Navigation Rail */}
+				<div className="sf-settings-rail">
+					{TABS.map((tab) => {
+						const Icon = tab.icon;
+						const isActive = activeTab === tab.id;
+						return (
+							<button
+								key={tab.id}
+								onClick={() => setActiveTab(tab.id)}
+								className={`sf-settings-rail-item ${isActive ? "active" : ""}`}
+								type="button"
+							>
+								<Icon size={15} className="sf-flex-shrink-0" />
+								<span>{tab.label}</span>
+							</button>
+						);
+					})}
+
+					{/* Quick status overview */}
+					<div className="sf-integr-rail-status">
+						<p className="sf-text-xs sf-text-tertiary" style={{ marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</p>
+						<div className="sf-integr-rail-status-item">
+							<span className={`sf-integr-dot ${yalidineApiId ? "sf-integr-dot--on" : ""}`} />
+							<span>Yalidine</span>
+						</div>
+						<div className="sf-integr-rail-status-item">
+							<span className={`sf-integr-dot ${zrApiId ? "sf-integr-dot--on" : ""}`} />
+							<span>ZR Express</span>
+						</div>
+						<div className="sf-integr-rail-status-item">
+							<span className={`sf-integr-dot ${maystroApiToken ? "sf-integr-dot--on" : ""}`} />
+							<span>Maystro</span>
+						</div>
+						<div className="sf-integr-rail-status-item">
+							<span className={`sf-integr-dot ${shopifyStoreUrl ? "sf-integr-dot--on" : ""}`} />
+							<span>Shopify</span>
+						</div>
+						<div className="sf-integr-rail-status-item">
+							<span className={`sf-integr-dot ${youcanStoreUrl ? "sf-integr-dot--on" : ""}`} />
+							<span>YouCan</span>
+						</div>
+						<div className="sf-integr-rail-status-item">
+							<span className={`sf-integr-dot ${wooStoreUrl ? "sf-integr-dot--on" : ""}`} />
+							<span>WooCommerce</span>
+						</div>
 					</div>
 				</div>
-			</div>
 
-			{/* Stats */}
-			{ordersReceived > 0 && (
-				<div className="sf-flex sf-gap-lg">
-					<div className="sf-card sf-flex-1">
-						<p className="sf-text-xs-secondary">
-							{t.integrations.ordersReceived}
-						</p>
-						<p className="sf-stat-value-lg">{ordersReceived}</p>
-					</div>
-					{lastSync && (
-						<div className="sf-card sf-flex-1">
-							<p className="sf-text-xs-secondary">{t.integrations.lastSync}</p>
-							<p className="sf-font-semibold sf-text-sm sf-mt-xs">
-								{new Date(lastSync).toLocaleString()}
-							</p>
+				{/* Content Area */}
+				<div className="sf-settings-content-area">
+
+					{/* ── TAB: Webhook Credentials ── */}
+					{activeTab === "webhook" && (
+						<div className="sf-flex-col sf-gap-xl">
+							<div className="sf-settings-section">
+								<div className="sf-settings-section-header">
+									<div className="sf-flex sf-items-center sf-gap-sm">
+										<div className="sf-icon-box-sm sf-icon-brand"><Webhook size={14} /></div>
+										<h3 className="sf-settings-section-title">Webhook Credentials</h3>
+									</div>
+									<p className="sf-settings-section-desc">Use these to receive orders from any platform. Paste the URL into your store&apos;s webhook settings.</p>
+								</div>
+
+								{/* URL field */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-field">
+										<label className="sf-label">{t.integrations.webhookUrl}</label>
+										<div className="sf-integr-input-row">
+											<div className="sf-integr-monospace-wrap">
+												<Webhook size={13} className="sf-integr-mono-icon" />
+												<input
+													className="sf-input sf-integr-mono-input"
+													value={webhookUrl}
+													readOnly
+													dir="ltr"
+													style={{ fontFamily: "monospace", fontSize: 12 }}
+												/>
+											</div>
+											<button
+												className={`sf-btn sf-btn-ghost sf-integr-copy-btn ${copied === "url" ? "sf-integr-copy-btn--done" : ""}`}
+												onClick={() => handleCopy("url")}
+											>
+												{copied === "url" ? <Check size={15} /> : <Copy size={15} />}
+												{copied === "url" ? "Copied" : t.integrations.copy}
+											</button>
+										</div>
+									</div>
+
+									<div className="sf-integr-field">
+										<label className="sf-label">{t.integrations.webhookSecret}</label>
+										<div className="sf-integr-input-row">
+											<div className="sf-integr-monospace-wrap">
+												<Link2 size={13} className="sf-integr-mono-icon" />
+												<input
+													className="sf-input sf-integr-mono-input"
+													value={webhookToken}
+													readOnly
+													dir="ltr"
+													style={{ fontFamily: "monospace", fontSize: 12 }}
+												/>
+											</div>
+											<button
+												className={`sf-btn sf-btn-ghost sf-integr-copy-btn ${copied === "secret" ? "sf-integr-copy-btn--done" : ""}`}
+												onClick={() => handleCopy("secret")}
+											>
+												{copied === "secret" ? <Check size={15} /> : <Copy size={15} />}
+												{copied === "secret" ? "Copied" : t.integrations.copy}
+											</button>
+										</div>
+									</div>
+
+									<div className="sf-integr-test-row">
+										<button
+											className={`sf-btn ${testResult === "ok" ? "sf-btn-primary" : testResult === "fail" ? "sf-btn-destructive" : "sf-btn-ghost"}`}
+											onClick={handleTest}
+											disabled={testing}
+										>
+											<RefreshCw size={14} className={testing ? "sf-animate-spin" : ""} style={{ marginInlineEnd: 6 }} />
+											{testing ? t.integrations.testing : testResult === "ok" ? "✓ Connected!" : testResult === "fail" ? "✗ Failed" : t.integrations.testWebhook}
+										</button>
+										<p className="sf-text-xs sf-text-tertiary" style={{ maxWidth: 360 }}>
+											{t.integrations.noApiRequired}
+										</p>
+									</div>
+								</div>
+							</div>
+
+							{/* Platform Setup Guide */}
+							<div className="sf-settings-section">
+								<div className="sf-settings-section-header">
+									<div className="sf-flex sf-items-center sf-gap-sm">
+										<div className="sf-icon-box-sm sf-icon-brand"><Globe size={14} /></div>
+										<h3 className="sf-settings-section-title">Platform Setup Guide</h3>
+									</div>
+									<p className="sf-settings-section-desc">Step-by-step instructions for connecting your storefront.</p>
+								</div>
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-platform-tabs">
+										{STORES.map((s) => (
+											<button
+												key={s.id}
+												onClick={() => setSelectedStore(s.id)}
+												className={`sf-integr-platform-tab ${selectedStore === s.id ? "sf-integr-platform-tab--active" : ""}`}
+												type="button"
+											>
+												<span>{s.logo}</span>
+												<span>{s.name}</span>
+											</button>
+										))}
+									</div>
+									<div className="sf-integr-steps-card">
+										<div className="sf-integr-steps-header">
+											<span className="sf-integr-steps-logo">{selectedInfo.logo}</span>
+											<span className="sf-font-semibold sf-text-sm">{selectedInfo.name} — Setup Steps</span>
+										</div>
+										<ol className="sf-integr-steps-list">
+											{selectedInfo.steps.map((step, i) => (
+												<li key={i} className="sf-integr-step-item">
+													<span className="sf-integr-step-num">{i + 1}</span>
+													<span className="sf-integr-step-text">{step}</span>
+												</li>
+											))}
+										</ol>
+									</div>
+								</div>
+							</div>
 						</div>
 					)}
-				</div>
-			)}
 
-			<div className="sf-grid-auto">
-				{/* Webhook credentials */}
-				<div className="sf-card sf-flex-col sf-gap-lg">
-					<h3 className="sf-section-title">Your Webhook Credentials</h3>
+					{/* ── TAB: Delivery Connections ── */}
+					{activeTab === "delivery" && (
+						<div className="sf-flex-col sf-gap-xl">
+							<div className="sf-settings-section">
+								<div className="sf-settings-section-header">
+									<div className="sf-flex sf-items-center sf-gap-sm">
+										<div className="sf-icon-box-sm sf-icon-brand"><Truck size={14} /></div>
+										<h3 className="sf-settings-section-title">{t.integrations.deliveryConnections}</h3>
+									</div>
+									<p className="sf-settings-section-desc">Connect Algerian delivery providers to auto-generate waybills and ship orders.</p>
+								</div>
 
-					<div>
-						<label className="sf-label">{t.integrations.webhookUrl}</label>
-						<div className="sf-flex sf-gap-sm sf-mt-xs">
-							<input
-								className="sf-input sf-input-mono sf-flex-1"
-								value={webhookUrl}
-								readOnly
-								dir="ltr"
-							/>
-							<button
-								className="sf-btn sf-btn-ghost sf-flex-shrink-0"
-								onClick={() => handleCopy("url")}
-							>
-								{copied === "url" ? <Check size={16} /> : <Copy size={16} />}
-							</button>
+								{/* Yalidine */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-provider-header">
+										<div className="sf-integr-provider-logo">📦</div>
+										<div className="sf-integr-provider-info">
+											<p className="sf-font-semibold sf-text-sm">Yalidine</p>
+											<p className="sf-text-xs sf-text-tertiary">Algeria&apos;s #1 delivery network</p>
+										</div>
+										{yalidineApiId && <span className="sf-badge sf-badge-success" style={{ fontSize: 10, marginInlineStart: "auto" }}>Connected</span>}
+									</div>
+									<div className="sf-integr-fields-grid">
+										<div>
+											<label className="sf-label">{t.integrations.yalidineApiId}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} value={yalidineApiId} onChange={(e) => setYalidineApiId(e.target.value)} placeholder="your-api-id" dir="ltr" />
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.yalidineApiToken}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={yalidineApiToken} onChange={(e) => setYalidineApiToken(e.target.value)} placeholder="your-api-token" dir="ltr" />
+										</div>
+									</div>
+									<div className="sf-settings-section-footer">
+										<button className="sf-btn sf-btn-primary" onClick={handleSaveYalidine} disabled={savingDelivery || !yalidineApiId || !yalidineApiToken}>
+											{savingDelivery ? t.integrations.saving : t.integrations.save}
+										</button>
+									</div>
+								</div>
+
+								<div className="sf-settings-divider" />
+
+								{/* ZR Express */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-provider-header">
+										<div className="sf-integr-provider-logo">✈️</div>
+										<div className="sf-integr-provider-info">
+											<p className="sf-font-semibold sf-text-sm">ZR Express</p>
+											<p className="sf-text-xs sf-text-tertiary">{t.integrations.zrExpressDesc}</p>
+										</div>
+										{zrApiId && <span className="sf-badge sf-badge-success" style={{ fontSize: 10, marginInlineStart: "auto" }}>Connected</span>}
+									</div>
+									<div className="sf-integr-fields-grid">
+										<div>
+											<label className="sf-label">API ID</label>
+											<input className="sf-input" style={{ marginTop: 4 }} value={zrApiId} onChange={(e) => setZrApiId(e.target.value)} placeholder="your-api-id" dir="ltr" />
+										</div>
+										<div>
+											<label className="sf-label">API Key</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={zrApiKey} onChange={(e) => setZrApiKey(e.target.value)} placeholder="your-api-key" dir="ltr" />
+										</div>
+									</div>
+									<div className="sf-settings-section-footer">
+										<button className="sf-btn sf-btn-primary" onClick={handleSaveZr} disabled={savingZr || !zrApiId || !zrApiKey}>
+											{savingZr ? t.integrations.saving : t.integrations.save}
+										</button>
+									</div>
+								</div>
+
+								<div className="sf-settings-divider" />
+
+								{/* Maystro */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-provider-header">
+										<div className="sf-integr-provider-logo">🚚</div>
+										<div className="sf-integr-provider-info">
+											<p className="sf-font-semibold sf-text-sm">Maystro Delivery</p>
+											<p className="sf-text-xs sf-text-tertiary">{t.integrations.maystroDesc}</p>
+										</div>
+										{maystroApiToken && <span className="sf-badge sf-badge-success" style={{ fontSize: 10, marginInlineStart: "auto" }}>Connected</span>}
+									</div>
+									<div>
+										<label className="sf-label">API Token</label>
+										<input className="sf-input" style={{ marginTop: 4 }} type="password" value={maystroApiToken} onChange={(e) => setMaystroApiToken(e.target.value)} placeholder="your-api-token" dir="ltr" />
+									</div>
+									<div className="sf-settings-section-footer">
+										<button className="sf-btn sf-btn-primary" onClick={handleSaveMaystro} disabled={savingMaystro || !maystroApiToken}>
+											{savingMaystro ? t.integrations.saving : t.integrations.save}
+										</button>
+									</div>
+								</div>
+							</div>
 						</div>
-					</div>
+					)}
 
-					<div>
-						<label className="sf-label">{t.integrations.webhookSecret}</label>
-						<div className="sf-flex sf-gap-sm sf-mt-xs">
-							<input
-								className="sf-input sf-input-mono-sm sf-flex-1"
-								value={webhookToken}
-								readOnly
-								dir="ltr"
-							/>
-							<button
-								className="sf-btn sf-btn-ghost sf-flex-shrink-0"
-								onClick={() => handleCopy("secret")}
-							>
-								{copied === "secret" ? <Check size={16} /> : <Copy size={16} />}
-							</button>
+					{/* ── TAB: Store Sync ── */}
+					{activeTab === "sync" && (
+						<div className="sf-flex-col sf-gap-xl">
+							<div className="sf-settings-section">
+								<div className="sf-settings-section-header">
+									<div className="sf-flex sf-items-center sf-gap-sm">
+										<div className="sf-icon-box-sm sf-icon-brand"><Package size={14} /></div>
+										<h3 className="sf-settings-section-title">{t.integrations.catalogSync}</h3>
+									</div>
+									<p className="sf-settings-section-desc">Sync products and orders from your e-commerce storefront. Credentials are encrypted and stored securely.</p>
+								</div>
+
+								{/* Shopify */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-provider-header">
+										<div className="sf-integr-provider-logo">🛍️</div>
+										<div className="sf-integr-provider-info">
+											<p className="sf-font-semibold sf-text-sm">Shopify</p>
+											<p className="sf-text-xs sf-text-tertiary">Sync orders &amp; products automatically</p>
+										</div>
+										{shopifyStoreUrl && <span className="sf-badge sf-badge-success" style={{ fontSize: 10, marginInlineStart: "auto" }}>Connected</span>}
+									</div>
+									<div className="sf-integr-fields-grid">
+										<div>
+											<label className="sf-label">{t.integrations.shopifyStoreUrl}</label>
+											<div className="sf-integr-input-row" style={{ marginTop: 4 }}>
+												<div className="sf-integr-monospace-wrap" style={{ flex: 1 }}>
+													<ShoppingBag size={13} className="sf-integr-mono-icon" />
+													<input className="sf-input sf-integr-mono-input" value={shopifyStoreUrl} onChange={(e) => setShopifyStoreUrl(e.target.value)} placeholder="mystore.myshopify.com" dir="ltr" />
+												</div>
+											</div>
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.shopifyAdminToken}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={shopifyAdminToken} onChange={(e) => setShopifyAdminToken(e.target.value)} placeholder="shpat_xxxxxxxxxxxxxxxx" dir="ltr" />
+										</div>
+									</div>
+									<div className="sf-settings-section-footer">
+										<button className="sf-btn sf-btn-ghost" onClick={handleSaveShopify} disabled={savingShopify || !shopifyStoreUrl || !shopifyAdminToken}>
+											{savingShopify ? t.integrations.saving : t.integrations.saveCredentials}
+										</button>
+										<button className="sf-btn sf-btn-primary" onClick={handleSync} disabled={syncing || !shopifyStoreUrl || !shopifyAdminToken}>
+											<RefreshCw size={13} className={syncing ? "sf-animate-spin" : ""} style={{ marginInlineEnd: 5 }} />
+											{syncing ? t.integrations.syncing : t.integrations.startSync}
+										</button>
+									</div>
+									{syncResult !== null && (
+										<div className="sf-integr-sync-result">
+											<Check size={14} style={{ color: "var(--color-accent-400)" }} />
+											<span>{t.integrations.syncSuccess.replace("{n}", String(syncResult))}</span>
+										</div>
+									)}
+								</div>
+
+								<div className="sf-settings-divider" />
+
+								{/* WooCommerce */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-provider-header">
+										<div className="sf-integr-provider-logo">🛒</div>
+										<div className="sf-integr-provider-info">
+											<p className="sf-font-semibold sf-text-sm">WooCommerce</p>
+											<p className="sf-text-xs sf-text-tertiary">Import orders from your WP store</p>
+										</div>
+										{wooStoreUrl && <span className="sf-badge sf-badge-success" style={{ fontSize: 10, marginInlineStart: "auto" }}>Connected</span>}
+									</div>
+									<div className="sf-integr-fields-grid">
+										<div>
+											<label className="sf-label">{t.integrations.wooStoreUrl}</label>
+											<div className="sf-integr-input-row" style={{ marginTop: 4 }}>
+												<div className="sf-integr-monospace-wrap" style={{ flex: 1 }}>
+													<ShoppingCart size={13} className="sf-integr-mono-icon" />
+													<input className="sf-input sf-integr-mono-input" value={wooStoreUrl} onChange={(e) => setWooStoreUrl(e.target.value)} placeholder="https://my-store.com" dir="ltr" />
+												</div>
+											</div>
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.wooConsumerKey}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={wooConsumerKey} onChange={(e) => setWooConsumerKey(e.target.value)} placeholder="ck_xxxxxxxxxxxxxxxx" dir="ltr" />
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.wooConsumerSecret}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={wooConsumerSecret} onChange={(e) => setWooConsumerSecret(e.target.value)} placeholder="cs_xxxxxxxxxxxxxxxx" dir="ltr" />
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.wooWebhookSecret}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={wooWebhookSecret} onChange={(e) => setWooWebhookSecret(e.target.value)} placeholder="optional — for signature verification" dir="ltr" />
+										</div>
+									</div>
+									<div className="sf-settings-section-footer">
+										<button className="sf-btn sf-btn-ghost" onClick={handleSaveWooCommerce} disabled={savingWoo || !wooStoreUrl || !wooConsumerKey || !wooConsumerSecret}>
+											{savingWoo ? t.integrations.saving : t.integrations.saveCredentials}
+										</button>
+										<button className="sf-btn sf-btn-primary" onClick={handleWooSync} disabled={wooSyncing || !wooStoreUrl || !wooConsumerKey || !wooConsumerSecret}>
+											<RefreshCw size={13} className={wooSyncing ? "sf-animate-spin" : ""} style={{ marginInlineEnd: 5 }} />
+											{wooSyncing ? t.integrations.syncing : t.integrations.startSync}
+										</button>
+									</div>
+									{wooSyncResult !== null && (
+										<div className="sf-integr-sync-result">
+											<Check size={14} style={{ color: "var(--color-accent-400)" }} />
+											<span>{t.integrations.syncSuccess.replace("{n}", String(wooSyncResult))}</span>
+										</div>
+									)}
+								</div>
+
+								<div className="sf-settings-divider" />
+
+								{/* YouCan */}
+								<div className="sf-settings-field-group">
+									<div className="sf-integr-provider-header">
+										<div className="sf-integr-provider-logo">🇩🇿</div>
+										<div className="sf-integr-provider-info">
+											<p className="sf-font-semibold sf-text-sm">YouCan</p>
+											<p className="sf-text-xs sf-text-tertiary">Algeria&apos;s leading e-commerce platform</p>
+										</div>
+										{youcanStoreUrl && <span className="sf-badge sf-badge-success" style={{ fontSize: 10, marginInlineStart: "auto" }}>Connected</span>}
+									</div>
+									<div className="sf-integr-fields-grid">
+										<div>
+											<label className="sf-label">{t.integrations.youcanStoreUrl}</label>
+											<div className="sf-integr-input-row" style={{ marginTop: 4 }}>
+												<div className="sf-integr-monospace-wrap" style={{ flex: 1 }}>
+													<Zap size={13} className="sf-integr-mono-icon" />
+													<input className="sf-input sf-integr-mono-input" value={youcanStoreUrl} onChange={(e) => setYoucanStoreUrl(e.target.value)} placeholder="https://my-store.youcan.shop" dir="ltr" />
+												</div>
+											</div>
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.youcanAccessToken}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={youcanAccessToken} onChange={(e) => setYoucanAccessToken(e.target.value)} placeholder="your-access-token" dir="ltr" />
+										</div>
+										<div>
+											<label className="sf-label">{t.integrations.youcanWebhookSecret}</label>
+											<input className="sf-input" style={{ marginTop: 4 }} type="password" value={youcanWebhookSecret} onChange={(e) => setYoucanWebhookSecret(e.target.value)} placeholder="optional — for signature verification" dir="ltr" />
+										</div>
+									</div>
+									<div className="sf-settings-section-footer">
+										<button className="sf-btn sf-btn-ghost" onClick={handleSaveYouCan} disabled={savingYouCan || !youcanStoreUrl || !youcanAccessToken}>
+											{savingYouCan ? t.integrations.saving : t.integrations.saveCredentials}
+										</button>
+										<button className="sf-btn sf-btn-primary" onClick={handleYouCanSync} disabled={youcanSyncing || !youcanStoreUrl || !youcanAccessToken}>
+											<RefreshCw size={13} className={youcanSyncing ? "sf-animate-spin" : ""} style={{ marginInlineEnd: 5 }} />
+											{youcanSyncing ? t.integrations.syncing : t.integrations.startSync}
+										</button>
+									</div>
+									{youcanSyncResult !== null && (
+										<div className="sf-integr-sync-result">
+											<Check size={14} style={{ color: "var(--color-accent-400)" }} />
+											<span>{t.integrations.syncSuccess.replace("{n}", String(youcanSyncResult))}</span>
+										</div>
+									)}
+								</div>
+
+								{/* Coming soon platforms */}
+								<div className="sf-settings-field-group sf-integr-coming-soon-grid">
+									{[
+										{ logo: "🟣", name: "Instagram Shop", hint: "Meta integration" },
+										{ logo: "🔵", name: "Facebook Shop", hint: "Meta Catalog sync" },
+										{ logo: "🟡", name: "Amazon Seller", hint: "Fulfillment by Amazon" },
+									].map((p) => (
+										<div key={p.name} className="sf-integr-coming-soon-card">
+											<span style={{ fontSize: 22 }}>{p.logo}</span>
+											<div>
+												<p className="sf-font-semibold sf-text-sm" style={{ opacity: 0.6 }}>{p.name}</p>
+												<p className="sf-text-xs sf-text-tertiary">{p.hint}</p>
+											</div>
+											<span className="sf-integr-coming-soon-badge">
+												<ArrowRight size={10} style={{ marginInlineEnd: 3 }} />
+												Coming soon
+											</span>
+										</div>
+									))}
+								</div>
+							</div>
 						</div>
-					</div>
+					)}
 
-					<button
-						className={`sf-btn ${testResult === "ok" ? "sf-btn-primary" : testResult === "fail" ? "sf-btn-destructive" : "sf-btn-ghost"}`}
-						onClick={handleTest}
-						disabled={testing}
-					>
-						<RefreshCw size={16} className={testing ? "sf-animate-spin" : ""} />
-						{testing
-							? t.integrations.testing
-							: testResult === "ok"
-								? "✓ Connected!"
-								: testResult === "fail"
-									? "✗ Failed"
-									: t.integrations.testWebhook}
-					</button>
-				</div>
-
-				{/* Instructions */}
-				<div className="sf-card sf-flex-col sf-gap-md">
-					<h3 className="sf-section-title">{t.integrations.howTo}</h3>
-
-					<div className="sf-flex sf-gap-sm sf-flex-wrap">
-						{STORES.map((s) => (
-							<button
-								key={s.id}
-								onClick={() => setSelectedStore(s.id)}
-								className={`sf-btn ${selectedStore === s.id ? "sf-btn-primary" : "sf-btn-ghost"} sf-btn-pill`}
-							>
-								{s.logo} {s.name}
-							</button>
-						))}
-					</div>
-
-					<ol className="sf-steps-list">
-						{selectedInfo.steps.map((step, i) => (
-							<li key={i} className="sf-step-text">
-								{step}
-							</li>
-						))}
-					</ol>
-				</div>
-			</div>
-
-			{/* Delivery Connections */}
-			<div className="sf-card sf-flex-col sf-gap-lg sf-integration-section">
-				<div className="sf-flex-center-gap-md">
-					<Truck size={20} />
-					<h3 className="sf-section-title">
-						{t.integrations.deliveryConnections}
-					</h3>
-				</div>
-
-				<div className="sf-grid-auto-sm">
-					<div className="sf-integration-card">
-						<div className="sf-flex-center-gap-sm">
-							<span className="sf-text-xl">📦</span>
-							<span className="sf-font-semibold sf-text-sm">Yalidine</span>
-						</div>
-
-						<div>
-							<label className="sf-label">{t.integrations.yalidineApiId}</label>
-							<input
-								className="sf-input sf-mt-xs"
-								value={yalidineApiId}
-								onChange={(e) => setYalidineApiId(e.target.value)}
-								placeholder="your-api-id"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.yalidineApiToken}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={yalidineApiToken}
-								onChange={(e) => setYalidineApiToken(e.target.value)}
-								placeholder="your-api-token"
-								dir="ltr"
-							/>
-						</div>
-
-						<button
-							className="sf-btn sf-btn-primary sf-self-start"
-							onClick={handleSaveYalidine}
-							disabled={savingDelivery || !yalidineApiId || !yalidineApiToken}
-						>
-							{savingDelivery ? t.integrations.saving : t.integrations.save}
-						</button>
-					</div>
-
-					<div className="sf-integration-card">
-						<div className="sf-flex-center-gap-sm">
-							<span className="sf-text-xl">✈️</span>
-							<span className="sf-font-semibold sf-text-sm">ZR Express</span>
-						</div>
-						<p className="sf-text-xs-tertiary">
-							{t.integrations.zrExpressDesc}
-						</p>
-
-						<div>
-							<label className="sf-label">API ID</label>
-							<input
-								className="sf-input sf-mt-xs"
-								value={zrApiId}
-								onChange={(e) => setZrApiId(e.target.value)}
-								placeholder="your-api-id"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">API Key</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={zrApiKey}
-								onChange={(e) => setZrApiKey(e.target.value)}
-								placeholder="your-api-key"
-								dir="ltr"
-							/>
-						</div>
-
-						<button
-							className="sf-btn sf-btn-primary sf-self-start"
-							onClick={handleSaveZr}
-							disabled={savingZr || !zrApiId || !zrApiKey}
-						>
-							{savingZr ? t.integrations.saving : t.integrations.save}
-						</button>
-					</div>
-
-					<div className="sf-integration-card">
-						<div className="sf-flex-center-gap-sm">
-							<span className="sf-text-xl">🚚</span>
-							<span className="sf-font-semibold sf-text-sm">
-								Maystro Delivery
-							</span>
-						</div>
-						<p className="sf-text-xs-tertiary">{t.integrations.maystroDesc}</p>
-
-						<div>
-							<label className="sf-label">API Token</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={maystroApiToken}
-								onChange={(e) => setMaystroApiToken(e.target.value)}
-								placeholder="your-api-token"
-								dir="ltr"
-							/>
-						</div>
-
-						<button
-							className="sf-btn sf-btn-primary sf-self-start"
-							onClick={handleSaveMaystro}
-							disabled={savingMaystro || !maystroApiToken}
-						>
-							{savingMaystro ? t.integrations.saving : t.integrations.save}
-						</button>
-					</div>
-				</div>
-			</div>
-
-			{/* Catalog Sync */}
-			<div className="sf-card sf-flex-col sf-gap-lg sf-integration-section">
-				<div className="sf-flex-center-gap-md">
-					<Package size={20} />
-					<h3 className="sf-section-title">{t.integrations.catalogSync}</h3>
-				</div>
-
-				<div className="sf-grid-auto-sm">
-					<div className="sf-integration-card">
-						<div className="sf-flex-center-gap-sm">
-							<span className="sf-text-xl">🛍️</span>
-							<span className="sf-font-semibold sf-text-sm">Shopify</span>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.shopifyStoreUrl}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								value={shopifyStoreUrl}
-								onChange={(e) => setShopifyStoreUrl(e.target.value)}
-								placeholder="mystore.myshopify.com"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.shopifyAdminToken}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={shopifyAdminToken}
-								onChange={(e) => setShopifyAdminToken(e.target.value)}
-								placeholder="shpat_xxxxxxxxxxxxxxxx"
-								dir="ltr"
-							/>
-						</div>
-
-						<div className="sf-flex sf-gap-sm sf-flex-wrap">
-							<button
-								className="sf-btn sf-btn-ghost"
-								onClick={handleSaveShopify}
-								disabled={
-									savingShopify || !shopifyStoreUrl || !shopifyAdminToken
-								}
-							>
-								{savingShopify
-									? t.integrations.saving
-									: t.integrations.saveCredentials}
-							</button>
-							<button
-								className="sf-btn sf-btn-primary"
-								onClick={handleSync}
-								disabled={syncing || !shopifyStoreUrl || !shopifyAdminToken}
-							>
-								{syncing ? t.integrations.syncing : t.integrations.startSync}
-							</button>
-						</div>
-
-						{syncResult !== null && (
-							<p className="sf-text-sm-secondary sf-mt-xs">
-								{t.integrations.syncSuccess.replace("{n}", String(syncResult))}
-							</p>
-						)}
-					</div>
-
-					<div className="sf-integration-card">
-						<div className="sf-flex-center-gap-sm">
-							<span className="sf-text-xl">🛒</span>
-							<span className="sf-font-semibold sf-text-sm">WooCommerce</span>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.wooStoreUrl}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								value={wooStoreUrl}
-								onChange={(e) => setWooStoreUrl(e.target.value)}
-								placeholder="https://my-store.com"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.wooConsumerKey}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={wooConsumerKey}
-								onChange={(e) => setWooConsumerKey(e.target.value)}
-								placeholder="ck_xxxxxxxxxxxxxxxx"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.wooConsumerSecret}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={wooConsumerSecret}
-								onChange={(e) => setWooConsumerSecret(e.target.value)}
-								placeholder="cs_xxxxxxxxxxxxxxxx"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.wooWebhookSecret}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={wooWebhookSecret}
-								onChange={(e) => setWooWebhookSecret(e.target.value)}
-								placeholder="optional — for signature verification"
-								dir="ltr"
-							/>
-						</div>
-
-						<div className="sf-flex sf-gap-sm sf-flex-wrap">
-							<button
-								className="sf-btn sf-btn-ghost"
-								onClick={handleSaveWooCommerce}
-								disabled={
-									savingWoo || !wooStoreUrl || !wooConsumerKey || !wooConsumerSecret
-								}
-							>
-								{savingWoo
-									? t.integrations.saving
-									: t.integrations.saveCredentials}
-							</button>
-							<button
-								className="sf-btn sf-btn-primary"
-								onClick={handleWooSync}
-								disabled={
-									wooSyncing || !wooStoreUrl || !wooConsumerKey || !wooConsumerSecret
-								}
-							>
-								{wooSyncing
-									? t.integrations.syncing
-									: t.integrations.startSync}
-							</button>
-						</div>
-
-						{wooSyncResult !== null && (
-							<p className="sf-text-sm-secondary sf-mt-xs">
-								{t.integrations.syncSuccess.replace("{n}", String(wooSyncResult))}
-							</p>
-						)}
-					</div>
-
-					<div className="sf-integration-card">
-						<div className="sf-flex-center-gap-sm">
-							<span className="sf-text-xl">🇩🇿</span>							<span className="sf-font-semibold sf-text-sm">YouCan</span>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.youcanStoreUrl}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								value={youcanStoreUrl}
-								onChange={(e) => setYoucanStoreUrl(e.target.value)}
-								placeholder="https://my-store.youcan.shop"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.youcanAccessToken}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={youcanAccessToken}
-								onChange={(e) => setYoucanAccessToken(e.target.value)}
-								placeholder="your-access-token"
-								dir="ltr"
-							/>
-						</div>
-
-						<div>
-							<label className="sf-label">
-								{t.integrations.youcanWebhookSecret}
-							</label>
-							<input
-								className="sf-input sf-mt-xs"
-								type="password"
-								value={youcanWebhookSecret}
-								onChange={(e) => setYoucanWebhookSecret(e.target.value)}
-								placeholder="optional — for signature verification"
-								dir="ltr"
-							/>
-						</div>
-
-						<div className="sf-flex sf-gap-sm sf-flex-wrap">
-							<button
-								className="sf-btn sf-btn-ghost"
-								onClick={handleSaveYouCan}
-								disabled={
-									savingYouCan || !youcanStoreUrl || !youcanAccessToken
-								}
-							>
-								{savingYouCan
-									? t.integrations.saving
-									: t.integrations.saveCredentials}
-							</button>
-							<button
-								className="sf-btn sf-btn-primary"
-								onClick={handleYouCanSync}
-								disabled={
-									youcanSyncing || !youcanStoreUrl || !youcanAccessToken
-								}
-							>
-								{youcanSyncing
-									? t.integrations.syncing
-									: t.integrations.startSync}
-							</button>
-						</div>
-
-						{youcanSyncResult !== null && (
-							<p className="sf-text-sm-secondary sf-mt-xs">
-								{t.integrations.syncSuccess.replace("{n}", String(youcanSyncResult))}
-							</p>
-						)}
-					</div>
 				</div>
 			</div>
 		</PageTransition>
