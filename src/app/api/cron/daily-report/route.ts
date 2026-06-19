@@ -145,7 +145,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: sellersErr.message }, { status: 500 });
 		}
 		if (!sellers || sellers.length === 0) {
-			return NextResponse.json({ message: "No sellers found", processed: 0 });
+			return NextResponse.json({ success: true, message: "No sellers found", processed: 0 }); // M2 fix: added success key for consistency
 		}
 
 		// 3. Batch-fetch ALL orders for today across all sellers (1 query instead of N)

@@ -55,7 +55,7 @@ export const POST = withAuthAndRateLimit(
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', conversationId)
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ success: true }) // M1 fix: was { ok: true }, inconsistent with other routes
   },
   {
     requirePermission: "inbox:send",

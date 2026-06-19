@@ -50,7 +50,7 @@ export const PATCH = withAuthAndRateLimit(
     // 2. Prevent modifying primary owner
     if (member.user_id === context.sellerId) {
       return NextResponse.json(
-        { error: "لا يمكن تعديل صلاحيات المالك الرئيسي للمتجر" },
+        { error: "Cannot modify the primary store owner's permissions" },
         { status: 403 }
       );
     }
@@ -58,7 +58,7 @@ export const PATCH = withAuthAndRateLimit(
     // 3. Prevent modifying own role or status
     if (member.user_id === user.id) {
       return NextResponse.json(
-        { error: "لا يمكنك تعديل دورك أو تعليق حسابك بنفسك" },
+        { error: "Cannot modify your own role or suspend yourself" },
         { status: 403 }
       );
     }
@@ -123,7 +123,7 @@ export const DELETE = withAuthAndRateLimit(async (req, { user, params }) => {
   // 2. Prevent deleting primary owner
   if (member.user_id === context.sellerId) {
     return NextResponse.json(
-      { error: "لا يمكن حذف المالك الرئيسي للمتجر" },
+      { error: "Cannot delete the primary store owner" },
       { status: 403 }
     );
   }
@@ -131,7 +131,7 @@ export const DELETE = withAuthAndRateLimit(async (req, { user, params }) => {
   // 3. Prevent deleting yourself
   if (member.user_id === user.id) {
     return NextResponse.json(
-      { error: "لا يمكنك إزالة نفسك من الفريق" },
+      { error: "Cannot remove yourself from the team" },
       { status: 403 }
     );
   }
@@ -139,7 +139,7 @@ export const DELETE = withAuthAndRateLimit(async (req, { user, params }) => {
   // 4. Role restrictions: Admins can't delete admins or owners
   if (context.role === "admin" && (member.role === "admin" || member.role === "owner")) {
     return NextResponse.json(
-      { error: "المسؤولون لا يمكنهم حذف مسؤولين آخرين أو المالك" },
+      { error: "Admins cannot delete other admins or the owner" },
       { status: 403 }
     );
   }

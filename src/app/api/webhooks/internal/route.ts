@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		return NextResponse.json({ ok: true, msg: "Dispatched to orchestrator" });
+		return NextResponse.json({ ok: true, message: "Dispatched to orchestrator" }); // L15 fix: was msg, now message (consistent with other routes)
 	} catch (err) {
 		const message = err instanceof Error ? err.message : "Unknown error";
 		webhookLog("error", "top_level_error", { error: message });
