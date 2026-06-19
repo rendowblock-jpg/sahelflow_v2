@@ -73,10 +73,11 @@ function AnimatedStatCardComponent({
 		};
 	}, [num, prefix, suffix, delay, value, locale]);
 
-	// Compute sparkline % from value if not provided
+	// Only show sparkline when real trend data is provided.
+	// Previously computed a fake ~83% value from the number itself — decorative, not real data.
 	const spark = sparklinePercent !== undefined
 		? Math.min(100, Math.max(0, sparklinePercent))
-		: Math.min(100, (num / Math.max(num * 1.2, 1)) * 100);
+		: null;
 
 	return (
 		<div
@@ -98,12 +99,14 @@ function AnimatedStatCardComponent({
 					</div>
 				)}
 			</div>
-			<div className="sf-stat-card-aaa__sparkline">
-				<div
-					className="sf-stat-card-aaa__sparkline-fill"
-					style={{ width: `${spark}%` }}
-				/>
-			</div>
+			{spark !== null && (
+				<div className="sf-stat-card-aaa__sparkline">
+					<div
+						className="sf-stat-card-aaa__sparkline-fill"
+						style={{ width: `${spark}%` }}
+					/>
+				</div>
+			)}
 		</div>
 	);
 }

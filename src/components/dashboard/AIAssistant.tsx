@@ -551,9 +551,6 @@ export function AIAssistant() {
 												⚡ {getModelBadge(lastModelUsed)}
 											</span>
 										)}
-										{!lastModelUsed && (
-											<span className="sf-ai-model-badge">⚡ Sahara-Brain</span>
-										)}
 									</div>
 									<p style={{ fontSize: 10, opacity: 0.75, lineHeight: 1.2, marginTop: 2 }}>
 										{t.ai.subtitle}
