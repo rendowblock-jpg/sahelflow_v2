@@ -18,7 +18,7 @@ export default function TeamInviteModal({
   onSuccess,
   currentUserRole,
 }: TeamInviteModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<TeamRole>("viewer");
   const [loading, setLoading] = useState(false);
@@ -63,8 +63,8 @@ export default function TeamInviteModal({
 
   // Define role helper descriptions in Arabic, English, and French
   const getRoleDescription = (r: TeamRole) => {
-    const isAr = t.locale === "ar";
-    const isFr = t.locale === "fr";
+    const isAr = locale === "ar";
+    const isFr = locale === "fr";
 
     switch (r) {
       case "owner":

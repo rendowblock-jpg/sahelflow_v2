@@ -137,8 +137,9 @@ export async function updateOrder(
   return data;
 }
 
-export async function updateOrderStatus(id: string, status: OrderStatus) {
-  const { error } = await getSupabase().rpc("atomic_update_order_status", {
+export async function updateOrderStatus(id: string, status: OrderStatus, supabaseClient?: SupabaseClient) {
+  const db = supabaseClient || getSupabase();
+  const { error } = await db.rpc("atomic_update_order_status", {
     p_order_id: id,
     p_new_status: status,
   });
@@ -146,7 +147,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   if (error) throw error;
 
   // We need to fetch the customer data for the return object since the RPC returns the order only
-  const { data: orderWithCustomer, error: fetchError } = await getSupabase()
+  const { data: orderWithCustomer, error: fetchError } = await db
     .from("orders")
     .select(
       "*, customer:customers(id, name, phone, wilaya, commune, order_count, total_spent)",
@@ -165,7 +166,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     (status === "returned" || status === "refused" || status === "cancelled")
   ) {
     try {
-      const { data: custOrders } = await getSupabase()
+      const { data: custOrders } = await db
         .from("orders")
         .select("status, total_price, created_at")
         .eq("customer_id", customerId)
@@ -192,7 +193,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
         if (delivered >= 3) score -= 10;
         if (total >= 5 && returnRate < 0.1) score -= 10;
         score = Math.max(0, Math.min(100, score));
-        await getSupabase()
+        await db
           .from("customers")
           .update({ risk_score: score })
           .eq("id", customerId);

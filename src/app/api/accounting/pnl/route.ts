@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
+import { createAdminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/accounting/pnl — get P&L summary
 export const GET = withAuthAndRateLimit(
-  async (req, { supabase }) => {
+  async (req, _ctx) => {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "30d";
 
-    const { data, error } = await supabase.rpc("get_pnl_summary", {
+    // get_pnl_summary is SECURITY DEFINER, GRANTed only to service_role.
+    // Use admin client to bypass RLS + permission checks.
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient.rpc("get_pnl_summary", {
       p_period: period,
     });
 

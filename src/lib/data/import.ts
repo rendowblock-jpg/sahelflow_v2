@@ -62,7 +62,9 @@ function parseCSVLine(line: string): string[] {
 }
 
 export function parseCSV(text: string): ParsedProduct[] {
-  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim())
+  // Split on newlines that are NOT inside quoted fields.
+  // A simple \r?\n split breaks when a quoted CSV value contains a newline.
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n(?=(?:[^"]*"[^"]*")*[^"]*$)/).filter(l => l.trim())
   if (lines.length < 2) return []
 
   const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase())

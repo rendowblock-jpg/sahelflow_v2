@@ -58,7 +58,7 @@ export function sanitizeDarijaLeaks(text: string, locale: 'ar' | 'fr' | 'en'): s
   let result = text
   for (const [darija, replacements] of Object.entries(DARIJA_LEAK_MAP)) {
     // Use word-boundary-aware replacement to avoid partial word matches
-    const regex = new RegExp('(?<=^|\s)' + darija + '(?=$|\s|[,.;!?])', 'gu')
+    const regex = new RegExp('(?<=^|\\s)' + darija + '(?=$|\\s|[,.;!?])', 'gu')
     const replacement = replacements[locale] || replacements.en
     result = result.replace(regex, replacement)
   }

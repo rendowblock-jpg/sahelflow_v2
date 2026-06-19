@@ -21,8 +21,8 @@ describe("Server-side delivery cost", () => {
     expect(computeDeliveryCost("Constantine", "desk", shippingRates)).toBe(380);
   });
 
-  it("returns 0 for unknown wilaya", () => {
-    expect(computeDeliveryCost("UnknownCity", "home", shippingRates)).toBe(0);
+  it("returns safe default (500) for unknown wilaya — not 0 which would give free shipping", () => {
+    expect(computeDeliveryCost("UnknownCity", "home", shippingRates)).toBe(500);
   });
 
   it("returns zone fallback when shippingRates is null", () => {

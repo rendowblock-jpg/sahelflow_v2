@@ -64,7 +64,8 @@ export function computeDeliveryCost(
   const wilayaEntry = WILAYAS.find(
     (w) => w.name.toLowerCase() === wilayaName.toLowerCase(),
   );
-  if (!wilayaEntry) return 0;
+  // Unknown wilaya: return a safe default rather than 0 (which would give free shipping).
+  if (!wilayaEntry) return 500;
 
   const rateKey = String(wilayaEntry.code);
   if (shippingRates?.[rateKey]) {
@@ -78,5 +79,6 @@ export function computeDeliveryCost(
     return deliveryType === "desk" ? zonePrices.desk : zonePrices.home;
   }
 
-  return 0;
+  // Fallback: unknown zone — return safe default.
+  return 500;
 }

@@ -84,6 +84,11 @@ async function markDeadLetter(
 
 // ===== Main handler =====
 
+// Vercel Cron sends GET requests. Alias to POST so the cron can drain the queue.
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
+
 export async function POST(req: NextRequest) {
   // Rate limit cron endpoint
   const ip = req.headers.get("x-forwarded-for") || "anonymous";
