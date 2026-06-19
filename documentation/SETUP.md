@@ -168,7 +168,7 @@ npm run test:watch
 npm run test:coverage
 ```
 
-Current suite: **604 tests** across **37 test files** + 9 Playwright e2e specs.
+Current suite: **696 tests** across **37 test files** + 7 Playwright e2e specs.
 
 ---
 

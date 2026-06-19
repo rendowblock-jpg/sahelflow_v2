@@ -28,7 +28,7 @@ SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce se
 | **Messaging**  | Evolution API (self-hosted WhatsApp)              | Per-client Railway deployment; QR-code connection                                              |
 | **Delivery**   | Yalidine, Maystro, ZR Express (Procolis)          | Adapter registry pattern; all 3 fully implemented with createShipment/getTracking/cancelShipment/getDeliveryCost            |
 | **Validation** | Zod                                               | All public API routes validated                                                                |
-| **Testing**    | Vitest + Playwright                               | **604 unit tests** across **37 test files** + 9 Playwright e2e specs                           |
+| **Testing**    | Vitest + Playwright                               | **696 unit tests** across **37 test files** + 7 Playwright e2e specs                           |
 | **i18n**       | Custom TypeScript-inferred system                 | 3 locales: `en`, `fr`, `ar` (RTL supported). Arabic is default.                                |
 | **Hosting**    | Vercel                                            | Per-client project, deployed via `vercel --prod --yes`                                         |
 

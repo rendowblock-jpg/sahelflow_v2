@@ -1,7 +1,7 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #10, 69 findings fixed)  
-> **Status:** ✅ ALL CRITICAL FINDINGS RESOLVED — 69 of ~170 findings fixed across 10 PRs. 0 critical remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
+> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #11, 81 findings fixed)  
+> **Status:** ✅ ALL CRITICAL FINDINGS + TEST GAPS RESOLVED — 81 of ~170 findings fixed across 11 PRs. 0 critical remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
 
 ---
 
@@ -172,9 +172,9 @@
 
 ---
 
-## Deep Audit Fixes (2026-06-19) — PR #2 through #10
+## Deep Audit Fixes (2026-06-19) — PR #2 through #11
 
-A 5-agent deep audit surfaced ~170 findings across all layers. **69 fixed across 10 PRs** (all 15 critical resolved):
+A 5-agent deep audit surfaced ~170 findings across all layers. **81 fixed across 11 PRs** (all 15 critical + 12 test gaps resolved):
 
 ### PR #2 — Latent DB drift bugs + dead code (7 commits)
 - ✅ `place-order` p_source `webstore`→`store` (orders.source CHECK violation)
@@ -246,7 +246,21 @@ A 5-agent deep audit surfaced ~170 findings across all layers. **69 fixed across
 - ✅ H6-H7: External API URLs → env vars (Groq + 3 delivery providers)
 - ✅ H8-H9: 25 inline ternaries + 7 hardcoded English → t() i18n system
 
-**Remaining audit findings:** ~101 (0 critical; ~25 high: S5-S18, M1-M4; ~45 medium; ~50 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
+### PR #11 — Test gaps + tautological tests (13 commits, +129 tests)
+- ✅ T1: atomic_create_order 18-arg RPC payload assertions (tool-handlers.test.ts)
+- ✅ T2: New executor.test.ts — 39 tests covering 7 triggers × 6 actions + race handling
+- ✅ T3: Rewrote agent-tools.test.ts importing real 30-tool registry (was 10 fake)
+- ✅ T4: 19 Shopify + WooCommerce HMAC tests (were completely untested)
+- ✅ T5: Added expect() to 10 risk-score tests (were no-ops)
+- ✅ T6: Extracted src/lib/order-transitions.ts TS module + 81 tests (was tautological)
+- ✅ T7: Full rewrite of webhooks/store route test — 21 tests exercising real POST + real HMAC
+- ✅ T8: Deleted 2 tautological Playwright cases
+- ✅ T9: Verified seed file healthy (audit premise was false — 34KB clean SQL)
+- ✅ T10: Externalized plaintext creds to E2E_LOGIN_EMAIL/PASSWORD env vars (fail-closed)
+- ✅ T11: Mocked @/lib/ai/service in setup.ts (prevents real Groq API calls in tests)
+- ✅ T12: CI now runs all 3 Playwright projects (chromium + mobile-chrome + mobile-safari)
+
+**Remaining audit findings:** ~89 (0 critical; ~25 high: S5-S18, M1-M4; ~45 medium; ~50 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
 
 ---
 
