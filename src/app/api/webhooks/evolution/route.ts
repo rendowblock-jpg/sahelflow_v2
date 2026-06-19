@@ -29,20 +29,11 @@ function webhookLog(
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      webhookLog("error", "missing_service_role_key");
-      return NextResponse.json(
-        { error: "Service unavailable" },
-        { status: 500 },
-      );
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-    );
-
-    const body = await req.json();
+    // S5 fix: Verify the webhook secret BEFORE parsing the JSON body.
+    // Parsing JSON is expensive — doing it before auth allows unauthenticated
+    // attackers to force expensive JSON parsing (cheap DoS amplifier).
+    // The secret is sent in a header (not computed from the body), so it can
+    // be verified without reading the body first.
 
     // Fail closed: require the secret to be configured AND the signature to match.
     // If the env var is missing, reject all requests rather than accepting them.
@@ -62,6 +53,22 @@ export async function POST(req: NextRequest) {
       webhookLog("warn", "invalid_webhook_secret");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      webhookLog("error", "missing_service_role_key");
+      return NextResponse.json(
+        { error: "Service unavailable" },
+        { status: 500 },
+      );
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+
+    // Only parse the body after the secret has been verified.
+    const body = await req.json();
 
     const parsed = evolutionWebhookSchema.safeParse(body);
     if (!parsed.success) {

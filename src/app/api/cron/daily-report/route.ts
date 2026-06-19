@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendText } from "@/lib/channels/evolution-api";
+import { timingSafeEqual } from "@/lib/validation";
 
 /** Phase 6.3: Locale-aware WhatsApp digest builder */
 interface DigestData {
@@ -98,18 +99,33 @@ function buildWhatsAppDigest(data: DigestData): string {
  * parallel WhatsApp sends via Promise.allSettled().
  */
 
-export async function GET(request: Request) {
+/**
+ * S7 fix: The canonical handler is POST (state-changing — UPSERTs, INSERTs,
+ * sends WhatsApp). GET is kept as a thin delegate for Vercel Cron backward
+ * compatibility (Vercel Cron historically sends GET). Both are protected by
+ * the CRON_SECRET auth check below, so prefetch risk is mitigated.
+ */
+export async function POST(request: Request) {
 	try {
-		// 1. Authorize trigger
+		// 1. Authorize trigger (S6 fix: timing-safe comparison, no dev bypass)
 		const authHeader = request.headers.get("authorization");
 		const { searchParams } = new URL(request.url);
 		const secretParam = searchParams.get("secret");
 		const expectedSecret = process.env.CRON_SECRET;
-		const isAuthorized =
-			(expectedSecret && authHeader === `Bearer ${expectedSecret}`) ||
-			(expectedSecret && secretParam === expectedSecret) ||
-			process.env.NODE_ENV === "development"; // Allow bypassing in local dev if CRON_SECRET is not set
-		if (!isAuthorized) {
+		if (!expectedSecret) {
+			// Fail closed: if no secret is configured, reject all requests.
+			// (Previously this fell through to a NODE_ENV=development bypass
+			// which left preview deploys wide open.)
+			return NextResponse.json(
+				{ error: "Cron secret not configured" },
+				{ status: 503 },
+			);
+		}
+		const bearerMatch =
+			authHeader && timingSafeEqual(authHeader, `Bearer ${expectedSecret}`);
+		const paramMatch =
+			secretParam && timingSafeEqual(secretParam, expectedSecret);
+		if (!bearerMatch && !paramMatch) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
@@ -326,4 +342,14 @@ export async function GET(request: Request) {
 			{ status: 500 },
 		);
 	}
+}
+
+/**
+ * S7 fix: GET delegate for Vercel Cron backward compatibility.
+ * Vercel Cron historically sends GET; this thin wrapper delegates to the
+ * canonical POST handler so the cron continues to work. Programmatic callers
+ * should prefer POST (proper REST for state-changing operations).
+ */
+export async function GET(request: Request): Promise<Response> {
+	return POST(request);
 }
