@@ -14,7 +14,6 @@
  *  - ensureRecipesExist: insert missing + 23505 race handling
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { Mock } from "vitest";
 
 // ── Hoisted mocks (must be declared before vi.mock calls) ───────────────────
 const { mockSupabase, mockCreateClient, mockCreateShipmentForOrder, mockSendText } =
@@ -44,7 +43,7 @@ vi.mock("@/lib/channels/evolution-api", () => ({
 }));
 
 // Use REAL recipes + template-interpolation (pure data/functions, no side effects)
-import { executeRecipes, ensureRecipesExist, type AutomationEvent } from "@/lib/automation/executor";
+import { executeRecipes, ensureRecipesExist } from "@/lib/automation/executor";
 import { RECIPES } from "@/lib/automation/recipes";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -805,7 +804,7 @@ describe("ensureRecipesExist", () => {
       automations: { then: { data: [], error: null } }, // no existing
     });
     // Make insert return success
-    mockSupabase.from.mockImplementation((table: string) => {
+    mockSupabase.from.mockImplementation(() => {
       const chain: any = {
         select: vi.fn(() => chain),
         insert: vi.fn(() => ({ error: null })),
@@ -823,7 +822,7 @@ describe("ensureRecipesExist", () => {
 
   it("skips recipes that already exist (T2)", async () => {
     // Simulate seller already has auto_confirm_safe seeded
-    mockSupabase.from.mockImplementation((table: string) => {
+    mockSupabase.from.mockImplementation(() => {
       const chain: any = {
         select: vi.fn(() => chain),
         insert: vi.fn(() => ({ error: null })),
@@ -844,7 +843,7 @@ describe("ensureRecipesExist", () => {
   });
 
   it("ignores 23505 unique_violation error (W3 race fix) (T2)", async () => {
-    mockSupabase.from.mockImplementation((table: string) => {
+    mockSupabase.from.mockImplementation(() => {
       const chain: any = {
         select: vi.fn(() => chain),
         insert: vi.fn(() => ({ error: { code: "23505", message: "duplicate" } })),
@@ -859,7 +858,7 @@ describe("ensureRecipesExist", () => {
   });
 
   it("throws on non-23505 insert errors (T2)", async () => {
-    mockSupabase.from.mockImplementation((table: string) => {
+    mockSupabase.from.mockImplementation(() => {
       const chain: any = {
         select: vi.fn(() => chain),
         insert: vi.fn(() => ({ error: { code: "P0001", message: "permission denied" } })),
