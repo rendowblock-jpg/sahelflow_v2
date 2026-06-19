@@ -86,6 +86,14 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 							{ status: 403 },
 						);
 					}
+					// W6 fix: Invited members haven't accepted their invite yet —
+					// block API access until they do.
+					if (teamCtx.status === "invited") {
+						return NextResponse.json(
+							{ error: "Forbidden: Please accept your team invitation to access this account" },
+							{ status: 403 },
+						);
+					}
 					sellerId = teamCtx.sellerId;
 					role = teamCtx.role;
 				} else {
@@ -109,9 +117,12 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 			const ip = forwardedFor
 				? forwardedFor.split(",")[0]?.trim() || "anonymous"
 				: "anonymous";
+			// W20 fix: Include HTTP method in rate limit key. Previously, GETs and
+			// POSTs to the same path shared the same bucket — a flood of GETs could
+			// exhaust the POST budget (and vice versa).
 			const rateLimitKey = user
-				? `user:${user.id}:${req.nextUrl.pathname}`
-				: `ip:${ip}:${req.nextUrl.pathname}`;
+				? `user:${user.id}:${req.method}:${req.nextUrl.pathname}`
+				: `ip:${ip}:${req.method}:${req.nextUrl.pathname}`;
 
 			const rl = await rateLimit(
 				rateLimitKey,

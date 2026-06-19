@@ -100,9 +100,20 @@ export async function deleteSession(
 // ─── Messages ───
 
 export async function getSessionMessages(
+	sellerId: string,
 	sessionId: string,
 ): Promise<ChatMessage[]> {
 	const supabase = await createClient();
+	// W5 fix: Verify session belongs to this seller before returning messages.
+	// Previously, anyone with a session UUID could read all messages.
+	const { data: session } = await supabase
+		.from("ai_chat_sessions")
+		.select("id")
+		.eq("id", sessionId)
+		.eq("seller_id", sellerId)
+		.single();
+	if (!session) return [];
+
 	const { data, error } = await supabase
 		.from("ai_chat_messages")
 		.select("*")
@@ -113,6 +124,7 @@ export async function getSessionMessages(
 }
 
 export async function addMessage(
+	sellerId: string,
 	sessionId: string,
 	role: "user" | "assistant" | "system",
 	content: string,
@@ -120,6 +132,16 @@ export async function addMessage(
 	actionCards?: unknown[],
 ): Promise<ChatMessage> {
 	const supabase = await createClient();
+	// W5 fix: Verify session belongs to this seller before inserting.
+	// Previously, anyone with a session UUID could write messages.
+	const { data: session } = await supabase
+		.from("ai_chat_sessions")
+		.select("id")
+		.eq("id", sessionId)
+		.eq("seller_id", sellerId)
+		.single();
+	if (!session) throw new Error("Session not found or access denied");
+
 	const { data, error } = await supabase
 		.from("ai_chat_messages")
 		.insert({

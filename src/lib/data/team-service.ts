@@ -26,7 +26,7 @@ export interface TeamMember {
 export async function getUserSellerContext(userId: string): Promise<{
 	sellerId: string;
 	role: TeamRole;
-	status: "active" | "suspended";
+	status: "active" | "invited" | "suspended";
 } | null> {
 	const supabase = await createClient();
 
@@ -57,10 +57,13 @@ export async function getUserSellerContext(userId: string): Promise<{
 				status: "suspended",
 			};
 		}
+		// W6 fix: Return the actual status. Previously, "invited" members were
+		// treated as "active" (full access before accepting invite). Now the
+		// caller sees the real status and can reject invited members.
 		return {
 			sellerId: member.seller_id,
 			role: member.role as TeamRole,
-			status: "active",
+			status: member.status as "active" | "invited" | "suspended",
 		};
 	}
 
