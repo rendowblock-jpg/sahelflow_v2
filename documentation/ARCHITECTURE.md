@@ -11,7 +11,7 @@
 
 SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce sellers operating on Cash-on-Delivery (COD). There is no built-in storefront. Sellers connect external stores (Shopify, WooCommerce, YouCan) via integrations and manage orders, customers, products, and delivery through a unified AI-powered dashboard.
 
-**Deployment strategy:** Per-client deployment via Vercel CLI. No GitHub repo. Each seller gets their own Vercel app + Supabase project (all free tier).
+**Deployment strategy:** GitHub repo (`rendowblock-jpg/sahelflow_v2`) is the source of truth. Each client gets their **own** Vercel project + Supabase project (per-client isolation, design system §2.2). Deployments via `vercel --prod --yes`. Auto-deploy from GitHub is planned (§7.2).
 
 ---
 
@@ -26,11 +26,11 @@ SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce se
 | **Animation**  | Framer Motion                                     | PageTransition, StaggerContainer, StaggerItem, FadeIn, SlideIn, AnimatedCard, AnimatedStatCard |
 | **AI**         | Groq API (multi-model router)                     | 5 specialized models with per-model API keys, 30 active tools, and fallback chains             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp)              | Per-client Railway deployment; QR-code connection                                              |
-| **Delivery**   | Yalidine, Maystro, ZR Express (Procolis)          | Adapter registry pattern; all three adapters verified via unit tests                           |
+| **Delivery**   | Yalidine (live), Maystro + ZR Express (stubs)     | Adapter registry pattern; only Yalidine is fully implemented; Maystro + ZR Express return 'coming soon'                     |
 | **Validation** | Zod                                               | All public API routes validated                                                                |
-| **Testing**    | Vitest                                            | **354 unit tests** across **32 test files**                                                    |
+| **Testing**    | Vitest + Playwright                               | **604 unit tests** across **37 test files** + 9 Playwright e2e specs                           |
 | **i18n**       | Custom TypeScript-inferred system                 | 3 locales: `en`, `fr`, `ar` (RTL supported). Arabic is default.                                |
-| **Hosting**    | Vercel                                            | Deployed via `vercel --prod --yes` (no GitHub repo)                                            |
+| **Hosting**    | Vercel                                            | Per-client project, deployed via `vercel --prod --yes`                                         |
 
 ---
 
@@ -253,7 +253,7 @@ All tables use **RLS** scoped via the helper function `public.check_user_seller_
 
 ### 6.1 One Deployment Per Client
 
-The database schema supports multiple sellers via `seller_id`, but each production deployment expects **only one row** in `sellers`. This provides maximum data isolation without multi-tenant complexity. Deployments are done via `vercel --prod --yes` with no GitHub repo.
+The database schema supports multiple sellers via `seller_id`, but each production deployment expects **only one row** in `sellers`. This provides maximum data isolation without multi-tenant complexity. Each client gets their own Vercel + Supabase project, deployed via `vercel --prod --yes`. Auto-deploy from GitHub is a planned automation item (design system §7.2).
 
 ### 6.2 Dashboard-Only (No Storefront)
 
@@ -306,7 +306,7 @@ Simple in-memory rate limiting via `src/lib/rate-limit.ts`. Uses `Map<string, co
 
 ### 6.10 Delivery Adapters
 
-Registry pattern with `getAllDeliveryAdapters()`. Each adapter implements `createParcel()`, `trackParcel()`, `getRates()`. Yalidine, Maystro, and ZR Express (Procolis) are all fully verified via unit tests and integrated into the delivery and order confirmation workflows.
+Registry pattern with `getAllDeliveryAdapters()`. Each adapter implements `createShipment()`, `getTracking()`, `cancelShipment()`, `getDeliveryCost()`. **Only Yalidine is fully implemented** — Maystro and ZR Express adapters exist but return 'coming soon' stubs. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md) §1 for details on fake/stub features.
 
 ### 6.11 Notification System
 
@@ -439,4 +439,4 @@ See [`SETUP.md`](./SETUP.md) for full descriptions and `.env.local` template.
 
 ---
 
-_Last updated: 2026-06-04_
+_Last updated: 2026-06-19 — Test counts, deployment strategy, and delivery adapter claims corrected. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md) for the full audit._

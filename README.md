@@ -45,7 +45,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **🗑️ Soft Delete & Restore**        | Orders, products, and customers can be soft-deleted and restored. No accidental data loss.                                                                                                                                                                 |
 | **🌍 Trilingual**                   | English, French, and Arabic (RTL) support with **Arabic (فصحة) as default**. AI understands Darija/Franco-Arab customer input but never displays it.                                                                                                       |
 | **🔐 Security Hardened**            | CSP + HSTS + Permissions-Policy + X-Frame-Options + X-Content-Type-Options + Referrer-Policy. SECURITY DEFINER RPCs restricted to `service_role`. RLS policies per-seller/team. HMAC webhooks. In-memory rate limiting.                                     |
-| **🛒 Three-Way Store Sync**         | Shopify + WooCommerce + YouCan catalog sync and webhook ingestion with deduplication. All delivery adapters (Yalidine, Maystro, ZR Express) fully integrated.                                                                                              |
+| **🛒 Three-Way Store Sync**         | Shopify + WooCommerce + YouCan catalog sync and webhook ingestion with deduplication. Yalidine delivery adapter fully integrated; Maystro + ZR Express are stubs (coming soon).                                                                          |
 
 ---
 
@@ -62,8 +62,8 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **AI**         | Groq API (5-model router with per-model API keys and cascading fallback, 30 tools)             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp via Baileys)                                               |
 | **Validation** | Zod (all public API routes)                                                                    |
-| **Testing**    | Vitest (360 unit tests across 34 test files)                                                   |
-| **Hosting**    | Vercel (per-client deployment via CLI)                                                         |
+| **Testing**    | Vitest (604 unit tests across 37 test files) + Playwright e2e                                   |
+| **Hosting**    | Vercel (per-client project, deployed via `vercel --prod --yes`)                                 |
 
 ---
 
@@ -82,49 +82,24 @@ npm run dev
 
 ## Documentation
 
-| File                                                                                 | Description                                                                                   |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)**                                             | Tech stack, project structure, conventions, API routes, database schema, security model       |
-| **[SETUP.md](./SETUP.md)**                                                           | Environment variables, database setup, dev guidelines, deployment                             |
-| **[VISION.md](./VISION.md)**                                                         | Product philosophy, business model, target audience, competitive position                     |
-| **[COMPETITOR_RESEARCH.md](./COMPETITOR_RESEARCH.md)**                               | Deep ECOMANAGER.dz analysis, feature gap matrix, pricing comparison, differentiation strategy |
-| **[docs/CLIENT_ONBOARDING.md](./docs/CLIENT_ONBOARDING.md)**                         | Complete seller setup guide (Arabic فصحة)                                                     |
-| **[docs/INTEGRATION_SETUP_SHOPIFY.md](./docs/INTEGRATION_SETUP_SHOPIFY.md)**         | Shopify webhook + sync setup                                                                  |
-| **[docs/INTEGRATION_SETUP_WOOCOMMERCE.md](./docs/INTEGRATION_SETUP_WOOCOMMERCE.md)** | WooCommerce webhook + sync setup                                                              |
-| **[docs/INTEGRATION_SETUP_YOUCAN.md](./docs/INTEGRATION_SETUP_YOUCAN.md)**           | YouCan webhook + sync setup                                                                   |
-| **[docs/ALGERIAN_ECOMMERCE_BIBLE.md](./docs/ALGERIAN_ECOMMERCE_BIBLE.md)**           | Market context, COD workflows, delivery landscape                                             |
+| File                                                           | Description                                                                                   |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **[ARCHITECTURE.md](./documentation/ARCHITECTURE.md)**         | Tech stack, project structure, conventions, API routes, database schema, security model       |
+| **[SETUP.md](./documentation/SETUP.md)**                       | Environment variables, database setup, dev guidelines, deployment                             |
+| **[VISION.md](./documentation/VISION.md)**                     | Product philosophy, business model, target audience, competitive position                     |
+| **[COMPETITOR_RESEARCH.md](./documentation/COMPETITOR_RESEARCH.md)** | Deep ECOMANAGER.dz analysis, feature gap matrix, pricing comparison, differentiation strategy |
+| **[AUDIT_FINDINGS.md](./documentation/AUDIT_FINDINGS.md)**     | Deep audit findings (~170 issues across all layers, with file:line refs and fix recommendations) |
+| **[PROJECT_STATE.md](./documentation/PROJECT_STATE.md)**       | Current project status, what's working, known limitations, decision log                       |
 
 ---
 
 ## Database
 
-A single comprehensive baseline migration is maintained at `supabase/migrations/000_baseline.sql`. It contains all tables, indexes, constraints, functions, triggers, RLS policies, and grants.
+A single comprehensive baseline migration is maintained at `supabase/migrations/000_baseline.sql`. It contains all 25 tables, indexes, constraints, functions, triggers, RLS policies, and grants.
 
-**Active patch migrations:**
+**To set up a fresh database, apply ONLY `000_baseline.sql`** in your Supabase SQL Editor. All prior patch migrations (001–029) have been consolidated into the baseline and are archived in `supabase/migrations/archive/` for historical reference. Do NOT re-apply the archived migrations — they will error (objects already exist in the baseline).
 
-- `001_fix_dashboard_and_notifications.sql` — Patched aggregates + notifications table
-- `002_security_and_schema_cleanup.sql` — `deleted_at` columns, provider check, RLS initplan fix, SECURITY DEFINER lockdown
-- `003_select_rls_and_cleanup.sql` — SELECT RLS policies for products/categories
-- `004_delivery_status_constraint_and_webhook_dedup.sql` — Status CHECK fix + webhook_events dedup table
-- `005_import_history.sql` — Import batches and history tracking
-- `006_audit_fixes.sql` — DB schema fixes & alignment (2026-05-12 audit)
-- `006_rls_insert_hardening.sql` — Harden insert RLS policies for sellers and customers
-- `007_ai_chat_persistence.sql` — Persistent sessions & messages tables for AI assistant
-- `007_rebuild_analytics_with_soft_delete.sql` — Rebuild statistics to support soft deleted models
-- `008_after_sales_returns.sql` — After-sales returns tracking schema and triggers
-- `009_accounting.sql` — Ledger tables: expenses, returns, variant cost mappings
-- `010_team_access.sql` — Team member management table, roles and updated team-aware RLS
-- `011_daily_reports.sql` — Daily analytics reports tables for cron metrics
-- `012_security_lockdown.sql` — Security hardening, dropping auth.email(), restricting functions
-- `013_data_integrity.sql` — Data integrity constraints, checks, and cleanup
-- `014_types_alignment.sql` — Types alignment fixes (e.g. ReturnReason enum mapping)
-- `020_soft_delete.sql` — Soft delete triggers and restore functions
-- `021_performance_indexes.sql` — Composite indexes, FK indexes, wilaya_risk_profiles table
-- `022_seller_locale.sql` — default_locale column added to sellers
-- `023_audit_security_grants.sql` — Revoke over-broad EXECUTE grants (PUBLIC/anon/authenticated)
-- `024_schema_cleanup.sql` — Fix default_locale default, drop duplicate slug constraint, fix cost_price default, drop legacy columns
-
-Historical migrations are archived in `supabase/migrations/archive/`.
+Default WhatsApp template seeds: `supabase/migrations/seeds/whatsapp_templates.sql` (also auto-seeded on onboarding).
 
 Default WhatsApp template seeds: `supabase/migrations/seeds/whatsapp_templates.sql` (also auto-seeded on onboarding)
 
@@ -132,43 +107,44 @@ Default WhatsApp template seeds: `supabase/migrations/seeds/whatsapp_templates.s
 
 ## Deployment
 
-This project **does not use a GitHub repo**. Deployments are done per-client via Vercel CLI:
+This project is hosted on GitHub at `rendowblock-jpg/sahelflow_v2` (source of truth + CI). Each client gets their **own** Vercel project + Supabase project for maximum data isolation (per the design system §2.2 — per-client deployment, no multi-tenant complexity).
 
 ```bash
+# Per-client deployment:
 vercel --prod --yes
 ```
 
-Each client gets their own Vercel app + Supabase project + Railway Evolution API instance. See [SETUP.md](./SETUP.md) for the full per-client deployment flow.
+Auto-deploy from GitHub `main` is a planned automation item (design system §7.2, target: before client #10). See [SETUP.md](./documentation/SETUP.md) for the full per-client deployment flow.
 
 ---
 
 ## Build & Test Gate
 
-- ✅ `next build` — compiles all routes, zero errors, zero warnings
-- ✅ `npx vitest run` — **360/360** passing across 34 test files
+- ✅ `npx vitest run` — **604/604** passing across 37 test files
 - ✅ `npx tsc --noEmit` — strict mode, zero errors
+- ✅ `npx eslint .` — zero errors
 - ✅ Security headers complete (CSP + HSTS + Permissions-Policy + XFO + XCTO + RP)
-- ✅ Zero English leakage in Arabic mode
 - ✅ All 3 integrations (Shopify/WooCommerce/YouCan) working end-to-end
-- ✅ All 3 delivery adapters (Yalidine/Maystro/ZR Express) verified via unit tests
-- ✅ AI chat: all 30 tools execute correctly with action cards and message persistence
+- ⚠️ Only Yalidine delivery adapter is implemented (Maystro + ZR Express are stubs)
+- ⚠️ See [AUDIT_FINDINGS.md](./documentation/AUDIT_FINDINGS.md) for ~170 known issues across all layers (15 critical)
 
 ---
 
 ## Project Status
 
-**SahelFlow v2 is CLIENT-READY and Production-Hardened.**
+**SahelFlow v2 is in active development.** A deep multi-layer audit (2026-06-19) surfaced ~170 findings — 15 critical, ~35 high. See [AUDIT_FINDINGS.md](./documentation/AUDIT_FINDINGS.md) for the full report.
 
-All development phases (P0–P7) are complete. The platform has been hardened through:
+Completed development phases (P0–P7):
 
-1. **AI Agent Repair** — 30 tools hardened, error propagation fixed, synthesis improved, session persistence added
+1. **AI Agent Repair** — 30 tools, session persistence, action cards
 2. **YouCan Integration** — Full API parity with Shopify/WooCommerce
 3. **Multi-Source Import Engine** — CSV/XLSX/Google Sheets with column mapping
 4. **Accounting & Expenses (P5)** — Real-time P&L analytics, variant product cost tracking, expense ledger
 5. **Returns & Exchanges Workflow (P5)** — Return tracker, timeline notes, auto stock adjustments
 6. **Multi-User Team Roles (P6)** — Owner, Admin, Confirmer, Packer, Viewer roles, custom RLS, and invite system
 7. **Daily Summary Cron (P7)** — Automated daily sales and operational performance report via WhatsApp
-8. **Final QA** — 355 tests passing, strict TypeScript type-safety, client onboarding guide complete
+
+**Known gaps** (from audit): 3 latent DB-drift bugs fixed in [PR #2](https://github.com/rendowblock-jpg/sahelflow_v2/pull/2). Remaining: fake/coming-soon UI sections (Billing, 2FA, channels), broken accounting RPC routes, missing RBAC on most API routes, RLS policy gaps for team members, and test coverage gaps on critical paths (`atomic_create_order`, automation executor, HMAC verifiers).
 
 ---
 

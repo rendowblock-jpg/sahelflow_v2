@@ -74,7 +74,7 @@ Every tech choice was made for a specific reason:
 | **Evolution API**         | Bypass Meta's WhatsApp Cloud API approval process. Seller just scans a QR code.                           |
 | **Groq (5-model router)** | Access to powerful LLMs without managing infrastructure. Per-model keys for rate-limit isolation.         |
 | **Vanilla CSS**           | Full control over design. No dependency bloat. Pixel-perfect RTL support.                                 |
-| **Per-client deployment** | Each seller gets their own Vercel + Supabase. Maximum data isolation. No multi-tenant complexity.         |
+| **Per-client deployment** | Each client gets their own Vercel + Supabase project. Maximum data isolation. No multi-tenant complexity.    |
 | **No online payment**     | COD is 95%+ of Algerian e-commerce. Building Stripe integration would solve a problem that doesn't exist. |
 
 ---
@@ -149,7 +149,7 @@ Revenue also from:
 - ✅ AI WhatsApp extraction + draft orders
 - ✅ Confirmation workflow with call scripts
 - ✅ Shopify + WooCommerce + YouCan catalog sync and webhook ingestion
-- ✅ All 3 delivery adapters (Yalidine, Maystro, ZR Express) fully integrated and verified
+- ✅ Yalidine delivery adapter fully integrated (Maystro + ZR Express are stubs — coming soon)
 - ✅ Multi-user team roles & custom RLS permissions (Owner, Admin, Confirmer, Packer, Viewer)
 - ✅ Ledger-based accounting: profit and loss, variant unit product costs, expense tracking
 - ✅ Complete returns and exchanges tracker with history timeline logs
