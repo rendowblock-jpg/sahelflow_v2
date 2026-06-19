@@ -1,6 +1,9 @@
 import { WILAYAS, ZONE_PRICES, type WilayaZone } from "@/lib/data/wilayas";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+// H4 fix: Named constant for fallback shipping cost (was magic number 400 repeated 3x)
+const DEFAULT_SHIPPING_COST_DA = 400;
+
 /**
  * Centralized delivery cost calculator that takes a Supabase client, sellerId, wilaya name, and delivery type.
  * Returns the cost in DA.
@@ -11,7 +14,7 @@ export async function calculateDeliveryCost(
 	wilayaName: string | null | undefined,
 	deliveryType: "home" | "desk" = "home",
 ): Promise<number> {
-	if (!wilayaName) return 400;
+	if (!wilayaName) return DEFAULT_SHIPPING_COST_DA;
 
 	try {
 		const query = supabase
@@ -32,7 +35,7 @@ export async function calculateDeliveryCost(
 			(w) => w.name.toLowerCase() === wilayaName.toLowerCase(),
 		);
 
-		if (!wilaya) return 400;
+		if (!wilaya) return DEFAULT_SHIPPING_COST_DA;
 
 		const rateKey = String(wilaya.code);
 		if (rates?.[rateKey]) {
@@ -52,5 +55,5 @@ export async function calculateDeliveryCost(
 		);
 	}
 
-	return 400;
+	return DEFAULT_SHIPPING_COST_DA;
 }
