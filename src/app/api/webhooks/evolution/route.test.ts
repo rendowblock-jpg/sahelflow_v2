@@ -129,8 +129,11 @@ describe("POST /api/webhooks/evolution", () => {
 
   it("returns 500 when SUPABASE_SERVICE_ROLE_KEY is missing", async () => {
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    // S5 fix: auth check now happens before SUPABASE_SERVICE_ROLE_KEY check,
+    // so the request must include the correct webhook secret to pass auth.
     const req = new Request("http://localhost/api/webhooks/evolution", {
       method: "POST",
+      headers: AUTH_HEADER,
       body: JSON.stringify({ event: "messages.upsert", instance: "test" }),
     });
     const res = await POST(req as never);
@@ -429,8 +432,10 @@ describe("POST /api/webhooks/evolution", () => {
   });
 
   it("returns 500 on top-level error", async () => {
+    // S5 fix: auth check now happens before body parsing.
     const req = new Request("http://localhost/api/webhooks/evolution", {
       method: "POST",
+      headers: AUTH_HEADER,
       body: "not-json",
     });
     const res = await POST(req as never);
@@ -439,8 +444,10 @@ describe("POST /api/webhooks/evolution", () => {
   });
 
   it("returns 500 on top-level error (non-Error exception)", async () => {
+    // S5 fix: auth check now happens before body parsing.
     const req = new Request("http://localhost/api/webhooks/evolution", {
       method: "POST",
+      headers: AUTH_HEADER,
       body: "not-json",
     });
     req.json = vi.fn().mockRejectedValue("Some non-Error string rejection");

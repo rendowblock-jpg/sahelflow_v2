@@ -8,14 +8,52 @@ import { getCurrentUser } from "./auth-service";
 
 // ===== IMAGE UPLOAD =====
 
+// S16 fix: Validate uploaded images before storing.
+// Limits: max 5 MB, image MIME types only, extension must match an allowlist.
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+const ALLOWED_IMAGE_EXTS = ["jpg", "jpeg", "png", "webp", "gif"];
+
 export async function uploadProductImage(file: File): Promise<string> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Not authenticated");
-  const ext = file.name.split(".").pop();
+
+  // S16 fix: Size validation — reject oversized uploads (was unbounded).
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error(
+      `Image too large: ${file.size} bytes (max ${MAX_IMAGE_SIZE} bytes / 5 MB)`,
+    );
+  }
+
+  // S16 fix: MIME type validation — reject non-image uploads.
+  // An attacker could rename a .exe to .jpg and upload it; without this check
+  // it would be stored and served as a public URL.
+  if (!file.type || !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error(
+      `Invalid file type: "${file.type}". Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`,
+    );
+  }
+
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  // S16 fix: Extension allowlist — defense in depth alongside MIME check.
+  if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
+    throw new Error(
+      `Invalid file extension: ".${ext}". Allowed: ${ALLOWED_IMAGE_EXTS.join(", ")}`,
+    );
+  }
+
   const path = `${user.id}/${Date.now()}.${ext}`;
   const { error } = await getSupabase().storage
     .from("product-images")
-    .upload(path, file, { upsert: true });
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type, // Ensure stored Content-Type matches validated MIME
+    });
   if (error) throw error;
   const { data } = getSupabase().storage
     .from("product-images")

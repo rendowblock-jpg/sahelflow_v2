@@ -13,6 +13,26 @@ function escapeCSV(val: unknown): string {
   return str;
 }
 
+/**
+ * S15 fix: Sanitize a cell value against CSV formula injection.
+ *
+ * Excel, Google Sheets, and LibreOffice Calc interpret a cell as a formula
+ * if it starts with =, +, -, @, a tab, or a carriage return. An attacker
+ * who controls a customer name, address, or note field can inject formulas
+ * (e.g. =cmd|"/c calc"!A1) that execute when a seller opens the export.
+ *
+ * Mitigation: prepend a single quote to any cell starting with a
+ * formula-trigger character. Spreadsheet apps treat a leading quote as an
+ * escape and display the value as plain text without executing it.
+ */
+function sanitizeCSVCell(val: unknown): string {
+  const str = String(val ?? "");
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  return str;
+}
+
 function downloadCSV(filename: string, csvContent: string) {
   const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
@@ -71,7 +91,7 @@ export async function exportOrdersCSV() {
       itemStr,
       o.notes,
       o.created_at ? new Date(String(o.created_at)).toLocaleDateString() : "",
-    ].map(escapeCSV);
+    ].map((v) => escapeCSV(sanitizeCSVCell(v)));
   });
 
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -111,7 +131,7 @@ export async function exportCustomersCSV() {
       c.risk_score,
       c.is_blocked ? "Yes" : "No",
       c.created_at ? new Date(String(c.created_at)).toLocaleDateString() : "",
-    ].map(escapeCSV),
+    ].map((v) => escapeCSV(sanitizeCSVCell(v))),
   );
 
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -164,7 +184,7 @@ export async function exportAnalyticsCSV(data: {
   // Top Products
   lines.push("Product,Quantity Sold");
   data.topProducts.forEach((p) => {
-    lines.push(`"${p.name.replace(/"/g, '""')}",${p.quantity}`);
+    lines.push(`"${escapeCSV(sanitizeCSVCell(p.name))}",${p.quantity}`);
   });
 
   const csv = lines.join("\n");
@@ -225,13 +245,13 @@ export async function exportDeliveryBulkCSV() {
       customer?.phone || "",
       o.wilaya || "",
       o.commune || "",
-      escapeCSV(o.address || ""),
-      escapeCSV(productLine),
+      escapeCSV(sanitizeCSVCell(o.address || "")),
+      escapeCSV(sanitizeCSVCell(productLine)),
       String(totalQty),
       String(o.total_price || 0),
       String(o.delivery_cost || 0),
       String(Number(o.total_price || 0) + Number(o.delivery_cost || 0)),
-      escapeCSV(o.notes || ""),
+      escapeCSV(sanitizeCSVCell(o.notes || "")),
     ].join(",");
   });
 
@@ -286,16 +306,16 @@ export async function exportMaystroCSV() {
       )
       .join(" + ");
     return [
-      escapeCSV(o.order_number || ""),
-      escapeCSV(customer?.name || ""),
-      escapeCSV(customer?.phone || ""),
-      escapeCSV(o.wilaya || ""),
-      escapeCSV(o.commune || ""),
-      escapeCSV(o.address || ""),
-      escapeCSV(productLine),
+      escapeCSV(sanitizeCSVCell(o.order_number || "")),
+      escapeCSV(sanitizeCSVCell(customer?.name || "")),
+      escapeCSV(sanitizeCSVCell(customer?.phone || "")),
+      escapeCSV(sanitizeCSVCell(o.wilaya || "")),
+      escapeCSV(sanitizeCSVCell(o.commune || "")),
+      escapeCSV(sanitizeCSVCell(o.address || "")),
+      escapeCSV(sanitizeCSVCell(productLine)),
       String(o.total_price || 0),
       "1",
-      escapeCSV(o.notes || ""),
+      escapeCSV(sanitizeCSVCell(o.notes || "")),
     ].join(",");
   });
 
@@ -349,16 +369,16 @@ export async function exportZRExpressCSV() {
       )
       .join(" + ");
     return [
-      escapeCSV(customer?.name || ""),
-      escapeCSV(customer?.phone || ""),
-      escapeCSV(o.wilaya || ""),
-      escapeCSV(o.commune || ""),
-      escapeCSV(o.address || ""),
-      escapeCSV(productLine),
+      escapeCSV(sanitizeCSVCell(customer?.name || "")),
+      escapeCSV(sanitizeCSVCell(customer?.phone || "")),
+      escapeCSV(sanitizeCSVCell(o.wilaya || "")),
+      escapeCSV(sanitizeCSVCell(o.commune || "")),
+      escapeCSV(sanitizeCSVCell(o.address || "")),
+      escapeCSV(sanitizeCSVCell(productLine)),
       String(o.total_price || 0),
       "1",
-      escapeCSV(o.order_number || ""),
-      escapeCSV(o.notes || ""),
+      escapeCSV(sanitizeCSVCell(o.order_number || "")),
+      escapeCSV(sanitizeCSVCell(o.notes || "")),
     ].join(",");
   });
 

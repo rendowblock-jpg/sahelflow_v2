@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { dispatch } from "@/lib/agents/orchestrator";
 import { internalWebhookSchema, timingSafeEqual } from "@/lib/validation";
-import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 
 /**
  * Structured logger — no full error objects leaked to stdout in production.
@@ -57,7 +57,7 @@ async function queueForRetry(
 export async function POST(req: NextRequest) {
 	try {
 		// Rate limiting — 60 requests per minute per IP
-		const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+		const ip = getClientIP(req); // S13 fix: spoofing-resistant IP
 		const rl = await rateLimit(`internal:${ip}`, 60, 60000);
 		if (!rl.allowed) {
 			return NextResponse.json(

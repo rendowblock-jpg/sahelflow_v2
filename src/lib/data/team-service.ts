@@ -230,10 +230,22 @@ export async function linkUserToInvitations(
 	userId: string,
 	email: string,
 ): Promise<void> {
-	const supabase = await createClient();
 	const cleanEmail = email.trim().toLowerCase();
 
-	const { data: invite } = await supabase
+	// S11 fix: Use the admin (service-role) client instead of the user's
+	// client. The team_members_manage RLS policy denies this UPDATE for
+	// newly registered users (they are neither the seller nor an admin
+	// of the seller's team yet). With the admin client, RLS is bypassed
+	// and the link succeeds.
+	//
+	// Safety: this function is called post-authentication (signUp /
+	// signIn) with the user's verified email. It only links invitations
+	// matching that email - no user-influenceable input beyond the email
+	// that Supabase auth already verified.
+	const { createAdminClient } = await import("@/lib/supabase/server");
+	const admin = createAdminClient();
+
+	const { data: invite } = await admin
 		.from("team_members")
 		.select("id, status")
 		.eq("email", cleanEmail)
@@ -241,7 +253,7 @@ export async function linkUserToInvitations(
 		.maybeSingle();
 
 	if (invite) {
-		const { error } = await supabase
+		const { error } = await admin
 			.from("team_members")
 			.update({
 				user_id: userId,

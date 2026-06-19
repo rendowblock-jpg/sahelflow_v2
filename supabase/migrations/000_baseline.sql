@@ -596,7 +596,7 @@ DECLARE
   v_thirty_days_ago TIMESTAMPTZ;
 BEGIN
   IF p_seller_id IS NOT NULL THEN
-    IF p_seller_id != auth.uid() AND current_setting('request.jwt.claim.role', true) != 'service_role' THEN
+    IF p_seller_id != auth.uid() AND current_setting('request.jwt.claims', true)::jsonb->>'role' != 'service_role' THEN
       RAISE EXCEPTION 'Unauthorized: seller_id mismatch';
     END IF;
     v_seller_id := p_seller_id;
@@ -708,7 +708,7 @@ DECLARE
   v_result JSONB;
 BEGIN
   IF p_seller_id IS NOT NULL THEN
-    IF p_seller_id != auth.uid() AND current_setting('request.jwt.claim.role', true) != 'service_role' THEN
+    IF p_seller_id != auth.uid() AND current_setting('request.jwt.claims', true)::jsonb->>'role' != 'service_role' THEN
       RAISE EXCEPTION 'Unauthorized: seller_id mismatch';
     END IF;
     v_seller_id := p_seller_id;
@@ -1358,8 +1358,12 @@ CREATE POLICY "team_members_manage" ON public.team_members FOR ALL TO public USI
   (auth.uid() = seller_id) OR
   (EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.seller_id = team_members.seller_id AND tm.user_id = (SELECT auth.uid()) AND tm.role = 'admin' AND tm.status = 'active'))
 ) WITH CHECK (
-  (auth.uid() = seller_id) OR
-  (EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.seller_id = team_members.seller_id AND tm.user_id = (SELECT auth.uid()) AND tm.role = 'admin' AND tm.status = 'active'))
+  -- S9 fix: prevent privilege escalation — team_members.role can never be 'owner'
+  -- (the owner IS the seller; a team member should never hold the owner role)
+  (
+    (auth.uid() = seller_id) OR
+    (EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.seller_id = team_members.seller_id AND tm.user_id = (SELECT auth.uid()) AND tm.role = 'admin' AND tm.status = 'active'))
+  ) AND team_members.role != 'owner'
 );
 
 -- S10 fix: allow team members to read their own row (needed for getUserSellerContext)
@@ -1372,6 +1376,9 @@ CREATE POLICY "categories_team_access" ON public.categories FOR ALL TO public US
 CREATE POLICY "products_public_select" ON public.products FOR SELECT TO anon USING (
   EXISTS (SELECT 1 FROM public.sellers s WHERE s.id = products.seller_id AND s.form_enabled = true) AND active = true AND stock > 0 AND deleted_at IS NULL
 );
+-- S12 fix: restrict anon to safe columns only (no cost_price, sku, variants)
+REVOKE SELECT ON public.products FROM anon;
+GRANT SELECT (id, seller_id, name, description, stock, price, image_url, active, created_at, updated_at, category_id, deleted_at) ON public.products TO anon;
 CREATE POLICY "products_team_access" ON public.products FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
 
 -- customers
@@ -1411,7 +1418,9 @@ CREATE POLICY "agent_activity_all" ON public.agent_activity FOR ALL TO public US
 CREATE POLICY "whatsapp_templates_team_access" ON public.whatsapp_templates FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
 
 -- webhook_retry_queue
-CREATE POLICY "webhook_retry_queue_team_access" ON public.webhook_retry_queue FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));
+-- S8 fix: team members get SELECT-only; service_role gets full access
+CREATE POLICY "webhook_retry_queue_team_select" ON public.webhook_retry_queue FOR SELECT TO public USING (public.check_user_seller_access(seller_id));
+CREATE POLICY "webhook_retry_queue_service_all" ON public.webhook_retry_queue FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- webhook_events
 CREATE POLICY "webhook_events_service_all" ON public.webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
