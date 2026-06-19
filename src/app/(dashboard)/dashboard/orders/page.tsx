@@ -537,7 +537,7 @@ export default function OrdersPage() {
 									} else {
 										toast({
 											type: "warning",
-											title: succeeded + " succeeded, " + failed + " failed",
+											title: succeeded + " " + (t.orders.bulkSucceeded || "succeeded") + ", " + failed + " " + (t.orders.bulkFailed || "failed"),
 										});
 									}
 								}}
@@ -573,7 +573,7 @@ export default function OrdersPage() {
 									} else {
 										toast({
 											type: "warning",
-											title: succeeded + " shipped, " + failed + " failed",
+											title: succeeded + " " + (t.orders.bulkShipped || "shipped") + ", " + failed + " " + (t.orders.bulkFailed || "failed"),
 										});
 									}
 									void count;

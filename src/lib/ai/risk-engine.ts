@@ -42,10 +42,22 @@ export interface WilayaRiskProfile {
 	riskMultiplier: number; // 0.5-2.0
 }
 
-// ===== WILAYA RISK PROFILES =====
-// Based on typical Algerian e-commerce return rates by region
+// ===== WILAYA RISK ESTIMATES =====
+// H1 fix: These are STATIC ESTIMATES based on typical Algerian e-commerce patterns,
+// NOT real "national average" data. They're used as a fallback when a seller doesn't
+// have enough order history to compute meaningful per-wilaya stats.
+//
+// The blending factor (40%) prevents overfitting on small samples — when a seller
+// has only a few orders for a wilaya, the estimate provides a reasonable baseline.
+// As the seller accumulates more data, the 60% actual weight dominates.
+//
+// TODO: When enough sellers are onboarded, replace these with real aggregate
+// data computed from the wilaya_risk_profiles table across all sellers.
 
-const WILAYA_RISK_PROFILES_BASE: Record<string, WilayaRiskProfile> = {
+const WILAYA_BLEND_FACTOR_STATIC = 0.4; // weight given to static estimate
+const WILAYA_BLEND_FACTOR_ACTUAL = 0.6; // weight given to seller's actual data
+
+const WILAYA_RISK_ESTIMATES: Record<string, WilayaRiskProfile> = {
 	Alger: {
 		wilaya: "Alger",
 		totalOrders: 1200,
@@ -161,7 +173,7 @@ const WILAYA_RISK_PROFILES_BASE: Record<string, WilayaRiskProfile> = {
 };
 
 const WILAYA_RISK_PROFILES: Record<string, WilayaRiskProfile> = {
-	...WILAYA_RISK_PROFILES_BASE,
+	...WILAYA_RISK_ESTIMATES,
 };
 
 WILAYAS.forEach((w) => {
@@ -595,9 +607,9 @@ export async function computeDynamicWilayaProfiles(
 		const staticProfile = WILAYA_RISK_PROFILES[wilaya];
 		const returnRate = stats.total > 0 ? stats.returned / stats.total : 0;
 
-		// Blend: 60% seller's actual data, 40% static profile (prevents overfitting on small samples)
+		// Blend seller's actual data with static estimate (prevents overfitting on small samples)
 		const blendedReturnRate = staticProfile
-			? returnRate * 0.6 + staticProfile.returnRate * 0.4
+			? returnRate * WILAYA_BLEND_FACTOR_ACTUAL + staticProfile.returnRate * WILAYA_BLEND_FACTOR_STATIC
 			: returnRate;
 
 		// Risk multiplier: 1.0 at 15% return rate, scales up/down

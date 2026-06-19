@@ -277,57 +277,10 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Database Limit Warning Bar */}
-      {stats && stats.totalOrders >= 12750 && (
-        <div 
-          id="database-usage-warning-bar"
-          className="sf-card sf-card-padded"
-          style={{
-            background: stats.totalOrders >= 14250 
-              ? "var(--sf-color-danger-bg)" 
-              : "var(--sf-color-warning-bg)",
-            border: stats.totalOrders >= 14250 
-              ? "1px solid var(--sf-color-danger)" 
-              : "1px solid var(--sf-color-warning)",
-            borderRadius: "var(--sf-radius-lg)",
-            padding: "16px",
-            marginBottom: "24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <AlertTriangle 
-                className={stats.totalOrders >= 14250 ? "sf-text-danger" : "sf-text-warning"} 
-                style={{ color: stats.totalOrders >= 14250 ? "var(--sf-color-danger)" : "var(--sf-color-warning)" }}
-                size={18} 
-              />
-              <span style={{ fontWeight: 600, color: "var(--sf-text-primary)" }}>
-                {stats.totalOrders >= 15000 
-                  ? "Database capacity blocked! Clean up immediately." 
-                  : stats.totalOrders >= 14250 
-                    ? "Critical warning: Database capacity almost full!" 
-                    : "Warning: Database capacity usage warning"}
-              </span>
-            </div>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--sf-text-primary)" }}>
-              Orders: {stats.totalOrders.toLocaleString()} / 15,000 ({Math.min(100, Math.round((stats.totalOrders / 15000) * 100))}%)
-            </span>
-          </div>
-          <div style={{ background: "rgba(255,255,255,0.06)", height: "8px", borderRadius: "var(--sf-radius-full)", overflow: "hidden" }}>
-            <div 
-              style={{
-                width: `${Math.min(100, (stats.totalOrders / 15000) * 100)}%`,
-                height: "100%",
-                background: stats.totalOrders >= 14250 ? "var(--sf-color-danger)" : "var(--sf-color-warning)",
-                borderRadius: "var(--sf-radius-full)"
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {/* H2 fix: Removed fake "Database capacity" warning. The thresholds (12,750/14,250/15,000
+          orders) were hardcoded and not based on any real Supabase limit. Supabase free tier
+          has 500MB, not 15K orders. If real capacity monitoring is needed, query
+          pg_database_size() and display actual usage. */}
 
       {/* Getting Started */}
       <GettingStarted />

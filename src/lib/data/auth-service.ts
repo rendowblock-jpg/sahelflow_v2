@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from "./supabase-helpers";
+import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
 import type { Seller } from "@/types/database";
 
 export async function getCurrentUser() {
@@ -70,40 +71,11 @@ export async function updateSellerProfile(
 	}
 
 	if (result && updates.onboarding_completed) {
-		const defaultTemplates = [
-			{
-				seller_id: user.id,
-				name: "Welcome Message",
-				slug: "welcome",
-				content: "مرحبا {{customer_name}}! 🎉 شكرا على التواصل مع {{business_name}}. كيف نقدر نعاونك اليوم؟",
-				category: "welcome",
-				language: "ar"
-			},
-			{
-				seller_id: user.id,
-				name: "Post-Delivery Follow-up",
-				slug: "followup",
-				content: "سلام {{customer_name}}! واش راك؟ نتمنى المنتوج عجبك 🙏 إذا عندك أي سؤال ولا حاجة، نحنا هنا. - {{business_name}}",
-				category: "followup",
-				language: "ar"
-			},
-			{
-				seller_id: user.id,
-				name: "Order Confirmation",
-				slug: "confirmation",
-				content: "مرحبا {{customer_name}}! طلبك رقم {{order_number}} تأكد ✅ التوصيل لـ {{wilaya}}. شكرا على الثقة! - {{business_name}}",
-				category: "confirmation",
-				language: "ar"
-			},
-			{
-				seller_id: user.id,
-				name: "Upsell Offer",
-				slug: "upsell",
-				content: "{{customer_name}}، عندنا عرض خاص على {{product_name}}! 🔥 تقدر تزيدو لطلبك بخصم. واش رايك؟ - {{business_name}}",
-				category: "upsell",
-				language: "ar"
-			}
-		];
+		// H3 fix: Templates now imported from default-templates.ts (single source of truth)
+		const defaultTemplates = DEFAULT_WHATSAPP_TEMPLATES.map((t) => ({
+			...t,
+			seller_id: user.id,
+		}));
 
 		const supabase = getSupabase();
 		for (const t of defaultTemplates) {
