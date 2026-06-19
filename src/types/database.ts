@@ -425,3 +425,108 @@ export interface Notification {
 	metadata: Record<string, unknown> | null;
 	created_at: string;
 }
+
+// ===== AGENT ACTIVITY (TD4 — was missing) =====
+export interface AgentActivity {
+        id: string;
+        seller_id: string;
+        type: string;
+        title: string;
+        description: string | null;
+        metadata: Record<string, unknown> | null;
+        created_at: string;
+}
+
+// ===== CHANNELS (TD4 — was missing) =====
+export type ChannelType = "whatsapp" | "messenger" | "instagram" | "telegram";
+
+export interface Channel {
+        id: string;
+        seller_id: string;
+        type: ChannelType;
+        name: string | null;
+        credentials: Record<string, unknown> | null;
+        active: boolean | null;
+        created_at: string;
+}
+
+// ===== CONVERSATIONS (TD4 — was missing) =====
+export type ConversationStatus = "open" | "pending" | "closed" | "archived";
+
+export interface Conversation {
+        id: string;
+        seller_id: string;
+        channel_id: string | null;
+        customer_id: string | null;
+        platform_thread_id: string | null;
+        status: ConversationStatus | null;
+        unread_count: number | null;
+        last_message_at: string | null;
+        created_at: string;
+        metadata: Record<string, unknown> | null;
+        last_message_preview: string | null;
+        is_pinned: boolean;
+        is_archived: boolean;
+        labels: string[];
+}
+
+// ===== MESSAGES (TD4 — was missing) =====
+export type MessageDirection = "inbound" | "outbound";
+export type MessageContentType =
+        | "text"
+        | "image"
+        | "audio"
+        | "video"
+        | "document"
+        | "location"
+        | "contact";
+
+export interface Message {
+        id: string;
+        conversation_id: string;
+        direction: MessageDirection;
+        content: string | null;
+        content_type: MessageContentType | null;
+        media_url: string | null;
+        ai_extraction: Record<string, unknown> | null;
+        is_ai_reply: boolean | null;
+        created_at: string;
+        platform_message_id: string | null;
+        reply_to_id: string | null;
+        quoted_text: string | null;
+}
+
+// ===== WEBHOOK RETRY QUEUE (TD4 — was missing) =====
+export type WebhookRetryStatus = "pending" | "processing" | "completed" | "failed" | "dead";
+
+export interface WebhookRetryQueue {
+        id: string;
+        idempotency_key: string;
+        event_type: string;
+        payload: Record<string, unknown>;
+        seller_id: string | null;
+        attempts: number | null;
+        max_attempts: number | null;
+        next_retry_at: string | null;
+        status: WebhookRetryStatus | null;
+        error: string | null;
+        created_at: string;
+        completed_at: string | null;
+        claimed_by: string | null;
+        claimed_at: string | null;
+        locked_until: string | null;
+}
+
+// ===== WILAYA RISK PROFILES (TD4 — was missing; DB-row shape) =====
+// NOTE: src/lib/ai/risk-engine.ts has a separate WilayaRiskProfile interface
+// with camelCase UI-layer fields. This is the DB-row shape (snake_case columns).
+export interface WilayaRiskProfileRow {
+        id: string;
+        seller_id: string;
+        wilaya: string;
+        total_orders: number;
+        return_rate: number;
+        avg_delivery_days: number;
+        risk_multiplier: number;
+        updated_at: string;
+}
