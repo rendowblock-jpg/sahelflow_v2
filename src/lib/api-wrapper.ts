@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 import { hasPermission, type TeamRole } from "@/lib/auth/permissions";
 import { z } from "zod";
 
@@ -112,11 +112,8 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 			}
 
 			// 2. Rate Limiting Check
-			// Use User ID if authenticated, else IP address (from headers securely passed by Next.js)
-			const forwardedFor = req.headers.get("x-forwarded-for");
-			const ip = forwardedFor
-				? forwardedFor.split(",")[0]?.trim() || "anonymous"
-				: "anonymous";
+			// Use User ID if authenticated, else spoofing-resistant IP (S13 fix)
+			const ip = getClientIP(req);
 			// W20 fix: Include HTTP method in rate limit key. Previously, GETs and
 			// POSTs to the same path shared the same bucket — a flood of GETs could
 			// exhaust the POST budget (and vice versa).

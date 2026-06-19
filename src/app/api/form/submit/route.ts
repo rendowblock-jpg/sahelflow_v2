@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 
 const schema = z.object({
   sellerSlug: z.string().min(1),
@@ -27,7 +27,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+  const ip = getClientIP(req); // S13 fix: spoofing-resistant IP
   const limit = rateLimit(`form:${ip}`, 5, 60_000);
   if (!limit.allowed) {
     return NextResponse.json(

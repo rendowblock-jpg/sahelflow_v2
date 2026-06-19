@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "@/lib/validation";
-import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,7 +43,7 @@ function requireAdmin(req: NextRequest): NextResponse | null {
 export async function GET(req: NextRequest) {
   try {
     // Rate limit admin endpoint
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
+    const ip = getClientIP(req); // S13 fix: spoofing-resistant IP
     const rl = rateLimit(`dead-letters:${ip}`, 30, 60000);
     if (!rl.allowed) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: rateLimitHeaders(rl) });
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Rate limit admin endpoint
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
+    const ip = getClientIP(req); // S13 fix: spoofing-resistant IP
     const rl = rateLimit(`dead-letters:${ip}`, 30, 60000);
     if (!rl.allowed) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: rateLimitHeaders(rl) });

@@ -13,11 +13,66 @@
  *   const ratelimit = new Ratelimit({ redis: Redis.fromEnv(), limiter: Ratelimit.slidingWindow(10, "1m") });
  */
 
+import type { NextRequest } from "next/server";
+
 interface RateLimitResult {
 	allowed: boolean;
 	remaining: number;
 	resetAt: number;
 	provider: string;
+}
+
+/**
+ S13 fix: Extract the client IP in a way that resists XFF spoofing.
+ 
+ The old pattern (`x-forwarded-for`.split(",")[0]) took the FIRST IP in the
+ chain, but that value is client-controllable. An attacker can rotate the
+ first XFF IP to get fresh rate-limit buckets indefinitely.
+ 
+ The new strategy (in priority order):
+   1. `x-vercel-forwarded-for` - set by Vercel edge network to the verified
+      client IP. NOT client-controllable. (Preferred on Vercel.)
+   2. `x-real-ip` - set by many reverse proxies (nginx, fly.io, etc.) to the
+      real connecting IP. Not client-controllable when the proxy overwrites it.
+   3. The FULL `x-forwarded-for` chain (not just the first IP). If an attacker
+      appends/rotates IPs, the whole string changes, producing a different key.
+      This is less precise than (1)/(2) but better than trusting the first IP.
+   4. "anonymous" - when no IP header is present at all.
+ 
+ This is a best-effort mitigation for single-instance in-memory rate limiting.
+ For multi-instance deployments, replace with @upstash/ratelimit (Redis-backed)
+ which uses a stable server-side identity.
+ */
+export function getClientIP(req: Request | NextRequest): string {
+	const headers =
+		req instanceof NextRequest ? req.headers : new Headers(req.headers);
+
+	// 1. Vercel verified client IP (preferred - not client-controllable)
+	const vercelIP = headers.get("x-vercel-forwarded-for");
+	if (vercelIP) {
+		// x-vercel-forwarded-for may itself be a chain; take the first entry
+		// since Vercel sets this to the real client IP (not spoofable).
+		const ip = vercelIP.split(",")[0]?.trim();
+		if (ip) return ip;
+	}
+
+	// 2. x-real-ip (common proxy-set header, often overwrites client value)
+	const realIP = headers.get("x-real-ip");
+	if (realIP) {
+		const ip = realIP.trim();
+		if (ip) return ip;
+	}
+
+	// 3. Full x-forwarded-for chain - NOT just the first IP.
+	// Using the full chain means an attacker rotating IPs changes the key.
+	const xff = headers.get("x-forwarded-for");
+	if (xff) {
+		const trimmed = xff.trim();
+		if (trimmed) return trimmed;
+	}
+
+	// 4. Fallback
+	return "anonymous";
 }
 
 interface MemoryEntry {

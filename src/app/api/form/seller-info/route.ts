@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 
 const schema = z.object({
 	slug: z.string().min(1),
@@ -9,7 +9,7 @@ const schema = z.object({
 
 export async function GET(req: Request) {
 	// Rate limit public endpoint
-	const ip = req.headers.get("x-forwarded-for") || "anonymous";
+	const ip = getClientIP(req); // S13 fix: spoofing-resistant IP
 	const rl = rateLimit(`form-seller-info:${ip}`, 30, 60000);
 	if (!rl.allowed) {
 		return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: rateLimitHeaders(rl) });

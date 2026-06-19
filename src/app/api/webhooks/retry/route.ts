@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { dispatch } from "@/lib/agents/orchestrator";
 import { timingSafeEqual } from "@/lib/validation";
 import { randomUUID } from "crypto";
-import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 
 /**
  * POST /api/webhooks/retry
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   // Rate limit cron endpoint
-  const ip = req.headers.get("x-forwarded-for") || "anonymous";
+  const ip = getClientIP(req); // S13 fix: spoofing-resistant IP
   const rl = rateLimit(`webhook-retry:${ip}`, 10, 60000);
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: rateLimitHeaders(rl) });
