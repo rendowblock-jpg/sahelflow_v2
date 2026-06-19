@@ -31,6 +31,10 @@ export interface ModelHealth {
 
 type HealthRecord = Record<string, ModelHealth>;
 
+// W10: This store is intentionally shared across all tenants (sellers).
+// Groq API health is global — if Groq is down for seller A, it's down for seller B.
+// Sharing the circuit breaker state means seller B's request is spared a failed
+// call when seller A already detected the outage. This is correct behavior.
 const healthStore: HealthRecord = {};
 
 // Circuit breaker config

@@ -297,10 +297,15 @@ export async function processOrder(
       console.warn(`[OrderAgent] Recommendation mismatch: risk score is low (${assessment.risk_score}) but AI recommended '${assessment.recommendation}'`);
     }
     // Auto-confirm
+    // W11 fix: Include AI recommendation in notes so sellers can see when
+    // the AI disagreed with the threshold-based decision.
+    const aiNote = assessment.recommendation !== "auto_confirm"
+      ? ` [AI recommended: ${assessment.recommendation}]`
+      : "";
     await supabase
       .from("orders")
       .update({
-        notes: `[AI Agent] Auto-confirmed. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}` + (order.notes ? `\n${order.notes}` : ""),
+        notes: `[AI Agent] Auto-confirmed. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}${aiNote}` + (order.notes ? `\n${order.notes}` : ""),
       })
       .eq("id", orderId);
 
@@ -329,10 +334,14 @@ export async function processOrder(
       console.warn(`[OrderAgent] Recommendation mismatch: risk score is high (${assessment.risk_score}) but AI recommended '${assessment.recommendation}'`);
     }
     // Auto-reject / cancel
+    // W11 fix: Include AI recommendation in notes.
+    const aiNoteReject = assessment.recommendation !== "auto_reject"
+      ? ` [AI recommended: ${assessment.recommendation}]`
+      : "";
     await supabase
       .from("orders")
       .update({
-        notes: `[AI Agent] Auto-rejected. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}` + (order.notes ? `\n${order.notes}` : ""),
+        notes: `[AI Agent] Auto-rejected. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}${aiNoteReject}` + (order.notes ? `\n${order.notes}` : ""),
       })
       .eq("id", orderId);
 

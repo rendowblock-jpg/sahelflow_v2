@@ -62,10 +62,32 @@ export const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
 /**
  * Checks if a role is authorized to perform a specific action.
  */
+const VALID_PERMISSIONS = new Set<string>(
+	Object.values(ROLE_PERMISSIONS).flat(),
+);
+
 export function hasPermission(role: TeamRole, action: string): boolean {
 	if (role === "owner") return true;
 	const permissions = ROLE_PERMISSIONS[role] || [];
 	return permissions.includes(action) || permissions.includes("*");
+}
+
+/**
+ * W17 fix: Strict permission check that validates the action string exists in
+ * ROLE_PERMISSIONS. Catches typos like "ordrs:manage" that would silently pass
+ * for owner (hasPermission returns true for any string when role === "owner").
+ *
+ * Use this in development/debugging to catch permission string typos.
+ * Production code should use hasPermission (owners bypass checks by design).
+ */
+export function hasPermissionStrict(role: TeamRole, action: string): boolean {
+	if (!VALID_PERMISSIONS.has(action)) {
+		console.warn(
+			`[permissions] Unknown permission string: "${action}". ` +
+			`This may be a typo. Valid permissions: ${[...VALID_PERMISSIONS].join(", ")}`,
+		);
+	}
+	return hasPermission(role, action);
 }
 
 /**
