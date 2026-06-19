@@ -14,7 +14,7 @@ The audit surfaced **~170 findings** across 5 layers. The most impactful categor
 
 | Category | Count | Impact |
 |----------|-------|--------|
-| 🔴 Critical (ship-blockers / security holes) | 15 | Runtime crashes, fake features shown to users, credential leaks |
+| 🔴 Critical (ship-blockers / security holes) | 15 (9 remaining) | Runtime crashes, fake features shown to users, credential leaks — **6 fixed in PR #4** |
 | 🟠 High (real bugs / weak security) | ~35 | Silent data corruption, broken team-member flows, missing RBAC |
 | 🟡 Medium (weak patterns / dead code) | ~60 | Race conditions, hardcoded values, tautological tests |
 | 🔵 Low (cosmetic / minor) | ~60 | Stale docs, code smell, minor a11y gaps |
@@ -76,12 +76,12 @@ Code that would throw at runtime. Many are latent (only trigger on specific path
 | B2 | `accounting/pnl/route.ts:12` + `accounting/products/route.ts:9` → baseline `:1458-1469` | **Accounting RPC routes always 500.** `get_pnl_summary` & `get_product_profitability` are GRANTed only to `service_role`, but routes use the cookie (`authenticated`) client. Permission denied. Also RPCs use `auth.uid()` internally → team members see zero rows even if permissions fixed. |
 | B3 | `webhooks/retry/route.ts:87` + `vercel.json:7-10` | **`/api/webhooks/retry` is POST but Vercel Cron only sends GET.** The retry queue is never drained by the cron. Dead-letter queue grows forever. |
 | B4 | `TeamInviteModal.tsx:66` + `settings/team/page.tsx:254,268,270` | **`t.locale` is a broken accessor — always `undefined`.** `t.locale` doesn't exist on the `t` object (it's a sibling field on context). 5 call sites always evaluate `undefined === "ar"` → `false`. Team role descriptions + dates always render in English regardless of selected locale. |
-| B5 | `tool-handlers.ts:246-263` | **AI duplicate-detection flags EVERY order as "doublon".** After creating an order, queries pending orders in last 24h but doesn't filter by `customer_id`. Every AI-created order after the first daily one gets `confirmation_status: 'doublon'`. |
+| ✅ B5 | `tool-handlers.ts:246-263` | **AI duplicate-detection flags EVERY order as "doublon".** After creating an order, queries pending orders in last 24h but doesn't filter by `customer_id`. Every AI-created order after the first daily one gets `confirmation_status: 'doublon'`. |
 | B6 | `lib/ai/agent.ts:70-87` | **`getPeriodFilter` doesn't handle advertised `'90d'`/`'year'` enums.** AI says "90-day P&L" but returns lifetime totals (no filter applied). Silent wrong data. |
 | B7 | `lib/ai/agent.ts:1377` | **AI system prompt references non-existent tool `update_store_info`.** Model calls it, hits "Tool not found", silently fails. |
 | B8 | `lib/ai/sanitizer.ts:61` | **Darija sanitizer regex is broken.** `'\s'` should be `'\\s'` → regex matches literal `s` as boundary, sanitizer never fires for space-delimited words. Phase 60A's goal (prevent Darija leaks) not achieved. |
-| B9 | `lib/data/order-service.ts:242` | **`updateOrderStatus` passes hardcoded `risk_score: 0` to automations.** `auto_confirm_safe` recipe (threshold ≤20) fires on EVERY order. Entire risk-based automation gating bypassed. |
-| B10 | `lib/agents/order-agent.ts:303,334,364` | **Order agent overwrites existing order notes.** `.update({ notes: "[AI Agent] ..." })` overwrites seller's manual notes, customer notes, prior agent notes. Data loss. |
+| ✅ B9 | `lib/data/order-service.ts:242` | **`updateOrderStatus` passes hardcoded `risk_score: 0` to automations.** `auto_confirm_safe` recipe (threshold ≤20) fires on EVERY order. Entire risk-based automation gating bypassed. |
+| ✅ B10 | `lib/agents/order-agent.ts:303,334,364` | **Order agent overwrites existing order notes.** `.update({ notes: "[AI Agent] ..." })` overwrites seller's manual notes, customer notes, prior agent notes. Data loss. |
 | B11 | `lib/data/shipping-service.ts:70,79` | **`computeDeliveryCost` returns 0 on failure.** Customers get free shipping silently when wilaya/zone lookup fails. |
 | B12 | `lib/data/customer-service.ts:142-158` | **`findOrCreateCustomer` overwrites customer data on every order.** Wrong `ignoreDuplicates` setting → name/address typos overwrite good data. |
 | B13 | `lib/data/import.ts:39-62` | **CSV parser doesn't handle newlines in quoted fields.** Silently corrupts imported data — a quoted field with a newline gets split across two "rows". |
@@ -94,8 +94,8 @@ Code that would throw at runtime. Many are latent (only trigger on specific path
 
 | # | Location | Issue |
 |---|----------|-------|
-| S1 | `000_baseline.sql:1348` (verified live) | **`sellers_public_select` RLS leaks `webhook_token` to anon.** Anyone on the internet can `SELECT *` from `sellers` where `form_enabled=true` — exposes `webhook_token` (the secret authenticating Shopify/Woo/YouCan webhooks), plus `email`, `phone`, `settings`. **Forge webhooks, take over order ingestion.** |
-| S2 | `lib/ai/agent.ts:55-68` | **AI agent silently falls back to service-role client.** If `auth.getUser()` fails (webhook/cron/test contexts), falls back to `createAdminClient()` (bypasses RLS). All 30 AI tools then run as root with only `sellerId` (API-influenceable) as scoping. |
+| ✅ S1 | `000_baseline.sql:1348` (verified live) | **`sellers_public_select` RLS leaks `webhook_token` to anon.** Anyone on the internet can `SELECT *` from `sellers` where `form_enabled=true` — exposes `webhook_token` (the secret authenticating Shopify/Woo/YouCan webhooks), plus `email`, `phone`, `settings`. **Forge webhooks, take over order ingestion.** |
+| ✅ S2 | `lib/ai/agent.ts:55-68` | **AI agent silently falls back to service-role client.** If `auth.getUser()` fails (webhook/cron/test contexts), falls back to `createAdminClient()` (bypasses RLS). All 30 AI tools then run as root with only `sellerId` (API-influenceable) as scoping. |
 | S3 | All routes except `api/team/*` | **RBAC enforced on only 2 of ~30 API routes.** A `viewer`-role team member can POST/PUT/DELETE orders, products, expenses, returns, templates, AI sessions. `withAuthAndRateLimit` resolves `sellerId` but never checks role/permissions. |
 | S4 | `store/place-order/route.ts:45-49` | **`/api/store/place-order` attributes every webstore order to the FIRST seller.** `sellers.limit(1).single()` — no `where` clause. In multi-seller deployments, every public-form order lands on whichever seller sorts first. |
 
@@ -108,7 +108,7 @@ Code that would throw at runtime. Many are latent (only trigger on specific path
 | S7 | `cron/daily-report/route.ts:101` | State-changing GET endpoint (UPSERTs, INSERTs, sends WhatsApp). REST violation, prefetch risk. |
 | S8 | `000_baseline.sql` (RLS) | `webhook_retry_queue_team_access` lets any team member DELETE/UPDATE retries (should be SELECT-only). |
 | S9 | `000_baseline.sql` (RLS) | `team_members_manage` allows admin to INSERT `role='owner'` → privilege escalation via direct Supabase client. |
-| S10 | `000_baseline.sql` (RLS) | `team_members_manage` blocks non-admin members from reading their own row → `getUserSellerContext` returns null → **team members broken in prod**. |
+| ✅ S10 | `000_baseline.sql` (RLS) | `team_members_manage` blocks non-admin members from reading their own row → `getUserSellerContext` returns null → **team members broken in prod**. |
 | S11 | `team-service.ts:226-253` | `linkUserToInvitations` UPDATE denied by same RLS → invited users never get linked on signup. |
 | S12 | `000_baseline.sql` (RLS) | `products_public_select` exposes `cost_price`, `sku`, `variants` to anon (competitor can scrape full cost structure). |
 | S13 | 6 public endpoints | XFF-spoofable IP rate limits (attacker rotates `X-Forwarded-For` for fresh buckets). |
@@ -296,13 +296,28 @@ Docs that claim things no longer true.
 | ✅ | `bba8e1e` | Deleted orphan `/dashboard/automation` route (singular) |
 | ✅ | `e12f9f8` | `000_baseline.sql`: reconciled with live DB (3 drifts) |
 
+### PR #4 — Magic Moment AAA fixes (6 commits, migration 030 applied to live DB)
+
+[PR #4](https://github.com/rendowblock-jpg/sahelflow_v2/pull/4) — `agent/magic-moment-aaa-fixes`:
+
+| ✅ | Commit | Fix |
+|----|--------|-----|
+| ✅ | `1accafd` | `tool-handlers.ts`: duplicate detection now filters by customer_id (B5) |
+| ✅ | `e737033` | `order-service.ts`: pass actual risk_score to automations (B9) |
+| ✅ | `5638dbb` | `order-agent.ts`: append AI notes instead of overwriting (B10) |
+| ✅ | `129b594` | `agent.ts`: remove service-role fallback (S2) |
+| ✅ | `90b3c58` | Migration 030 + baseline: column-level GRANT on sellers for anon (S1) |
+| ✅ | `4978ba9` | Migration 030 + baseline: `team_members_self_select` RLS policy (S10) |
+
+**Migration 030 applied to live DB on 2026-06-19.** Verified: anon SELECT on `sellers` 23→9 columns; `team_members_self_select` active.
+
 ---
 
 ## Recommended Fix Batches
 
 | PR | Theme | Findings | Est. commits |
 |----|-------|----------|--------------|
-| #3 | 🔴 Critical broken + fake features | B1-B13, F1-F12, S1-S4 | ~20 |
+| #3 | 🔴 Critical broken + fake features | B1-B4, B6-B13, F1-F12, S3-S4 (B5/B9/B10/S1/S2/S10 ✅ PR #4) | ~15 |
 | #4 | 🔒 Security hardening | S5-S18, M1-M4 (RLS fixes) | ~12 |
 | #5 | 🪦 Dead code removal | D1-D12 | ~10 |
 | #6 | ⚠️ Weak patterns / silent bugs | W1-W22 | ~15 |
@@ -328,4 +343,4 @@ Findings were cross-referenced and de-duplicated. Each finding includes a `file:
 
 ---
 
-_Last updated: 2026-06-19 — Initial audit. Findings will be checked off as PRs land._
+_Last updated: 2026-06-19 — 6 critical findings fixed in PR #4 (B5, B9, B10, S2, S1, S10). Migration 030 applied to live DB. 9 critical findings remaining._
