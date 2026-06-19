@@ -229,6 +229,7 @@ export async function handleCreateOrder(
 				.select("id, order_number")
 				.eq("seller_id", sellerId)
 				.in("status", ["draft", "pending"])
+				.eq("customer_id", customerId)
 				.neq("id", orderId)
 				.gte(
 					"created_at",
@@ -236,14 +237,9 @@ export async function handleCreateOrder(
 				)
 				.limit(1);
 
-			const customerDupes = dupes?.filter((d: { id: string }) => {
-				const dId = d.id;
-				return dId !== orderId;
-			});
-
-			if (customerDupes && customerDupes.length > 0) {
+			if (dupes && dupes.length > 0) {
 				warnings.push(
-					`Warning: this customer already has a pending order ${customerDupes[0].order_number}`,
+					`Warning: this customer already has a pending order ${dupes[0].order_number}`,
 				);
 
 				await supabase
@@ -255,8 +251,8 @@ export async function handleCreateOrder(
 					seller_id: sellerId,
 					type: "alert",
 					title: "Duplicate order detected",
-					description: `AI-created order ${result.order_number} shares a phone number with existing order ${customerDupes[0].order_number}`,
-					metadata: { order_id: orderId, duplicate_of: customerDupes[0].id },
+					description: `AI-created order ${result.order_number} shares a phone number with existing order ${dupes[0].order_number}`,
+					metadata: { order_id: orderId, duplicate_of: dupes[0].id },
 				});
 			}
 		} catch {
