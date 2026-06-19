@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/service";
 import { executeAgent, AgentStep } from "@/lib/ai/agent";
 import { createClient } from "@/lib/supabase/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { aiRequestSchema } from "@/lib/validation";
 
@@ -44,6 +45,15 @@ export async function POST(request: Request) {
       );
     }
     const sellerId = teamCtx ? teamCtx.sellerId : user.id;
+    const role = teamCtx ? teamCtx.role : "owner";
+
+    // RBAC (S3) — ai:chat required. Solo sellers are owners.
+    if (!hasPermission(role, "ai:chat")) {
+      return NextResponse.json(
+        { error: "Forbidden: insufficient permissions", required: "ai:chat", role },
+        { status: 403 },
+      );
+    }
 
     // Rate limiting — 10 requests per minute per user
     const limit = await rateLimit(`ai:${user.id}`, 10, 60000);
