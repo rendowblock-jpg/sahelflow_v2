@@ -9,21 +9,10 @@
  */
 
 import { callLLMJson } from "./groq";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { matchProductToCatalog } from "@/lib/ai/extraction";
 import { getAlgerianLanguagePrompt } from "@/lib/ai/prompts/algerian";
 import { calculateDeliveryCost } from "@/lib/data/shipping-calculator";
-
-function getServiceSupabase() {
-	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-	const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!url || !key) {
-		throw new Error(
-			"[CommAgent] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
-		);
-	}
-	return createServiceClient(url, key);
-}
 
 // ======= Types =======
 

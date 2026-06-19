@@ -8,19 +8,12 @@
  */
 
 import { processOrder } from "./order-agent";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { processIncomingMessage } from "./communication-agent";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { AgentConfig, DEFAULT_AGENT_CONFIG } from "./types";
 export type { AgentConfig } from "./types";
 export { DEFAULT_AGENT_CONFIG } from "./types";
 
-function getServiceSupabase() {
-	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-	const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!url || !key)
-		throw new Error("Missing Supabase service role configuration");
-	return createServiceClient(url, key);
-}
 
 // ======= Types =======
 

@@ -9,7 +9,7 @@ const schema = z.object({
 
 export const POST = withAuthAndRateLimit(
   async (_req, { sellerId, supabase, body }) => {
-    const { order_id } = body as z.infer<typeof schema>;
+    const { order_id } = body!; // L10 fix: removed redundant cast (body already typed by wrapper)
 
     const { data: order, error: orderErr } = await supabase
       .from("orders")

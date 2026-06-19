@@ -7,6 +7,9 @@
 
 // ===== TYPES =====
 
+
+// M15 fix: extracted magic number to a named constant
+const FETCH_TIMEOUT_MS = 15000;
 export type DeliveryStatus =
 	| "pending" // Created, not yet picked up
 	| "created" // Record created in delivery company system
@@ -230,7 +233,7 @@ export class YalidineAdapter extends DeliveryAdapter {
 				method: "POST",
 				headers: this.headers(credentials),
 				body: JSON.stringify(body),
-				signal: AbortSignal.timeout(15000),
+				signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 			});
 
 			if (!res.ok) {
@@ -282,7 +285,7 @@ export class YalidineAdapter extends DeliveryAdapter {
 				{
 					method: "GET",
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 
@@ -356,7 +359,7 @@ export class YalidineAdapter extends DeliveryAdapter {
 				{
 					method: "DELETE",
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			return { success: res.ok };
@@ -385,7 +388,7 @@ export class YalidineAdapter extends DeliveryAdapter {
 			const res = await fetch(`${YALIDINE_BASE}/deliveryfees/?${params}`, {
 				method: "GET",
 				headers: this.headers(credentials),
-				signal: AbortSignal.timeout(15000),
+				signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 			});
 
 			if (!res.ok) return 0;
@@ -439,7 +442,7 @@ export class ZRExpressAdapter extends DeliveryAdapter {
 			const res = await retryFetch(`${ZR_BASE}/shipment/create`, {
 				method: "POST",
 				headers: this.headers(credentials),
-				signal: AbortSignal.timeout(15000),
+				signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				body: JSON.stringify({
 					reference: request.orderNumber,
 					nom: request.customer.name,
@@ -497,7 +500,7 @@ export class ZRExpressAdapter extends DeliveryAdapter {
 				`${ZR_BASE}/shipment/tracking/${encodeURIComponent(trackingId)}`,
 				{
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			if (!res.ok)
@@ -553,7 +556,7 @@ export class ZRExpressAdapter extends DeliveryAdapter {
 				{
 					method: "DELETE",
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			return { success: r.ok };
@@ -574,7 +577,7 @@ export class ZRExpressAdapter extends DeliveryAdapter {
 				`${ZR_BASE}/deliveryfees?from=${encodeURIComponent(fromWilaya)}&to=${encodeURIComponent(toWilaya)}&weight=${weight}`,
 				{
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			if (!r.ok) return 0;
@@ -621,7 +624,7 @@ export class MaystroAdapter extends DeliveryAdapter {
 			const res = await retryFetch(`${MAYSTRO_BASE}/shipments`, {
 				method: "POST",
 				headers: this.headers(credentials),
-				signal: AbortSignal.timeout(15000),
+				signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				body: JSON.stringify({
 					reference: request.orderNumber,
 					recipient_name: request.customer.name,
@@ -680,7 +683,7 @@ export class MaystroAdapter extends DeliveryAdapter {
 				`${MAYSTRO_BASE}/shipments/${encodeURIComponent(trackingId)}/tracking`,
 				{
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			if (!res.ok)
@@ -735,7 +738,7 @@ export class MaystroAdapter extends DeliveryAdapter {
 				{
 					method: "POST",
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			return { success: r.ok };
@@ -756,7 +759,7 @@ export class MaystroAdapter extends DeliveryAdapter {
 				`${MAYSTRO_BASE}/pricing?wilaya=${encodeURIComponent(toWilaya)}`,
 				{
 					headers: this.headers(credentials),
-					signal: AbortSignal.timeout(15000),
+					signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 				},
 			);
 			if (!r.ok) return 0;

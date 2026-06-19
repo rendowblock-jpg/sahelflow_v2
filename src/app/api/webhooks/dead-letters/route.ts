@@ -8,17 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { z } from "zod";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
 
-function getServiceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createServiceClient(url, key);
-}
 
 function requireAdmin(req: NextRequest): NextResponse | null {
   // Fail-closed: if no secret is configured, do not expose service-role endpoints publicly.
