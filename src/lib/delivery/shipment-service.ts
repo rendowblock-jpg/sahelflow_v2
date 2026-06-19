@@ -31,6 +31,7 @@ interface CreateShipmentParams {
 	items: ShipmentItem[];
 	isExchange?: boolean;
 	notes?: string;
+	provider?: string;
 }
 
 export async function createShipmentForOrder(
@@ -52,35 +53,37 @@ export async function createShipmentForOrder(
 		items,
 		isExchange,
 		notes,
+		provider = "yalidine",
 	} = params;
 
-	// 1. Find active delivery integration for this seller
+	// 1. Find active delivery integration for this seller.
+	// `integrations` columns: platform, credentials, is_active (NO provider/type/active/updated_at).
+	// `provider` comes from the caller (default "yalidine"); we look up the matching
+	// integration row by platform to obtain stored credentials.
+	const adapter = getDeliveryAdapter(provider);
+	if (!adapter) {
+		return {
+			success: false,
+			trackingId: "",
+			cost: 0,
+			error: `${provider} delivery adapter not available`,
+		};
+	}
+
 	const { data: integration } = await supabase
 		.from("integrations")
-		.select("provider, credentials")
+		.select("credentials")
 		.eq("seller_id", sellerId)
-		.eq("type", "delivery")
-		.eq("active", true)
-		.order("updated_at", { ascending: false })
-		.limit(1)
-		.single();
+		.eq("platform", provider)
+		.eq("is_active", true)
+		.maybeSingle();
 
 	if (!integration) {
 		return {
 			success: false,
 			trackingId: "",
 			cost: 0,
-			error: "No active delivery integration found",
-		};
-	}
-
-	const adapter = getDeliveryAdapter(integration.provider);
-	if (!adapter) {
-		return {
-			success: false,
-			trackingId: "",
-			cost: 0,
-			error: `${integration.provider} delivery adapter not available`,
+			error: `No active ${adapter.name} integration found. Connect it in Settings → Integrations.`,
 		};
 	}
 
@@ -116,7 +119,7 @@ export async function createShipmentForOrder(
 		await supabase.from("deliveries").insert({
 			order_id: orderId,
 			seller_id: sellerId,
-			provider: integration.provider,
+			provider,
 			tracking_number: result.trackingId,
 			status: "created",
 			raw_response: result as unknown as Record<string, unknown>,

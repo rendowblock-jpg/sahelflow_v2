@@ -127,7 +127,7 @@ export const POST = withAuthAndRateLimit(
         p_wilaya: form.wilaya,
         p_commune: form.commune,
         p_address: form.address,
-        p_source: "webstore",
+        p_source: "store",
         p_external_id: null,
         p_notes: form.notes || null,
         p_delivery_type: deliveryType || "home",
