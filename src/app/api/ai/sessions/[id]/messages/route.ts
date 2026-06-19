@@ -21,6 +21,7 @@ export const POST = withAuthAndRateLimit(
 			}
 
 			const message = await addMessage(
+				sellerId,
 				id as string,
 				role,
 				content,

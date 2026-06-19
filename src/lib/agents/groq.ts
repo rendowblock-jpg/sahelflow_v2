@@ -158,6 +158,14 @@ export async function callLLM(
 					continue;
 				}
 			}
+			// W7 fix: Don't retry non-retryable errors (400/401/403/404).
+			// Previously ALL errors were retried 3x, wasting 90s on permanent failures.
+			if (err instanceof Error) {
+				const msg = err.message;
+				if (/Groq API error: (400|401|403|404)/.test(msg)) {
+					throw err; // Non-retryable — fail fast
+				}
+			}
 			if (attempt >= maxRetries - 1) throw err;
 		}
 	}

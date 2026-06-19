@@ -34,8 +34,9 @@ const DARIJA_LEAK_MAP: Record<string, { ar: string; fr: string; en: string }> = 
   'مازال': { ar: 'لم يتم بعد', fr: 'pas encore', en: 'not yet' },
   'دابا': { ar: 'الآن', fr: 'maintenant', en: 'now' },
   'غدوة': { ar: 'غداً', fr: 'demain', en: 'tomorrow' },
-  'اليوم': { ar: 'اليوم', fr: "aujourd'hui", en: 'today' },
-  'بصراحة': { ar: 'بصراحة', fr: 'franchement', en: 'honestly' },
+  // W15 fix: Removed 'اليوم' (today) and 'بصراحة' (honestly) — these are valid
+  // MSA (Modern Standard Arabic) words, not Darija leaks. Replacing them would
+  // corrupt valid Arabic text. Only true Darija-only words remain.
   'نشالله': { ar: 'إن شاء الله', fr: 'si Dieu le veut', en: 'God willing' },
   'الحمدولله': { ar: 'الحمد لله', fr: 'Dieu merci', en: 'thank God' },
 }

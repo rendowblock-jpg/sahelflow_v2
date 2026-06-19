@@ -159,7 +159,7 @@ describe("Delivery Adapters", () => {
 			});
 
 			it("handles network failure", async () => {
-				vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error("Timeout"));
+				vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Timeout"));
 
 				const result = await adapter.createShipment(mockShipment, credentials);
 				expect(result.success).toBe(false);
@@ -459,7 +459,7 @@ describe("Delivery Adapters", () => {
 			});
 
 			it("handles network failure", async () => {
-				vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error("Timeout"));
+				vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Timeout"));
 
 				const result = await adapter.createShipment(mockShipment, credentials);
 				expect(result.success).toBe(false);
@@ -686,7 +686,7 @@ describe("Delivery Adapters", () => {
 			});
 
 			it("handles network failure", async () => {
-				vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error("Timeout"));
+				vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Timeout"));
 
 				const result = await adapter.createShipment(mockShipment, credentials);
 				expect(result.success).toBe(false);

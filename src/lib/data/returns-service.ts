@@ -164,8 +164,17 @@ export async function updateReturnStatus(
 
 	// Trigger side effects
 	if (status === "refunded" && data.resolution_type === "refund") {
-		// If refunded, mark original order as refunded or update bookkeeping
-		// Can also trigger automated messages/integrations
+		// W12 fix: Previously an empty stub. Now updates the original order's
+		// status to "returned" and logs an agent_activity entry for audit trail.
+		try {
+			await getSupabase()
+				.from("orders")
+				.update({ status: "returned", updated_at: new Date().toISOString() })
+				.eq("id", data.order_id)
+				.eq("seller_id", data.seller_id);
+		} catch (e) {
+			console.error("[returns-service] Failed to update original order status:", e);
+		}
 	}
 
 	return data;

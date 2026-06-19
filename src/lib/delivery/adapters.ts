@@ -19,6 +19,46 @@ export type DeliveryStatus =
 	| "refused" // Customer refused delivery
 	| "failed"; // Delivery attempt failed
 
+// W8 fix: Retry wrapper for transient failures (502, 503, timeout).
+// Previously, a single transient 502 from any delivery provider = permanent
+// failure, leaving the order stuck unshipped. Now retries up to 3 times.
+async function retryFetch(
+	url: string,
+	options: RequestInit,
+	maxRetries = 3,
+): Promise<Response> {
+	let lastError: Error | null = null;
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			const res = await fetch(url, options);
+			// Retry on 502/503 (transient server errors)
+			if (res.status === 502 || res.status === 503) {
+				if (attempt < maxRetries - 1) {
+					const delay = (attempt + 1) * 1000 + Math.floor(Math.random() * 500);
+					console.warn(
+						`[DeliveryAdapter] ${res.status} on attempt ${attempt + 1}/${maxRetries}, retrying in ${delay}ms`,
+					);
+					await new Promise((r) => setTimeout(r, delay));
+					continue;
+				}
+			}
+			return res;
+		} catch (e) {
+			lastError = e as Error;
+			// Retry on network errors (AbortError/timeout, connection refused)
+			if (attempt < maxRetries - 1) {
+				const delay = (attempt + 1) * 1000 + Math.floor(Math.random() * 500);
+				console.warn(
+					`[DeliveryAdapter] Network error on attempt ${attempt + 1}/${maxRetries}: ${(e as Error).name}, retrying in ${delay}ms`,
+				);
+				await new Promise((r) => setTimeout(r, delay));
+				continue;
+			}
+		}
+	}
+	throw lastError || new Error("retryFetch exhausted");
+}
+
 export interface ShipmentRequest {
 	orderId: string;
 	orderNumber: string;
@@ -185,7 +225,7 @@ export class YalidineAdapter extends DeliveryAdapter {
 		];
 
 		try {
-			const res = await fetch(`${YALIDINE_BASE}/parcels/`, {
+			const res = await retryFetch(`${YALIDINE_BASE}/parcels/`, {
 				method: "POST",
 				headers: this.headers(credentials),
 				body: JSON.stringify(body),
@@ -395,7 +435,7 @@ export class ZRExpressAdapter extends DeliveryAdapter {
 			};
 		}
 		try {
-			const res = await fetch(`${ZR_BASE}/shipment/create`, {
+			const res = await retryFetch(`${ZR_BASE}/shipment/create`, {
 				method: "POST",
 				headers: this.headers(credentials),
 				signal: AbortSignal.timeout(15000),
@@ -577,7 +617,7 @@ export class MaystroAdapter extends DeliveryAdapter {
 			};
 		}
 		try {
-			const res = await fetch(`${MAYSTRO_BASE}/shipments`, {
+			const res = await retryFetch(`${MAYSTRO_BASE}/shipments`, {
 				method: "POST",
 				headers: this.headers(credentials),
 				signal: AbortSignal.timeout(15000),

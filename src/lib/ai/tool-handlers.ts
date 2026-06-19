@@ -51,7 +51,7 @@ export async function handleUpdateOrderStatus(
 
 	if (orderError) {
 		console.error(
-			`[handleUpdateOrderStatus] Supabase error:`,
+			`[Tool handleUpdateOrderStatus] Supabase error:`,
 			orderError.message,
 		);
 		return { error: `Database error: ${orderError.message}` };
@@ -127,7 +127,7 @@ export async function handleCreateOrder(
 		.eq("seller_id", sellerId);
 	if (catalogError) {
 		console.error(
-			`[handleCreateOrder] Catalog fetch error:`,
+			`[Tool handleCreateOrder] Catalog fetch error:`,
 			catalogError.message,
 		);
 	}
@@ -161,7 +161,7 @@ export async function handleCreateOrder(
 			}
 			if ((item.price || 0) <= 0) {
 				console.warn(
-					`[handleCreateOrder] No price for item "${item.name}" and no catalog match. Defaulting to 0.`,
+					`[Tool handleCreateOrder] No price for item "${item.name}" and no catalog match. Defaulting to 0.`,
 				);
 				return { ...item, price: 0 };
 			}
@@ -171,7 +171,7 @@ export async function handleCreateOrder(
 		items = items.map((item) => {
 			if ((item.price || 0) <= 0) {
 				console.warn(
-					`[handleCreateOrder] No price for item "${item.name}" (catalog empty). Defaulting to 0.`,
+					`[Tool handleCreateOrder] No price for item "${item.name}" (catalog empty). Defaulting to 0.`,
 				);
 				return { ...item, price: 0 };
 			}
@@ -337,7 +337,7 @@ export async function handleUpdateProduct(
 
 	if (productError) {
 		console.error(
-			`[handleUpdateProduct] Supabase error:`,
+			`[Tool handleUpdateProduct] Supabase error:`,
 			productError.message,
 		);
 		return { error: `Database error: ${productError.message}` };
@@ -416,7 +416,7 @@ export async function handleUpdateCustomer(
 
 	if (customerError) {
 		console.error(
-			`[handleUpdateCustomer] Supabase error:`,
+			`[Tool handleUpdateCustomer] Supabase error:`,
 			customerError.message,
 		);
 		return { error: `Database error: ${customerError.message}` };
@@ -464,7 +464,7 @@ export async function handleDeleteOrder(
 		.eq("order_number", params.order_number)
 		.single();
 	if (lookupError) {
-		console.error(`[handleDeleteOrder] Supabase error:`, lookupError.message);
+		console.error(`[Tool handleDeleteOrder] Supabase error:`, lookupError.message);
 		return { error: `Database error: ${lookupError.message}` };
 	}
 	if (!data) return { error: "Order not found" };
@@ -492,7 +492,7 @@ export async function handleDeleteProduct(
 		.ilike("name", escapeLike(params.name))
 		.limit(2);
 	if (lookupError) {
-		console.error(`[handleDeleteProduct] Supabase error:`, lookupError.message);
+		console.error(`[Tool handleDeleteProduct] Supabase error:`, lookupError.message);
 		return { error: `Database error: ${lookupError.message}` };
 	}
 	if (!data || data.length === 0) return { error: "Product not found" };
@@ -536,7 +536,7 @@ export async function handleUpdateShippingRate(
 		.single();
 	if (lookupError) {
 		console.error(
-			`[handleUpdateShippingRate] Supabase error:`,
+			`[Tool handleUpdateShippingRate] Supabase error:`,
 			lookupError.message,
 		);
 		return { error: `Database error: ${lookupError.message}` };
@@ -575,7 +575,7 @@ export async function handleToggleAutomation(
 		.single();
 	if (lookupError) {
 		console.error(
-			`[handleToggleAutomation] Supabase error:`,
+			`[Tool handleToggleAutomation] Supabase error:`,
 			lookupError.message,
 		);
 		return { error: `Database error: ${lookupError.message}` };
@@ -614,7 +614,7 @@ export async function handleCreateShipment(
 		.single();
 
 	if (orderError) {
-		console.error(`[handleCreateShipment] Supabase error:`, orderError.message);
+		console.error(`[Tool handleCreateShipment] Supabase error:`, orderError.message);
 		return { error: `Database error: ${orderError.message}` };
 	}
 
@@ -691,7 +691,7 @@ export async function handleListReturns(
 
 	const { data, error } = await query;
 	if (error) {
-		console.error(`[handleListReturns] Supabase error:`, error.message);
+		console.error(`[Tool handleListReturns] Supabase error:`, error.message);
 		return { error: `Database error: ${error.message}` };
 	}
 
@@ -793,7 +793,7 @@ export async function handleCreateReturn(
 		.single();
 
 	if (insertError) {
-		console.error(`[handleCreateReturn] Insert error:`, insertError.message);
+		console.error(`[Tool handleCreateReturn] Insert error:`, insertError.message);
 		return { error: `Failed to create return: ${insertError.message}` };
 	}
 
@@ -862,6 +862,7 @@ export async function handleUpdateReturnStatus(
 	}
 
 	// Auto-create exchange order if status changes to exchanged and exchange_order_id not set
+	// W4 fix: Guard against race condition where two concurrent calls both create exchange orders.
 	if (params.new_status === "exchanged" && !returnObj.exchange_order_id) {
 		// Fetch original order details
 		const { data: originalOrder, error: orderError } = await supabase
@@ -906,7 +907,25 @@ export async function handleUpdateReturnStatus(
 				.single();
 
 			if (!insertOrderError && newOrder) {
-				rawUpdates.exchange_order_id = newOrder.id;
+				// W4 fix: Atomically claim the exchange order. Only set exchange_order_id
+				// if it's still null (prevents duplicate exchange orders from concurrent calls).
+				const { data: claimed, error: claimErr } = await supabase
+					.from("returns")
+					.update({ exchange_order_id: newOrder.id })
+					.eq("id", returnObj.id)
+					.is("exchange_order_id", null)
+					.select("id")
+					.single();
+
+				if (claimErr || !claimed) {
+					// Another concurrent call already claimed this return — delete our duplicate order
+					await supabase.from("orders").delete().eq("id", newOrder.id);
+					console.warn(
+						`[Tool handleUpdateReturnStatus] Duplicate exchange order prevented for return ${returnObj.id}`,
+					);
+				} else {
+					rawUpdates.exchange_order_id = newOrder.id;
+				}
 
 				// Add timeline log for auto-created order
 				await supabase.from("return_notes").insert({
@@ -961,7 +980,7 @@ export async function handleGetPnL(
 	});
 
 	if (error) {
-		console.error(`[handleGetPnL] RPC error:`, error.message);
+		console.error(`[Tool handleGetPnL] RPC error:`, error.message);
 		return { error: `Failed to fetch P&L summary: ${error.message}` };
 	}
 
@@ -990,7 +1009,7 @@ export async function handleListExpenses(
 
 	const { data, error } = await query;
 	if (error) {
-		console.error(`[handleListExpenses] Supabase error:`, error.message);
+		console.error(`[Tool handleListExpenses] Supabase error:`, error.message);
 		return { error: `Failed to fetch expenses: ${error.message}` };
 	}
 
@@ -1045,7 +1064,7 @@ export async function handleAddExpense(
 		.single();
 
 	if (error) {
-		console.error(`[handleAddExpense] Supabase error:`, error.message);
+		console.error(`[Tool handleAddExpense] Supabase error:`, error.message);
 		return { error: `Failed to create expense: ${error.message}` };
 	}
 

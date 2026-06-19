@@ -1433,16 +1433,29 @@ PERSONALITY:
 
 		// Execute functions if requested
 		if (tool_calls && tool_calls.length > 0) {
+			// W21 fix: Guard against excessive tool calls in a single pass.
+			// The agent is currently single-pass (no multi-step reasoning loop),
+			// but this prevents pathological cases where the model returns
+			// dozens of tool calls in one response.
+			const MAX_TOOL_CALLS_PER_TURN = 10;
+			const callsToExecute = tool_calls.slice(0, MAX_TOOL_CALLS_PER_TURN);
+			if (tool_calls.length > MAX_TOOL_CALLS_PER_TURN) {
+				console.warn(
+					`[Agent] Model requested ${tool_calls.length} tool calls in one turn. ` +
+					`Executing only the first ${MAX_TOOL_CALLS_PER_TURN}.`,
+				);
+			}
+
 			onStep?.({
 				step: "tool_call",
-				detail: `Executing ${tool_calls.length} tool${tool_calls.length > 1 ? "s" : ""}...`,
+				detail: `Executing ${callsToExecute.length} tool${callsToExecute.length > 1 ? "s" : ""}...`,
 			});
 			actionCards = [];
 			const toolResultsMessages: ChatMessage[] = [];
 
 			// We use a regular loop instead of Promise.all to ensure we don't skip any tool calls
 			// OpenAI/Groq REQUIRE that every tool_call_id is answered.
-			for (const call of tool_calls) {
+			for (const call of callsToExecute) {
 				if (!call.id || call.type !== "function") continue;
 
 				const toolName = call.function?.name;

@@ -278,8 +278,11 @@ export function normalizeWilayaName(name: string): string | undefined {
   if (found) return found.name;
 
   // Try substring matching (e.g. if name is "wilaya of alger" or "الجزائر العاصمة")
+  // W22 fix: Only match if the input includes the alias (not the reverse).
+  // Previously `alias.includes(clean)` was too loose — "tam" would match
+  // "Tamanrasset" because "Tamanrasset".includes("tam") is true.
   for (const [alias, official] of Object.entries(WILAYA_ALIASES)) {
-    if (clean.includes(alias) || alias.includes(clean)) {
+    if (clean.includes(alias)) {
       return official;
     }
   }
