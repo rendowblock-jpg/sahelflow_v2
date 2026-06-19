@@ -85,7 +85,7 @@ export async function extractOrderFromConversation(
 			commune: extraction.commune || null,
 			address: extraction.address || null,
 			products: extraction.products.map((p) => ({
-				name: p.name,
+				name: p.name || p.product_name || "",
 				quantity: p.quantity,
 				variant: p.variant || undefined,
 			})),

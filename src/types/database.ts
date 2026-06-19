@@ -132,10 +132,17 @@ export type ConfirmationStatus =
 	| "confirmed"
 	| "annule";
 
+// TD1 fix: OrderItem accepts BOTH shapes that exist in the orders.items JSONB column.
+// - Store/webhook path uses { product_name, unit_price }
+// - AI extraction path uses { name, price }
+// Code reads via `item.product_name || item.name` fallbacks. Both alias fields
+// are optional so either shape satisfies the type.
 export interface OrderItem {
-	product_name: string;
+	product_name?: string;
+	name?: string; // AI-extraction alias
 	quantity: number;
-	unit_price: number;
+	unit_price?: number;
+	price?: number; // AI-extraction alias
 	product_id?: string;
 	variant?: string | null;
 }
@@ -322,13 +329,7 @@ export interface AIExtraction {
 	wilaya: string | undefined;
 	commune: string | undefined;
 	address: string | undefined;
-	products: Array<{
-		product_id?: string;
-		name: string;
-		quantity: number;
-		price?: number;
-		variant?: string | null;
-	}>;
+	products: OrderItem[]; // TD1 fix: unified with OrderItem (AI fills name/price, code normalizes)
 	confidence: number;
 	raw_text: string;
 }
