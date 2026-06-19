@@ -62,7 +62,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **AI**         | Groq API (5-model router with per-model API keys and cascading fallback, 30 tools)             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp via Baileys)                                               |
 | **Validation** | Zod (all public API routes)                                                                    |
-| **Testing**    | Vitest (604 unit tests across 37 test files) + Playwright e2e                                   |
+| **Testing**    | Vitest (567 unit tests across 36 test files) + Playwright e2e                                   |
 | **Hosting**    | Vercel (per-client project, deployed via `vercel --prod --yes`)                                 |
 
 ---
@@ -120,7 +120,7 @@ Auto-deploy from GitHub `main` is a planned automation item (design system §7.2
 
 ## Build & Test Gate
 
-- ✅ `npx vitest run` — **604/604** passing across 37 test files
+- ✅ `npx vitest run` — **567/567** passing across 36 test files
 - ✅ `npx tsc --noEmit` — strict mode, zero errors
 - ✅ `npx eslint .` — zero errors
 - ✅ Security headers complete (CSP + HSTS + Permissions-Policy + XFO + XCTO + RP)
@@ -144,7 +144,7 @@ Completed development phases (P0–P7):
 6. **Multi-User Team Roles (P6)** — Owner, Admin, Confirmer, Packer, Viewer roles, custom RLS, and invite system
 7. **Daily Summary Cron (P7)** — Automated daily sales and operational performance report via WhatsApp
 
-**Known gaps** (from audit): 3 latent DB-drift bugs fixed in [PR #2](https://github.com/rendowblock-jpg/sahelflow_v2/pull/2). Remaining: fake/coming-soon UI sections (Billing, 2FA, channels), broken accounting RPC routes, missing RBAC on most API routes, RLS policy gaps for team members, and test coverage gaps on critical paths (`atomic_create_order`, automation executor, HMAC verifiers).
+**Audit progress:** 69 of ~170 findings fixed across 10 PRs. All 15 critical findings resolved (0 remaining). Recent fixes: RBAC enforcement on 28 routes (PR #7), dead code removal -1,090 lines (PR #8), 22 weak patterns / silent bugs (PR #9), 9 hardcoded values → config/i18n (PR #10). Remaining: ~25 high (security S5-S18), ~45 medium, ~50 low. See `documentation/AUDIT_FINDINGS.md`.
 
 ---
 

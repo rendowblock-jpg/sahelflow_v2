@@ -1,7 +1,7 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-06-19 (deep audit fixes)  
-> **Status:** ⚠️ IN ACTIVE DEVELOPMENT — deep audit surfaced ~170 findings (15 critical). See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
+> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #10, 69 findings fixed)  
+> **Status:** ✅ ALL CRITICAL FINDINGS RESOLVED — 69 of ~170 findings fixed across 10 PRs. 0 critical remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
 
 ---
 
@@ -10,7 +10,7 @@
 | Gate                           | Result                                               |
 | ------------------------------ | ---------------------------------------------------- |
 | `next build`                   | ✅ Zero errors, zero warnings                        |
-| `npx vitest run`               | ✅ **604/604** passing across 37 test files          |
+| `npx vitest run`               | ✅ **567/567** passing across 36 test files          |
 | `npx eslint .`                 | ✅ 0 errors (10 warnings — pre-existing unused vars)  |
 | `npx tsc --noEmit`             | ✅ Zero errors (strict mode)                         |
 | Security headers               | ✅ CSP + HSTS + Permissions-Policy + XFO + XCTO + RP |
@@ -172,9 +172,9 @@
 
 ---
 
-## Deep Audit Fixes (2026-06-19) — PR #2, #4, #5, #6
+## Deep Audit Fixes (2026-06-19) — PR #2 through #10
 
-A 5-agent deep audit surfaced ~170 findings across all layers. 27 fixed across 4 PRs:
+A 5-agent deep audit surfaced ~170 findings across all layers. **69 fixed across 10 PRs** (all 15 critical resolved):
 
 ### PR #2 — Latent DB drift bugs + dead code (7 commits)
 - ✅ `place-order` p_source `webstore`→`store` (orders.source CHECK violation)
@@ -217,7 +217,36 @@ A 5-agent deep audit surfaced ~170 findings across all layers. 27 fixed across 4
 - ✅ F11: Inbox fake draft order fallback removed
 - ✅ F12: AIAssistant fake model badge removed
 
-**Remaining audit findings:** ~143 (3 critical: S3 RBAC, S4 multi-seller attribution; ~35 high; ~60 medium; ~60 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
+### PR #7 — Security: RBAC + multi-seller attribution (4 commits)
+- ✅ S3: RBAC enforced on 28 previously unprotected API routes via `requirePermission` wrapper option
+- ✅ S4: `/api/store/place-order` fixed to attribute orders by `sellerSlug` (was `sellers.limit(1).single()`)
+- **Last 2 critical findings resolved — 0 critical remaining**
+
+### PR #8 — Dead code removal (5 commits, -1,090 lines net)
+- ✅ D1: Removed dead smart-confirmation engine + companion + tests (595 lines)
+- ✅ D2: Removed 3 dead functions + duplicate forceRoute from executor.ts (148 lines)
+- ✅ D3: Removed empty health.ts stub (11 lines)
+- ✅ D4: Removed unused CreateOrderModal component (288 lines)
+- ✅ D8-D9, D11-D12: Minor dead code cleanups
+- ⏭️ D5/D6 skipped (not dead — actively imported), D10 already fixed
+
+### PR #9 — Weak patterns / silent bugs (6 commits, migration 031)
+- ✅ W1-W4: Race conditions (fail-open, atomic run_count, TOCTOU, exchange order)
+- ✅ W5, W6, W20: Security scoping (chat sessions, invited members, rate limit method)
+- ✅ W7-W9: Retry + resilience (Groq fail-fast, delivery retry, Evolution URL)
+- ✅ W12-W13: Business logic (refunded stub, undefined trigger guard)
+- ✅ W10, W11, W14-W17, W21, W22: Code quality (8 findings)
+- ✅ W18-W19: Safety (clearTestData completeness, cart guardrails)
+
+### PR #10 — Hardcoded values → config/i18n (5 commits)
+- ✅ H1: Relabeled fake "national averages" as static estimates
+- ✅ H2: Removed fake "Database capacity" warning
+- ✅ H3: Extracted WhatsApp templates to shared module
+- ✅ H4-H5: Magic number → constant, phone placeholder → obviously fake
+- ✅ H6-H7: External API URLs → env vars (Groq + 3 delivery providers)
+- ✅ H8-H9: 25 inline ternaries + 7 hardcoded English → t() i18n system
+
+**Remaining audit findings:** ~101 (0 critical; ~25 high: S5-S18, M1-M4; ~45 medium; ~50 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
 
 ---
 

@@ -14,14 +14,26 @@ The audit surfaced **~170 findings** across 5 layers. The most impactful categor
 
 | Category | Count | Impact |
 |----------|-------|--------|
-| 🔴 Critical (ship-blockers / security holes) | 15 (3 remaining) | Runtime crashes, fake features shown to users, credential leaks — **12 fixed in PR #4 + PR #5 + PR #6** |
-| 🟠 High (real bugs / weak security) | ~35 | Silent data corruption, broken team-member flows, missing RBAC |
-| 🟡 Medium (weak patterns / dead code) | ~60 | Race conditions, hardcoded values, tautological tests |
-| 🔵 Low (cosmetic / minor) | ~60 | Stale docs, code smell, minor a11y gaps |
+| 🔴 Critical (ship-blockers / security holes) | 15 (**0 remaining** ✅) | Runtime crashes, fake features shown to users, credential leaks — **all 15 fixed in PR #4 + #5 + #6 + #7** |
+| 🟠 High (real bugs / weak security) | ~35 (**~10 fixed**, ~25 remaining) | Silent data corruption, broken team-member flows, missing RBAC — **22 weak patterns fixed in PR #9, 9 hardcoded values fixed in PR #10** |
+| 🟡 Medium (weak patterns / dead code) | ~60 (**~18 fixed**) | Race conditions, hardcoded values, tautological tests — **9 dead code findings fixed in PR #8** |
+| 🔵 Low (cosmetic / minor) | ~60 | Stale docs, code smell, minor a11y gaps — **PR #11-#13 territory** |
 
 **Already fixed in [PR #2](https://github.com/rendowblock-jpg/sahelflow_v2/pull/2):** 3 latent DB-drift bugs (place-order source, clearTestData messages, shipment-service integrations), 3 dead-code cleanups (stray expenses file, vitest paths, orphan automation route), 1 baseline reconciliation (3 drifts). These are marked ✅ below.
 
-**Recommended fix order:** PR #3 (critical broken + fake features) → PR #4 (security) → PR #5 (dead code) → PR #6 (weak patterns) → PR #7 (hardcoded values) → PR #8 (test gaps) → PR #9 (docs/types).
+**Fix progress (as of PR #10):** 69 of ~170 findings fixed across 10 PRs.
+- ✅ PR #2: Latent DB drift bugs (7 fixes)
+- ✅ PR #3: Audit findings doc + doc refresh
+- ✅ PR #4: Magic Moment AAA fixes (6 fixes, migration 030)
+- ✅ PR #5: Code-layer AAA fixes (10 fixes)
+- ✅ PR #6: UI-layer fake features (12 fixes)
+- ✅ PR #7: RBAC enforcement (S3) + multi-seller attribution (S4) — last 2 criticals
+- ✅ PR #8: Dead code removal (9 of 12 findings, -1,090 lines)
+- ✅ PR #9: Weak patterns / silent bugs (22 fixes, migration 031)
+- ✅ PR #10: Hardcoded values → config/i18n (9 fixes)
+- ⏳ PR #11: Test gaps + tautological tests (T1-T12)
+- ⏳ PR #12: Docs + types + migration reconciliation (DOC1-9, TD1-5)
+- ⏳ PR #13: Remaining security findings (S5-S18, M1-M4)
 
 ---
 
@@ -96,8 +108,8 @@ Code that would throw at runtime. Many are latent (only trigger on specific path
 |---|----------|-------|
 | ✅ S1 | `000_baseline.sql:1348` (verified live) | **`sellers_public_select` RLS leaks `webhook_token` to anon.** Anyone on the internet can `SELECT *` from `sellers` where `form_enabled=true` — exposes `webhook_token` (the secret authenticating Shopify/Woo/YouCan webhooks), plus `email`, `phone`, `settings`. **Forge webhooks, take over order ingestion.** |
 | ✅ S2 | `lib/ai/agent.ts:55-68` | **AI agent silently falls back to service-role client.** If `auth.getUser()` fails (webhook/cron/test contexts), falls back to `createAdminClient()` (bypasses RLS). All 30 AI tools then run as root with only `sellerId` (API-influenceable) as scoping. |
-| S3 | All routes except `api/team/*` | **RBAC enforced on only 2 of ~30 API routes.** A `viewer`-role team member can POST/PUT/DELETE orders, products, expenses, returns, templates, AI sessions. `withAuthAndRateLimit` resolves `sellerId` but never checks role/permissions. |
-| S4 | `store/place-order/route.ts:45-49` | **`/api/store/place-order` attributes every webstore order to the FIRST seller.** `sellers.limit(1).single()` — no `where` clause. In multi-seller deployments, every public-form order lands on whichever seller sorts first. |
+| ✅ S3 | All routes except `api/team/*` | **RBAC enforced on only 2 of ~30 API routes.** A `viewer`-role team member can POST/PUT/DELETE orders, products, expenses, returns, templates, AI sessions. `withAuthAndRateLimit` resolves `sellerId` but never checks role/permissions. |
+| ✅ S4 | `store/place-order/route.ts:45-49` | **`/api/store/place-order` attributes every webstore order to the FIRST seller.** `sellers.limit(1).single()` — no `where` clause. In multi-seller deployments, every public-form order lands on whichever seller sorts first. |
 
 ### 🟠 High
 
@@ -128,15 +140,15 @@ Values that should come from config, DB, or i18n.
 
 | # | Location | Issue |
 |---|----------|-------|
-| H1 | `lib/ai/risk-engine.ts:46-141` | **Fake "national average" data.** 14 wilayas have made-up `totalOrders`/`returnRate`/`avgDeliveryTime` blended 40% into seller risk scores. Presented as real insights. |
-| H2 | `dashboard/page.tsx:281-330` | **"Database capacity almost full!" warning uses hardcoded thresholds** (12,750/14,250/15,000 orders). Not based on real capacity. |
-| H3 | `auth-service.ts:73-106` | 4 WhatsApp templates hardcoded in source instead of SQL seed (seed file already exists at `supabase/seeds/whatsapp_templates.sql`). |
-| H4 | `shipping-calculator.ts:14,35,55` | Magic number `400` (DA) hardcoded 3× as fallback shipping cost. |
-| H5 | `i18n/locales/{ar,en,fr}.ts` | Phone placeholder `0791999157` looks like a **real phone number** (should be obviously fake like `0555 000 000`). |
-| H6 | `groq.ts:13,108,215` | Groq URL + `HTTP-Referer: "https://sahelflow.vercel.app"` hardcoded. |
-| H7 | `delivery/adapters.ts:121,367,550` | All 3 delivery API base URLs hardcoded. |
-| H8 | 5 files (accounting pages, returns/[id], TeamInviteModal) | **Inline ternary dictionaries** (`isAr ? "..." : isFr ? "..." : "..."`) bypass the `t()` i18n system — ~150 strings translators can't find. |
-| H9 | `ChatMessage.tsx:134`, `dashboard/error.tsx:25,27`, `orders/page.tsx:540,576,608`, `AIAssistant.tsx:439` | Hardcoded English strings not going through `t()`. |
+| ✅ H1 | `lib/ai/risk-engine.ts:46-141` | **Fake "national average" data.** 14 wilayas have made-up `totalOrders`/`returnRate`/`avgDeliveryTime` blended 40% into seller risk scores. Presented as real insights. |
+| ✅ H2 | `dashboard/page.tsx:281-330` | **"Database capacity almost full!" warning uses hardcoded thresholds** (12,750/14,250/15,000 orders). Not based on real capacity. |
+| ✅ H3 | `auth-service.ts:73-106` | 4 WhatsApp templates hardcoded in source instead of SQL seed (seed file already exists at `supabase/seeds/whatsapp_templates.sql`). |
+| ✅ H4 | `shipping-calculator.ts:14,35,55` | Magic number `400` (DA) hardcoded 3× as fallback shipping cost. |
+| ✅ H5 | `i18n/locales/{ar,en,fr}.ts` | Phone placeholder `0791999157` looks like a **real phone number** (should be obviously fake like `0555 000 000`). |
+| ✅ H6 | `groq.ts:13,108,215` | Groq URL + `HTTP-Referer: "https://sahelflow.vercel.app"` hardcoded. |
+| ✅ H7 | `delivery/adapters.ts:121,367,550` | All 3 delivery API base URLs hardcoded. |
+| ✅ H8 | 5 files (accounting pages, returns/[id], TeamInviteModal) | **Inline ternary dictionaries** (`isAr ? "..." : isFr ? "..." : "..."`) bypass the `t()` i18n system — ~150 strings translators can't find. |
+| ✅ H9 | `ChatMessage.tsx:134`, `dashboard/error.tsx:25,27`, `orders/page.tsx:540,576,608`, `AIAssistant.tsx:439` | Hardcoded English strings not going through `t()`. |
 
 ---
 
@@ -148,23 +160,23 @@ Exported but never imported, or unreachable branches.
 
 | # | Location | Issue |
 |---|----------|-------|
-| D1 | `lib/automation/confirmation.ts` (335 lines) | **Entire smart-confirmation engine — zero production imports.** 9 hardcoded Darija templates, multi-step sequences. Never wired into the actual confirmation flow. |
-| D2 | `lib/ai/models/executor.ts:219,271,334` | 3 exported functions (~150 lines) never imported. Production uses only `executeWithFallback`. |
-| D3 | `lib/ai/health.ts` (11 lines) | Empty stub, no exports. |
-| D4 | `components/dashboard/orders/CreateOrderModal.tsx` (289 lines) | Exported, never imported (orders page inlines its own modal). |
-| D5 | `lib/ai/service.ts` (71 lines) | Third AI entry point duplicating `agent.ts` + `communication-agent.ts`. |
-| D6 | `lib/agents/` (legacy AI) | Coexists with `lib/ai/` (modern), intertwined. Need to determine which paths are dead. |
-| D7 | `router.ts:253` vs `executor.ts:202` | `forceRoute` duplicated with different behavior. |
+| ✅ D1 | `lib/automation/confirmation.ts` (335 lines) | **Entire smart-confirmation engine — zero production imports.** 9 hardcoded Darija templates, multi-step sequences. Never wired into the actual confirmation flow. |
+| ✅ D2 | `lib/ai/models/executor.ts:219,271,334` | 3 exported functions (~150 lines) never imported. Production uses only `executeWithFallback`. |
+| ✅ D3 | `lib/ai/health.ts` (11 lines) | Empty stub, no exports. |
+| ✅ D4 | `components/dashboard/orders/CreateOrderModal.tsx` (289 lines) | Exported, never imported (orders page inlines its own modal). |
+| ⏭️ D5 | `lib/ai/service.ts` (71 lines) | **NOT dead — all 3 exports actively called in /api/ai/route.ts. Skipped in PR #8.** | Third AI entry point duplicating `agent.ts` + `communication-agent.ts`. |
+| ⏭️ D6 | `lib/agents/` (legacy AI) | **NOT dead — all 5 files actively imported by webhook/API routes. Architectural coexistence, skipped in PR #8.** | Coexists with `lib/ai/` (modern), intertwined. Need to determine which paths are dead. |
+| ✅ D7 | `router.ts:253` vs `executor.ts:202` | `forceRoute` duplicated with different behavior. |
 
 ### 🟡 Medium
 
 | # | Location | Issue |
 |---|----------|-------|
-| D8 | `env.ts:65-66` | `YALIDINE_API_KEY`/`YALIDINE_API_TOKEN` exported, never imported. |
-| D9 | `components/ui/charts/ChartContainer.tsx:34` | `style={prefersReducedMotion ? undefined : undefined}` — both branches return `undefined`. Dead variable. |
-| D10 | `integrations/page.tsx:197` | Duplicate `void toast(...)` call + "Automation error" hardcoded English. |
-| D11 | `types/database.ts:135-143` | `ReturnReason` defined locally then shadowed by re-export from `./returns`. |
-| D12 | `orders/[id]/confirm/route.ts:8` + `status/route.ts:8` | `typeof params.id === "string" ? ... : params.id?.[0]` — array branch is dead (App Router always provides string for `[id]`). |
+| ✅ D8 | `env.ts:65-66` | `YALIDINE_API_KEY`/`YALIDINE_API_TOKEN` exported, never imported. |
+| ✅ D9 | `components/ui/charts/ChartContainer.tsx:34` | `style={prefersReducedMotion ? undefined : undefined}` — both branches return `undefined`. Dead variable. |
+| ✅ D10 | `integrations/page.tsx:197` | **Already fixed (duplicate toast gone, likely in PR #6).** | Duplicate `void toast(...)` call + "Automation error" hardcoded English. |
+| ✅ D11 | `types/database.ts:135-143` | `ReturnReason` defined locally then shadowed by re-export from `./returns`. |
+| ✅ D12 | `orders/[id]/confirm/route.ts:8` + `status/route.ts:8` | `typeof params.id === "string" ? ... : params.id?.[0]` — array branch is dead (App Router always provides string for `[id]`). |
 
 ---
 
@@ -174,28 +186,28 @@ Exported but never imported, or unreachable branches.
 
 | # | Location | Issue |
 |---|----------|-------|
-| W1 | `executor.ts:166-167` | **`evaluateConditions` default returns `true`** → unknown trigger types ALWAYS match (fail-open). |
-| W2 | `executor.ts:115-121` | `run_count` race condition (read-then-write, concurrent events lose increments). |
-| W3 | `executor.ts:457-491` | `ensureRecipesExist` TOCTOU race → duplicate automation rows on concurrent onboarding. |
-| W4 | `tool-handlers.ts:858-906` | `handleUpdateReturnStatus` race on exchange order creation → customer gets 2 exchange orders. |
-| W5 | 10+ `lib/data` services | Missing explicit `seller_id` scoping (rely on RLS only) — leak if ever called with service client. Especially `getSessionMessages`/`addMessage` (anyone with session UUID can read/write). |
-| W6 | `team-service.ts:51-64` | Treats `invited` members as `active` (full access before accepting invite). |
-| W7 | `groq.ts:149-162` | Retries non-retryable errors (400/401 retried 3× = 90s wasted latency). |
-| W8 | `delivery/adapters.ts:187-223,397-441,579-624` | **NO retry logic for shipment creation** (transient 502 = permanent failure, order stuck unshipped). |
-| W9 | `evolution-api.ts:14-15` | Silently falls back to `localhost:8080` if env vars missing. |
-| W10 | `lib/ai/models/health.ts:34` | Module-level health store shared across tenants (seller A's failures mark models unhealthy for seller B). |
-| W11 | `order-agent.ts:295-358` | AI recommendation ignored, only `risk_score` thresholds used (AI feature is dead weight). |
-| W12 | `returns-service.ts:166-169` | Empty stub for refunded side-effects (return doesn't update original order, no accounting entry, no notification). |
-| W13 | `order-service.ts:213-222` | Status→trigger map incomplete (unknown statuses call `executeRecipes` with `undefined` type). |
-| W14 | `tool-handlers.ts` (15+ occurrences) | `console.error` calls have **truncated prefix** (`andleUpdateOrderStatus]` instead of `[Tool handleUpdateOrderStatus]`) — bad find-and-replace stripped `"[Tool h"` globally. |
-| W15 | `sanitizer.ts:37,38` | Valid MSA Arabic words (`اليوم`, `بصراحة`) listed as "Darija leaks" — would corrupt valid Arabic if regex worked. |
-| W16 | `i18n/server.ts:10` vs `index.tsx:13` | Server defaults to `"en"`, client defaults to `"ar"` — inconsistent. |
-| W17 | `permissions.ts:66` | `hasPermission` returns `true` for owner on ANY string (typos masked for primary users). |
-| W18 | `storage-service.ts:28-60` | `clearTestData` is a destructive nuke with no guardrails, no soft-delete, no audit log, AND incomplete (doesn't delete returns/expenses/automations → FK violations). |
-| W19 | `cart.ts:56-67` | No upper bound on quantity, no price validation, `localStorage.setItem` unwrapped. |
-| W20 | `rate-limit.ts` | Key omits HTTP method → GETs burn POST budget. |
-| W21 | `agent.ts:1296-1450` | No infinite-loop protection (single-pass only — can't do multi-step reasoning). |
-| W22 | `wilayas.ts:285-289` | `normalizeWilayaName` substring match too loose ("tam" → Tamanrasset). |
+| ✅ W1 | `executor.ts:166-167` | **`evaluateConditions` default returns `true`** → unknown trigger types ALWAYS match (fail-open). |
+| ✅ W2 | `executor.ts:115-121` | `run_count` race condition (read-then-write, concurrent events lose increments). |
+| ✅ W3 | `executor.ts:457-491` | `ensureRecipesExist` TOCTOU race → duplicate automation rows on concurrent onboarding. |
+| ✅ W4 | `tool-handlers.ts:858-906` | `handleUpdateReturnStatus` race on exchange order creation → customer gets 2 exchange orders. |
+| ✅ W5 | 10+ `lib/data` services | Missing explicit `seller_id` scoping (rely on RLS only) — leak if ever called with service client. Especially `getSessionMessages`/`addMessage` (anyone with session UUID can read/write). |
+| ✅ W6 | `team-service.ts:51-64` | Treats `invited` members as `active` (full access before accepting invite). |
+| ✅ W7 | `groq.ts:149-162` | Retries non-retryable errors (400/401 retried 3× = 90s wasted latency). |
+| ✅ W8 | `delivery/adapters.ts:187-223,397-441,579-624` | **NO retry logic for shipment creation** (transient 502 = permanent failure, order stuck unshipped). |
+| ✅ W9 | `evolution-api.ts:14-15` | Silently falls back to `localhost:8080` if env vars missing. |
+| ✅ W10 | `lib/ai/models/health.ts:34` | Module-level health store shared across tenants (seller A's failures mark models unhealthy for seller B). |
+| ✅ W11 | `order-agent.ts:295-358` | AI recommendation ignored, only `risk_score` thresholds used (AI feature is dead weight). |
+| ✅ W12 | `returns-service.ts:166-169` | Empty stub for refunded side-effects (return doesn't update original order, no accounting entry, no notification). |
+| ✅ W13 | `order-service.ts:213-222` | Status→trigger map incomplete (unknown statuses call `executeRecipes` with `undefined` type). |
+| ✅ W14 | `tool-handlers.ts` (15+ occurrences) | `console.error` calls have **truncated prefix** (`andleUpdateOrderStatus]` instead of `[Tool handleUpdateOrderStatus]`) — bad find-and-replace stripped `"[Tool h"` globally. |
+| ✅ W15 | `sanitizer.ts:37,38` | Valid MSA Arabic words (`اليوم`, `بصراحة`) listed as "Darija leaks" — would corrupt valid Arabic if regex worked. |
+| ✅ W16 | `i18n/server.ts:10` vs `index.tsx:13` | Server defaults to `"en"`, client defaults to `"ar"` — inconsistent. |
+| ✅ W17 | `permissions.ts:66` | `hasPermission` returns `true` for owner on ANY string (typos masked for primary users). |
+| ✅ W18 | `storage-service.ts:28-60` | `clearTestData` is a destructive nuke with no guardrails, no soft-delete, no audit log, AND incomplete (doesn't delete returns/expenses/automations → FK violations). |
+| ✅ W19 | `cart.ts:56-67` | No upper bound on quantity, no price validation, `localStorage.setItem` unwrapped. |
+| ✅ W20 | `rate-limit.ts` | Key omits HTTP method → GETs burn POST budget. |
+| ✅ W21 | `agent.ts:1296-1450` | No infinite-loop protection (single-pass only — can't do multi-step reasoning). |
+| ✅ W22 | `wilayas.ts:285-289` | `normalizeWilayaName` substring match too loose ("tam" → Tamanrasset). |
 
 ---
 
@@ -313,17 +325,22 @@ Docs that claim things no longer true.
 
 ---
 
-## Recommended Fix Batches
+## Recommended Fix Batches (updated post-PR #10)
 
-| PR | Theme | Findings | Est. commits |
-|----|-------|----------|--------------|
-| #3 | 🔴 Critical broken + fake features | S3-S4 only (B1-B13 ✅ PR #4+#5, F1-F12 ✅ PR #6) | ~2 |
-| #4 | 🔒 Security hardening | S5-S18, M1-M4 (RLS fixes) | ~12 |
-| #5 | 🪦 Dead code removal | D1-D12 | ~10 |
-| #6 | ⚠️ Weak patterns / silent bugs | W1-W22 | ~15 |
-| #7 | 🔢 Hardcoded values → config/i18n | H1-H9 | ~12 |
-| #8 | 🧪 Test gaps + tautological tests | T1-T12 | ~10 |
-| #9 | 📄 Docs + types + migration reconciliation | DOC1-9, TD1-5 | ~10 |
+| PR | Theme | Findings | Status |
+|----|-------|----------|--------|
+| #2 | DB drift + dead code cleanup | 7 fixes | ✅ merged |
+| #3 | Audit findings doc + doc refresh | 5 commits | ✅ merged |
+| #4 | 🔴 Magic Moment AAA fixes | B5/B9/B10/S2/S1/S10 | ✅ merged |
+| #5 | 🔴 Code-layer AAA fixes | B1-B4/B6-B8/B11-B13 | ✅ merged |
+| #6 | 🔴 UI-layer fake features | F1-F12 | ✅ merged |
+| #7 | 🔴 Security: RBAC + seller attribution | S3, S4 | ✅ merged |
+| #8 | 🪦 Dead code removal | D1-D4, D7-D9, D11-D12 (9 of 12) | ✅ merged |
+| #9 | ⚠️ Weak patterns / silent bugs | W1-W22 (all 22) | ✅ merged |
+| #10 | 🔢 Hardcoded values → config/i18n | H1-H9 (all 9) | ✅ merged |
+| #11 | 🧪 Test gaps + tautological tests | T1-T12 | ⏳ next |
+| #12 | 📄 Docs + types + migration reconciliation | DOC1-9, TD1-5 | ⏳ pending |
+| #13 | 🔒 Remaining security hardening | S5-S18, M1-M4 | ⏳ pending |
 
 ---
 
@@ -343,4 +360,4 @@ Findings were cross-referenced and de-duplicated. Each finding includes a `file:
 
 ---
 
-_Last updated: 2026-06-19 — 27 findings fixed across PR #4 + #5 + #6 (B1-B13, F1-F12, S1-S2, S10). 3 critical findings remaining (S3, S4 + B9/B10 already in PR #4)._
+_Last updated: 2026-06-19 — **69 findings fixed** across PR #2 through PR #10. All 15 critical findings resolved (0 remaining). 22 weak patterns + 9 hardcoded values + 9 dead code findings also fixed. Next: PR #11 (test gaps T1-T12), PR #12 (docs/types), PR #13 (security S5-S18)._
