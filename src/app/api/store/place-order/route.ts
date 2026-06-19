@@ -33,19 +33,26 @@ const placeOrderSchema = z.object({
   total: z.number().min(0),
   deliveryCost: z.number().min(0),
   deliveryType: z.enum(["home", "desk"]).optional(),
+  sellerSlug: z
+    .string()
+    .min(1, "Seller slug is required")
+    .max(100, "Seller slug too long")
+    .regex(/^[a-z0-9-]+$/, "Invalid seller slug"),
 });
 
 export const POST = withAuthAndRateLimit(
   async (req, { body }) => {
-    const { form, items, deliveryType } = body!;
+    const { form, items, deliveryType, sellerSlug } = body!;
 
     const adminClient = createAdminClient();
 
-    // 1. Derive seller_id server-side (per-client deployment = single seller row)
+    // 1. Resolve seller by slug (S4 fix — previously used sellers.limit(1).single()
+    //    which attributed ALL webstore orders to whichever seller sorted first,
+    //    corrupting multi-seller deployments).
     const { data: sellerRow, error: sellerErr } = await adminClient
       .from("sellers")
-      .select("id, shipping_rates")
-      .limit(1)
+      .select("id, shipping_rates, form_enabled")
+      .eq("slug", sellerSlug)
       .single();
 
     if (sellerErr || !sellerRow) {
@@ -54,6 +61,15 @@ export const POST = withAuthAndRateLimit(
         { status: 404 },
       );
     }
+
+    // Reject submissions to stores with the public form disabled
+    if (!sellerRow.form_enabled) {
+      return NextResponse.json(
+        { error: "Order form is disabled for this store" },
+        { status: 403 },
+      );
+    }
+
     const sellerId = sellerRow.id;
 
     // Server-side delivery cost computation — never trust client-supplied cost
