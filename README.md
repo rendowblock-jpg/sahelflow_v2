@@ -62,7 +62,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **AI**         | Groq API (5-model router with per-model API keys and cascading fallback, 30 tools)             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp via Baileys)                                               |
 | **Validation** | Zod (all public API routes)                                                                    |
-| **Testing**    | Vitest (696 unit tests across 37 test files) + Playwright e2e                                   |
+| **Testing**    | Vitest (691 unit tests across 37 test files) + Playwright e2e                                   |
 | **Hosting**    | Vercel (per-client project, deployed via `vercel --prod --yes`)                                 |
 
 ---
@@ -120,7 +120,7 @@ Auto-deploy from GitHub `main` is a planned automation item (design system §7.2
 
 ## Build & Test Gate
 
-- ✅ `npx vitest run` — **696/696** passing across 37 test files
+- ✅ `npx vitest run` — **691/691** passing across 37 test files
 - ✅ `npx tsc --noEmit` — strict mode, zero errors
 - ✅ `npx eslint .` — zero errors
 - ✅ Security headers complete (CSP + HSTS + Permissions-Policy + XFO + XCTO + RP)
@@ -132,7 +132,7 @@ Auto-deploy from GitHub `main` is a planned automation item (design system §7.2
 
 ## Project Status
 
-**SahelFlow v2 is in active development.** A deep multi-layer audit (2026-06-19) surfaced ~170 findings — 15 critical, ~35 high. See [AUDIT_FINDINGS.md](./documentation/AUDIT_FINDINGS.md) for the full report.
+**SahelFlow v2 is in active development.** A deep multi-layer audit (2026-06-19) surfaced ~170 findings — all 15 critical + all 18 high resolved (0 remaining). See [AUDIT_FINDINGS.md](./documentation/AUDIT_FINDINGS.md) for the full report.
 
 Completed development phases (P0–P7):
 
@@ -144,7 +144,7 @@ Completed development phases (P0–P7):
 6. **Multi-User Team Roles (P6)** — Owner, Admin, Confirmer, Packer, Viewer roles, custom RLS, and invite system
 7. **Daily Summary Cron (P7)** — Automated daily sales and operational performance report via WhatsApp
 
-**Audit progress:** 95 of ~170 findings fixed across 12 PRs. All 15 critical + 12 test gaps + 14 type/doc findings resolved (0 remaining). Recent fixes: RBAC enforcement on 28 routes (PR #7), dead code removal -1,090 lines (PR #8), 22 weak patterns / silent bugs (PR #9), 9 hardcoded values → config/i18n (PR #10), 12 test gaps + tautological tests +129 tests (PR #11), 5 type-drift + 9 stale-doc fixes (PR #12). Remaining: ~16 high (security S5-S18, M1-M4), ~45 medium, ~50 low. See `documentation/AUDIT_FINDINGS.md`.
+**Audit progress:** 135 of ~170 findings fixed across 15 PRs. All 15 critical + all 18 high + 26 medium/low + 12 test gaps + 14 type/doc findings resolved (0 critical + 0 high remaining). Recent fixes: RBAC enforcement on 28 routes (PR #7), dead code removal -1,090 lines (PR #8), 22 weak patterns / silent bugs (PR #9), 9 hardcoded values → config/i18n (PR #10), 12 test gaps + tautological tests +129 tests (PR #11), 5 type-drift + 9 stale-doc fixes (PR #12), 14 security findings S5-S18/M1-M4 + migration 032 applied (PR #14), 26 medium/low findings M1-M20/L1-L15 (PR #15). Remaining: ~19 medium (architectural refactors, AI duplication, performance) + ~16 low (a11y, type-safety). See `documentation/AUDIT_FINDINGS.md`.
 
 ---
 

@@ -1,7 +1,7 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #12, 95 findings fixed)  
-> **Status:** ✅ ALL CRITICAL + TEST GAPS + TYPE DRIFT + STALE DOCS RESOLVED — 95 of ~170 findings fixed across 12 PRs. 0 critical remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
+> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #15, 135 findings fixed)  
+> **Status:** ✅ ALL CRITICAL + ALL HIGH + 26 MEDIUM/LOW RESOLVED — 135 of ~170 findings fixed across 15 PRs. 0 critical + 0 high remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
 
 ---
 
@@ -10,8 +10,8 @@
 | Gate                           | Result                                               |
 | ------------------------------ | ---------------------------------------------------- |
 | `next build`                   | ✅ Zero errors, zero warnings                        |
-| `npx vitest run`               | ✅ **696/696** passing across 37 test files          |
-| `npx eslint .`                 | ✅ 0 errors (12 warnings — pre-existing unused vars)  |
+| `npx vitest run`               | ✅ **691/691** passing across 37 test files          |
+| `npx eslint .`                 | ✅ 0 errors (13 warnings — pre-existing unused vars)  |
 | `npx tsc --noEmit`             | ✅ Zero errors (strict mode)                         |
 | Security headers               | ✅ CSP + HSTS + Permissions-Policy + XFO + XCTO + RP |
 | Zero English leakage (ar mode) | ✅ Verified via `scripts/check-translations.ts`      |
@@ -172,9 +172,9 @@
 
 ---
 
-## Deep Audit Fixes (2026-06-19) — PR #2 through #12
+## Deep Audit Fixes (2026-06-19) — PR #2 through #15
 
-A 5-agent deep audit surfaced ~170 findings across all layers. **95 fixed across 12 PRs** (all 15 critical + 12 test gaps + 14 type/doc findings resolved):
+A 5-agent deep audit surfaced ~170 findings across all layers. **135 fixed across 15 PRs** (all 15 critical + all 18 high + 26 medium/low + 12 test gaps + 14 type/doc findings resolved):
 
 ### PR #2 — Latent DB drift bugs + dead code (7 commits)
 - ✅ `place-order` p_source `webstore`→`store` (orders.source CHECK violation)
@@ -269,7 +269,48 @@ A 5-agent deep audit surfaced ~170 findings across all layers. **95 fixed across
 - ✅ DOC2-6,8,9: Marked ✅ in AUDIT_FINDINGS.md (already fixed in earlier doc-refresh)
 - ✅ DOC8: VISION.md "Production Hardened" → "Active Development, Critical Issues Resolved"
 
-**Remaining audit findings:** ~75 (0 critical; ~16 high: S5-S18, M1-M4; ~45 medium; ~50 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
+### PR #13 — Docs sync (1 commit)
+- ✅ Updated PROJECT_STATE.md + README.md test counts and audit progress to post-PR #12 state
+
+### PR #14 — Security hardening S5-S18, M1-M4 (7 commits, migration 032 applied to live DB)
+- ✅ S5: Evolution webhook verifies secret BEFORE parsing JSON body (DoS amplifier fix)
+- ✅ S6: Timing-safe CRON_SECRET comparison + removed NODE_ENV=development bypass
+- ✅ S7: State-changing cron GET→POST with GET delegate for Vercel Cron compat
+- ✅ S8: webhook_retry_queue team access → SELECT-only (was FOR ALL)
+- ✅ S9: team_members_manage WITH CHECK forbids role='owner' (privilege escalation fix)
+- ✅ S11: linkUserToInvitations uses admin client (RLS was denying UPDATE)
+- ✅ S12: Products column-level GRANT for anon (hide cost_price/sku/variants)
+- ✅ S13: getClientIP() helper — spoofing-resistant (x-vercel-forwarded-for, full XFF chain)
+- ✅ S14: getIntegrations no longer leaks credentials to browser + server-side getIntegrationCredentials()
+- ✅ S15: sanitizeCSVCell() against CSV formula injection (=, +, -, @, tab, CR)
+- ✅ S16: uploadProductImage size/MIME validation (5MB, image allowlist)
+- ✅ S17: signUp 10-char password + 3-of-4 complexity + email regex + rate limit
+- ✅ S18: next 16.2.4→16.2.9, xlsx→SheetJS CDN 0.20.3 (CVE fixes)
+- ✅ M1: Fixed JWT claim name in get_dashboard_aggregates + get_analytics_data (was dead code)
+- ✅ M2: Archive README explaining duplicate migration numbers
+- ✅ M3: Trilingual whatsapp templates (ar+fr+en, was Arabic-only)
+- ✅ M4: Already fixed by S10 (documented)
+- **Migration 032 applied to live DB and verified (S8, S9, S12, M1 all active)**
+
+### PR #15 — Medium/low audit findings M1-M20, L1-L15 (6 commits)
+- ✅ M19: Team-member scoping bug — 3 routes used user.id instead of sellerId (team members saw no data)
+- ✅ L8: Deterministic idempotency key (was Date.now(), defeated retry queue dedup)
+- ✅ M3/M4/M5: Added zod schemas to 5 routes (notifications, dead-letters, 3 AI session routes)
+- ✅ L9: Bounds-checked pagination limit/offset on expenses + returns (was unbounded)
+- ✅ M20: clearTestData error checking on critical deletes (was silent)
+- ✅ L6: UserProvider silent error swallow → console.error
+- ✅ L7: Removed empty SKELETON_PROVIDERS dead code
+- ✅ L12: Removed debug console.log in production cold start
+- ✅ M18: Removed dead placeOrderSchema export from validation.ts
+- ✅ L2/L4/L5/L13: A11y — 7 aria-labels, label association, alt text, 8 i18n aria-labels + 8 new locale keys
+- ✅ M1/M2/L1/L15: API consistency ({ ok: true }→{ success: true }, msg→message, Arabic→English)
+- ✅ L11/L14: console.log→console.error for error conditions
+- ✅ M15: Extracted FETCH_TIMEOUT_MS constant (12 occurrences)
+- ✅ M16: Consolidated getServiceSupabase from 5 files into shared module
+- ✅ M6: Simplified SupabaseClient<any,any,any> → SupabaseClient
+- ✅ L10: Removed redundant zod casts
+
+**Remaining audit findings:** ~35 (0 critical; 0 high; ~19 medium: architectural refactors M11-M14/M17, AI duplication D5/D6, performance M9-M10; ~16 low: more a11y L3, type-safety M7/M8). See `documentation/AUDIT_FINDINGS.md` for the full report.
 
 ---
 
