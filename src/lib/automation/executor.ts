@@ -111,14 +111,23 @@ export async function executeRecipes(event: AutomationEvent): Promise<{
 		try {
 			await executeRecipeAction(recipe, event);
 
-			// Update run_count and last_run_at
-			await supabaseSvc
-				.from("automations")
-				.update({
-					run_count: (row.run_count || 0) + 1,
-					last_run_at: new Date().toISOString(),
-				})
-				.eq("id", row.id);
+			// W2 fix: atomic increment via RPC (prevents race condition where
+			// concurrent events read the same run_count and lose increments).
+			// Falls back to read-then-write if RPC not available.
+			const { error: incrErr } = await supabaseSvc.rpc(
+				"increment_automation_run_count",
+				{ p_automation_id: row.id },
+			);
+			if (incrErr) {
+				// Fallback: best-effort non-atomic update (pre-PR #9 behavior)
+				await supabaseSvc
+					.from("automations")
+					.update({
+						run_count: (row.run_count || 0) + 1,
+						last_run_at: new Date().toISOString(),
+					})
+					.eq("id", row.id);
+			}
 
 			executed.push(recipe.id);
 		} catch (e) {
@@ -164,7 +173,11 @@ function evaluateConditions(recipe: Recipe, event: AutomationEvent): boolean {
 			return true;
 		}
 		default:
-			return true;
+			// W1 fix: fail-closed for unknown trigger types.
+			// Previously returned true (fail-open), meaning any new/unknown
+			// trigger type would ALWAYS match — executing actions on events
+			// that shouldn't trigger them.
+			return false;
 	}
 }
 
@@ -486,6 +499,17 @@ export async function ensureRecipesExist(sellerId: string): Promise<void> {
 	);
 
 	if (toInsert.length > 0) {
-		await supabaseSvc.from("automations").insert(toInsert);
+		// W3 fix: handle TOCTOU race. The unique index idx_automations_recipe_unique
+		// on (seller_id, trigger_type, trigger_config->>recipe_id) prevents duplicates,
+		// but concurrent onboarding calls may both try to insert the same recipe.
+		// Catch 23505 (unique_violation) and ignore — the recipe already exists.
+		const { error: insertErr } = await supabaseSvc
+			.from("automations")
+			.insert(toInsert);
+		if (insertErr && insertErr.code !== "23505") {
+			throw new Error(
+				`Failed to seed automation recipes: ${insertErr.message}`,
+			);
+		}
 	}
 }
