@@ -82,35 +82,9 @@ ADMIN_SECRET=your-admin-secret
 
 SahelFlow uses a **single comprehensive baseline migration** for the schema:
 
-- **`supabase/migrations/000_baseline.sql`** — Contains all tables, indexes, constraints, functions, triggers, RLS policies, and grants.
+- **`supabase/migrations/000_baseline.sql`** — Contains all 25 tables, indexes, constraints, functions, triggers, RLS policies, and grants.
 
-Apply the patch migrations in order:
-
-1. `001_fix_dashboard_and_notifications.sql`
-2. `002_security_and_schema_cleanup.sql`
-3. `003_select_rls_and_cleanup.sql`
-4. `004_delivery_status_constraint_and_webhook_dedup.sql`
-5. `005_import_history.sql`
-6. `006_audit_fixes.sql`
-7. `006_rls_insert_hardening.sql`
-8. `007_ai_chat_persistence.sql`
-9. `007_rebuild_analytics_with_soft_delete.sql`
-10. `008_after_sales_returns.sql`
-11. `009_accounting.sql`
-12. `010_team_access.sql`
-13. `011_daily_reports.sql`
-14. `012_security_lockdown.sql`
-15. `013_data_integrity.sql`
-16. `014_types_alignment.sql`
-17. `020_soft_delete.sql`
-18. `021_performance_indexes.sql`
-19. `022_seller_locale.sql`
-20. `023_audit_security_grants.sql`
-21. `024_schema_cleanup.sql`
-
-Historical migrations are archived in `supabase/migrations/archive/`.
-
-To set up a new database, run all migrations in order in your Supabase SQL Editor.
+**To set up a new database, apply ONLY `000_baseline.sql`** in your Supabase SQL Editor. All prior patch migrations (001–029) have been consolidated into the baseline — they are archived in `supabase/migrations/archive/` for historical reference only. Do NOT re-apply the archived migrations (they will error because the objects already exist in the baseline).
 
 ### WhatsApp Template Seeds
 
@@ -194,7 +168,7 @@ npm run test:watch
 npm run test:coverage
 ```
 
-Current suite: **360 tests** across **34 test files**.
+Current suite: **604 tests** across **37 test files** + 9 Playwright e2e specs.
 
 ---
 
@@ -208,27 +182,27 @@ npm run build
 
 ## Deploy to Vercel
 
-**No GitHub repo.** Deploy directly via Vercel CLI:
+This project is hosted on GitHub at `rendowblock-jpg/sahelflow_v2`. Vercel auto-deploys the `main` branch.
 
 ```bash
-# First time: link project
-vercel
+# Production: push to main (auto-deploys)
+git push origin main
 
-# Subsequent deployments
+# Or manual deploy:
 vercel --prod --yes
+
+# Preview: open a PR (auto-generates preview URL)
 ```
 
-### Per-Client Deployment Flow
+### Deployment Flow
 
-For each new seller client:
-
-1. Create a new Supabase project (free tier)
-2. Run all migrations in order via Supabase SQL Editor
+1. Create a Supabase project (free tier)
+2. Apply `supabase/migrations/000_baseline.sql` in the Supabase SQL Editor
 3. Set all env vars via `vercel env add <key> production` or Vercel dashboard
-4. Deploy with `vercel --prod --yes`
-5. Set up Evolution API instance on Railway (per client)
-6. Seller registers at `/register`, completes onboarding
+4. Push to `main` (or run `vercel --prod --yes`)
+5. Set up Evolution API instance (Railway or self-hosted)
+6. Register at `/register`, complete onboarding
 
 ---
 
-_Last updated: 2026-06-04_
+_Last updated: 2026-06-19_

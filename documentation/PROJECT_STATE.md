@@ -1,7 +1,7 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-06-04  
-> **Status:** ✅ CLIENT-READY — Production deploy authorized
+> **Last updated:** 2026-06-19  
+> **Status:** ⚠️ IN ACTIVE DEVELOPMENT — deep audit surfaced ~170 findings (15 critical). See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
 
 ---
 
@@ -10,7 +10,7 @@
 | Gate                           | Result                                               |
 | ------------------------------ | ---------------------------------------------------- |
 | `next build`                   | ✅ Zero errors, zero warnings                        |
-| `npx vitest run`               | ✅ **360/360** passing across 34 test files          |
+| `npx vitest run`               | ✅ **604/604** passing across 37 test files          |
 | `npx tsc --noEmit`             | ✅ Zero errors (strict mode)                         |
 | Security headers               | ✅ CSP + HSTS + Permissions-Policy + XFO + XCTO + RP |
 | Zero English leakage (ar mode) | ✅ Verified via `scripts/check-translations.ts`      |
@@ -66,8 +66,8 @@
 | WooCommerce catalog sync | ✅     | 100/page, paginated to 1,000 max         |
 | YouCan catalog sync      | ✅     | Product pull via REST API                |
 | Yalidine delivery        | ✅     | Full lifecycle: create/track/cancel/cost |
-| Maystro adapter          | ✅     | Verified via complete unit test coverage |
-| ZR Express adapter       | ✅     | Verified via complete unit test coverage |
+| Maystro adapter          | ⚠️ Stub | Returns 'coming soon' — not implemented |
+| ZR Express adapter       | ⚠️ Stub | Returns 'coming soon' — not implemented |
 
 ### Import Engine (P2)
 
@@ -102,7 +102,7 @@
 | Rate limiting             | ✅     | All public/cron routes                      |
 | Structured logging        | ✅     | JSON logs, no `console.error` in user paths (including `team-service.ts` auto-link, fixed 2026-06-04) |
 | CSP headers               | ✅     | Explicit connect-src allowlist              |
-| HSTS + Permissions-Policy | ✅     | Added in P9                                 |
+| HSTS + Permissions-Policy | ✅     | Added in Phase 6 (CSP hardening)            |
 | Secret handling           | ✅     | Fail-closed, no leakage                     |
 
 ### Financials, After-Sales & Operations (Phases 5–7)
@@ -225,11 +225,11 @@ Full-stack deep audit completed: every file in `src/` read and verified. 19 find
 
 ## Post-Audit Fixes (2026-05-22)
 
-### Multi-Tenant Isolation Alignment & Next.js 15 Routing Compatibility
+### Multi-Tenant Isolation Alignment & Next.js 16 Routing Compatibility
 
 | Fix | Files |
 |-----|-------|
-| Centralized API wrapper context and resolution for multi-tenant isolation, automatic suspension checks, and pre-resolution of Next.js 15 route params | `src/lib/api-wrapper.ts` |
+| Centralized API wrapper context and resolution for multi-tenant isolation, automatic suspension checks, and pre-resolution of Next.js 16 route params | `src/lib/api-wrapper.ts` |
 | Eliminated `await params` redundancy and handled pre-resolved parameter mapping | `src/app/api/expenses/[id]/route.ts`, `src/app/api/returns/[id]/notes/route.ts`, `src/app/api/returns/[id]/route.ts` |
 | Standardized team routing dynamic parameters and narrowed `memberId` to plain string | `src/app/api/team/[id]/route.ts` |
 | Added dedicated wrapper tests verifying isolation, roles, suspension enforcement, and fallback mechanics | `src/lib/__tests__/api-wrapper.test.ts` |
@@ -244,7 +244,7 @@ Cross-layer audit completed: DB schema ↔ TypeScript types ↔ service layer �
 
 | Fix | Files |
 |-----|-------|
-| `DeliveryStatus` expanded 6 → 10 values (matched DB CHECK constraint) | `src/types/database.ts`, `src/lib/delivery/adapters.ts` |
+| `DeliveryStatus` expanded 6 → 10 values (matched live DB CHECK constraint; baseline reconciled in PR #2) | `src/types/database.ts`, `src/lib/delivery/adapters.ts` |
 | Added missing `WebhookEvent` interface | `src/types/database.ts` |
 | Added missing `ImportBatch` + `ImportBatchStatus` types | `src/types/database.ts` |
 
@@ -274,27 +274,17 @@ Cross-layer audit completed: DB schema ↔ TypeScript types ↔ service layer �
 
 ## Migrations Applied to Live DB
 
-| Migration                                              | Applied    | Purpose                                                        |
-| ------------------------------------------------------ | ---------- | -------------------------------------------------------------- |
-| `000_baseline.sql`                                     | Baseline   | Initial schema                                                 |
-| `001_fix_dashboard_and_notifications.sql`              | 2026-04    | Patched aggregates + notifications table                       |
-| `002_security_and_schema_cleanup.sql`                  | 2026-05-04 | Security definer lockdown + schema fixes                       |
-| `003_select_rls_and_cleanup.sql`                       | 2026-05-05 | SELECT RLS policies + icom cleanup                             |
-| `004_delivery_status_constraint_and_webhook_dedup.sql` | 2026-05-05 | Status CHECK + webhook_events dedup table                      |
-| `005_import_history.sql`                               | 2026-05-11 | Import batches and history tracking                            |
-| `006_audit_fixes.sql`                                  | 2026-05-12 | DB schema fixes & alignment (2026-05-12 audit)                 |
-| `006_rls_insert_hardening.sql`                          | 2026-05-12 | Harden insert RLS policies for sellers and customers           |
-| `007_ai_chat_persistence.sql`                          | 2026-05-18 | Server-side AI Chat Sessions & Messages table                  |
-| `007_rebuild_analytics_with_soft_delete.sql`           | 2026-05-18 | Rebuild statistics to support soft deleted models              |
-| `008_after_sales_returns.sql`                          | 2026-05-19 | After-sales returns tracking schema and triggers               |
-| `009_accounting.sql`                                   | 2026-05-19 | Accounting ledger: expenses, return logs, variant costs        |
-| `010_team_access.sql`                                  | 2026-05-20 | Multi-user team invites, role permissions, and updated RLS     |
-| `011_daily_reports.sql`                                | 2026-05-20 | Daily analytics aggregation tables and reporting cron          |
-| `020_soft_delete.sql`                                  | 2026-05-11 | Soft delete triggers and restore functions                     |
-| `021_performance_indexes.sql`                          | 2026-06-02 | Composite indexes, FK indexes, wilaya_risk_profiles table      |
-| `022_seller_locale.sql`                                | 2026-06-02 | default_locale column added to sellers                         |
-| `023_audit_security_grants.sql`                        | 2026-06-02 | Revoke over-broad EXECUTE grants (PUBLIC/anon/authenticated)   |
-| `024_schema_cleanup.sql`                               | 2026-06-02 | Fix default_locale default, drop duplicate slug constraint, fix cost_price default, drop legacy columns |
+**The live DB is fully described by `supabase/migrations/000_baseline.sql`.** All prior patch migrations (001–029) have been consolidated into the baseline. The archive files in `supabase/migrations/archive/` are historical record only — do NOT re-apply them (they will error because the objects already exist in the baseline).
+
+To set up a fresh database: apply ONLY `000_baseline.sql` in your Supabase SQL Editor.
+
+| Migration file          | Status        | Purpose                                                          |
+| ----------------------- | ------------- | ---------------------------------------------------------------- |
+| `000_baseline.sql`      | ✅ Canonical  | All 25 tables, 15 functions, 14 triggers, ~50 indexes, RLS, grants |
+| `archive/001-029`       | 📦 Historical | Consolidated into baseline; kept for audit trail                 |
+| `seeds/whatsapp_templates.sql` | ✅ Active | 4 default Arabic templates (auto-seeded on onboarding)           |
+
+**Baseline reconciliation (2026-06-19, PR #2):** 3 drifts between baseline and live DB were fixed — `products UNIQUE(seller_id, name)`, `daily_analytics_reports UNIQUE(seller_id, report_date)`, and `deliveries.status` CHECK expanded from 7 to 10 values. The baseline now matches the live DB exactly.
 
 ---
 
@@ -304,7 +294,7 @@ Cross-layer audit completed: DB schema ↔ TypeScript types ↔ service layer �
 | ---------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | 2026-06-04 | Full-stack deep audit (19 findings) + full remediation pass | Exhaustive read of every file in `src/`. Resolved all type duplications, parallelised bulk operations, fixed deprecated RLS policy live on DB, added missing soft-delete type field, i18n'd hardcoded English strings, added Remove Item UX, fixed accessibility on slideout. `tsc --noEmit` passes 0 errors. |
 | 2026-05-23 | Phase 6: Full i18n/UX audit — locale-aware formatting, CSS progressive enhancement, centralized phone utils, CSP strict-dynamic | Eliminates English leakage in Arabic mode, ensures RTL responsiveness, protects against XSS with modern CSP, unifies divergent phone validation logic |
-| 2026-05-22 | Centralized Multi-Tenant Alignment & Next.js 15 Dynamic Routing type compatibility       | Prevents team members' personal ID usage as seller ID across 17+ APIs, enforces suspension at middleware level, and resolves strict static type checks cleanly. |
+| 2026-05-22 | Centralized Multi-Tenant Alignment & Next.js 16 Dynamic Routing type compatibility       | Prevents team members' personal ID usage as seller ID across 17+ APIs, enforces suspension at middleware level, and resolves strict static type checks cleanly. |
 | 2026-05-20 | Fix `atomic_create_order` RPC parameter mismatch                                        | Added p_external_id: null to RPC parameters to match the 18-argument database signature.                    |
 | 2026-05-20 | Connect product import flow and modal                                                   | Wired ImportModal into products page header for CSV/XLSX imports.                                           |
 | 2026-05-20 | Full Returns module localization                                                        | Refactored returns dashboards to support locales and ensure zero English leakage in Arabic mode.            |
