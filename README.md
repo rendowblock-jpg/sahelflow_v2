@@ -144,7 +144,7 @@ Completed development phases (P0–P7):
 6. **Multi-User Team Roles (P6)** — Owner, Admin, Confirmer, Packer, Viewer roles, custom RLS, and invite system
 7. **Daily Summary Cron (P7)** — Automated daily sales and operational performance report via WhatsApp
 
-**Audit progress:** 81 of ~170 findings fixed across 11 PRs. All 15 critical findings + all 12 test gaps resolved (0 remaining). Recent fixes: RBAC enforcement on 28 routes (PR #7), dead code removal -1,090 lines (PR #8), 22 weak patterns / silent bugs (PR #9), 9 hardcoded values → config/i18n (PR #10), 12 test gaps + tautological tests +129 tests (PR #11). Remaining: ~25 high (security S5-S18, M1-M4), ~45 medium, ~50 low. See `documentation/AUDIT_FINDINGS.md`.
+**Audit progress:** 95 of ~170 findings fixed across 12 PRs. All 15 critical + 12 test gaps + 14 type/doc findings resolved (0 remaining). Recent fixes: RBAC enforcement on 28 routes (PR #7), dead code removal -1,090 lines (PR #8), 22 weak patterns / silent bugs (PR #9), 9 hardcoded values → config/i18n (PR #10), 12 test gaps + tautological tests +129 tests (PR #11), 5 type-drift + 9 stale-doc fixes (PR #12). Remaining: ~16 high (security S5-S18, M1-M4), ~45 medium, ~50 low. See `documentation/AUDIT_FINDINGS.md`.
 
 ---
 
