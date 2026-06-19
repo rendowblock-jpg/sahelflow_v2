@@ -21,7 +21,6 @@ import {
   recordTimeout,
 } from "./health";
 import type { ModelProfile } from "./registry";
-import { MODELS } from "./registry";
 import type { RouteDecision } from "./router";
 import { routeIntent } from "./router";
 
@@ -41,19 +40,6 @@ export interface ModelExecutionResult {
   tokensUsed?: number;
   errors?: string[];
   usedFallback: boolean;
-}
-
-export interface OrchestratorResult {
-  success: boolean;
-  answer: string;
-  actionCards?: Array<{
-    type: string;
-    title: string;
-    description?: string;
-  }>;
-  modelChain: string[];
-  totalLatencyMs: number;
-  errors: string[];
 }
 
 // ===== INTERNAL EXECUTION =====
@@ -194,173 +180,6 @@ export async function executeWithFallback(
 }
 
 // ===== PUBLIC API =====
-
-/**
- * Build a RouteDecision that forces a specific model by ID.
- * Falls back to MODELS.brain if the ID is not found.
- */
-function forceRoute(modelId: string): RouteDecision {
-  const model =
-    Object.values(MODELS).find((m) => m.id === modelId) || MODELS.brain;
-  return {
-    primary: model,
-    fallback: MODELS.deep,
-    strategy: "single",
-    reasoning: "forced",
-    latencyEstimate: "normal",
-    darijaOptimized: false,
-  };
-}
-
-/**
- * Execute a single-turn request through the model router.
- * This is the main entry point for the AI engine.
- */
-export async function executeRoutedRequest(
-  input: string,
-  options?: {
-    conversationHistory?: ChatMessage[];
-    systemPrompt?: string;
-    useTools?: boolean;
-    tools?: GroqOptions["tools"];
-    forcedModel?: string;
-  },
-): Promise<ModelExecutionResult> {
-  // Quick path: greetings don't need any model
-  if (isGreeting(input)) {
-    return {
-      success: true,
-      content:
-        "Hello! I'm SahelFlow AI. How can I help you today? مرحبا! كيفاش نقدر نعاونك؟",
-      modelUsed: "none",
-      modelDisplayName: "Greeting Handler",
-      latencyMs: 0,
-      usedFallback: false,
-    };
-  }
-
-  // Classify intent
-  const intent = classifyIntent(input);
-
-  // Route to model(s)
-  const decision = options?.forcedModel
-    ? forceRoute(options.forcedModel)
-    : routeIntent(intent);
-
-  // Build messages
-  const messages: ChatMessage[] = [];
-  if (options?.systemPrompt) {
-    messages.push({ role: "system", content: options.systemPrompt });
-  }
-  if (options?.conversationHistory) {
-    messages.push(...options.conversationHistory.slice(-6));
-  }
-  messages.push({ role: "user", content: input });
-
-  // Execute
-  return executeWithFallback(decision, messages, {
-    useTools: options?.useTools,
-    tools: options?.tools,
-  });
-}
-
-/**
- * Execute a model chain for complex multi-step tasks.
- * Example: Extract → Analyze → Generate response
- */
-export async function executeModelChain(
-  chain: ModelProfile[],
-  initialMessages: ChatMessage[],
-  stepTransformers?: Array<
-    (result: ModelExecutionResult, stepIndex: number) => ChatMessage[]
-  >,
-): Promise<OrchestratorResult> {
-  const modelChain: string[] = [];
-  const errors: string[] = [];
-  let totalLatency = 0;
-  let currentMessages = [...initialMessages];
-  let finalContent = "";
-
-  for (let i = 0; i < chain.length; i++) {
-    const model = chain[i];
-    const transformer = stepTransformers?.[i];
-
-    const result = await executeSingleModel(model, currentMessages);
-    modelChain.push(model.id);
-    totalLatency += result.latencyMs;
-
-    if (!result.success) {
-      errors.push(
-        `Step ${i + 1} (${model.displayName}): ${result.errors?.[0]}`,
-      );
-      return {
-        success: false,
-        answer: `Failed at step ${i + 1}: ${result.errors?.[0]}`,
-        modelChain,
-        totalLatencyMs: totalLatency,
-        errors,
-      };
-    }
-
-    finalContent = result.content;
-
-    if (transformer && i < chain.length - 1) {
-      currentMessages = transformer(result, i);
-    } else if (i < chain.length - 1) {
-      currentMessages = [
-        ...currentMessages,
-        { role: "assistant", content: result.content },
-        {
-          role: "user",
-          content: "Continue with the next step.",
-        },
-      ];
-    }
-  }
-
-  return {
-    success: true,
-    answer: finalContent,
-    modelChain,
-    totalLatencyMs: totalLatency,
-    errors,
-  };
-}
-
-/**
- * Smart extraction helper — routes through Flash for simple data,
- * Brain for complex Darija, Struct for clean JSON.
- */
-export async function extractWithSmartRouting(
-  text: string,
-  options?: {
-    systemPrompt?: string;
-    jsonSchema?: string;
-    requireStructured?: boolean;
-  },
-): Promise<ModelExecutionResult> {
-  // Try Flash first for speed
-  if (isFlashWorthy(text) && !options?.requireStructured) {
-    const flashResult = await executeSingleModel(MODELS.flash, [
-      ...(options?.systemPrompt
-        ? [{ role: "system" as const, content: options.systemPrompt }]
-        : []),
-      { role: "user", content: text },
-    ]);
-    if (flashResult.success) return flashResult;
-  }
-
-  // Otherwise route normally based on intent classification
-  const intent = classifyIntent(text);
-  const decision = routeIntent(intent);
-
-  return executeWithFallback(decision, [
-    ...(options?.systemPrompt
-      ? [{ role: "system" as const, content: options.systemPrompt }]
-      : []),
-    { role: "user", content: text },
-  ]);
-}
 
 /**
  * Re-export key functions for convenience.
