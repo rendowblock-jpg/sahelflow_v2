@@ -10,7 +10,10 @@
  * - Tool calling & multilingual support sufficient for Algerian e-commerce
  */
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// H6 fix: Groq URL + HTTP-Referer now configurable via env vars
+const GROQ_URL = process.env.GROQ_API_URL || "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_HTTP_REFERER = process.env.GROQ_HTTP_REFERER || "https://sahelflow.vercel.app";
+const GROQ_X_TITLE = process.env.GROQ_X_TITLE || "SahelFlow AI";
 
 export const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
@@ -105,8 +108,8 @@ export async function callLLM(
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
 					"Content-Type": "application/json",
-					"HTTP-Referer": "https://sahelflow.vercel.app",
-					"X-Title": "SahelFlow AI",
+					"HTTP-Referer": GROQ_HTTP_REFERER,
+					"X-Title": GROQ_X_TITLE,
 				},
 				body: JSON.stringify(body),
 				signal: controller.signal,
@@ -220,8 +223,8 @@ export async function callLLMWithTools(
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
 					"Content-Type": "application/json",
-					"HTTP-Referer": "https://sahelflow.vercel.app",
-					"X-Title": "SahelFlow AI",
+					"HTTP-Referer": GROQ_HTTP_REFERER,
+					"X-Title": GROQ_X_TITLE,
 				},
 				body: JSON.stringify(body),
 				signal: controller.signal,

@@ -158,7 +158,8 @@ export abstract class DeliveryAdapter {
 
 import { getCommuneCode } from "./yalidine-communes";
 
-const YALIDINE_BASE = "https://api.yalidine.app/v1";
+// H7 fix: Delivery API base URLs now configurable via env vars
+const YALIDINE_BASE = process.env.YALIDINE_API_BASE || "https://api.yalidine.app/v1";
 
 export class YalidineAdapter extends DeliveryAdapter {
 	readonly id = "yalidine";
@@ -404,7 +405,7 @@ export class YalidineAdapter extends DeliveryAdapter {
 
 // ===== ZR EXPRESS ADAPTER (Procolis API) =====
 
-const ZR_BASE = "https://procolis.com/api_v1";
+const ZR_BASE = process.env.ZR_EXPRESS_API_BASE || "https://procolis.com/api_v1";
 
 export class ZRExpressAdapter extends DeliveryAdapter {
 	readonly id = "zrexpress";
@@ -587,7 +588,7 @@ export class ZRExpressAdapter extends DeliveryAdapter {
 
 // ===== MAYSTRO ADAPTER =====
 
-const MAYSTRO_BASE = "https://api.maystro-delivery.com/v1";
+const MAYSTRO_BASE = process.env.MAYSTRO_API_BASE || "https://api.maystro-delivery.com/v1";
 
 export class MaystroAdapter extends DeliveryAdapter {
 	readonly id = "maystro";
