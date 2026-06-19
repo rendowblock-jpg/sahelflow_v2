@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Shield, Loader2, Check, AlertTriangle, Eye, EyeOff, Smartphone } from "lucide-react";
+import { Lock, Loader2, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
 import type { TeamRole } from "@/lib/auth/permissions";

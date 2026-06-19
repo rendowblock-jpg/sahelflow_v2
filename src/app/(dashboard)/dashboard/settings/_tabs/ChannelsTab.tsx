@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Mail, Instagram } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 interface ChannelsTabProps {

@@ -13,16 +13,16 @@ export default function BillingTab() {
 					<div>
 						<p className="sf-font-semibold">35,000 DZD</p>
 						<p className="sf-settings-meta">
-							"Lifetime Access — Pay once, use forever"
+							{"Lifetime Access — Pay once, use forever"}
 						</p>
 					</div>
 					<span className="sf-badge sf-badge-success">
-						"Lifetime"
+						{"Lifetime"}
 					</span>
 				</div>
 			</div>
 			<p className="sf-settings-meta" style={{ opacity: 0.7 }}>
-				"One payment, no recurring fees. All features included. Contact support to upgrade."
+				{"One payment, no recurring fees. All features included. Contact support to upgrade."}
 			</p>
 		</div>
 	);
