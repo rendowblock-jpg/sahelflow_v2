@@ -356,7 +356,7 @@ export default function ProductsPage() {
 				<div className="sf-flex-col sf-gap-md">
 					{filtered.map((p) => {
 						const stockStatus =
-							p.stock <= 0 ? "danger" : p.stock <= 5 ? "warning" : "success";
+							(p.stock ?? 0) <= 0 ? "danger" : (p.stock ?? 0) <= 5 ? "warning" : "success";
 						return (
 							<div
 								key={p.id}
@@ -365,9 +365,9 @@ export default function ProductsPage() {
 								<div className="sf-flex-between sf-mb-xs">
 									<span className="sf-name">{p.name}</span>
 									<span className={`sf-badge sf-badge-${stockStatus}`}>
-										{p.stock <= 0
+										{(p.stock ?? 0) <= 0
 											? t.products.out
-											: p.stock <= 5
+											: (p.stock ?? 0) <= 5
 												? `${t.products.low}: ${p.stock}`
 												: p.stock}
 									</span>
@@ -421,9 +421,9 @@ export default function ProductsPage() {
 											<td>
 												<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 													<div className={`sf-avatar ${
-														p.stock <= 0 
+														(p.stock ?? 0) <= 0 
 															? "sf-avatar--teal" 
-															: p.stock <= 5 
+															: (p.stock ?? 0) <= 5 
 																? "sf-avatar--orange" 
 																: "sf-avatar--purple"
 													}`}>
@@ -442,13 +442,13 @@ export default function ProductsPage() {
 													<div className="sf-stock-bar__track">
 														<div
 															className={`sf-stock-bar__fill ${
-																p.stock <= 0 
+																(p.stock ?? 0) <= 0 
 																	? "sf-stock-bar__fill--out" 
-																	: p.stock <= 5 
+																	: (p.stock ?? 0) <= 5 
 																		? "sf-stock-bar__fill--low" 
 																		: "sf-stock-bar__fill--ok"
 															}`}
-															style={{ width: `${Math.min(100, (p.stock / 20) * 100)}%` }}
+															style={{ width: `${Math.min(100, ((p.stock ?? 0) / 20) * 100)}%` }}
 														/>
 													</div>
 													<span style={{ fontSize: "12px", minWidth: "24px" }} className="sf-text-tabular">

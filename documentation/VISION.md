@@ -143,7 +143,7 @@ Revenue also from:
 
 ## Where It's Going
 
-### Near-Term (Current — Production Hardened)
+### Near-Term (Current — Active Development, Critical Issues Resolved)
 
 - ✅ Dashboard, orders, customers, products, analytics
 - ✅ AI WhatsApp extraction + draft orders

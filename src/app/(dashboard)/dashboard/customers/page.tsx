@@ -109,14 +109,14 @@ export default function CustomersPage() {
 		const riskLevel = c.is_blocked ? "blocked" : risk?.level || "low";
 		const enriched: EnrichedCustomer = {
 			...c,
-			ordersCount: c.order_count,
+			ordersCount: c.order_count ?? 0,
 			totalSpent: Number(c.total_spent) || 0,
 			lastOrder: null,
 			confirmationRate: 0,
 			returnRate: 0,
 			avgOrderValue:
-				c.order_count > 0
-					? Math.round(Number(c.total_spent) / c.order_count)
+				(c.order_count ?? 0) > 0
+					? Math.round(Number(c.total_spent ?? 0) / (c.order_count ?? 1))
 					: 0,
 			custOrders: [],
 			riskLevel,
@@ -174,13 +174,13 @@ export default function CustomersPage() {
 		const risk = riskMap[c.id];
 		const riskLevel = c.is_blocked
 			? "blocked"
-			: risk?.level || (c.order_count <= 1 ? "new" : "low");
+			: risk?.level || ((c.order_count ?? 0) <= 1 ? "new" : "low");
 		const totalSpent = Number(c.total_spent) || 0;
 		const avgOrderValue =
-			c.order_count > 0 ? Math.round(totalSpent / c.order_count) : 0;
+			(c.order_count ?? 0) > 0 ? Math.round(totalSpent / (c.order_count ?? 1)) : 0;
 		return {
 			...c,
-			ordersCount: c.order_count,
+			ordersCount: c.order_count ?? 0,
 			totalSpent,
 			lastOrder: null,
 			confirmationRate: 0,
@@ -539,7 +539,7 @@ export default function CustomersPage() {
 															? "sf-avatar--teal" 
 															: c.riskLevel === "high" 
 																? "sf-avatar--orange" 
-																: c.total_spent >= 10000 
+																: (c.total_spent ?? 0) >= 10000 
 																	? "sf-avatar--green" 
 																	: "sf-avatar--purple"
 													}`}>

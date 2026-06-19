@@ -35,14 +35,14 @@ export interface Seller {
 		number,
 		{ home: number; desk: number; express: boolean }
 	>;
-	webhook_token: string | null;
-	webhook_orders_count: number;
+	webhook_token: string; // NOT NULL DEFAULT gen_random_bytes(16) hex in DB
+	webhook_orders_count: number | null; // nullable in DB (DEFAULT 0)
 	webhook_last_sync: string | null;
 	notification_settings: NotificationSettings | null;
 	wilaya: string | null;
-	categories: string[] | null;
-	delivery_partners: string[] | null;
-	order_sources: string[] | null;
+	categories: string[]; // NOT NULL DEFAULT '{}' in DB (TD2 fix — was string[] | null)
+	delivery_partners: string[]; // NOT NULL DEFAULT '{}' in DB (TD2 fix)
+	order_sources: string[]; // NOT NULL DEFAULT '{}' in DB (TD2 fix)
 	onboarding_completed: boolean;
 	slug: string | null;
 	form_enabled: boolean;
@@ -70,11 +70,11 @@ export interface Product {
 	description: string | null;
 	variants: ProductVariant[];
 	category_id: string | null;
-	stock: number;
+	stock: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
 	price: number;
-	cost_price: number;
+	cost_price: number | null; // nullable in DB — TD3 fix
 	image_url: string | null;
-	active: boolean;
+	active: boolean | null; // nullable in DB (DEFAULT true) — TD3 fix
 	deleted_at: string | null;
 	created_at: string;
 	updated_at: string;
@@ -89,10 +89,10 @@ export interface Customer {
 	wilaya: string | null;
 	commune: string | null;
 	address: string | null;
-	order_count: number;
-	total_spent: number;
-	risk_score: number;
-	is_blocked: boolean;
+	order_count: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
+	total_spent: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
+	risk_score: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
+	is_blocked: boolean | null; // nullable in DB (DEFAULT false) — TD3 fix
 	metadata: Record<string, unknown>;
 	deleted_at: string | null;
 	created_at: string;
@@ -132,10 +132,17 @@ export type ConfirmationStatus =
 	| "confirmed"
 	| "annule";
 
+// TD1 fix: OrderItem accepts BOTH shapes that exist in the orders.items JSONB column.
+// - Store/webhook path uses { product_name, unit_price }
+// - AI extraction path uses { name, price }
+// Code reads via `item.product_name || item.name` fallbacks. Both alias fields
+// are optional so either shape satisfies the type.
 export interface OrderItem {
-	product_name: string;
+	product_name?: string;
+	name?: string; // AI-extraction alias
 	quantity: number;
-	unit_price: number;
+	unit_price?: number;
+	price?: number; // AI-extraction alias
 	product_id?: string;
 	variant?: string | null;
 }
@@ -322,13 +329,7 @@ export interface AIExtraction {
 	wilaya: string | undefined;
 	commune: string | undefined;
 	address: string | undefined;
-	products: Array<{
-		product_id?: string;
-		name: string;
-		quantity: number;
-		price?: number;
-		variant?: string | null;
-	}>;
+	products: OrderItem[]; // TD1 fix: unified with OrderItem (AI fills name/price, code normalizes)
 	confidence: number;
 	raw_text: string;
 }
@@ -424,4 +425,109 @@ export interface Notification {
 	dismissed: boolean;
 	metadata: Record<string, unknown> | null;
 	created_at: string;
+}
+
+// ===== AGENT ACTIVITY (TD4 — was missing) =====
+export interface AgentActivity {
+        id: string;
+        seller_id: string;
+        type: string;
+        title: string;
+        description: string | null;
+        metadata: Record<string, unknown> | null;
+        created_at: string;
+}
+
+// ===== CHANNELS (TD4 — was missing) =====
+export type ChannelType = "whatsapp" | "messenger" | "instagram" | "telegram";
+
+export interface Channel {
+        id: string;
+        seller_id: string;
+        type: ChannelType;
+        name: string | null;
+        credentials: Record<string, unknown> | null;
+        active: boolean | null;
+        created_at: string;
+}
+
+// ===== CONVERSATIONS (TD4 — was missing) =====
+export type ConversationStatus = "open" | "pending" | "closed" | "archived";
+
+export interface Conversation {
+        id: string;
+        seller_id: string;
+        channel_id: string | null;
+        customer_id: string | null;
+        platform_thread_id: string | null;
+        status: ConversationStatus | null;
+        unread_count: number | null;
+        last_message_at: string | null;
+        created_at: string;
+        metadata: Record<string, unknown> | null;
+        last_message_preview: string | null;
+        is_pinned: boolean;
+        is_archived: boolean;
+        labels: string[];
+}
+
+// ===== MESSAGES (TD4 — was missing) =====
+export type MessageDirection = "inbound" | "outbound";
+export type MessageContentType =
+        | "text"
+        | "image"
+        | "audio"
+        | "video"
+        | "document"
+        | "location"
+        | "contact";
+
+export interface Message {
+        id: string;
+        conversation_id: string;
+        direction: MessageDirection;
+        content: string | null;
+        content_type: MessageContentType | null;
+        media_url: string | null;
+        ai_extraction: Record<string, unknown> | null;
+        is_ai_reply: boolean | null;
+        created_at: string;
+        platform_message_id: string | null;
+        reply_to_id: string | null;
+        quoted_text: string | null;
+}
+
+// ===== WEBHOOK RETRY QUEUE (TD4 — was missing) =====
+export type WebhookRetryStatus = "pending" | "processing" | "completed" | "failed" | "dead";
+
+export interface WebhookRetryQueue {
+        id: string;
+        idempotency_key: string;
+        event_type: string;
+        payload: Record<string, unknown>;
+        seller_id: string | null;
+        attempts: number | null;
+        max_attempts: number | null;
+        next_retry_at: string | null;
+        status: WebhookRetryStatus | null;
+        error: string | null;
+        created_at: string;
+        completed_at: string | null;
+        claimed_by: string | null;
+        claimed_at: string | null;
+        locked_until: string | null;
+}
+
+// ===== WILAYA RISK PROFILES (TD4 — was missing; DB-row shape) =====
+// NOTE: src/lib/ai/risk-engine.ts has a separate WilayaRiskProfile interface
+// with camelCase UI-layer fields. This is the DB-row shape (snake_case columns).
+export interface WilayaRiskProfileRow {
+        id: string;
+        seller_id: string;
+        wilaya: string;
+        total_orders: number;
+        return_rate: number;
+        avg_delivery_days: number;
+        risk_multiplier: number;
+        updated_at: string;
 }

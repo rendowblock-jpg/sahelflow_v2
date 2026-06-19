@@ -14,7 +14,7 @@ interface ExtractedOrder {
   phone?: string
   wilaya?: string
   address?: string
-  products: Array<{ name: string; quantity: number; variant?: string }>
+  products: Array<{ name: string; quantity: number; variant?: string; unit_price?: number; price?: number }>
   confidence: number
 }
 
@@ -73,7 +73,7 @@ export default function AIOrderImport({ onClose, onOrderCreated }: AIOrderImport
       items: extracted.products.map(p => ({
         product_name: p.name,
         quantity: p.quantity,
-        price: (p as unknown as { unit_price?: number })?.unit_price || (p as unknown as { price?: number })?.price || 0,
+        price: p.unit_price || p.price || 0,
         variant: p.variant,
       })),
     })
