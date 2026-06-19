@@ -23,11 +23,11 @@
     "es-toolkit": "^1.40.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.564.0",
-    "next": "16.2.4",
+    "next": "16.2.9",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.1",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -37,7 +37,7 @@
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.2.9",
     "husky": "^9.1.7",
     "typescript": "^5",
     "vitest": "^4.1.2"
