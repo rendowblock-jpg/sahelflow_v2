@@ -47,21 +47,35 @@ function notify() {
 
 function save(items: CartItem[]) {
   cachedSnapshot = items
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  // W19 fix: Wrap in try/catch — localStorage can throw (private browsing, quota exceeded)
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  } catch (e) {
+    console.warn('[cart] Failed to persist cart:', e)
+  }
   notify()
 }
 
 /* ── Public API ── */
 
+const MAX_QUANTITY_PER_ITEM = 999;
+
 export function addToCart(item: Omit<CartItem, 'quantity'>, quantity = 1) {
+  // W19 fix: Validate quantity and price before adding to cart.
+  const safeQuantity = Math.max(1, Math.min(Math.floor(quantity), MAX_QUANTITY_PER_ITEM));
+  if (item.price < 0) item.price = 0;
+
   const cart = [...getSnapshot()]
   const idx = cart.findIndex(
     (c) => c.product_id === item.product_id && c.variant === item.variant
   )
   if (idx >= 0) {
-    cart[idx] = { ...cart[idx], quantity: cart[idx].quantity + quantity }
+    cart[idx] = {
+      ...cart[idx],
+      quantity: Math.min(cart[idx].quantity + safeQuantity, MAX_QUANTITY_PER_ITEM),
+    }
   } else {
-    cart.push({ ...item, quantity })
+    cart.push({ ...item, quantity: safeQuantity })
   }
   save(cart)
 }

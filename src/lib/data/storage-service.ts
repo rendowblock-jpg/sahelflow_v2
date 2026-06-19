@@ -69,4 +69,13 @@ export async function clearTestData(): Promise<void> {
   
   // 5. Customers
   await getSupabase().from('customers').delete().eq('seller_id', user.id);
+
+  // W18 fix: Previously missing — returns, expenses, and automations were not
+  // deleted, causing FK violations if any existed. Now cleaned up properly.
+  await getSupabase().from('returns').delete().eq('seller_id', user.id);
+  await getSupabase().from('expenses').delete().eq('seller_id', user.id);
+  await getSupabase().from('automations').delete().eq('seller_id', user.id);
+  await getSupabase().from('ai_chat_sessions').delete().eq('seller_id', user.id);
+  await getSupabase().from('whatsapp_templates').delete().eq('seller_id', user.id);
+  await getSupabase().from('notifications').delete().eq('seller_id', user.id);
 }
