@@ -1,9 +1,2925 @@
 {
-  "success": false,
-  "issues": [],
-  "unusedExports": [],
-  "unusedFiles": [],
-  "unusedDeps": [],
+  "success": true,
+  "issues": [
+    {
+      "type": "file",
+      "name": "scripts/audit-locales.js",
+      "file": "scripts/audit-locales.js"
+    },
+    {
+      "type": "file",
+      "name": "scripts/check-translations.ts",
+      "file": "scripts/check-translations.ts"
+    },
+    {
+      "type": "file",
+      "name": "scripts/fix-css-imports.mjs",
+      "file": "scripts/fix-css-imports.mjs"
+    },
+    {
+      "type": "file",
+      "name": "scripts/fix-fallbacks.js",
+      "file": "scripts/fix-fallbacks.js"
+    },
+    {
+      "type": "file",
+      "name": "scripts/fix-locales.js",
+      "file": "scripts/fix-locales.js"
+    },
+    {
+      "type": "file",
+      "name": "scripts/split-css.mjs",
+      "file": "scripts/split-css.mjs"
+    },
+    {
+      "type": "file",
+      "name": "src/components/dashboard/SlideOutPanel.tsx",
+      "file": "src/components/dashboard/SlideOutPanel.tsx"
+    },
+    {
+      "type": "file",
+      "name": "src/components/ui/Toast.tsx",
+      "file": "src/components/ui/Toast.tsx"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/ai/health.ts",
+      "file": "src/lib/ai/health.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/automation/confirmation-utils.ts",
+      "file": "src/lib/automation/confirmation-utils.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/data/expense-service.ts",
+      "file": "src/lib/data/expense-service.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/data/import.ts",
+      "file": "src/lib/data/import.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/store/cart.ts",
+      "file": "src/lib/store/cart.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/components/dashboard/orders/CreateOrderModal.tsx",
+      "file": "src/components/dashboard/orders/CreateOrderModal.tsx"
+    },
+    {
+      "type": "dependency",
+      "name": "clsx",
+      "file": "package.json",
+      "line": 22
+    },
+    {
+      "type": "dependency",
+      "name": "es-toolkit",
+      "file": "package.json",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_MODEL",
+      "file": "src/lib/agents/groq.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "getCurrentUser",
+      "file": "src/lib/data/service.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "getProduct",
+      "file": "src/lib/data/service.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "restoreProduct",
+      "file": "src/lib/data/service.ts",
+      "line": 32
+    },
+    {
+      "type": "export",
+      "name": "getOrder",
+      "file": "src/lib/data/service.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "updateOrder",
+      "file": "src/lib/data/service.ts",
+      "line": 40
+    },
+    {
+      "type": "export",
+      "name": "restoreOrder",
+      "file": "src/lib/data/service.ts",
+      "line": 43
+    },
+    {
+      "type": "export",
+      "name": "getCustomer",
+      "file": "src/lib/data/service.ts",
+      "line": 49
+    },
+    {
+      "type": "export",
+      "name": "createCustomer",
+      "file": "src/lib/data/service.ts",
+      "line": 50
+    },
+    {
+      "type": "export",
+      "name": "restoreCustomer",
+      "file": "src/lib/data/service.ts",
+      "line": 53
+    },
+    {
+      "type": "export",
+      "name": "getAutomations",
+      "file": "src/lib/data/service.ts",
+      "line": 60
+    },
+    {
+      "type": "export",
+      "name": "createAutomation",
+      "file": "src/lib/data/service.ts",
+      "line": 61
+    },
+    {
+      "type": "export",
+      "name": "updateAutomation",
+      "file": "src/lib/data/service.ts",
+      "line": 62
+    },
+    {
+      "type": "export",
+      "name": "deleteAutomation",
+      "file": "src/lib/data/service.ts",
+      "line": 63
+    },
+    {
+      "type": "export",
+      "name": "createDelivery",
+      "file": "src/lib/data/service.ts",
+      "line": 69
+    },
+    {
+      "type": "export",
+      "name": "getCODStats",
+      "file": "src/lib/data/service.ts",
+      "line": 76
+    },
+    {
+      "type": "export",
+      "name": "logAgentActivity",
+      "file": "src/lib/data/service.ts",
+      "line": 79
+    },
+    {
+      "type": "export",
+      "name": "getNotifications",
+      "file": "src/lib/data/service.ts",
+      "line": 84
+    },
+    {
+      "type": "export",
+      "name": "getUnreadNotificationCount",
+      "file": "src/lib/data/service.ts",
+      "line": 85
+    },
+    {
+      "type": "export",
+      "name": "markNotificationRead",
+      "file": "src/lib/data/service.ts",
+      "line": 86
+    },
+    {
+      "type": "export",
+      "name": "markAllNotificationsRead",
+      "file": "src/lib/data/service.ts",
+      "line": 87
+    },
+    {
+      "type": "export",
+      "name": "dismissNotification",
+      "file": "src/lib/data/service.ts",
+      "line": 88
+    },
+    {
+      "type": "export",
+      "name": "createNotification",
+      "file": "src/lib/data/service.ts",
+      "line": 89
+    },
+    {
+      "type": "export",
+      "name": "deleteNotification",
+      "file": "src/lib/data/service.ts",
+      "line": 90
+    },
+    {
+      "type": "export",
+      "name": "getWhatsAppTemplates",
+      "file": "src/lib/data/service.ts",
+      "line": 95
+    },
+    {
+      "type": "export",
+      "name": "createWhatsAppTemplate",
+      "file": "src/lib/data/service.ts",
+      "line": 96
+    },
+    {
+      "type": "export",
+      "name": "updateWhatsAppTemplate",
+      "file": "src/lib/data/service.ts",
+      "line": 97
+    },
+    {
+      "type": "export",
+      "name": "deleteWhatsAppTemplate",
+      "file": "src/lib/data/service.ts",
+      "line": 98
+    },
+    {
+      "type": "export",
+      "name": "getSellerShippingRates",
+      "file": "src/lib/data/service.ts",
+      "line": 103
+    },
+    {
+      "type": "export",
+      "name": "WILAYA_ALIASES",
+      "file": "src/lib/data/wilayas.ts",
+      "line": 94
+    },
+    {
+      "type": "export",
+      "name": "WILAYA_ARABIC_NAMES",
+      "file": "src/lib/data/wilayas.ts",
+      "line": 290
+    },
+    {
+      "type": "export",
+      "name": "SUPABASE_URL",
+      "file": "src/lib/env.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "SUPABASE_ANON_KEY",
+      "file": "src/lib/env.ts",
+      "line": 16
+    },
+    {
+      "type": "export",
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "file": "src/lib/env.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "APP_URL",
+      "file": "src/lib/env.ts",
+      "line": 20
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY",
+      "file": "src/lib/env.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_FLASH",
+      "file": "src/lib/env.ts",
+      "line": 26
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_BRAIN",
+      "file": "src/lib/env.ts",
+      "line": 27
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_DEEP",
+      "file": "src/lib/env.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_STRUCT",
+      "file": "src/lib/env.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_CRAFT",
+      "file": "src/lib/env.ts",
+      "line": 30
+    },
+    {
+      "type": "export",
+      "name": "EVOLUTION_API_URL",
+      "file": "src/lib/env.ts",
+      "line": 51
+    },
+    {
+      "type": "export",
+      "name": "EVOLUTION_API_KEY",
+      "file": "src/lib/env.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "EVOLUTION_WEBHOOK_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "INTERNAL_WEBHOOK_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 56
+    },
+    {
+      "type": "export",
+      "name": "SHOPIFY_WEBHOOK_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 57
+    },
+    {
+      "type": "export",
+      "name": "CRON_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 60
+    },
+    {
+      "type": "export",
+      "name": "HEALTH_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 61
+    },
+    {
+      "type": "export",
+      "name": "ADMIN_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 62
+    },
+    {
+      "type": "export",
+      "name": "YALIDINE_API_KEY",
+      "file": "src/lib/env.ts",
+      "line": 65
+    },
+    {
+      "type": "export",
+      "name": "YALIDINE_API_TOKEN",
+      "file": "src/lib/env.ts",
+      "line": 66
+    },
+    {
+      "type": "export",
+      "name": "aiSuggestSchema",
+      "file": "src/lib/validation.ts",
+      "line": 40
+    },
+    {
+      "type": "export",
+      "name": "integrationSyncSchema",
+      "file": "src/lib/validation.ts",
+      "line": 83
+    },
+    {
+      "type": "export",
+      "name": "getCurrentUser",
+      "file": "src/lib/auth/actions.ts",
+      "line": 86
+    },
+    {
+      "type": "export",
+      "name": "getSellerProfile",
+      "file": "src/lib/auth/actions.ts",
+      "line": 94
+    },
+    {
+      "type": "export",
+      "name": "Skeleton",
+      "file": "src/components/ui/Skeleton.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "itemVariants",
+      "file": "src/components/ui/motion/index.ts",
+      "line": 5
+    },
+    {
+      "type": "export",
+      "name": "AnimatedCard",
+      "file": "src/components/ui/motion/index.ts",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "ProductBarChart",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 5
+    },
+    {
+      "type": "export",
+      "name": "CashFlowChart",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 6
+    },
+    {
+      "type": "export",
+      "name": "THEME_COLORS",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "STATUS_COLORS",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "CHART_PALETTE",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "tooltipStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "tooltipLabelStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "tooltipItemStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "gridStroke",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 16
+    },
+    {
+      "type": "export",
+      "name": "axisTickStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "axisLineStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "formatCompact",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "formatCompactLocale",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 20
+    },
+    {
+      "type": "export",
+      "name": "formatCurrencyTooltip",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 21
+    },
+    {
+      "type": "export",
+      "name": "getLocaleTag",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 22
+    },
+    {
+      "type": "export",
+      "name": "tools",
+      "file": "src/lib/ai/agent.ts",
+      "line": 89
+    },
+    {
+      "type": "export",
+      "name": "AgentTool",
+      "file": "src/lib/ai/agent.ts",
+      "line": 44
+    },
+    {
+      "type": "export",
+      "name": "ROLE_PERMISSIONS",
+      "file": "src/lib/auth/permissions.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "UserPermissionContext",
+      "file": "src/lib/auth/permissions.ts",
+      "line": 3
+    },
+    {
+      "type": "export",
+      "name": "isModelRecovering",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 131
+    },
+    {
+      "type": "export",
+      "name": "probeModel",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 187
+    },
+    {
+      "type": "export",
+      "name": "probeAllModels",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 218
+    },
+    {
+      "type": "export",
+      "name": "getHealthSummary",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 226
+    },
+    {
+      "type": "export",
+      "name": "getModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 170
+    },
+    {
+      "type": "export",
+      "name": "getModelByGroqName",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 175
+    },
+    {
+      "type": "export",
+      "name": "getAllModelIds",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 182
+    },
+    {
+      "type": "export",
+      "name": "isValidModelId",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 192
+    },
+    {
+      "type": "export",
+      "name": "getDefaultModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 197
+    },
+    {
+      "type": "export",
+      "name": "getFastestModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 202
+    },
+    {
+      "type": "export",
+      "name": "getCreativeModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 207
+    },
+    {
+      "type": "export",
+      "name": "getStructuredModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 212
+    },
+    {
+      "type": "export",
+      "name": "getDarijaModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 217
+    },
+    {
+      "type": "export",
+      "name": "getToolCapableModels",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 222
+    },
+    {
+      "type": "export",
+      "name": "getParallelToolModels",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 227
+    },
+    {
+      "type": "export",
+      "name": "ensureRecipesExist",
+      "file": "src/lib/automation/executor.ts",
+      "line": 457
+    },
+    {
+      "type": "export",
+      "name": "restoreProduct",
+      "file": "src/lib/data/product-service.ts",
+      "line": 173
+    },
+    {
+      "type": "export",
+      "name": "getSellerShippingRates",
+      "file": "src/lib/data/shipping-service.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "registerDeliveryAdapter",
+      "file": "src/lib/delivery/adapters.ts",
+      "line": 734
+    },
+    {
+      "type": "export",
+      "name": "TrackingEvent",
+      "file": "src/lib/delivery/adapters.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "DeliveryCompanyConfig",
+      "file": "src/lib/delivery/adapters.ts",
+      "line": 67
+    },
+    {
+      "type": "export",
+      "name": "clearCommuneCache",
+      "file": "src/lib/delivery/yalidine-communes.ts",
+      "line": 61
+    },
+    {
+      "type": "export",
+      "name": "parseRawRows",
+      "file": "src/lib/import/parsers.ts",
+      "line": 105
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_ORDER_AGENT_CONFIG",
+      "file": "src/types/index.ts",
+      "line": 43
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_COMM_AGENT_CONFIG",
+      "file": "src/types/index.ts",
+      "line": 44
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_AGENT_CONFIG",
+      "file": "src/types/index.ts",
+      "line": 45
+    },
+    {
+      "type": "export",
+      "name": "ProductVariant",
+      "file": "src/types/index.ts",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "Category",
+      "file": "src/types/index.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "Seller",
+      "file": "src/types/index.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "NotificationSettings",
+      "file": "src/types/index.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "Product",
+      "file": "src/types/index.ts",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "Customer",
+      "file": "src/types/index.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "OrderStatus",
+      "file": "src/types/index.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "OrderSource",
+      "file": "src/types/index.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationStatus",
+      "file": "src/types/index.ts",
+      "line": 16
+    },
+    {
+      "type": "export",
+      "name": "OrderItem",
+      "file": "src/types/index.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "Order",
+      "file": "src/types/index.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "DeliveryProvider",
+      "file": "src/types/index.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "DeliveryStatus",
+      "file": "src/types/index.ts",
+      "line": 20
+    },
+    {
+      "type": "export",
+      "name": "Delivery",
+      "file": "src/types/index.ts",
+      "line": 21
+    },
+    {
+      "type": "export",
+      "name": "Automation",
+      "file": "src/types/index.ts",
+      "line": 22
+    },
+    {
+      "type": "export",
+      "name": "DashboardStats",
+      "file": "src/types/index.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "CODStats",
+      "file": "src/types/index.ts",
+      "line": 24
+    },
+    {
+      "type": "export",
+      "name": "Integration",
+      "file": "src/types/index.ts",
+      "line": 25
+    },
+    {
+      "type": "export",
+      "name": "TemplateCategory",
+      "file": "src/types/index.ts",
+      "line": 26
+    },
+    {
+      "type": "export",
+      "name": "TemplateLanguage",
+      "file": "src/types/index.ts",
+      "line": 27
+    },
+    {
+      "type": "export",
+      "name": "WhatsAppTemplate",
+      "file": "src/types/index.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "WebhookEvent",
+      "file": "src/types/index.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "ImportBatchStatus",
+      "file": "src/types/index.ts",
+      "line": 30
+    },
+    {
+      "type": "export",
+      "name": "ImportBatch",
+      "file": "src/types/index.ts",
+      "line": 31
+    },
+    {
+      "type": "export",
+      "name": "AIExtraction",
+      "file": "src/types/index.ts",
+      "line": 32
+    },
+    {
+      "type": "export",
+      "name": "OrderAgentConfig",
+      "file": "src/types/index.ts",
+      "line": 37
+    },
+    {
+      "type": "export",
+      "name": "CommAgentConfig",
+      "file": "src/types/index.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "AgentConfig",
+      "file": "src/types/index.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_COMM_AGENT_CONFIG",
+      "file": "src/lib/agents/types.ts",
+      "line": 34
+    },
+    {
+      "type": "export",
+      "name": "CommAgentConfig",
+      "file": "src/lib/agents/types.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "calculateCustomerRisk",
+      "file": "src/lib/data/risk.ts",
+      "line": 30
+    },
+    {
+      "type": "export",
+      "name": "updateCustomerRiskScore",
+      "file": "src/lib/data/risk.ts",
+      "line": 262
+    },
+    {
+      "type": "export",
+      "name": "RiskLevel",
+      "file": "src/lib/data/risk.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "getSessionMessages",
+      "file": "src/lib/data/chat-service.ts",
+      "line": 102
+    },
+    {
+      "type": "export",
+      "name": "getInstanceInfo",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 210
+    },
+    {
+      "type": "export",
+      "name": "deleteInstance",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 218
+    },
+    {
+      "type": "export",
+      "name": "logoutInstance",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 223
+    },
+    {
+      "type": "export",
+      "name": "sendMedia",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 241
+    },
+    {
+      "type": "export",
+      "name": "markAsRead",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 266
+    },
+    {
+      "type": "export",
+      "name": "normalizePhone",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 302
+    },
+    {
+      "type": "export",
+      "name": "getLocaleFromRequest",
+      "file": "src/lib/i18n/server.ts",
+      "line": 6
+    },
+    {
+      "type": "export",
+      "name": "SupportedLocale",
+      "file": "src/lib/i18n/server.ts",
+      "line": 4
+    },
+    {
+      "type": "export",
+      "name": "extractOrderFromConversation",
+      "file": "src/lib/agents/communication-agent.ts",
+      "line": 63
+    },
+    {
+      "type": "export",
+      "name": "classifyMessage",
+      "file": "src/lib/agents/communication-agent.ts",
+      "line": 115
+    },
+    {
+      "type": "export",
+      "name": "suggestReplies",
+      "file": "src/lib/agents/communication-agent.ts",
+      "line": 151
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_AGENT_CONFIG",
+      "file": "src/lib/agents/orchestrator.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "AgentConfig",
+      "file": "src/lib/agents/orchestrator.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "THEME_COLORS",
+      "file": "src/components/ui/charts/chart-utils.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "getAutomations",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "createAutomation",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "updateAutomation",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "deleteAutomation",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "createDelivery",
+      "file": "src/lib/data/delivery-service.ts",
+      "line": 24
+    },
+    {
+      "type": "export",
+      "name": "getCODStats",
+      "file": "src/lib/data/analytics-service.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "logAgentActivity",
+      "file": "src/lib/data/analytics-service.ts",
+      "line": 59
+    },
+    {
+      "type": "export",
+      "name": "getNotifications",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "getUnreadNotificationCount",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "markNotificationRead",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 48
+    },
+    {
+      "type": "export",
+      "name": "markAllNotificationsRead",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 56
+    },
+    {
+      "type": "export",
+      "name": "dismissNotification",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 65
+    },
+    {
+      "type": "export",
+      "name": "createNotification",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 73
+    },
+    {
+      "type": "export",
+      "name": "deleteNotification",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 88
+    },
+    {
+      "type": "export",
+      "name": "NotificationInput",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "getWhatsAppTemplates",
+      "file": "src/lib/data/template-service.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "createWhatsAppTemplate",
+      "file": "src/lib/data/template-service.ts",
+      "line": 22
+    },
+    {
+      "type": "export",
+      "name": "updateWhatsAppTemplate",
+      "file": "src/lib/data/template-service.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "deleteWhatsAppTemplate",
+      "file": "src/lib/data/template-service.ts",
+      "line": 60
+    },
+    {
+      "type": "export",
+      "name": "itemVariants",
+      "file": "src/components/ui/motion/StaggerContainer.tsx",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "AnimatedCard",
+      "file": "src/components/ui/motion/AnimatedCard.tsx",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "ProductBarChart",
+      "file": "src/components/ui/charts/ProductBarChart.tsx",
+      "line": 33
+    },
+    {
+      "type": "export",
+      "name": "CashFlowChart",
+      "file": "src/components/ui/charts/CashFlowChart.tsx",
+      "line": 36
+    },
+    {
+      "type": "export",
+      "name": "DARIJA_VOCABULARY",
+      "file": "src/lib/ai/prompts/algerian.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "WILAYA_SHORTCUTS",
+      "file": "src/lib/ai/prompts/algerian.ts",
+      "line": 204
+    },
+    {
+      "type": "export",
+      "name": "assessRisk",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 243
+    },
+    {
+      "type": "export",
+      "name": "getWilayaRisk",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 474
+    },
+    {
+      "type": "export",
+      "name": "getAllWilayaRisks",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 478
+    },
+    {
+      "type": "export",
+      "name": "fetchCustomerRiskData",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 670
+    },
+    {
+      "type": "export",
+      "name": "RiskAssessment",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "RiskFactor",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "executeRoutedRequest",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 219
+    },
+    {
+      "type": "export",
+      "name": "executeModelChain",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 271
+    },
+    {
+      "type": "export",
+      "name": "extractWithSmartRouting",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 334
+    },
+    {
+      "type": "export",
+      "name": "isFlashWorthy",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 368
+    },
+    {
+      "type": "export",
+      "name": "isGreeting",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 368
+    },
+    {
+      "type": "export",
+      "name": "routeIntent",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 368
+    },
+    {
+      "type": "export",
+      "name": "OrchestratorResult",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 46
+    },
+    {
+      "type": "export",
+      "name": "IntentAnalysis",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 369
+    },
+    {
+      "type": "export",
+      "name": "Direction",
+      "file": "src/lib/i18n/index.tsx",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "TranslationKeys",
+      "file": "src/lib/i18n/index.tsx",
+      "line": 112
+    },
+    {
+      "type": "export",
+      "name": "SellerPlan",
+      "file": "src/types/database.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "NotificationSettings",
+      "file": "src/types/database.ts",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "OrderSource",
+      "file": "src/types/database.ts",
+      "line": 113
+    },
+    {
+      "type": "export",
+      "name": "OrderItem",
+      "file": "src/types/database.ts",
+      "line": 145
+    },
+    {
+      "type": "export",
+      "name": "DeliveryProvider",
+      "file": "src/types/database.ts",
+      "line": 190
+    },
+    {
+      "type": "export",
+      "name": "DeliveryStatus",
+      "file": "src/types/database.ts",
+      "line": 191
+    },
+    {
+      "type": "export",
+      "name": "CODStats",
+      "file": "src/types/database.ts",
+      "line": 252
+    },
+    {
+      "type": "export",
+      "name": "TemplateCategory",
+      "file": "src/types/database.ts",
+      "line": 271
+    },
+    {
+      "type": "export",
+      "name": "TemplateLanguage",
+      "file": "src/types/database.ts",
+      "line": 277
+    },
+    {
+      "type": "export",
+      "name": "WhatsAppTemplate",
+      "file": "src/types/database.ts",
+      "line": 279
+    },
+    {
+      "type": "export",
+      "name": "WebhookEvent",
+      "file": "src/types/database.ts",
+      "line": 293
+    },
+    {
+      "type": "export",
+      "name": "ImportBatchStatus",
+      "file": "src/types/database.ts",
+      "line": 303
+    },
+    {
+      "type": "export",
+      "name": "ImportBatch",
+      "file": "src/types/database.ts",
+      "line": 311
+    },
+    {
+      "type": "export",
+      "name": "ReturnStatus",
+      "file": "src/types/database.ts",
+      "line": 349
+    },
+    {
+      "type": "export",
+      "name": "_ReturnReason",
+      "file": "src/types/database.ts",
+      "line": 350
+    },
+    {
+      "type": "export",
+      "name": "ReturnResolutionType",
+      "file": "src/types/database.ts",
+      "line": 351
+    },
+    {
+      "type": "export",
+      "name": "ReturnItem",
+      "file": "src/types/database.ts",
+      "line": 352
+    },
+    {
+      "type": "export",
+      "name": "Return",
+      "file": "src/types/database.ts",
+      "line": 353
+    },
+    {
+      "type": "export",
+      "name": "ReturnNote",
+      "file": "src/types/database.ts",
+      "line": 354
+    },
+    {
+      "type": "export",
+      "name": "ReturnNoteType",
+      "file": "src/types/database.ts",
+      "line": 357
+    },
+    {
+      "type": "export",
+      "name": "ExpenseCategory",
+      "file": "src/types/database.ts",
+      "line": 361
+    },
+    {
+      "type": "export",
+      "name": "Expense",
+      "file": "src/types/database.ts",
+      "line": 361
+    },
+    {
+      "type": "export",
+      "name": "TeamRole",
+      "file": "src/types/database.ts",
+      "line": 364
+    },
+    {
+      "type": "export",
+      "name": "TeamMemberStatus",
+      "file": "src/types/database.ts",
+      "line": 365
+    },
+    {
+      "type": "export",
+      "name": "TeamMember",
+      "file": "src/types/database.ts",
+      "line": 367
+    },
+    {
+      "type": "export",
+      "name": "AIChatSession",
+      "file": "src/types/database.ts",
+      "line": 382
+    },
+    {
+      "type": "export",
+      "name": "AIChatMessage",
+      "file": "src/types/database.ts",
+      "line": 391
+    },
+    {
+      "type": "export",
+      "name": "DailyAnalyticsReport",
+      "file": "src/types/database.ts",
+      "line": 402
+    },
+    {
+      "type": "export",
+      "name": "NotificationType",
+      "file": "src/types/database.ts",
+      "line": 418
+    },
+    {
+      "type": "export",
+      "name": "Notification",
+      "file": "src/types/database.ts",
+      "line": 426
+    },
+    {
+      "type": "export",
+      "name": "IntentType",
+      "file": "src/lib/ai/models/classifier.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationStatus",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "ReminderStep",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationAttempt",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "OrderConfirmation",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationStats",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 69
+    },
+    {
+      "type": "export",
+      "name": "ProductOption",
+      "file": "src/components/dashboard/orders/types.ts",
+      "line": 28
+    }
+  ],
+  "unusedExports": [
+    {
+      "type": "export",
+      "name": "DEFAULT_MODEL",
+      "file": "src/lib/agents/groq.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "getCurrentUser",
+      "file": "src/lib/data/service.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "getProduct",
+      "file": "src/lib/data/service.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "restoreProduct",
+      "file": "src/lib/data/service.ts",
+      "line": 32
+    },
+    {
+      "type": "export",
+      "name": "getOrder",
+      "file": "src/lib/data/service.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "updateOrder",
+      "file": "src/lib/data/service.ts",
+      "line": 40
+    },
+    {
+      "type": "export",
+      "name": "restoreOrder",
+      "file": "src/lib/data/service.ts",
+      "line": 43
+    },
+    {
+      "type": "export",
+      "name": "getCustomer",
+      "file": "src/lib/data/service.ts",
+      "line": 49
+    },
+    {
+      "type": "export",
+      "name": "createCustomer",
+      "file": "src/lib/data/service.ts",
+      "line": 50
+    },
+    {
+      "type": "export",
+      "name": "restoreCustomer",
+      "file": "src/lib/data/service.ts",
+      "line": 53
+    },
+    {
+      "type": "export",
+      "name": "getAutomations",
+      "file": "src/lib/data/service.ts",
+      "line": 60
+    },
+    {
+      "type": "export",
+      "name": "createAutomation",
+      "file": "src/lib/data/service.ts",
+      "line": 61
+    },
+    {
+      "type": "export",
+      "name": "updateAutomation",
+      "file": "src/lib/data/service.ts",
+      "line": 62
+    },
+    {
+      "type": "export",
+      "name": "deleteAutomation",
+      "file": "src/lib/data/service.ts",
+      "line": 63
+    },
+    {
+      "type": "export",
+      "name": "createDelivery",
+      "file": "src/lib/data/service.ts",
+      "line": 69
+    },
+    {
+      "type": "export",
+      "name": "getCODStats",
+      "file": "src/lib/data/service.ts",
+      "line": 76
+    },
+    {
+      "type": "export",
+      "name": "logAgentActivity",
+      "file": "src/lib/data/service.ts",
+      "line": 79
+    },
+    {
+      "type": "export",
+      "name": "getNotifications",
+      "file": "src/lib/data/service.ts",
+      "line": 84
+    },
+    {
+      "type": "export",
+      "name": "getUnreadNotificationCount",
+      "file": "src/lib/data/service.ts",
+      "line": 85
+    },
+    {
+      "type": "export",
+      "name": "markNotificationRead",
+      "file": "src/lib/data/service.ts",
+      "line": 86
+    },
+    {
+      "type": "export",
+      "name": "markAllNotificationsRead",
+      "file": "src/lib/data/service.ts",
+      "line": 87
+    },
+    {
+      "type": "export",
+      "name": "dismissNotification",
+      "file": "src/lib/data/service.ts",
+      "line": 88
+    },
+    {
+      "type": "export",
+      "name": "createNotification",
+      "file": "src/lib/data/service.ts",
+      "line": 89
+    },
+    {
+      "type": "export",
+      "name": "deleteNotification",
+      "file": "src/lib/data/service.ts",
+      "line": 90
+    },
+    {
+      "type": "export",
+      "name": "getWhatsAppTemplates",
+      "file": "src/lib/data/service.ts",
+      "line": 95
+    },
+    {
+      "type": "export",
+      "name": "createWhatsAppTemplate",
+      "file": "src/lib/data/service.ts",
+      "line": 96
+    },
+    {
+      "type": "export",
+      "name": "updateWhatsAppTemplate",
+      "file": "src/lib/data/service.ts",
+      "line": 97
+    },
+    {
+      "type": "export",
+      "name": "deleteWhatsAppTemplate",
+      "file": "src/lib/data/service.ts",
+      "line": 98
+    },
+    {
+      "type": "export",
+      "name": "getSellerShippingRates",
+      "file": "src/lib/data/service.ts",
+      "line": 103
+    },
+    {
+      "type": "export",
+      "name": "WILAYA_ALIASES",
+      "file": "src/lib/data/wilayas.ts",
+      "line": 94
+    },
+    {
+      "type": "export",
+      "name": "WILAYA_ARABIC_NAMES",
+      "file": "src/lib/data/wilayas.ts",
+      "line": 290
+    },
+    {
+      "type": "export",
+      "name": "SUPABASE_URL",
+      "file": "src/lib/env.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "SUPABASE_ANON_KEY",
+      "file": "src/lib/env.ts",
+      "line": 16
+    },
+    {
+      "type": "export",
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "file": "src/lib/env.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "APP_URL",
+      "file": "src/lib/env.ts",
+      "line": 20
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY",
+      "file": "src/lib/env.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_FLASH",
+      "file": "src/lib/env.ts",
+      "line": 26
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_BRAIN",
+      "file": "src/lib/env.ts",
+      "line": 27
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_DEEP",
+      "file": "src/lib/env.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_STRUCT",
+      "file": "src/lib/env.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "GROQ_API_KEY_CRAFT",
+      "file": "src/lib/env.ts",
+      "line": 30
+    },
+    {
+      "type": "export",
+      "name": "EVOLUTION_API_URL",
+      "file": "src/lib/env.ts",
+      "line": 51
+    },
+    {
+      "type": "export",
+      "name": "EVOLUTION_API_KEY",
+      "file": "src/lib/env.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "EVOLUTION_WEBHOOK_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "INTERNAL_WEBHOOK_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 56
+    },
+    {
+      "type": "export",
+      "name": "SHOPIFY_WEBHOOK_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 57
+    },
+    {
+      "type": "export",
+      "name": "CRON_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 60
+    },
+    {
+      "type": "export",
+      "name": "HEALTH_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 61
+    },
+    {
+      "type": "export",
+      "name": "ADMIN_SECRET",
+      "file": "src/lib/env.ts",
+      "line": 62
+    },
+    {
+      "type": "export",
+      "name": "YALIDINE_API_KEY",
+      "file": "src/lib/env.ts",
+      "line": 65
+    },
+    {
+      "type": "export",
+      "name": "YALIDINE_API_TOKEN",
+      "file": "src/lib/env.ts",
+      "line": 66
+    },
+    {
+      "type": "export",
+      "name": "aiSuggestSchema",
+      "file": "src/lib/validation.ts",
+      "line": 40
+    },
+    {
+      "type": "export",
+      "name": "integrationSyncSchema",
+      "file": "src/lib/validation.ts",
+      "line": 83
+    },
+    {
+      "type": "export",
+      "name": "getCurrentUser",
+      "file": "src/lib/auth/actions.ts",
+      "line": 86
+    },
+    {
+      "type": "export",
+      "name": "getSellerProfile",
+      "file": "src/lib/auth/actions.ts",
+      "line": 94
+    },
+    {
+      "type": "export",
+      "name": "Skeleton",
+      "file": "src/components/ui/Skeleton.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "itemVariants",
+      "file": "src/components/ui/motion/index.ts",
+      "line": 5
+    },
+    {
+      "type": "export",
+      "name": "AnimatedCard",
+      "file": "src/components/ui/motion/index.ts",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "ProductBarChart",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 5
+    },
+    {
+      "type": "export",
+      "name": "CashFlowChart",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 6
+    },
+    {
+      "type": "export",
+      "name": "THEME_COLORS",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "STATUS_COLORS",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "CHART_PALETTE",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "tooltipStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "tooltipLabelStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "tooltipItemStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "gridStroke",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 16
+    },
+    {
+      "type": "export",
+      "name": "axisTickStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "axisLineStyle",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "formatCompact",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "formatCompactLocale",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 20
+    },
+    {
+      "type": "export",
+      "name": "formatCurrencyTooltip",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 21
+    },
+    {
+      "type": "export",
+      "name": "getLocaleTag",
+      "file": "src/components/ui/charts/index.ts",
+      "line": 22
+    },
+    {
+      "type": "export",
+      "name": "tools",
+      "file": "src/lib/ai/agent.ts",
+      "line": 89
+    },
+    {
+      "type": "export",
+      "name": "AgentTool",
+      "file": "src/lib/ai/agent.ts",
+      "line": 44
+    },
+    {
+      "type": "export",
+      "name": "ROLE_PERMISSIONS",
+      "file": "src/lib/auth/permissions.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "UserPermissionContext",
+      "file": "src/lib/auth/permissions.ts",
+      "line": 3
+    },
+    {
+      "type": "export",
+      "name": "isModelRecovering",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 131
+    },
+    {
+      "type": "export",
+      "name": "probeModel",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 187
+    },
+    {
+      "type": "export",
+      "name": "probeAllModels",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 218
+    },
+    {
+      "type": "export",
+      "name": "getHealthSummary",
+      "file": "src/lib/ai/models/health.ts",
+      "line": 226
+    },
+    {
+      "type": "export",
+      "name": "getModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 170
+    },
+    {
+      "type": "export",
+      "name": "getModelByGroqName",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 175
+    },
+    {
+      "type": "export",
+      "name": "getAllModelIds",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 182
+    },
+    {
+      "type": "export",
+      "name": "isValidModelId",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 192
+    },
+    {
+      "type": "export",
+      "name": "getDefaultModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 197
+    },
+    {
+      "type": "export",
+      "name": "getFastestModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 202
+    },
+    {
+      "type": "export",
+      "name": "getCreativeModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 207
+    },
+    {
+      "type": "export",
+      "name": "getStructuredModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 212
+    },
+    {
+      "type": "export",
+      "name": "getDarijaModel",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 217
+    },
+    {
+      "type": "export",
+      "name": "getToolCapableModels",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 222
+    },
+    {
+      "type": "export",
+      "name": "getParallelToolModels",
+      "file": "src/lib/ai/models/registry.ts",
+      "line": 227
+    },
+    {
+      "type": "export",
+      "name": "ensureRecipesExist",
+      "file": "src/lib/automation/executor.ts",
+      "line": 457
+    },
+    {
+      "type": "export",
+      "name": "restoreProduct",
+      "file": "src/lib/data/product-service.ts",
+      "line": 173
+    },
+    {
+      "type": "export",
+      "name": "getSellerShippingRates",
+      "file": "src/lib/data/shipping-service.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "registerDeliveryAdapter",
+      "file": "src/lib/delivery/adapters.ts",
+      "line": 734
+    },
+    {
+      "type": "export",
+      "name": "TrackingEvent",
+      "file": "src/lib/delivery/adapters.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "DeliveryCompanyConfig",
+      "file": "src/lib/delivery/adapters.ts",
+      "line": 67
+    },
+    {
+      "type": "export",
+      "name": "clearCommuneCache",
+      "file": "src/lib/delivery/yalidine-communes.ts",
+      "line": 61
+    },
+    {
+      "type": "export",
+      "name": "parseRawRows",
+      "file": "src/lib/import/parsers.ts",
+      "line": 105
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_ORDER_AGENT_CONFIG",
+      "file": "src/types/index.ts",
+      "line": 43
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_COMM_AGENT_CONFIG",
+      "file": "src/types/index.ts",
+      "line": 44
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_AGENT_CONFIG",
+      "file": "src/types/index.ts",
+      "line": 45
+    },
+    {
+      "type": "export",
+      "name": "ProductVariant",
+      "file": "src/types/index.ts",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "Category",
+      "file": "src/types/index.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "Seller",
+      "file": "src/types/index.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "NotificationSettings",
+      "file": "src/types/index.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "Product",
+      "file": "src/types/index.ts",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "Customer",
+      "file": "src/types/index.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "OrderStatus",
+      "file": "src/types/index.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "OrderSource",
+      "file": "src/types/index.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationStatus",
+      "file": "src/types/index.ts",
+      "line": 16
+    },
+    {
+      "type": "export",
+      "name": "OrderItem",
+      "file": "src/types/index.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "Order",
+      "file": "src/types/index.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "DeliveryProvider",
+      "file": "src/types/index.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "DeliveryStatus",
+      "file": "src/types/index.ts",
+      "line": 20
+    },
+    {
+      "type": "export",
+      "name": "Delivery",
+      "file": "src/types/index.ts",
+      "line": 21
+    },
+    {
+      "type": "export",
+      "name": "Automation",
+      "file": "src/types/index.ts",
+      "line": 22
+    },
+    {
+      "type": "export",
+      "name": "DashboardStats",
+      "file": "src/types/index.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "CODStats",
+      "file": "src/types/index.ts",
+      "line": 24
+    },
+    {
+      "type": "export",
+      "name": "Integration",
+      "file": "src/types/index.ts",
+      "line": 25
+    },
+    {
+      "type": "export",
+      "name": "TemplateCategory",
+      "file": "src/types/index.ts",
+      "line": 26
+    },
+    {
+      "type": "export",
+      "name": "TemplateLanguage",
+      "file": "src/types/index.ts",
+      "line": 27
+    },
+    {
+      "type": "export",
+      "name": "WhatsAppTemplate",
+      "file": "src/types/index.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "WebhookEvent",
+      "file": "src/types/index.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "ImportBatchStatus",
+      "file": "src/types/index.ts",
+      "line": 30
+    },
+    {
+      "type": "export",
+      "name": "ImportBatch",
+      "file": "src/types/index.ts",
+      "line": 31
+    },
+    {
+      "type": "export",
+      "name": "AIExtraction",
+      "file": "src/types/index.ts",
+      "line": 32
+    },
+    {
+      "type": "export",
+      "name": "OrderAgentConfig",
+      "file": "src/types/index.ts",
+      "line": 37
+    },
+    {
+      "type": "export",
+      "name": "CommAgentConfig",
+      "file": "src/types/index.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "AgentConfig",
+      "file": "src/types/index.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_COMM_AGENT_CONFIG",
+      "file": "src/lib/agents/types.ts",
+      "line": 34
+    },
+    {
+      "type": "export",
+      "name": "CommAgentConfig",
+      "file": "src/lib/agents/types.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "calculateCustomerRisk",
+      "file": "src/lib/data/risk.ts",
+      "line": 30
+    },
+    {
+      "type": "export",
+      "name": "updateCustomerRiskScore",
+      "file": "src/lib/data/risk.ts",
+      "line": 262
+    },
+    {
+      "type": "export",
+      "name": "RiskLevel",
+      "file": "src/lib/data/risk.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "getSessionMessages",
+      "file": "src/lib/data/chat-service.ts",
+      "line": 102
+    },
+    {
+      "type": "export",
+      "name": "getInstanceInfo",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 210
+    },
+    {
+      "type": "export",
+      "name": "deleteInstance",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 218
+    },
+    {
+      "type": "export",
+      "name": "logoutInstance",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 223
+    },
+    {
+      "type": "export",
+      "name": "sendMedia",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 241
+    },
+    {
+      "type": "export",
+      "name": "markAsRead",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 266
+    },
+    {
+      "type": "export",
+      "name": "normalizePhone",
+      "file": "src/lib/channels/evolution-api.ts",
+      "line": 302
+    },
+    {
+      "type": "export",
+      "name": "getLocaleFromRequest",
+      "file": "src/lib/i18n/server.ts",
+      "line": 6
+    },
+    {
+      "type": "export",
+      "name": "SupportedLocale",
+      "file": "src/lib/i18n/server.ts",
+      "line": 4
+    },
+    {
+      "type": "export",
+      "name": "extractOrderFromConversation",
+      "file": "src/lib/agents/communication-agent.ts",
+      "line": 63
+    },
+    {
+      "type": "export",
+      "name": "classifyMessage",
+      "file": "src/lib/agents/communication-agent.ts",
+      "line": 115
+    },
+    {
+      "type": "export",
+      "name": "suggestReplies",
+      "file": "src/lib/agents/communication-agent.ts",
+      "line": 151
+    },
+    {
+      "type": "export",
+      "name": "DEFAULT_AGENT_CONFIG",
+      "file": "src/lib/agents/orchestrator.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "AgentConfig",
+      "file": "src/lib/agents/orchestrator.ts",
+      "line": 14
+    },
+    {
+      "type": "export",
+      "name": "THEME_COLORS",
+      "file": "src/components/ui/charts/chart-utils.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "getAutomations",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "createAutomation",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "updateAutomation",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "deleteAutomation",
+      "file": "src/lib/data/automation-service.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "createDelivery",
+      "file": "src/lib/data/delivery-service.ts",
+      "line": 24
+    },
+    {
+      "type": "export",
+      "name": "getCODStats",
+      "file": "src/lib/data/analytics-service.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "logAgentActivity",
+      "file": "src/lib/data/analytics-service.ts",
+      "line": 59
+    },
+    {
+      "type": "export",
+      "name": "getNotifications",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 17
+    },
+    {
+      "type": "export",
+      "name": "getUnreadNotificationCount",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "markNotificationRead",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 48
+    },
+    {
+      "type": "export",
+      "name": "markAllNotificationsRead",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 56
+    },
+    {
+      "type": "export",
+      "name": "dismissNotification",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 65
+    },
+    {
+      "type": "export",
+      "name": "createNotification",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 73
+    },
+    {
+      "type": "export",
+      "name": "deleteNotification",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 88
+    },
+    {
+      "type": "export",
+      "name": "NotificationInput",
+      "file": "src/lib/data/notification-service.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "getWhatsAppTemplates",
+      "file": "src/lib/data/template-service.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "createWhatsAppTemplate",
+      "file": "src/lib/data/template-service.ts",
+      "line": 22
+    },
+    {
+      "type": "export",
+      "name": "updateWhatsAppTemplate",
+      "file": "src/lib/data/template-service.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "deleteWhatsAppTemplate",
+      "file": "src/lib/data/template-service.ts",
+      "line": 60
+    },
+    {
+      "type": "export",
+      "name": "itemVariants",
+      "file": "src/components/ui/motion/StaggerContainer.tsx",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "AnimatedCard",
+      "file": "src/components/ui/motion/AnimatedCard.tsx",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "ProductBarChart",
+      "file": "src/components/ui/charts/ProductBarChart.tsx",
+      "line": 33
+    },
+    {
+      "type": "export",
+      "name": "CashFlowChart",
+      "file": "src/components/ui/charts/CashFlowChart.tsx",
+      "line": 36
+    },
+    {
+      "type": "export",
+      "name": "DARIJA_VOCABULARY",
+      "file": "src/lib/ai/prompts/algerian.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "WILAYA_SHORTCUTS",
+      "file": "src/lib/ai/prompts/algerian.ts",
+      "line": 204
+    },
+    {
+      "type": "export",
+      "name": "assessRisk",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 243
+    },
+    {
+      "type": "export",
+      "name": "getWilayaRisk",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 474
+    },
+    {
+      "type": "export",
+      "name": "getAllWilayaRisks",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 478
+    },
+    {
+      "type": "export",
+      "name": "fetchCustomerRiskData",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 670
+    },
+    {
+      "type": "export",
+      "name": "RiskAssessment",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "RiskFactor",
+      "file": "src/lib/ai/risk-engine.ts",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "executeRoutedRequest",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 219
+    },
+    {
+      "type": "export",
+      "name": "executeModelChain",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 271
+    },
+    {
+      "type": "export",
+      "name": "extractWithSmartRouting",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 334
+    },
+    {
+      "type": "export",
+      "name": "isFlashWorthy",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 368
+    },
+    {
+      "type": "export",
+      "name": "isGreeting",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 368
+    },
+    {
+      "type": "export",
+      "name": "routeIntent",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 368
+    },
+    {
+      "type": "export",
+      "name": "OrchestratorResult",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 46
+    },
+    {
+      "type": "export",
+      "name": "IntentAnalysis",
+      "file": "src/lib/ai/models/executor.ts",
+      "line": 369
+    },
+    {
+      "type": "export",
+      "name": "Direction",
+      "file": "src/lib/i18n/index.tsx",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "TranslationKeys",
+      "file": "src/lib/i18n/index.tsx",
+      "line": 112
+    },
+    {
+      "type": "export",
+      "name": "SellerPlan",
+      "file": "src/types/database.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "NotificationSettings",
+      "file": "src/types/database.ts",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "OrderSource",
+      "file": "src/types/database.ts",
+      "line": 113
+    },
+    {
+      "type": "export",
+      "name": "OrderItem",
+      "file": "src/types/database.ts",
+      "line": 145
+    },
+    {
+      "type": "export",
+      "name": "DeliveryProvider",
+      "file": "src/types/database.ts",
+      "line": 190
+    },
+    {
+      "type": "export",
+      "name": "DeliveryStatus",
+      "file": "src/types/database.ts",
+      "line": 191
+    },
+    {
+      "type": "export",
+      "name": "CODStats",
+      "file": "src/types/database.ts",
+      "line": 252
+    },
+    {
+      "type": "export",
+      "name": "TemplateCategory",
+      "file": "src/types/database.ts",
+      "line": 271
+    },
+    {
+      "type": "export",
+      "name": "TemplateLanguage",
+      "file": "src/types/database.ts",
+      "line": 277
+    },
+    {
+      "type": "export",
+      "name": "WhatsAppTemplate",
+      "file": "src/types/database.ts",
+      "line": 279
+    },
+    {
+      "type": "export",
+      "name": "WebhookEvent",
+      "file": "src/types/database.ts",
+      "line": 293
+    },
+    {
+      "type": "export",
+      "name": "ImportBatchStatus",
+      "file": "src/types/database.ts",
+      "line": 303
+    },
+    {
+      "type": "export",
+      "name": "ImportBatch",
+      "file": "src/types/database.ts",
+      "line": 311
+    },
+    {
+      "type": "export",
+      "name": "ReturnStatus",
+      "file": "src/types/database.ts",
+      "line": 349
+    },
+    {
+      "type": "export",
+      "name": "_ReturnReason",
+      "file": "src/types/database.ts",
+      "line": 350
+    },
+    {
+      "type": "export",
+      "name": "ReturnResolutionType",
+      "file": "src/types/database.ts",
+      "line": 351
+    },
+    {
+      "type": "export",
+      "name": "ReturnItem",
+      "file": "src/types/database.ts",
+      "line": 352
+    },
+    {
+      "type": "export",
+      "name": "Return",
+      "file": "src/types/database.ts",
+      "line": 353
+    },
+    {
+      "type": "export",
+      "name": "ReturnNote",
+      "file": "src/types/database.ts",
+      "line": 354
+    },
+    {
+      "type": "export",
+      "name": "ReturnNoteType",
+      "file": "src/types/database.ts",
+      "line": 357
+    },
+    {
+      "type": "export",
+      "name": "ExpenseCategory",
+      "file": "src/types/database.ts",
+      "line": 361
+    },
+    {
+      "type": "export",
+      "name": "Expense",
+      "file": "src/types/database.ts",
+      "line": 361
+    },
+    {
+      "type": "export",
+      "name": "TeamRole",
+      "file": "src/types/database.ts",
+      "line": 364
+    },
+    {
+      "type": "export",
+      "name": "TeamMemberStatus",
+      "file": "src/types/database.ts",
+      "line": 365
+    },
+    {
+      "type": "export",
+      "name": "TeamMember",
+      "file": "src/types/database.ts",
+      "line": 367
+    },
+    {
+      "type": "export",
+      "name": "AIChatSession",
+      "file": "src/types/database.ts",
+      "line": 382
+    },
+    {
+      "type": "export",
+      "name": "AIChatMessage",
+      "file": "src/types/database.ts",
+      "line": 391
+    },
+    {
+      "type": "export",
+      "name": "DailyAnalyticsReport",
+      "file": "src/types/database.ts",
+      "line": 402
+    },
+    {
+      "type": "export",
+      "name": "NotificationType",
+      "file": "src/types/database.ts",
+      "line": 418
+    },
+    {
+      "type": "export",
+      "name": "Notification",
+      "file": "src/types/database.ts",
+      "line": 426
+    },
+    {
+      "type": "export",
+      "name": "IntentType",
+      "file": "src/lib/ai/models/classifier.ts",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationStatus",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 15
+    },
+    {
+      "type": "export",
+      "name": "ReminderStep",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 23
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationAttempt",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "OrderConfirmation",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 52
+    },
+    {
+      "type": "export",
+      "name": "ConfirmationStats",
+      "file": "src/lib/automation/confirmation.ts",
+      "line": 69
+    },
+    {
+      "type": "export",
+      "name": "ProductOption",
+      "file": "src/components/dashboard/orders/types.ts",
+      "line": 28
+    }
+  ],
+  "unusedFiles": [
+    {
+      "type": "file",
+      "name": "scripts/audit-locales.js",
+      "file": "scripts/audit-locales.js"
+    },
+    {
+      "type": "file",
+      "name": "scripts/check-translations.ts",
+      "file": "scripts/check-translations.ts"
+    },
+    {
+      "type": "file",
+      "name": "scripts/fix-css-imports.mjs",
+      "file": "scripts/fix-css-imports.mjs"
+    },
+    {
+      "type": "file",
+      "name": "scripts/fix-fallbacks.js",
+      "file": "scripts/fix-fallbacks.js"
+    },
+    {
+      "type": "file",
+      "name": "scripts/fix-locales.js",
+      "file": "scripts/fix-locales.js"
+    },
+    {
+      "type": "file",
+      "name": "scripts/split-css.mjs",
+      "file": "scripts/split-css.mjs"
+    },
+    {
+      "type": "file",
+      "name": "src/components/dashboard/SlideOutPanel.tsx",
+      "file": "src/components/dashboard/SlideOutPanel.tsx"
+    },
+    {
+      "type": "file",
+      "name": "src/components/ui/Toast.tsx",
+      "file": "src/components/ui/Toast.tsx"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/ai/health.ts",
+      "file": "src/lib/ai/health.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/automation/confirmation-utils.ts",
+      "file": "src/lib/automation/confirmation-utils.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/data/expense-service.ts",
+      "file": "src/lib/data/expense-service.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/data/import.ts",
+      "file": "src/lib/data/import.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/lib/store/cart.ts",
+      "file": "src/lib/store/cart.ts"
+    },
+    {
+      "type": "file",
+      "name": "src/components/dashboard/orders/CreateOrderModal.tsx",
+      "file": "src/components/dashboard/orders/CreateOrderModal.tsx"
+    }
+  ],
+  "unusedDeps": [
+    {
+      "type": "dependency",
+      "name": "clsx",
+      "file": "package.json",
+      "line": 22
+    },
+    {
+      "type": "dependency",
+      "name": "es-toolkit",
+      "file": "package.json",
+      "line": 23
+    }
+  ],
   "unlistedDeps": [],
-  "summary": "Error: Process timed out after 30000ms (killed with SIGTERM)"
+  "summary": "Found 245 issues"
 }
