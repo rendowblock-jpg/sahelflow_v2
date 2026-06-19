@@ -88,7 +88,7 @@ export const POST = withAuthAndRateLimit(
     )
 
     if (!result.success) {
-      const idempotencyKey = `delivery:${order.id}:${Date.now()}`;
+      const idempotencyKey = `delivery:${order.id}:${provider}`; // L8 fix: deterministic (was Date.now() — defeated dedup)
       await supabase.from('webhook_retry_queue').insert({
         idempotency_key: idempotencyKey,
         event_type: 'delivery.create',

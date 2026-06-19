@@ -11,13 +11,13 @@ const extractSchema = z.object({
  * Extract order data from a message using the AI extraction engine
  */
 export const POST = withAuthAndRateLimit(
-  async (req, { body, supabase, user }) => {
+  async (req, { body, supabase, sellerId }) => {
     const { messages } = body!;
 
     const { data: dbProducts } = await supabase
       .from('products')
       .select('id, name, price, variants')
-      .eq('seller_id', user.id)
+      .eq('seller_id', sellerId)
       .eq('active', true)
       .limit(100);
 
