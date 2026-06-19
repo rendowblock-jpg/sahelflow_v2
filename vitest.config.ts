@@ -22,15 +22,15 @@ export default defineConfig({
 			// Phase 4 (AAA Sprint): ramp to 100% per module.
 			// See docs/ultimate-design-system.md §16 and readiness assessment for targets.
 			thresholds: {
-				"src/lib/confirmation.ts": { statements: 95, branches: 90 },
-				"src/lib/extraction.ts": { statements: 65, branches: 55 },
-				"src/lib/upsell-engine.ts": { statements: 95, branches: 75 },
-				"src/lib/router.ts": { statements: 80, branches: 75 },
-				"src/lib/classifier.ts": { statements: 85, branches: 80 },
+				"src/lib/automation/confirmation.ts": { statements: 95, branches: 90 },
+				"src/lib/ai/extraction.ts": { statements: 65, branches: 55 },
+				"src/lib/ai/upsell-engine.ts": { statements: 95, branches: 75 },
+				"src/lib/ai/models/router.ts": { statements: 80, branches: 75 },
+				"src/lib/ai/models/classifier.ts": { statements: 85, branches: 80 },
 				"src/lib/import/engine.ts": { statements: 80, branches: 70 },
-				"src/lib/product-service.ts": { statements: 70, branches: 55 },
+				"src/lib/data/product-service.ts": { statements: 70, branches: 55 },
 				"src/lib/delivery/adapters.ts": { statements: 35, branches: 15 },
-				"src/lib/auth-service.ts": { statements: 55, branches: 50 },
+				"src/lib/data/auth-service.ts": { statements: 55, branches: 50 },
 				"src/lib/api-wrapper.ts": { statements: 65, branches: 60 },
 				"src/app/api/webhooks/evolution/route.ts": { statements: 100, branches: 100 },
 			},
