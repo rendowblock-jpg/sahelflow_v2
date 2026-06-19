@@ -20,3 +20,18 @@ vi.mock("@/lib/agents/groq", async (importOriginal) => {
       .mockRejectedValue(new Error("LLM mocked in unit tests")),
   };
 });
+
+// Mock the modern AI service path so tests importing @/lib/ai/service get
+// controllable mocks instead of falling through to the real Groq API.
+// Individual tests can override these via vi.mocked(...).mockResolvedValueOnce(...).
+vi.mock("@/lib/ai/service", () => ({
+  extractOrderFromMessage: vi
+    .fn()
+    .mockRejectedValue(new Error("AI service mocked in unit tests")),
+  askSellerAssistant: vi
+    .fn()
+    .mockRejectedValue(new Error("AI service mocked in unit tests")),
+  generateReplySuggestions: vi
+    .fn()
+    .mockRejectedValue(new Error("AI service mocked in unit tests")),
+}));

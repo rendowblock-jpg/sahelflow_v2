@@ -62,7 +62,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **AI**         | Groq API (5-model router with per-model API keys and cascading fallback, 30 tools)             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp via Baileys)                                               |
 | **Validation** | Zod (all public API routes)                                                                    |
-| **Testing**    | Vitest (567 unit tests across 36 test files) + Playwright e2e                                   |
+| **Testing**    | Vitest (696 unit tests across 37 test files) + Playwright e2e                                   |
 | **Hosting**    | Vercel (per-client project, deployed via `vercel --prod --yes`)                                 |
 
 ---
@@ -120,7 +120,7 @@ Auto-deploy from GitHub `main` is a planned automation item (design system §7.2
 
 ## Build & Test Gate
 
-- ✅ `npx vitest run` — **567/567** passing across 36 test files
+- ✅ `npx vitest run` — **696/696** passing across 37 test files
 - ✅ `npx tsc --noEmit` — strict mode, zero errors
 - ✅ `npx eslint .` — zero errors
 - ✅ Security headers complete (CSP + HSTS + Permissions-Policy + XFO + XCTO + RP)

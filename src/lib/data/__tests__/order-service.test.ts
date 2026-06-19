@@ -359,7 +359,7 @@ describe("order-service", () => {
       });
     });
 
-    describe("customer risk score calculation", () => {
+    describe("customer risk score calculation (T5 — assertions added)", () => {
       const orderData = {
         id: "o1",
         total_price: 500,
@@ -367,21 +367,19 @@ describe("order-service", () => {
         customer: { id: "c1" }
       };
 
-      it("calculates high return rate risk score (>= 0.5)", async () => {
-        const custOrders = [
-          { status: "returned", total_price: 100 },
-          { status: "returned", total_price: 100 },
-          { status: "delivered", total_price: 100 },
-        ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
+      // Helper: build a mock supabase client that returns custOrders for the
+      // customer_id query, and captures the risk_score update call.
+      function buildRiskScoreMock(custOrders: any[] | null) {
+        const updateMock = vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        });
+        const rpcMock = vi.fn().mockResolvedValue({ error: null });
         vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
+          const mockSub: any = chain({ data: orderData, error: null });
+          mockSub.rpc = rpcMock;
           mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
+          mockSub.update = updateMock;
+          mockSub.eq = vi.fn((field: string, val: any) => {
             if (field === "customer_id" && val === "c1") {
               return chain({ data: custOrders, error: null });
             }
@@ -389,38 +387,46 @@ describe("order-service", () => {
           });
           return mockSub;
         });
+        return { updateMock, rpcMock };
+      }
+
+      it("calculates high return rate risk score (>= 0.5) → 35 (T5)", async () => {
+        // 2 returned / 3 total = 0.667 >= 0.5 → +35
+        // cancelled=0 → +0; delivered=1 (not 0, not >=3); total<5
+        // Expected: 35
+        const custOrders = [
+          { status: "returned", total_price: 100 },
+          { status: "returned", total_price: 100 },
+          { status: "delivered", total_price: 100 },
+        ];
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 35 });
       });
 
-      it("calculates medium return rate risk score (>= 0.25)", async () => {
+      it("calculates medium return rate risk score (>= 0.25) → 10 (T5)", async () => {
+        // 1 returned / 4 total = 0.25 >= 0.25 → +20
+        // cancelled=0 → +0; delivered=3 >=3 → -10
+        // Expected: 20 - 10 = 10
         const custOrders = [
           { status: "returned", total_price: 100 },
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 10 });
       });
 
-      it("calculates low return rate risk score (> 0 but < 0.25)", async () => {
+      it("calculates low return rate risk score (> 0 but < 0.25) → 0 (clamped) (T5)", async () => {
+        // 1 returned / 5 total = 0.2 < 0.25 but returned>0 → +8
+        // cancelled=0 → +0; delivered=4 >=3 → -10
+        // 8 - 10 = -2 → clamped to 0
         const custOrders = [
           { status: "returned", total_price: 100 },
           { status: "delivered", total_price: 100 },
@@ -428,132 +434,82 @@ describe("order-service", () => {
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 0 });
       });
 
-      it("calculates risk score for cancelled rate >= 0.4", async () => {
+      it("calculates risk score for cancelled rate >= 0.4 → 20 (T5)", async () => {
+        // returned=0 → +0; 2 cancelled / 3 total = 0.667 >= 0.4 → +20
+        // delivered=1 (not 0, not >=3); total<5
+        // Expected: 20
         const custOrders = [
           { status: "cancelled", total_price: 100 },
           { status: "cancelled", total_price: 100 },
           { status: "delivered", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "cancelled");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 20 });
       });
 
-      it("calculates risk score for cancelled rate < 0.4 but > 0", async () => {
+      it("calculates risk score for cancelled rate < 0.4 but > 0 → 0 (clamped) (T5)", async () => {
+        // returned=0 → +0; 1 cancelled / 4 total = 0.25 < 0.4 but >0 → +10
+        // delivered=3 >=3 → -10
+        // 10 - 10 = 0
         const custOrders = [
           { status: "cancelled", total_price: 100 },
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "cancelled");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 0 });
       });
 
-      it("calculates risk score when total >= 2 and delivered === 0", async () => {
+      it("calculates risk score when total >= 2 and delivered === 0 → 55 (T5)", async () => {
+        // 2 returned / 2 total = 1.0 >= 0.5 → +35
+        // cancelled=0 → +0; total>=2 && delivered==0 → +20
+        // Expected: 35 + 20 = 55
         const custOrders = [
           { status: "returned", total_price: 100 },
           { status: "returned", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 55 });
       });
 
-      it("decreases risk score when delivered >= 3", async () => {
+      it("decreases risk score when delivered >= 3 → 10 (T5)", async () => {
+        // 1 returned / 4 total = 0.25 >= 0.25 → +20
+        // cancelled=0 → +0; delivered=3 >=3 → -10
+        // 20 - 10 = 10
         const custOrders = [
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
           { status: "returned", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 10 });
       });
 
-      it("decreases risk score when total >= 5 and return rate < 0.1", async () => {
+      it("decreases risk score when total >= 5 and return rate < 0.1 → 0 (clamped) (T5)", async () => {
+        // returned=0 → +0; 1 cancelled / 5 total = 0.2 < 0.4 but >0 → +10
+        // delivered=4 >=3 → -10; total>=5 && returnRate<0.1 (0 < 0.1) → -10
+        // 10 - 10 - 10 = -10 → clamped to 0
         const custOrders = [
           { status: "delivered", total_price: 100 },
           { status: "delivered", total_price: 100 },
@@ -561,66 +517,33 @@ describe("order-service", () => {
           { status: "delivered", total_price: 100 },
           { status: "cancelled", total_price: 100 },
         ];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "cancelled");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 0 });
       });
 
-      it("calculates risk score when customer has 0 orders", async () => {
+      it("calculates risk score when customer has 0 orders → 0 (T5)", async () => {
+        // total=0, returned=0, returnRate=0 → +0
+        // cancelled=0 → +0; total<2; delivered<3; total<5
+        // Expected: 0
         const custOrders: any[] = [];
-
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: custOrders, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+        const { updateMock } = buildRiskScoreMock(custOrders);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).toHaveBeenCalledWith({ risk_score: 0 });
       });
 
-      it("does not update risk score when custOrders is null", async () => {
-        const client = chain({ data: orderData, error: null });
-        client.rpc = vi.fn().mockResolvedValue({ error: null });
-
-        vi.mocked(getSupabase).mockImplementation(() => {
-          const mockSub = chain({ data: orderData, error: null });
-          mockSub.rpc = client.rpc;
-          mockSub.select = vi.fn(() => mockSub);
-          mockSub.eq = vi.fn((field, val) => {
-            if (field === "customer_id" && val === "c1") {
-              return chain({ data: null, error: null });
-            }
-            return mockSub;
-          });
-          return mockSub;
-        });
+      it("does not update risk score when custOrders is null (T5)", async () => {
+        // When custOrders is null, the `if (custOrders)` guard skips the entire block.
+        // No update call should be made.
+        const { updateMock } = buildRiskScoreMock(null);
 
         await updateOrderStatus("o1", "returned");
+
+        expect(updateMock).not.toHaveBeenCalled();
       });
 
       it("logs error and does not throw when customer orders fetch fails", async () => {

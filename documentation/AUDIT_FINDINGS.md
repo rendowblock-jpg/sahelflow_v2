@@ -31,7 +31,7 @@ The audit surfaced **~170 findings** across 5 layers. The most impactful categor
 - ✅ PR #8: Dead code removal (9 of 12 findings, -1,090 lines)
 - ✅ PR #9: Weak patterns / silent bugs (22 fixes, migration 031)
 - ✅ PR #10: Hardcoded values → config/i18n (9 fixes)
-- ⏳ PR #11: Test gaps + tautological tests (T1-T12)
+- ✅ PR #11: Test gaps + tautological tests (T1-T12) — DONE
 - ⏳ PR #12: Docs + types + migration reconciliation (DOC1-9, TD1-5)
 - ⏳ PR #13: Remaining security findings (S5-S18, M1-M4)
 
@@ -217,23 +217,23 @@ Exported but never imported, or unreachable branches.
 
 | # | Location | Issue |
 |---|----------|-------|
-| T1 | `tool-handlers.ts:194` + baseline `:962-1069` | **`atomic_create_order` RPC has ZERO tests.** 18-arg function implementing stock integrity (FOR UPDATE lock, insufficient-stock RAISE) — the security-critical invariant is completely untested. |
-| T2 | `executor.ts` (491 lines) | **No test file.** Recipe matching, condition evaluation, action dispatch — the entire automation engine is untested. |
-| T3 | `agent-tools.test.ts:1-94` | **Tautological — tests its own mock array.** Imports nothing from production. 6 tests give false confidence that 30 AI tools are tested. |
-| T4 | `webhook-verify.ts:9-36` | `verifyShopifyHmac` + `verifyWooCommerceHmac` have **ZERO tests** (only YouCan tested). |
+| T1 ✅ | `tool-handlers.ts:194` + baseline `:962-1069` | ~~`atomic_create_order` RPC has ZERO tests.~~ **Fixed (PR #11):** 4 new tests assert the exact 18-arg RPC payload, error propagation, p_status/p_source defaults, and null defaults for optional fields. |
+| T2 ✅ | `executor.ts` (516 lines) | ~~No test file.~~ **Fixed (PR #11):** New `executor.test.ts` with 39 tests covering all 7 triggers, all 6 actions, run_count increment + fallback, ensureRecipesExist TOCTOU race handling. |
+| T3 ✅ | `agent-tools.test.ts:1-94` | ~~Tautological — tests its own mock array.~~ **Fixed (PR #11):** Rewritten to import real `tools` from `@/lib/ai/agent` (30 tools). 23 tests verify count, uniqueness, descriptions, category coverage, schema documentation. |
+| T4 ✅ | `webhook-verify.ts:9-36` | ~~`verifyShopifyHmac` + `verifyWooCommerceHmac` have ZERO tests.~~ **Fixed (PR #11):** 19 new tests (7 Shopify base64, 7 WooCommerce hex, 3 detectPlatform fallbacks, 2 cross-platform timing-safe). |
 
 ### 🟠 High
 
 | # | Location | Issue |
 |---|----------|-------|
-| T5 | `order-service.test.ts:370-649` | 9 "customer risk score" test cases have **no `expect()`** assertions — names promise specific behavior, bodies verify nothing. |
-| T6 | `order-transitions.test.ts:1-65` | Asserts against its own hardcoded `VALID_TRANSITIONS` map, not the actual RPC (tautological). |
-| T7 | `webhooks/store/[token]/route.test.ts:1-95` | 8 tests mock `crypto.subtle.verify` then assert on the mock. **Zero production code exercised.** |
-| T8 | `magic-moment.spec.ts:346-365` | 2 tautological cases (assert on own object literals). |
-| T9 | `algerian_demo_seed.sql` (whole file) | **Corrupted on disk** (2KB, wrapped in literal quotes, truncated mid-sentence; expected 66KB+). Playwright spec depends on it. |
-| T10 | `magic-moment.spec.ts:115-116` | **Plaintext credentials committed** (`abdo2019hamouma@gmail.com` / `password123`). |
-| T11 | `src/test/setup.ts:10-22` | Mocks legacy `lib/agents/groq` but NOT modern `lib/ai/service` → AI tests make real Groq calls. |
-| T12 | CI (`ci.yml`) | Never runs Playwright `mobile-chrome`/`mobile-safari` projects (only chromium on PRs). |
+| T5 ✅ | `order-service.test.ts:370-649` | ~~10 customer risk score test cases have no `expect()`.~~ **Fixed (PR #11):** All 10 tests now assert the exact expected `risk_score` value (35, 10, 0, 20, 0, 55, 10, 0, 0, no-update) with documented scoring math. (Audit said 9; actual was 10.) |
+| T6 ✅ | `order-transitions.test.ts:1-65` | ~~Asserts against its own hardcoded VALID_TRANSITIONS map (tautological, missing 'cancelled').~~ **Fixed (PR #11):** Extracted `src/lib/order-transitions.ts` TS module mirroring SQL rules. 81 tests cover all 8x8 transitions, terminal states, error messages. |
+| T7 ✅ | `webhooks/store/[token]/route.test.ts:1-95` | ~~8 tests mock crypto.subtle.verify then assert on the mock.~~ **Fixed (PR #11):** Full rewrite (21 tests) mocks at module boundary, exercises real POST handler with real HMAC verification. Covers test-mode, rate-limit, all 3 platforms, dedup, RPC dispatch. |
+| T8 ✅ | `magic-moment.spec.ts:346-365` | ~~2 tautological cases (assert on own object literals).~~ **Fixed (PR #11):** Both deleted. Test count 9→7 (all remaining exercise real E2E flows). |
+| T9 ✅ (audit-error) | `algerian_demo_seed.sql` | ~~Corrupted on disk (2KB, wrapped in literal quotes).~~ **Audit premise was FALSE.** File is 34,872 bytes / 268 lines of clean SQL (1 BEGIN, 1 COMMIT, 11 INSERTs, 24 DELETEs). Live DB already has seed applied (5 cats, 15 prods, 20 orders match). No fix needed — documented as audit-error. |
+| T10 ✅ | `magic-moment.spec.ts:115-116` | ~~Plaintext credentials committed.~~ **Fixed (PR #11):** Externalized to `E2E_LOGIN_EMAIL` / `E2E_LOGIN_PASSWORD` env vars (fail-closed if missing). Added to `.env.example`. ⚠️ Recommend rotating the password on Supabase since it was in the public repo. |
+| T11 ✅ | `src/test/setup.ts:10-22` | ~~Mocks legacy lib/agents/groq but NOT modern lib/ai/service.~~ **Fixed (PR #11):** Added `vi.mock("@/lib/ai/service")` for all 3 exports (extractOrderFromMessage, askSellerAssistant, generateReplySuggestions). Tests can override via `vi.mocked()`. |
+| T12 ✅ | CI (`ci.yml`) | ~~Never runs Playwright mobile-chrome/mobile-safari projects.~~ **Fixed (PR #11):** CI now installs chromium + webkit and runs all 3 projects (--project=chromium --project=mobile-chrome --project=mobile-safari). Timeout bumped 20→30 min. Added E2E_LOGIN_* + SUPABASE_SERVICE_ROLE_KEY to CI env. |
 
 ---
 
@@ -338,7 +338,7 @@ Docs that claim things no longer true.
 | #8 | 🪦 Dead code removal | D1-D4, D7-D9, D11-D12 (9 of 12) | ✅ merged |
 | #9 | ⚠️ Weak patterns / silent bugs | W1-W22 (all 22) | ✅ merged |
 | #10 | 🔢 Hardcoded values → config/i18n | H1-H9 (all 9) | ✅ merged |
-| #11 | 🧪 Test gaps + tautological tests | T1-T12 | ⏳ next |
+| #11 | 🧪 Test gaps + tautological tests | T1-T12 | ✅ done (this PR) |
 | #12 | 📄 Docs + types + migration reconciliation | DOC1-9, TD1-5 | ⏳ pending |
 | #13 | 🔒 Remaining security hardening | S5-S18, M1-M4 | ⏳ pending |
 
@@ -360,4 +360,4 @@ Findings were cross-referenced and de-duplicated. Each finding includes a `file:
 
 ---
 
-_Last updated: 2026-06-19 — **69 findings fixed** across PR #2 through PR #10. All 15 critical findings resolved (0 remaining). 22 weak patterns + 9 hardcoded values + 9 dead code findings also fixed. Next: PR #11 (test gaps T1-T12), PR #12 (docs/types), PR #13 (security S5-S18)._
+_Last updated: 2026-06-19 — **81 findings fixed** across PR #2 through PR #11. All 15 critical findings resolved (0 remaining). 22 weak patterns + 9 hardcoded values + 9 dead code findings + 12 test-gap findings also fixed. Test count 567→696 (+129). Next: PR #12 (docs/types DOC1-9/TD1-5), PR #13 (security S5-S18/M1-M4)._
