@@ -149,7 +149,7 @@ Revenue also from:
 - ✅ AI WhatsApp extraction + draft orders
 - ✅ Confirmation workflow with call scripts
 - ✅ Shopify + WooCommerce + YouCan catalog sync and webhook ingestion
-- ✅ Yalidine delivery adapter fully integrated (Maystro + ZR Express are stubs — coming soon)
+- ✅ All 3 delivery adapters (Yalidine, Maystro, ZR Express) fully integrated
 - ✅ Multi-user team roles & custom RLS permissions (Owner, Admin, Confirmer, Packer, Viewer)
 - ✅ Ledger-based accounting: profit and loss, variant unit product costs, expense tracking
 - ✅ Complete returns and exchanges tracker with history timeline logs

@@ -255,7 +255,7 @@ Docs that claim things no longer true.
 | DOC4 | `PROJECT_STATE.md:105` | References "P9" — phases only go P0-P7. |
 | DOC5 | `PROJECT_STATE.md:228` | "Next.js 15 Dynamic Routing" — project is Next.js 16. |
 | DOC6 | `README.md:91-95` | **5 dead doc links.** References `docs/CLIENT_ONBOARDING.md`, `docs/INTEGRATION_SETUP_*.md`, `docs/ALGERIAN_ECOMMERCE_BIBLE.md` — none exist (`docs/` folder missing). |
-| DOC7 | `README.md:48,153`, `ARCHITECTURE.md:29`, `PROJECT_STATE.md:69-70`, `VISION.md:152` | **"All 3 delivery adapters fully integrated/verified" is false.** Maystro + ZR Express are stubs ("coming soon"). Only Yalidine is implemented. |
+| ✅ DOC7 | ~~`README.md`, `ARCHITECTURE.md`, `PROJECT_STATE.md`, `VISION.md`~~ | **AUDIT ERROR — finding was incorrect.** Maystro + ZR Express ARE fully implemented (verified via code review of `adapters.ts:369,552`). The `SKELETON_PROVIDERS` set is empty — no provider returns 'coming soon'. Docs corrected in follow-up commit to accurately reflect all 3 adapters are live. |
 | DOC8 | `README.md:160`, `PROJECT_STATE.md:4` | **"CLIENT-READY and Production-Hardened" overstated** given the ~170 audit findings (15 critical). |
 | DOC9 | `PROJECT_STATE.md:247` | "DeliveryStatus expanded 6 → 10 values (matched DB CHECK constraint)" — was only true on live DB; baseline had 7 (now ✅ fixed in PR #2). |
 

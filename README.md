@@ -45,7 +45,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **🗑️ Soft Delete & Restore**        | Orders, products, and customers can be soft-deleted and restored. No accidental data loss.                                                                                                                                                                 |
 | **🌍 Trilingual**                   | English, French, and Arabic (RTL) support with **Arabic (فصحة) as default**. AI understands Darija/Franco-Arab customer input but never displays it.                                                                                                       |
 | **🔐 Security Hardened**            | CSP + HSTS + Permissions-Policy + X-Frame-Options + X-Content-Type-Options + Referrer-Policy. SECURITY DEFINER RPCs restricted to `service_role`. RLS policies per-seller/team. HMAC webhooks. In-memory rate limiting.                                     |
-| **🛒 Three-Way Store Sync**         | Shopify + WooCommerce + YouCan catalog sync and webhook ingestion with deduplication. Yalidine delivery adapter fully integrated; Maystro + ZR Express are stubs (coming soon).                                                                          |
+| **🛒 Three-Way Store Sync**         | Shopify + WooCommerce + YouCan catalog sync and webhook ingestion with deduplication. All 3 delivery adapters (Yalidine, Maystro, ZR Express) fully integrated.                                                                                              |
 
 ---
 
@@ -125,7 +125,7 @@ Auto-deploy from GitHub `main` is a planned automation item (design system §7.2
 - ✅ `npx eslint .` — zero errors
 - ✅ Security headers complete (CSP + HSTS + Permissions-Policy + XFO + XCTO + RP)
 - ✅ All 3 integrations (Shopify/WooCommerce/YouCan) working end-to-end
-- ⚠️ Only Yalidine delivery adapter is implemented (Maystro + ZR Express are stubs)
+- ✅ All 3 delivery adapters (Yalidine, Maystro, ZR Express) fully implemented
 - ⚠️ See [AUDIT_FINDINGS.md](./documentation/AUDIT_FINDINGS.md) for ~170 known issues across all layers (15 critical)
 
 ---

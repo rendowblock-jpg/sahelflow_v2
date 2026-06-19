@@ -67,8 +67,8 @@
 | WooCommerce catalog sync | ✅     | 100/page, paginated to 1,000 max         |
 | YouCan catalog sync      | ✅     | Product pull via REST API                |
 | Yalidine delivery        | ✅     | Full lifecycle: create/track/cancel/cost |
-| Maystro adapter          | ⚠️ Stub | Returns 'coming soon' — not implemented |
-| ZR Express adapter       | ⚠️ Stub | Returns 'coming soon' — not implemented |
+| Maystro adapter          | ✅     | Fully implemented (createShipment, getTracking, cancelShipment, getDeliveryCost) |
+| ZR Express adapter       | ✅     | Fully implemented via Procolis API (createShipment, getTracking, cancelShipment, getDeliveryCost) |
 
 ### Import Engine (P2)
 

@@ -26,7 +26,7 @@ SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce se
 | **Animation**  | Framer Motion                                     | PageTransition, StaggerContainer, StaggerItem, FadeIn, SlideIn, AnimatedCard, AnimatedStatCard |
 | **AI**         | Groq API (multi-model router)                     | 5 specialized models with per-model API keys, 30 active tools, and fallback chains             |
 | **Messaging**  | Evolution API (self-hosted WhatsApp)              | Per-client Railway deployment; QR-code connection                                              |
-| **Delivery**   | Yalidine (live), Maystro + ZR Express (stubs)     | Adapter registry pattern; only Yalidine is fully implemented; Maystro + ZR Express return 'coming soon'                     |
+| **Delivery**   | Yalidine, Maystro, ZR Express (Procolis)          | Adapter registry pattern; all 3 fully implemented with createShipment/getTracking/cancelShipment/getDeliveryCost            |
 | **Validation** | Zod                                               | All public API routes validated                                                                |
 | **Testing**    | Vitest + Playwright                               | **604 unit tests** across **37 test files** + 9 Playwright e2e specs                           |
 | **i18n**       | Custom TypeScript-inferred system                 | 3 locales: `en`, `fr`, `ar` (RTL supported). Arabic is default.                                |
@@ -306,7 +306,7 @@ Simple in-memory rate limiting via `src/lib/rate-limit.ts`. Uses `Map<string, co
 
 ### 6.10 Delivery Adapters
 
-Registry pattern with `getAllDeliveryAdapters()`. Each adapter implements `createShipment()`, `getTracking()`, `cancelShipment()`, `getDeliveryCost()`. **Only Yalidine is fully implemented** — Maystro and ZR Express adapters exist but return 'coming soon' stubs. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md) §1 for details on fake/stub features.
+Registry pattern with `getAllDeliveryAdapters()`. Each adapter implements `createShipment()`, `getTracking()`, `cancelShipment()`, `getDeliveryCost()`. All 3 adapters (Yalidine, Maystro, ZR Express) are fully implemented and functional. The `SKELETON_PROVIDERS` set in the API route is empty — no provider is marked as a stub.
 
 ### 6.11 Notification System
 
