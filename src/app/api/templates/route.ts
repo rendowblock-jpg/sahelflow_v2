@@ -49,7 +49,7 @@ export const GET = withAuthAndRateLimit(async (_req, { sellerId, supabase }) => 
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ templates: data });
-});
+}, { requirePermission: "inbox:view" });
 
 export const POST = withAuthAndRateLimit(
   async (_req, { sellerId, supabase, body }) => {
@@ -70,7 +70,7 @@ export const POST = withAuthAndRateLimit(
     }
     return NextResponse.json({ template: data }, { status: 201 });
   },
-  { schema: templateSchema },
+  { requirePermission: "inbox:send", schema: templateSchema },
 );
 
 export const PUT = withAuthAndRateLimit(
@@ -108,7 +108,7 @@ export const PUT = withAuthAndRateLimit(
       );
     return NextResponse.json({ template: data });
   },
-  { schema: z.object({ id: z.string().uuid(), ...updateSchema.shape }) },
+  { requirePermission: "inbox:send", schema: z.object({ id: z.string().uuid(), ...updateSchema.shape }) },
 );
 
 export const DELETE = withAuthAndRateLimit(async (req, { sellerId, supabase }) => {
@@ -135,4 +135,4 @@ export const DELETE = withAuthAndRateLimit(async (req, { sellerId, supabase }) =
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-});
+}, { requirePermission: "inbox:send" });

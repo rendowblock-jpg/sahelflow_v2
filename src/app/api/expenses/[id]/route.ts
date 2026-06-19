@@ -39,6 +39,7 @@ export const PATCH = withAuthAndRateLimit(
     return NextResponse.json({ expense });
   },
   {
+    requirePermission: "accounting:manage",
     schema: updateExpenseSchema,
     requireAuth: true,
   }
@@ -75,5 +76,5 @@ export const DELETE = withAuthAndRateLimit(
 
     return NextResponse.json({ success: true });
   },
-  { requireAuth: true }
+  { requirePermission: "accounting:manage", requireAuth: true }
 );

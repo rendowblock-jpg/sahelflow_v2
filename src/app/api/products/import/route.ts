@@ -148,6 +148,7 @@ export const POST = withAuthAndRateLimit(
 		return NextResponse.json(results);
 	},
 	{
+		requirePermission: "products:manage",
 		schema: importSchema,
 		rateLimitConfig: { maxRequests: 10, windowMs: 60000 },
 	},

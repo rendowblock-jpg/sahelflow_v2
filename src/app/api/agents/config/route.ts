@@ -32,7 +32,7 @@ export const GET = withAuthAndRateLimit(async (req, { user, supabase }) => {
   };
 
   return NextResponse.json(agentConfig);
-});
+}, { requirePermission: "automations:view" });
 
 export const POST = withAuthAndRateLimit(
   async (req, { user, supabase, body }) => {
@@ -63,6 +63,7 @@ export const POST = withAuthAndRateLimit(
     return NextResponse.json({ success: true });
   },
   {
+    requirePermission: "automations:manage",
     schema: agentConfigSchema,
     rateLimitConfig: { maxRequests: 20, windowMs: 60000 },
   },

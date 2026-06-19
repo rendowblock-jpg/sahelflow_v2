@@ -35,6 +35,7 @@ export const GET = withAuthAndRateLimit(
 		return NextResponse.json({ batches: data || [], count: count || 0 });
 	},
 	{
+		requirePermission: "products:manage",
 		schema: z.object({}),
 		rateLimitConfig: { maxRequests: 30, windowMs: 60000 },
 	},

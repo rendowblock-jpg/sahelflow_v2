@@ -57,5 +57,5 @@ export const POST = withAuthAndRateLimit(
       instanceName 
     })
   },
-  { rateLimitConfig: { maxRequests: 5, windowMs: 60000 } } // Strict rate limit to prevent abuse of external WhatsApp api
+  { requirePermission: "settings:manage", rateLimitConfig: { maxRequests: 5, windowMs: 60000 } } // Strict rate limit to prevent abuse of external WhatsApp api
 )

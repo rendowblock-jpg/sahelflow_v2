@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 import { z } from "zod";
-import { getTeamMembers, inviteTeamMember, getUserSellerContext } from "@/lib/data/team-service";
-import { hasPermission } from "@/lib/auth/permissions";
+import { getTeamMembers, inviteTeamMember } from "@/lib/data/team-service";
 
 // Define schema for inviting a team member
 const inviteSchema = z.object({
@@ -10,33 +9,24 @@ const inviteSchema = z.object({
   role: z.enum(["owner", "admin", "confirmer", "packer", "viewer"]),
 });
 
-export const GET = withAuthAndRateLimit(async (req, { user }) => {
-  const context = await getUserSellerContext(user.id);
-  if (!context || !hasPermission(context.role, "team:view")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+export const GET = withAuthAndRateLimit(async (req, { sellerId }) => {
   try {
-    const members = await getTeamMembers(context.sellerId);
+    const members = await getTeamMembers(sellerId);
     return NextResponse.json(members);
   } catch (error: unknown) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
-});
+}, { requirePermission: "team:view" });
 
 export const POST = withAuthAndRateLimit(
-  async (req, { user, body }) => {
+  async (req, { user, sellerId, role, body }) => {
     if (!body) {
       return NextResponse.json({ error: "Missing body" }, { status: 400 });
     }
 
-    const context = await getUserSellerContext(user.id);
-    if (!context || !hasPermission(context.role, "team:manage")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Owner restriction: only owners can invite admins or owners
-    if ((body.role === "admin" || body.role === "owner") && context.role !== "owner") {
+    // (wrapper already enforces team:manage; this is a finer-grained business rule)
+    if ((body.role === "admin" || body.role === "owner") && role !== "owner") {
       return NextResponse.json(
         { error: "مالك المتجر فقط يمكنه دعوة المسؤولين (Admins) أو ملاك آخرين" },
         { status: 403 }
@@ -45,7 +35,7 @@ export const POST = withAuthAndRateLimit(
 
     try {
       const member = await inviteTeamMember(
-        context.sellerId,
+        sellerId,
         body.email,
         body.role,
         user.id
@@ -55,5 +45,5 @@ export const POST = withAuthAndRateLimit(
       return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
     }
   },
-  { schema: inviteSchema }
+  { requirePermission: "team:manage", schema: inviteSchema }
 );

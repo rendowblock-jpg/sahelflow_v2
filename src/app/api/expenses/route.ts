@@ -41,7 +41,7 @@ export const GET = withAuthAndRateLimit(
 
     return NextResponse.json({ expenses: expenses || [], total: count ?? 0 });
   },
-  { requireAuth: true }
+  { requirePermission: "accounting:view", requireAuth: true }
 );
 
 // POST /api/expenses — create an expense
@@ -69,6 +69,7 @@ export const POST = withAuthAndRateLimit(
     return NextResponse.json({ expense }, { status: 201 });
   },
   {
+    requirePermission: "accounting:manage",
     schema: createExpenseSchema,
     requireAuth: true,
   }

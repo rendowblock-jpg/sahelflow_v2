@@ -134,6 +134,7 @@ export const POST = withAuthAndRateLimit(
     })
   },
   {
+    requirePermission: "orders:manage",
     schema: createShipmentSchema,
     rateLimitConfig: { maxRequests: 20, windowMs: 60000 },
   },

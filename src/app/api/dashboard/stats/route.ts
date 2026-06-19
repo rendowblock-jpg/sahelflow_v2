@@ -29,6 +29,6 @@ export const GET = withAuthAndRateLimit(
 		}
 		return NextResponse.json(data ?? {});
 	},
-	{ requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+	{ requirePermission: "dashboard:view", requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );
 

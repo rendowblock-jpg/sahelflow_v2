@@ -58,6 +58,7 @@ export const POST = withAuthAndRateLimit(
     return NextResponse.json({ ok: true })
   },
   {
+    requirePermission: "inbox:send",
     schema: sendMessageSchema,
     rateLimitConfig: { maxRequests: 20, windowMs: 60000 },
   }

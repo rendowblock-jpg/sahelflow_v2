@@ -216,5 +216,5 @@ export const GET = withAuthAndRateLimit(
 
 		return NextResponse.json({ trend });
 	},
-	{ requireAuth: true },
+	{ requirePermission: "accounting:view", requireAuth: true },
 );

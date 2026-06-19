@@ -31,7 +31,7 @@ export const GET = withAuthAndRateLimit(
 
     return NextResponse.json({ returns: returns || [], total: count ?? 0 });
   },
-  { requireAuth: true }
+  { requirePermission: "returns:view", requireAuth: true }
 );
 
 // POST /api/returns — create a return request
@@ -96,6 +96,7 @@ export const POST = withAuthAndRateLimit(
     return NextResponse.json({ return: retObj }, { status: 201 });
   },
   {
+    requirePermission: "returns:manage",
     schema: createReturnSchema,
     requireAuth: true,
   }

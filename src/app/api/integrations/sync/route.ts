@@ -438,6 +438,7 @@ export const POST = withAuthAndRateLimit(
     );
   },
   {
+    requirePermission: "settings:manage",
     schema: syncSchema,
     rateLimitConfig: { maxRequests: 5, windowMs: 60000 },
   },
