@@ -368,6 +368,7 @@ const fr: TranslationKeys = {
     deleteCustomerWarning:
       "Cela supprimera définitivement ce client et détachera toutes ses commandes. Cette action est irréversible.",
     address: "Adresse",
+    customerDetails: "Détails du client",
   },
 
   // Import
@@ -586,6 +587,7 @@ const fr: TranslationKeys = {
     growthTips: "Conseils de croissance",
     pendingOrders: "Commandes en attente",
     revenueToday: "CA du jour",
+    open: "Ouvrir l'assistant IA",
   },
 
   // Theme
@@ -756,6 +758,7 @@ const fr: TranslationKeys = {
     unarchived: "Désarchivé",
     replyHint: "Double-cliquez pour répondre",
     downloadFile: "Télécharger le fichier",
+    imageFromCustomer: "Image envoyée par le client",
     label: "Étiquette",
     addLabel: "Ajouter une étiquette",
     removeLabel: "Supprimer l'étiquette",
@@ -764,6 +767,12 @@ const fr: TranslationKeys = {
     forward: "Transférer",
     forwardTo: "Transférer à",
     forwardSent: "Message transféré",
+    backToList: "Retour à la liste",
+    pinConversation: "Épingler la conversation",
+    archiveConversation: "Archiver la conversation",
+    call: "Appeler",
+    createOrderFromChat: "Créer une commande depuis le chat",
+    aiSuggestReply: "Suggérer une réponse par IA",
   },
   shipping: {
     title: "Tarifs de livraison",

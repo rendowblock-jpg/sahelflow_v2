@@ -364,6 +364,7 @@ const ar: TranslationKeys = {
     deleteCustomerWarning:
       "سيتم حذف هذا العميل نهائياً وفصل جميع طلباته. لا يمكن التراجع عن هذا الإجراء.",
     address: "العنوان",
+    customerDetails: "تفاصيل العميل",
   },
 
   // Import
@@ -577,6 +578,7 @@ const ar: TranslationKeys = {
     growthTips: "نصائح للنمو",
     pendingOrders: "الطلبيات المعلقة",
     revenueToday: "إيرادات اليوم",
+    open: "فتح مساعد الذكاء الاصطناعي",
   },
 
   // Theme
@@ -742,6 +744,7 @@ const ar: TranslationKeys = {
     unarchived: "تم إلغاء الأرشفة",
     replyHint: "انقر مرتين للرد",
     downloadFile: "تحميل الملف",
+    imageFromCustomer: "صورة مرسلة من العميل",
     label: "تصنيف",
     addLabel: "إضافة تصنيف",
     removeLabel: "إزالة التصنيف",
@@ -750,6 +753,12 @@ const ar: TranslationKeys = {
     forward: "إعادة توجيه",
     forwardTo: "إعادة توجيه إلى",
     forwardSent: "تم إعادة توجيه الرسالة",
+    backToList: "العودة إلى القائمة",
+    pinConversation: "تثبيت المحادثة",
+    archiveConversation: "أرشفة المحادثة",
+    call: "اتصال",
+    createOrderFromChat: "إنشاء طلب من المحادثة",
+    aiSuggestReply: "اقتراح رد بالذكاء الاصطناعي",
   },
   shipping: {
     title: "أسعار التوصيل",

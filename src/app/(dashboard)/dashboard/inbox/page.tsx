@@ -564,7 +564,7 @@ export default function InboxPage() {
             placeholder={t.inbox.searchConversations}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search conversations"
+            aria-label={t.inbox.searchConversations}
           />
         </div>
         <div className="inbox-filter-bar">
@@ -632,7 +632,7 @@ export default function InboxPage() {
               <button
                 className="inbox-chat__back"
                 onClick={() => setActiveConvo(null)}
-                aria-label="Back to list"
+                aria-label={t.inbox.backToList}
               >
                 <ChevronLeft size={20} />
               </button>
@@ -650,7 +650,7 @@ export default function InboxPage() {
               <div className="inbox-chat__header-actions">
                 <button
                   className="inbox-icon-btn"
-                  aria-label="Pin conversation"
+                  aria-label={t.inbox.pinConversation}
                   title={activeConvo.is_pinned ? t.inbox.unpin : t.inbox.pin}
                   onClick={async () => {
                     await supabase
@@ -676,7 +676,7 @@ export default function InboxPage() {
                 </button>
                 <button
                   className="inbox-icon-btn"
-                  aria-label="Archive conversation"
+                  aria-label={t.inbox.archiveConversation}
                   title={t.inbox.archive}
                   onClick={async () => {
                     await supabase
@@ -707,14 +707,14 @@ export default function InboxPage() {
                   <a
                     href={`tel:${activeConvo.customer.phone}`}
                     className="inbox-icon-btn"
-                    aria-label="Call"
+                    aria-label={t.inbox.call}
                   >
                     <Phone size={18} />
                   </a>
                 )}
                 <button
                   className="inbox-icon-btn"
-                  aria-label="Create order from chat"
+                  aria-label={t.inbox.createOrderFromChat}
                   title={t.inbox.extractOrder}
                   onClick={handleExtractOrder}
                   disabled={extracting}
@@ -727,7 +727,7 @@ export default function InboxPage() {
                 </button>
                 <button
                   className="inbox-icon-btn"
-                  aria-label="AI suggest reply"
+                  aria-label={t.inbox.aiSuggestReply}
                   title={t.inbox.aiSuggest}
                   onClick={handleAiSuggest}
                   disabled={suggesting}

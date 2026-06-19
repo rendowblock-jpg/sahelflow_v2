@@ -507,7 +507,7 @@ export function AIAssistant() {
 		<>
 			{/* Floating Action Button — gradient sphere with pulse */}
 			{!isOpen && (
-				<button className="sf-ai-fab-aaa" onClick={() => setIsOpen(true)} aria-label="Open AI Assistant">
+				<button className="sf-ai-fab-aaa" onClick={() => setIsOpen(true)} aria-label={t.ai.open}>
 					<Sparkles size={22} />
 					{messages.filter(m => m.role === 'assistant' && m.id !== 'welcome').length > 0 && (
 						<span className="sf-ai-fab-badge">

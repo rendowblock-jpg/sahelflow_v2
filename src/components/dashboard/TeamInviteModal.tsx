@@ -99,6 +99,7 @@ export default function TeamInviteModal({
       >
         <button
           onClick={onClose}
+          aria-label={t.common.closePanel}
           className="sf-btn-close sf-absolute-top-right"
           style={{ top: 16, right: 16 }}
         >

@@ -39,7 +39,7 @@ export function MessageBubble({ message, onDoubleClick, onForward }: Props) {
 					{/* eslint-disable-next-line @next/next/no-img-element */}
 					<img
 						src={message.media_url}
-						alt=""
+						alt={message.content || t.inbox.imageFromCustomer}
 						className="inbox-msg__media-img"
 						loading="lazy"
 					/>

@@ -149,10 +149,10 @@ export default function AIOrderImport({ onClose, onOrderCreated }: AIOrderImport
               <div className="sf-card" style={{ background: 'var(--color-surface-secondary)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {editing ? (
                   <>
-                    <div><label className="sf-label">{t.orders.customerName}</label><input className="sf-input" value={editForm.customer_name} onChange={e => setEditForm(f => ({ ...f, customer_name: e.target.value }))} /></div>
-                    <div><label className="sf-label">{t.orders.phone}</label><input className="sf-input" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" /></div>
-                    <div><label className="sf-label">{t.dashboard.wilaya}</label><input className="sf-input" value={editForm.wilaya} onChange={e => setEditForm(f => ({ ...f, wilaya: e.target.value }))} /></div>
-                    <div><label className="sf-label">{t.orders.address}</label><input className="sf-input" value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} /></div>
+                    <div><label className="sf-label">{t.orders.customerName}<input className="sf-input" value={editForm.customer_name} onChange={e => setEditForm(f => ({ ...f, customer_name: e.target.value }))} /></label></div>
+                    <div><label className="sf-label">{t.orders.phone}<input className="sf-input" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" /></label></div>
+                    <div><label className="sf-label">{t.dashboard.wilaya}<input className="sf-input" value={editForm.wilaya} onChange={e => setEditForm(f => ({ ...f, wilaya: e.target.value }))} /></label></div>
+                    <div><label className="sf-label">{t.orders.address}<input className="sf-input" value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} /></label></div>
                   </>
                 ) : (
                   <>

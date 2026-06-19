@@ -514,6 +514,7 @@ export default function DeliveryPage() {
 							</h2>
 							<button
 								onClick={() => setShipmentModal(null)}
+								aria-label={t.common.closePanel}
 								className="sf-delivery-modal__close"
 							>
 								<X size={20} />

@@ -500,6 +500,7 @@ export default function ProductsPage() {
 							</h2>
 							<button
 								className="sf-btn-close"
+								aria-label={t.common.closePanel}
 								onClick={() => setShowForm(false)}
 							>
 								<X size={20} />
@@ -729,6 +730,7 @@ export default function ProductsPage() {
 							</h2>
 							<button
 								className="sf-btn-close"
+								aria-label={t.common.closePanel}
 								onClick={() => setShowCatForm(false)}
 							>
 								<X size={20} />

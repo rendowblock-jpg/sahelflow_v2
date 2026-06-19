@@ -702,6 +702,7 @@ export default function OrdersPage() {
 							<h2 className="sf-orders-modal__title">{t.orders.newOrder}</h2>
 							<button
 								onClick={() => setShowCreate(false)}
+								aria-label={t.common.closePanel}
 								className="sf-orders-modal__close"
 							>
 								<X size={20} />
