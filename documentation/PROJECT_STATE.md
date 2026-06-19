@@ -10,8 +10,8 @@
 | Gate                           | Result                                               |
 | ------------------------------ | ---------------------------------------------------- |
 | `next build`                   | ✅ Zero errors, zero warnings                        |
-| `npx vitest run`               | ✅ **567/567** passing across 36 test files          |
-| `npx eslint .`                 | ✅ 0 errors (10 warnings — pre-existing unused vars)  |
+| `npx vitest run`               | ✅ **696/696** passing across 37 test files          |
+| `npx eslint .`                 | ✅ 0 errors (12 warnings — pre-existing unused vars)  |
 | `npx tsc --noEmit`             | ✅ Zero errors (strict mode)                         |
 | Security headers               | ✅ CSP + HSTS + Permissions-Policy + XFO + XCTO + RP |
 | Zero English leakage (ar mode) | ✅ Verified via `scripts/check-translations.ts`      |
