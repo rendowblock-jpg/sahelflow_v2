@@ -631,7 +631,7 @@ export default function CustomersPage() {
 						onClick={(e) => e.stopPropagation()}
 						role="dialog"
 						aria-modal="true"
-						aria-label="Customer details"
+						aria-label={t.customers.customerDetails}
 					>
 						<div className="sf-slideout__header">
 							<div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

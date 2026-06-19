@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
+import { z } from "zod";
+
+// M3 fix: zod schema for PATCH body (was manually parsed without validation)
+const notificationPatchSchema = z
+  .object({
+    markAllRead: z.boolean().optional(),
+    id: z.string().uuid().optional(),
+    read: z.boolean().optional(),
+  })
+  .refine((d) => d.markAllRead !== undefined || (d.id !== undefined && d.read !== undefined), {
+    message: "Provide markAllRead, or both id and read",
+  });
 
 export const GET = withAuthAndRateLimit(
   async (req: NextRequest, { sellerId, supabase }) => {
@@ -19,15 +31,8 @@ export const GET = withAuthAndRateLimit(
 );
 
 export const PATCH = withAuthAndRateLimit(
-  async (req: NextRequest, { sellerId, supabase }) => {
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    if (body.markAllRead) {
+  async (req: NextRequest, { sellerId, supabase, body }) => {
+    if (body!.markAllRead) {
       const { error } = await supabase
         .from("notifications")
         .update({ read: true })
@@ -39,11 +44,11 @@ export const PATCH = withAuthAndRateLimit(
       return NextResponse.json({ success: true });
     }
 
-    if (body.id && body.read !== undefined) {
+    if (body!.id && body!.read !== undefined) {
       const { error } = await supabase
         .from("notifications")
-        .update({ read: body.read })
-        .eq("id", body.id)
+        .update({ read: body!.read })
+        .eq("id", body!.id)
         .eq("seller_id", sellerId);
       if (error)
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -52,7 +57,7 @@ export const PATCH = withAuthAndRateLimit(
 
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   },
-  { requireAuth: true }
+  { requireAuth: true, schema: notificationPatchSchema }
 );
 
 export const DELETE = withAuthAndRateLimit(

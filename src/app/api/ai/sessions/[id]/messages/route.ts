@@ -3,22 +3,16 @@
  * POST /api/ai/sessions/[id]/messages — add message to session
  */
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 import { addMessage, autoTitleSession } from "@/lib/data/chat-service";
 
 export const POST = withAuthAndRateLimit(
-	async (req, { sellerId, params }) => {
+	async (req, { sellerId, params, body }) => {
 		try {
 			const { id } = params;
-			const body = await req.json();
-			const { role, content, toolCalls, actionCards, isFirstMessage } = body;
-
-			if (!role || !content) {
-				return NextResponse.json(
-					{ error: "role and content are required" },
-					{ status: 400 },
-				);
-			}
+			// M5 fix: all fields validated by schema
+			const { role, content, toolCalls, actionCards, isFirstMessage } = body!;
 
 			const message = await addMessage(
 				sellerId,
@@ -40,5 +34,16 @@ export const POST = withAuthAndRateLimit(
 			return NextResponse.json({ error: msg }, { status: 500 });
 		}
 	},
-	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+	{
+		requirePermission: "ai:chat",
+		requireAuth: true,
+		schema: z.object({
+			role: z.enum(["user", "assistant"]),
+			content: z.string().min(1).max(8000),
+			toolCalls: z.array(z.unknown()).optional(),
+			actionCards: z.array(z.unknown()).optional(),
+			isFirstMessage: z.boolean().optional(),
+		}),
+		rateLimitConfig: { maxRequests: 30, windowMs: 60000 },
+	},
 );

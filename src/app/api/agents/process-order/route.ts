@@ -9,7 +9,7 @@ import { withAuthAndRateLimit } from "@/lib/api-wrapper";
  * Can be called manually from the dashboard or automatically via webhook.
  */
 export const POST = withAuthAndRateLimit(
-  async (req, { user, supabase, body }) => {
+  async (req, { sellerId, supabase, body }) => {
     const { orderId } = body!;
 
     // Verify the order belongs to this seller via explicit RLS equivalent
@@ -17,7 +17,7 @@ export const POST = withAuthAndRateLimit(
       .from("orders")
       .select("id, seller_id")
       .eq("id", orderId)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .single();
 
     if (!order) {
@@ -28,7 +28,7 @@ export const POST = withAuthAndRateLimit(
     const { data: seller } = await supabase
       .from("sellers")
       .select("settings")
-      .eq("id", user.id)
+      .eq("id", sellerId)
       .single();
 
     const agentConfig = (seller?.settings as Record<string, unknown>)?.agent_config as Record<string, unknown> | undefined;

@@ -28,7 +28,7 @@ interface ImportModalProps {
 }
 
 export default function ImportModal({ onClose, onImported }: ImportModalProps) {
-	const { locale } = useI18n();
+	const { t, locale } = useI18n();
 	const { toast } = useToast();
 	const fileRef = useRef<HTMLInputElement>(null);
 
@@ -255,6 +255,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
 					</h2>
 					<button
 						onClick={onClose}
+						aria-label={t.common.closePanel}
 						className="sf-btn sf-btn-ghost"
 						style={{ color: "var(--color-content-secondary)" }}
 					>

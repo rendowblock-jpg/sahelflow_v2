@@ -31,7 +31,7 @@ export default function ReturnModal({
 	onClose,
 	onSuccess,
 }: ReturnModalProps) {
-	const { t: _t } = useI18n();
+	const { t } = useI18n();
 	const { toast } = useToast();
 	const [loading, setLoading] = useState(false);
 	const [products, setProducts] = useState<
@@ -200,7 +200,7 @@ export default function ReturnModal({
 						<RotateCcw size={18} className="sf-text-brand" />
 						Request Return / Exchange
 					</h2>
-					<button onClick={onClose} className="sf-orders-modal__close">
+					<button onClick={onClose} aria-label={t.common.closePanel} className="sf-orders-modal__close">
 						<X size={20} />
 					</button>
 				</div>

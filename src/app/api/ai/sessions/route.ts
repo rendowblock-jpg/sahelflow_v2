@@ -4,6 +4,7 @@
  * POST /api/ai/sessions — create session for authenticated seller
  */
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 import { listSessions, createSession } from "@/lib/data/chat-service";
 
@@ -21,15 +22,15 @@ export const GET = withAuthAndRateLimit(
 );
 
 export const POST = withAuthAndRateLimit(
-	async (req, { sellerId }) => {
+	async (req, { sellerId, body }) => {
 		try {
-			const body = await req.json();
-			const session = await createSession(sellerId, body.title);
+			// M5 fix: title validated by schema
+			const session = await createSession(sellerId, body?.title);
 			return NextResponse.json({ session }, { status: 201 });
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			return NextResponse.json({ error: message }, { status: 500 });
 		}
 	},
-	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 10, windowMs: 60000 } },
+	{ requirePermission: "ai:chat", requireAuth: true, schema: z.object({ title: z.string().max(120).optional() }), rateLimitConfig: { maxRequests: 10, windowMs: 60000 } },
 );

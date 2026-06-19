@@ -178,7 +178,7 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 
 			return response;
 		} catch (error) {
-			console.log(
+			console.error(
 				JSON.stringify({
 					type: "api_wrapper_error",
 					method: req.method,

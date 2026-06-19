@@ -8,7 +8,7 @@ const schema = z.object({
 
 export const POST = withAuthAndRateLimit(
   async (_req, { body }) => {
-    const { url } = body as z.infer<typeof schema>;
+    const { url } = body!; // L10 fix: removed redundant cast (body already typed by wrapper)
 
     let parsed: URL;
     try {

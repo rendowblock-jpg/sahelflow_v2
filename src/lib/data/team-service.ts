@@ -263,6 +263,6 @@ export async function linkUserToInvitations(
 			})
 			.eq("id", invite.id);
 
-		if (error) console.log(JSON.stringify({ type: "team_invitation_link_error", error: error.message }));
+		if (error) console.error(JSON.stringify({ type: "team_invitation_link_error", error: error.message }));
 	}
 }

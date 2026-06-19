@@ -361,6 +361,7 @@ const en = {
     deleteCustomerWarning:
       "This will permanently delete this customer and unlink all their orders. This cannot be undone.",
     address: "Address",
+    customerDetails: "Customer details",
   },
 
   // Import
@@ -574,6 +575,7 @@ const en = {
     growthTips: "Growth tips",
     pendingOrders: "Pending orders",
     revenueToday: "Revenue today",
+    open: "Open AI Assistant",
   },
 
   // Theme
@@ -742,6 +744,7 @@ const en = {
     unarchived: "Unarchived",
     replyHint: "Double-click to reply",
     downloadFile: "Download file",
+    imageFromCustomer: "Image sent by customer",
     label: "Label",
     addLabel: "Add label",
     removeLabel: "Remove label",
@@ -750,6 +753,12 @@ const en = {
     forward: "Forward",
     forwardTo: "Forward to",
     forwardSent: "Message forwarded",
+    backToList: "Back to list",
+    pinConversation: "Pin conversation",
+    archiveConversation: "Archive conversation",
+    call: "Call",
+    createOrderFromChat: "Create order from chat",
+    aiSuggestReply: "AI suggest reply",
   },
   shipping: {
     title: "Shipping Rates",

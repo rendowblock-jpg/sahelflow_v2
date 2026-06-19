@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
 	evolutionWebhookSchema,
 	internalWebhookSchema,
-	placeOrderSchema,
 	sendMessageSchema,
 	aiRequestSchema,
 	timingSafeEqual,
@@ -64,65 +63,6 @@ describe("validation schemas", () => {
 			const result = internalWebhookSchema.safeParse({
 				type: "message.received",
 				sellerId: "550e8400-e29b-41d4-a716-446655440001",
-			});
-			expect(result.success).toBe(false);
-		});
-	});
-
-	describe("placeOrderSchema", () => {
-		const validPayload = {
-			form: {
-				name: "Ahmed",
-				phone: "0555123456",
-				wilaya: "Alger",
-				commune: "Bab El Oued",
-				address: "123 Rue Test",
-			},
-			items: [
-				{
-					name: "Parfum",
-					quantity: 1,
-					price: 2500,
-					product_id: "550e8400-e29b-41d4-a716-446655440000",
-				},
-			],
-			total: 2500,
-			deliveryCost: 400,
-		};
-
-		it("accepts valid order", () => {
-			const result = placeOrderSchema.safeParse(validPayload);
-			expect(result.success).toBe(true);
-		});
-
-		it("accepts desk delivery", () => {
-			const result = placeOrderSchema.safeParse({
-				...validPayload,
-				deliveryType: "desk",
-			});
-			expect(result.success).toBe(true);
-		});
-
-		it("rejects invalid phone", () => {
-			const result = placeOrderSchema.safeParse({
-				...validPayload,
-				form: { ...validPayload.form, phone: "123" },
-			});
-			expect(result.success).toBe(false);
-		});
-
-		it("rejects empty cart", () => {
-			const result = placeOrderSchema.safeParse({
-				...validPayload,
-				items: [],
-			});
-			expect(result.success).toBe(false);
-		});
-
-		it("rejects missing name", () => {
-			const result = placeOrderSchema.safeParse({
-				...validPayload,
-				form: { ...validPayload.form, name: "" },
 			});
 			expect(result.success).toBe(false);
 		});

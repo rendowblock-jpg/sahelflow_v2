@@ -145,8 +145,7 @@ export async function POST(req: NextRequest) {
 /* ── Message Handler ── */
 
 async function handleMessageUpsert(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: import("@supabase/supabase-js").SupabaseClient<any, any, any>,
+  supabase: import("@supabase/supabase-js").SupabaseClient,
   data: Record<string, unknown>,
   channelId: string,
   sellerId: string,
@@ -369,8 +368,7 @@ async function handleMessageUpsert(
 /* ── Connection Handler ── */
 
 async function handleConnectionUpdate(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: import("@supabase/supabase-js").SupabaseClient<any, any, any>,
+  supabase: import("@supabase/supabase-js").SupabaseClient,
   data: Record<string, unknown>,
   channelId: string,
 ) {

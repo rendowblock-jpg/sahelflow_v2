@@ -4,7 +4,7 @@ import { updateExpenseSchema } from "@/lib/validation";
 
 // PATCH /api/expenses/[id] — update an expense
 export const PATCH = withAuthAndRateLimit(
-  async (req, { user, supabase, body, params }) => {
+  async (req, { sellerId, supabase, body, params }) => {
     const { id } = params;
     if (!id) {
       return NextResponse.json({ error: "Expense ID is required" }, { status: 400 });
@@ -15,7 +15,7 @@ export const PATCH = withAuthAndRateLimit(
       .from("expenses")
       .select("id")
       .eq("id", id)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .single();
 
     if (checkError || !existing) {
@@ -47,7 +47,7 @@ export const PATCH = withAuthAndRateLimit(
 
 // DELETE /api/expenses/[id] — delete an expense
 export const DELETE = withAuthAndRateLimit(
-  async (req, { user, supabase, params }) => {
+  async (req, { sellerId, supabase, params }) => {
     const { id } = params;
     if (!id) {
       return NextResponse.json({ error: "Expense ID is required" }, { status: 400 });
@@ -58,7 +58,7 @@ export const DELETE = withAuthAndRateLimit(
       .from("expenses")
       .select("id")
       .eq("id", id)
-      .eq("seller_id", user.id)
+      .eq("seller_id", sellerId)
       .single();
 
     if (checkError || !existing) {

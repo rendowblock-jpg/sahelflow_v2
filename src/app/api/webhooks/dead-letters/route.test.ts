@@ -48,6 +48,8 @@ describe("/api/webhooks/dead-letters admin guards", () => {
     const body = await res.json();
 
     expect(res.status).toBe(400);
-    expect(body).toEqual({ error: "Missing id or action" });
+    // M4 fix: now uses zod validation, returns "Invalid request" + details
+    expect(body.error).toBe("Invalid request");
+    expect(Array.isArray(body.details)).toBe(true);
   });
 });

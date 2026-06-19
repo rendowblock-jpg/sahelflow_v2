@@ -139,7 +139,7 @@ describe("POST /api/webhooks/internal", () => {
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({
 			ok: true,
-			msg: "Dispatched to orchestrator",
+			message: "Dispatched to orchestrator", // L15 fix: msg → message
 		});
 		expect(dispatch).toHaveBeenCalledWith({
 			type: "order.created",

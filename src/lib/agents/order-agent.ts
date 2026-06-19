@@ -10,15 +10,10 @@
  */
 
 import { callLLMJson } from "./groq";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { OrderAgentConfig, DEFAULT_ORDER_AGENT_CONFIG } from "./types";
 
 // We use the service role client so agent operations bypass RLS
-function getServiceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createServiceClient(url, key);
-}
 
 // ======= Types =======
 

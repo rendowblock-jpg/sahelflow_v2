@@ -6,7 +6,7 @@
  * Updates run_count and last_run_at on matched automations.
  */
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { RECIPES, type Recipe } from "./recipes";
 import { createShipmentForOrder } from "@/lib/delivery/shipment-service";
 import { sendText } from "@/lib/channels/evolution-api";
@@ -14,17 +14,6 @@ import {
 	interpolateTemplate,
 	buildTemplateVars,
 } from "@/lib/channels/template-interpolation";
-
-function getServiceSupabase() {
-	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-	const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!url || !key) {
-		throw new Error(
-			"[Executor] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
-		);
-	}
-	return createServiceClient(url, key);
-}
 
 export interface AutomationEvent {
 	type: string;

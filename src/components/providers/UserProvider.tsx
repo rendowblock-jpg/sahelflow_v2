@@ -47,7 +47,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setStatus(null);
       }
     } catch (error) {
-      void error; // TODO: Integrate error reporting (Sentry)
+      // L6 fix: was silently swallowed. Now logged so auth failures are visible.
+      console.error("Auth context fetch failed:", error);
     } finally {
       setLoading(false);
     }
