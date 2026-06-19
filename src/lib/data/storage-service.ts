@@ -49,7 +49,19 @@ export async function clearTestData(): Promise<void> {
   await getSupabase().from('agent_activity').delete().eq('seller_id', user.id);
   
   // 3. Messages & Conversations
-  await getSupabase().from('messages').delete().eq('seller_id', user.id);
+  // NOTE: `messages` has no seller_id column (it links to sellers via conversations).
+  // Fetch the seller's conversation IDs first, then delete messages by conversation_id.
+  const { data: sellerConversations } = await getSupabase()
+    .from('conversations')
+    .select('id')
+    .eq('seller_id', user.id);
+  const conversationIds = (sellerConversations || []).map((c) => c.id);
+  if (conversationIds.length > 0) {
+    await getSupabase()
+      .from('messages')
+      .delete()
+      .in('conversation_id', conversationIds);
+  }
   await getSupabase().from('conversations').delete().eq('seller_id', user.id);
   
   // 4. Orders
