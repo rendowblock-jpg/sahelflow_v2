@@ -783,26 +783,6 @@ export default function IntegrationsPage() {
 									)}
 								</div>
 
-								{/* Coming soon platforms */}
-								<div className="sf-settings-field-group sf-integr-coming-soon-grid">
-									{[
-										{ logo: "🟣", name: "Instagram Shop", hint: "Meta integration" },
-										{ logo: "🔵", name: "Facebook Shop", hint: "Meta Catalog sync" },
-										{ logo: "🟡", name: "Amazon Seller", hint: "Fulfillment by Amazon" },
-									].map((p) => (
-										<div key={p.name} className="sf-integr-coming-soon-card">
-											<span style={{ fontSize: 22 }}>{p.logo}</span>
-											<div>
-												<p className="sf-font-semibold sf-text-sm" style={{ opacity: 0.6 }}>{p.name}</p>
-												<p className="sf-text-xs sf-text-tertiary">{p.hint}</p>
-											</div>
-											<span className="sf-integr-coming-soon-badge">
-												<ArrowRight size={10} style={{ marginInlineEnd: 3 }} />
-												Coming soon
-											</span>
-										</div>
-									))}
-								</div>
 							</div>
 						</div>
 					)}

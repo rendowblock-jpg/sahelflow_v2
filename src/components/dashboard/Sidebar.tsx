@@ -23,6 +23,7 @@ import {
   Import,
   Shield,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { useI18n } from "@/lib/i18n";
@@ -47,6 +48,7 @@ const navIcons = {
   imports: Import,
   team: Shield,
   settings: Settings,
+  risk: AlertTriangle,
 };
 
 const navGroups = [
@@ -110,6 +112,7 @@ const routePermissions: Record<keyof typeof navIcons, string> = {
   imports: "products:manage",
   team: "team:view",
   settings: "dashboard:view",
+  risk: "dashboard:view",
 };
 
 export default function Sidebar() {
@@ -117,7 +120,7 @@ export default function Sidebar() {
   const { t } = useI18n();
   const { isMobile, isTablet, sidebarOpen, closeSidebar } = useLayout();
   const { hasPermission, loading } = usePermissions();
-  const { displayName: storeName, initials } = useSeller();
+  const { displayName: storeName, initials, profile } = useSeller();
   const isMobileOrTablet = isMobile || isTablet;
   const [waConnected, setWaConnected] = useState<boolean>(false);
 
@@ -210,7 +213,7 @@ export default function Sidebar() {
           <span className="sf-sidebar-workspace-name">
             {storeName || t.common.myStore}
           </span>
-          <div className="sf-sidebar-workspace-badge">Pro</div>
+          {profile?.plan && <div className="sf-sidebar-workspace-badge">{profile.plan === "free" ? "Free" : profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1)}</div>}
           <ChevronDown size={12} style={{ color: "var(--color-content-tertiary)", flexShrink: 0 }} />
         </div>
 

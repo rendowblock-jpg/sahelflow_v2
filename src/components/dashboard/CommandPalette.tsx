@@ -2,20 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Package,
-  Users,
-  Truck,
-  BarChart3,
-  Settings,
-  Plus,
-  Store,
-  Search,
-} from "lucide-react";
+import {AlertTriangle, BarChart3, Bot, Calculator, LayoutDashboard, MessageCircle, Package, Plug, Plus, RotateCcw, Search, Settings, Shield, ShoppingCart, Store, Truck, Upload, Users, Zap} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { useSeller } from "@/components/providers/SellerProvider";
 
 interface CmdItem {
   id: string;
@@ -28,6 +18,7 @@ interface CmdItem {
 
 export default function CommandPalette() {
   const { t } = useI18n();
+  const { profile } = useSeller();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
@@ -136,6 +127,86 @@ export default function CommandPalette() {
       keywords: "delivery shipping",
     },
     {
+      id: "nav-inbox",
+      label: t.nav.inbox,
+      href: "/dashboard/inbox",
+      icon: MessageCircle,
+      section: "navigation",
+      keywords: "inbox whatsapp messages",
+    },
+    {
+      id: "nav-returns",
+      label: t.nav.returns,
+      href: "/dashboard/returns",
+      icon: RotateCcw,
+      section: "navigation",
+      keywords: "returns exchanges refunds",
+    },
+    {
+      id: "nav-shipping",
+      label: t.nav.shipping,
+      href: "/dashboard/shipping",
+      icon: Truck,
+      section: "navigation",
+      keywords: "shipping rates wilaya",
+    },
+    {
+      id: "nav-accounting",
+      label: t.nav.accounting,
+      href: "/dashboard/accounting",
+      icon: Calculator,
+      section: "navigation",
+      keywords: "accounting pnl expenses profit",
+    },
+    {
+      id: "nav-agents",
+      label: t.nav.agents,
+      href: "/dashboard/agents",
+      icon: Bot,
+      section: "navigation",
+      keywords: "ai agents automation config",
+    },
+    {
+      id: "nav-automations",
+      label: t.nav.automations,
+      href: "/dashboard/automations",
+      icon: Zap,
+      section: "navigation",
+      keywords: "automations recipes rules",
+    },
+    {
+      id: "nav-imports",
+      label: t.nav.imports,
+      href: "/dashboard/imports",
+      icon: Upload,
+      section: "navigation",
+      keywords: "imports csv excel sheets",
+    },
+    {
+      id: "nav-integrations",
+      label: t.nav.integrations,
+      href: "/dashboard/integrations",
+      icon: Plug,
+      section: "navigation",
+      keywords: "integrations shopify woocommerce youcan",
+    },
+    {
+      id: "nav-risk",
+      label: "Risk",
+      href: "/dashboard/risk",
+      icon: AlertTriangle,
+      section: "navigation",
+      keywords: "risk customers block",
+    },
+    {
+      id: "nav-team",
+      label: t.nav.team,
+      href: "/dashboard/settings/team",
+      icon: Shield,
+      section: "navigation",
+      keywords: "team members roles",
+    },
+    {
       id: "nav-analytics",
       label: t.nav.analytics,
       href: "/dashboard/analytics",
@@ -173,7 +244,7 @@ export default function CommandPalette() {
     {
       id: "action-open-store",
       label: t.commandPalette.openStore,
-      href: "/",
+      href: profile?.slug ? `/form/${profile.slug}` : "/dashboard",
       icon: Store,
       section: "actions",
       keywords: "open store shop",

@@ -204,42 +204,6 @@ export default function SecurityTab({
 				</div>
 			</div>
 
-			{/* 2FA Section */}
-			<div className="sf-settings-section">
-				<div className="sf-settings-section-header">
-					<h3 className="sf-settings-section-title">{t.settings.twoFactor || "Two-Factor Authentication"}</h3>
-					<p className="sf-settings-section-desc">
-						{t.settings.twoFactorDesc || "Add an extra layer of security to your account."}
-					</p>
-				</div>
-				<div className="sf-settings-section-body sf-gap-sm">
-					<div className="sf-2fa-card">
-						<div className="sf-2fa-card__icon">
-							<Smartphone size={18} />
-						</div>
-						<div className="sf-flex-1">
-							<p className="sf-font-medium sf-text-sm">Authenticator App (TOTP)</p>
-							<p className="sf-text-xs sf-text-tertiary sf-mt-sm">
-								Google Authenticator, Authy, or similar apps
-							</p>
-						</div>
-						<span className="sf-2fa-soon">Soon</span>
-					</div>
-					<div className="sf-2fa-card">
-						<div className="sf-2fa-card__icon">
-							<Shield size={18} />
-						</div>
-						<div className="sf-flex-1">
-							<p className="sf-font-medium sf-text-sm">SMS Verification</p>
-							<p className="sf-text-xs sf-text-tertiary sf-mt-sm">
-								Receive a code via text message on your phone
-							</p>
-						</div>
-						<span className="sf-2fa-soon">Soon</span>
-					</div>
-				</div>
-			</div>
-
 			{/* Danger Zone */}
 			{role === "owner" && (
 				<div className="sf-danger-zone">

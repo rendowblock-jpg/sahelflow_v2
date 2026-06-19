@@ -319,23 +319,9 @@ export default function InboxPage() {
           .single();
         customerId = existing?.id || null;
       }
-      // Call the real AI extraction endpoint if available
-      let extractedData = {
-        items: [
-          {
-            product_id: null,
-            name: t.inbox.extractedItem,
-            quantity: 1,
-            price: 0,
-            cost_price: null,
-          },
-        ],
-        total_price: 0,
-        delivery_cost: 0,
-        wilaya: "",
-        commune: "",
-        address: "",
-      };
+      // Call the AI extraction endpoint. If it fails or returns no items,
+      // do NOT create a fake draft order with placeholder data — show an error instead.
+      let extractedData: { items: unknown[]; total_price: number; delivery_cost: number; wilaya: string; commune: string; address: string } | null = null;
       try {
         const res = await fetch("/api/ai/extract", {
           method: "POST",
@@ -401,7 +387,16 @@ export default function InboxPage() {
           }
         }
       } catch {
-        console.warn("AI extraction unavailable, creating empty draft");
+        console.warn("AI extraction unavailable");
+      }
+      // If AI extraction failed or returned no items, do NOT create a fake draft.
+      if (!extractedData || !extractedData.items || extractedData.items.length === 0) {
+        toast({
+          type: "error",
+          title: t.inbox.extractionFailed || "Extraction failed",
+          description: "Could not extract order details from this message.",
+        });
+        return;
       }
       const { data, error } = await supabase
         .from("orders")
