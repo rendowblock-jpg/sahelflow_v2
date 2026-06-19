@@ -105,15 +105,29 @@ async function seedTestData() {
 	}).throwOnError();
 }
 
+// T10: Login credentials are read from env vars (E2E_LOGIN_EMAIL / E2E_LOGIN_PASSWORD)
+// loaded via loadEnv() from .env.local. Fail-closed if missing — never hardcode
+// real seller credentials in the test source.
+const E2E_LOGIN_EMAIL = process.env.E2E_LOGIN_EMAIL;
+const E2E_LOGIN_PASSWORD = process.env.E2E_LOGIN_PASSWORD;
+
 async function performLogin(page: Page) {
+	if (!E2E_LOGIN_EMAIL || !E2E_LOGIN_PASSWORD) {
+		throw new Error(
+			"E2E_LOGIN_EMAIL and E2E_LOGIN_PASSWORD must be set in .env.local " +
+			"or CI secrets to run the magic-moment Playwright spec. " +
+			"These are the demo seller credentials — do NOT commit them.",
+		);
+	}
+
 	await page.addInitScript(() => {
 		window.localStorage.setItem("sf-locale", "en");
 	});
 
 	await page.goto("/login");
 	await page.waitForLoadState("networkidle");
-	await page.fill('input[name="email"]', "abdo2019hamouma@gmail.com");
-	await page.fill('input[name="password"]', "password123");
+	await page.fill('input[name="email"]', E2E_LOGIN_EMAIL);
+	await page.fill('input[name="password"]', E2E_LOGIN_PASSWORD);
 	await page.click('button[type="submit"]');
 	await page.waitForURL("**/dashboard");
 	await page.waitForLoadState("networkidle");
@@ -341,27 +355,6 @@ test.describe("Magic Moment: Error Handling", () => {
 
 	test.afterAll(async () => {
 		await cleanTestData();
-	});
-
-	test("Invalid WhatsApp format → extraction fails gracefully", async () => {
-		// Mock invalid extraction
-		const extraction = {
-			customer_name: null,
-			phone: null,
-			wilaya: null,
-			commune: null,
-			address: null,
-			products: [],
-			confidence: 0,
-			notes: "Extraction failed — could not parse conversation",
-		};
-		expect(extraction.confidence).toBe(0);
-		expect(extraction.notes).toContain("Extraction failed");
-	});
-
-	test("AI extraction low confidence → requires manual review", async () => {
-		const confidence = 45;
-		expect(confidence).toBeLessThan(50);
 	});
 
 	test("Confirmation rejected → order stays draft", async ({ page }) => {
