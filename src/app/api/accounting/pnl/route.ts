@@ -23,5 +23,5 @@ export const GET = withAuthAndRateLimit(
 
     return NextResponse.json({ summary: data });
   },
-  { requireAuth: true }
+  { requirePermission: "accounting:view", requireAuth: true }
 );

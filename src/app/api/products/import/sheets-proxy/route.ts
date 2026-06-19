@@ -45,5 +45,5 @@ export const POST = withAuthAndRateLimit(
       );
     }
   },
-  { schema, rateLimitConfig: { maxRequests: 10, windowMs: 60000 } },
+  { requirePermission: "products:manage", schema, rateLimitConfig: { maxRequests: 10, windowMs: 60000 } },
 );

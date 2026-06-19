@@ -28,6 +28,7 @@ export const POST = withAuthAndRateLimit(
     return NextResponse.json(extraction);
   },
   {
+    requirePermission: "ai:chat",
     schema: extractSchema,
     rateLimitConfig: { maxRequests: 10, windowMs: 60000 },
   }

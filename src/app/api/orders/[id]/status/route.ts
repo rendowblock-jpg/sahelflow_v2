@@ -35,6 +35,7 @@ export const PATCH = withAuthAndRateLimit(
     }
   },
   {
+    requirePermission: "orders:manage",
     schema: updateOrderStatusSchema,
     requireAuth: true,
   }

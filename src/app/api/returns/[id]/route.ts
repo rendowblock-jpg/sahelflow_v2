@@ -36,7 +36,7 @@ export const GET = withAuthAndRateLimit(
 
 		return NextResponse.json({ return: { ...returnObj, notes: notes || [] } });
 	},
-	{ requireAuth: true },
+	{ requirePermission: "returns:view", requireAuth: true },
 );
 
 // PATCH /api/returns/[id] — update return status, resolution details, or create exchange order
@@ -193,6 +193,7 @@ export const PATCH = withAuthAndRateLimit(
 		return NextResponse.json({ return: updatedReturn });
 	},
 	{
+		requirePermission: "returns:manage",
 		schema: updateReturnStatusSchema,
 		requireAuth: true,
 	},
@@ -217,5 +218,5 @@ export const DELETE = withAuthAndRateLimit(
 
 		return NextResponse.json({ success: true });
 	},
-	{ requireAuth: true },
+	{ requirePermission: "returns:manage", requireAuth: true },
 );

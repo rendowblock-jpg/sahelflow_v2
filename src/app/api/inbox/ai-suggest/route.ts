@@ -38,6 +38,7 @@ export const POST = withAuthAndRateLimit(
     });
   },
   {
+    requirePermission: "inbox:view",
     schema: aiSuggestSchema,
     rateLimitConfig: { maxRequests: 15, windowMs: 60000 },
   }

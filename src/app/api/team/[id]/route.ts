@@ -91,7 +91,7 @@ export const PATCH = withAuthAndRateLimit(
       return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
     }
   },
-  { schema: updateSchema }
+  { requirePermission: "team:manage", schema: updateSchema }
 );
 
 export const DELETE = withAuthAndRateLimit(async (req, { user, params }) => {
@@ -150,4 +150,4 @@ export const DELETE = withAuthAndRateLimit(async (req, { user, params }) => {
   } catch (error: unknown) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
   }
-});
+}, { requirePermission: "team:manage" });

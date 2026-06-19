@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { hasPermission, type TeamRole } from "@/lib/auth/permissions";
 import { z } from "zod";
 
 /** Resolved params record passed to handlers after awaiting the Next.js Promise. */
@@ -11,6 +12,7 @@ type ApiHandler<T = unknown> = (
 	ctx: {
 		user: { id: string; email?: string };
 		sellerId: string;
+		role: TeamRole;
 		supabase: Awaited<ReturnType<typeof createClient>>;
 		body?: T;
 		params: ResolvedParams;
@@ -20,6 +22,13 @@ type ApiHandler<T = unknown> = (
 interface WrapperOptions<T extends z.ZodTypeAny> {
 	schema?: T;
 	requireAuth?: boolean;
+	/**
+	 * Permission string (from ROLE_PERMISSIONS in lib/auth/permissions.ts) that the
+	 * caller's role must possess. Enforced after auth + seller-context resolution.
+	 * Solo sellers (no team_members row) are treated as "owner" and always pass.
+	 * If omitted, no permission check is applied (backward-compatible).
+	 */
+	requirePermission?: string;
 	rateLimitConfig?: {
 		maxRequests: number;
 		windowMs: number;
@@ -42,6 +51,7 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 			const {
 				requireAuth = true,
 				schema,
+				requirePermission,
 				rateLimitConfig = { maxRequests: 60, windowMs: 60000 },
 			} = options;
 
@@ -63,8 +73,9 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 				user = authData.user;
 			}
 
-			// Resolve active sellerId if authenticated
+			// Resolve active sellerId + role if authenticated
 			let sellerId = "";
+			let role: TeamRole = "owner"; // solo sellers (no team_members row) are owners
 			if (user) {
 				const { getUserSellerContext } = await import("@/lib/data/team-service");
 				const teamCtx = await getUserSellerContext(user.id);
@@ -76,8 +87,19 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 						);
 					}
 					sellerId = teamCtx.sellerId;
+					role = teamCtx.role;
 				} else {
 					sellerId = user.id;
+					role = "owner";
+				}
+
+				// RBAC enforcement (S3) — if route declares a required permission,
+				// reject callers whose role doesn't possess it.
+				if (requirePermission && !hasPermission(role, requirePermission)) {
+					return NextResponse.json(
+						{ error: "Forbidden: insufficient permissions", required: requirePermission, role },
+						{ status: 403 },
+					);
 				}
 			}
 
@@ -135,6 +157,7 @@ export function withAuthAndRateLimit<T extends z.ZodTypeAny>(
 			const response = await handler(req, {
 				user: user as { id: string; email?: string }, // Only non-null if requireAuth is true
 				sellerId,
+				role,
 				supabase,
 				body: validatedBody,
 				params: resolvedParams,

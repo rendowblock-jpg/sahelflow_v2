@@ -64,5 +64,5 @@ export const POST = withAuthAndRateLimit(
       return NextResponse.json({ cost: null });
     }
   },
-  { schema, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+  { requirePermission: "orders:view", schema, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );

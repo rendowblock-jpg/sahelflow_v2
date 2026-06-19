@@ -29,7 +29,7 @@ export const GET = withAuthAndRateLimit(
 			return NextResponse.json({ error: message }, { status: 500 });
 		}
 	},
-	{ requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );
 
 export const PATCH = withAuthAndRateLimit(
@@ -44,7 +44,7 @@ export const PATCH = withAuthAndRateLimit(
 			return NextResponse.json({ error: message }, { status: 500 });
 		}
 	},
-	{ requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );
 
 export const DELETE = withAuthAndRateLimit(
@@ -58,5 +58,5 @@ export const DELETE = withAuthAndRateLimit(
 			return NextResponse.json({ error: message }, { status: 500 });
 		}
 	},
-	{ requireAuth: true, rateLimitConfig: { maxRequests: 10, windowMs: 60000 } },
+	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 10, windowMs: 60000 } },
 );

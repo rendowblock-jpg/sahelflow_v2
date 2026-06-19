@@ -39,5 +39,5 @@ export const POST = withAuthAndRateLimit(
 			return NextResponse.json({ error: msg }, { status: 500 });
 		}
 	},
-	{ requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );

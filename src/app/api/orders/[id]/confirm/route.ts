@@ -74,6 +74,7 @@ export const PATCH = withAuthAndRateLimit(
     }
   },
   {
+    requirePermission: "orders:confirm",
     schema: updateOrderConfirmationSchema,
     requireAuth: true,
   }

@@ -92,6 +92,7 @@ export const POST = withAuthAndRateLimit(
 		});
 	},
 	{
+		requirePermission: "products:manage",
 		schema: previewSchema,
 		rateLimitConfig: { maxRequests: 20, windowMs: 60000 },
 	},
@@ -219,6 +220,7 @@ export const PATCH = withAuthAndRateLimit(
 		});
 	},
 	{
+		requirePermission: "products:manage",
 		schema: commitSchema,
 		rateLimitConfig: { maxRequests: 10, windowMs: 60000 },
 	},

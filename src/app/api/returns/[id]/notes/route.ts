@@ -39,6 +39,7 @@ export const POST = withAuthAndRateLimit(
     return NextResponse.json({ note }, { status: 201 });
   },
   {
+    requirePermission: "returns:manage",
     schema: addReturnNoteSchema,
     requireAuth: true,
   }
