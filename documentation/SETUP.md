@@ -182,26 +182,26 @@ npm run build
 
 ## Deploy to Vercel
 
-This project is hosted on GitHub at `rendowblock-jpg/sahelflow_v2`. Vercel auto-deploys the `main` branch.
+This project is hosted on GitHub at `rendowblock-jpg/sahelflow_v2` (source of truth + CI). Each client gets their **own** Vercel project + Supabase project for maximum data isolation (per-client deployment, design system §2.2).
 
 ```bash
-# Production: push to main (auto-deploys)
-git push origin main
-
-# Or manual deploy:
+# Per-client deployment:
 vercel --prod --yes
-
-# Preview: open a PR (auto-generates preview URL)
 ```
 
-### Deployment Flow
+Auto-deploy from GitHub `main` is a planned automation item (design system §7.2, target: before client #10).
 
-1. Create a Supabase project (free tier)
+### Per-Client Deployment Flow
+
+For each new client:
+
+1. Create a new Supabase project (free tier)
 2. Apply `supabase/migrations/000_baseline.sql` in the Supabase SQL Editor
-3. Set all env vars via `vercel env add <key> production` or Vercel dashboard
-4. Push to `main` (or run `vercel --prod --yes`)
-5. Set up Evolution API instance (Railway or self-hosted)
-6. Register at `/register`, complete onboarding
+3. Create a new Vercel project linked to the GitHub repo
+4. Set all env vars via `vercel env add <key> production` or Vercel dashboard
+5. Deploy with `vercel --prod --yes`
+6. Set up Evolution API instance (Railway or self-hosted; shared instance OK)
+7. Client registers at `/register`, completes onboarding
 
 ---
 

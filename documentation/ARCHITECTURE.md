@@ -11,7 +11,7 @@
 
 SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce sellers operating on Cash-on-Delivery (COD). There is no built-in storefront. Sellers connect external stores (Shopify, WooCommerce, YouCan) via integrations and manage orders, customers, products, and delivery through a unified AI-powered dashboard.
 
-**Deployment strategy:** GitHub repo (`rendowblock-jpg/sahelflow_v2`) with Vercel auto-deploy on `main`. Each deployment uses a shared Vercel app + Supabase project.
+**Deployment strategy:** GitHub repo (`rendowblock-jpg/sahelflow_v2`) is the source of truth. Each client gets their **own** Vercel project + Supabase project (per-client isolation, design system §2.2). Deployments via `vercel --prod --yes`. Auto-deploy from GitHub is planned (§7.2).
 
 ---
 
@@ -30,7 +30,7 @@ SahelFlow is a **dashboard-only** Next.js application for Algerian e-commerce se
 | **Validation** | Zod                                               | All public API routes validated                                                                |
 | **Testing**    | Vitest + Playwright                               | **604 unit tests** across **37 test files** + 9 Playwright e2e specs                           |
 | **i18n**       | Custom TypeScript-inferred system                 | 3 locales: `en`, `fr`, `ar` (RTL supported). Arabic is default.                                |
-| **Hosting**    | Vercel                                            | Auto-deploy from GitHub `main` branch                                                          |
+| **Hosting**    | Vercel                                            | Per-client project, deployed via `vercel --prod --yes`                                         |
 
 ---
 
@@ -253,7 +253,7 @@ All tables use **RLS** scoped via the helper function `public.check_user_seller_
 
 ### 6.1 One Deployment Per Client
 
-The database schema supports multiple sellers via `seller_id`, but each production deployment expects **only one row** in `sellers`. This provides maximum data isolation without multi-tenant complexity. Deployments auto-deploy from the GitHub `main` branch to Vercel.
+The database schema supports multiple sellers via `seller_id`, but each production deployment expects **only one row** in `sellers`. This provides maximum data isolation without multi-tenant complexity. Each client gets their own Vercel + Supabase project, deployed via `vercel --prod --yes`. Auto-deploy from GitHub is a planned automation item (design system §7.2).
 
 ### 6.2 Dashboard-Only (No Storefront)
 

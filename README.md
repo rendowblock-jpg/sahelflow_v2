@@ -63,7 +63,7 @@ SahelFlow turns WhatsApp messages into draft orders automatically, guides seller
 | **Messaging**  | Evolution API (self-hosted WhatsApp via Baileys)                                               |
 | **Validation** | Zod (all public API routes)                                                                    |
 | **Testing**    | Vitest (604 unit tests across 37 test files) + Playwright e2e                                   |
-| **Hosting**    | Vercel (auto-deploy from GitHub `main` branch)                                                  |
+| **Hosting**    | Vercel (per-client project, deployed via `vercel --prod --yes`)                                 |
 
 ---
 
@@ -107,16 +107,14 @@ Default WhatsApp template seeds: `supabase/migrations/seeds/whatsapp_templates.s
 
 ## Deployment
 
-This project is hosted on GitHub at `rendowblock-jpg/sahelflow_v2`. Vercel auto-deploys the `main` branch. Pushes to `main` go to production; PRs generate preview deployments.
+This project is hosted on GitHub at `rendowblock-jpg/sahelflow_v2` (source of truth + CI). Each client gets their **own** Vercel project + Supabase project for maximum data isolation (per the design system §2.2 — per-client deployment, no multi-tenant complexity).
 
 ```bash
-# Production: push to main (auto-deploys), or manual deploy:
+# Per-client deployment:
 vercel --prod --yes
-
-# Preview: open a PR (auto-generates preview URL)
 ```
 
-Each deployment uses a shared Vercel app + Supabase project. See [SETUP.md](./documentation/SETUP.md) for environment setup and the full deployment flow.
+Auto-deploy from GitHub `main` is a planned automation item (design system §7.2, target: before client #10). See [SETUP.md](./documentation/SETUP.md) for the full per-client deployment flow.
 
 ---
 

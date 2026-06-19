@@ -74,7 +74,7 @@ Every tech choice was made for a specific reason:
 | **Evolution API**         | Bypass Meta's WhatsApp Cloud API approval process. Seller just scans a QR code.                           |
 | **Groq (5-model router)** | Access to powerful LLMs without managing infrastructure. Per-model keys for rate-limit isolation.         |
 | **Vanilla CSS**           | Full control over design. No dependency bloat. Pixel-perfect RTL support.                                 |
-| **GitHub + Vercel**       | Auto-deploy from `main` branch. Shared Vercel app + Supabase project. Simple, no multi-tenant complexity.   |
+| **Per-client deployment** | Each client gets their own Vercel + Supabase project. Maximum data isolation. No multi-tenant complexity.    |
 | **No online payment**     | COD is 95%+ of Algerian e-commerce. Building Stripe integration would solve a problem that doesn't exist. |
 
 ---
