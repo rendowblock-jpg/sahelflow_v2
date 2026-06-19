@@ -1348,6 +1348,9 @@ ALTER TABLE public.wilaya_risk_profiles ENABLE ROW LEVEL SECURITY;
 
 -- sellers
 CREATE POLICY "sellers_public_select" ON public.sellers FOR SELECT TO anon USING (form_enabled = true);
+-- S1 fix: restrict anon to safe columns only (no webhook_token, email, settings, etc.)
+REVOKE SELECT ON public.sellers FROM anon;
+GRANT SELECT (id, business_name, slug, wilaya, form_config, default_locale, form_enabled, phone, shipping_rates) ON public.sellers TO anon;
 CREATE POLICY "sellers_team_access" ON public.sellers FOR ALL TO public USING (public.check_user_seller_access(id));
 
 -- team_members
@@ -1358,6 +1361,9 @@ CREATE POLICY "team_members_manage" ON public.team_members FOR ALL TO public USI
   (auth.uid() = seller_id) OR
   (EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.seller_id = team_members.seller_id AND tm.user_id = (SELECT auth.uid()) AND tm.role = 'admin' AND tm.status = 'active'))
 );
+
+-- S10 fix: allow team members to read their own row (needed for getUserSellerContext)
+CREATE POLICY "team_members_self_select" ON public.team_members FOR SELECT TO public USING (auth.uid() = user_id);
 
 -- categories
 CREATE POLICY "categories_team_access" ON public.categories FOR ALL TO public USING (public.check_user_seller_access(seller_id)) WITH CHECK (public.check_user_seller_access(seller_id));

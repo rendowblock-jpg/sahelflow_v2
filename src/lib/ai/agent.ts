@@ -3,7 +3,7 @@
  * Tool-calling agent that queries real Supabase data and performs actions
  */
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getAlgerianLanguagePrompt } from "@/lib/ai/prompts/algerian";
 import { ChatMessage } from "@/lib/agents/groq";
 import {
@@ -53,18 +53,17 @@ export interface AgentTool {
 }
 
 async function getSupabase() {
-	try {
-		const client = await createClient();
-		const {
-			data: { user },
-		} = await client.auth.getUser();
-		if (user) {
-			return client;
-		}
-	} catch {
-		// Fallback to admin client if cookies aren't available or auth fails
+	const client = await createClient();
+	const {
+		data: { user },
+	} = await client.auth.getUser();
+	if (!user) {
+		throw new Error(
+			"Unauthorized: AI agent requires an authenticated user session. " +
+			"If running in a webhook/cron context, route through the internal webhook flow which has its own auth.",
+		);
 	}
-	return createAdminClient();
+	return client;
 }
 
 function getPeriodFilter(period?: string): string {

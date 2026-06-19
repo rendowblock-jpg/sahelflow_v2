@@ -239,7 +239,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
         data: {
           order_id: id,
           customer_id: customerId || undefined,
-          risk_score: 0,
+          risk_score: Number(orderWithCustomer.risk_score || 0),
           status,
           total_price: Number(orderWithCustomer.total_price || 0),
           wilaya: (orderWithCustomer.wilaya as string) || "",
