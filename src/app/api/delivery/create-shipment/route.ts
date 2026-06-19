@@ -8,7 +8,6 @@ const createShipmentSchema = z.object({
   provider: z.string().optional().default('yalidine'),
 })
 
-const SKELETON_PROVIDERS = new Set<string>([])
 
 export const POST = withAuthAndRateLimit(
   async (req, { user: _user, sellerId, supabase, body }) => {
@@ -28,15 +27,6 @@ export const POST = withAuthAndRateLimit(
     if (order.status !== 'confirmed' && order.status !== 'pending') {
       return NextResponse.json(
         { error: `Order must be confirmed or pending. Current: ${order.status}` },
-        { status: 400 },
-      )
-    }
-
-    if (SKELETON_PROVIDERS.has(provider)) {
-      const adapter = getDeliveryAdapter(provider)
-      const name = adapter?.name || provider
-      return NextResponse.json(
-        { error: `${name} API integration coming soon — use CSV export from the Delivery page.`, isSkeleton: true },
         { status: 400 },
       )
     }
@@ -147,7 +137,6 @@ export async function GET() {
       id: a.id,
       name: a.name,
       logo: a.logo,
-      isSkeleton: SKELETON_PROVIDERS.has(a.id),
     })),
   })
 }

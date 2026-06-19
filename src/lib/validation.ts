@@ -85,36 +85,9 @@ export const integrationSyncSchema = z.object({
 });
 
 // === Store API Schemas ===
-
-export const placeOrderSchema = z.object({
-	form: z.object({
-		name: z.string().min(1, "Name is required"),
-		phone: z
-			.string()
-			.regex(
-				/^(0)?(5|6|7)\d{8}$/,
-				"Must be a valid Algerian mobile number (05/06/07XXXXXXXX)",
-			),
-		wilaya: z.string().min(1, "Wilaya is required"),
-		commune: z.string().min(1, "Commune is required"),
-		address: z.string().min(1, "Address is required"),
-		notes: z.string().optional(),
-	}),
-	items: z
-		.array(
-			z.object({
-				name: z.string(),
-				quantity: z.number().int().min(1),
-				price: z.number().min(0),
-				product_id: z.string().uuid(),
-				variant: z.string().optional(),
-			}),
-		)
-		.min(1, "Cart is empty"),
-	total: z.number().min(0),
-	deliveryCost: z.number().min(0),
-	deliveryType: z.enum(["home", "desk"]).optional(),
-});
+// M18 fix: placeOrderSchema removed (dead code).
+// The route at api/store/place-order/route.ts has its own local schema
+// (with sellerSlug, added in PR #7's S4 fix). This export was never imported.
 
 // === Returns Schemas ===
 

@@ -63,6 +63,12 @@ export async function uploadProductImage(file: File): Promise<string> {
 
 // ===== DANGER ZONE =====
 
+/**
+ * M20 fix: Previously ran 10+ deletes without checking any errors. If step 5
+ * failed, steps 1-4 were committed but 6-10 were not, leaving data inconsistent.
+ * Now checks error on each critical delete and logs failures. A full transaction
+ * (single RPC) would be better but requires a migration — deferred to a future PR.
+ */
 export async function clearTestData(): Promise<void> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Not authenticated");
@@ -81,7 +87,8 @@ export async function clearTestData(): Promise<void> {
   // Deliveries -> Agent Activity -> Messages -> Conversations -> Orders -> Customers
   
   // 1. Deliveries (if tracked)
-  await getSupabase().from('deliveries').delete().eq('seller_id', user.id);
+  const { error: deliveriesErr } = await getSupabase().from('deliveries').delete().eq('seller_id', user.id);
+  if (deliveriesErr) console.error('clearTestData: deliveries delete failed:', deliveriesErr.message);
   
   // 2. Agent Activity
   await getSupabase().from('agent_activity').delete().eq('seller_id', user.id);
@@ -103,10 +110,12 @@ export async function clearTestData(): Promise<void> {
   await getSupabase().from('conversations').delete().eq('seller_id', user.id);
   
   // 4. Orders
-  await getSupabase().from('orders').delete().eq('seller_id', user.id);
+  const { error: ordersErr } = await getSupabase().from('orders').delete().eq('seller_id', user.id);
+  if (ordersErr) console.error('clearTestData: orders delete failed:', ordersErr.message);
   
   // 5. Customers
-  await getSupabase().from('customers').delete().eq('seller_id', user.id);
+  const { error: customersErr } = await getSupabase().from('customers').delete().eq('seller_id', user.id);
+  if (customersErr) console.error('clearTestData: customers delete failed:', customersErr.message);
 
   // W18 fix: Previously missing — returns, expenses, and automations were not
   // deleted, causing FK violations if any existed. Now cleaned up properly.

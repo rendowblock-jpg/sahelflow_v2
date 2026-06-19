@@ -50,7 +50,7 @@ async function getCommuneCache(credentials: { api_id: string; api_token: string 
 
     communeCache = map
     cacheExpiry = Date.now() + CACHE_TTL
-    console.log(`[YalidineCommunes] Cached ${map.size} commune codes`)
+    // L12 fix: removed debug console.log (ran on every cold start in production)
   } catch (err) {
     console.warn('[YalidineCommunes] Failed to fetch communes:', err)
   }
