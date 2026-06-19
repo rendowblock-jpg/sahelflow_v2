@@ -1,6 +1,6 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-06-19  
+> **Last updated:** 2026-06-19 (deep audit fixes)  
 > **Status:** ⚠️ IN ACTIVE DEVELOPMENT — deep audit surfaced ~170 findings (15 critical). See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
 
 ---
@@ -11,6 +11,7 @@
 | ------------------------------ | ---------------------------------------------------- |
 | `next build`                   | ✅ Zero errors, zero warnings                        |
 | `npx vitest run`               | ✅ **604/604** passing across 37 test files          |
+| `npx eslint .`                 | ✅ 0 errors (10 warnings — pre-existing unused vars)  |
 | `npx tsc --noEmit`             | ✅ Zero errors (strict mode)                         |
 | Security headers               | ✅ CSP + HSTS + Permissions-Policy + XFO + XCTO + RP |
 | Zero English leakage (ar mode) | ✅ Verified via `scripts/check-translations.ts`      |
@@ -168,6 +169,55 @@
 3. **Team invite email cross-lookup** — `inviteTeamMember` queries `sellers.email` without a DB-side index or SECURITY DEFINER wrapper. Acceptable for current single-tenant usage; tracked for Phase 8 when multi-tenant team management scales.
 4. **AI layer console.error** — 40+ `console.error` calls remain in `src/lib/ai/` and `src/lib/agents/`. These are not in user-facing paths. Scheduled for gradual structured-logging migration in Phase 8.
 5. **In-memory rate limiter** — `rate-limit.ts` uses a `Map` that resets on cold starts. Acceptable for current single-instance Vercel deployment. Migration path to `@upstash/ratelimit` documented in the file.
+
+---
+
+## Deep Audit Fixes (2026-06-19) — PR #2, #4, #5, #6
+
+A 5-agent deep audit surfaced ~170 findings across all layers. 27 fixed across 4 PRs:
+
+### PR #2 — Latent DB drift bugs + dead code (7 commits)
+- ✅ `place-order` p_source `webstore`→`store` (orders.source CHECK violation)
+- ✅ `storage-service` clearTestData messages delete via conversation_ids
+- ✅ `shipment-service` integrations query realigned to live schema
+- ✅ Deleted stray `expenses/ [id]` file, orphan `/dashboard/automation` route
+- ✅ Vitest config paths updated to post-decomposition locations
+- ✅ Baseline reconciled (products UNIQUE, daily_reports UNIQUE, deliveries.status CHECK)
+
+### PR #4 — Magic Moment AAA fixes (6 commits, migration 030 live)
+- ✅ B5: Duplicate detection now filters by customer_id
+- ✅ B9: Pass actual risk_score to automations (was hardcoded 0)
+- ✅ B10: AI notes appended not overwritten
+- ✅ S2: Removed service-role fallback in AI agent
+- ✅ S1: Column-level GRANT on sellers for anon (migration 030 live)
+- ✅ S10: team_members_self_select RLS policy (migration 030 live)
+
+### PR #5 — Code-layer fixes (10 commits)
+- ✅ B1: `orders/[id]/status` + `confirm` routes — pass server supabase to updateOrderStatus
+- ✅ B2: `accounting/pnl` + `products` — use createAdminClient for RPC routes
+- ✅ B3: `webhooks/retry` — add GET handler (Vercel Cron sends GET)
+- ✅ B4: `t.locale` broken accessor → use `locale` from useI18n (5 call sites)
+- ✅ B6: `getPeriodFilter` add 90d/year cases
+- ✅ B7: Remove non-existent `update_store_info` from AI system prompt
+- ✅ B8: Darija sanitizer regex `\s` escape fix
+- ✅ B11: `computeDeliveryCost` return 500 DA default instead of 0
+- ✅ B12: `findOrCreateCustomer` ignoreDuplicates: true
+- ✅ B13: CSV parser quote-aware split for newlines in quoted fields
+
+### PR #6 — UI-layer fixes (12 fixes, -139 net lines)
+- ✅ F1: BillingTab fake tiers → real 35K DZD lifetime model
+- ✅ F2: ChannelsTab Instagram/Email "Coming Soon" removed
+- ✅ F4: SecurityTab fake 2FA section removed
+- ✅ F5: Integrations page fake platform grid removed
+- ✅ F6: Sidebar "Pro" badge → drives from seller.profile.plan
+- ✅ F7: AnimatedStatCard fake sparkline removed
+- ✅ F8: /dashboard/risk added to Sidebar (was orphan)
+- ✅ F9: CommandPalette "Open Store" → /form/[slug]
+- ✅ F10: CommandPalette 7→17 routes
+- ✅ F11: Inbox fake draft order fallback removed
+- ✅ F12: AIAssistant fake model badge removed
+
+**Remaining audit findings:** ~143 (3 critical: S3 RBAC, S4 multi-seller attribution; ~35 high; ~60 medium; ~60 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
 
 ---
 

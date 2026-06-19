@@ -14,7 +14,7 @@ The audit surfaced **~170 findings** across 5 layers. The most impactful categor
 
 | Category | Count | Impact |
 |----------|-------|--------|
-| 🔴 Critical (ship-blockers / security holes) | 15 (9 remaining) | Runtime crashes, fake features shown to users, credential leaks — **6 fixed in PR #4** |
+| 🔴 Critical (ship-blockers / security holes) | 15 (3 remaining) | Runtime crashes, fake features shown to users, credential leaks — **12 fixed in PR #4 + PR #5 + PR #6** |
 | 🟠 High (real bugs / weak security) | ~35 | Silent data corruption, broken team-member flows, missing RBAC |
 | 🟡 Medium (weak patterns / dead code) | ~60 | Race conditions, hardcoded values, tautological tests |
 | 🔵 Low (cosmetic / minor) | ~60 | Stale docs, code smell, minor a11y gaps |
@@ -49,18 +49,18 @@ The user's primary concern. Features that look real in the UI but have no backin
 
 | # | Location | Issue |
 |---|----------|-------|
-| F1 | `settings/_tabs/BillingTab.tsx:5-49` | **Entire Billing tab is decorative.** Hardcoded Starter/Pro/Enterprise prices ("2,900 DA", "9,900 DA"). Both Upgrade buttons permanently `disabled` with `title="Coming soon"`. No fetch, no save, no Stripe. |
-| F2 | `settings/_tabs/ChannelsTab.tsx:128-161` | **Channels tab "Coming Soon" section.** Instagram DMs + Email cards with "Soon" badges. Zero implementation. |
+| ✅ F1 | `settings/_tabs/BillingTab.tsx:5-49` | **Entire Billing tab is decorative.** Hardcoded Starter/Pro/Enterprise prices ("2,900 DA", "9,900 DA"). Both Upgrade buttons permanently `disabled` with `title="Coming soon"`. No fetch, no save, no Stripe. |
+| ✅ F2 | `settings/_tabs/ChannelsTab.tsx:128-161` | **Channels tab "Coming Soon" section.** Instagram DMs + Email cards with "Soon" badges. Zero implementation. |
 | F3 | `settings/_tabs/DeliverySettingsTab.tsx:7-44` | **DeliverySettings tab — hardcoded + Coming Soon.** `PROVIDERS` array fully hardcoded (duplicates Delivery page API data). DHL Freight card has disabled "Coming Soon" button. The 3 "active" cards only link to Integrations tab. |
-| F4 | `settings/_tabs/SecurityTab.tsx:207-241` | **Security tab 2FA section is fake.** TOTP + SMS cards with "Soon" badges. No toggle, no enrollment, no Supabase MFA wiring. |
-| F5 | `dashboard/integrations/page.tsx:786-805` | **Integrations page "Coming soon" grid.** 3 hardcoded placeholders (Instagram Shop, Facebook Shop, Amazon Seller). No interactivity. |
-| F6 | `components/dashboard/Sidebar.tsx:213` | **Sidebar "Pro" badge contradicts Billing tab.** Always renders `<div>Pro</div>`. But Billing tab says user is on "Starter". Every free user sees a fake "Pro" badge. Should read from `useSeller().profile.plan`. |
-| F7 | `components/ui/AnimatedStatCard.tsx:79` | **Sparkline is fake data viz.** When no `sparklinePercent` passed, computes `Math.min(100, (num / Math.max(num*1.2, 1)) * 100)` → always ~83%. Every dashboard stat card shows the same decorative bar. |
-| F8 | `dashboard/risk/page.tsx` (entire file, 303 lines) | **`/dashboard/risk` is an orphan route — unreachable.** Fully implemented (real `calculateAllCustomerRisks()` fetch, real block/unblock mutations). NOT linked from Sidebar/Topbar/MobileNav/CommandPalette. Users cannot reach it. |
-| F9 | `components/dashboard/CommandPalette.tsx:175-180` | **"Open Store" navigates to wrong URL.** `href: "/"` lands on dashboard root, not the public store (`/form/[sellerSlug]`). |
-| F10 | `components/dashboard/CommandPalette.tsx:97-154` | **CommandPalette exposes only 7 of 21 dashboard routes.** 14 pages unreachable via Cmd+K (inbox, returns, shipping, accounting, agents, automations, imports, integrations, risk, settings/team, etc.). |
-| F11 | `dashboard/inbox/page.tsx:323-338` | **Inbox AI-extract fallback creates fake draft order.** When extraction fails, inserts a draft order with placeholder item "Extracted Item" instead of showing an error. |
-| F12 | `components/dashboard/AIAssistant.tsx:554-556` | **Fake model badge before first call.** Shows "⚡ Sahara-Brain" badge before any AI call is made — misleading attribution. |
+| ✅ F4 | `settings/_tabs/SecurityTab.tsx:207-241` | **Security tab 2FA section is fake.** TOTP + SMS cards with "Soon" badges. No toggle, no enrollment, no Supabase MFA wiring. |
+| ✅ F5 | `dashboard/integrations/page.tsx:786-805` | **Integrations page "Coming soon" grid.** 3 hardcoded placeholders (Instagram Shop, Facebook Shop, Amazon Seller). No interactivity. |
+| ✅ F6 | `components/dashboard/Sidebar.tsx:213` | **Sidebar "Pro" badge contradicts Billing tab.** Always renders `<div>Pro</div>`. But Billing tab says user is on "Starter". Every free user sees a fake "Pro" badge. Should read from `useSeller().profile.plan`. |
+| ✅ F7 | `components/ui/AnimatedStatCard.tsx:79` | **Sparkline is fake data viz.** When no `sparklinePercent` passed, computes `Math.min(100, (num / Math.max(num*1.2, 1)) * 100)` → always ~83%. Every dashboard stat card shows the same decorative bar. |
+| ✅ F8 | `dashboard/risk/page.tsx` (entire file, 303 lines) | **`/dashboard/risk` is an orphan route — unreachable.** Fully implemented (real `calculateAllCustomerRisks()` fetch, real block/unblock mutations). NOT linked from Sidebar/Topbar/MobileNav/CommandPalette. Users cannot reach it. |
+| ✅ F9 | `components/dashboard/CommandPalette.tsx:175-180` | **"Open Store" navigates to wrong URL.** `href: "/"` lands on dashboard root, not the public store (`/form/[sellerSlug]`). |
+| ✅ F10 | `components/dashboard/CommandPalette.tsx:97-154` | **CommandPalette exposes only 7 of 21 dashboard routes.** 14 pages unreachable via Cmd+K (inbox, returns, shipping, accounting, agents, automations, imports, integrations, risk, settings/team, etc.). |
+| ✅ F11 | `dashboard/inbox/page.tsx:323-338` | **Inbox AI-extract fallback creates fake draft order.** When extraction fails, inserts a draft order with placeholder item "Extracted Item" instead of showing an error. |
+| ✅ F12 | `components/dashboard/AIAssistant.tsx:554-556` | **Fake model badge before first call.** Shows "⚡ Sahara-Brain" badge before any AI call is made — misleading attribution. |
 
 ---
 
@@ -72,19 +72,19 @@ Code that would throw at runtime. Many are latent (only trigger on specific path
 
 | # | Location | Issue |
 |---|----------|-------|
-| B1 | `orders/[id]/status/route.ts:30` + `orders/[id]/confirm/route.ts:54` → `order-service.ts:140` → `supabase-helpers.ts:15-19` | **`updateOrderStatus()` crashes server-side.** Calls `getSupabase()` which throws `"client-only"` whenever `typeof window === "undefined"` (always on server). Every PATCH to these routes → 500. CI misses it because tests mock the helper. |
-| B2 | `accounting/pnl/route.ts:12` + `accounting/products/route.ts:9` → baseline `:1458-1469` | **Accounting RPC routes always 500.** `get_pnl_summary` & `get_product_profitability` are GRANTed only to `service_role`, but routes use the cookie (`authenticated`) client. Permission denied. Also RPCs use `auth.uid()` internally → team members see zero rows even if permissions fixed. |
-| B3 | `webhooks/retry/route.ts:87` + `vercel.json:7-10` | **`/api/webhooks/retry` is POST but Vercel Cron only sends GET.** The retry queue is never drained by the cron. Dead-letter queue grows forever. |
-| B4 | `TeamInviteModal.tsx:66` + `settings/team/page.tsx:254,268,270` | **`t.locale` is a broken accessor — always `undefined`.** `t.locale` doesn't exist on the `t` object (it's a sibling field on context). 5 call sites always evaluate `undefined === "ar"` → `false`. Team role descriptions + dates always render in English regardless of selected locale. |
+| ✅ B1 | `orders/[id]/status/route.ts:30` + `orders/[id]/confirm/route.ts:54` → `order-service.ts:140` → `supabase-helpers.ts:15-19` | **`updateOrderStatus()` crashes server-side.** Calls `getSupabase()` which throws `"client-only"` whenever `typeof window === "undefined"` (always on server). Every PATCH to these routes → 500. CI misses it because tests mock the helper. |
+| ✅ B2 | `accounting/pnl/route.ts:12` + `accounting/products/route.ts:9` → baseline `:1458-1469` | **Accounting RPC routes always 500.** `get_pnl_summary` & `get_product_profitability` are GRANTed only to `service_role`, but routes use the cookie (`authenticated`) client. Permission denied. Also RPCs use `auth.uid()` internally → team members see zero rows even if permissions fixed. |
+| ✅ B3 | `webhooks/retry/route.ts:87` + `vercel.json:7-10` | **`/api/webhooks/retry` is POST but Vercel Cron only sends GET.** The retry queue is never drained by the cron. Dead-letter queue grows forever. |
+| ✅ B4 | `TeamInviteModal.tsx:66` + `settings/team/page.tsx:254,268,270` | **`t.locale` is a broken accessor — always `undefined`.** `t.locale` doesn't exist on the `t` object (it's a sibling field on context). 5 call sites always evaluate `undefined === "ar"` → `false`. Team role descriptions + dates always render in English regardless of selected locale. |
 | ✅ B5 | `tool-handlers.ts:246-263` | **AI duplicate-detection flags EVERY order as "doublon".** After creating an order, queries pending orders in last 24h but doesn't filter by `customer_id`. Every AI-created order after the first daily one gets `confirmation_status: 'doublon'`. |
-| B6 | `lib/ai/agent.ts:70-87` | **`getPeriodFilter` doesn't handle advertised `'90d'`/`'year'` enums.** AI says "90-day P&L" but returns lifetime totals (no filter applied). Silent wrong data. |
-| B7 | `lib/ai/agent.ts:1377` | **AI system prompt references non-existent tool `update_store_info`.** Model calls it, hits "Tool not found", silently fails. |
-| B8 | `lib/ai/sanitizer.ts:61` | **Darija sanitizer regex is broken.** `'\s'` should be `'\\s'` → regex matches literal `s` as boundary, sanitizer never fires for space-delimited words. Phase 60A's goal (prevent Darija leaks) not achieved. |
+| ✅ B6 | `lib/ai/agent.ts:70-87` | **`getPeriodFilter` doesn't handle advertised `'90d'`/`'year'` enums.** AI says "90-day P&L" but returns lifetime totals (no filter applied). Silent wrong data. |
+| ✅ B7 | `lib/ai/agent.ts:1377` | **AI system prompt references non-existent tool `update_store_info`.** Model calls it, hits "Tool not found", silently fails. |
+| ✅ B8 | `lib/ai/sanitizer.ts:61` | **Darija sanitizer regex is broken.** `'\s'` should be `'\\s'` → regex matches literal `s` as boundary, sanitizer never fires for space-delimited words. Phase 60A's goal (prevent Darija leaks) not achieved. |
 | ✅ B9 | `lib/data/order-service.ts:242` | **`updateOrderStatus` passes hardcoded `risk_score: 0` to automations.** `auto_confirm_safe` recipe (threshold ≤20) fires on EVERY order. Entire risk-based automation gating bypassed. |
 | ✅ B10 | `lib/agents/order-agent.ts:303,334,364` | **Order agent overwrites existing order notes.** `.update({ notes: "[AI Agent] ..." })` overwrites seller's manual notes, customer notes, prior agent notes. Data loss. |
-| B11 | `lib/data/shipping-service.ts:70,79` | **`computeDeliveryCost` returns 0 on failure.** Customers get free shipping silently when wilaya/zone lookup fails. |
-| B12 | `lib/data/customer-service.ts:142-158` | **`findOrCreateCustomer` overwrites customer data on every order.** Wrong `ignoreDuplicates` setting → name/address typos overwrite good data. |
-| B13 | `lib/data/import.ts:39-62` | **CSV parser doesn't handle newlines in quoted fields.** Silently corrupts imported data — a quoted field with a newline gets split across two "rows". |
+| ✅ B11 | `lib/data/shipping-service.ts:70,79` | **`computeDeliveryCost` returns 0 on failure.** Customers get free shipping silently when wilaya/zone lookup fails. |
+| ✅ B12 | `lib/data/customer-service.ts:142-158` | **`findOrCreateCustomer` overwrites customer data on every order.** Wrong `ignoreDuplicates` setting → name/address typos overwrite good data. |
+| ✅ B13 | `lib/data/import.ts:39-62` | **CSV parser doesn't handle newlines in quoted fields.** Silently corrupts imported data — a quoted field with a newline gets split across two "rows". |
 
 ---
 
@@ -317,7 +317,7 @@ Docs that claim things no longer true.
 
 | PR | Theme | Findings | Est. commits |
 |----|-------|----------|--------------|
-| #3 | 🔴 Critical broken + fake features | B1-B4, B6-B13, F1-F12, S3-S4 (B5/B9/B10/S1/S2/S10 ✅ PR #4) | ~15 |
+| #3 | 🔴 Critical broken + fake features | S3-S4 only (B1-B13 ✅ PR #4+#5, F1-F12 ✅ PR #6) | ~2 |
 | #4 | 🔒 Security hardening | S5-S18, M1-M4 (RLS fixes) | ~12 |
 | #5 | 🪦 Dead code removal | D1-D12 | ~10 |
 | #6 | ⚠️ Weak patterns / silent bugs | W1-W22 | ~15 |
@@ -343,4 +343,4 @@ Findings were cross-referenced and de-duplicated. Each finding includes a `file:
 
 ---
 
-_Last updated: 2026-06-19 — 6 critical findings fixed in PR #4 (B5, B9, B10, S2, S1, S10). Migration 030 applied to live DB. 9 critical findings remaining._
+_Last updated: 2026-06-19 — 27 findings fixed across PR #4 + #5 + #6 (B1-B13, F1-F12, S1-S2, S10). 3 critical findings remaining (S3, S4 + B9/B10 already in PR #4)._
