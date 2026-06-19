@@ -81,6 +81,12 @@ function getPeriodFilter(period?: string): string {
 		case "month":
 			now.setDate(now.getDate() - 30);
 			break;
+		case "90d":
+			now.setDate(now.getDate() - 90);
+			break;
+		case "year":
+			now.setDate(now.getDate() - 365);
+			break;
 	}
 	return now.toISOString();
 }
@@ -1339,7 +1345,7 @@ CAPABILITIES YOU MUST LEVERAGE:
 - 🔍 Search: search_all — cross-entity search across orders, products, customers
 - 📦 Delivery: create_shipment — ship orders via Yalidine
 - ⚙️ Operations: get_automations, toggle_automation, get_shipping_rates, update_shipping_rate
-- 🏪 Store: get_store_info, update_store_info
+- 🏪 Store: get_store_info
 - 💰 Finance: get_cod_cashflow — track money in transit, collected, and returns
 - ↩️ Returns: list_returns, create_return, update_return_status — manage customer returns, refunds, and exchange orders
 
