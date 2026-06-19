@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS public.deliveries (
   seller_id UUID NOT NULL REFERENCES public.sellers(id) ON DELETE CASCADE,
   provider TEXT NOT NULL CHECK (provider IN ('yalidine', 'zrexpress', 'maystro', 'manual')),
   tracking_number TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'created', 'picked_up', 'in_transit', 'delivered', 'returned', 'failed')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'created', 'picked_up', 'in_transit', 'at_hub', 'out_for_delivery', 'delivered', 'returned', 'refused', 'failed')),
   raw_response JSONB DEFAULT '{}',
   last_sync TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now()
@@ -401,7 +401,8 @@ CREATE TABLE IF NOT EXISTS public.daily_analytics_reports (
   refused_orders INTEGER NOT NULL DEFAULT 0,
   revenue NUMERIC NOT NULL DEFAULT 0.00,
   top_products JSONB NOT NULL DEFAULT '[]',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT unique_seller_date UNIQUE (seller_id, report_date)
 );
 
 -- wilaya_risk_profiles
@@ -1262,6 +1263,7 @@ CREATE INDEX IF NOT EXISTS idx_customers_seller ON public.customers (seller_id);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON public.customers (seller_id, phone);
 CREATE INDEX IF NOT EXISTS idx_products_seller ON public.products (seller_id);
 CREATE INDEX IF NOT EXISTS idx_products_category ON public.products (category_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_seller_name ON public.products (seller_id, name);
 CREATE INDEX IF NOT EXISTS idx_orders_seller ON public.orders (seller_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders (seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_status_created ON public.orders (seller_id, status, created_at DESC);
