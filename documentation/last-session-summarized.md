@@ -28,6 +28,9 @@
 | **Capital** | Bootstrapped. Assumes everything stays free-tier forever. Willing to spend ~2K DZD/year on domain. |
 | **Time** | ~1 hour/day human support. The rest is AI-automated or deferred. |
 | **Risk Tolerance** | Moderate-High. Willing to kill features, defer platforms, and pivot strategy quickly when evidence appears. |
+| **Systems Thinker** | Yes (newly observed). Anticipates failure modes before they happen — kept asking "how will the next chat carry on?" before the problem even occurred. Thinks about infrastructure as a system, not just tasks. |
+| **Security-Aware** | Moderate-High. Asked the right questions unprompted: classic vs fine-grained PAT, DB access safety model, what happens if the sandbox resets. Doesn't blindly paste secrets — asks about the architecture first. |
+| **Infrastructure Patient** | Yes. Willing to spend an entire session setting up tooling before any "real" work begins. Understands that foundation quality compounds. |
 
 ### What They Actually Want (Underneath the Words)
 
@@ -39,6 +42,8 @@
 | "All-in-one platform" | **Fear of missing out.** Competitors have more features. They don't want to be perceived as incomplete. |
 | "We compensate in other places" (killing Meta) | **Pragmatism > Ego.** Willing to kill "cool" features if the cost (business docs, verification) is too high. |
 | "I don't code, u do" | **Radical self-awareness.** They know their limitation and lean into it. Doesn't pretend. |
+| "how the next new chat will carry-on if u know what i mean" | **Fear of context loss.** They've experienced the pain of re-explaining everything to a fresh AI. This is the #1 friction in their AI-first workflow. |
+| "before i send u the PAT, i wanna ask..." | **Trust verification.** They don't share secrets until they understand the architecture. Not paranoia — diligence. |
 
 ### Their Biggest Fear
 > **"What if AI generates something that breaks production and I don't catch it?"**
@@ -63,6 +68,10 @@ We killed Meta integrations (Phase 1 → 🚫). We cut SMS. We deferred React Na
 | **"btw" = actually important** | "btw i want to build what we want with top tier class AAA" | Pay attention to the "btw." It's where the real constraints live. |
 | **Lowercase/casual in chat** | "look", "btw", "etc..." | Informal, fast typing. Don't mistake casualness for lack of seriousness. |
 | **Capitalizes for emphasis** | "AAA", "NO", "YES" | When they capitalize, it's a decision point. |
+| **"if u know what i mean"** | "how the next new chat will carry-on if u know what i mean" | Checking for shared understanding. They want to make sure you get the *spirit* of the concern, not just the literal question. Respond by reflecting the underlying need. |
+| **Permission before secrets** | "before i send u the PAT, i wanna ask..." | They pause before sharing sensitive info to verify the architecture is sound. Never rush them past this pause — it's a trust signal. |
+| **Concerns as questions** | "how are we gonna work with this case tell me" | They don't complain. They ask. The question IS the concern. Don't just answer — acknowledge the worry underneath. |
+| **Goes quiet between major decisions** | Long gaps between messages during setup | They're thinking, not disengaging. Don't fill the silence with more text. Wait. |
 
 ### What They Resist
 | Resist When... | Why | How to Handle |
@@ -95,6 +104,15 @@ We killed Meta integrations (Phase 1 → 🚫). We cut SMS. We deferred React Na
 | **Frustration loop** | I generate → they test → it breaks → they tell me → I fix → repeat. 70% of iterations don't meet their real need. |
 | **Success mode** | They specify precisely → I generate → it works first time → they move on. |
 | **Speed vs quality tension** | They say "fast" and "AAA" in the same breath. These conflict. They know. They still want both. |
+
+### The Multi-Agent Reality (newly established, Session 2)
+| Dimension | Reality |
+|-----------|---------|
+| **Primary coding agent** | Z.ai Code (the one writing this). Has GitHub push access + live Supabase DB read/write access. |
+| **Local operations** | User runs git commands on their own machine that the agent can't (e.g., GitLab remote cleanup, local sync). |
+| **Cross-chat continuity** | Two-layer handoff system: (1) `agent-handoff` orphan branch on GitHub for technical state, (2) this document for strategic/human context. |
+| **Credential re-provisioning** | Each new chat = fresh sandbox. User pastes PAT + Supabase connection string from a saved template. ~15 seconds to rebuild. |
+| **DB safety policy** | Agent shows exact SQL before any write. User approves. Destructive ops require explicit flag. All ops journaled. |
 
 ### What Makes a Session Good vs Bad
 
@@ -219,11 +237,87 @@ Not a SaaS. Not a traditional software company. It's a **personal monopoly** —
 
 ---
 
+## 9. Session Log
+
+> Chronological record of each session. Newest at top. Each entry captures: what we did, key decisions, where we stopped, and what the next session should pick up.
+
+### Session 2 — 2026-06-18 — Agent Infrastructure Setup
+
+**Session Type:** Infrastructure / Tooling (Non-Feature)
+
+**What We Did:**
+| Step | Outcome |
+|------|--------|
+| Explored the repo via web reader | Confirmed I could read `sahelflow_v2` on GitHub |
+| Tested git clone in sandbox | Confirmed sandbox has git + network access to GitHub |
+| Received GitHub PAT (fine-grained) | Stored in `~/.git-credentials` (chmod 600). Verified: authenticated as `rendowblock-jpg`, full push/admin perms. |
+| Built `sb-db` CLI | Custom DB agent tool. Commands: test, query, tables, schema, exec, insert, backup, journal. Safety: `--dry-run`, `--i-know-this-is-destructive`. |
+| Received Supabase connection string | Transaction pooler, port 6543, EU-West-1. Verified: PostgreSQL 17.6, 25 tables mapped. |
+| First persistence attempt (FAILED) | Tried storing secrets in `/home/z/my-project/` — assumed it persisted across chats. User opened a new chat and confirmed it did NOT. Lesson learned the hard way. |
+| Built `bootstrap.sh` | One-command environment rebuild script. Tested from fully wiped state — works. |
+| Created `agent-handoff` orphan branch | Stores AGENT_HANDOFF.md + bootstrap.sh + sb-db source on GitHub. Survives across chats because it's on GitHub's servers, not the sandbox. |
+| Cleaned up GitLab remote | User's local repo had both GitLab (`origin`) and GitHub (`old-origin`). Removed GitLab, renamed GitHub to `origin`. |
+| Synced local → GitHub | User committed local changes (massive: 131 files, +59,508/-28,576 lines) + pushed to main. GitHub main now at `674e722`. |
+| Updated handoff doc | Recorded all progress on `agent-handoff` branch. |
+
+**Key Decisions Locked:**
+1. **Fine-grained PAT** (not classic) — scoped to `sahelflow_v2` only, Contents+PRs RW, 30-day expiry
+2. **Direct Postgres access** (not Supabase REST) — full SQL capability via transaction pooler
+3. **Orphan branch for handoff** (not main, not local files) — `agent-handoff` branch on GitHub is the single source of truth for agent state
+4. **Two-layer handoff** — technical state on `agent-handoff` branch, human/strategic context in this file
+5. **User re-provides secrets each chat** — paste from saved template, ~15 seconds, no persistence needed
+
+**Where We Stopped:**
+- Environment fully operational (GitHub push + Supabase DB + cross-chat handoff)
+- Local repo synced to GitHub (`674e722`)
+- **Awaiting the first real task** — no bug, feature, or investigation has been defined yet
+
+**What the Next Session Should Pick Up:**
+1. User defines the task (a bug, feature, or investigation)
+2. Agent reads `AGENT_HANDOFF.md` from the `agent-handoff` branch for technical state
+3. Agent reads this file for human/strategic context
+4. Agent runs `bootstrap.sh` to rebuild the environment
+5. Agent executes the task: branch → edit → commit → push → PR
+
+**Observations Added This Session (already reflected in sections above):**
+- Founder is a systems thinker who anticipates failure modes
+- Founder is security-aware without being paranoid
+- Founder is patient with infrastructure setup
+- Founder surfaces concerns as questions ("how will the next chat carry on?")
+- Founder asks permission before sharing secrets
+- Founder goes quiet between major decisions (thinking, not disengaging)
+
+---
+
+### Session 1 — 2026-06-05 — Strategic Planning
+
+**Session Type:** Strategic Planning (Non-Coding)
+
+**What We Did:**
+- First full strategic session. Documented founder profile, communication patterns, working model, strategic insights, collaboration protocol.
+- Killed Meta integrations (Phase 1), cut SMS, deferred React Native, said no to tiers, no to auto-archive.
+- Locked pricing: 35K DZD lifetime, no recurring.
+- Created v1.0 of this document.
+
+**Key Decisions Locked:**
+1. Lifetime-only pricing (35K DZD, no subscriptions)
+2. No Meta integrations (business docs barrier too high)
+3. No SMS (cost + delivery rate issues)
+4. React Native deferred
+5. No feature tiers (one price, one product)
+
+**Where We Stopped:**
+- Strategic plan locked
+- Awaiting transition to coding phase
+
+---
+
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-06-05 | Initial creation from first full strategic planning session. Documented founder profile, communication patterns, working model, strategic insights, collaboration protocol. |
+| 1.1 | 2026-06-18 | Added Session 2 observations: systems thinker, security-aware, infrastructure-patient dimensions. New communication patterns: "if u know what i mean", permission-before-secrets, concerns-as-questions, quiet-between-decisions. New "Multi-Agent Reality" section documenting the Z.ai coding agent setup (GitHub push + Supabase DB access + orphan-branch handoff). Added Section 9: Session Log with full Session 2 record (infrastructure setup, GitLab cleanup, local→GitHub sync). Next session should pick up: user defines first task. |
 
 ---
 
