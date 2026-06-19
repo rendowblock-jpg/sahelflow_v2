@@ -11,8 +11,11 @@ export const GET = withAuthAndRateLimit(
     const category = searchParams.get("category");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    // L9 fix: bounds-check limit/offset
+    const rawLimit = parseInt(searchParams.get("limit") || "50", 10);
+    const rawOffset = parseInt(searchParams.get("offset") || "0", 10);
+    const limit = Number.isNaN(rawLimit) ? 50 : Math.min(Math.max(rawLimit, 1), 100);
+    const offset = Number.isNaN(rawOffset) ? 0 : Math.max(rawOffset, 0);
 
     let query = supabase
       .from("expenses")

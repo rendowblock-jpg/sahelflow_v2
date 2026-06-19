@@ -5,6 +5,7 @@
  * DELETE /api/ai/sessions/[id] — delete session
  */
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withAuthAndRateLimit } from "@/lib/api-wrapper";
 import {
 	getSession,
@@ -33,18 +34,18 @@ export const GET = withAuthAndRateLimit(
 );
 
 export const PATCH = withAuthAndRateLimit(
-	async (req, { sellerId, params }) => {
+	async (req, { sellerId, params, body }) => {
 		try {
 			const { id } = params;
-			const body = await req.json();
-			await updateSessionTitle(sellerId, id as string, body.title);
+			// M5 fix: title validated by schema
+			await updateSessionTitle(sellerId, id as string, body!.title);
 			return NextResponse.json({ success: true });
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			return NextResponse.json({ error: message }, { status: 500 });
 		}
 	},
-	{ requirePermission: "ai:chat", requireAuth: true, rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
+	{ requirePermission: "ai:chat", requireAuth: true, schema: z.object({ title: z.string().max(120) }), rateLimitConfig: { maxRequests: 30, windowMs: 60000 } },
 );
 
 export const DELETE = withAuthAndRateLimit(

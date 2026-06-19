@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, getClientIP } from "@/lib/rate-limit";
@@ -88,11 +89,20 @@ export async function POST(req: NextRequest) {
     if (authError) return authError;
 
     const body = await req.json();
-    const { action, id } = body;
 
-    if (!id || !action) {
-      return NextResponse.json({ error: "Missing id or action" }, { status: 400 });
+    // M4 fix: validate with zod instead of manual destructuring
+    const deadLetterSchema = z.object({
+      id: z.string().uuid(),
+      action: z.enum(["retry", "dismiss"]),
+    });
+    const parsed = deadLetterSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request", details: parsed.error.issues.map((i) => i.message) },
+        { status: 400 },
+      );
     }
+    const { action, id } = parsed.data;
 
     const supabase = getServiceSupabase();
     if (!supabase) {
