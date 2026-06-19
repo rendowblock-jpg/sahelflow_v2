@@ -51,9 +51,9 @@ export const PATCH = withAuthAndRateLimit(
     try {
       let finalOrder;
       if (confirmation_status === "annule") {
-        finalOrder = await updateOrderStatus(orderId, "cancelled");
+        finalOrder = await updateOrderStatus(orderId, "cancelled", supabase);
       } else if (confirmation_status === "confirmed") {
-        finalOrder = await updateOrderStatus(orderId, "confirmed");
+        finalOrder = await updateOrderStatus(orderId, "confirmed", supabase);
       } else {
         // Just fetch the order with customer details to return standard format
         const { data: fetchedOrder, error: fetchError } = await supabase

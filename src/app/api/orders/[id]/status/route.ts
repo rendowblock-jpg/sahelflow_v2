@@ -27,7 +27,7 @@ export const PATCH = withAuthAndRateLimit(
 
     // 2. Call service layer update
     try {
-      const updatedOrder = await updateOrderStatus(orderId, status);
+      const updatedOrder = await updateOrderStatus(orderId, status, supabase);
       return NextResponse.json({ success: true, order: updatedOrder });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update order status";
