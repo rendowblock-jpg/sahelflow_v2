@@ -35,14 +35,14 @@ export interface Seller {
 		number,
 		{ home: number; desk: number; express: boolean }
 	>;
-	webhook_token: string | null;
-	webhook_orders_count: number;
+	webhook_token: string; // NOT NULL DEFAULT gen_random_bytes(16) hex in DB
+	webhook_orders_count: number | null; // nullable in DB (DEFAULT 0)
 	webhook_last_sync: string | null;
 	notification_settings: NotificationSettings | null;
 	wilaya: string | null;
-	categories: string[] | null;
-	delivery_partners: string[] | null;
-	order_sources: string[] | null;
+	categories: string[]; // NOT NULL DEFAULT '{}' in DB (TD2 fix — was string[] | null)
+	delivery_partners: string[]; // NOT NULL DEFAULT '{}' in DB (TD2 fix)
+	order_sources: string[]; // NOT NULL DEFAULT '{}' in DB (TD2 fix)
 	onboarding_completed: boolean;
 	slug: string | null;
 	form_enabled: boolean;
@@ -70,11 +70,11 @@ export interface Product {
 	description: string | null;
 	variants: ProductVariant[];
 	category_id: string | null;
-	stock: number;
+	stock: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
 	price: number;
-	cost_price: number;
+	cost_price: number | null; // nullable in DB — TD3 fix
 	image_url: string | null;
-	active: boolean;
+	active: boolean | null; // nullable in DB (DEFAULT true) — TD3 fix
 	deleted_at: string | null;
 	created_at: string;
 	updated_at: string;
@@ -89,10 +89,10 @@ export interface Customer {
 	wilaya: string | null;
 	commune: string | null;
 	address: string | null;
-	order_count: number;
-	total_spent: number;
-	risk_score: number;
-	is_blocked: boolean;
+	order_count: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
+	total_spent: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
+	risk_score: number | null; // nullable in DB (DEFAULT 0) — TD3 fix
+	is_blocked: boolean | null; // nullable in DB (DEFAULT false) — TD3 fix
 	metadata: Record<string, unknown>;
 	deleted_at: string | null;
 	created_at: string;
