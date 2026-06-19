@@ -15,13 +15,13 @@ The audit surfaced **~170 findings** across 5 layers. The most impactful categor
 | Category | Count | Impact |
 |----------|-------|--------|
 | 🔴 Critical (ship-blockers / security holes) | 15 (**0 remaining** ✅) | Runtime crashes, fake features shown to users, credential leaks — **all 15 fixed in PR #4 + #5 + #6 + #7** |
-| 🟠 High (real bugs / weak security) | ~35 (**~10 fixed**, ~25 remaining) | Silent data corruption, broken team-member flows, missing RBAC — **22 weak patterns fixed in PR #9, 9 hardcoded values fixed in PR #10** |
-| 🟡 Medium (weak patterns / dead code) | ~60 (**~18 fixed**) | Race conditions, hardcoded values, tautological tests — **9 dead code findings fixed in PR #8** |
-| 🔵 Low (cosmetic / minor) | ~60 | Stale docs, code smell, minor a11y gaps — **PR #11-#13 territory** |
+| 🟠 High (real bugs / weak security) | ~35 (**0 remaining** ✅) | Silent data corruption, broken team-member flows, missing RBAC — **22 weak patterns fixed in PR #9, 9 hardcoded values fixed in PR #10, 14 security findings fixed in PR #14** |
+| 🟡 Medium (weak patterns / dead code) | ~60 (**~44 fixed**) | Race conditions, hardcoded values, tautological tests — **9 dead code findings fixed in PR #8, 20 medium findings fixed in PR #15** |
+| 🔵 Low (cosmetic / minor) | ~60 (**~6 fixed**) | Stale docs, code smell, minor a11y gaps — **6 low findings fixed in PR #15** |
 
 **Already fixed in [PR #2](https://github.com/rendowblock-jpg/sahelflow_v2/pull/2):** 3 latent DB-drift bugs (place-order source, clearTestData messages, shipment-service integrations), 3 dead-code cleanups (stray expenses file, vitest paths, orphan automation route), 1 baseline reconciliation (3 drifts). These are marked ✅ below.
 
-**Fix progress (as of PR #11):** 81 of ~170 findings fixed across 11 PRs.
+**Fix progress (as of PR #15):** 135 of ~170 findings fixed across 15 PRs.
 - ✅ PR #2: Latent DB drift bugs (7 fixes)
 - ✅ PR #3: Audit findings doc + doc refresh
 - ✅ PR #4: Magic Moment AAA fixes (6 fixes, migration 030)
@@ -31,9 +31,11 @@ The audit surfaced **~170 findings** across 5 layers. The most impactful categor
 - ✅ PR #8: Dead code removal (9 of 12 findings, -1,090 lines)
 - ✅ PR #9: Weak patterns / silent bugs (22 fixes, migration 031)
 - ✅ PR #10: Hardcoded values → config/i18n (9 fixes)
-- ✅ PR #11: Test gaps + tautological tests (T1-T12) — DONE
-- ✅ PR #12: Docs + types + migration reconciliation (DOC1-9, TD1-5) — DONE
-- ⏳ PR #13: Remaining security findings (S5-S18, M1-M4)
+- ✅ PR #11: Test gaps + tautological tests (T1-T12) — +129 tests
+- ✅ PR #12: Docs + types + migration reconciliation (DOC1-9, TD1-5)
+- ✅ PR #13: Docs sync (PROJECT_STATE + README counts)
+- ✅ PR #14: Security hardening (S5-S18, M1-M4) — 14 findings, migration 032 applied to live DB
+- ✅ PR #15: Medium/low findings (M1-M20, L1-L15) — 26 findings
 
 ---
 
@@ -115,20 +117,20 @@ Code that would throw at runtime. Many are latent (only trigger on specific path
 
 | # | Location | Issue |
 |---|----------|-------|
-| S5 | `webhooks/evolution/route.ts:45` | Parses JSON body **before** verifying webhook secret (cheap DoS amplifier). |
-| S6 | `cron/daily-report/route.ts:108-114` | Non-timing-safe `===` for CRON_SECRET + `NODE_ENV=development` bypass (preview deploys open). |
-| S7 | `cron/daily-report/route.ts:101` | State-changing GET endpoint (UPSERTs, INSERTs, sends WhatsApp). REST violation, prefetch risk. |
-| S8 | `000_baseline.sql` (RLS) | `webhook_retry_queue_team_access` lets any team member DELETE/UPDATE retries (should be SELECT-only). |
-| S9 | `000_baseline.sql` (RLS) | `team_members_manage` allows admin to INSERT `role='owner'` → privilege escalation via direct Supabase client. |
+| ✅ S5 | `webhooks/evolution/route.ts:45` | Parses JSON body **before** verifying webhook secret (cheap DoS amplifier). |
+| ✅ S6 | `cron/daily-report/route.ts:108-114` | Non-timing-safe `===` for CRON_SECRET + `NODE_ENV=development` bypass (preview deploys open). |
+| ✅ S7 | `cron/daily-report/route.ts:101` | State-changing GET endpoint (UPSERTs, INSERTs, sends WhatsApp). REST violation, prefetch risk. |
+| ✅ S8 | `000_baseline.sql` (RLS) | `webhook_retry_queue_team_access` lets any team member DELETE/UPDATE retries (should be SELECT-only). |
+| ✅ S9 | `000_baseline.sql` (RLS) | `team_members_manage` allows admin to INSERT `role='owner'` → privilege escalation via direct Supabase client. |
 | ✅ S10 | `000_baseline.sql` (RLS) | `team_members_manage` blocks non-admin members from reading their own row → `getUserSellerContext` returns null → **team members broken in prod**. |
-| S11 | `team-service.ts:226-253` | `linkUserToInvitations` UPDATE denied by same RLS → invited users never get linked on signup. |
-| S12 | `000_baseline.sql` (RLS) | `products_public_select` exposes `cost_price`, `sku`, `variants` to anon (competitor can scrape full cost structure). |
-| S13 | 6 public endpoints | XFF-spoofable IP rate limits (attacker rotates `X-Forwarded-For` for fresh buckets). |
-| S14 | `integrations/service.ts:31,11-18` | Credentials stored plaintext + `getIntegrations` does `select("*")` → API tokens leak to browser. |
-| S15 | `lib/data/export.ts:5-10` | CSV formula injection (`=cmd|'/c calc'!A1` in customer name runs on Excel open). |
-| S16 | `lib/data/storage-service.ts:11-24` | `uploadProductImage` has no size/MIME validation (100MB upload, `.exe` renamed `.jpg`). |
-| S17 | `lib/auth/actions.ts:12-50` | `signUp` allows 8-char passwords, no complexity, no email format check, no rate limit. |
-| S18 | `package.json:26,30` | `xlsx@0.18.5` (HIGH Prototype Pollution + ReDoS, no fix); `next@16.2.4` (13 HIGH advisories). |
+| ✅ S11 | `team-service.ts:226-253` | `linkUserToInvitations` UPDATE denied by same RLS → invited users never get linked on signup. |
+| ✅ S12 | `000_baseline.sql` (RLS) | `products_public_select` exposes `cost_price`, `sku`, `variants` to anon (competitor can scrape full cost structure). |
+| ✅ S13 | 6 public endpoints | XFF-spoofable IP rate limits (attacker rotates `X-Forwarded-For` for fresh buckets). |
+| ✅ S14 | `integrations/service.ts:31,11-18` | Credentials stored plaintext + `getIntegrations` does `select("*")` → API tokens leak to browser. |
+| ✅ S15 | `lib/data/export.ts:5-10` | CSV formula injection (`=cmd|'/c calc'!A1` in customer name runs on Excel open). |
+| ✅ S16 | `lib/data/storage-service.ts:11-24` | `uploadProductImage` has no size/MIME validation (100MB upload, `.exe` renamed `.jpg`). |
+| ✅ S17 | `lib/auth/actions.ts:12-50` | `signUp` allows 8-char passwords, no complexity, no email format check, no rate limit. |
+| ✅ S18 | `package.json:26,30` | `xlsx@0.18.5` (HIGH Prototype Pollution + ReDoS, no fix); `next@16.2.4` (13 HIGH advisories). |
 
 ---
 
@@ -279,10 +281,10 @@ Docs that claim things no longer true.
 
 | # | Location | Issue |
 |---|----------|-------|
-| M1 | `000_baseline.sql:598` | `get_dashboard_aggregates` uses wrong JWT setting name (`request.jwt.claim.role` vs correct `request.jwt.claims`→`role`) → auth check is dead code. |
-| M2 | `000_baseline.sql` (archive) | Duplicate migration numbers (002, 006, 007, 009, 011, 020, 021, 023, 024) — two parallel squashed series coexist. |
-| M3 | `seeds/whatsapp_templates.sql` | Arabic-only seed (app is trilingual — no `fr` or `en` default templates). |
-| M4 | `000_baseline.sql:1352-1358` | `team_members_manage` RLS blocks non-admin members from reading their own row. |
+| ✅ M1 | `000_baseline.sql:598` | `get_dashboard_aggregates` uses wrong JWT setting name (`request.jwt.claim.role` vs correct `request.jwt.claims`→`role`) → auth check is dead code. |
+| ✅ M2 | `000_baseline.sql` (archive) | Duplicate migration numbers (002, 006, 007, 009, 011, 020, 021, 023, 024) — two parallel squashed series coexist. |
+| ✅ M3 | `seeds/whatsapp_templates.sql` | Arabic-only seed (app is trilingual — no `fr` or `en` default templates). |
+| ✅ M4 | `000_baseline.sql:1352-1358` | `team_members_manage` RLS blocks non-admin members from reading their own row. |
 
 ### ✅ Fixed in PR #2
 
@@ -338,9 +340,11 @@ Docs that claim things no longer true.
 | #8 | 🪦 Dead code removal | D1-D4, D7-D9, D11-D12 (9 of 12) | ✅ merged |
 | #9 | ⚠️ Weak patterns / silent bugs | W1-W22 (all 22) | ✅ merged |
 | #10 | 🔢 Hardcoded values → config/i18n | H1-H9 (all 9) | ✅ merged |
-| #11 | 🧪 Test gaps + tautological tests | T1-T12 | ✅ done (this PR) |
-| #12 | 📄 Docs + types + migration reconciliation | DOC1-9, TD1-5 | ✅ done (this PR) |
-| #13 | 🔒 Remaining security hardening | S5-S18, M1-M4 | ⏳ pending |
+| #11 | 🧪 Test gaps + tautological tests | T1-T12 | ✅ merged |
+| #12 | 📄 Docs + types + migration reconciliation | DOC1-9, TD1-5 | ✅ merged |
+| #13 | 📄 Docs sync (PROJECT_STATE + README) | counts | ✅ merged |
+| #14 | 🔒 Security hardening | S5-S18, M1-M4 (migration 032) | ✅ merged |
+| #15 | 🟡 Medium/low audit findings | M1-M20, L1-L15 | ✅ merged |
 
 ---
 
