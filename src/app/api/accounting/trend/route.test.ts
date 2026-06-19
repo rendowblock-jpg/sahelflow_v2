@@ -86,6 +86,7 @@ vi.mock("@/lib/rate-limit", () => ({
     provider: "memory",
   }),
   rateLimitHeaders: vi.fn().mockReturnValue({}),
+  getClientIP: vi.fn().mockReturnValue("127.0.0.1"),
 }));
 
 describe("GET /api/accounting/trend", () => {

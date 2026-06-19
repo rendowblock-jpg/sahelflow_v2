@@ -44,8 +44,9 @@ interface RateLimitResult {
  which uses a stable server-side identity.
  */
 export function getClientIP(req: Request | NextRequest): string {
-	const headers =
-		req instanceof NextRequest ? req.headers : new Headers(req.headers);
+	// Both Request and NextRequest have a .headers property (Headers object).
+	// No need for instanceof — duck typing is safer across module boundaries.
+	const headers = req.headers;
 
 	// 1. Vercel verified client IP (preferred - not client-controllable)
 	const vercelIP = headers.get("x-vercel-forwarded-for");

@@ -92,6 +92,8 @@ export default function IntegrationsPage() {
 	const [ordersReceived, setOrdersReceived] = useState(0);
 	const [lastSync, setLastSync] = useState<string | null>(null);
 
+	// S14 fix: track which integrations are configured (without credentials)
+	const [configuredPlatforms, setConfiguredPlatforms] = useState<Set<string>>(new Set());
 	const [yalidineApiId, setYalidineApiId] = useState("");
 	const [yalidineApiToken, setYalidineApiToken] = useState("");
 	const [savingDelivery, setSavingDelivery] = useState(false);
@@ -154,39 +156,16 @@ export default function IntegrationsPage() {
 	useEffect(() => {
 		async function loadIntegrations() {
 			try {
+				// S14 fix: getIntegrations() no longer returns credentials (they
+				// must never be sent to the browser). We only check which
+				// integrations are configured (is_active) to show status badges.
+				// Form fields start empty — users enter new credentials to update.
 				const integrations = await getIntegrations();
-				const yalidine = integrations.find((i) => i.platform === "yalidine");
-				if (yalidine?.credentials) {
-					setYalidineApiId(String(yalidine.credentials.api_id || ""));
-					setYalidineApiToken(String(yalidine.credentials.api_token || ""));
-				}
-				const zr = integrations.find((i) => i.platform === "zrexpress");
-				if (zr?.credentials) {
-					setZrApiId(String(zr.credentials.api_id || ""));
-					setZrApiKey(String(zr.credentials.api_key || ""));
-				}
-				const maystro = integrations.find((i) => i.platform === "maystro");
-				if (maystro?.credentials) {
-					setMaystroApiToken(String(maystro.credentials.api_token || ""));
-				}
-				const shopify = integrations.find((i) => i.platform === "shopify");
-				if (shopify?.credentials) {
-					setShopifyStoreUrl(String(shopify.credentials.shop_url || ""));
-					setShopifyAdminToken(String(shopify.credentials.access_token || ""));
-				}
-				const youcan = integrations.find((i) => i.platform === "youcan");
-				if (youcan?.credentials) {
-					setYoucanStoreUrl(String(youcan.credentials.store_url || ""));
-					setYoucanAccessToken(String(youcan.credentials.access_token || ""));
-					setYoucanWebhookSecret(String(youcan.credentials.webhook_secret || ""));
-				}
-				const woo = integrations.find((i) => i.platform === "woocommerce");
-				if (woo?.credentials) {
-					setWooStoreUrl(String(woo.credentials.store_url || ""));
-					setWooConsumerKey(String(woo.credentials.consumer_key || ""));
-					setWooConsumerSecret(String(woo.credentials.consumer_secret || ""));
-					setWooWebhookSecret(String(woo.credentials.webhook_secret || ""));
-				}
+				// Store the set of configured platforms for status display.
+				const configured = new Set(
+					integrations.filter((i) => i.is_active).map((i) => i.platform),
+				);
+				setConfiguredPlatforms(configured);
 			} catch {
 				/* silent */
 			}
@@ -337,7 +316,7 @@ export default function IntegrationsPage() {
 	const selectedInfo = STORES.find((s) => s.id === selectedStore)!;
 
 	return (
-		<PageTransition className="sf-flex-col sf-gap-xl">
+		<PageTransition className="sf-flex-col sf-gap-xl" data-configured-count={configuredPlatforms.size}>
 			{/* Page Header */}
 			<div className="sf-page-header">
 				<div>

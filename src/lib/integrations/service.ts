@@ -12,16 +12,25 @@ function getSupabase() {
 // Credentials (API tokens, secrets) must NEVER be sent to the browser.
 // Only the server-side getIntegrationCredentials() (below) fetches the
 // full row including credentials, and only when actually needed.
+//
+// The integrations table has: id, seller_id, platform, credentials,
+// is_active, last_sync, created_at. We select everything EXCEPT credentials.
 const SAFE_INTEGRATION_COLUMNS =
-  "id, seller_id, platform, is_active, created_at, updated_at, last_synced_at, sync_status";
+  "id, seller_id, platform, is_active, last_sync, created_at";
 
-export async function getIntegrations(): Promise<Integration[]> {
+/**
+ * Safe integration data — same as Integration but without credentials.
+ * This is what client-side code receives.
+ */
+export type SafeIntegration = Omit<Integration, "credentials">;
+
+export async function getIntegrations(): Promise<SafeIntegration[]> {
   const { data, error } = await getSupabase()
     .from("integrations")
     .select(SAFE_INTEGRATION_COLUMNS)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data as Integration[]) || [];
+  return (data as SafeIntegration[]) || [];
 }
 
 export async function saveIntegration(
@@ -59,7 +68,7 @@ export async function saveIntegration(
  */
 export async function getIntegrationCredentials(
   integrationId: string,
-): Promise<Record<string, string> | null> {
+): Promise<Record<string, unknown> | null> {
   const { createAdminClient } = await import("@/lib/supabase/server");
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -68,5 +77,5 @@ export async function getIntegrationCredentials(
     .eq("id", integrationId)
     .single();
   if (error) throw error;
-  return (data?.credentials as Record<string, string>) || null;
+  return (data?.credentials as Record<string, unknown>) || null;
 }
