@@ -150,7 +150,7 @@ export async function findOrCreateCustomer(customer: {
 				commune: customer.commune,
 				address: customer.address,
 			},
-			{ onConflict: "seller_id,phone", ignoreDuplicates: false },
+			{ onConflict: "seller_id,phone", ignoreDuplicates: true },
 		)
 		.select()
 		.single();
