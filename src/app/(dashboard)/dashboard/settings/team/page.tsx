@@ -36,7 +36,7 @@ interface TeamMember {
 export default function TeamPage() {
   const { role, canManageTeam, loading: authLoading } = usePermissions();
   const { toast } = useToast();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,7 +251,7 @@ export default function TeamPage() {
                   <span className="sf-text-xs-secondary sf-flex sf-align-center sf-gap-xs sf-mt-xs">
                     <Calendar size={12} />
                     <span>
-                      {t.team.joined}: {new Date(member.invited_at).toLocaleDateString(t.locale === "ar" ? "ar-DZ" : t.locale === "fr" ? "fr-FR" : "en-US")}
+                      {t.team.joined}: {new Date(member.invited_at).toLocaleDateString(locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-US")}
                     </span>
                   </span>
                 </div>
@@ -265,9 +265,9 @@ export default function TeamPage() {
                 >
                   <Clock size={12} className="sf-text-warning" />
                   <span>
-                    {t.locale === "ar"
+                    {locale === "ar"
                       ? "بانتظار تسجيل العضو للربط التلقائي"
-                      : t.locale === "fr"
+                      : locale === "fr"
                       ? "En attente d'inscription"
                       : "Pending registration"}
                   </span>
