@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import { useReducedMotion } from "framer-motion";
 import { EmptyState } from "../EmptyState";
 import { SkeletonCard } from "../Skeleton";
 
@@ -26,12 +25,10 @@ export function ChartContainer({
 	height = 260,
 	className = "",
 }: ChartContainerProps) {
-	const prefersReducedMotion = useReducedMotion();
 
 	return (
 		<div
 			className={`sf-card ${className}`}
-			style={prefersReducedMotion ? undefined : undefined}
 		>
 			<h3 className="sf-section-title">{title}</h3>
 			{loading ? (

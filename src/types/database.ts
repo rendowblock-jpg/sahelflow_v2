@@ -132,16 +132,6 @@ export type ConfirmationStatus =
 	| "confirmed"
 	| "annule";
 
-export type ReturnReason =
-	| "wrong_product"
-	| "damaged"
-	| "changed_mind"
-	| "not_as_described"
-	| "wrong_size"
-	| "defective"
-	| "late_delivery"
-	| "other";
-
 export interface OrderItem {
 	product_name: string;
 	quantity: number;
@@ -347,7 +337,7 @@ export interface AIExtraction {
 // Canonical definitions live in @/types/returns — re-exported here for backward compatibility
 export type {
 	ReturnStatus,
-	ReturnReason as _ReturnReason,
+	ReturnReason,
 	ReturnResolutionType,
 	ReturnItem,
 	Return,
