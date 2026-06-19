@@ -1,6 +1,7 @@
 "use client";
 
 import { Bot, RotateCcw } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface ActionCard {
 	type: "success" | "info" | "data";
@@ -110,6 +111,7 @@ export default function ChatMessageComponent({
 	lastFailedMessage,
 	onRetry,
 }: ChatMessageProps) {
+	const { t } = useI18n();
 	return (
 		<div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
 			{role === "user" ? (
@@ -131,7 +133,7 @@ export default function ChatMessageComponent({
 								onClick={() => onRetry(lastFailedMessage)}
 								style={{ marginTop: "8px" }}
 							>
-								<RotateCcw size={12} /> Retry
+								<RotateCcw size={12} /> {t.common.retry}
 							</button>
 						)}
 					</div>

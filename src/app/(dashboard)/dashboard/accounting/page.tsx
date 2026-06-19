@@ -22,7 +22,7 @@ import {
 type Period = "7d" | "30d" | "90d" | "year";
 
 export default function AccountingDashboardPage() {
-	const { locale, formatCurrency } = useI18n();
+	const { locale, formatCurrency, t } = useI18n();
 	const { isMobile } = useLayout();
 	const [period, setPeriod] = useState<Period>("30d");
 	const [loading, setLoading] = useState(true);
@@ -65,7 +65,7 @@ export default function AccountingDashboardPage() {
 				: isFr
 					? "Total Dépenses"
 					: "Total Expenses",
-			netProfit: isAr ? "صافي الربح" : isFr ? "Bénéfice Net" : "Net Profit",
+			netProfit: t.accounting.netProfit,
 			profitabilityRatio: isAr
 				? "نسبة الربحية"
 				: isFr
@@ -96,7 +96,7 @@ export default function AccountingDashboardPage() {
 				: isFr
 					? "Dépenses Opérationnelles"
 					: "Operating Expenses",
-			refunds: isAr ? "المبالغ المستردة" : isFr ? "Remboursements" : "Refunds",
+			refunds: t.accounting.refunds,
 			performance: isAr
 				? "مؤشرات الأداء"
 				: isFr
@@ -152,10 +152,10 @@ export default function AccountingDashboardPage() {
 				: isFr
 					? "Échec du chargement des données"
 					: "Failed to load financial data",
-			days7: isAr ? "آخر 7 أيام" : isFr ? "7 Derniers Jours" : "Last 7 Days",
-			days30: isAr ? "آخر 30 يوم" : isFr ? "30 Derniers Jours" : "Last 30 Days",
-			days90: isAr ? "آخر 90 يوم" : isFr ? "90 Derniers Jours" : "Last 90 Days",
-			year: isAr ? "هذا العام" : isFr ? "Cette Année" : "This Year",
+			days7: t.accounting.last7Days,
+			days30: t.accounting.last30Days,
+			days90: t.accounting.last90Days,
+			year: t.accounting.thisYear,
 			// New dictionary keys for charts and translations
 			profitTrend: isAr
 				? "اتجاهات الأرباح والخسائر"
@@ -167,13 +167,13 @@ export default function AccountingDashboardPage() {
 				: isFr
 					? "Allocation des Dépenses"
 					: "Expense Allocation",
-			revenueLabel: isAr ? "الإيرادات" : isFr ? "Revenu" : "Revenue",
+			revenueLabel: t.accounting.revenue,
 			expensesLabel: isAr
 				? "إجمالي المصاريف"
 				: isFr
 					? "Total Dépenses"
 					: "Total Expenses",
-			profitLabel: isAr ? "صافي الربح" : isFr ? "Bénéfice Net" : "Net Profit",
+			profitLabel: t.accounting.netProfit,
 			cogsLabel: isAr
 				? "تكلفة البضائع"
 				: isFr
@@ -440,7 +440,7 @@ export default function AccountingDashboardPage() {
 									title={dict.profitTrend}
 									empty={trend.length === 0}
 									emptyTitle={
-										isAr ? "لا توجد بيانات كافية" : "Pas assez de données"
+										t.accounting.insufficientData
 									}
 									emptyDescription={
 										isAr
@@ -1013,7 +1013,7 @@ export default function AccountingDashboardPage() {
 													<div className="sf-expense-info">
 														<span className="sf-expense-description">
 															{exp.description ||
-																(isAr ? "مصاريف عامة" : "General expense")}
+																t.accounting.generalExpense}
 														</span>
 														<div className="sf-expense-meta">
 															<span
@@ -1097,15 +1097,15 @@ export default function AccountingDashboardPage() {
 										) : (
 											<>
 												<div className="sf-profitability-row is-header">
-													<span>{isAr ? "المنتج" : "Produit"}</span>
+													<span>{t.accounting.product}</span>
 													<span style={{ textAlign: "end" }}>
-														{isAr ? "المبيعات" : "Sold"}
+														{t.accounting.sold}
 													</span>
 													<span style={{ textAlign: "end" }}>
-														{isAr ? "الربح" : "Profit"}
+														{t.accounting.profit}
 													</span>
 													<span style={{ textAlign: "end" }}>
-														{isAr ? "التوصيل" : "Deliv."}
+														{t.accounting.delivery}
 													</span>
 												</div>
 												{products.map((p) => (

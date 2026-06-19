@@ -22,9 +22,9 @@ export default function ErrorBoundary({
     <div className="sf-p-6" style={{ minHeight: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
       <div className="sf-card sf-p-8" style={{ maxWidth: 400, width: '100%' }}>
         <AlertCircle size={48} color="var(--color-danger)" style={{ margin: '0 auto 1rem' }} />
-        <h2 className="sf-text-xl sf-font-semibold sf-mb-2">Something went wrong!</h2>
+        <h2 className="sf-text-xl sf-font-semibold sf-mb-2">{t.common.errorTitle || "Something went wrong!"}</h2>
         <p className="sf-text-sm sf-text-secondary sf-mb-6">
-          {error.message || 'An unexpected error occurred in the dashboard.'}
+          {error.message || t.common.errorMessage || "An unexpected error occurred."}
         </p>
         <button
           onClick={() => reset()}

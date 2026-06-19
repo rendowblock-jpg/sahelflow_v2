@@ -80,7 +80,7 @@ const CATEGORIES = [
 ];
 
 export default function ExpensesPage() {
-	const { locale, formatCurrency } = useI18n();
+	const { locale, formatCurrency, t } = useI18n();
 	const { isMobile } = useLayout();
 	const { toast } = useToast();
 
@@ -121,11 +121,11 @@ export default function ExpensesPage() {
 			: isFr
 				? "Retour au tableau"
 				: "Back to dashboard",
-		category: isAr ? "الفئة" : isFr ? "Catégorie" : "Category",
-		amount: isAr ? "المبلغ" : isFr ? "Montant" : "Amount",
-		description: isAr ? "الوصف" : isFr ? "Description" : "Description",
-		date: isAr ? "التاريخ" : isFr ? "Date" : "Date",
-		actions: isAr ? "الإجراءات" : isFr ? "Actions" : "Actions",
+		category: t.common.category,
+		amount: t.common.amount,
+		description: t.common.description,
+		date: t.common.date,
+		actions: t.common.actions,
 		noExpenses: isAr
 			? "لا توجد مصاريف مطابقة للبحث"
 			: isFr
@@ -146,10 +146,10 @@ export default function ExpensesPage() {
 			: isFr
 				? "Échec de la suppression"
 				: "Failed to delete expense",
-		loadMore: isAr ? "تحميل المزيد" : isFr ? "Charger plus" : "Load More",
-		filter: isAr ? "تصفية" : isFr ? "Filtrer" : "Filter",
-		startDate: isAr ? "من تاريخ" : isFr ? "De" : "From Date",
-		endDate: isAr ? "إلى تاريخ" : isFr ? "À" : "To Date",
+		loadMore: t.common.loadMore,
+		filter: t.expenses.filter,
+		startDate: t.expenses.startDate,
+		endDate: t.expenses.endDate,
 	};
 
 	const loadData = useCallback(
@@ -179,7 +179,7 @@ export default function ExpensesPage() {
 
 				toast({
 					type: "error",
-					title: isAr ? "فشل تحميل المصاريف" : "Failed to load expenses",
+					title: t.expenses.loadFailed,
 				});
 			} finally {
 				setLoading(false);
@@ -465,7 +465,7 @@ export default function ExpensesPage() {
 												<tr key={exp.id}>
 													<td style={{ fontWeight: 600 }}>
 														{exp.description ||
-															(isAr ? "مصاريف عامة" : "General expense")}
+															t.accounting.generalExpense}
 													</td>
 													<td style={{ textAlign: "center" }}>
 														<span
