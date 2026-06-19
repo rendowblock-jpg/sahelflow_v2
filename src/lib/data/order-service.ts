@@ -223,6 +223,20 @@ export async function updateOrderStatus(id: string, status: OrderStatus, supabas
     };
     const triggerType = statusTriggerMap[status];
 
+    // W13 fix: Skip automation execution if the status isn't in the map.
+    // Previously, unknown statuses would call executeRecipes with type=undefined.
+    if (!triggerType) {
+      console.log(
+        JSON.stringify({
+          type: "automation_skipped",
+          reason: "No trigger mapping for status",
+          status,
+          order_id: id,
+        }),
+      );
+      return orderWithCustomer;
+    }
+
     const currentUser = await getCurrentUser();
     const sellerId = currentUser?.id;
     if (!sellerId) {
