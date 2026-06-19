@@ -11,8 +11,18 @@
  * Docs: https://doc.evolution-api.com/
  */
 
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
+const EVOLUTION_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || "";
+
+// W9 fix: Previously fell back to "http://localhost:8080" silently — in production,
+// every WhatsApp message attempt failed with a connection error to localhost.
+// Now we log a clear error if the URL is not configured.
+if (!EVOLUTION_URL) {
+  console.error(
+    "[EvolutionAPI] EVOLUTION_API_URL environment variable is not set. " +
+    "WhatsApp messaging will not work until configured.",
+  );
+}
 
 const MAX_RETRIES = 3;
 
