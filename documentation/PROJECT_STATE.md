@@ -1,7 +1,7 @@
 # SahelFlow v2 — Project State
 
-> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #11, 81 findings fixed)  
-> **Status:** ✅ ALL CRITICAL FINDINGS + TEST GAPS RESOLVED — 81 of ~170 findings fixed across 11 PRs. 0 critical remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
+> **Last updated:** 2026-06-19 (deep audit fixes — PR #2 through #12, 95 findings fixed)  
+> **Status:** ✅ ALL CRITICAL + TEST GAPS + TYPE DRIFT + STALE DOCS RESOLVED — 95 of ~170 findings fixed across 12 PRs. 0 critical remaining. See [AUDIT_FINDINGS.md](./AUDIT_FINDINGS.md).
 
 ---
 
@@ -172,9 +172,9 @@
 
 ---
 
-## Deep Audit Fixes (2026-06-19) — PR #2 through #11
+## Deep Audit Fixes (2026-06-19) — PR #2 through #12
 
-A 5-agent deep audit surfaced ~170 findings across all layers. **81 fixed across 11 PRs** (all 15 critical + 12 test gaps resolved):
+A 5-agent deep audit surfaced ~170 findings across all layers. **95 fixed across 12 PRs** (all 15 critical + 12 test gaps + 14 type/doc findings resolved):
 
 ### PR #2 — Latent DB drift bugs + dead code (7 commits)
 - ✅ `place-order` p_source `webstore`→`store` (orders.source CHECK violation)
@@ -260,7 +260,16 @@ A 5-agent deep audit surfaced ~170 findings across all layers. **81 fixed across
 - ✅ T11: Mocked @/lib/ai/service in setup.ts (prevents real Groq API calls in tests)
 - ✅ T12: CI now runs all 3 Playwright projects (chromium + mobile-chrome + mobile-safari)
 
-**Remaining audit findings:** ~89 (0 critical; ~25 high: S5-S18, M1-M4; ~45 medium; ~50 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
+### PR #12 — Type drift + stale docs (5 commits)
+- ✅ TD4: Added 6 missing TS interfaces (AgentActivity, Channel, Conversation, Message, WebhookRetryQueue, WilayaRiskProfileRow)
+- ✅ TD2+TD3: Fixed 12 field nullability mismatches (Seller 5, Product 3, Customer 4) to match live DB
+- ✅ TD1: Unified OrderItem shape to accept both webhook + AI formats via optional alias fields
+- ✅ TD5: Removed 1 double as-unknown-as cast (17 remain as legitimate Supabase bridges)
+- ✅ DOC1: Fixed 9 stale test/audit count locations (696 tests, 81→95 findings, 11→12 PRs)
+- ✅ DOC2-6,8,9: Marked ✅ in AUDIT_FINDINGS.md (already fixed in earlier doc-refresh)
+- ✅ DOC8: VISION.md "Production Hardened" → "Active Development, Critical Issues Resolved"
+
+**Remaining audit findings:** ~75 (0 critical; ~16 high: S5-S18, M1-M4; ~45 medium; ~50 low). See `documentation/AUDIT_FINDINGS.md` for the full report.
 
 ---
 
