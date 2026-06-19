@@ -62,5 +62,3 @@ export const HEALTH_SECRET = optional("HEALTH_SECRET");
 export const ADMIN_SECRET = optional("ADMIN_SECRET");
 
 // ── Yalidine Delivery (optional) ──
-export const YALIDINE_API_KEY = optional("YALIDINE_API_KEY");
-export const YALIDINE_API_TOKEN = optional("YALIDINE_API_TOKEN");

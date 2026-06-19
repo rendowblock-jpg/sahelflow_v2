@@ -5,7 +5,7 @@ import { updateOrderConfirmationSchema } from "@/lib/validation";
 
 export const PATCH = withAuthAndRateLimit(
   async (req, { user: _user, sellerId, supabase, body, params }) => {
-    const orderId = typeof params.id === "string" ? params.id : params.id?.[0];
+    const orderId = params.id as string;
     if (!orderId) {
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
     }
