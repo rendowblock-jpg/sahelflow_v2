@@ -271,7 +271,7 @@ export async function processOrder(
   const { data: order, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, seller_id, customer_id, wilaya, commune, address, total_price, items, source",
+      "id, order_number, seller_id, customer_id, wilaya, commune, address, total_price, items, source, notes",
     )
     .eq("id", orderId)
     .single();
@@ -300,7 +300,7 @@ export async function processOrder(
     await supabase
       .from("orders")
       .update({
-        notes: `[AI Agent] Auto-confirmed. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}`,
+        notes: `[AI Agent] Auto-confirmed. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}` + (order.notes ? `\n${order.notes}` : ""),
       })
       .eq("id", orderId);
 
@@ -332,7 +332,7 @@ export async function processOrder(
     await supabase
       .from("orders")
       .update({
-        notes: `[AI Agent] Auto-rejected. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}`,
+        notes: `[AI Agent] Auto-rejected. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}` + (order.notes ? `\n${order.notes}` : ""),
       })
       .eq("id", orderId);
 
@@ -361,7 +361,7 @@ export async function processOrder(
     await supabase
       .from("orders")
       .update({
-        notes: `[AI Agent] Flagged for review. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}`,
+        notes: `[AI Agent] Flagged for review. Risk: ${assessment.risk_score}/100. ${assessment.reasons.join("; ")}` + (order.notes ? `\n${order.notes}` : ""),
       })
       .eq("id", orderId);
 
