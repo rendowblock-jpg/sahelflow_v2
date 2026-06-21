@@ -2,15 +2,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { DualBarChart } from "@/components/charts/dual-bar-chart";
 import {
   TrendingUp,
   Wallet,
@@ -123,19 +115,7 @@ export default async function AccountingPage() {
           <CardTitle className="text-base">Revenu vs Dépenses (6 mois)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="month" className="text-xs" />
-              <YAxis className="text-xs" />
-              <Tooltip
-                formatter={(value: number) => formatDZD(value)}
-                contentStyle={{ borderRadius: "8px" }}
-              />
-              <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} name="Revenu" />
-              <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Dépenses" />
-            </BarChart>
-          </ResponsiveContainer>
+<DualBarChart data={monthlyData} />
         </CardContent>
       </Card>
 

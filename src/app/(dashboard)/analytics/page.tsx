@@ -1,18 +1,8 @@
 import { db } from "@/lib/db";
 import { formatDZD } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { RevenueChart } from "@/components/charts/revenue-chart";
+import { StatusPieChart } from "@/components/charts/status-pie-chart";
 import { TrendingUp, ShoppingCart, Users, Package } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -151,18 +141,7 @@ export default async function AnalyticsPage() {
           <CardTitle className="text-base">Revenu des 7 derniers jours</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={revenueByDay}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="day" className="text-xs" />
-              <YAxis className="text-xs" />
-              <Tooltip
-                formatter={(value: number) => [formatDZD(value), "Revenu"]}
-                contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))" }}
-              />
-              <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+<RevenueChart data={revenueByDay} />
         </CardContent>
       </Card>
 
@@ -173,30 +152,7 @@ export default async function AnalyticsPage() {
             <CardTitle className="text-base">Commandes par statut</CardTitle>
           </CardHeader>
           <CardContent>
-            {statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                  >
-                    {statusData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground text-sm">
-                Aucune donnée
-              </div>
-            )}
+            <StatusPieChart data={statusData} />
           </CardContent>
         </Card>
 
@@ -226,7 +182,7 @@ export default async function AnalyticsPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground text-sm">
+              <div className='flex items-center justify-center h-[300px] text-muted-foreground text-sm'>
                 Aucune donnée
               </div>
             )}

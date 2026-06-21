@@ -14,7 +14,7 @@
  *   - Store it
  *   - Return "valid" (trial active)
  */
-import "server-only";
+
 import { env } from "@/lib/env";
 import type { LicensePayload, LicenseStatus, LicenseValidationResult, SignedLicense } from "./types";
 import { verifyLicenseSignature, isExpired, daysRemaining, meetsVersionRequirement } from "./crypto";
