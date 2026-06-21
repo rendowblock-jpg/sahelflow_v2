@@ -188,3 +188,219 @@ export async function runAgent(
     toolCalls: allToolCalls,
   };
 }
+
+// ── STREAMING AGENT ─────────────────────────────────────────────────────────
+
+/**
+ * Streaming agent events. The client renders these incrementally:
+ *   tool_call   — a tool is being invoked (show name + args)
+ *   tool_result — the tool returned (show result summary)
+ *   text_delta  — a chunk of the assistant's text response (append to bubble)
+ *   done        — the full response is complete (save to DB, stop spinner)
+ *   error       — something went wrong (show error message)
+ */
+export type AgentStreamEvent =
+  | { type: "tool_call"; name: string; args: Record<string, unknown> }
+  | { type: "tool_result"; name: string; result: unknown }
+  | { type: "text_delta"; text: string }
+  | { type: "done"; response: string; toolCalls: AgentResult["toolCalls"] }
+  | { type: "error"; message: string };
+
+/**
+ * Streaming version of the agentic loop.
+ *
+ * Uses Gemini's `streamGenerateContent` endpoint so the assistant's text
+ * response streams token-by-token. Tool calls are still synchronous (they're
+ * DB operations), but the client gets real-time events for each step.
+ *
+ * Yields events in order:
+ *   [tool_call, tool_result]* (0-5 iterations) → text_delta+ → done
+ *
+ * If no Gemini key is configured, yields a single `done` event with a helpful
+ * message (same behavior as the non-streaming agent).
+ */
+export async function* runAgentStream(
+  conversationHistory: AgentMessage[],
+  userMessage: string,
+): AsyncGenerator<AgentStreamEvent> {
+  const apiKey = await getSecret("gemini_api_key");
+  if (!apiKey) {
+    yield {
+      type: "done",
+      response:
+        "Je ne peux pas répondre car aucune clé Gemini n'est configurée. Allez dans Paramètres → Intelligence artificielle pour en ajouter une.",
+      toolCalls: [],
+    };
+    return;
+  }
+
+  const toolDefs = getAllToolDefinitions();
+  const ctx: ToolContext = { db };
+  const allToolCalls: AgentResult["toolCalls"] = [];
+
+  const contents: Array<{
+    role: string;
+    parts: Array<Record<string, unknown>>;
+  }> = [
+    ...conversationHistory.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    { role: "user", parts: [{ text: userMessage }] },
+  ];
+
+  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+    let stream: ReadableStream<Uint8Array> | null = null;
+    let lastError = "";
+
+    // Try each model until one streams successfully
+    for (const model of MODELS) {
+      try {
+        const url = `${GEMINI_API_URL}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            contents,
+            tools: [{ functionDeclarations: toolDefs }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+          }),
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.status === 400 || res.status === 404) continue; // try next model
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as GeminiResponse;
+          lastError = err.error?.message ?? `Erreur API: ${res.status}`;
+          continue;
+        }
+
+        stream = res.body;
+        break;
+      } catch {
+        continue;
+      }
+    }
+
+    if (!stream) {
+      yield {
+        type: "error",
+        message: lastError || "Impossible de contacter Gemini. Vérifiez votre connexion.",
+      };
+      return;
+    }
+
+    // Parse the SSE stream. Gemini's streamGenerateContent with alt=sse returns
+    // `data: {json}\n\n` lines. Each JSON object has the same shape as a
+    // non-streaming response chunk (candidates[0].content.parts[]).
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let fullText = "";
+    let functionCall: GeminiFunctionCall | null = null;
+    let hadAnyPart = false;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE lines (terminated by \n\n)
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n\n")) >= 0) {
+          const rawEvent = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 2);
+
+          // Parse SSE format: `data: {json}`
+          for (const line of rawEvent.split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
+
+            let chunk: GeminiResponse;
+            try {
+              chunk = JSON.parse(jsonStr) as GeminiResponse;
+            } catch {
+              continue; // skip malformed chunk
+            }
+
+            if (chunk.error) {
+              yield { type: "error", message: chunk.error.message };
+              return;
+            }
+
+            const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+            for (const part of parts) {
+              if (part.text) {
+                fullText += part.text;
+                hadAnyPart = true;
+                yield { type: "text_delta", text: part.text };
+              }
+              if (part.functionCall) {
+                functionCall = part.functionCall;
+                hadAnyPart = true;
+              }
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // If Gemini called a function, execute it + feed the result back
+    if (functionCall) {
+      const fc = functionCall;
+      yield { type: "tool_call", name: fc.name, args: fc.args };
+
+      const tool = getTool(fc.name);
+      let result: unknown;
+      if (!tool) {
+        result = { error: `Outil inconnu: ${fc.name}` };
+      } else {
+        const toolResult = await tool.execute(fc.args, ctx);
+        result = toolResult.success ? toolResult.data : { error: toolResult.error };
+      }
+
+      allToolCalls.push({ name: fc.name, args: fc.args, result });
+      yield { type: "tool_result", name: fc.name, result };
+
+      // Feed the function result back to Gemini for the next iteration
+      contents.push({ role: "model", parts: [{ functionCall: fc }] });
+      contents.push({
+        role: "user",
+        parts: [{ functionResponse: { name: fc.name, response: { result } } }],
+      });
+      continue;
+    }
+
+    // Gemini returned text (streamed above) — we're done
+    if (fullText) {
+      yield { type: "done", response: fullText, toolCalls: allToolCalls };
+      return;
+    }
+
+    // No text + no function call — empty response
+    if (!hadAnyPart) {
+      yield {
+        type: "done",
+        response: "Je n'ai pas pu générer de réponse. Reformulez votre question.",
+        toolCalls: allToolCalls,
+      };
+      return;
+    }
+  }
+
+  yield {
+    type: "done",
+    response: "J'ai atteint la limite d'itérations. Reformulez votre demande de manière plus simple.",
+    toolCalls: allToolCalls,
+  };
+}
