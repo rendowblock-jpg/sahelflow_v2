@@ -1,4 +1,4 @@
-# SahelFlow Ultimate Design System (v1.0)
+# SahelFlow Ultimate Design System (v2.0)
 ## The Operational Bible — From Now Until First Paying Client
 
 ---
@@ -13,117 +13,87 @@
 
 ## 1. Philosophy & Non-Negotiables
 
-| Principle | What It Means | What It Kills |
-|-----------|-------------|---------------|
-| **All-in-One** | Every feature needed to run an Algerian COD business in one platform | Feature gaps that force apps/tools switching |
-| **Lifetime Access** | One payment, use forever, no recurring ever | Subscription fatigue, price objections |
-| **Free Tier Only** | Every service runs on free tiers or self-hosted | Costs that scale with clients |
-| **AI-First, User-Simple** | Powerful behind the scenes, dead simple in front | Complexity that scares non-tech sellers |
-| **Algeria-Optimized** | Built for Darija, COD, wilaya-based delivery, local realities | Generic Western e-commerce assumptions |
+| # | Principle | What It Means | What It Kills |
+|---|-----------|---------------|---------------|
+| 1 | **All-in-One, Algeria-First** | Every feature an Algerian COD seller needs to run their back-office in one platform — built for Darija, COD, wilaya delivery, local realities. Algeria is permanent identity, not launch strategy. | Tool-switching; generic Western e-commerce assumptions; speculative multi-country abstraction |
+| 2 | **Lifetime Access, One Price** | One payment (25K DZD), use forever, no tiers, no upsells. "Lifetime" means the lifetime of the SahelFlow service: the founder is personally committed to maintaining it because he uses it for his own business. The app requires local license validation on launch; if the founder ever stops maintaining the project, the app stops working. We don't pretend otherwise. | Subscription fatigue; price objections; feature envy; false "forever" promises |
+| 3 | **Free Tier Only** | Every seller runs on their own free-tier AI accounts (Groq + Gemini). All processing happens locally on the seller's device. No VPS, no server costs. SahelFlow costs $0/month to run, at any scale, forever. | Costs that scale with clients; surprise bills; vendor lock-in |
+| 4 | **AI-First, User-Simple** | AI does the heavy lifting in back; the seller sees a dead-simple UI. One accepted trade: initial AI setup requires the seller to add their own free-tier API keys (Groq + Gemini) via a guided wizard. After setup, the AI is invisible. The app works without AI keys (manual mode) so sellers are never blocked. Seller owns their data — local SQLite, SQLCipher-encrypted, exportable anytime the app is open, never auto-deleted. | Complexity that scares non-tech sellers; data lock-in; data-hostage dynamics |
+| 5 | **Ship Fast, AAA at the Seams** | Velocity matters — but the Magic Moment flow and security are always AAA-grade. Elsewhere, "good enough, iterate" is fine. | Perfectionism that kills momentum; slop that kills trust |
+
+**Principle test for new features:**
+- **Product features** (seller-facing, order-flow): must pass **7 of 7** principles
+- **Infrastructure features** (license, encryption, export, multi-shop, adapters): must pass **4 of 7** (P1 Algeria, P2 Free-Tier, P4 One-Time, P5 User-Simple)
 
 ---
 
-## 2. Locked-In Decisions (Never Revisit Without New Info)
+## 2. Locked-In Decisions
 
 ### 2.1 Business Model
 
-| Aspect | Decision | Why |
-|--------|----------|-----|
-| **Pricing** | 35,000 DZD one-time, lifetime access | Matches Algerian seller psychology, kills ECOMANAGER monthly model |
-| **No tiers** | Everyone gets everything | Simplicity, no decision fatigue, no feature envy |
-| **Upgrades** | No paid upgrades ever | One deal, done. Expansion via new clients, not upsells |
-| **Target clients** | 100 by end of summer | Achievable with automation, caps human support need |
-| **Revenue goal** | 3,650,000 DZD (~$27,000 USD) | 1M DZD personal target, rest for project/legal buffer |
-| **Max clients ever** | 300 | At ~27 min manual setup each = manageable. foramax |
-| **Team members per client** | 25 max, expandable on request | Arbitrary safety margin; no tiers; human override |
-| **Behavior at team limit** | Blocked with clear message; contact support for more | Keeps "no tiers" clean; human gate for edge cases |
-| **Paid upgrade for more members** | Never | Violates lifetime-only philosophy |
+| Aspect | Decision |
+|--------|----------|
+| **Pricing** | 25,000 DZD one-time, lifetime access |
+| **No tiers** | Everyone gets everything |
+| **Upgrades** | No paid upgrades ever |
+| **Target clients** | 100 |
+| **Revenue goal** | 2,500,000 DZD (~$18,500 USD) |
+| **Max clients ever** | 300 |
+| **Personal target** | 1,000,000 DZD (hits at client #40, triggers founder's own e-commerce business using SahelFlow) |
+| **Team feature** | DROPPED. No team/multi-user access. Revisit only if sync solution found. |
 
 ### 2.2 Deployment Architecture
 
 | Component | Pattern | Why |
 |-----------|---------|-----|
-| **Hosting** | Per-client Vercel project | Full isolation, no multi-tenant complexity |
-| **Database** | Per-client Supabase project | RLS isolation, no data leakage risk |
-| **AI** | Per-client Groq + shared Gemini pool | Rate limit isolation for Groq, zero cost for Gemini |
-| **WhatsApp** | Shared Evolution API instance | One Railway free tier hosts many clients |
-| **MCP** | Level 3 Integration | Sellers experience full inter-app AI connectivity |
+| **Desktop app** | Tauri (wraps Next.js codebase) | Seller's PC. $0. Native feel. |
+| **Mobile** | PWA (installable on Android via "Add to Home Screen") | One codebase. No app store. Phone-first Algeria. |
+| **Database** | Local SQLite, SQLCipher-encrypted (one file per shop, max 10 shops) | Seller's device. $0. Data ownership. Encryption protects against theft. |
+| **WhatsApp** | Baileys + b3s-baileys (SQLite auth state) as Tauri sidecar | Local-first, low RAM (50-150MB), no PostgreSQL dependency. Syncs messages on app launch (WhatsApp multi-device protocol queues messages for up to 14 days). |
+| **AI — Groq** | Per-client account, key stored locally in OS keychain | Seller's own free tier. ~14,400 req/day per account. |
+| **AI — Gemini** | Per-client account, key stored locally in OS keychain | Seller's own free tier. ~1,500 req/day per account. |
+| **AI fallback** | App tries Groq first, falls back to Gemini (or seller picks default) | Resilience if one provider is down. |
+| **Integrations** (Shopify/WooCommerce/YouCan/TikTok) | Polling (not webhooks). App polls every 2-5 min. | One integration pattern. No public URL needed. No webhook queue complexity. Matches local-first architecture. |
+| **Store builder hosting** | Cloudflare Pages (free) at `[seller].sahelflow.app` | One account serves all storefronts. No per-client hosting. No ToS issue. |
+| **Marketing site** | Cloudflare Pages (free) | Static site + trial signup form |
+| **App updates** | GitHub Releases + Tauri auto-updater (signed) | Free, reliable, auto-rollback on 3 launch failures |
+| **MCP server** | Deferred to Phase 4 / on-request only | Not v1. Build only if 10+ technical sellers request it. |
 
 ### 2.3 Support Model
 
-| Aspect | Decision | Why |
-|--------|----------|-----|
-| **Primary support** | AI-powered (Gemini/Groq) | Scales infinitely at zero marginal cost |
-| **Human support** | 1 hour/day, you only | Enough for payment verification, edge cases, escalations |
-| **Response time** | AI instant, human < 24h | Sets expectation, manageable load |
-| **No team** | Solo operation | Keeps costs zero, decision-making fast |
+| Aspect | Decision |
+|--------|----------|
+| **Primary support** | AI chatbot (burnout mitigation — absorbs common questions) |
+| **Human support** | TBD (to be validated against real ticket volume) |
+| **Response time** | TBD |
+| **Support channels** | WhatsApp + email |
+| **Team** | Solo operation |
 
 ---
 
-## 3. MCP Integration (Level 3)
+## 3. Social Platform Integrations
 
-### 3.1 What Level 3 Means for SahelFlow
+### 3.1 Order Ingestion Sources (Priority Order)
 
-| Level | Name | What It Means | Status |
-|-------|------|-------------|--------|
-| L1 | Internal Tool Calling | AI uses SahelFlow's 30 tools | ✅ Done |
-| L2 | MCP Client | SahelFlow calls external MCP servers | ❌ Not needed |
-| **L3** | **MCP Server** | **SahelFlow exposes itself as MCP server** | **🎯 Target** |
-| L4 | Multi-Agent Mesh | Internal agents coordinate via MCP | Future |
-| L5 | Ecosystem Platform | Third-party tools build on SahelFlow MCP | Far future |
+| Priority | Platform | Source | Integration Type | Status |
+|----------|----------|--------|------------------|--------|
+| P0 | **WhatsApp** | Baileys (local sidecar) | Local WebSocket | ✅ Done (rebuilt as Baileys sidecar in Phase 0) |
+| P1 | **TikTok** | Business DM | Polling (every 2-5 min) | 🎯 Next |
+| ~~P2~~ | ~~Instagram DMs~~ | ~~Meta Messaging API~~ | ~~Webhook~~ | ~~v2 (blocked on Meta business verification)~~ |
+| ~~P2~~ | ~~Facebook Messenger~~ | ~~Messenger API~~ | ~~Webhook~~ | ~~v2 (blocked on Meta business verification)~~ |
+| ~~P3~~ | ~~Facebook Lead Ads~~ | ~~Lead Gen API~~ | ~~Webhook~~ | ~~v2 (blocked on Meta business verification)~~ |
+| ~~OUT~~ | ~~Comments, story replies, video comments (all platforms)~~ | — | — | ~~OUT forever — low-ROI noise~~ |
 
-### 3.2 L3: SahelFlow as MCP Server — User Experience
+**Meta integrations (Instagram, Facebook, Lead Ads):** NOT in v1. They require Meta business verification the founder has not pursued. If a future version adds them, the architecture supports it, but no commitment. Sellers on Instagram/Facebook can manually enter orders.
 
-**Not for developers. For sellers.**
-
-| Seller Action | Result |
-|---------------|--------|
-| Opens any MCP client (Claude, Cursor, etc.) | Sees "SahelFlow" as available server |
-| Asks "How many pending orders do I have?" | Gets real number, pulled live from their DB |
-| Asks "What's my top-selling product this week?" | Gets answer with chart image |
-| Asks "Which customers haven't ordered in 30 days?" | Gets list with re-engagement suggestions |
-| Asks "Show me yesterday's orders" | Gets formatted table or summary |
-| Asks "Confirm all safe orders" | AI runs tool, marks confirmed, reports back |
-
-**Behind the scenes:** MCP server authenticates via API key, accesses their Supabase project read-only (or read-write for specific tools), formats response conversationally.
-
-### 3.3 Implementation Scope
-
-| Component | Effort | Details |
-|-----------|--------|---------|
-| **MCP server scaffolding** | 2 days | Implement MCP protocol (tools, resources, prompts) |
-| **Auth layer** | 1 day | API key per client, connects to their Supabase |
-| **Tool definitions** | 2 days | Map existing 30 tools + data queries to MCP schema |
-| **Resource endpoints** | 1 day | Orders, products, customers as MCP resources |
-| **Prompt templates** | 1 day | Pre-built prompts for common seller questions |
-| **Testing & polish** | 1 day | End-to-end with Claude Desktop, Cursor |
-| **Total** | **~8 days** | Post-summer if needed, or parallel with lower priority items |
-
----
-
-## 4. Social Platform Integrations
-
-### 4.1 Order Ingestion Sources (Priority Order)
-
-| Priority | Platform | Source | Integration Type | Effort | Status |
-|----------|----------|--------|-----------------|--------|--------|
-| P0 | **WhatsApp** | Evolution API (DMs, groups) | Webhook | ✅ Done | Active |
-| ~~P0~~ | ~~Messenger DMs~~ | ~~Page DMs~~ | ~~Messenger API~~ | ~~3 days~~ | ~~🚫 Deferred until business registration~~ |
-| ~~P0~~ | ~~Instagram~~ | ~~Business DM~~ | ~~Instagram Messaging API~~ | ~~3 days~~ | ~~🚫 Deferred until business registration~~ |
-| **P1** | **Facebook** | **Lead Ads forms** | **Lead Gen API + Webhooks** | **4 days** | **🎯 Next** |
-| **P2** | **TikTok** | **Business DM** | **TikTok for Business API** | **3 days** | **Soon** |
-| P2 | TikTok | Video comments | Comment webhook | 2 days | Soon |
-| P3 | Facebook | Page post comments | Comment webhook | 2 days | Future |
-| P3 | Instagram | Story replies | Story reply webhook | 2 days | Future |
-
-### 4.2 Unified Ingestion Pipeline
+### 3.2 Unified Ingestion Pipeline
 
 Every source flows through the same pipeline:
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Customer sends │────▶│  Platform       │────▶│  AI Extraction  │
-│  message/form   │     │  webhook/API    │     │  (Darija/AR/FR) │
+│  Customer sends │────▶│  Local sidecar  │────▶│  AI Extraction  │
+│  message/form   │     │  (Baileys/poll) │     │  (Darija/AR/FR) │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                                           │
 ┌─────────────────┐     ┌─────────────────┐             │
@@ -132,53 +102,71 @@ Every source flows through the same pipeline:
 └─────────────────┘     └─────────────────┘
 ```
 
----
+### 3.3 Inbox UX
 
-## 5. The "Magic Moment"
-
-### 5.1 Definition
-
-The **irreversible moment** when a trial seller realizes SahelFlow is indispensable — within **10 minutes of first use**.
-
-### 5.2 Current Magic Moment
-
-| Step | Time | Experience |
-|------|------|-----------|
-| Signs up for trial | 0:00 | Gets welcome email with URL |
-| Logs in | 0:01 | Arabic dashboard loads |
-| Connects WhatsApp | 0:03 | Scans QR code, sees "Connected" |
-| **Receives first customer WhatsApp** | **0:05** | **Message appears in inbox** |
-| **AI extracts order** | **0:06** | **Shows: "Order detected — iPhone 14 Case, Algiers, 2,500 DA"** |
-| **Clicks "Create Draft"** | **0:07** | **Order appears in dashboard with customer details auto-filled** |
-| **Calls customer** | **0:10** | **Uses guided confirmation panel, marks confirmed** |
+- **S1: Tabs in one page** (WhatsApp | TikTok)
+- Unified pipeline, identical AI extraction
+- Source badge differentiates ("WhatsApp" / "TikTok")
+- No platform-specific UX
 
 ---
 
-## 5.5 Order Lifecycle & Storage Management
+## 4. The Magic Moment
+
+### 4.1 Definition
+
+The **irreversible moment** when a trial seller realizes SahelFlow is indispensable. No longer time-bound (old 10-min target is dead due to onboarding friction from AI key setup).
+
+### 4.2 Magic Moment — AI Mode
+
+| Milestone | Trigger |
+|-----------|---------|
+| **Aha moment** | 1st AI extraction — seller sees AI read Darija correctly ("iPhone 14 Case, Algiers, 2500 DA") |
+| **Indispensable moment** | 3 extractions + 1 confirmed order — seller can't imagine going back to manual |
+
+### 4.3 Magic Moment — Manual Mode (Fallback)
+
+For sellers who get stuck on AI key setup: **first manual order created in under 5 minutes.** The app is genuinely useful even without AI. This catches sellers who abandon AI setup.
+
+### 4.4 Trial & Enforcement
 
 | Item | Decision |
 |------|----------|
-| **Max orders** | ~15,000 (bounded by Supabase free tier DB size) |
-| **Tracking** | Real-time usage bar: "Orders: X / 15,000" |
-| **Warning thresholds** | 85% (yellow), 95% (red), 100% (blocked) |
-| **At 100%** | Cannot create new orders. Data stays. Must export & delete to continue. |
-| **Export** | Manual only (CSV). Seller downloads to local file (PC/phone). Re-importable format. Data stays until seller deletes. |
-| **Export scope** | Orders, customers, products (what's feasible). Rest: copy-paste to notes. |
-| **Auto-archive** | **Not built.** If 10+ clients request, revisit. |
-| **Auto-delete** | **Never.** Seller's data, seller's responsibility. |
-| **Support at limit** | "Check your dashboard warning at 85%. We warned you. Export to free space." |
+| **Trial length** | 7 days |
+| **Trial issuance** | App self-issues trial license on first launch (cryptographic, machine-ID-tied, 7-day expiry) |
+| **Trial abuse prevention** | Machine ID fingerprinting (one trial per PC — 5 hardware fingerprints: CPU, motherboard, disk, MAC, OS GUID) |
+| **Enforcement** | Local license validation on every app launch. No valid license = app refuses to launch. No server involved. |
+| **Day 6** | In-app reminder banner: "Trial ends tomorrow" |
+| **Day 7 (unpaid)** | App refuses to launch. Shows: "Trial expired. Pay 25K DZD to restore." + displays machine ID. |
+| **After payment** | Founder verifies CCP receipt, generates permanent license key (signed, tied to machine ID), emails it. Seller pastes key into app → unlocks permanently. |
+| **Manual steps** | Only payment verification + license issuance (~10-15 min per paying client) |
+| **No refunds** | 25K DZD is one-time, non-refundable. Trial is the evaluation period. |
+
+### 4.5 Account Management
+
+- **No accounts, no passwords.** License keys replace accounts.
+- **No self-serve signup.** Seller downloads app → app self-issues trial → after payment, founder emails license key.
+- **No password reset.** Not applicable (no passwords).
+- **License activation limit:** 2 machines max (seller's PC + laptop). 3rd activation = blocked, seller contacts founder.
+- **License storage:** OS keychain (Windows Credential Manager / macOS Keychain / Linux Secret Service).
+- **Trial extension mechanism:** If trial expires, seller clicks "Request extension" → app generates one-time code → founder issues 7-day extension license. Prevents "trial expired, I'll just not buy" losses.
 
 ---
 
-### 5.3 Magic Moment + Social Integrations
+## 5. Order Lifecycle & Storage Management
 
-With Facebook/Instagram/TikTok, the magic moment extends:
-
-| New Scenario | Magic |
-|-------------|-------|
-| **Customer DM on Instagram** | Same flow: DM arrives → AI extracts → draft created → seller confirms |
-| **Lead form submitted** | Form data auto-creates draft with all fields pre-filled |
-| **Multiple platforms, one inbox** | Seller sees all orders (WhatsApp + IG + FB + manual) in unified view |
+| Item | Decision |
+|------|----------|
+| **Max orders** | None (SQLite handles billions of rows) |
+| **Soft performance cap** | ~100,000 orders (UI may feel slow above this; recommend export) |
+| **Tracking** | Usage based on last 90 days of orders (not lifetime count) |
+| **Warning thresholds** | At 100K orders, suggest "export old orders to CSV for performance" |
+| **At cap** | Nothing blocked — just a recommendation |
+| **Export** | Manual CSV. Orders, customers, products. Always available when app is open. |
+| **Auto-archive** | KILLED. Sellers who hit 100K can manually export + delete. |
+| **Auto-delete** | Never. Seller's data, seller's responsibility. |
+| **Encryption** | SQLCipher (database encrypted with key derived from machine ID). Protects against theft. Does NOT protect against drive failure — seller accepts this risk. |
+| **Data loss risk** | If seller's hard drive dies, data is gone. SQLCipher protects against theft, not drive failure. No auto-backup to cloud (would require server). |
 
 ---
 
@@ -186,17 +174,52 @@ With Facebook/Instagram/TikTok, the magic moment extends:
 
 | Aspect | Decision |
 |--------|----------|
-| **Price** | 35,000 DZD |
-| **What's included** | Everything — within free tier operational limits: up to 25 team members, ~15K orders (with export/delete old for new), ~225 AI messages/day, unlimited WhatsApp messages |
+| **Price** | 25,000 DZD |
+| **What's included** | See Section 6.1 below |
 | **No tiers** | Everyone gets the same product |
-| **Operational limits** | Hard limits from free tiers (DB size, API rate limits). Export/delete old data to continue within bounds. |
+| **Trial** | 7 days, local license validation. App refuses to launch on expiry. |
+| **Refunds** | None. Trial is the evaluation period. |
 | **Payment** | CCP transfer or BaridiMob |
-| **Trial** | 7 days full access, then pay or account deactivates |
-| **Export at limit** | Manual only (CSV). No auto-archive. Re-importable format. Data stays until seller deletes. |
-| **Order volume** | ~15K orders max per client (DB size bound). Export + delete old orders to make room. |
-| **AI messages** | ~225/day (Gemini/Groq free tier combined). Resets daily. |
-| **WhatsApp messages** | Effectively unlimited (Evolution API on Railway free tier) |
-| **Auto-archive** | Not built. If 10+ clients request, revisit. |
+| **License activation** | 2 machines max (PC + laptop) |
+
+### 6.1 What's Included (v1)
+
+**Desktop app** (Tauri) + **Android PWA** — installable, login-gated via local license
+**WhatsApp + TikTok DM ingestion** — unified inbox with tabs, real-time
+**AI order extraction** — your own Groq + Gemini free-tier accounts, guided setup wizard, manual mode fallback
+**Full back-office:**
+- Orders (lifecycle + confirmation workflow)
+- Customers (risk scores, order history)
+- Products (variants, categories)
+- COD cash flow
+- Analytics (6 chart types, Recharts)
+- Accounting (P&L, expenses, product margins)
+- Returns/exchange flow
+- Daily WhatsApp reports
+**Delivery integrations:** Yalidine, Maystro, ZR Express (full lifecycle)
+**E-commerce sync:** Shopify, WooCommerce, YouCan (polling-based)
+**Import engine:** CSV, XLSX, Google Sheets with visual column mapper
+**COD landing page builder** (mini-storefront v1) — multi-product, cart, COD checkout, 3 templates, mobile-responsive, hosted at `[seller].sahelflow.app`
+**Multi-shop support** — up to 10 shops, isolated data
+**Multi-language UI** — Arabic, French, English (fully localized, RTL support, Arabic-Indic numerals)
+**CSV export** — orders, customers, products, anytime
+**Automation recipes** — trigger/action workflows
+**30-tool AI chat** — persisted sessions, action cards, streaming
+
+### 6.2 What's NOT Included
+
+- Team/multi-user access (dropped)
+- Meta integrations (Instagram, Facebook — v2, blocked on business verification)
+- MCP server (Phase 4 / on-request)
+- Email marketing, SMS, ad management, full accounting, native mobile app
+- See Section 9 roadmap for phased features
+
+### 6.3 Costs
+
+- **SahelFlow:** 0 DZD/month, forever
+- **Seller needs:** Free-tier Groq + Gemini accounts (guided setup)
+- **Founder absorbs:** Cloudflare Pages (free) + GitHub Releases (free) = $0/month
+- **No VPS, no server costs, no scaling costs**
 
 ---
 
@@ -206,181 +229,364 @@ With Facebook/Instagram/TikTok, the magic moment extends:
 
 | Step | Actor | Action | Time |
 |------|-------|--------|------|
-| 1 | Seller | Visits marketing site, clicks "Start Free Trial" | — |
-| 2 | System | Creates Supabase + Vercel projects | 30 sec |
-| 3 | System | Deploys SahelFlow, sets env vars | 2 min |
-| 4 | System | Sends email: URL, temp password, WhatsApp QR | Instant |
-| 5 | Seller | Logs in, connects WhatsApp, explores | — |
-| 6 | System | 6-day reminder: "Trial ends tomorrow" | Automated |
-| 7 | System | Day 7: Trial expires, account locks | Automated |
-| 8 | Seller | Pays 35K via CCP, sends receipt | — |
-| 9 | You | Verify payment, activate permanently | ~5 min |
-| 10 | System | Sends confirmation: "Lifetime access activated" | Instant |
+| 1 | Seller | Visits marketing site (Cloudflare Pages), clicks "Download" | — |
+| 2 | System | Downloads Tauri app | ~2 min |
+| 3 | Seller | Installs + opens app | ~3 min |
+| 4 | App | Self-issues trial license (cryptographic, 7-day, machine-ID-tied) | instant |
+| 5 | Seller | Guided wizard: connect WhatsApp (QR) + add AI keys (Groq + Gemini) | 10-15 min |
+| 6 | App | Magic Moment (first AI extraction, whenever it happens) | variable |
+| 7 | App | Day 6: in-app reminder banner "Trial ends tomorrow" | automated |
+| 8 | App | Day 7: refuses to launch, shows "Pay 25K DZD" + machine ID | automated |
+| 9 | Seller | Pays 25K via CCP, sends receipt + machine ID | — |
+| 10 | Founder | Verifies payment, generates permanent license key, emails it | ~10 min |
+| 11 | Seller | Pastes license key into app → unlocks permanently | ~1 min |
 
-### 7.2 Automation Priority
+### 7.2 Automation Status
 
-| Automation | Status | Effort | When |
-|-----------|--------|--------|------|
-| Supabase project creation | 🟡 Script ready, manual trigger | 1 day | Before client #2 |
-| Vercel project creation | 🟡 Script ready, manual trigger | 1 day | Before client #2 |
-| Environment variable injection | 🟡 Script ready, manual trigger | 1 day | Before client #2 |
-| Auto-deploy on push | 🟡 CI/CD configured | 2 days | Before client #2 |
-| Credential email | 🟡 Template ready | 1 day | Before client #2 |
-| Payment verification | 🔴 Manual (you check CCP receipt) | — | Until automation built |
-| Account activation | 🔴 Manual (update DB flag) | — | Until automation built |
+**Automated by design** (only 2 manual steps: payment verification + license issuance).
 
-**Goal: 90% automated before client #10.**
+| Step | Status |
+|------|--------|
+| App download | ✅ Automated (Cloudflare Pages) |
+| Trial license issuance | ✅ Automated (app self-issues) |
+| WhatsApp connect | ✅ Seller self-service (QR scan) |
+| AI key setup | ✅ Seller self-service (guided wizard) |
+| Trial expiry reminder | ✅ Automated (in-app Day 6) |
+| Trial lock | ✅ Automated (local license check Day 7) |
+| Payment verification | 🔴 Manual (founder checks CCP receipt) |
+| License issuance | 🔴 Manual (founder generates + emails key) |
+| License activation | ✅ Seller self-service (paste key) |
+| App updates | ✅ Automated (Tauri auto-updater, signed) |
 
 ---
 
-## 8. Competitive Positioning (Locked)
+## 8. Competitive Positioning
+
+### 8.1 Competitors
 
 | Competitor | Their Strength | Our Response |
-|------------|--------------|-------------|
-| **ECOMANAGER** | 60+ delivery partners, established trust | AI + price + lifetime |
-| **Ecommaps** | Full ecosystem, content marketing | Deeper AI, Darija, confirmation rate |
-| **COD Pilot** | Mobile app, affiliate marketing | Better AI, WhatsApp-native, all-in-one |
+|------------|---------------|--------------|
+| **ECOMANAGER** | 60+ delivery partners, established trust | AI + price (25K vs subscription) + lifetime + privacy (local data) |
+| **Ecommaps** | Full ecosystem, content marketing | Deeper AI, Darija, confirmation rate, local-first privacy |
+| **COD Pilot** | Mobile app, affiliate marketing | Better AI, WhatsApp-native, PWA matches mobile, all-in-one |
 | **Hanotify** | Store builder, early stage | More mature, more features, same price |
-| **Octomatic** | Data in Algeria, 9 years | AI, lifetime, per-client isolation |
-| **Flex DZ** | Store builder only | Partner/integration, not competitor |
+| **Octomatic** | Data in Algeria, 9 years | AI, lifetime, "your data on your machine" (stronger than per-client isolation) |
+| **Flex DZ** | Store builder | Now a competitor in storefront lane. Our store builder integrates with SahelFlow back-office natively. |
 
-### Public Narrative
+**Deep competitor research:** Scheduled for next session (verify active competitors + find new ones).
 
-> **"SahelFlow is the AI-powered operating system for Algerian COD sellers. Pay once, use forever. Our AI reads your WhatsApp and turns messages into orders automatically. Our confirmation workflow takes your Hop confirmation rate from 60% to 85%. No monthly fees. No complexity. Just results."**
+### 8.2 Public Narrative
+
+> **"SahelFlow is the AI-powered operating system for Algerian COD sellers — installable on your PC and phone. Pay 25K once, use forever. Your data stays on your machine. Your AI keys stay on your machine. Our AI reads your WhatsApp and TikTok messages and turns them into orders automatically. Our confirmation workflow takes your rate from 60% to 85%. No monthly fees. No data lock-in. Just results."**
+
+### 8.3 Key Differentiators
+
+1. **Privacy:** Data + AI keys on seller's machine. No server has access.
+2. **Price:** 25K one-time vs competitors' monthly subscriptions
+3. **Mobile:** PWA installable on Android
+4. **Local-first:** Works offline, no server dependency, $0/mo to run
+5. **AI:** 30-tool AI chat + Darija extraction + confirmation workflow
+
+### 8.4 Confirmation Rate Claim
+
+"60% → 85%" is **aspirational, not validated.** Marked as "target metric, to be validated with real user data post-launch." Do not present as proven until data exists.
 
 ---
 
-## 9. Feature Roadmap (Locked Priorities)
+## 9. Feature Roadmap
 
-### Phase 1: AAA Foundation + Core Gaps (Before Client #1)
-| # | Feature | Effort | Status |
-|---|---------|--------|--------|
-| 1 | **Full codebase audit & AAA refactor** | **5 days** | **🎯 NEXT — see Section 15** |
-| 2 | **Comprehensive test coverage (Magic Moment flow)** | **4 days** | **🎯 NEXT — see Section 15** |
-| 3 | Activate Wilaya Risk Engine | 2 days | 🎯 |
-| 4 | COD landing page builder | 5 days | 🎯 |
-| 5 | Marketing site + trial flow | 5 days | 🎯 |
-| ~~6~~ | ~~Facebook Messenger DM ingestion~~ | ~~3 days~~ | ~~🚫 Deferred until business registration~~ |
-| ~~7~~ | ~~Instagram Business DM ingestion~~ | ~~3 days~~ | ~~🚫 Deferred until business registration~~ |
+### Phase 0 — The Tauri Pivot (~12-15 weeks, ship when ready)
 
-### Phase 2: Differentiate Deeply (Clients #1-20)
-| # | Feature | Effort | Status |
-|---|---------|--------|--------|
-| 6 | TikTok Business DM ingestion | 3 days | Next |
-| 7 | MCP server (Level 3) | 8 days | Next |
-| 8 | Campaign P&L | 4 days | Next |
-| ~~9~~ | ~~Facebook Lead Ads integration~~ | ~~4 days~~ | ~~🚫 Requires business verification; deferred~~ |
+| # | Feature | Effort | Notes |
+|---|---------|--------|-------|
+| 1 | **Week-1 verification spike: Baileys sidecar** | 5 days | Day 1-2: Baileys + b3s-baileys standalone. Day 3-4: Tauri sidecar packaging. Day 5: send message from Tauri UI. **If this fails, fallback to $2-5/mo VPS.** |
+| 2 | Tauri shell wrapping Next.js | 1 week | Wraps existing UI in desktop app |
+| 3 | Local SQLite replacing Supabase | 3-4 weeks | Biggest piece. Schema carries over; Supabase client calls, RLS, RPCs, realtime all need replacing. |
+| 4 | License validation system (Layer 4-local) | 2 weeks | Crypto license + obfuscation + anti-tamper + hardened machine ID + version-gating + 2-machine activation + OS keychain + trial extension |
+| 5 | SQLCipher encrypted SQLite | 2-3 days | Encryption + key derivation from machine ID |
+| 6 | Automatic update system | 2-3 days | Tauri auto-updater, signed, GitHub Releases, auto-rollback on 3 failures |
+| 7 | Feature flags in license | 1 day | License payload includes `features[]` array |
+| 8 | TikTok DMs integration (polling) | 1 week | Polls TikTok API every 2-5 min, unified inbox with tabs |
+| 9 | Guided AI key setup wizard | 3-5 days | Groq + Gemini setup with screenshots, validation, skip option |
+| 10 | Manual mode (app works without AI keys) | 2-3 days | Fallback when AI keys not set |
+| 11 | Per-client Groq/Gemini key management | 3-5 days | Rework existing Groq router to use seller's keys |
+| 12 | Multi-shop support | 3-5 days | SQLite file-per-shop, shop selector dropdown, 10 max |
+| 13 | PWA for Android | 3-5 days | Configure Next.js as installable PWA |
+| 14 | COD landing page builder v1 (mini-storefront) | 2-3 weeks | Multi-product, cart, COD checkout, 3 templates, mobile-responsive, Cloudflare Pages hosting |
+| 15 | Marketing site + self-serve download | 1 week | Static site on Cloudflare Pages, download link, no signup form (app self-issues trial) |
+| 16 | Polling integrations (Shopify/WooCommerce/YouCan) | 1 week | Replace existing webhook handlers with polling. One integration pattern. |
+| 17 | Wilaya Risk Engine activation | 2 days | Already built, activate during Phase 0 |
+| 18 | Remove dead code (Supabase RLS, team feature, multi-user) | 1 week | Clean up codebase after pivot |
+| 19 | AI support chatbot (burnout mitigation) | 1 week | In-app chatbot for common questions |
 
-### Phase 3: Scale & Moat (Clients #20-100)
-| # | Feature | Effort | Status |
-|---|---------|--------|--------|
-| 9 | PWA for mobile sellers | 1 week | Later |
-| 10 | Add 2-3 more delivery adapters | 3 days | Later |
-| 11 | Multi-shop support | 2 weeks | Later |
-| 12 | Self-improving AI | 2 weeks | Later |
-| 13 | **Meta integrations (Messenger, Instagram, Lead Ads)** | **~10 days** | **🟡 After business registration** |
+**Total: ~12-15 weeks. Ship when ready (no hard deadlines).**
 
-### Phase 4: Post-100 (If Reached)
-| # | Feature | Effort | Status |
-|---|---------|--------|--------|
-| 14 | SMS notifications (when revenue allows API contract) | 1 week | Future |
-| 15 | React native app (hire or AI-generate) | 4-6 weeks | Future |
-| 16 | Content marketing (ongoing) | 2-3 hrs/week | Ongoing |
+### Phase 1 — First 10 Clients (post-launch, validate the model)
+
+| # | Feature | Effort | Why |
+|---|---------|--------|-----|
+| 20 | Bug fixes from real client feedback | ongoing | Reality will surface issues |
+| 21 | Onboarding webinar recording (Darija) | 1 day | Reduces support burden |
+
+### Phase 2 — Differentiate Deeply (Clients #10-30)
+
+| # | Feature | Effort | Why |
+|---|---------|--------|-----|
+| 22 | Store builder v2 (custom domains, discount codes, theming) | 2-3 weeks | Power sellers want these |
+| 23 | More delivery adapters (top 5 covering 95%) | 3 days | Coverage for serious sellers |
+| 24 | Campaign P&L | 4 days | Marketing ROI tracking |
+
+### Phase 3 — Scale & Moat (Clients #30-100)
+
+| # | Feature | Effort | Why |
+|---|---------|--------|-----|
+| 25 | Meta integrations (Instagram DMs, Facebook Messenger) | ~10 days | Blocked on business registration. May or may not pursue. |
+| 26 | Self-improving AI | 2 weeks | Use 30+ clients' data to improve extraction |
+| 27 | Content marketing (ongoing) | 2-3 hrs/week | SEO + Darija content |
+
+### Phase 4 — Future / On Request
+
+| # | Feature | Why |
+|---|---------|-----|
+| 28 | MCP server | Only if 10+ technical sellers request it |
+| 29 | Team/multi-user feature | Only if sync solution found |
+| 30 | iOS app | PWA covers Android; iOS needs native wrapper (lower priority) |
 
 ---
 
 ## 10. Risk Register
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Supabase pauses free project | Medium | High | Heartbeat ping (daily cron) |
-| Groq rate limits hit | Medium | Medium | Gemini fallback, per-client keys |
-| Seller exceeds 500MB DB | Low | Medium | Export/delete old data feature |
-| Vercel bandwidth exceeded | Low | Medium | CDN optimization, move to paid if needed |
-| Payment fraud/disputes | Low | Medium | No refunds, CCP only (harder to dispute) |
-| Competitor copies lifetime model | Medium | High | Speed to market, AI moat, Darija |
-| Manual setup bottleneck | High | High | Automate before client #10 |
-| AI hallucinations hurt seller | Medium | High | Human review for critical actions, disclaimers |
+| # | Risk | Likelihood | Impact | Mitigation |
+|---|------|-----------|--------|------------|
+| 1 | **Groq/Gemini rate limits hit (per-client)** | Medium | Medium | Seller uses own accounts. If exceeded, seller adds 2nd account or upgrades. |
+| 2 | **Payment fraud/disputes** | Low | Medium | No refunds. CCP transfers (harder to dispute). |
+| 3 | **Competitor copies lifetime model** | Medium | High | 25K is even more attractive to copy. Speed to market, AI moat, Darija, local-first privacy. |
+| 4 | **AI hallucinations hurt seller** | Medium | High | Human review for critical actions, disclaimers. |
+| 5 | **WhatsApp protocol changes break Baileys** | High (every 3-6 months) | High | SLA: 72h target, 1 week max to release fix. Auto-updater delivers fix. |
+| 6 | **TikTok API changes** | Medium | Medium | Same SLA: 72h target, 1 week max. |
+| 7 | **Tauri app rot on OS updates** | Medium | Medium | Windows/macOS updates can break Tauri. Maintenance required. |
+| 8 | **Seller can't set up AI keys** | Medium | Medium | Guided wizard + manual mode fallback. ~30% may get stuck. |
+| 9 | **Solo founder burnout** | High | Critical | AI support chatbot absorbs common questions. Cap clients at 100 (not 300) if needed. |
+| 10 | **"Lifetime" legal exposure in Algeria** | Low | Medium | No TOS liability cap (founder accepts unlimited liability). Standard TOS: "license is perpetual for version purchased, updates at developer discretion." |
+| 11 | **Per-client AI key rotation burden** | Low | Low | Sellers' AI keys expire/get revoked. They re-add via wizard. |
+| 12 | **License piracy** | Medium | Medium | Layer 4-local (crypto + obfuscation + anti-tamper + machine ID + version-gating). Realistic piracy: 5-15%. Version-gating forces re-crack every release. |
+| 13 | **Trial abuse via burner SIMs** | Low | Low | Machine ID fingerprinting prevents same-PC re-trials. Burner SIMs low ROI for abusers. |
+| 14 | **Seller's hard drive failure = data loss** | Medium | Critical | SQLCipher protects against theft, not drive failure. Seller accepts this risk. No cloud backup (would require server). |
+| 15 | **Baileys session corruption** | Low | Medium | Use b3s-baileys (SQLite auth) instead of file-based. "Reset WhatsApp connection" button in UI. |
+| 16 | **WhatsApp ban (unofficial library)** | Medium | High | Rate-limit outgoing (max 1 msg/3s, burst ≤5), human-like delays, no bulk spam. Inherent to all unofficial libs. |
+
+### Risks eliminated by NV architecture:
+- ~~Supabase pauses free project~~ (no Supabase)
+- ~~Seller exceeds 500MB DB~~ (no cap)
+- ~~Vercel bandwidth exceeded~~ (no Vercel)
+- ~~Manual setup bottleneck~~ (automated)
+- ~~VPS downtime = all locked out~~ (no VPS)
+- ~~Oracle account termination~~ (no Oracle)
 
 ---
 
 ## 11. Success Metrics
 
-| Metric | Target | How Measured |
-|--------|--------|-------------|
-| Trial-to-paid conversion | >30% | Payment / total trials |
-| Time to magic moment | <10 min | Log first draft order creation time |
-| Confirmation rate improvement | +15% vs baseline | Compare before/after for active users |
-| Client acquisition cost | <5,000 DZD | Marketing spend / clients acquired |
-| Human support hours/client | <0.5 hrs | Time tracking |
-| Churn (abandoned after activation) | <10% | Active / total activated |
+| Metric | v1 Target | How Measured |
+|--------|-----------|--------------|
+| **Trial-to-paid conversion** | >20% | Payment / total trials |
+| **Time to Magic Moment** | Within 7-day trial (MM-1: first AI extraction) | Log first AI extraction timestamp |
+| **Confirmation rate improvement** | Validate baseline first (no target until data) | Compare before/after for active users |
+| **Client acquisition cost** | $0 (organic only for v1) | Marketing spend / clients acquired |
+| **Human support hours/client** | TBD (support model not yet defined) | Time tracking |
+| **Churn (inactive 90+ days)** | <15% | 90+ days inactive OR WhatsApp link expired |
+| **Update adoption rate** | >70% within 30 days of release | Auto-updater telemetry |
+| **AI key setup completion** | >70% of trials complete setup | Wizard completion tracking |
 
 ---
 
-## 12. Design Principles for All Future Decisions
+## 12. Design Principles + AAA Charter
 
-Every feature, integration, or UI decision must pass:
+### 12.1 Product Principles (every feature must pass)
 
-| Principle | Question |
-|-----------|----------|
-| **Algeria First** | Does this make sense for an Algerian COD seller? |
-| **Free Tier Only** | Can this run on free tiers forever? |
-| **AI-Enhanced** | Does AI make this 5× better than manual? |
-| **One-Time Sustainable** | Does the cost stay flat regardless of client count? |
-| **User-Simple** | Can a non-tech seller use this without training? |
-| **WhatsApp-Native** | Does this feel natural in a WhatsApp-first workflow? |
-| **Confirmation Rate** | Does this ultimately help confirm more orders? |
+| # | Principle | Question to ask |
+|---|-----------|-----------------|
+| 1 | **Algeria First** | Does this make sense for an Algerian COD seller? |
+| 2 | **Free-Tier Forever** | Can this run on $0/mo at any scale? |
+| 3 | **AI-Enhanced** | Does AI make this 5× better than manual? |
+| 4 | **One-Time Sustainable** | Does the cost stay flat regardless of client count? |
+| 5 | **User-Simple** | Can a non-tech seller use this without training? |
+| 6 | **Channel-Native** | Does this feel natural in a WhatsApp + TikTok workflow? |
+| 7 | **Confirmation Rate** | Does this ultimately help confirm more orders? |
+
+**Threshold:** Product features must pass **7 of 7**. Infrastructure features must pass **4 of 7** (P1, P2, P4, P5).
+
+### 12.2 Engineering Standards ("No AI Slop")
+
+| Layer | Standard | Enforcement |
+|-------|----------|-------------|
+| **Types** | Strict TypeScript (`strict: true`). Zero `any` in production code. | `tsc --noEmit` in pre-commit |
+| **Errors** | Typed errors, user-friendly messages, exponential backoff for retries | Code review |
+| **Tests** | Unit + integration for core flows. Magic Moment flow: 100% coverage target. | CI gate |
+| **Auth** | License validation on every app launch. SQLCipher encryption on local DB. | Security checklist per release |
+| **Inputs** | Zod validation on all input boundaries (forms, file imports, AI responses, polling responses) | Every PR |
+| **Config** | Centralized config module. No scattered constants. License-gated features. | Code review |
+| **Logs** | Structured local logging (rotating file). No `console.log` in production paths. | Lint rule |
+| **i18n** | Full AR/FR/EN. No hardcoded strings. RTL support. | `scripts/check-translations.ts` in CI |
+| **DB** | Migrations versioned. Schema in `prisma/`. No ad-hoc schema changes. | Mandatory migration files |
+| **Offline-first** | App must function fully without internet (except WhatsApp/TikTok sync, AI calls). No "loading..." spinners that never resolve. | Code review |
+| **Graceful degradation** | If AI keys missing → manual mode. If WhatsApp disconnected → clear reconnection flow. If SQLite corrupted → restore prompt. App always launches. | Code review |
+| **Code review** | R3: AI-assisted review + pre-release checklist (9 items) | Pre-release |
+| **Security** | Layer 4-local: SQLCipher, license signing, obfuscation, anti-tamper, machine ID | Per release |
+
+### 12.3 AAA Scope (Magic Moment flow must be AAA-grade)
+
+1. Seller receives WhatsApp/TikTok message
+2. AI extracts order details (Darija/AR/FR)
+3. Order appears as draft in inbox
+4. Seller confirms order via confirmation panel
+5. Order status updates, customer notified (if WhatsApp)
+6. Delivery dispatched via adapter
+
+**Everything else can be "good enough" for launch and iterated.** The Magic Moment flow is the AAA-grade surface.
+
+### 12.4 Pre-Release Checklist (9 items)
+
+- [ ] Does it match the spec exactly?
+- [ ] Does it follow existing file patterns?
+- [ ] Are new types defined in `types/`?
+- [ ] Are there `any` types or `// @ts-ignore`?
+- [ ] Are edge cases handled (null, empty, error)?
+- [ ] Does it explain itself (comments where non-obvious)?
+- [ ] Would a senior engineer sign off on this?
+- [ ] **Does it work offline?** (No network calls that block the UI without fallback)
+- [ ] **Does it degrade gracefully?** (AI keys missing, WhatsApp disconnected, SQLite corrupted — app still launches)
 
 ---
 
-## 13. Open Questions (For Future Sessions)
+## 13. Open Questions
 
 | # | Question | When to Resolve |
 |---|----------|-----------------|
-| 1 | Marketing site design & copy | Before client #1 |
-| 2 | Payment collection automation (BaridiMob API?) | Before client #5 |
-| 3 | Trial abuse prevention (multiple trials, fake emails) | Before client #10 |
-| 4 | Legal/tax structure for 1M+ DZD revenue | Before first payment |
-| 5 | Data export/migration if free tier fails | Before client #50 |
-| 6 | Team member permissions & RLS boundaries | 25 max, expandable on manual request |
+| 1 | Marketing site design & copy | Before client #1 (Phase 0 item 15) |
+| 2 | Payment collection automation (BaridiMob API?) | Before client #5 (manual for v1) |
+| 3 | Domain name registration | Before client #1 (can use localhost during dev) |
+| 4 | Legal/tax structure for 1M+ DZD revenue | Before first payment (deferred per founder — flagged as risk) |
+| 5 | Deep competitor research | Next session |
+| 6 | Human support hours target | After first 10 clients (validate real ticket volume) |
+
+### Resolved (no longer open)
+
+| Question | Resolution |
+|----------|------------|
+| ~~Trial abuse prevention~~ | Machine ID fingerprinting (one trial per PC) |
+| ~~Team member permissions~~ | Team feature dropped |
+| ~~Data export/migration if free tier fails~~ | NV architecture + SQLCipher (no free tier to fail) |
+| ~~CCP account~~ | Ready |
+| ~~Support channels~~ | WhatsApp + email |
+| ~~Update distribution~~ | GitHub Releases + auto-rollback |
+| ~~Marketing site hosting~~ | Cloudflare Pages |
 
 ---
 
+## 14. AI Vibe Coding Protocol
+
+### 14.1 Role Definition
+
+| Role | Human (Founder) | AI (Z.ai Code) |
+|------|-----------------|----------------|
+| **Architecture & Planning** | ✅ Owner — decides structure, tradeoffs, priorities | Suggests, defers to human |
+| **Implementation** | ❌ Does not write code | ✅ Generates all code |
+| **Quality Gate** | ✅ Sole owner — reviews, rejects, requests fixes | Can self-verify syntax/types/tests, but NOT business correctness |
+| **Testing** | ✅ Specifies test plans, reviews test quality | Generates + runs tests |
+| **Running Code** | ✅ Validates business logic, UX, real-world behavior | ✅ Runs lint, tsc, tests, build (mechanical verification) |
+| **Debugging** | ✅ Identifies business issues, instructs fixes | ✅ Runs diagnostic commands, reads logs, proposes fixes |
+| **Decision authority** | ✅ All product/business decisions | ✅ Technical recommendations only |
+
+### 14.2 The Vibe Coding Rules
+
+#### Rule 1: Test Spec Before Code
+```
+✅ HUMAN: "Write tests for [specific function] with these cases: null input, empty array, valid input, edge case"
+✅ AI: Generates tests
+✅ HUMAN: Reviews tests (does it test the right thing?)
+✅ AI: Writes code to pass tests
+✅ AI: Runs tests (mechanical verification)
+✅ HUMAN + AI: Iterate until green
+```
+
+#### Rule 2: Small Scope Per Request
+```
+❌ BAD: "Build Facebook Messenger integration"
+✅ GOOD: "Create src/integrations/messenger/types.ts defining MessengerPayload, MessengerEvent interfaces. Follow existing WhatsApp types pattern. Types only — no logic."
+```
+
+#### Rule 3: Human Review Checklist (Every Output — 9 items)
+See Section 12.4.
+
+#### Rule 4: Start New Session When
+- AI starts suggesting "I'll create a new file" when file already exists
+- AI forgets constraints mentioned earlier (types, naming, etc.)
+- Output quality visibly drops
+- Switching to a different major feature
+
+*(No hard message-count limit. Quality-based triggers only.)*
+
+### 14.3 Known Failure Modes (Evidence-Based)
+
+| Frustration | Root Cause | Protocol Fix |
+|-------------|-----------|--------------|
+| Errors AI creates & doesn't catch | AI cannot verify business correctness | Human must validate business logic |
+| Can't read full codebase | Context window limits | Index codebase, modular architecture |
+| 70% not what was wanted | Ambiguous specs + long context | Human writes precise spec first |
+| Hallucinations, quality drop | Long sessions = degraded reasoning | Use Rule 4 triggers |
+| Hard to get impressive UI/UX | AI optimizes for "works," not "delight" | Human provides references, reviews visually |
+| Hardcoded/fake/incomplete code | AI generates plausible-looking fakes | Test-first: code must pass human-specified tests |
+
+### 14.4 Tools & Environment
+
+| Tool | Purpose |
+|------|---------|
+| **Z.ai Code** (or current AI coding agent) | Primary AI coding assistant |
+| **Vitest** | Unit/Integration test runner |
+| **Playwright** | E2E for web parts (marketing site, store builder) |
+| **Tauri test driver** | E2E for desktop app |
+| **@vitest/coverage-v8** | Coverage reporting |
+
 ---
 
-## 15. AAA Best Practices Charter ("No AI Slop")
+## 15. Coverage & Test Strategy
 
-### Definition
-Every line of code written or refactored from this point forward must pass manual review for correctness, completeness, and maintainability. AI generates drafts; humans own the quality.
+### 15.1 Coverage Targets (C100-AAA)
 
-### Standards
-| Layer | Standard | Enforcement |
-|-------|----------|-------------|
-| **Types** | Strict TypeScript (`strict: true`). Zero `any` in production code. | `tsc --noEmit` in CI |
-| **Errors** | Typed errors, user-friendly messages, exponential backoff for retries | Code review |
-| **Tests** | Unit + integration for core flows. Magic Moment flow: 100% coverage target. | CI gate |
-| **Auth** | Middleware on every route. RLS policies active and tested. | Security audit checklist |
-| **Inputs** | Zod validation on all API boundaries | Every PR |
-| **Env** | Centralized `env.ts` with Zod schema. No scattered `process.env` | Lint rule |
-| **Logs** | Structured logging (Pino). No `console.log` in production | Lint rule |
-| **i18n** | Full AR/FR/EN support. No hardcoded strings | Code review |
-| **DB** | Migrations versioned. No ad-hoc schema changes | Mandatory migration files |
-| **Code review** | Every PR reviewed by you (solo owner) before merge | GitHub branch protection |
+| Layer | Framework | Coverage Target |
+|-------|-----------|-----------------|
+| **AAA Surface** (Magic Moment, license validation, AI extraction, order management) | Vitest | **100%** |
+| **Dashboard/Components** | @testing-library/react + Vitest | 80% |
+| **Utilities/Helpers** | Vitest | 60% |
+| **Database** | SQLite (in-memory) + Vitest | 100% on data layer |
+| **E2E Critical Flows** | Playwright (web) + Tauri test driver (desktop) | Magic Moment: 100% |
+| **Coverage reporting** | @vitest/coverage-v8 | CI gate on AAA surface |
 
-### AAA Scope (Magic Moment Flow)
-The following user journey must be AAA-grade before any client sees it:
-1. Seller receives WhatsApp message from customer
-2. AI extracts order details (Darija/AR/FR)
-3. Order appears as draft in dashboard
-4. Seller confirms order via confirmation panel
-5. Order status updates, customer notified
-6. Delivery dispatched via adapter
+### 15.2 Test Layers
 
-Everything else can be "good enough" for launch and iterated.
+| Layer | What to test |
+|-------|-------------|
+| **License validation** | Sign/verify, machine ID, activation limit (2 machines), version-gating, trial expiry, trial extension |
+| **SQLCipher encryption** | Encrypt/decrypt, key derivation from machine ID, corruption handling |
+| **Offline mode** | App functions with no network (manual mode, cached data) |
+| **Graceful degradation** | AI keys missing → manual mode. WhatsApp disconnected → reconnection flow. SQLite corrupted → restore prompt. |
+| **Auto-update** | Download, verify signature, apply, rollback on 3 launch failures |
+| **AI extraction** | Darija/AR/FR input → structured order output, edge cases (null, empty, malformed) |
+| **Order management** | Full lifecycle, status transitions, confirmation workflow |
+| **Magic Moment flow** | End-to-end: message → AI extraction → draft → confirm → status update → delivery dispatch |
+
+### 15.3 Deadlines
+
+**No hard deadlines. Ship when ready.** (D-KILL decision)
+
+The original deadlines (July 1 AAA, July 15 first client, September 1 100 clients) are all dead. Phase 0 is ~12-15 weeks. First paying client is ~2-4 weeks after Phase 0 ship. 100 clients is 12-18 months from launch.
+
+**Quality over speed. The doc commits to this explicitly.**
 
 ---
 
-## 14. Appendix: Useful Links
+## Appendix: Useful Links
 
 | Document | Purpose |
 |----------|---------|
@@ -388,13 +594,14 @@ Everything else can be "good enough" for launch and iterated.
 | `ARCHITECTURE.md` | Technical stack, project structure, conventions |
 | `SETUP.md` | Environment variables, deployment guide |
 | `COMPETITOR_RESEARCH.md` | Deep ECOMANAGER analysis, feature gaps |
-| `last-session-summarized.md` | **Founder profile, communication patterns, working model, strategic insights** |
+| `PROJECT_STATE.md` | Current codebase state (17 PRs, 691 tests, 135 findings fixed) |
+| `AUDIT_FINDINGS.md` | Deep audit findings (135/170 resolved) |
 | This document | Ultimate design system — decisions locked |
 
 ### Session Start Protocol (For AI Assistant)
 At the beginning of every new session:
-1. Read `docs/last-session-summarized.md` (founder profile, patterns, insights)
-2. Read `docs/ultimate-design-system.md` (locked decisions, roadmap, constraints)
+1. Read `documentation/PROJECT_STATE.md` (current codebase state)
+2. Read `documentation/ultimate-design-system.md` (this doc — locked decisions, roadmap, constraints)
 3. Ask the user: **"Planning or coding?"**
 4. Proceed with full context awareness — do not treat the founder as a stranger
 
@@ -407,129 +614,15 @@ At the beginning of every new session:
 | v1.0 | 2026-06-05 | Initial creation from full strategy session |
 | v1.1 | 2026-06-05 | Team member limit locked at 25, expandable on manual request |
 | v1.2 | 2026-06-05 | Honest operational limits: ~15K orders, ~225 AI messages/day, export/delete for renewal |
-| v1.3 | 2026-06-05 | Meta integrations KILLED (deferred until business registration). AAA Before Ship mode activated. Hard deadline: AAA complete July 1, first client July 15. |
-| v1.4 | 2026-06-05 | Team member limits locked (25), honest operational limits (~15K orders, ~225 AI msgs/day), manual export-only at limit. |
-| v1.5 | 2026-06-05 | 100%_dashboard coverage mandate locked (Option A). Test frameworks: Vitest + Playwright + Coverage gate. |
-| v1.6 | 2026-06-05 | AI Vibe Coding Protocol established (Section 17). Roles defined: Human plans/reviews/verifies, AI generates code. Known failure modes documented. |
-| v1.7 | 2026-06-05 | Session end. Design system complete for round 1 of 2. Remaining open: marketing site, trial abuse prevention, payment flow, AI coding workflow refinements, daily schedule. |
-
----
-
-## 16. Coverage Mandate (Locked)
-
-| Item | Decision |
-|------|----------|
-| **Coverage target** | **100% across all features and functions** |
-| **Method** | AI vibe coding — accelerated development with AI assistance (see Section 17) |
-| **Quality gate** | Manual review of all AI-generated code for AAA compliance |
-
----
-
-## 17. AI Vibe Coding Protocol (Locked)
-
-### Role Definition
-| Role | Human (You) | AI (Me / Pi Coding Agent) |
-|------|-------------|---------------------------|
-| **Architecture & Planning** | ✅ Owner — decides structure, tradeoffs, priorities | Suggests, defers to human |
-| **Implementation** | ❌ Does not write code | ✅ Generates all code |
-| **Quality Gate** | ✅ Sole owner — reviews, rejects, requests fixes | Cannot self-verify |
-| **Testing** | ✅ Specifies test plans, reviews test quality | Generates test code |
-| **Running Code** | ✅ Runs, tests, validates in dev environment | Cannot run or execute |
-| **Debugging** | ✅ Identifies issues, instructs fixes | Generates fixes when directed |
-
-### This Means:
-- The AI generates code, tests, and suggestions
-- The human is the **ONLY** quality gate
-- If the human doesn't catch a bug, it ships
-- This is a high-risk, high-speed model that requires strict protocols
-
-### Known Failure Modes (Evidence-Based)
-| Frustration | Root Cause | Protocol Fix |
-|-------------|-----------|------------|
-| Errors AI creates & doesn't catch | AI cannot self-verify | Human must run every piece of code |
-| Can't read full codebase | Context window limits (~200K tokens) | Index codebase, modular architecture |
-| 70% not what was wanted | Ambiguous specs + long context | Human writes precise spec first |
-| Hallucinations, quality drop | Long sessions = degraded reasoning | Start new sessions for new tasks |
-| Hard to get impressive UI/UX | AI optimizes for "works," not "delight" | Human provides references, reviews visually |
-| Hardcoded/fake/incomplete code | AI generates plausible-looking fakes | Test-first: code must pass human-specified tests |
-
-### The Vibe Coding Rules
-
-#### Rule 1: Test Spec Before Code
-```
-✅ HUMAN: "Write tests for [specific function] with these cases: null input, empty array, valid input, edge case"
-✅ AI: Generates tests
-✅ HUMAN: Reviews tests (does it test the right thing?)
-✅ AI: Writes code to pass tests
-✅ HUMAN: Runs tests
-✅ HUMAN + AI: Iterate until green
-```
-
-#### Rule 2: One Feature = One Session (Max 30 Messages)
-- Long sessions = degraded context and quality
-- Start new session for new feature
-- Re-index codebase at start of session (use tools, not memory)
-
-#### Rule 3: Small Scope Per Request
-```
-❌ BAD: "Build Facebook Messenger integration"
-✅ GOOD: "Create src/integrations/messenger/types.ts defining MessengerPayload, MessengerEvent interfaces. Follow existing WhatsApp types pattern. Types only — no logic."
-```
-
-#### Rule 4: Human Review Checklist (Every Output)
-- [ ] Does it match the spec exactly?
-- [ ] Does it follow existing file patterns?
-- [ ] Are new types defined in `types/`?
-- [ ] Are there `any` types or `// @ts-ignore`?
-- [ ] Are edge cases handled (null, empty, error)?
-- [ ] Does it explain itself (comments where non-obvious)?
-- [ ] Would a senior engineer sign off on this?
-
-#### Rule 5: Start New Session When
-- More than 30 messages back-and-forth
-- AI starts suggesting "I'll create a new file" when file already exists
-- AI forgets constraints mentioned earlier (types, naming, etc.)
-- Output quality visibly drops
-- Switching to a different major feature
-
-### Tools & Environment
-| Tool | Purpose |
-|------|---------|
-| **Pi Coding Agent** (this tool) | Primary AI coding assistant |
-| **Kimi K2.6** (me) | Model generating all code |
-| **Vitest** (in repo) | Unit/Integration test runner |
-| **Playwright** | E2E critical flow testing |
-| **@vitest/coverage-v8** | Coverage reporting (already in repo) |
-
----
-
-## 16. Hard Deadlines & Test Strategy (Locked)
-
-### Deadlines
-| Milestone | Date | Days From Now (~June 5) |
-|-----------|------|------------------------|
-| **AAA refactor complete** | **July 1, 2026** | **~26 days** |
-| **First paying client** | **July 15, 2026** | **~40 days** |
-| **100 clients target** | **September 1, 2026** | **~88 days** |
-
-### Test Framework Stack (Locked)
-| Layer | Framework | Coverage Target |
-|-------|-----------|-----------------|
-| Unit/Integration | Vitest (existing in repo) | 100% |
-| React Components | @testing-library/react + Vitest | 100% |
-| API Routes | Supertest + Vitest | 100% |
-| Database | Supabase local + Vitest | 100% |
-| E2E Critical Flows | Playwright | Magic Moment: 100% |
-| Coverage reporting | @vitest/coverage-v8 (existing) | CI gate at 100% |
-
-### Coverage Priorities (Descending)
-1. **Auth & RLS** — 100% (security)
-2. **Magic Moment Flow** — 100% branch coverage (business critical)
-3. **Order management** — 100% (core functionality)
-4. **AI extraction** — 100% (differentiator)
-5. **Dashboard/Components** — 100% (UX quality)
-6. **Utilities/Helpers** — 100% (completeness)
+| v1.3 | 2026-06-05 | Meta integrations KILLED (deferred until business registration). AAA Before Ship mode activated. |
+| v1.4 | 2026-06-05 | Team member limits locked (25), honest operational limits, manual export-only at limit |
+| v1.5 | 2026-06-05 | 100% dashboard coverage mandate locked. Test frameworks: Vitest + Playwright + Coverage gate |
+| v1.6 | 2026-06-05 | AI Vibe Coding Protocol established (Section 14). Roles defined |
+| v1.7 | 2026-06-05 | Session end. Design system complete for round 1 of 2 |
+| **v2.0** | **2026-06-20** | **Full redesign after deep grilling session. Architecture pivoted from web app (per-client Vercel + Supabase) to local-first desktop app (Tauri + local SQLite + Baileys sidecar). 108 decisions across 15 sections. Key changes: (1) Price 35K→25K. (2) Team feature dropped. (3) MCP removed. (4) Meta integrations deferred to v2. (5) Magic Moment redefined (MM-1: first AI extraction, not time-bound). (6) Trial enforcement via local license validation (not server login-gate). (7) No VPS — all local, $0/mo forever. (8) Baileys replaces Evolution API. (9) Polling replaces webhooks for all integrations. (10) Layer 4-local security (crypto license + obfuscation + anti-tamper + machine ID + SQLCipher). (11) No hard deadlines (D-KILL). (12) Coverage scoped to AAA surface (C100-AAA). (13) Solo dev review = AI + checklist (R3). (14) Dead-man's switch removed — "lifetime = lifetime of service" honestly stated. (15) AI support chatbot added for burnout mitigation.** |
 
 ---
 
 **This document is source of truth until explicitly updated.**
+
+_Last updated: 2026-06-20 — v2.0. Full redesign. Local-first Tauri architecture. 108 decisions locked. No hard deadlines. Ship when ready._
