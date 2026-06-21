@@ -1,10 +1,11 @@
 /**
- * Prisma client factory + Customer PII encryption extension (ADR-003).
+ * Prisma client factory + transparent PII encryption extension (ADR-003).
  *
  * Two exports:
- *   - `db`     — the extended client. Customer create/update/upsert/find* are
- *                transparently encrypted/decrypted. Use this everywhere in the
- *                app (call sites pass plaintext, get plaintext back).
+ *   - `db`     — the extended client. PII fields on Customer, Order, and
+ *                Conversation are transparently encrypted/decrypted. Use this
+ *                everywhere in the app (call sites pass plaintext, get
+ *                plaintext back).
  *   - `dbRaw`  — the unextended client. Use ONLY for the PII migration script
  *                (which reads plaintext + writes ciphertext directly) and for
  *                admin/debug queries that need to see the raw encrypted shape.
@@ -12,6 +13,14 @@
  * ARCHITECTURE: One SQLite file per shop (max 10 shops). For development, a
  * single default client is used. SQLCipher is NOT used (Prisma's `?key=` param
  * is silently ignored — see ADR-003). Encryption is at the field level.
+ *
+ * PII coverage:
+ *   - Customer (searchable phone): blind-index + companion ciphertext pattern
+ *     (see src/lib/crypto/customer-encryption.ts)
+ *   - Order (phone, address, notes — non-searchable): in-place ciphertext
+ *     (see src/lib/crypto/pii-fields.ts)
+ *   - Conversation (contactName, contactPhone — non-searchable): in-place
+ *     ciphertext (see src/lib/crypto/pii-fields.ts)
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -21,6 +30,12 @@ import {
   rewriteCustomerWhere,
   ensurePhoneEncSelected,
 } from "@/lib/crypto/customer-encryption";
+import {
+  encryptPiiFields,
+  decryptPiiRow,
+  ORDER_PII_FIELDS,
+  CONVERSATION_PII_FIELDS,
+} from "@/lib/crypto/pii-fields";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
@@ -178,6 +193,223 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
         async deleteMany({ args, query }) {
           args.where = rewriteCustomerWhere(args.where) as never;
           return query(args);
+        },
+      },
+
+      // ─────────────────────────────────────────────────────────────────────
+      // Order: non-searchable PII (phone, address, notes) — in-place encrypt
+      // ─────────────────────────────────────────────────────────────────────
+      order: {
+        async create({ args, query }) {
+          if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              ORDER_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            ORDER_PII_FIELDS,
+          ) as never;
+        },
+
+        async createMany({ args, query }) {
+          if (Array.isArray(args.data)) {
+            args.data = args.data.map((d) =>
+              encryptPiiFields(d as Record<string, unknown>, ORDER_PII_FIELDS),
+            ) as never;
+          } else if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              ORDER_PII_FIELDS,
+            ) as never;
+          }
+          // createMany returns a count — no row decryption needed
+          return query(args);
+        },
+
+        async update({ args, query }) {
+          if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              ORDER_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            ORDER_PII_FIELDS,
+          ) as never;
+        },
+
+        async upsert({ args, query }) {
+          if (args.create && typeof args.create === "object") {
+            args.create = encryptPiiFields(
+              args.create as Record<string, unknown>,
+              ORDER_PII_FIELDS,
+            ) as never;
+          }
+          if (args.update && typeof args.update === "object") {
+            args.update = encryptPiiFields(
+              args.update as Record<string, unknown>,
+              ORDER_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            ORDER_PII_FIELDS,
+          ) as never;
+        },
+
+        async findMany({ args, query }) {
+          const result = (await query(args)) as unknown;
+          if (Array.isArray(result)) {
+            return result.map((r) =>
+              decryptPiiRow(r as Record<string, unknown>, ORDER_PII_FIELDS),
+            ) as never;
+          }
+          return result as never;
+        },
+
+        async findUnique({ args, query }) {
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            ORDER_PII_FIELDS,
+          ) as never;
+        },
+
+        async findFirst({ args, query }) {
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            ORDER_PII_FIELDS,
+          ) as never;
+        },
+
+        async delete({ args, query }) {
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            ORDER_PII_FIELDS,
+          ) as never;
+        },
+
+        // deleteMany + count + aggregate: no PII in results — no interception
+      },
+
+      // ─────────────────────────────────────────────────────────────────────
+      // Conversation: non-searchable PII (contactName, contactPhone) — in-place
+      // ─────────────────────────────────────────────────────────────────────
+      conversation: {
+        async create({ args, query }) {
+          if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              CONVERSATION_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            CONVERSATION_PII_FIELDS,
+          ) as never;
+        },
+
+        async createMany({ args, query }) {
+          if (Array.isArray(args.data)) {
+            args.data = args.data.map((d) =>
+              encryptPiiFields(
+                d as Record<string, unknown>,
+                CONVERSATION_PII_FIELDS,
+              ),
+            ) as never;
+          } else if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              CONVERSATION_PII_FIELDS,
+            ) as never;
+          }
+          return query(args);
+        },
+
+        async update({ args, query }) {
+          if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              CONVERSATION_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            CONVERSATION_PII_FIELDS,
+          ) as never;
+        },
+
+        async upsert({ args, query }) {
+          if (args.create && typeof args.create === "object") {
+            args.create = encryptPiiFields(
+              args.create as Record<string, unknown>,
+              CONVERSATION_PII_FIELDS,
+            ) as never;
+          }
+          if (args.update && typeof args.update === "object") {
+            args.update = encryptPiiFields(
+              args.update as Record<string, unknown>,
+              CONVERSATION_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            CONVERSATION_PII_FIELDS,
+          ) as never;
+        },
+
+        async findMany({ args, query }) {
+          const result = (await query(args)) as unknown;
+          if (Array.isArray(result)) {
+            return result.map((r) =>
+              decryptPiiRow(
+                r as Record<string, unknown>,
+                CONVERSATION_PII_FIELDS,
+              ),
+            ) as never;
+          }
+          return result as never;
+        },
+
+        async findUnique({ args, query }) {
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            CONVERSATION_PII_FIELDS,
+          ) as never;
+        },
+
+        async findFirst({ args, query }) {
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            CONVERSATION_PII_FIELDS,
+          ) as never;
+        },
+
+        async delete({ args, query }) {
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptPiiRow(
+            result as Record<string, unknown>,
+            CONVERSATION_PII_FIELDS,
+          ) as never;
         },
       },
     },

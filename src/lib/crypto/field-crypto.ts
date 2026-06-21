@@ -45,6 +45,28 @@ export interface EncryptedPayload {
 }
 
 /**
+ * True if a string looks like an encrypted JSON payload (iv/ciphertext/tag).
+ * Used by the encrypt helpers to detect already-encrypted values (idempotency)
+ * and by the decrypt helpers to skip already-plaintext values.
+ *
+ * Lives here (next to `EncryptedPayload`) so all PII modules can share it
+ * without a circular dependency on customer-encryption.ts.
+ */
+export function isEncryptedPayload(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    const parsed = JSON.parse(value) as Partial<EncryptedPayload>;
+    return (
+      typeof parsed.iv === "string" &&
+      typeof parsed.ciphertext === "string" &&
+      typeof parsed.tag === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Encrypt a string with AES-256-GCM and a fresh random IV.
  * Each call produces a different ciphertext (non-deterministic).
  */
