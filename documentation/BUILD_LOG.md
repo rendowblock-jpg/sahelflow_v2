@@ -5,6 +5,81 @@
 
 ---
 
+## Session 3 — 2026-06-21: Data layer — types, validation, state machine, services, seed, tests
+
+**Branches affected:** `main`
+**Commits:** `4f8f109`
+
+### What was built
+
+**Domain types (`src/types/domain.ts`, 181 lines):**
+- Clean Prisma-independent types: Order, OrderItem, Customer, Product, Category, Delivery, Conversation, Message, DashboardStats
+- Money is always integer DZD. IDs are cuid strings.
+- Status enums: OrderStatus (8 values), OrderSource (7), DeliveryStatus (10), DeliveryProvider (3), MessageChannel (2)
+
+**Typed errors (`src/types/errors.ts`, 91 lines):**
+- SahelFlowError base class (code + statusCode)
+- NotFoundError (404), ValidationError (400), BusinessRuleError (409), InvalidTransitionError (409), ConflictError (409), ExternalServiceError (502), RateLimitError (429)
+
+**Zod validation (`src/lib/validation/index.ts`, 142 lines):**
+- Primitives: nonEmptyString, dzPhone (regex 0[5-7]XXXXXXXX), nonNegInt, posInt, cuid, isoDate
+- Schemas: createOrder, updateOrderStatus, createCustomer, updateCustomer, createProduct, updateProduct, createCategory, createDelivery
+- Every service function validates input against a schema before touching the DB
+
+**Order state machine (`src/lib/order-transitions.ts`, 134 lines):**
+- 8 statuses, 4 terminal (delivered/returned/refused/cancelled)
+- ALLOWED_TRANSITIONS table: draft→[pending,cancelled], pending→[confirmed,cancelled], confirmed→[shipped,returned,refused,cancelled], shipped→[delivered,returned,refused]
+- canTransition(), assertCanTransition(), getAllowedTransitions()
+- triggersStockDeduction(), triggersStockRestoration(), triggersCustomerStatsUpdate() — for the order service's transactional side effects
+- **32 unit tests, all passing** (100% coverage of transition rules)
+
+**Service layer (`src/lib/data/`):**
+- `service-base.ts`: ServiceContext type (takes PrismaClient for multi-shop), withServiceError wrapper (catches Zod→ValidationError, Prisma→NotFoundError, lets SahelFlowError pass), generateOrderNumber
+- `customer-service.ts`: list, getById, getByPhone, create, update, delete (blocks if orders exist), incrementStats
+- `product-service.ts`: list, getById, create, update, delete (soft-deletes if order items exist), deductStock, restoreStock, listLowStock, categories (list + create)
+- `order-service.ts` (244 lines, AAA surface): create (transaction: order + items + total calculation + order number generation), updateStatus (transaction: state machine enforcement + stock deduction/restoration + customer stats update), list, getById, getByOrderNumber, countByStatus, listToday
+- `delivery-service.ts`: list, getById, getByOrderId, create, updateStatus, listActive (adapter integration deferred to Phase 0 #16)
+- `stats-service.ts`: getDashboard (7 parallel Prisma queries for dashboard metrics)
+- `dashboard.ts`: server-side data fetchers (getDashboardStats, getRecentOrders)
+
+**Seed script (`scripts/seed.ts`, 203 lines):**
+- 3 categories (Électronique, Mode, Maison)
+- 15 products (realistic Algerian e-commerce: écouteurs JBL 4500 DA, montre connectée 8500 DA, robe d'été 3500 DA, etc.)
+- 5 customers (Ahmed Benali Alger, Fatima Zohra Oran, Karim Haddad Constantine, Amina Cherif Sétif, Yacine Brahimi Annaba)
+- 8 orders covering all statuses (delivered, shipped, confirmed, pending, draft, returned, cancelled)
+- 3 deliveries (for shipped/delivered orders, Yalidine provider)
+
+**Dashboard wired to real data:**
+- Rewritten as server component (was client with stub data)
+- Reads from statsService (7 metrics) + recent 5 orders
+- Shows real counts, real order list with status badges, real revenue
+
+**i18n:**
+- `src/lib/i18n-server.ts`: server-side i18n for server components (reads locale from cookie, loads JSON synchronously, caches module-level)
+- `ui-store.ts`: setLocale now syncs to cookie (so server components can read it)
+
+### Verification
+- `tsc --noEmit` ✅ (0 errors)
+- `eslint .` ✅ (0 errors, 0 warnings — scripts/ added to ignores)
+- `vitest run` ✅ (32/32 tests passing)
+- Seed runs successfully (3 + 15 + 5 + 8 + 3 records created)
+
+### Engineering decisions
+- Services take `ServiceContext { prisma }` parameter (not a global) — supports multi-shop (file-per-shop) from day 1
+- Order status transitions enforced in the service layer (not the DB) — the state machine is testable without a DB
+- Stock side effects (deduct on confirm, restore on return/cancel/refuse) happen in a transaction with the status update — atomic
+- Zod schemas are the single source of truth for input shapes — domain types are inferred from them where possible
+- Server components use `getI18n()` (async, cookie-based); client components use `useI18n()` (React 19 `use()` pattern)
+
+### Next session priorities
+1. License crypto implementation (Phase 0 item #4 — `sf-license` tool is ready, wire into app)
+2. Build CRUD UI for orders (list + detail + status actions)
+3. Source a static commune dataset
+4. Resolve Prisma + SQLCipher decision (Phase 0 item #5)
+5. Baileys sidecar spike (Phase 0 item #1) — once Gate 1 resolved
+
+---
+
 ## Session 2 — 2026-06-21: UI shell + ported data (wilayas + i18n)
 
 **Branches affected:** `main`

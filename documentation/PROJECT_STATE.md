@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`.
 
 **Last updated:** 2026-06-21
-**Main HEAD:** `8c99299` (UI shell + ported data)
+**Main HEAD:** `4f8f109` (data layer)
 **Design system version:** v2.2
 
 ---
@@ -16,11 +16,12 @@
 | Phase | Phase −1 (pre-Phase-0 gates) — BLOCKING |
 | Foundation scaffold | ✅ Done (tsc + eslint green) |
 | UI shell | ✅ Done (sidebar, topbar, dashboard, 12 pages) |
+| Data layer | ✅ Done (6 services, Zod validation, order state machine) |
+| Tests | 32 (order state machine — 100% coverage) |
 | i18n | ✅ 1,092 keys × 3 locales (AR/FR/EN, RTL) |
 | Wilaya data | ✅ 58 wilayas ported (communes = known gap) |
 | Prisma models | 19 (schema designed, not yet used) |
-| Tests | 0 (no test code yet — UI shell phase) |
-| LOC | ~4,500 (config + schema + UI shell + ported data) |
+| LOC | ~6,000 (config + schema + UI shell + data layer + ported data) |
 | Open blocking decisions | 3 (Gates 1-3) + 1 technical (Prisma + SQLCipher) |
 
 ---
@@ -163,4 +164,4 @@
 
 ---
 
-_Last updated: 2026-06-21 — UI shell + ported data done. Phase −1 gates still open. Next: data layer + license crypto._
+_Last updated: 2026-06-21 — Data layer done (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
