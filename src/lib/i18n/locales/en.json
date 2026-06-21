@@ -1090,5 +1090,8 @@
   "time.daysAgo": "{n}d ago",
   "time.hoursAgo": "{n}h ago",
   "time.justNow": "Just now",
-  "time.minutesAgo": "{n}m ago"
+  "time.minutesAgo": "{n}m ago",
+  "nav.storefronts": "Storefronts",
+  "storefronts.newTitle": "New storefront",
+  "storefronts.editTitle": "Edit storefront"
 }
