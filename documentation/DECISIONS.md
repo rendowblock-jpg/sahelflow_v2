@@ -282,14 +282,48 @@ Primary key strategy. Auto-increment integers or Cuids/UUIDs?
 
 ---
 
+## ADR-010: Production frontend serving — Next.js standalone server (not static export)
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted
+
+### Context
+Tauri's production build needs a `frontendDist`. The v3.0 app uses Next.js **API routes** (8+ routes: extraction, customers, products, orders, whatsapp proxy, secrets, conversations) and **server components** (dashboard, inbox, settings — reading Prisma directly). Static export (`output: 'export'`) deletes the API layer and forces server components to become client-only — a full rewrite of the data layer to Tauri Rust commands. The original `frontendDist: "../out"` assumed static export and was never wired (`output: 'export'` was absent), so `tauri:build` could not produce a working bundle.
+
+### Decision
+**Bundle the Next.js standalone server and spawn it as a local process at runtime.** The Tauri webview loads `http://localhost:3000`.
+
+- `next.config.ts`: `output: "standalone"` → `.next/standalone/server.js` (a minimal Node/Bun-runnable server).
+- `src-tauri/build-frontend.sh` (Tauri `beforeBuildCommand`): builds Next.js, arranges `.next/static` + `public/` into the standalone dir, copies it to `src-tauri/resources/standalone/`, and compiles the WhatsApp sidecar to a single binary (`bun build --compile`).
+- `tauri.conf.json`: `frontendDist: "http://localhost:3000"`, `bundle.resources: ["resources/standalone/**/*"]`, `bundle.externalBin: ["binaries/sahelflow-whatsapp"]`.
+- `src-tauri/src/lib.rs` setup hook (release only): spawns the WhatsApp sidecar + the Next.js server (`bun`/`node`), waits for port 3000, then the webview loads.
+
+### Rationale
+1. **Keeps the API routes + server components.** Zero rewrite. The 8 routes + Prisma-reading pages keep working unchanged.
+2. **Standard Next.js production output.** `output: "standalone"` is a first-class Next.js feature, designed for self-hosting.
+3. **Sidecar pattern is idiomatic Tauri.** `externalBin` + `tauri_plugin_shell` is the documented way to bundle + spawn helper processes.
+4. **Dev workflow preserved.** In debug builds the setup hook is a no-op; the user runs `bun run dev` + `bun run sidecar` manually with hot reload, exactly as before.
+
+### Consequences
+- Production requires `bun` (preferred) or `node` 20+ on the host to run the standalone server. Bundling a runtime (Bun single-binary) is a follow-up to remove this dependency.
+- `tauri.conf.json` `frontendDist` is a URL, not a dist dir — Tauri loads it at runtime (the standalone server must be up).
+- The WhatsApp sidecar is a compiled binary (`bun build --compile`) — no runtime dependency for it.
+- `bun run build` must run before `tauri build` (enforced by `beforeBuildCommand`).
+- The `getShopClient(shopFilePath, encryptionKey?)` vestigial `?key=` param (ADR-003) remains for cleanup.
+
+### Open follow-up
+- Bundle Bun as a Tauri resource to remove the host-runtime requirement (compile the Next.js server to a single binary with `bun build --compile`, or ship Bun alongside).
+- Validate the full `tauri build` on each target platform (macOS/Windows/Linux) — the Rust setup hook compiles but needs on-machine verification.
+
+---
+
 ## Open decisions (to be resolved)
 
 | ID | Topic | When to resolve | Lean |
 |---|---|---|---|
-| ADR-003 | Prisma + SQLCipher approach | Before Phase 0 item #5 | Drizzle + better-sqlite3 |
 | — | Meta business verification | Before Phase 0 starts | Kill for v1 (WhatsApp + TikTok only) |
 | — | Marketing strategy details | Before client #1 | Direct outreach for first 10, then organic + referral |
 
 ---
 
-_Last updated: 2026-06-21 — 9 ADRs (8 accepted, 1 open)._
+_Last updated: 2026-06-21 — 10 ADRs (10 accepted, 0 open). ADR-003 (encryption) resolved → application-layer field-level AES-256-GCM._
