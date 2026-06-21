@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SahelFlow PWA icon (SVG, scalable).
+  A stylized "S" + flow wave in the brand teal (#0f766e).
+  Chrome accepts SVG icons in the manifest with the right MIME type.
+  For maximum Android compatibility, PNG versions should also be generated
+  (see scripts/generate-pwa-icons.ts for a canvas-based generator).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background (rounded square for maskable safe zone) -->
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+
+  <!-- Flow wave (represents order flow / delivery) -->
+  <path
+    d="M 128 320 Q 192 256 256 320 T 384 320"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="24"
+    stroke-linecap="round"
+    opacity="0.85"
+  />
+  <path
+    d="M 128 384 Q 192 320 256 384 T 384 384"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+    opacity="0.5"
+  />
+
+  <!-- Stylized "S" (SahelFlow) -->
+  <text
+    x="256"
+    y="280"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-size="200"
+    font-weight="700"
+    fill="#ffffff"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >S</text>
+</svg>
