@@ -12,6 +12,7 @@
     "store:default",
     "os:default",
     "process:default",
-    "updater:default"
+    "updater:default",
+    "stronghold:default"
   ]
 }

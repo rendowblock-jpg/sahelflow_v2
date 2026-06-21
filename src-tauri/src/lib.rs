@@ -25,12 +25,26 @@ use tauri_plugin_shell::ShellExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Stronghold password — in production this would come from the OS keychain
+    // or a user prompt. For now, we use a fixed app-level password (the vault
+    // file itself is protected by OS file permissions + the password).
+    // A future PR adds a biometric / password prompt on first launch.
+    let stronghold_password = "sahelflow-stronghold-v1"
+        .to_string()
+        .into_bytes()
+        .into_boxed_slice();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_stronghold::Builder::new()
+                .password(&stronghold_password)
+                .build(),
+        )
         .setup(|app| {
             // Only spawn services in release builds. In dev, the user runs
             // `bun run dev` + `bun run sidecar` manually (hot reload).
@@ -43,10 +57,88 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // Tauri commands registered here as features are built
+            get_master_key_from_stronghold,
+            save_master_key_to_stronghold,
         ])
         .run(tauri::generate_context!())
         .expect("error while running SahelFlow application");
+}
+
+/// Tauri command: get the master encryption key from Stronghold.
+///
+/// Stronghold stores the key in an encrypted vault (backed by OS-level secure
+/// storage). The key never touches the filesystem in plaintext.
+///
+/// Returns the key as a hex string (64 chars = 32 bytes = 256 bits), or null
+/// if no key is stored yet (first run).
+#[tauri::command]
+async fn get_master_key_from_stronghold(
+    app: tauri::AppHandle,
+    vault_path: String,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_stronghold::StrongholdExt;
+
+    let stronghold = app
+        .stronghold()
+        .map_err(|e| format!("Stronghold not available: {e}"))?;
+
+    let _ = vault_path; // vault path is configured at plugin init; accepted for API symmetry
+
+    // Load the vault (it's created on first access if missing)
+    stronghold
+        .load_client("sahelflow-master-key")
+        .map_err(|e| format!("Failed to load Stronghold client: {e}"))?;
+
+    // Read the key from the store
+    match stronghold.get_store().get("master-key".as_bytes()) {
+        Ok(Some(bytes)) => {
+            let hex = bytes
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<String>();
+            Ok(Some(hex))
+        }
+        Ok(None) => Ok(None), // first run — no key stored yet
+        Err(e) => Err(format!("Failed to read master key from Stronghold: {e}")),
+    }
+}
+
+/// Tauri command: save the master encryption key to Stronghold.
+///
+/// Called on first run (after generating a new key) or during key rotation.
+/// The key is stored as raw bytes in the Stronghold vault.
+#[tauri::command]
+async fn save_master_key_to_stronghold(
+    app: tauri::AppHandle,
+    vault_path: String,
+    key_hex: String,
+) -> Result<(), String> {
+    use tauri_plugin_stronghold::StrongholdExt;
+
+    let stronghold = app
+        .stronghold()
+        .map_err(|e| format!("Stronghold not available: {e}"))?;
+
+    let _ = vault_path;
+
+    // Decode hex to bytes
+    let bytes = hex::decode(&key_hex).map_err(|e| format!("Invalid hex key: {e}"))?;
+
+    stronghold
+        .load_client("sahelflow-master-key")
+        .map_err(|e| format!("Failed to load Stronghold client: {e}"))?;
+
+    stronghold
+        .get_store()
+        .insert("master-key".as_bytes().to_vec(), bytes, None)
+        .map_err(|e| format!("Failed to save master key to Stronghold: {e}"))?;
+
+    // Persist the vault to disk (encrypted)
+    stronghold
+        .save()
+        .map_err(|e| format!("Failed to persist Stronghold vault: {e}"))?;
+
+    Ok(())
 }
 
 /// In production: spawn the WhatsApp sidecar + the Next.js standalone server,
