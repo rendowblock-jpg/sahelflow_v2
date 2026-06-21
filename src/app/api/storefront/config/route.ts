@@ -1,0 +1,89 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/storefront/config?slug=...
+ * Returns the storefront config + products for public display.
+ * Does NOT require auth (public endpoint).
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const slug = req.nextUrl.searchParams.get("slug");
+    if (!slug) {
+      return NextResponse.json({ error: "slug required" }, { status: 400 });
+    }
+
+    const { storefrontService } = await import("@/lib/storefront/service");
+    const config = await storefrontService.getBySlug(slug);
+    if (!config || !config.isActive) {
+      return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
+    }
+
+    // Fetch the selected products
+    const products = config.productIds.length > 0
+      ? await db.product.findMany({
+          where: { id: { in: config.productIds }, isActive: true },
+          select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
+        })
+      : [];
+
+    return NextResponse.json({
+      config,
+      products,
+    });
+  } catch (err) {
+    console.error("[GET /api/storefront/config]", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+const createConfigSchema = z.object({
+  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase, digits, or hyphens"),
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  theme: z.object({
+    template: z.enum(["minimal", "modern", "classic"]),
+    primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color"),
+    showPrices: z.boolean().default(true),
+    showStock: z.boolean().default(false),
+  }),
+  productIds: z.array(z.string()).default([]),
+  contact: z.object({
+    phone: z.string().optional(),
+    whatsapp: z.string().optional(),
+    email: z.string().optional(),
+    address: z.string().optional(),
+  }).optional(),
+});
+
+/** POST /api/storefront/config — create a new storefront config (seller-only). */
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const input = createConfigSchema.parse(body);
+
+    const { storefrontService, DEFAULT_THEME } = await import("@/lib/storefront/service");
+    const config = await storefrontService.create({
+      slug: input.slug,
+      name: input.name,
+      description: input.description,
+      theme: input.theme,
+      productIds: input.productIds,
+      contact: input.contact,
+    });
+    void DEFAULT_THEME;
+    return NextResponse.json({ config }, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation failed", details: err.issues }, { status: 400 });
+    }
+    console.error("[POST /api/storefront/config]", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Internal error" },
+      { status: 500 },
+    );
+  }
+}

@@ -384,3 +384,34 @@ model WhatsAppTemplate {
 
   @@index([language, category])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STOREFRONT (COD landing page builder — Phase 0 #14)
+// ─────────────────────────────────────────────────────────────────────────────
+// A StorefrontConfig holds the seller's mini-storefront settings (slug, theme,
+// selected products, contact info). The public storefront is served at
+// /storefront/[slug] — customers browse products, fill a COD form, and the
+// order is created in the seller's DB via /api/storefront/submit.
+//
+// HOSTING (ADR-012, to be documented): in the local-first desktop model, the
+// storefront is served by the Next.js app running on the seller's machine
+// (localhost:3000/storefront/[slug]). For public access, the seller deploys
+// the standalone Next.js build to Cloudflare Pages (free). The order-placement
+// API is the same in both cases. A future PR adds a "deploy to Cloudflare"
+// button that generates + uploads the static storefront.
+
+model StorefrontConfig {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  // JSON: { template: "minimal"|"modern"|"classic", primaryColor: string, ... }
+  theme       String
+  // JSON: [productId, productId, ...] — which products to show
+  productIds  String
+  // JSON: { phone, whatsapp, email, address }
+  contact     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
