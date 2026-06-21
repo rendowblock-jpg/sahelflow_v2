@@ -171,7 +171,7 @@ export default async function DashboardPage() {
               </div>
               <h3 className="text-lg font-semibold mb-1">Aucune commande</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
-                Les commandes apparaîtront ici une fois reçues via WhatsApp ou TikTok.
+                Les commandes apparaîtront ici une fois reçues via WhatsApp.
               </p>
               <Button asChild>
                 <Link href="/orders">{t("nav.orders")}</Link>

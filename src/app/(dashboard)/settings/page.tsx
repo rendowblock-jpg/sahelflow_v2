@@ -42,7 +42,6 @@ export default async function SettingsPage() {
       icon: MessageSquare,
       items: [
         { platform: "whatsapp", name: "WhatsApp (Baileys)", type: "Social", description: "Réception des commandes WhatsApp" },
-        { platform: "tiktok", name: "TikTok DM", type: "Social", description: "Réception des commandes TikTok" },
       ],
     },
     {
