@@ -381,7 +381,7 @@ export function AiChat() {
               <Bot className="h-5 w-5 text-primary" />
               <h2 className="font-semibold">Assistant IA</h2>
               <Badge variant="outline" className="ml-auto text-xs">
-                6 outils
+                18 outils
               </Badge>
             </div>
 
