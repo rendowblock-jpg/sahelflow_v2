@@ -5,6 +5,76 @@
 
 ---
 
+## Session 2 — 2026-06-21: UI shell + ported data (wilayas + i18n)
+
+**Branches affected:** `main`
+**Commits:** `8c99299`
+
+### What was built
+
+**Data ported from v2-legacy (as raw JSON, not code):**
+- `data/wilayas.json` — 58 wilayas with Arabic names + zones (north/east/west/center/highPlateaux/south)
+- `data/communes.json` — `[]` (known gap: v2 fetched communes at runtime from Yalidine API; no static dataset exists. Flagged for founder.)
+- `src/lib/i18n/locales/{ar,fr,en}.json` — 1,092 keys per locale (was 21 stubs). Full AR/FR/EN parity verified. Arabic RTL preserved.
+
+**shadcn/ui components installed (11):**
+- button, card, dropdown-menu, avatar, separator, tabs, tooltip, scroll-area, sheet, skeleton, badge
+
+**UI shell built:**
+- `src/components/layout/navigation.ts` — single source of truth (11 nav items, 3 groups: operations/insights/administration)
+- `src/components/layout/sidebar.tsx` — collapsible sidebar, grouped nav, active-state highlighting, RTL-aware chevrons, keyboard accessible
+- `src/components/layout/topbar.tsx` — shop selector dropdown, language switcher (AR/FR/EN with flags), AI status badge, avatar
+- `src/components/layout/dashboard-layout.tsx` — sidebar + topbar + scrollable content area
+- `src/app/(dashboard)/layout.tsx` — route group layout wrapping all dashboard pages
+- `src/app/(dashboard)/dashboard/page.tsx` — dashboard home with 4 stats cards + 2 secondary cards + empty state (trilingual: AR/FR/EN)
+- 11 stub pages for remaining nav routes (inbox, orders, customers, products, deliveries, returns, analytics, accounting, agents, automations, settings)
+
+**State management:**
+- `src/stores/ui-store.ts` — Zustand persisted (locale, sidebar collapsed state)
+- `src/stores/shop-store.ts` — multi-shop state (stub dev shop, max 10 enforcement, active shop tracking)
+
+**Hooks:**
+- `src/hooks/use-i18n.ts` — React 19 `use()` pattern for translation loading (cached promises, zero setState-in-effect violations, automatic `<html lang/dir>` sync)
+- `src/hooks/use-mobile.ts` — `useSyncExternalStore` (React 19 pattern, no setState-in-effect)
+
+**Root layout updated:**
+- Inter (latin) + Amiri (arabic) fonts via next/font
+- TooltipProvider wrapper
+- Default lang="fr", dir auto-set by useI18n
+
+**Root page redirects to /dashboard.**
+
+### Engineering notes
+- React 19 + Next 16 ESLint rules are strict: `react-hooks/set-state-in-effect` flags any synchronous setState in effects. Solved by using `use()` for async translation loading and `useSyncExternalStore` for mobile detection.
+- DOM mutations (html lang/dir) belong in `useEffect`, not `useMemo` (the rule correctly flags side-effects in useMemo).
+- i18n uses the v2 key namespace (`nav.dashboard`, `nav.groupOperations`, `status.confirmed`) — NOT the v3 stub namespace (`orders.status.confirmed`). Any future code should use the v2 key names.
+
+### Verification
+- `tsc --noEmit` ✅ (0 errors)
+- `eslint .` ✅ (0 errors, 0 warnings)
+- Both green after refactoring use-i18n (3 iterations) and use-mobile (1 iteration)
+
+### Known gaps flagged
+1. **Communes dataset:** v2 fetched communes at runtime from Yalidine API. v3 needs either a static dataset or the same runtime-fetch pattern. Currently `data/communes.json` is `[]`.
+2. **Runtime verification:** Could not run SahelFlow's dev server (port 3000 is occupied by the sandbox's own Next.js project). tsc + eslint pass, but browser-level rendering verification needs the user's machine or a different port.
+
+### Open items carried forward
+- Phase −1 Gate 1: Real Darija validation (needs founder action)
+- Phase −1 Gate 2: Meta business verification decision
+- Phase −1 Gate 3: Marketing strategy section
+- Communes dataset (static source needed)
+- Phase 0 item #5: Prisma + SQLCipher tension (open decision)
+- Security: rotate v2 Supabase demo password (founder action)
+
+### Next session priorities
+1. Source a static commune dataset (or decide to use runtime fetch)
+2. Build the data layer (Prisma services for orders, customers, products, deliveries)
+3. Implement license crypto (Phase 0 item #4)
+4. Resolve Prisma + SQLCipher decision (Phase 0 item #5)
+5. Baileys sidecar spike (Phase 0 item #1) — once Gate 1 resolved
+
+---
+
 ## Session 1 — 2026-06-21: Greenfield pivot + foundation scaffold + agent-handoff redesign
 
 **Branches affected:** `main` (reset to fresh), `v2-legacy` (created), `agent-handoff` (redesigned)

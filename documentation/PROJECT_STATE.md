@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`.
 
 **Last updated:** 2026-06-21
-**Main HEAD:** `ad26caf` (foundation scaffold)
+**Main HEAD:** `8c99299` (UI shell + ported data)
 **Design system version:** v2.2
 
 ---
@@ -15,9 +15,12 @@
 |---|---|
 | Phase | Phase −1 (pre-Phase-0 gates) — BLOCKING |
 | Foundation scaffold | ✅ Done (tsc + eslint green) |
+| UI shell | ✅ Done (sidebar, topbar, dashboard, 12 pages) |
+| i18n | ✅ 1,092 keys × 3 locales (AR/FR/EN, RTL) |
+| Wilaya data | ✅ 58 wilayas ported (communes = known gap) |
 | Prisma models | 19 (schema designed, not yet used) |
-| Tests | 0 (no test code yet — foundation only) |
-| LOC | ~2,900 (config + schema + skeleton) |
+| Tests | 0 (no test code yet — UI shell phase) |
+| LOC | ~4,500 (config + schema + UI shell + ported data) |
 | Open blocking decisions | 3 (Gates 1-3) + 1 technical (Prisma + SQLCipher) |
 
 ---
@@ -90,6 +93,10 @@
 ## What's Done (Foundation Scaffold — commit `ad26caf`)
 
 ### Code
+- ✅ **UI shell** (sidebar + topbar + dashboard layout, 12 pages, i18n + RTL)
+- ✅ **i18n** (1,092 keys × AR/FR/EN, React 19 use() pattern, RTL auto-flip)
+- ✅ **State stores** (Zustand: ui-store for locale/sidebar, shop-store for multi-shop)
+- ✅ **Ported data** (58 wilayas with Arabic names + zones; communes = known gap)
 - ✅ Tauri shell config (`src-tauri/` — Cargo.toml, tauri.conf.json, lib.rs, capabilities)
 - ✅ Next.js 16 + TypeScript strict + Tailwind 4 + shadcn-ready CSS
 - ✅ Prisma schema (19 models, local-first redesign — `prisma/schema.prisma`)
@@ -97,6 +104,7 @@
 - ✅ i18n scaffold (AR/FR/EN + RTL — `src/lib/i18n/`)
 - ✅ Lib foundation (`src/lib/env.ts`, `src/lib/db.ts`, `src/lib/utils.ts`)
 - ✅ Minimal app shell (`src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css`)
+- ✅ shadcn/ui components (11): button, card, dropdown-menu, avatar, separator, tabs, tooltip, scroll-area, sheet, skeleton, badge
 
 ### Config
 - ✅ `package.json` (deps: Next 16, React 19, Prisma 6, Zod 4, Zustand 5, TanStack Query 5, shadcn-ready)
@@ -117,14 +125,16 @@
 ## What's NOT Done (next sessions)
 
 ### Immediate next steps (after Phase −1 gates)
-1. Port wilaya/commune data from v2-legacy (`sf-port wilayas`)
-2. Port full i18n translations from v2-legacy (`sf-port i18n`)
-3. Install shadcn/ui components (via CLI)
-4. Build UI shell (sidebar + topbar + dashboard layout)
-5. Implement license crypto (Phase 0 item #4 — `sf-license` tool is ready)
-6. Resolve Prisma + SQLCipher decision (Phase 0 item #5)
-7. Baileys sidecar spike (Phase 0 item #1)
-8. Regex + Gemini prototypes (Phase 0 items #11, #11b — needs Gate 1)
+1. ~~Port wilaya/commune data~~ ✅ (58 wilayas done; communes = known gap)
+2. ~~Port full i18n translations~~ ✅ (1,092 keys × 3 locales)
+3. ~~Install shadcn/ui components~~ ✅ (11 components)
+4. ~~Build UI shell~~ ✅ (sidebar + topbar + dashboard + 12 pages)
+5. Source a static commune dataset (known gap — v2 fetched from Yalidine API at runtime)
+6. Build the data layer (Prisma services for orders, customers, products, deliveries)
+7. Implement license crypto (Phase 0 item #4 — `sf-license` tool is ready)
+8. Resolve Prisma + SQLCipher decision (Phase 0 item #5)
+9. Baileys sidecar spike (Phase 0 item #1)
+10. Regex + Gemini prototypes (Phase 0 items #11, #11b — needs Gate 1)
 
 ### Open decisions (documented in `DECISIONS.md`)
 - ⚠️ Prisma + SQLCipher: (a) Prisma custom engine, (b) Drizzle + better-sqlite3, (c) raw better-sqlite3
@@ -153,4 +163,4 @@
 
 ---
 
-_Last updated: 2026-06-21 — Foundation scaffold done. Phase −1 gates open. No Phase 0 items started yet._
+_Last updated: 2026-06-21 — UI shell + ported data done. Phase −1 gates still open. Next: data layer + license crypto._
