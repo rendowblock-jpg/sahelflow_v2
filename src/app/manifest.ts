@@ -64,7 +64,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Boîte de réception",
         short_name: "Inbox",
-        description: "Conversations WhatsApp + TikTok",
+        description: "Conversations WhatsApp",
         url: "/inbox",
       },
       {

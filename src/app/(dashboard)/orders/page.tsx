@@ -175,7 +175,7 @@ export default async function OrdersPage({
               </div>
               <h3 className="text-lg font-semibold mb-1">Aucune commande</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
-                Les commandes apparaîtront ici une fois reçues via WhatsApp, TikTok ou saisie manuelle.
+                Les commandes apparaîtront ici une fois reçues via WhatsApp ou saisie manuelle.
               </p>
             </div>
           ) : (
