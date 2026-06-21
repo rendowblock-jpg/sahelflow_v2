@@ -5,6 +5,77 @@
 
 ---
 
+## Session 7 — 2026-06-21: Desktop-ready polish (dark mode, communes, mobile, Tauri CLI, loading states)
+
+**Branches affected:** `main`
+**Commits:** `2544d5d`, `088c024`, `9742a93`
+
+### What was built
+
+**Communes dataset (1,541 communes):**
+- Sourced from kossa/algeria-cities (public Algerian government data)
+- data/communes.json: code, wilayaCode, name, nameAr, postCode (1,541 entries)
+- Order form: commune field is now a dropdown filtered by selected wilaya
+  (was plain text input — now shows only communes in the chosen wilaya)
+
+**Dark mode:**
+- next-themes installed
+- ThemeProvider in root layout (attribute='class', defaultTheme='light', enableSystem)
+- ThemeToggle component in topbar (sun/moon icon, toggles class on <html>)
+- CSS variables already supported dark mode (from original globals.css)
+
+**Mobile responsive:**
+- Sidebar hidden on mobile (lg:flex), shown via Sheet (hamburger menu) in topbar
+- Shop selector name hidden on small screens (sm:inline)
+- AI status badge hidden on mobile (md:flex)
+- Separators hidden on mobile (md:block)
+
+**Loading + error + 404 pages:**
+- loading.tsx: skeleton placeholders during page loads (stat cards + list)
+- not-found.tsx: branded 404 page with link back to dashboard
+- error.tsx: error boundary with retry button
+
+**Tauri desktop support:**
+- @tauri-apps/cli v2.11.3 installed as dev dependency
+- Generated app icons (32x32, 128x128, 128x128@2x, icon.png, icon.ico, icon.icns)
+  from a simple "SF" logo SVG
+- Updated tauri scripts: tauri:dev → bunx tauri dev, tauri:build → bunx tauri build
+- Verified: bunx tauri --version works (2.11.3)
+
+### App status: DESKTOP-READY
+The app is now testable on the user's machine:
+- Web version: `bun run dev` → http://localhost:3000
+- Desktop version: `bun run tauri:dev` (needs Rust toolchain)
+
+### Verification
+- tsc ✅ (0 errors) · eslint ✅ (0 errors, 0 warnings) · vitest ✅ (48/48 tests)
+- 16 pages, 8 API routes, 32 components, 26 lib modules, ~11,500 LOC
+
+### Known gaps for next session
+1. **Tauri production build** — `tauri:build` needs Next.js static export config,
+   which conflicts with server components/API routes. Architecture decision needed.
+2. **WhatsApp (Baileys)** — inbox shows seeded conversations, can't send/receive real messages (Phase 0 #1)
+3. **Gemini AI key wizard** — regex extraction works without a key, Gemini needs the seller's API key (Phase 0 #9)
+4. **SQLCipher encryption** — database is currently unencrypted (Phase 0 #5)
+5. **Phase -1 Gate 1** — real Darija validation (50 real WhatsApp messages) still needed
+6. **Phase -1 Gate 2** — Meta business verification decision (commit or kill)
+7. **Phase -1 Gate 3** — marketing strategy section in design system
+
+### How to test on desktop (user's machine)
+```bash
+git clone https://github.com/rendowblock-jpg/sahelflow_v2.git
+cd sahelflow_v2
+bun install
+bunx prisma generate
+bunx prisma db push
+bun run scripts/seed.ts
+bun run dev          # web version (no Rust needed)
+# OR
+bun run tauri:dev    # desktop version (needs Rust toolchain)
+```
+
+---
+
 ## Session 6 — 2026-06-21: AI extraction + inbox + automations + agents + build guide
 
 **Branches affected:** `main`

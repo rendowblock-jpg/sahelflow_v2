@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`.
 
 **Last updated:** 2026-06-21
-**Main HEAD:** `001cde1` (all 12 pages functional + AI extraction)
+**Main HEAD:** `9742a93` (desktop-ready: Tauri CLI + icons + dark mode + communes)
 **Design system version:** v2.2
 
 ---
@@ -21,6 +21,11 @@
 | License crypto | ✅ Done (Ed25519, trial, settings UI) |
 | Manual order creation | ✅ Done (multi-step dialog) |
 | AI extraction | ✅ Done (regex + Gemini smart router, 16 tests) |
+| Communes dataset | ✅ Done (1,541 communes, sourced from public data) |
+| Dark mode | ✅ Done (next-themes, toggle in topbar) |
+| Mobile responsive | ✅ Done (sidebar → hamburger on mobile) |
+| Loading/error/404 pages | ✅ Done (skeleton loaders + error boundary) |
+| Tauri CLI + icons | ✅ Done (@tauri-apps/cli v2.11.3, icons generated) |
 | Inbox | ✅ Done (conversations, messages, extraction button) |
 | Automations + Agents | ✅ Done (pages with recipes + AI capabilities) |
 | Desktop build guide | ✅ Done (documentation/DESKTOP_BUILD.md) |
@@ -28,7 +33,7 @@
 | i18n | ✅ 1,092 keys × 3 locales (AR/FR/EN, RTL) |
 | Wilaya data | ✅ 58 wilayas ported (communes = known gap) |
 | Prisma models | 19 (schema designed, not yet used) |
-| LOC | ~10,500 (full app — 16 pages, 8 API routes, 30 components, 26 lib modules) |
+| LOC | ~11,500 (full app — 16 pages, 8 API routes, 32 components, 26 lib modules, 1,541 communes) |
 | Open blocking decisions | 3 (Gates 1-3) + 1 technical (Prisma + SQLCipher) |
 
 ---
@@ -179,4 +184,4 @@
 
 ---
 
-_Last updated: 2026-06-21 — All 12 pages functional + AI extraction engine + inbox + desktop build guide. Next: communes dataset, dark mode, mobile responsive, Baileys spike._ Next: Baileys spike (Phase 0 #1) or AI extraction (Phase 0 #11)._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
+_Last updated: 2026-06-21 — Desktop-ready. Tauri CLI + icons installed, dark mode, mobile responsive, 1,541 communes, loading/error pages. App is testable via `bun run dev` or `bun run tauri:dev` on user's machine. Next: Baileys sidecar (Phase 0 #1), Gemini key wizard (Phase 0 #9), SQLCipher (Phase 0 #5)._ Next: communes dataset, dark mode, mobile responsive, Baileys spike._ Next: Baileys spike (Phase 0 #1) or AI extraction (Phase 0 #11)._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
