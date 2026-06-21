@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`.
 
 **Last updated:** 2026-06-21
-**Main HEAD:** `35e37c1` (functional app)
+**Main HEAD:** `001cde1` (all 12 pages functional + AI extraction)
 **Design system version:** v2.2
 
 ---
@@ -19,12 +19,16 @@
 | Data layer | ✅ Done (6 services, Zod validation, order state machine) |
 | CRUD UI | ✅ Done (orders, customers, products, deliveries, returns, analytics, accounting) |
 | License crypto | ✅ Done (Ed25519, trial, settings UI) |
-| Manual order creation | ✅ Done (multi-step dialog, completes manual Magic Moment) |
+| Manual order creation | ✅ Done (multi-step dialog) |
+| AI extraction | ✅ Done (regex + Gemini smart router, 16 tests) |
+| Inbox | ✅ Done (conversations, messages, extraction button) |
+| Automations + Agents | ✅ Done (pages with recipes + AI capabilities) |
+| Desktop build guide | ✅ Done (documentation/DESKTOP_BUILD.md) |
 | Tests | 32 (order state machine — 100% coverage) |
 | i18n | ✅ 1,092 keys × 3 locales (AR/FR/EN, RTL) |
 | Wilaya data | ✅ 58 wilayas ported (communes = known gap) |
 | Prisma models | 19 (schema designed, not yet used) |
-| LOC | ~8,500 (config + schema + UI shell + data layer + CRUD UI + license + ported data) |
+| LOC | ~10,500 (full app — 16 pages, 8 API routes, 30 components, 26 lib modules) |
 | Open blocking decisions | 3 (Gates 1-3) + 1 technical (Prisma + SQLCipher) |
 
 ---
@@ -175,4 +179,4 @@
 
 ---
 
-_Last updated: 2026-06-21 — Functional app. License crypto + manual order creation + 7 functional pages. Next: Baileys spike (Phase 0 #1) or AI extraction (Phase 0 #11)._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
+_Last updated: 2026-06-21 — All 12 pages functional + AI extraction engine + inbox + desktop build guide. Next: communes dataset, dark mode, mobile responsive, Baileys spike._ Next: Baileys spike (Phase 0 #1) or AI extraction (Phase 0 #11)._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
