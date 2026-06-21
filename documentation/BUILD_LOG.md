@@ -5,6 +5,38 @@
 
 ---
 
+## Session 4 — 2026-06-21: CRUD UI — orders, customers, products
+
+**Branches affected:** `main`
+**Commits:** `5b6f832`
+
+### What was built
+
+**Orders (AAA surface):**
+- Orders list page (server component): status filter tabs with counts, 4 stat cards, table with full order info, links to detail
+- Order detail page (server component): items + totals, delivery info, customer card, delivery address, status timeline
+- Order status actions (client component): context-aware buttons based on state machine (Confirm, Ship, Deliver, Return, Cancel), calls API, refreshes on success
+- API routes: GET /api/orders, PATCH /api/orders/[id]/status
+
+**Customers (subagent):**
+- List page with stat cards + table + create dialog
+- Form dialog (react-hook-form + zod, POST /api/customers)
+- Detail page with order history
+- API routes: full CRUD
+
+**Products (subagent):**
+- List page with 4 stat cards (total, active, low stock, inventory value) + table with stock badges + create dialog
+- Form dialog (8 fields, category select, POST /api/products)
+- Detail page with pricing/stock/margin + recent orders
+- API routes: full CRUD + categories
+
+**shadcn/ui components installed:** input, label, dialog, table, form, select, switch (7 new)
+
+### Verification
+- tsc ✅ (0 errors) · eslint ✅ (0 errors, 0 warnings) · vitest ✅ (32/32)
+
+---
+
 ## Session 3 — 2026-06-21: Data layer — types, validation, state machine, services, seed, tests
 
 **Branches affected:** `main`

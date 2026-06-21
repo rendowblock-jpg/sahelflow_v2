@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`.
 
 **Last updated:** 2026-06-21
-**Main HEAD:** `4f8f109` (data layer)
+**Main HEAD:** `5b6f832` (CRUD UI)
 **Design system version:** v2.2
 
 ---
@@ -75,7 +75,7 @@
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| — | UI shell (sidebar, topbar, dashboard) | ⏳ Not started | shadcn/ui not installed yet |
+| — | UI shell (sidebar, topbar, dashboard) | ✅ Done | 12 pages, i18n + RTL |
 | 14 | COD landing page builder v1 | ⏳ Not started | 2-3 weeks |
 | 13 | PWA for Android | ⏳ Not started | |
 | 15 | Marketing site + download | ⏳ Not started | |
@@ -94,6 +94,8 @@
 ## What's Done (Foundation Scaffold — commit `ad26caf`)
 
 ### Code
+- ✅ **CRUD UI** (orders list + detail + status actions, customers list + form + detail, products list + form + detail)
+- ✅ **API routes** (orders, customers, products, categories — full CRUD)
 - ✅ **UI shell** (sidebar + topbar + dashboard layout, 12 pages, i18n + RTL)
 - ✅ **i18n** (1,092 keys × AR/FR/EN, React 19 use() pattern, RTL auto-flip)
 - ✅ **State stores** (Zustand: ui-store for locale/sidebar, shop-store for multi-shop)
@@ -164,4 +166,4 @@
 
 ---
 
-_Last updated: 2026-06-21 — Data layer done (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
+_Last updated: 2026-06-21 — CRUD UI done (orders, customers, products). Next: license crypto + manual order creation + deliveries._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
