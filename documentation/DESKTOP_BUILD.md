@@ -72,17 +72,38 @@ bun run scripts/seed.ts
 
 ### Step 4: Development mode (with hot reload)
 
+You need **two terminals** — the Next.js app and the WhatsApp sidecar run alongside Tauri:
+
 ```bash
+# Terminal 1 — Next.js app (port 3000)
+bun run dev
+
+# Terminal 2 — WhatsApp sidecar (port 3001)
+bun run sidecar
+
+# Terminal 3 — Tauri shell (loads localhost:3000)
 bun run tauri:dev
 ```
 
-This opens a desktop window with the app running. Hot reload works — edit code and see changes instantly.
+This opens a desktop window with the app running. Hot reload works — edit code and see changes instantly. The WhatsApp sidecar is optional in dev (the inbox falls back to seeded demo conversations when it's not running).
 
 ### Step 5: Production build (creates installable binary)
 
 ```bash
 bun run tauri:build
 ```
+
+**Architecture (ADR-010):** the app uses Next.js API routes + server components, so static export is not viable. Instead, `tauri:build`:
+
+1. Runs `src-tauri/build-frontend.sh` (the `beforeBuildCommand`):
+   - `bun run build` with `output: "standalone"` → `.next/standalone/server.js`
+   - Copies `.next/static` + `public/` into the standalone dir
+   - Copies the standalone dir → `src-tauri/resources/standalone/` (bundled as a Tauri resource)
+   - Compiles the WhatsApp sidecar → `src-tauri/binaries/sahelflow-whatsapp-<triple>` (Tauri `externalBin`)
+2. Compiles the Rust shell (`src-tauri/src/lib.rs`).
+3. The release setup hook spawns the WhatsApp sidecar + the Next.js server (`bun`/`node`), waits for port 3000, then the webview loads `http://localhost:3000`.
+
+**Requirement:** `bun` (preferred) or `node` 20+ must be on the user's PATH at runtime to start the Next.js server. (Bundling a runtime is a documented follow-up.)
 
 This creates:
 - **Windows:** `.msi` installer + `.exe` in `src-tauri/target/release/bundle/`
@@ -141,12 +162,19 @@ Click the globe icon in the topbar → French (🇫🇷), Arabic (🇩🇿, RTL)
 **Port 3000 already in use**
 → Another process is using port 3000. Kill it: `lsof -ti:3000 | xargs kill -9` (Linux/macOS).
 
-## What's NOT yet implemented (coming in Phase 0)
+## What's implemented (Phase 0 progress)
 
-- **WhatsApp connection (Baileys)** — the inbox shows seeded conversations but can't send/receive real messages yet. This is Phase 0 item #1.
-- **Gemini AI key setup** — the extraction works with regex (no key needed), but Gemini integration requires your API key. This is Phase 0 item #9.
-- **SQLCipher encryption** — the database is currently unencrypted. This is Phase 0 item #5.
+- ✅ **WhatsApp connection (Baileys)** — real WhatsApp messaging in the inbox via a local sidecar (`bun run sidecar`). Scan the QR in Messagerie → live chats + replies. Falls back to seeded demo conversations when the sidecar is off.
+- ✅ **Gemini AI key wizard** — Settings → Intelligence artificielle. Enter your Google AI Studio key → it's tested against Gemini → saved encrypted (AES-256-GCM). The extraction route loads it server-side; regex still handles ~70% of messages offline.
+- ✅ **Encryption foundation (ADR-003)** — field-level AES-256-GCM for secrets + a blind-index primitive for searchable PII. Master key in a mode-0600 keyfile (OS keychain via Tauri Stronghold is the production target). Customer-PII field encryption is the immediate next PR.
+- ✅ **Production build config (ADR-010)** — `output: "standalone"` + Tauri sidecar/resource bundling. `tauri:build` produces an installable bundle (validate on your machine).
+
+## What's NOT yet implemented
+
+- **Customer-PII field encryption** — the crypto lib is ready; applying it to `Customer.name/phone/address/notes` (with a blind index on phone) is the next focused PR.
 - **Auto-updater** — updates must be downloaded manually for now. This is Phase 0 item #6.
+- **Tauri Stronghold / OS keychain** — secrets currently live in an encrypted SQLite table (interim per ADR-004). Moving the master key to Stronghold is a single-PR storage swap.
+- **Bundled runtime** — production builds currently require `bun`/`node` on PATH to start the Next.js server (ADR-010 follow-up: bundle Bun).
 
 ## Need help?
 

@@ -5,10 +5,13 @@ node_modules/
 .next/
 out/
 build/
+next-env.d.ts
 
 # Tauri
 src-tauri/target/
 src-tauri/gen/schemas/
+src-tauri/resources/
+src-tauri/binaries/
 
 # Prisma
 prisma/migrations/dev.db*
