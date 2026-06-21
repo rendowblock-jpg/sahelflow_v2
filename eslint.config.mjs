@@ -40,6 +40,7 @@ const eslintConfig = [
       "coverage/**",
       "prisma/migrations/**",
       "data/**",
+      "scripts/**",
     ],
   },
 ];

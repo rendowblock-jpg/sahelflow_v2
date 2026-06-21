@@ -1,90 +1,91 @@
-"use client";
-
-import { useI18n } from "@/hooks/use-i18n";
-import { useShopStore } from "@/stores/shop-store";
+import { getDashboardStats, getRecentOrders } from "@/lib/data/dashboard";
+import { formatDZD } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   ShoppingCart,
-  Users,
-  Package,
   TrendingUp,
+  Users,
   MessageSquare,
   Truck,
+  Package,
   ArrowUpRight,
   ArrowDownRight,
-  Bot,
 } from "lucide-react";
+import { getI18n } from "@/lib/i18n-server";
+import Link from "next/link";
 
-// Stub data — will be replaced with real Prisma queries in the data layer phase
-const stubStats = {
-  ordersToday: 0,
-  ordersTrend: 0,
-  revenueToday: 0,
-  revenueTrend: 0,
-  newCustomers: 0,
-  activeConversations: 0,
-  pendingDeliveries: 0,
-  lowStockProducts: 0,
-};
+// Refresh every 30 seconds (in production, use TanStack Query for client-side caching)
+export const revalidate = 30;
 
-export default function DashboardPage() {
-  const { t, locale } = useI18n();
-  const activeShop = useShopStore((s) => s.shops.find((shop) => shop.id === s.activeShopId) ?? null);
+export default async function DashboardPage() {
+  const { t } = await getI18n();
+  const [stats, recentOrders] = await Promise.all([
+    getDashboardStats(),
+    getRecentOrders(5),
+  ]);
 
-  const stats = [
+  const statusLabels: Record<string, string> = {
+    draft: t("status.draft") || "Brouillon",
+    pending: t("status.pending") || "En attente",
+    confirmed: t("status.confirmed") || "Confirmée",
+    shipped: t("status.shipped") || "Expédiée",
+    delivered: t("status.delivered") || "Livrée",
+    returned: t("status.returned") || "Retournée",
+    refused: t("status.refused") || "Refusée",
+    cancelled: t("status.cancelled") || "Annulée",
+  };
+
+  const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    draft: "outline",
+    pending: "secondary",
+    confirmed: "default",
+    shipped: "default",
+    delivered: "default",
+    returned: "destructive",
+    refused: "destructive",
+    cancelled: "destructive",
+  };
+
+  const statCards = [
     {
       label: t("nav.orders"),
-      value: String(stubStats.ordersToday),
+      value: String(stats.ordersToday),
       icon: ShoppingCart,
-      trend: stubStats.ordersTrend,
-      format: "count",
+      trend: stats.ordersTrend,
     },
     {
       label: t("nav.accounting"),
-      value: formatDZD(stubStats.revenueToday),
+      value: formatDZD(stats.revenueToday),
       icon: TrendingUp,
-      trend: stubStats.revenueTrend,
-      format: "currency",
+      trend: stats.revenueTrend,
     },
     {
       label: t("nav.customers"),
-      value: String(stubStats.newCustomers),
+      value: String(stats.newCustomers),
       icon: Users,
       trend: 0,
-      format: "count",
     },
     {
       label: t("nav.inbox"),
-      value: String(stubStats.activeConversations),
+      value: String(stats.activeConversations),
       icon: MessageSquare,
       trend: 0,
-      format: "count",
     },
   ];
 
   return (
     <div className="space-y-6 p-6">
       {/* Welcome header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {activeShop?.name ?? t("nav.dashboard")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("nav.dashboard")} — {locale === "ar" ? "أهلا بك" : locale === "fr" ? "Bienvenue" : "Welcome"}
-          </p>
-        </div>
-        <Badge variant="outline" className="gap-1.5">
-          <Bot className="h-3 w-3" />
-          <span className="text-xs">AI: {t("nav.agents")}</span>
-        </Badge>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t("nav.dashboard")}</h1>
+        <p className="text-sm text-muted-foreground">{t("app.tagline")}</p>
       </div>
 
       {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+        {statCards.map((stat) => {
           const Icon = stat.icon;
           const isPositive = stat.trend > 0;
           const isNegative = stat.trend < 0;
@@ -114,7 +115,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Secondary cards: deliveries + products */}
+      {/* Secondary cards */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -126,11 +127,11 @@ export default function DashboardPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold">{stubStats.pendingDeliveries}</p>
+                <p className="text-2xl font-bold">{stats.pendingDeliveries}</p>
                 <p className="text-xs text-muted-foreground">en attente</p>
               </div>
-              <Button variant="outline" size="sm">
-                {t("nav.delivery")}
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/deliveries">{t("nav.delivery")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -146,46 +147,64 @@ export default function DashboardPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold">{stubStats.lowStockProducts}</p>
+                <p className="text-2xl font-bold">{stats.lowStockProducts}</p>
                 <p className="text-xs text-muted-foreground">stock faible</p>
               </div>
-              <Button variant="outline" size="sm">
-                {t("nav.products")}
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/products">{t("nav.products")}</Link>
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Empty state — no data yet */}
+      {/* Recent orders */}
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="rounded-full bg-muted p-4 mb-4">
-            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-1">
-            {locale === "ar" ? "ابدأ بإضافة طلبات" : locale === "fr" ? "Commencez par ajouter des commandes" : "Start by adding orders"}
-          </h3>
-          <p className="text-sm text-muted-foreground max-w-md mb-4">
-            {locale === "ar"
-              ? "اربط واتساب للبدء في استخراج الطلبات تلقائيا بالذكاء الاصطناعي"
-              : locale === "fr"
-              ? "Connectez WhatsApp pour commencer à extraire les commandes automatiquement avec l'IA"
-              : "Connect WhatsApp to start extracting orders automatically with AI"}
-          </p>
-          <Button>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {t("nav.inbox")}
-          </Button>
+        <CardHeader>
+          <CardTitle className="text-base">Commandes récentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentOrders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-1">Aucune commande</h3>
+              <p className="text-sm text-muted-foreground max-w-md mb-4">
+                Les commandes apparaîtront ici une fois reçues via WhatsApp ou TikTok.
+              </p>
+              <Button asChild>
+                <Link href="/orders">{t("nav.orders")}</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between p-3 rounded-md border hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm font-medium">{order.orderNumber}</span>
+                    <div>
+                      <p className="text-sm font-medium">{order.customer.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.items.length} article{order.items.length > 1 ? "s" : ""} · {order.wilaya}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">{formatDZD(order.totalPrice)}</span>
+                    <Badge variant={statusBadgeVariant[order.status] ?? "outline"}>
+                      {statusLabels[order.status] ?? order.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
-}
-
-function formatDZD(amount: number): string {
-  return new Intl.NumberFormat("fr-DZ", {
-    style: "decimal",
-    maximumFractionDigits: 0,
-  }).format(amount) + " DA";
 }
