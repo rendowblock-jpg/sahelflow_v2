@@ -172,3 +172,71 @@ export async function extractWithGemini(
     missingFields: ["all_models_failed"],
   };
 }
+
+/**
+ * Verify a Gemini API key with a minimal generateContent call.
+ * Used by the key-wizard (Settings → AI) to test before saving.
+ *
+ * Returns the first model that accepted the key (so the UI can show which
+ * model will be used), or an error message.
+ */
+export async function verifyGeminiKey(
+  apiKey: string,
+  timeoutMs = 10000,
+): Promise<{ ok: boolean; model?: string; error?: string }> {
+  if (!apiKey || !apiKey.startsWith("AIza")) {
+    return { ok: false, error: "Le format de la clé semble invalide (doit commencer par AIza)." };
+  }
+
+  for (const model of MODELS) {
+    try {
+      const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: "ping" }] }],
+          generationConfig: { maxOutputTokens: 1 },
+        }),
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        return { ok: true, model };
+      }
+      const errorBody = (await response.json().catch(() => ({}))) as GeminiResponse;
+
+      if (response.status === 400 || response.status === 404) {
+        // Model not available for this key — try the next one
+        continue;
+      }
+      if (response.status === 403) {
+        return { ok: false, error: "Clé refusée (403). Vérifiez qu'elle est active et que l'API Generative Language est activée." };
+      }
+      if (response.status === 429) {
+        // Key works but rate-limited — treat as valid
+        return { ok: true, model, error: "Valide mais quota atteint (429). Réessayez plus tard." };
+      }
+      return {
+        ok: false,
+        error: errorBody.error?.message ?? `Erreur HTTP ${response.status}`,
+      };
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return { ok: false, error: "Délai dépassé. Vérifiez votre connexion." };
+      }
+      // Network error — try next model
+      continue;
+    }
+  }
+
+  return {
+    ok: false,
+    error: "Aucun modèle Gemini disponible pour cette clé. Vérifiez que l'API Generative Language est activée dans Google AI Studio.",
+  };
+}

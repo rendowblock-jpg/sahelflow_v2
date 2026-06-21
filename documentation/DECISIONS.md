@@ -66,13 +66,13 @@ Need an ORM for local SQLite. Options: Prisma, Drizzle, raw better-sqlite3.
 
 ---
 
-## ADR-003: SQLCipher encryption approach — OPEN
+## ADR-003: Encryption approach — application-layer field-level AES-256-GCM
 
 **Date:** 2026-06-21
-**Status:** ⚠️ Open (resolve before Phase 0 item #5)
+**Status:** ✅ Decided — Option D (application-layer field-level encryption)
 
 ### Context
-The design system requires SQLCipher encryption (Phase 0 item #5). Prisma doesn't natively support SQLCipher. Three options:
+The design system requires SQLCipher encryption (Phase 0 item #5). Prisma doesn't natively support SQLCipher. Three options were initially considered:
 
 **Option A: Prisma custom SQLCipher engine**
 - Prisma has experimental support via `@prisma/adapter-better-sqlite3` + custom builds
@@ -89,22 +89,43 @@ The design system requires SQLCipher encryption (Phase 0 item #5). Prisma doesn'
 - Pros: maximum control, direct SQLCipher support
 - Cons: no type safety (or manual types), no migration system, most code
 
-### Current lean
-**Option B (Drizzle).** We haven't built enough Prisma-specific code yet to make migration costly. better-sqlite3 has first-class SQLCipher support. Drizzle is type-safe and well-maintained.
+### Investigation (post v3.0 session 7)
+The app now has 19 Prisma models, 8 API routes, and an inbox reading Prisma directly. Migrating to Drizzle (Option B) or raw better-sqlite3 (Option C) mid-build would be a high-risk rewrite of working code for low marginal benefit. Further, Prisma's `?key=` connection-string param (used in `getShopClient`) is **silently ignored** by Prisma's built-in SQLite driver — it does not engage SQLCipher. So the "SQLCipher through Prisma" path is not merely experimental, it is non-functional without a custom driver build that the team would have to maintain.
 
 ### Decision
-**Not yet made.** Resolve before starting Phase 0 item #5. Test each option against:
-1. Does SQLCipher work?
-2. Is the key derivation from machine ID clean?
-3. How much rework is needed?
-4. Does the team (founder + agent) understand it?
+**Option D: application-layer field-level AES-256-GCM encryption.**
+
+Sensitive columns (API keys, customer PII) are encrypted with AES-256-GCM at the service layer, before Prisma writes them. The master key is stored **outside** the database (mode-0600 keyfile in the app data dir, interim; OS keychain via Tauri Stronghold, production target — see ADR-004 amendment).
+
+- **Random-IV AES-256-GCM** for secrets & non-searchable PII (names, addresses, notes, API keys).
+- **HMAC-SHA256 blind index** for fields that must remain searchable by exact equality (e.g. customer phone). The blind index is stored alongside the ciphertext; lookups use `WHERE phoneIndex = ?` without decrypting.
+
+### Rationale
+1. **Keeps Prisma.** No ORM migration. The 19-model schema + 8 API routes + inbox keep working.
+2. **Protects the actual threat.** The DB file (structure, orders, products) is not sensitive — customer PII and API keys are. Field-level encryption protects exactly what matters.
+3. **Key separation.** The master key and the ciphertext live in different locations (keyfile vs SQLite). An attacker needs both.
+4. **Tamper detection.** GCM auth tags detect ciphertext tampering.
+5. **Searchability preserved.** Blind indexes keep phone-lookup O(log n) via the existing unique index — no full-table decrypt.
+6. **Forward path to OS keychain.** When Tauri Stronghold is wired, only the master-key storage changes; the encryption layer stays.
+
+### Consequences
+- New `Secret` Prisma model (key/ciphertext/iv/tag) for API keys.
+- New `src/lib/crypto/` module: `field-crypto.ts` (AES-256-GCM + blind index), `master-key.ts` (load/generate/rotate).
+- New `src/lib/secrets/` service: `getSecret` / `setSecret` / `hasSecret` / `deleteSecret`.
+- Customer-PII field encryption (name/phone/address/notes) is a focused follow-up PR: requires deterministic phone encryption + blind index + data migration. The crypto lib is ready; application is mechanical.
+- `getShopClient(shopFilePath, encryptionKey?)` in `db.ts` is now vestigial (the `?key=` param does nothing). Marked for cleanup.
+- Supersedes the "Current lean: Option B (Drizzle)" note above.
+
+### Open follow-up
+- Apply field encryption to `Customer` (name, phone, address, notes) + `Conversation.contactName/contactPhone` (PII). Phone gets a blind index; the rest get random-IV AES-GCM. Migration script encrypts existing rows.
+- Wire Tauri Stronghold for the master key (ADR-004 production target).
 
 ---
 
 ## ADR-004: OS keychain for all third-party credentials
 
 **Date:** 2026-06-21
-**Status:** ✅ Accepted (locked in design system v2.2)
+**Status:** ✅ Accepted (locked in design system v2.2) — **amended: interim SQLite-backed encrypted store (see below)**
 
 ### Context
 Where do delivery provider credentials (Yalidine API ID/token, ZR Express API ID/key, Maystro API token), e-commerce integration tokens (Shopify/WooCommerce/YouCan), and AI keys (Gemini API key) live locally?
@@ -124,6 +145,12 @@ Where do delivery provider credentials (Yalidine API ID/token, ZR Express API ID
 - Secret values read from keychain at runtime
 - Tauri keychain plugin needed (or platform-specific implementation)
 - Slightly more complex read path (keychain + DB), but security > convenience here
+
+### Amendment (2026-06-21, post v3.0 session 7)
+**Interim backing store: AES-256-GCM encrypted `Secret` table in SQLite** (per ADR-003), with the master key in a mode-0600 keyfile. This unblocks the Gemini key wizard and all credential features in the web/dev environment **before** the Tauri Stronghold plugin is wired.
+
+- The `src/lib/secrets/` service interface (`getSecret` / `setSecret` / `hasSecret` / `deleteSecret`) is the stable API. When Stronghold lands, only the implementation swaps — call sites are unchanged.
+- The production target remains OS keychain. The interim is acceptable because (a) the master key is separated from the ciphertext, (b) the threat model (DB file theft) is addressed, and (c) the migration to Stronghold is a single-PR storage swap.
 
 ---
 
