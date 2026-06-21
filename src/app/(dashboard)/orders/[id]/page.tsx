@@ -16,13 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
+import { CreateShipment } from "@/components/orders/create-shipment";
 import {
   ArrowRight,
   Phone,
   MapPin,
   Calendar,
   MessageSquare,
-  Truck,
   Package,
   User,
   ArrowLeft,
@@ -185,41 +185,18 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
 
-          {/* Delivery info */}
-          {delivery && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Truck className="h-4 w-4" />
-                  Livraison
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Transporteur</span>
-                  <span className="font-medium capitalize">{delivery.provider}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Suivi</span>
-                  <span className="font-mono text-xs">
-                    {delivery.trackingNumber ?? "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Coût</span>
-                  <span className="font-medium">
-                    {delivery.cost ? formatDZD(delivery.cost) : "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Statut</span>
-                  <Badge variant="outline" className="capitalize">
-                    {delivery.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Delivery / shipment */}
+          <CreateShipment
+            orderId={order.id}
+            orderStatus={order.status}
+            delivery={delivery ? {
+              id: delivery.id,
+              provider: delivery.provider,
+              trackingNumber: delivery.trackingNumber,
+              cost: delivery.cost,
+              status: delivery.status,
+            } : null}
+          />
 
           {/* Notes */}
           {order.notes && (

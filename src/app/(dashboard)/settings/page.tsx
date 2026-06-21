@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { LicensePanel } from "@/components/settings/license-panel";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
+import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import {
   Bot,
   MessageSquare,
@@ -78,6 +79,9 @@ export default async function SettingsPage() {
 
       {/* AI key wizard */}
       <AiKeyPanel />
+
+      {/* Delivery credentials */}
+      <DeliveryCredentialsPanel />
 
       {/* Integrations */}
       <Card>
