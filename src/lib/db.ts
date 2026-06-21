@@ -24,6 +24,8 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
 import {
   encryptCustomerData,
   decryptCustomerRow,
@@ -420,15 +422,89 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
 export type DbClient = ReturnType<typeof withPiiEncryption<PrismaClient>>;
 
 /**
- * Default client (development / single-shop mode) — extended with PII encryption.
- * In production, use getShopClient(shopFilePath) instead.
+ * The fallback client — used when no shop is registered yet (first run),
+ * when the active shop's DB file is missing, or in test mode.
+ *
+ * This points at the default dev database (data/shops/dev.db via DATABASE_URL).
+ * The shop registry bootstraps a "default" shop pointing here on first run,
+ * so in normal operation the active-shop path below takes over.
  */
-export const db = (globalForPrisma.prisma as DbClient | undefined) ??
+const fallbackClient = (globalForPrisma.prisma as DbClient | undefined) ??
   withPiiEncryption(dbRaw);
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = db;
+  globalForPrisma.prisma = fallbackClient;
 }
+
+/**
+ * Resolve the Prisma client for the currently active shop.
+ *
+ * Reads the active shop from the shop registry (data/app-meta.json), gets its
+ * dbPath, and returns the cached (or newly created) extended client for that
+ * file. Falls back to the default dev client if:
+ *   - no shop is registered yet (first run before bootstrap)
+ *   - the active shop's dbPath doesn't exist on disk
+ *   - we're in a test environment (tests set their own DB via env vars)
+ *
+ * This reads app-meta.json directly (not via the shops module) to avoid a
+ * circular dependency: shops/index.ts → getShopClient → db.ts → shops/index.ts.
+ * The JSON shape is stable ({shops:[{id,dbPath,...}], activeShopId}).
+ */
+function getActiveShopClient(): DbClient {
+  // In test mode, always use the fallback client (tests set DATABASE_URL)
+  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+    return fallbackClient;
+  }
+
+  try {
+    const metaPath = resolve(process.cwd(), "data", "app-meta.json");
+    if (!existsSync(metaPath)) return fallbackClient;
+
+    const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as {
+      shops?: Array<{ id: string; dbPath: string }>;
+      activeShopId?: string | null;
+    };
+    const activeId = meta.activeShopId;
+    if (!activeId) return fallbackClient;
+
+    const shop = meta.shops?.find((s) => s.id === activeId);
+    if (!shop) return fallbackClient;
+
+    const fullPath = resolve(process.cwd(), shop.dbPath);
+    if (!existsSync(fullPath)) return fallbackClient;
+
+    return getShopClient(fullPath);
+  } catch {
+    // Any error reading the registry → fall back to the dev client.
+    return fallbackClient;
+  }
+}
+
+/**
+ * The active-shop-aware Prisma client.
+ *
+ * This is a Proxy that forwards every property access to the currently active
+ * shop's Prisma client. When the user switches shops via the topbar selector,
+ * subsequent `db.*` calls automatically route to the new shop's SQLite file —
+ * no call-site changes needed (all 52 files that import `db` keep working).
+ *
+ * The resolution happens lazily on each access, so shop switching is immediate.
+ * Shop clients are cached in-process (see getShopClient), so the per-access
+ * overhead is just a Map lookup + a tiny file read.
+ *
+ * In test mode, this falls back to the default client (tests set DATABASE_URL).
+ */
+export const db: DbClient = new Proxy(fallbackClient, {
+  get(_target, prop, receiver) {
+    const client = getActiveShopClient();
+    const value = Reflect.get(client, prop, receiver);
+    // Preserve `this` binding for methods (Prisma client methods need it)
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+}) as DbClient;
 
 /**
  * Get an extended PrismaClient for a specific shop file.
