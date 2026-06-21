@@ -1,0 +1,350 @@
+[
+  {
+    "code": 1,
+    "name": "Adrar",
+    "nameAr": "أدرار",
+    "zone": "south"
+  },
+  {
+    "code": 2,
+    "name": "Chlef",
+    "nameAr": "الشلف",
+    "zone": "west"
+  },
+  {
+    "code": 3,
+    "name": "Laghouat",
+    "nameAr": "الأغواط",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 4,
+    "name": "Oum El Bouaghi",
+    "nameAr": "أم البواقي",
+    "zone": "east"
+  },
+  {
+    "code": 5,
+    "name": "Batna",
+    "nameAr": "باتنة",
+    "zone": "east"
+  },
+  {
+    "code": 6,
+    "name": "Béjaïa",
+    "nameAr": "بجاية",
+    "zone": "east"
+  },
+  {
+    "code": 7,
+    "name": "Biskra",
+    "nameAr": "بسكرة",
+    "zone": "south"
+  },
+  {
+    "code": 8,
+    "name": "Béchar",
+    "nameAr": "بشار",
+    "zone": "south"
+  },
+  {
+    "code": 9,
+    "name": "Blida",
+    "nameAr": "البليدة",
+    "zone": "north"
+  },
+  {
+    "code": 10,
+    "name": "Bouira",
+    "nameAr": "البويرة",
+    "zone": "north"
+  },
+  {
+    "code": 11,
+    "name": "Tamanrasset",
+    "nameAr": "تمنراست",
+    "zone": "south"
+  },
+  {
+    "code": 12,
+    "name": "Tébessa",
+    "nameAr": "تبسة",
+    "zone": "east"
+  },
+  {
+    "code": 13,
+    "name": "Tlemcen",
+    "nameAr": "تلمسان",
+    "zone": "west"
+  },
+  {
+    "code": 14,
+    "name": "Tiaret",
+    "nameAr": "تيارت",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 15,
+    "name": "Tizi Ouzou",
+    "nameAr": "تيزي وزو",
+    "zone": "north"
+  },
+  {
+    "code": 16,
+    "name": "Alger",
+    "nameAr": "الجزائر",
+    "zone": "north"
+  },
+  {
+    "code": 17,
+    "name": "Djelfa",
+    "nameAr": "الجلفة",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 18,
+    "name": "Jijel",
+    "nameAr": "جيجل",
+    "zone": "east"
+  },
+  {
+    "code": 19,
+    "name": "Sétif",
+    "nameAr": "سطيف",
+    "zone": "east"
+  },
+  {
+    "code": 20,
+    "name": "Saïda",
+    "nameAr": "سعيدة",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 21,
+    "name": "Skikda",
+    "nameAr": "سكيكدة",
+    "zone": "east"
+  },
+  {
+    "code": 22,
+    "name": "Sidi Bel Abbès",
+    "nameAr": "سيدي بلعباس",
+    "zone": "west"
+  },
+  {
+    "code": 23,
+    "name": "Annaba",
+    "nameAr": "عنابة",
+    "zone": "east"
+  },
+  {
+    "code": 24,
+    "name": "Guelma",
+    "nameAr": "قالمة",
+    "zone": "east"
+  },
+  {
+    "code": 25,
+    "name": "Constantine",
+    "nameAr": "قسنطينة",
+    "zone": "east"
+  },
+  {
+    "code": 26,
+    "name": "Médéa",
+    "nameAr": "المدية",
+    "zone": "north"
+  },
+  {
+    "code": 27,
+    "name": "Mostaganem",
+    "nameAr": "مستغانم",
+    "zone": "west"
+  },
+  {
+    "code": 28,
+    "name": "M'Sila",
+    "nameAr": "المسيلة",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 29,
+    "name": "Mascara",
+    "nameAr": "معسكر",
+    "zone": "west"
+  },
+  {
+    "code": 30,
+    "name": "Ouargla",
+    "nameAr": "ورقلة",
+    "zone": "south"
+  },
+  {
+    "code": 31,
+    "name": "Oran",
+    "nameAr": "وهران",
+    "zone": "west"
+  },
+  {
+    "code": 32,
+    "name": "El Bayadh",
+    "nameAr": "البيض",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 33,
+    "name": "Illizi",
+    "nameAr": "إليزي",
+    "zone": "south"
+  },
+  {
+    "code": 34,
+    "name": "Bordj Bou Arréridj",
+    "nameAr": "برج بوعريريج",
+    "zone": "east"
+  },
+  {
+    "code": 35,
+    "name": "Boumerdès",
+    "nameAr": "بومرداس",
+    "zone": "north"
+  },
+  {
+    "code": 36,
+    "name": "El Tarf",
+    "nameAr": "الطارف",
+    "zone": "east"
+  },
+  {
+    "code": 37,
+    "name": "Tindouf",
+    "nameAr": "تندوف",
+    "zone": "south"
+  },
+  {
+    "code": 38,
+    "name": "Tissemsilt",
+    "nameAr": "تيسمسيلت",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 39,
+    "name": "El Oued",
+    "nameAr": "الوادي",
+    "zone": "south"
+  },
+  {
+    "code": 40,
+    "name": "Khenchela",
+    "nameAr": "خنشلة",
+    "zone": "east"
+  },
+  {
+    "code": 41,
+    "name": "Souk Ahras",
+    "nameAr": "سوق أهراس",
+    "zone": "east"
+  },
+  {
+    "code": 42,
+    "name": "Tipaza",
+    "nameAr": "تيبازة",
+    "zone": "north"
+  },
+  {
+    "code": 43,
+    "name": "Mila",
+    "nameAr": "ميلة",
+    "zone": "east"
+  },
+  {
+    "code": 44,
+    "name": "Aïn Defla",
+    "nameAr": "عين الدفلى",
+    "zone": "north"
+  },
+  {
+    "code": 45,
+    "name": "Naâma",
+    "nameAr": "النعامة",
+    "zone": "west"
+  },
+  {
+    "code": 46,
+    "name": "Aïn Témouchent",
+    "nameAr": "عين تموشنت",
+    "zone": "west"
+  },
+  {
+    "code": 47,
+    "name": "Ghardaïa",
+    "nameAr": "غرداية",
+    "zone": "south"
+  },
+  {
+    "code": 48,
+    "name": "Relizane",
+    "nameAr": "غليزان",
+    "zone": "west"
+  },
+  {
+    "code": 49,
+    "name": "El M'Ghair",
+    "nameAr": "المغير",
+    "zone": "south"
+  },
+  {
+    "code": 50,
+    "name": "El Meniaa",
+    "nameAr": "المنيعة",
+    "zone": "south"
+  },
+  {
+    "code": 51,
+    "name": "Ouled Djellal",
+    "nameAr": "أولاد جلال",
+    "zone": "south"
+  },
+  {
+    "code": 52,
+    "name": "Bordj Baji Mokhtar",
+    "nameAr": "برج باجي مختار",
+    "zone": "south"
+  },
+  {
+    "code": 53,
+    "name": "Béni Abbès",
+    "nameAr": "بني عباس",
+    "zone": "south"
+  },
+  {
+    "code": 54,
+    "name": "Timimoun",
+    "nameAr": "تيميمون",
+    "zone": "south"
+  },
+  {
+    "code": 55,
+    "name": "Touggourt",
+    "nameAr": "تقرت",
+    "zone": "south"
+  },
+  {
+    "code": 56,
+    "name": "Djanet",
+    "nameAr": "جانت",
+    "zone": "south"
+  },
+  {
+    "code": 57,
+    "name": "In Salah",
+    "nameAr": "عين صالح",
+    "zone": "south"
+  },
+  {
+    "code": 58,
+    "name": "In Guezzam",
+    "nameAr": "عين قزام",
+    "zone": "south"
+  }
+]
