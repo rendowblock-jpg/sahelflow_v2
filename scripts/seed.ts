@@ -201,3 +201,88 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+// ─── Conversations + Messages (for the inbox) ─────────────────────────────────
+async function seedConversations() {
+  console.log("\n💬 Seeding conversations...");
+
+  const conversations = [
+    {
+      channel: "whatsapp",
+      contactName: "Ahmed Benali",
+      contactPhone: "0555123456",
+      sourceId: "wa-001",
+      lastMessageAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      unreadCount: 2,
+      messages: [
+        { body: "السلام عليكم", direction: "inbound", timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) },
+        { body: "وعليكم السلام، كيفاش نقدر نعاونك؟", direction: "outbound", timestamp: new Date(Date.now() - 2.8 * 60 * 60 * 1000) },
+        { body: "بغيت نشرى iPhone 14 Case ب 1200 دج ف Alger، رقمي 0555123456", direction: "inbound", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        { body: "اسمي Ahmed", direction: "inbound", timestamp: new Date(Date.now() - 1.9 * 60 * 60 * 1000) },
+      ],
+    },
+    {
+      channel: "whatsapp",
+      contactName: "Fatima Zohra",
+      contactPhone: "0661987654",
+      sourceId: "wa-002",
+      lastMessageAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      unreadCount: 1,
+      messages: [
+        { body: "Bonjour, je veux commander 2x robe d'été 3500 DA Oran, 0661987654", direction: "inbound", timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000) },
+        { body: "Je m'appelle Fatima", direction: "inbound", timestamp: new Date(Date.now() - 4.9 * 60 * 60 * 1000) },
+      ],
+    },
+    {
+      channel: "whatsapp",
+      contactName: "Karim Haddad",
+      contactPhone: "0770456789",
+      sourceId: "wa-003",
+      lastMessageAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      unreadCount: 0,
+      messages: [
+        { body: "نبغي نشري ٣ قطع من basket sport ب 6500 دج كل وحدة ف Constantine", direction: "inbound", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        { body: "تم تأكيد طلبك، سنتواصل معك قريباً", direction: "outbound", timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000) },
+      ],
+    },
+    {
+      channel: "tiktok",
+      contactName: "Amina Cherif",
+      contactPhone: "0555789012",
+      sourceId: "tt-001",
+      lastMessageAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
+      unreadCount: 1,
+      messages: [
+        { body: "3x basket sport 6500 DA Constantine 0770456789", direction: "inbound", timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000) },
+      ],
+    },
+    {
+      channel: "whatsapp",
+      contactName: "Yacine Brahimi",
+      contactPhone: "0661345678",
+      sourceId: "wa-004",
+      lastMessageAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      unreadCount: 0,
+      messages: [
+        { body: "بغيت نشرى montre connectée ب 8500 دج ف Annaba", direction: "inbound", timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+        { body: "تم الشحن، رقم التتبع: YAL-0003", direction: "outbound", timestamp: new Date(Date.now() - 47 * 60 * 60 * 1000) },
+      ],
+    },
+  ];
+
+  for (const conv of conversations) {
+    const { messages, ...convData } = conv;
+    const created = await prisma.conversation.create({
+      data: {
+        ...convData,
+        messages: {
+          create: messages,
+        },
+      },
+      include: { messages: true },
+    });
+    console.log(`  ✅ ${created.contactName} (${created.messages.length} messages)`);
+  }
+}
+
+await seedConversations();
