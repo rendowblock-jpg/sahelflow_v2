@@ -25,10 +25,15 @@ import {
   encryptString,
   decryptString,
   deriveBlindIndex,
+  isEncryptedPayload,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
 import { getMasterKey } from "@/lib/crypto/master-key";
 import type { Buffer } from "buffer";
+
+// Re-export for backward compat (callers that imported isEncryptedPayload from
+// customer-encryption). The canonical home is now field-crypto.ts.
+export { isEncryptedPayload };
 
 /** Fields stored as random-IV AES-256-GCM JSON in their own column. */
 export const ENCRYPTED_FIELDS = ["name", "phone2", "address", "notes"] as const;
@@ -47,21 +52,6 @@ export const PLAINTEXT_PII_FIELDS = [
   "address",
   "notes",
 ] as const;
-
-/** True if a string looks like an encrypted JSON payload (iv/ciphertext/tag). */
-export function isEncryptedPayload(value: string | null | undefined): boolean {
-  if (!value) return false;
-  try {
-    const parsed = JSON.parse(value) as Partial<EncryptedPayload>;
-    return (
-      typeof parsed.iv === "string" &&
-      typeof parsed.ciphertext === "string" &&
-      typeof parsed.tag === "string"
-    );
-  } catch {
-    return false;
-  }
-}
 
 /** Serialize an EncryptedPayload to its JSON string form (for DB storage). */
 function payloadToJson(payload: EncryptedPayload): string {
