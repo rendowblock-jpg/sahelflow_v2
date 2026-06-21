@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { LicensePanel } from "@/components/settings/license-panel";
+import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import {
   Bot,
   MessageSquare,
@@ -74,6 +75,9 @@ export default async function SettingsPage() {
 
       {/* License panel */}
       <LicensePanel />
+
+      {/* AI key wizard */}
+      <AiKeyPanel />
 
       {/* Integrations */}
       <Card>

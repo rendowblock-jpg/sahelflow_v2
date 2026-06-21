@@ -319,6 +319,23 @@ model AiChatMessage {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SECRETS (encrypted key/value store — ADR-003/004)
+// ─────────────────────────────────────────────────────────────────────────────
+// Third-party API keys (Gemini, delivery providers, e-commerce) stored
+// AES-256-GCM encrypted. The master key lives outside the DB (keyfile → OS
+// keychain). See src/lib/crypto/ and src/lib/secrets/.
+
+model Secret {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  ciphertext String
+  iv         String
+  tag        String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // NOTIFICATIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
