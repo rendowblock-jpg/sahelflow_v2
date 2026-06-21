@@ -1,0 +1,268 @@
+# SahelFlow v3.0 — Architectural Decisions (ADRs)
+
+> **Locked decisions with rationale.** Each entry is an Architectural Decision Record.
+> Once locked, a decision is only changed by adding a new ADR that supersedes it.
+> For the full spec, see `ultimate-design-system.md`. For the build plan, see `full_build.md`.
+
+---
+
+## ADR-001: Greenfield over migration
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted
+**Supersedes:** v2 architecture (Next.js + Supabase web app)
+
+### Context
+The v2 codebase (19 PRs, 135 audit findings fixed, 691 tests) was built as a Next.js + Supabase web app. The v2.1 design system pivoted the architecture to local-first desktop (Tauri + local SQLite + Baileys sidecar). The question: migrate the v2 codebase to the new architecture, or start fresh?
+
+Investigation revealed:
+- 61 files import Supabase
+- 46 API routes (all deleted in Tauri — no server)
+- 39 files use the auth wrapper (all deleted — license validation replaces auth)
+- 73 files do `.from()` DB access (all rewritten against Prisma/local SQLite)
+- UI uses hand-rolled `sf-` CSS, not shadcn/ui (design system requires shadcn)
+- The server/client component split is meaningless in Tauri
+
+### Decision
+**Start fresh. Zero code copied from v2.**
+
+### Rationale
+1. The portable core (delivery adapters, i18n, types, order-transitions, wilayas, risk engine — ~10K lines) is the easy part. Copying it deliberately is 1-2 days, not 3-4 weeks of surgery.
+2. The UI doesn't meet the new standard (shadcn/ui) — would be rebuilt regardless.
+3. The architecture is a different species (web app vs desktop app). Migration produces a Frankenstein where every file carries traces of the old architecture.
+4. The 19 PRs of audit work taught the lessons — the *lessons* survive even if the *code* doesn't. Carry `AUDIT_FINDINGS.md` as a pre-flight checklist.
+5. Greenfield is psychologically harder but architecturally honest.
+
+### Consequences
+- v2-legacy branch preserved as reference (do NOT merge into main)
+- Schema *design* travels as reference (redesigned as Prisma, not copied)
+- Wilaya/commune data + i18n translations port as raw JSON (government data + linguistic work)
+- ~12-15 weeks of Phase 0 work to rebuild what v2 had, but cleaner
+
+---
+
+## ADR-002: Prisma as the ORM
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted (with open tension — see ADR-003)
+
+### Context
+Need an ORM for local SQLite. Options: Prisma, Drizzle, raw better-sqlite3.
+
+### Decision
+**Use Prisma** (v6) for the data layer.
+
+### Rationale
+1. Type-safe schema-first design (`.prisma` file is the source of truth)
+2. Excellent TypeScript inference (no manual types)
+3. Mature tooling (Prisma Studio, migrations, client generation)
+4. The founder's sandbox already has Prisma configured + working
+5. shadcn/ui ecosystem examples often use Prisma
+
+### Consequences
+- Schema lives in `prisma/schema.prisma`
+- `prisma generate` required after schema changes (enforced in `sf-verify`)
+- **Open tension:** SQLCipher support (see ADR-003)
+
+---
+
+## ADR-003: SQLCipher encryption approach — OPEN
+
+**Date:** 2026-06-21
+**Status:** ⚠️ Open (resolve before Phase 0 item #5)
+
+### Context
+The design system requires SQLCipher encryption (Phase 0 item #5). Prisma doesn't natively support SQLCipher. Three options:
+
+**Option A: Prisma custom SQLCipher engine**
+- Prisma has experimental support via `@prisma/adapter-better-sqlite3` + custom builds
+- Pros: keep Prisma
+- Cons: fragile, experimental, limited community support
+
+**Option B: Drizzle + better-sqlite3**
+- Drop Prisma, use Drizzle (supports better-sqlite3, which supports SQLCipher)
+- Pros: cleaner SQLCipher support, type-safe, mature
+- Cons: lose Prisma's tooling (Studio, migration system), rewrite schema in Drizzle syntax
+
+**Option C: Raw better-sqlite3**
+- Drop ORM entirely
+- Pros: maximum control, direct SQLCipher support
+- Cons: no type safety (or manual types), no migration system, most code
+
+### Current lean
+**Option B (Drizzle).** We haven't built enough Prisma-specific code yet to make migration costly. better-sqlite3 has first-class SQLCipher support. Drizzle is type-safe and well-maintained.
+
+### Decision
+**Not yet made.** Resolve before starting Phase 0 item #5. Test each option against:
+1. Does SQLCipher work?
+2. Is the key derivation from machine ID clean?
+3. How much rework is needed?
+4. Does the team (founder + agent) understand it?
+
+---
+
+## ADR-004: OS keychain for all third-party credentials
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted (locked in design system v2.2)
+
+### Context
+Where do delivery provider credentials (Yalidine API ID/token, ZR Express API ID/key, Maystro API token), e-commerce integration tokens (Shopify/WooCommerce/YouCan), and AI keys (Gemini API key) live locally?
+
+### Decision
+**All third-party credentials stored in OS keychain** (Windows Credential Manager / macOS Keychain / Linux Secret Service). Never in SQLite.
+
+### Rationale
+1. Consistent with the AI-key decision (design system Section 2.2)
+2. Encrypted at rest by the OS — survives even if SQLCipher key leaks
+3. One secure store for all secrets (simpler mental model)
+4. Never accidentally exported with the database
+5. OS-native, no custom crypto
+
+### Consequences
+- `Integration` table stores only non-secret config (base URL, sync interval, `is_active`)
+- Secret values read from keychain at runtime
+- Tauri keychain plugin needed (or platform-specific implementation)
+- Slightly more complex read path (keychain + DB), but security > convenience here
+
+---
+
+## ADR-005: File-per-shop architecture
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted
+
+### Context
+The design system requires multi-shop support (up to 10 shops, isolated data). How to structure this?
+
+### Decision
+**One SQLite file per shop.** The app opens a different `PrismaClient` instance per shop file path. No `seller_id` column — the file IS the shop.
+
+### Rationale
+1. True isolation (no cross-shop data leakage possible)
+2. Easy backup/transfer (copy one file)
+3. Easy deletion (delete one file)
+4. No `seller_id` column cluttering every query
+5. Schema is simpler (no multi-tenancy in the schema)
+6. Scales to the 10-shop limit without performance concerns
+
+### Consequences
+- `src/lib/db.ts` has `getShopClient(shopFilePath, encryptionKey?)` for multi-shop
+- Shop metadata (name, icon, file path) stored separately (app-meta store, not in the shop schema)
+- Max 10 shops enforced at the app level
+- Each shop = separate SQLCipher key (derived from machine ID + shop ID)
+
+---
+
+## ADR-006: Ed25519 for license signing
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted
+
+### Context
+Need a cryptographic signing scheme for license validation. The app verifies licenses offline (no server).
+
+### Decision
+**Ed25519** (via `@noble/ed25519`).
+
+### Rationale
+1. Fast verification (important for every app launch)
+2. Small signature size (64 bytes)
+3. Small key size (32 bytes private, 32 bytes public)
+4. Well-supported in the JS ecosystem (`@noble/ed25519` is audited)
+5. Only the public key is embedded in the app; private key stays offline with the founder
+6. Standard, not experimental
+
+### Consequences
+- Founder generates one keypair (via `sf-license keygen`), stores private key offline
+- Public key embedded as `LICENSE_PUBLIC_KEY` env var
+- License = JSON payload + Ed25519 signature (base64)
+- `sf-license sign` (founder's tool) signs licenses offline
+- App verifies signature on launch (via the public key)
+
+---
+
+## ADR-007: Polling replaces webhooks
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted (from design system v2.0)
+
+### Context
+v2 used webhooks for e-commerce integrations (Shopify, WooCommerce, YouCan). The local-first architecture has no public URL to receive webhooks.
+
+### Decision
+**All integrations use polling** (every 2-5 min). No webhooks.
+
+### Rationale
+1. Local-first = no public URL = no webhooks possible
+2. One integration pattern (simpler code)
+3. No webhook queue/retry complexity
+4. 2-5 min latency is acceptable for Algerian COD (not real-time critical)
+5. Matches the Baileys pattern (WhatsApp also syncs on launch, not real-time push)
+
+### Consequences
+- `PollingEvent` table (replaces v2's `webhook_events`)
+- Each integration has a `lastSyncAt` timestamp
+- Polling loop runs while the app is open
+- `Integration.lastSyncAt` column tracks sync state
+
+---
+
+## ADR-008: Integer money (DZD)
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted
+
+### Context
+Money in the database. Float or Integer?
+
+### Decision
+**Integer.** All money fields are `Int` (DZD, no decimals).
+
+### Rationale
+1. DZD doesn't use decimals in practice (prices are whole numbers)
+2. Float causes rounding errors (0.1 + 0.2 ≠ 0.3)
+3. Integer is exact
+4. v2 audit found Float-related issues
+
+### Consequences
+- Every money field in the schema is `Int` (`price`, `cost`, `totalPrice`, `deliveryCost`, `amount`, `revenue`, `expenses`, `netProfit`, `totalSpent`)
+- `formatDZD()` in `src/lib/utils.ts` formats for display (adds "DA" suffix)
+- No `Float` type anywhere in the schema
+
+---
+
+## ADR-009: Cuid IDs (not sequential integers)
+
+**Date:** 2026-06-21
+**Status:** ✅ Accepted
+
+### Context
+Primary key strategy. Auto-increment integers or Cuids/UUIDs?
+
+### Decision
+**Cuid** (`@id @default(cuid())`) for all models.
+
+### Rationale
+1. No sequential IDs leaking count/order (competitor could estimate client's order volume)
+2. Globally unique (safe for future multi-device sync)
+3. URL-safe (no encoding issues)
+4. Prisma supports it natively
+
+### Consequences
+- Every model uses `@id @default(cuid())`
+- `orderNumber` is a separate human-readable field (`ORD-0001`) for display
+
+---
+
+## Open decisions (to be resolved)
+
+| ID | Topic | When to resolve | Lean |
+|---|---|---|---|
+| ADR-003 | Prisma + SQLCipher approach | Before Phase 0 item #5 | Drizzle + better-sqlite3 |
+| — | Meta business verification | Before Phase 0 starts | Kill for v1 (WhatsApp + TikTok only) |
+| — | Marketing strategy details | Before client #1 | Direct outreach for first 10, then organic + referral |
+
+---
+
+_Last updated: 2026-06-21 — 9 ADRs (8 accepted, 1 open)._
