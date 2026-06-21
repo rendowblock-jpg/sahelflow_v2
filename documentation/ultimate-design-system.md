@@ -18,7 +18,7 @@
 | 1 | **All-in-One, Algeria-First** | Every feature an Algerian COD seller needs to run their back-office in one platform — built for Darija, COD, wilaya delivery, local realities. Algeria is permanent identity, not launch strategy. | Tool-switching; generic Western e-commerce assumptions; speculative multi-country abstraction |
 | 2 | **Lifetime Access, One Price** | One payment (25K DZD), use forever, no tiers, no upsells. "Lifetime" means the lifetime of the SahelFlow service: the founder is personally committed to maintaining it because he uses it for his own business. The app requires local license validation on launch; if the founder ever stops maintaining the project, the app stops working. We don't pretend otherwise. | Subscription fatigue; price objections; feature envy; false "forever" promises |
 | 3 | **Free Tier Only** | Every seller runs on their own free-tier AI accounts (Groq + Gemini). All processing happens locally on the seller's device. No VPS, no server costs. SahelFlow costs $0/month to run, at any scale, forever. | Costs that scale with clients; surprise bills; vendor lock-in |
-| 4 | **AI-First, User-Simple** | AI does the heavy lifting in back; the seller sees a dead-simple UI. One accepted trade: initial AI setup requires the seller to add their own free-tier API keys (Groq + Gemini) via a guided wizard. After setup, the AI is invisible. The app works without AI keys (manual mode) so sellers are never blocked. Seller owns their data — local SQLite, SQLCipher-encrypted, exportable anytime the app is open, never auto-deleted. | Complexity that scares non-tech sellers; data lock-in; data-hostage dynamics |
+| 4 | **AI-First, User-Simple** | AI does the heavy lifting in back; the seller sees a dead-simple UI. One accepted trade: initial AI setup requires the seller to add their own free-tier Google AI Studio API key (Gemini 3.5 Flash, 1 account) via a guided wizard. After setup, the AI is invisible. The app works without AI keys (manual mode) so sellers are never blocked. Seller owns their data — local SQLite, SQLCipher-encrypted, exportable anytime the app is open, never auto-deleted. | Complexity that scares non-tech sellers; data lock-in; data-hostage dynamics |
 | 5 | **Ship Fast, AAA at the Seams** | Velocity matters — but the Magic Moment flow and security are always AAA-grade. Elsewhere, "good enough, iterate" is fine. | Perfectionism that kills momentum; slop that kills trust |
 
 **Principle test for new features:**
@@ -50,9 +50,9 @@
 | **Mobile** | PWA (installable on Android via "Add to Home Screen") | One codebase. No app store. Phone-first Algeria. |
 | **Database** | Local SQLite, SQLCipher-encrypted (one file per shop, max 10 shops) | Seller's device. $0. Data ownership. Encryption protects against theft. |
 | **WhatsApp** | Baileys + b3s-baileys (SQLite auth state) as Tauri sidecar | Local-first, low RAM (50-150MB), no PostgreSQL dependency. Syncs messages on app launch (WhatsApp multi-device protocol queues messages for up to 14 days). |
-| **AI — Groq** | Per-client account, key stored locally in OS keychain | Seller's own free tier. ~14,400 req/day per account. |
-| **AI — Gemini** | Per-client account, key stored locally in OS keychain | Seller's own free tier. ~1,500 req/day per account. |
-| **AI fallback** | App tries Groq first, falls back to Gemini (or seller picks default) | Resilience if one provider is down. |
+| **AI — Gemini 3.5 Flash** | Per-client account (Google AI Studio free tier), key stored locally in OS keychain | Seller's own free tier. 1,500 RPD, 10 RPM. Best free Darija quality (4.5/5). Handles extraction + AI chat + 30-tool agentic system. |
+| **AI model fallback** | Gemini 2.5 Flash (if 3.5 unavailable or rate-limited) | Resilience if Google changes 3.5 access. |
+| **Local regex extractor** | Built-in regex + wilaya dictionary + currency parser | Handles ~70% of simple COD messages instantly, offline, free. Smart routing: regex first → Gemini for complex/ambiguous. Reduces Gemini usage by ~70%, protecting the 1,500 RPD quota for AI chat + agentic tools. |
 | **Integrations** (Shopify/WooCommerce/YouCan/TikTok) | Polling (not webhooks). App polls every 2-5 min. | One integration pattern. No public URL needed. No webhook queue complexity. Matches local-first architecture. |
 | **Store builder hosting** | Cloudflare Pages (free) at `[seller].sahelflow.app` | One account serves all storefronts. No per-client hosting. No ToS issue. |
 | **Marketing site** | Cloudflare Pages (free) | Static site + trial signup form |
@@ -141,6 +141,7 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 | **After payment** | Founder verifies CCP receipt, generates permanent license key (signed, tied to machine ID), emails it. Seller pastes key into app → unlocks permanently. |
 | **Manual steps** | Only payment verification + license issuance (~10-15 min per paying client) |
 | **No refunds** | 25K DZD is one-time, non-refundable. Trial is the evaluation period. |
+| **AI quota** | Gemini free tier: 1,500 RPD. Regex fallback handles ~70% of messages (no quota used). AI chat + agentic tools use Gemini quota. Power users (>50 chat questions/day) may approach limit — acceptable for v1, add Groq as power-user upgrade in Phase 2 if needed. |
 
 ### 4.5 Account Management
 
@@ -186,7 +187,7 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 
 **Desktop app** (Tauri) + **Android PWA** — installable, login-gated via local license
 **WhatsApp + TikTok DM ingestion** — unified inbox with tabs, real-time
-**AI order extraction** — your own Groq + Gemini free-tier accounts, guided setup wizard, manual mode fallback
+**AI order extraction** — your own Google AI Studio free-tier account (Gemini 3.5 Flash), guided setup wizard, local regex fallback for ~70% of simple messages (instant, offline, free), manual mode fallback
 **Full back-office:**
 - Orders (lifecycle + confirmation workflow)
 - Customers (risk scores, order history)
@@ -217,7 +218,7 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 ### 6.3 Costs
 
 - **SahelFlow:** 0 DZD/month, forever
-- **Seller needs:** Free-tier Groq + Gemini accounts (guided setup)
+- **Seller needs:** Free-tier Google AI Studio account (Gemini 3.5 Flash, guided setup — 1 account only, ~5-10 min)
 - **Founder absorbs:** Cloudflare Pages (free) + GitHub Releases (free) = $0/month
 - **No VPS, no server costs, no scaling costs**
 
@@ -233,7 +234,7 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 | 2 | System | Downloads Tauri app | ~2 min |
 | 3 | Seller | Installs + opens app | ~3 min |
 | 4 | App | Self-issues trial license (cryptographic, 7-day, machine-ID-tied) | instant |
-| 5 | Seller | Guided wizard: connect WhatsApp (QR) + add AI keys (Groq + Gemini) | 10-15 min |
+| 5 | Seller | Guided wizard: connect WhatsApp (QR) + add Gemini API key (1 account, Google AI Studio) | 5-10 min |
 | 6 | App | Magic Moment (first AI extraction, whenever it happens) | variable |
 | 7 | App | Day 6: in-app reminder banner "Trial ends tomorrow" | automated |
 | 8 | App | Day 7: refuses to launch, shows "Pay 25K DZD" + machine ID | automated |
@@ -281,7 +282,7 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 
 ### 8.3 Key Differentiators
 
-1. **Privacy:** Data + AI keys on seller's machine. No server has access.
+1. **Privacy (honest):** Data stored locally on seller's device (SQLCipher encrypted). SahelFlow has no server — no server access to seller data. AI processing uses seller's own Google AI Studio free tier; Google's free-tier terms may use inputs for model training. For absolute privacy, sellers can upgrade to Google's paid tier (doesn't train on inputs). Local regex extractor handles ~70% of messages without any AI call — those messages never leave the seller's device.
 2. **Price:** 25K one-time vs competitors' monthly subscriptions
 3. **Mobile:** PWA installable on Android
 4. **Local-first:** Works offline, no server dependency, $0/mo to run
@@ -307,9 +308,10 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 | 6 | Automatic update system | 2-3 days | Tauri auto-updater, signed, GitHub Releases, auto-rollback on 3 failures |
 | 7 | Feature flags in license | 1 day | License payload includes `features[]` array |
 | 8 | TikTok DMs integration (polling) | 1 week | Polls TikTok API every 2-5 min, unified inbox with tabs |
-| 9 | Guided AI key setup wizard | 3-5 days | Groq + Gemini setup with screenshots, validation, skip option |
+| 9 | Guided AI key setup wizard | 2-3 days | Gemini-only setup (Google AI Studio, 1 account) with screenshots, validation, skip option |
 | 10 | Manual mode (app works without AI keys) | 2-3 days | Fallback when AI keys not set |
-| 11 | Per-client Groq/Gemini key management | 3-5 days | Rework existing Groq router to use seller's keys |
+| 11 | Local regex fallback extractor + smart routing | 4-5 days | Regex extractor for ~70% of simple COD messages (Arabic numerals + wilaya dictionary + currency parsing). Smart routing: regex first → Gemini for complex. Reduces Gemini usage, protects 1,500 RPD quota. |
+| 11b | Gemini 3.5 Flash integration + agentic routing | 3-4 days | Rework AI service to use Gemini 3.5 Flash for extraction + AI chat + 30-tool agentic system. Validate Darija quality on real messages. Fallback to 2.5 Flash if 3.5 unavailable. |
 | 12 | Multi-shop support | 3-5 days | SQLite file-per-shop, shop selector dropdown, 10 max |
 | 13 | PWA for Android | 3-5 days | Configure Next.js as installable PWA |
 | 14 | COD landing page builder v1 (mini-storefront) | 2-3 weeks | Multi-product, cart, COD checkout, 3 templates, mobile-responsive, Cloudflare Pages hosting |
@@ -396,7 +398,8 @@ For sellers who get stuck on AI key setup: **first manual order created in under
 | **Human support hours/client** | TBD (support model not yet defined) | Time tracking |
 | **Churn (inactive 90+ days)** | <15% | 90+ days inactive OR WhatsApp link expired |
 | **Update adoption rate** | >70% within 30 days of release | Auto-updater telemetry |
-| **AI key setup completion** | >70% of trials complete setup | Wizard completion tracking |
+| **AI key setup completion** | >85% of trials complete Gemini setup | Wizard completion tracking (1 account = lower friction than 2) |
+| **Regex fallback hit rate** | >60% of extractions handled by regex (not Gemini) | Smart routing telemetry — validates regex coverage |
 
 ---
 
@@ -619,10 +622,11 @@ At the beginning of every new session:
 | v1.5 | 2026-06-05 | 100% dashboard coverage mandate locked. Test frameworks: Vitest + Playwright + Coverage gate |
 | v1.6 | 2026-06-05 | AI Vibe Coding Protocol established (Section 14). Roles defined |
 | v1.7 | 2026-06-05 | Session end. Design system complete for round 1 of 2 |
+| **v2.1** | **2026-06-20** | **AI architecture refined: Q3 (Gemini-only + regex fallback + smart routing). Dropped Groq from v1 — Gemini 3.5 Flash (1,500 RPD) handles extraction + AI chat + agentic tools. Local regex extractor handles ~70% of simple messages (instant, offline, free, no Google data exposure). Smart routing: regex first → Gemini for complex. Onboarding friction reduced: 1 account (was 2), 5-10 min setup (was 25-40 min). Trial-to-paid target bumped >20% → >30%. Privacy pitch made honest: Google free tier may train on inputs; regex fallback keeps ~70% of messages on-device. Added regex hit rate metric (>60% target). Phase 0: item 9 simplified (2-3 days, was 3-5), item 11 replaced (regex + smart routing, 4-5 days), item 11b added (Gemini 3.5 Flash integration, 3-4 days). |
 | **v2.0** | **2026-06-20** | **Full redesign after deep grilling session. Architecture pivoted from web app (per-client Vercel + Supabase) to local-first desktop app (Tauri + local SQLite + Baileys sidecar). 108 decisions across 15 sections. Key changes: (1) Price 35K→25K. (2) Team feature dropped. (3) MCP removed. (4) Meta integrations deferred to v2. (5) Magic Moment redefined (MM-1: first AI extraction, not time-bound). (6) Trial enforcement via local license validation (not server login-gate). (7) No VPS — all local, $0/mo forever. (8) Baileys replaces Evolution API. (9) Polling replaces webhooks for all integrations. (10) Layer 4-local security (crypto license + obfuscation + anti-tamper + machine ID + SQLCipher). (11) No hard deadlines (D-KILL). (12) Coverage scoped to AAA surface (C100-AAA). (13) Solo dev review = AI + checklist (R3). (14) Dead-man's switch removed — "lifetime = lifetime of service" honestly stated. (15) AI support chatbot added for burnout mitigation.** |
 
 ---
 
 **This document is source of truth until explicitly updated.**
 
-_Last updated: 2026-06-20 — v2.0. Full redesign. Local-first Tauri architecture. 108 decisions locked. No hard deadlines. Ship when ready._
+_Last updated: 2026-06-20 — v2.1. AI architecture refined (Q3: Gemini-only + regex fallback). v2.0: Full redesign. Local-first Tauri architecture. No hard deadlines. Ship when ready._
