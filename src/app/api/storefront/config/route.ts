@@ -5,35 +5,37 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/storefront/config?slug=...
- * Returns the storefront config + products for public display.
- * Does NOT require auth (public endpoint).
+ * GET /api/storefront/config
+ *   No query params → list all storefronts (seller management view, includes inactive).
+ *   ?slug=...       → public storefront config + products (for the public storefront page).
+ *                    Only returns active storefronts.
  */
 export async function GET(req: NextRequest) {
   try {
     const slug = req.nextUrl.searchParams.get("slug");
-    if (!slug) {
-      return NextResponse.json({ error: "slug required" }, { status: 400 });
+
+    // Public path: fetch by slug for the storefront page
+    if (slug) {
+      const { storefrontService } = await import("@/lib/storefront/service");
+      const config = await storefrontService.getBySlug(slug);
+      if (!config || !config.isActive) {
+        return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
+      }
+
+      const products = config.productIds.length > 0
+        ? await db.product.findMany({
+            where: { id: { in: config.productIds }, isActive: true },
+            select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
+          })
+        : [];
+
+      return NextResponse.json({ config, products });
     }
 
+    // Seller path: list all storefronts (management view)
     const { storefrontService } = await import("@/lib/storefront/service");
-    const config = await storefrontService.getBySlug(slug);
-    if (!config || !config.isActive) {
-      return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
-    }
-
-    // Fetch the selected products
-    const products = config.productIds.length > 0
-      ? await db.product.findMany({
-          where: { id: { in: config.productIds }, isActive: true },
-          select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
-        })
-      : [];
-
-    return NextResponse.json({
-      config,
-      products,
-    });
+    const configs = await storefrontService.list();
+    return NextResponse.json({ configs });
   } catch (err) {
     console.error("[GET /api/storefront/config]", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

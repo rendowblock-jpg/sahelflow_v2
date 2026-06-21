@@ -1090,5 +1090,8 @@
   "time.daysAgo": "منذ {n} يوم",
   "time.hoursAgo": "منذ {n} ساعة",
   "time.justNow": "الآن",
-  "time.minutesAgo": "منذ {n} دقيقة"
+  "time.minutesAgo": "منذ {n} دقيقة",
+  "nav.storefronts": "المتاجر",
+  "storefronts.newTitle": "إنشاء متجر جديد",
+  "storefronts.editTitle": "تعديل المتجر"
 }
