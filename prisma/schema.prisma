@@ -415,3 +415,22 @@ model StorefrontConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SETTING — non-secret app configuration (key/value, plaintext)
+// ─────────────────────────────────────────────────────────────────────────────
+// For secret values (API keys, tokens), use the `Secret` model instead.
+// This model holds non-sensitive config like feature toggles, notification
+// preferences, and report scheduling. Values are stored as strings; callers
+// parse them (boolean, number, JSON) as needed.
+//
+// Well-known keys (convention: snake_case):
+//   "daily_report_enabled"  — "true"|"false"  (daily WhatsApp report on/off)
+//   "daily_report_phone"    — "213555123456"  (recipient phone, intl format)
+//   "daily_report_time"     — "09:00"          (send time, HH:MM 24h, seller TZ)
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

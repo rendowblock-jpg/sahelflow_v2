@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { LicensePanel } from "@/components/settings/license-panel";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
+import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import {
   Bot,
   MessageSquare,
@@ -126,6 +127,9 @@ export default async function SettingsPage() {
           })}
         </CardContent>
       </Card>
+
+      {/* Daily WhatsApp report panel */}
+      <DailyReportPanel />
 
       {/* About */}
       <Card>
