@@ -1,16 +1,18 @@
 /**
  * Shop store — multi-shop management state.
- * In production, shop list is loaded from app-meta store.
- * For now, stubbed with a single dev shop.
+ *
+ * Backed by /api/shops (which reads/writes data/app-meta.json + manages the
+ * per-shop SQLite files). The store loads the shop list on mount and syncs
+ * mutations back to the API.
  */
 import { create } from "zustand";
 
 export interface Shop {
   id: string;
   name: string;
-  /** File path to the shop's SQLite database */
+  /** Path to the shop's SQLite database (relative to project root). */
   dbPath: string;
-  /** Icon (emoji or null) */
+  /** Emoji icon (nullable). */
   icon: string | null;
   createdAt: string;
 }
@@ -18,40 +20,78 @@ export interface Shop {
 interface ShopState {
   shops: Shop[];
   activeShopId: string | null;
+  loaded: boolean;
 
-  addShop: (shop: Shop) => void;
-  removeShop: (shopId: string) => void;
-  setActiveShop: (shopId: string) => void;
+  /** Load the shop list + active shop ID from the API. Call on app mount. */
+  loadShops: () => Promise<void>;
+  /** Create a new shop (calls POST /api/shops). Returns the created shop. */
+  createShop: (input: { name: string; icon?: string | null }) => Promise<Shop>;
+  /** Delete a shop (calls DELETE /api/shops/[id]). */
+  removeShop: (shopId: string) => Promise<void>;
+  /** Set the active shop (calls PUT /api/shops/active). */
+  setActiveShop: (shopId: string) => Promise<void>;
+  /** Get the active shop (synchronous, from store state). */
   getActiveShop: () => Shop | null;
 }
 
 export const useShopStore = create<ShopState>((set, get) => ({
-  shops: [
-    {
-      id: "dev-shop",
-      name: "Ma Boutique",
-      dbPath: "data/shops/dev.db",
-      icon: "🏪",
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  activeShopId: "dev-shop",
+  shops: [],
+  activeShopId: null,
+  loaded: false,
 
-  addShop: (shop) =>
+  loadShops: async () => {
+    try {
+      const res = await fetch("/api/shops");
+      if (!res.ok) return;
+      const data = (await res.json()) as { shops: Shop[]; activeShopId: string | null };
+      set({ shops: data.shops, activeShopId: data.activeShopId, loaded: true });
+    } catch {
+      // leave the store empty — the UI shows a loading state
+    }
+  },
+
+  createShop: async (input) => {
+    const res = await fetch("/api/shops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Échec de la création de la boutique");
+    }
+    const { shop } = (await res.json()) as { shop: Shop };
+    set((s) => ({ shops: [...s.shops, shop] }));
+    return shop;
+  },
+
+  removeShop: async (shopId) => {
+    const res = await fetch(`/api/shops/${shopId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Échec de la suppression");
+    }
     set((s) => {
-      if (s.shops.length >= 10) {
-        throw new Error("Maximum 10 shops allowed");
-      }
-      return { shops: [...s.shops, shop] };
-    }),
+      const shops = s.shops.filter((shop) => shop.id !== shopId);
+      const activeShopId =
+        s.activeShopId === shopId ? shops[0]?.id ?? null : s.activeShopId;
+      return { shops, activeShopId };
+    });
+  },
 
-  removeShop: (shopId) =>
-    set((s) => ({
-      shops: s.shops.filter((shop) => shop.id !== shopId),
-      activeShopId: s.activeShopId === shopId ? s.shops[0]?.id ?? null : s.activeShopId,
-    })),
-
-  setActiveShop: (shopId) => set({ activeShopId: shopId }),
+  setActiveShop: async (shopId) => {
+    // Optimistic update
+    set({ activeShopId: shopId });
+    try {
+      await fetch("/api/shops/active", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId }),
+      });
+    } catch {
+      // best-effort — the optimistic update stays
+    }
+  },
 
   getActiveShop: () => {
     const { shops, activeShopId } = get();

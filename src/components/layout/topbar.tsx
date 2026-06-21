@@ -1,6 +1,7 @@
 "use client";
 
 
+import { useEffect } from "react";
 import { useI18n } from "@/hooks/use-i18n";
 import { useShopStore } from "@/stores/shop-store";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./sidebar";
+import { CreateShopDialog } from "./create-shop-dialog";
 import { Globe, Store, ChevronDown, AlertCircle, Menu } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
@@ -31,8 +33,15 @@ export function Topbar() {
   const { t, locale, setLocale } = useI18n();
   const shops = useShopStore((s) => s.shops);
   const activeShopId = useShopStore((s) => s.activeShopId);
+  const loaded = useShopStore((s) => s.loaded);
   const setActiveShop = useShopStore((s) => s.setActiveShop);
+  const loadShops = useShopStore((s) => s.loadShops);
   const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
+
+  // Load the shop list + active shop ID from the API on mount
+  useEffect(() => {
+    void loadShops();
+  }, [loadShops]);
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-4 gap-4">
@@ -56,7 +65,9 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Store className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium hidden sm:inline">{activeShop?.name ?? t("nav.dashboard")}</span>
+              <span className="font-medium hidden sm:inline">
+                {loaded ? (activeShop?.name ?? "Sélectionner") : "Chargement…"}
+              </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
@@ -66,7 +77,7 @@ export function Topbar() {
             {shops.map((shop) => (
               <DropdownMenuItem
                 key={shop.id}
-                onClick={() => setActiveShop(shop.id)}
+                onClick={() => void setActiveShop(shop.id)}
                 className="gap-2"
               >
                 <span className="text-lg">{shop.icon ?? "🏪"}</span>
@@ -77,9 +88,7 @@ export function Topbar() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled className="text-muted-foreground">
-              + {t("nav.more")}
-            </DropdownMenuItem>
+            <CreateShopDialog />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
