@@ -24,6 +24,7 @@ import {
 import { Plus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import wilayasData from "../../../data/wilayas.json";
+import communesData from "../../../data/communes.json";
 
 interface Customer {
   id: string;
@@ -56,6 +57,13 @@ interface Wilaya {
   zone: string;
 }
 
+interface Commune {
+  code: number;
+  wilayaCode: number;
+  name: string;
+  nameAr: string;
+}
+
 interface OrderFormDialogProps {
   customers: Customer[];
   products: Product[];
@@ -77,6 +85,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const [deliveryCost, setDeliveryCost] = useState("600");
 
   const wilayas = wilayasData as Wilaya[];
+  const allCommunes = communesData as Commune[];
 
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
 
@@ -304,11 +313,23 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Commune</Label>
-                <Input
-                  value={commune}
-                  onChange={(e) => setCommune(e.target.value)}
-                  placeholder="Commune..."
-                />
+                <Select value={commune} onValueChange={setCommune} disabled={!wilaya}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={wilaya ? "Sélectionnez..." : "Choisissez d'abord une wilaya"} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {allCommunes
+                      .filter((c) => {
+                        const wilayaCode = wilayas.find((w) => w.name === wilaya)?.code;
+                        return c.wilayaCode === wilayaCode;
+                      })
+                      .map((c) => (
+                        <SelectItem key={c.code} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">

@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useI18n } from "@/hooks/use-i18n";
 import { useShopStore } from "@/stores/shop-store";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Globe, Store, ChevronDown, AlertCircle } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sidebar } from "./sidebar";
+import { Globe, Store, ChevronDown, AlertCircle, Menu } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
 const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
@@ -32,13 +36,27 @@ export function Topbar() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-4 gap-4">
-      {/* Left: Shop selector */}
+      {/* Left: Mobile sidebar toggle + shop selector */}
       <div className="flex items-center gap-3">
+        {/* Mobile sidebar (hidden on desktop) */}
+        <div className="lg:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <Sidebar />
+            </SheetContent>
+          </Sheet>
+        </div>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Store className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">{activeShop?.name ?? t("nav.dashboard")}</span>
+              <span className="font-medium hidden sm:inline">{activeShop?.name ?? t("nav.dashboard")}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
@@ -66,15 +84,14 @@ export function Topbar() {
         </DropdownMenu>
       </div>
 
-      {/* Right: AI status + language + avatar */}
+      {/* Right: AI status + language + theme + avatar */}
       <div className="flex items-center gap-2">
-        {/* AI status indicator (stub — will reflect real Gemini connection status) */}
-        <Badge variant="outline" className="gap-1.5 text-muted-foreground">
+        <Badge variant="outline" className="gap-1.5 text-muted-foreground hidden md:flex">
           <AlertCircle className="h-3 w-3" />
           <span className="text-xs">{t("nav.agents")}: —</span>
         </Badge>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-6 hidden md:block" />
 
         {/* Language switcher */}
         <DropdownMenu>
@@ -99,7 +116,10 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Avatar (stub — no user accounts in v3, license-based) */}
+        {/* Theme toggle */}
+        <ThemeToggle />
+
+        {/* Avatar */}
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
             {activeShop?.name.charAt(0).toUpperCase() ?? "S"}

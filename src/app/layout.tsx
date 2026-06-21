@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Amiri } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,7 +10,6 @@ const inter = Inter({
   display: "swap",
 });
 
-// Amiri for Arabic text (loads only when needed via unicode-range)
 const amiri = Amiri({
   subsets: ["arabic"],
   weight: ["400", "700"],
@@ -28,7 +28,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
-        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <TooltipProvider delayDuration={300}>
+            {children}
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
