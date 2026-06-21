@@ -10,9 +10,11 @@
  *   - 8 orders (various statuses, covering the full lifecycle)
  *   - 2 deliveries (for confirmed/shipped orders)
  */
-import { PrismaClient } from "@prisma/client";
+import { db as prisma } from "@/lib/db";
 
-const prisma = new PrismaClient();
+// `prisma` is the PII-encryption-extended client. Customer create/update/find
+// are transparently encrypted/decrypted (ADR-003). For migrating pre-existing
+// plaintext databases, run scripts/migrate-pii-encryption.ts after seeding.
 
 async function main() {
   console.log("🌱 Seeding dev database...");

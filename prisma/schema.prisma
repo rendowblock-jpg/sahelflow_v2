@@ -68,10 +68,17 @@ model Product {
 // CUSTOMERS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// PII ENCRYPTION (ADR-003): name, phone, phone2, address, notes are encrypted
+// at the application layer (AES-256-GCM). `phone` stores an HMAC blind index
+// (deterministic, searchable, @unique); `phoneEnc` stores the encrypted actual
+// phone. Callers pass plaintext — the Prisma extension in src/lib/db.ts
+// encrypts on write, decrypts on read, and rewrites `where.phone` to the blind
+// index. See src/lib/crypto/customer-encryption.ts.
 model Customer {
   id         String    @id @default(cuid())
   name       String
   phone      String
+  phoneEnc   String?
   phone2     String?
   wilaya     String?
   commune    String?

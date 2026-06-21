@@ -117,7 +117,8 @@ Sensitive columns (API keys, customer PII) are encrypted with AES-256-GCM at the
 - Supersedes the "Current lean: Option B (Drizzle)" note above.
 
 ### Open follow-up
-- Apply field encryption to `Customer` (name, phone, address, notes) + `Conversation.contactName/contactPhone` (PII). Phone gets a blind index; the rest get random-IV AES-GCM. Migration script encrypts existing rows.
+- ~~Apply field encryption to `Customer`~~ — ✅ DONE (session 8): `Customer.name/phone2/address/notes` are AES-256-GCM encrypted; `phone` is an HMAC blind index (`@unique`, searchable); `phoneEnc` holds the encrypted actual phone. A Prisma `$extends` query interceptor makes it transparent (call sites pass plaintext, get plaintext back). Migration script: `scripts/migrate-pii-encryption.ts`.
+- Apply field encryption to `Order.phone` (denormalized delivery phone) + `Conversation.contactName/contactPhone` (PII from WhatsApp). Same pattern as Customer; `Conversation.contactPhone` gets a blind index for lookup-by-phone.
 - Wire Tauri Stronghold for the master key (ADR-004 production target).
 
 ---
