@@ -5,6 +5,73 @@
 
 ---
 
+## Session 5 — 2026-06-21: License crypto + 5 functional pages + manual order creation
+
+**Branches affected:** `main`
+**Commits:** `c0cb192`, `a112e05`, `370a0b0`, `35e37c1`
+
+### What was built
+
+**License validation (Phase 0 item #4):**
+- `src/lib/license/crypto.ts` — real Ed25519 verification via @noble/ed25519, isExpired, daysRemaining, meetsVersionRequirement (semver)
+- `src/lib/license/machine-id.ts` — browser fingerprint in dev, real hardware in Tauri (TODO)
+- `src/lib/license/license-service.ts` — validateLicense (signature → machine ID → version → expiry), issueTrial (7-day, machine-ID-tied)
+- `src/stores/license-store.ts` — Zustand persisted (stores license JSON)
+- `src/hooks/use-license.ts` — client hook: checks license on mount, self-issues trial
+- `src/components/settings/license-panel.tsx` — settings UI: status badge, type, expiry, machine ID with copy button, paste-key dialog
+- Settings page rewritten: license panel + integrations status + about panel
+
+**Deliveries page:**
+- Server component with status filter tabs (all/pending/in_transit/delivered/returned)
+- 4 stat cards, table with tracking number/order link/customer/provider/cost/status/date
+
+**Analytics page:**
+- 4 summary stats (revenue, orders, avg order value, delivery rate)
+- Revenue bar chart (7 days, recharts)
+- Orders by status pie chart (color-coded)
+- Top 5 products by revenue
+
+**Accounting page:**
+- 4 P&L stat cards (revenue, COGS, expenses, net profit — color-coded)
+- Revenue vs Expenses bar chart (6 months)
+- Monthly expenses list
+
+**Returns page:**
+- 4 stat cards, table with order link/customer/type/reason/status/date
+
+**Manual order creation (completes the manual Magic Moment):**
+- `src/components/orders/order-form-dialog.tsx` (366 lines): multi-step client component
+  - Customer select (auto-fills delivery info from customer record)
+  - Product line items (dropdown, quantities, live total)
+  - Delivery form (58 wilayas dropdown, commune, address, phone, delivery cost)
+  - POST /api/orders → redirect to order detail
+- POST endpoint added to /api/orders
+- Orders list page updated with "Nouvelle commande" button
+
+### Verification
+- tsc ✅ (0 errors) · eslint ✅ (0 errors, 0 warnings) · vitest ✅ (32/32)
+
+### App status
+The app is now a **functional back-office tool**. A seller can:
+- See real dashboard data ✅
+- Create orders manually (customer → products → delivery → submit) ✅
+- Manage order lifecycle (confirm → ship → deliver → return/cancel) ✅
+- Manage customers (CRUD) ✅
+- Manage products (CRUD with stock) ✅
+- View deliveries with tracking ✅
+- View returns ✅
+- View analytics with charts ✅
+- View accounting with P&L ✅
+- Manage license (view status, machine ID, paste permanent key) ✅
+
+### Still missing for full app
+- Inbox (conversations + messages) — needs Baileys (Phase 0 #1)
+- AI extraction (Gemini + regex) — needs Phase 0 #11/#11b
+- Automations — not critical for v1
+- Agents (AI chat) — not critical for v1
+
+---
+
 ## Session 4 — 2026-06-21: CRUD UI — orders, customers, products
 
 **Branches affected:** `main`

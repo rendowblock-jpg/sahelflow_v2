@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`.
 
 **Last updated:** 2026-06-21
-**Main HEAD:** `5b6f832` (CRUD UI)
+**Main HEAD:** `35e37c1` (functional app)
 **Design system version:** v2.2
 
 ---
@@ -17,11 +17,14 @@
 | Foundation scaffold | ✅ Done (tsc + eslint green) |
 | UI shell | ✅ Done (sidebar, topbar, dashboard, 12 pages) |
 | Data layer | ✅ Done (6 services, Zod validation, order state machine) |
+| CRUD UI | ✅ Done (orders, customers, products, deliveries, returns, analytics, accounting) |
+| License crypto | ✅ Done (Ed25519, trial, settings UI) |
+| Manual order creation | ✅ Done (multi-step dialog, completes manual Magic Moment) |
 | Tests | 32 (order state machine — 100% coverage) |
 | i18n | ✅ 1,092 keys × 3 locales (AR/FR/EN, RTL) |
 | Wilaya data | ✅ 58 wilayas ported (communes = known gap) |
 | Prisma models | 19 (schema designed, not yet used) |
-| LOC | ~6,000 (config + schema + UI shell + data layer + ported data) |
+| LOC | ~8,500 (config + schema + UI shell + data layer + CRUD UI + license + ported data) |
 | Open blocking decisions | 3 (Gates 1-3) + 1 technical (Prisma + SQLCipher) |
 
 ---
@@ -94,6 +97,12 @@
 ## What's Done (Foundation Scaffold — commit `ad26caf`)
 
 ### Code
+- ✅ **Manual order creation** (multi-step dialog: customer → products → delivery → total → submit)
+- ✅ **License validation** (Ed25519 crypto, trial self-issuance, settings UI with machine ID + paste-key)
+- ✅ **Analytics** (revenue chart, status pie chart, top products)
+- ✅ **Accounting** (P&L, expense tracking, 6-month chart)
+- ✅ **Returns** (list with status tracking)
+- ✅ **Deliveries** (list with status filters, tracking numbers)
 - ✅ **CRUD UI** (orders list + detail + status actions, customers list + form + detail, products list + form + detail)
 - ✅ **API routes** (orders, customers, products, categories — full CRUD)
 - ✅ **UI shell** (sidebar + topbar + dashboard layout, 12 pages, i18n + RTL)
@@ -166,4 +175,4 @@
 
 ---
 
-_Last updated: 2026-06-21 — CRUD UI done (orders, customers, products). Next: license crypto + manual order creation + deliveries._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
+_Last updated: 2026-06-21 — Functional app. License crypto + manual order creation + 7 functional pages. Next: Baileys spike (Phase 0 #1) or AI extraction (Phase 0 #11)._ (services + state machine + tests + seed). Dashboard shows real data. Next: license crypto or Baileys spike._
