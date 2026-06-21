@@ -4,6 +4,7 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { UpdateChecker } from "@/components/updater/update-checker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,6 +56,7 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>
             {children}
             <ServiceWorkerRegister />
+            <UpdateChecker />
           </TooltipProvider>
         </ThemeProvider>
       </body>
