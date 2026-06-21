@@ -16,6 +16,7 @@ import { db } from "@/lib/db";
 import { getSecret } from "@/lib/secrets";
 import { getAllToolDefinitions, getTool, type ToolContext } from "./tools/registry";
 import "./tools/core-tools"; // registers the 6 core tools
+import "./tools/extended-tools"; // registers 12 extended tools (18 total)
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
