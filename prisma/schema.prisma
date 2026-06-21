@@ -1,0 +1,362 @@
+// ════════════════════════════════════════════════════════════════════════════
+// SahelFlow — Prisma Schema (v3.0, local-first)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// ARCHITECTURE: One SQLite file per shop (max 10 shops per app install).
+// There is NO seller_id column — the file IS the shop. The app opens a different
+// PrismaClient instance per shop file. Shop metadata (name, icon, file path) is
+// stored separately in a lightweight app-meta store, not in this schema.
+//
+// KEY DIFFERENCES FROM v2 (Supabase):
+//   - No sellers table (app owner = the seller; config in app settings)
+//   - No team_members table (team feature dropped per design system v2.0)
+//   - No RLS policies (local DB, single user, no multi-tenant isolation needed)
+//   - No webhook_events → renamed to PollingEvent (polling replaces webhooks)
+//   - Integer money (DZD) — never Float (avoids rounding errors)
+//   - Cuid IDs (no sequential integers leaking count/order)
+//   - Integration credentials NOT here — stored in OS keychain
+//   - No created_by/updated_by audit columns (single user)
+//
+// SQLCipher: This schema targets standard SQLite. Encryption (SQLCipher) is
+// applied at the connection layer (Phase 0 item #5), not at the schema level.
+// ════════════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATALOG
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  products  Product[]
+
+  @@unique([name])
+}
+
+model Product {
+  id               String     @id @default(cuid())
+  name             String
+  sku              String?
+  price            Int
+  cost             Int?
+  stock            Int        @default(0)
+  lowStockThreshold Int       @default(5)
+  categoryId       String?
+  category         Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants         String?
+  images           String?
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  orderItems       OrderItem[]
+
+  @@unique([sku])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOMERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Customer {
+  id         String    @id @default(cuid())
+  name       String
+  phone      String
+  phone2     String?
+  wilaya     String?
+  commune    String?
+  address    String?
+  orderCount Int       @default(0)
+  totalSpent Int       @default(0)
+  riskScore  Int       @default(0)
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  orders     Order[]
+
+  @@unique([phone])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    String
+  status         String      @default("draft")
+  customerId     String
+  customer       Customer    @relation(fields: [customerId], references: [id])
+  items          OrderItem[]
+  totalPrice     Int
+  deliveryCost   Int?
+  wilaya         String
+  commune        String
+  address        String
+  phone          String
+  source         String      @default("whatsapp")
+  sourceMetadata String?
+  notes          String?
+  confirmedAt    DateTime?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  delivery       Delivery?
+  returns        Return[]
+
+  @@unique([orderNumber])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName String
+  quantity    Int
+  unitPrice   Int
+  total       Int
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELIVERIES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Delivery {
+  id                String    @id @default(cuid())
+  orderId           String    @unique
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider          String
+  trackingNumber    String?
+  cost              Int?
+  status            String    @default("pending")
+  estimatedDelivery DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status])
+  @@index([provider])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONVERSATIONS & MESSAGES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Conversation {
+  id            String    @id @default(cuid())
+  channel       String
+  contactName   String
+  contactPhone  String?
+  sourceId      String?
+  lastMessageAt DateTime?
+  unreadCount   Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  messages      Message[]
+
+  @@index([channel])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id                 String       @id @default(cuid())
+  conversationId     String
+  conversation       Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  body               String
+  direction          String
+  timestamp          DateTime
+  extractedOrderJson String?
+  extractionMethod   String?
+  createdAt          DateTime     @default(now())
+
+  @@index([conversationId, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RETURNS & EXCHANGES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Return {
+  id              String    @id @default(cuid())
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id])
+  reason          String
+  status          String    @default("requested")
+  type            String
+  exchangeOrderId String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model ReturnNote {
+  id        String   @id @default(cuid())
+  returnId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([returnId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINANCE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Expense {
+  id        String   @id @default(cuid())
+  category  String
+  amount    Int
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([category])
+}
+
+model DailyAnalyticsReport {
+  id             String   @id @default(cuid())
+  date           DateTime @unique
+  ordersCount    Int
+  revenue        Int
+  confirmedCount Int
+  deliveredCount Int
+  returnedCount  Int
+  expenses       Int
+  netProfit      Int
+  createdAt      DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOMATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Automation {
+  id        String   @id @default(cuid())
+  name      String
+  trigger   String
+  action    String
+  isActive  Boolean  @default(true)
+  runCount  Int      @default(0)
+  lastRunAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([trigger])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTEGRATIONS (credentials in OS keychain, NOT in this table)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Integration {
+  id         String   @id @default(cuid())
+  platform   String   @unique
+  type       String
+  isActive   Boolean  @default(false)
+  lastSyncAt DateTime?
+  config     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PollingEvent {
+  id          String    @id @default(cuid())
+  source      String
+  eventId     String    @unique
+  payload     String
+  processed   Boolean   @default(false)
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([source, processed])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI CHAT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AiChatSession {
+  id        String         @id @default(cuid())
+  title     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  messages  AiChatMessage[]
+}
+
+model AiChatMessage {
+  id        String        @id @default(cuid())
+  sessionId String
+  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  toolCalls String?
+  createdAt DateTime      @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([read, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WILAYA RISK PROFILES (reference data, loaded from data/wilayas.json on init)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model WilayaRiskProfile {
+  id               String  @id @default(cuid())
+  wilaya           String  @unique
+  riskLevel        Int
+  confirmationRate Float?
+  returnRate       Float?
+  notes            String?
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHATSAPP TEMPLATES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model WhatsAppTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  content   String
+  language  String
+  category  String
+  createdAt DateTime @default(now())
+
+  @@index([language, category])
+}

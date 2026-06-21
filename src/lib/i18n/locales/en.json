@@ -1,0 +1,23 @@
+{
+  "app.name": "SahelFlow",
+  "app.tagline": "AI-powered back-office for Algerian COD sellers",
+  "nav.dashboard": "Dashboard",
+  "nav.inbox": "Inbox",
+  "nav.orders": "Orders",
+  "nav.customers": "Customers",
+  "nav.products": "Products",
+  "nav.deliveries": "Deliveries",
+  "nav.analytics": "Analytics",
+  "nav.accounting": "Accounting",
+  "nav.returns": "Returns",
+  "nav.automations": "Automations",
+  "nav.settings": "Settings",
+  "orders.status.draft": "Draft",
+  "orders.status.pending": "Pending",
+  "orders.status.confirmed": "Confirmed",
+  "orders.status.shipped": "Shipped",
+  "orders.status.delivered": "Delivered",
+  "orders.status.returned": "Returned",
+  "orders.status.refused": "Refused",
+  "orders.status.cancelled": "Cancelled"
+}

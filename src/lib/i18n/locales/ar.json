@@ -1,0 +1,23 @@
+{
+  "app.name": "SahelFlow",
+  "app.tagline": "نظام إدارة للمتاجر الجزائرية الدفع عند الاستلام",
+  "nav.dashboard": "لوحة التحكم",
+  "nav.inbox": "الرسائل",
+  "nav.orders": "الطلبات",
+  "nav.customers": "العملاء",
+  "nav.products": "المنتجات",
+  "nav.deliveries": "التوصيل",
+  "nav.analytics": "التحليلات",
+  "nav.accounting": "المحاسبة",
+  "nav.returns": "الإرجاع",
+  "nav.automations": "الأتمتة",
+  "nav.settings": "الإعدادات",
+  "orders.status.draft": "مسودة",
+  "orders.status.pending": "في الانتظار",
+  "orders.status.confirmed": "مؤكدة",
+  "orders.status.shipped": "تم الشحن",
+  "orders.status.delivered": "تم التوصيل",
+  "orders.status.returned": "مرتجعة",
+  "orders.status.refused": "مرفوضة",
+  "orders.status.cancelled": "ملغاة"
+}

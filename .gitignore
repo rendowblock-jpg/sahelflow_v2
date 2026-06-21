@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+build/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Prisma
+prisma/migrations/dev.db*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database (local SQLite — never commit shop data)
+*.db
+*.db-journal
+data/shops/
+
+# Logs
+*.log
+dev.log
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+playwright/.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TypeScript build info
+tsconfig.tsbuildinfo
