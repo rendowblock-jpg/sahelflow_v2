@@ -12,6 +12,9 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   toolCalls?: ParsedToolCall[]; // parsed from DB JSON string on load
+  // Streaming-only fields (not persisted)
+  streaming?: boolean;
+  streamingToolCalls?: StreamingToolCall[];
   createdAt: string;
 }
 
@@ -27,6 +30,12 @@ interface ParsedToolCall {
   result: unknown;
 }
 
+interface StreamingToolCall {
+  name: string;
+  args: Record<string, unknown>;
+  result?: unknown;
+}
+
 export function AiChat() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -36,6 +45,8 @@ export function AiChat() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Abort controller for the active stream (lets the user cancel)
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -132,58 +143,193 @@ export function AiChat() {
     setSending(true);
 
     const tempId = `temp-${Date.now()}`;
+    const assistantId = `assistant-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
       { id: tempId, role: "user", content: userMessage, createdAt: new Date().toISOString() },
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        streaming: true,
+        streamingToolCalls: [],
+        createdAt: new Date().toISOString(),
+      },
     ]);
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const res = await fetch(`/api/ai/sessions/${activeSessionId}/messages`, {
+      const res = await fetch(`/api/ai/sessions/${activeSessionId}/messages/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage }),
+        signal: controller.signal,
       });
-      const data = (await res.json()) as {
-        response: string;
-        toolCalls?: ParsedToolCall[];
-        error?: string;
-      };
 
-      setMessages((prev) => [
-        ...prev.filter((m) => m.id !== tempId),
-        {
-          id: `user-${Date.now()}`,
-          role: "user" as const,
-          content: userMessage,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant" as const,
-          content: data.response || "(pas de réponse)",
-          toolCalls: data.toolCalls,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      if (!res.ok || !res.body) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
+      // Parse the SSE stream manually
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let sepIdx: number;
+        while ((sepIdx = buffer.indexOf("\n\n")) >= 0) {
+          const rawEvent = buffer.slice(0, sepIdx);
+          buffer = buffer.slice(sepIdx + 2);
+
+          let eventType = "";
+          let eventData = "";
+          for (const line of rawEvent.split("\n")) {
+            if (line.startsWith("event:")) {
+              eventType = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+              eventData = line.slice(5).trim();
+            }
+          }
+
+          if (!eventType || !eventData) continue;
+          if (eventType === "close") continue;
+
+          let payload: Record<string, unknown>;
+          try {
+            payload = JSON.parse(eventData) as Record<string, unknown>;
+          } catch {
+            continue;
+          }
+
+          if (eventType === "text_delta") {
+            const text = payload.text as string;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, content: m.content + text }
+                  : m,
+              ),
+            );
+          } else if (eventType === "tool_call") {
+            const name = payload.name as string;
+            const args = payload.args as Record<string, unknown>;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      streamingToolCalls: [
+                        ...(m.streamingToolCalls ?? []),
+                        { name, args },
+                      ],
+                    }
+                  : m,
+              ),
+            );
+          } else if (eventType === "tool_result") {
+            const name = payload.name as string;
+            const result = payload.result;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      streamingToolCalls: (m.streamingToolCalls ?? []).map((tc) =>
+                        tc.name === name && tc.result === undefined
+                          ? { ...tc, result }
+                          : tc,
+                      ),
+                    }
+                  : m,
+              ),
+            );
+          } else if (eventType === "done") {
+            const response = payload.response as string;
+            const toolCalls = payload.toolCalls as ParsedToolCall[] | undefined;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: response || m.content || "(pas de réponse)",
+                      streaming: false,
+                      streamingToolCalls: undefined,
+                      toolCalls: toolCalls && toolCalls.length > 0 ? toolCalls : m.toolCalls,
+                    }
+                  : m,
+              ),
+            );
+          } else if (eventType === "error") {
+            const message = payload.message as string;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: m.content || `Erreur: ${message}`,
+                      streaming: false,
+                      streamingToolCalls: undefined,
+                    }
+                  : m,
+              ),
+            );
+          }
+        }
+      }
+
+      // Replace the temp user message with a permanent one
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, id: `user-${Date.now()}` }
+            : m,
+        ),
+      );
+
+      // Refresh sessions list (title may have changed)
       const sessionsRes = await fetch("/api/ai/sessions");
       if (sessionsRes.ok) {
         const sessionsData = (await sessionsRes.json()) as { sessions: Session[] };
         setSessions(sessionsData.sessions);
       }
-    } catch {
-      setMessages((prev) => [
-        ...prev.filter((m) => m.id !== tempId),
-        {
-          id: `err-${Date.now()}`,
-          role: "assistant",
-          content: "Échec de la connexion au serveur.",
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        // User cancelled — finalize the assistant message as-is
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, streaming: false, streamingToolCalls: undefined }
+              : m,
+          ),
+        );
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  content: "Échec de la connexion au serveur.",
+                  streaming: false,
+                  streamingToolCalls: undefined,
+                }
+              : m,
+          ),
+        );
+      }
     } finally {
+      abortRef.current = null;
       setSending(false);
     }
+  }
+
+  function handleCancel() {
+    abortRef.current?.abort();
   }
 
   return (
@@ -267,9 +413,18 @@ export function AiChat() {
                               : "bg-muted"
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {msg.content}
+                            {msg.streaming && !msg.content && (
+                              <Loader2 className="inline h-3 w-3 animate-spin ml-1" />
+                            )}
+                            {msg.streaming && msg.content && (
+                              <span className="inline-block w-1.5 h-3.5 bg-foreground/60 ml-0.5 animate-pulse" />
+                            )}
+                          </p>
                         </div>
                       </div>
+                      {/* Persisted tool calls (from DB) */}
                       {msg.toolCalls && msg.toolCalls.length > 0 && (
                         <div className="ml-4 space-y-1">
                           {msg.toolCalls.map((tc, i) => (
@@ -286,15 +441,31 @@ export function AiChat() {
                           ))}
                         </div>
                       )}
+                      {/* Live streaming tool calls */}
+                      {msg.streamingToolCalls && msg.streamingToolCalls.length > 0 && (
+                        <div className="ml-4 space-y-1">
+                          {msg.streamingToolCalls.map((tc, i) => (
+                            <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Wrench className="h-3 w-3" />
+                              <span className="font-mono">{tc.name}</span>
+                              {tc.result === undefined ? (
+                                <span className="italic">exécution…</span>
+                              ) : (
+                                <>
+                                  <span>→</span>
+                                  <span className="truncate max-w-xs">
+                                    {typeof tc.result === "object"
+                                      ? JSON.stringify(tc.result).slice(0, 80)
+                                      : String(tc.result).slice(0, 80)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))
-                )}
-                {sending && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-3">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -315,9 +486,15 @@ export function AiChat() {
                   }}
                   disabled={sending}
                 />
-                <Button size="icon" onClick={handleSend} disabled={sending || !input.trim()}>
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
+                {sending ? (
+                  <Button size="icon" variant="destructive" onClick={handleCancel} title="Arrêter">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </Button>
+                ) : (
+                  <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </>
