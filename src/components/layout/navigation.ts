@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Bot,
   Settings,
+  Upload,
 } from "lucide-react";
 
 export interface NavItem {
@@ -45,6 +46,7 @@ export const navItems: NavItem[] = [
   // Administration
   { labelKey: "nav.agents", href: "/agents", icon: Bot, group: "administration" },
   { labelKey: "nav.automations", href: "/automations", icon: Bot, group: "administration" },
+  { labelKey: "nav.imports", href: "/imports", icon: Upload, group: "administration" },
   { labelKey: "nav.settings", href: "/settings", icon: Settings, group: "administration" },
 ];
 
