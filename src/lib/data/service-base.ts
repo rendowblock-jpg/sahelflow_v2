@@ -1,15 +1,15 @@
 /**
  * Service layer base — shared helpers for all domain services.
  *
- * Each service takes a PrismaClient (for multi-shop support) and exposes
- * typed methods that validate input (Zod), enforce business rules, and
- * throw typed errors (from @/types/errors).
+ * Each service takes a DbClient (the PII-encryption-extended Prisma client,
+ * see src/lib/db.ts) and exposes typed methods that validate input (Zod),
+ * enforce business rules, and throw typed errors (from @/types/errors).
  */
-import type { PrismaClient } from "@prisma/client";
+import type { DbClient } from "@/lib/db";
 import { SahelFlowError, NotFoundError, ValidationError } from "@/types/errors";
 
 export type ServiceContext = {
-  prisma: PrismaClient;
+  prisma: DbClient;
 };
 
 /**
