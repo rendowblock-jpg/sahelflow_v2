@@ -1,0 +1,21 @@
+{
+  "name": "sahelflow-whatsapp-sidecar",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Baileys WhatsApp bridge for SahelFlow — REST + WebSocket on port 3001",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "@hapi/boom": "^10.0.1",
+    "hono": "^4.6.0",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.5"
+  }
+}

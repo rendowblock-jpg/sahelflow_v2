@@ -41,6 +41,7 @@ const eslintConfig = [
       "prisma/migrations/**",
       "data/**",
       "scripts/**",
+      "sidecars/**",
     ],
   },
 ];

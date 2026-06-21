@@ -63,6 +63,7 @@
     "node_modules",
     "src-tauri",
     "playwright-report",
-    "test-results"
+    "test-results",
+    "sidecars"
   ]
 }

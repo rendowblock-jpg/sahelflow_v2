@@ -23,6 +23,12 @@ prisma/migrations/dev.db*
 *.db-journal
 data/shops/
 
+# Secrets & auth (never commit)
+data/master.key
+data/whatsapp-auth/
+sidecars/*/node_modules/
+sidecars/*/data/
+
 # Logs
 *.log
 dev.log
