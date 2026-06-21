@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag } from "lucide-react";
+import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Commandes — SahelFlow" };
@@ -59,9 +60,11 @@ export default async function OrdersPage({
     ? { status: statusFilter as OrderStatus }
     : undefined;
   const include = { items: true, customer: { select: { name: true, phone: true } } };
-  const [allOrders, filteredOrders] = await Promise.all([
+  const [allOrders, filteredOrders, customers, products] = await Promise.all([
     db.order.findMany({ include, orderBy: { createdAt: "desc" }, take: 200 }),
     db.order.findMany({ where, include, orderBy: { createdAt: "desc" }, take: 200 }),
+    db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, wilaya: true, commune: true, address: true } }),
+    db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true } }),
   ]);
 
   // Count by status for the tab badges
@@ -114,6 +117,7 @@ export default async function OrdersPage({
             Gérez toutes vos commandes en un seul endroit
           </p>
         </div>
+        <OrderFormDialog customers={customers} products={products} />
       </div>
 
       {/* Stat cards */}
