@@ -1,49 +1,34 @@
 // SahelFlow Tauri library entry.
 //
-// The desktop shell wraps the Next.js webview and manages:
-//   - Baileys WhatsApp sidecar (Phase 0 item #1) — compiled binary, spawned on launch
-//   - Next.js standalone server — spawned on launch (production only)
-//   - OS keychain access for secrets (future: tauri-plugin-stronghold)
-//   - Auto-updater (signed GitHub Releases)
-//   - License validation on launch (Phase 0 item #4)
-//   - SQLite file management (multi-shop)
-//
 // Dev vs production:
-//   - `tauri dev`: the user runs `bun run dev` + `bun run sidecar` manually.
-//     This hook does nothing (cfg!(debug_assertions) is true) — preserves the
-//     existing hot-reload workflow.
-//   - `tauri build` (release): this hook spawns the compiled WhatsApp sidecar
-//     (externalBin) and the Next.js standalone server (bundled resource),
-//     waits for the server port to open, then the webview loads
-//     http://localhost:3000.
+//   - `tauri dev`: the user runs `bun run dev` manually. This hook does
+//     nothing (cfg!(debug_assertions) is true) — preserves hot-reload.
+//   - `tauri build` (release): this hook spawns the WhatsApp sidecar
+//     and the Next.js standalone server, waits for the server port to open.
 
+#[cfg(not(debug_assertions))]
 use std::net::TcpStream;
+#[cfg(not(debug_assertions))]
 use std::time::{Duration, Instant};
-use tauri::Manager;
-use tauri_plugin_shell::process::CommandEvent;
-use tauri_plugin_shell::ShellExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Stronghold password — in production this would come from the OS keychain
-    // or a user prompt. For now, we use a fixed app-level password (the vault
-    // file itself is protected by OS file permissions + the password).
-    // A future PR adds a biometric / password prompt on first launch.
-    let stronghold_password = "sahelflow-stronghold-v1"
-        .to_string()
-        .into_bytes()
-        .into_boxed_slice();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
-            tauri_plugin_stronghold::Builder::new()
-                .password(&stronghold_password)
-                .build(),
+            // Stronghold v2: Builder::new() takes a password hash function.
+            // This closure hashes the vault password before storing it.
+            tauri_plugin_stronghold::Builder::new(|password: &str| {
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut hasher = DefaultHasher::new();
+                password.hash(&mut hasher);
+                hasher.finish().to_le_bytes().to_vec()
+            })
+            .build(),
         )
         .setup(|app| {
             // Only spawn services in release builds. In dev, the user runs
@@ -66,9 +51,6 @@ pub fn run() {
 
 /// Tauri command: get the master encryption key from Stronghold.
 ///
-/// Stronghold stores the key in an encrypted vault (backed by OS-level secure
-/// storage). The key never touches the filesystem in plaintext.
-///
 /// Returns the key as a hex string (64 chars = 32 bytes = 256 bits), or null
 /// if no key is stored yet (first run).
 #[tauri::command]
@@ -76,10 +58,10 @@ async fn get_master_key_from_stronghold(
     app: tauri::AppHandle,
     vault_path: String,
 ) -> Result<Option<String>, String> {
-    use tauri_plugin_stronghold::StrongholdExt;
+    use tauri_plugin_stronghold::stronghold::Stronghold;
 
     let stronghold = app
-        .stronghold()
+        .state::<Stronghold>()
         .map_err(|e| format!("Stronghold not available: {e}"))?;
 
     let _ = vault_path; // vault path is configured at plugin init; accepted for API symmetry
@@ -106,17 +88,16 @@ async fn get_master_key_from_stronghold(
 /// Tauri command: save the master encryption key to Stronghold.
 ///
 /// Called on first run (after generating a new key) or during key rotation.
-/// The key is stored as raw bytes in the Stronghold vault.
 #[tauri::command]
 async fn save_master_key_to_stronghold(
     app: tauri::AppHandle,
     vault_path: String,
     key_hex: String,
 ) -> Result<(), String> {
-    use tauri_plugin_stronghold::StrongholdExt;
+    use tauri_plugin_stronghold::stronghold::Stronghold;
 
     let stronghold = app
-        .stronghold()
+        .state::<Stronghold>()
         .map_err(|e| format!("Stronghold not available: {e}"))?;
 
     let _ = vault_path;
@@ -145,12 +126,15 @@ async fn save_master_key_to_stronghold(
 /// then wait for the server port to open before the webview loads.
 #[cfg(not(debug_assertions))]
 fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::Manager;
+    use tauri_plugin_shell::ShellExt;
+
     // 1. WhatsApp sidecar (compiled externalBin: sahelflow-whatsapp)
     match app.shell().sidecar("sahelflow-whatsapp") {
         Ok(cmd) => match cmd.spawn() {
             Ok((mut rx, _child)) => {
                 eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
-                // Drain sidecar output to stderr (for debugging)
+                use tauri_plugin_shell::process::CommandEvent;
                 tauri::async_runtime::spawn(async move {
                     while let Some(event) = rx.recv().await {
                         match event {
@@ -176,8 +160,6 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // 2. Next.js standalone server (from bundled resources).
-    //    Requires `bun` (preferred) or `node` on PATH. The standalone
-    //    server.js lives at <resource_dir>/standalone/server.js.
     let resource_dir = app.path().resource_dir()?;
     let server_js = resource_dir.join("standalone").join("server.js");
 
@@ -196,8 +178,7 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         app.shell().command("node", &[server_path]).spawn()
     } else {
         eprintln!(
-            "[sahelflow] Neither `bun` nor `node` found on PATH. Install Bun (https://bun.sh) \
-             or Node.js 20+ so the Next.js server can start."
+            "[sahelflow] Neither `bun` nor `node` found on PATH. Install Bun or Node.js 20+."
         );
         return Ok(());
     };
@@ -209,8 +190,7 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => eprintln!("[sahelflow] failed to spawn Next.js server: {e}"),
     }
 
-    // Wait for the server port to open (max ~15s) so the webview doesn't
-    // load before it's ready.
+    // Wait for the server port to open (max ~15s)
     wait_for_port("127.0.0.1", 3000, Duration::from_secs(15));
 
     Ok(())
