@@ -35,14 +35,14 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/sahelflow-whatsapp"],
+    "externalBin": [],
     "resources": [
       "resources/standalone/**/*"
     ]
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "endpoints": [
         "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json"
       ],
