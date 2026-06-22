@@ -30,8 +30,9 @@
 │  │                          │                 │               │  │
 │  │                   ┌──────▼──────┐  ┌───────▼───────┐       │  │
 │  │                   │  SQLite     │  │  Gemini API   │       │  │
-│  │                   │  (SQLCipher)│  │  (seller's    │       │  │
-│  │                   │  per shop   │  │   free key)   │       │  │
+│  │                   │  (field-    │  │  (seller's    │       │  │
+│  │                   │  encrypted) │  │   free key)   │       │  │
+│  │                   │  per shop   │  │               │       │  │
 │  │                   └─────────────┘  └───────────────┘       │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                              │ stdio / WebSocket                 │
@@ -67,7 +68,7 @@
 | **Component library** | shadcn/ui (New York) | latest | Composable, accessible, themeable |
 | **Database** | SQLite | 3.46 (bundled) | Local, $0, file-per-shop |
 | **ORM** | Prisma | 6.x | Type-safe, schema-first (see ADR-002) |
-| **Encryption** | SQLCipher | (Phase 0 #5) | At-rest encryption, key from machine ID |
+| **Encryption** | AES-256-GCM field-level (ADR-003) | application-layer | SQLCipher is non-functional with Prisma; field-level crypto protects PII + secrets. Master key in Tauri Stronghold (production) or keyfile (dev). |
 | **State (client)** | Zustand | 5.x | Simple, no boilerplate |
 | **State (server)** | TanStack Query | 5.x | Caching, invalidation |
 | **Forms** | React Hook Form + Zod | latest | Type-safe validation |
@@ -221,21 +222,24 @@ sahelflow_v2/
 App launch
   │
   ▼
-Shop selector (from app-meta store)
+Shop selector (topbar dropdown — reads data/app-meta.json)
   │
-  ├── Shop A → /data/shops/shop-a.db (SQLCipher key derived from machineId + shopA-id)
-  │            └── PrismaClient instance A
+  ├── Shop A → /data/shops/shop-a.db
+  │            └── PrismaClient instance A (cached in-process)
   │
-  ├── Shop B → /data/shops/shop-b.db (SQLCipher key derived from machineId + shopB-id)
-  │            └── PrismaClient instance B
+  ├── Shop B → /data/shops/shop-b.db
+  │            └── PrismaClient instance B (cached in-process)
   │
   └── ... (up to 10 shops)
 ```
 
-- Shop metadata (name, icon, file path, encryption key reference) stored in app-meta store (NOT in a shop DB)
-- Switching shops = close current PrismaClient, open new one
-- Data never crosses shop boundaries (different files, different keys)
-- Max 10 shops enforced at app level
+- Shop metadata (id, name, icon, dbPath) stored in `data/app-meta.json` (NOT in a shop DB)
+- **DB routing via Proxy:** `db` (in `src/lib/db.ts`) is a Proxy that resolves the active shop's client on every property access. Reads `app-meta.json` → finds active shop's `dbPath` → returns `getShopClient(fullPath)`. Zero call-site changes (all 52 files that import `db` keep working).
+- Switching shops = update `activeShopId` in `app-meta.json` → subsequent `db.*` calls route to the new shop immediately.
+- Shop clients are cached in-process (`globalForPrisma.shopClients` Map) to avoid reconnection overhead.
+- Data never crosses shop boundaries (different SQLite files).
+- Max 10 shops enforced at app level.
+- Fallback: if no shop is registered, the active shop's DB file is missing, or in test mode, `db` falls back to the default dev client (`DATABASE_URL`).
 
 ---
 
@@ -243,38 +247,52 @@ Shop selector (from app-meta store)
 
 ```
 ┌─────────────────────────────────────────────┐
-│  OS Keychain (all secrets)                  │
-│  ├── Gemini API keys (per shop)             │
-│  ├── Delivery provider tokens               │
-│  │   (Yalidine, ZR Express, Maystro)        │
-│  ├── E-commerce integration tokens          │
-│  │   (Shopify, WooCommerce, YouCan)         │
-│  └── License key (trial or permanent)       │
+│  Tauri Stronghold (production — ADR-004)     │
+│  ├── Master encryption key (32 bytes)        │
+│  │   (never touches filesystem in prod)      │
+│  └── Encrypted vault, OS-backed              │
+└─────────────────────────────────────────────┘
+                    │
+                    ▼ (master key used to encrypt/decrypt)
+┌─────────────────────────────────────────────┐
+│  Secret table (AES-256-GCM encrypted)        │
+│  ├── Gemini API keys (per shop)              │
+│  ├── Delivery provider tokens                │
+│  │   (Yalidine, ZR Express, Maystro)         │
+│  ├── E-commerce integration tokens           │
+│  │   (Shopify, WooCommerce, YouCan)          │
+│  └── License key (trial or permanent)        │
 └─────────────────────────────────────────────┘
                     │
                     ▼
 ┌─────────────────────────────────────────────┐
-│  SQLite (SQLCipher encrypted)               │
-│  ├── Key derived from machine ID            │
-│  │   (5 hardware signals, SHA-256)          │
-│  ├── File is unreadable on another machine  │
-│  └── Protects against theft, not drive fail │
+│  SQLite (field-level encrypted — ADR-003)    │
+│  ├── PII fields: AES-256-GCM JSON payloads   │
+│  │   (Customer name/phone2/address/notes,    │
+│  │    Order phone/address/notes,             │
+│  │    Conversation contactName/contactPhone) │
+│  ├── Customer.phone: HMAC blind index        │
+│  │   (searchable, @unique)                   │
+│  └── Transparent Prisma $extends interceptor │
+│      (call sites pass plaintext, get plain)  │
 └─────────────────────────────────────────────┘
                     │
                     ▼
 ┌─────────────────────────────────────────────┐
-│  License Validation (on every launch)       │
-│  ├── Ed25519 signature verification         │
-│  ├── Machine ID fingerprint check           │
-│  ├── 2-machine activation limit             │
-│  ├── Version-gating (minAppVersion)         │
-│  ├── Trial expiry check                     │
-│  └── No valid license = app refuses launch  │
+│  License Validation (on every launch)        │
+│  ├── Ed25519 signature verification          │
+│  ├── Machine ID fingerprint check            │
+│  ├── 2-machine activation limit              │
+│  ├── Version-gating (minAppVersion)          │
+│  ├── Trial expiry check                      │
+│  └── No valid license = app refuses launch   │
 └─────────────────────────────────────────────┘
 ```
 
+**Why not SQLCipher?** Prisma's built-in SQLite driver silently ignores the `?key=` connection param (ADR-003). SQLCipher is non-functional with Prisma. Instead, we encrypt sensitive fields at the application layer with AES-256-GCM. The master key lives in Tauri Stronghold (production) or a mode-0600 keyfile (dev). This protects against laptop theft (DB file is useless without the Stronghold vault).
+
 **Threat model:**
-- **Stolen laptop:** SQLCipher protects DB. Keychain protects secrets. License is machine-tied (won't work on another machine). ✅
+- **Stolen laptop:** Stronghold vault protects master key. DB file is useless without it (PII + secrets are ciphertext). License is machine-tied (won't work on another machine). ✅
 - **Hard drive failure:** Data is gone. No cloud backup (would require server). Seller accepts this risk. Documented in design system. ⚠️
 - **License piracy:** Ed25519 signing + obfuscation + version-gating. Realistic piracy 5-15%. Acceptable. ✅
 - **WhatsApp ban:** Rate-limit outgoing (max 1 msg/3s, burst ≤5). Inherent to unofficial libs. ⚠️
