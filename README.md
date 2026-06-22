@@ -35,9 +35,10 @@ See `documentation/PROJECT_STATE.md` for the full current state.
 
 ```bash
 bun install
-bun run db:generate    # Generate Prisma client
-bun run db:push        # Create SQLite schema
-bun run dev            # Start Next.js dev server (port 3000)
+cp .env.example .env     # Create the .env file (Windows: copy .env.example .env)
+bun run db:generate       # Generate Prisma client
+bun run db:push           # Create SQLite schema
+bun run dev               # Start Next.js dev server (port 3000)
 ```
 
 Then open `http://localhost:3000` in your browser. This runs the web version (no Tauri, no WhatsApp sidecar).
