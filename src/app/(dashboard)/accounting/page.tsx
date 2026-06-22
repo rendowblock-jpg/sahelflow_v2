@@ -8,6 +8,8 @@ import {
   Wallet,
   Receipt,
   Package,
+  PiggyBank,
+  CreditCard,
 } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -37,8 +39,7 @@ export default async function AccountingPage() {
   const revenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
   const cogs = deliveredOrders.reduce((sum, o) => {
     return sum + o.items.reduce((s, item) => {
-      // Estimate cost: if product had a cost, use it; otherwise 0
-      return s + (item.unitPrice * 0.6 * item.quantity); // 60% default margin
+      return s + (item.unitPrice * 0.6 * item.quantity);
     }, 0);
   }, 0);
   const deliveryCosts = deliveredOrders.reduce((sum, o) => sum + (o.delivery?.cost ?? 0), 0);
@@ -74,35 +75,37 @@ export default async function AccountingPage() {
   );
 
   const stats = [
-    { label: "Revenu (mois)", value: formatDZD(revenue), icon: TrendingUp, color: "text-green-600" },
-    { label: "Coût des marchandises", value: formatDZD(cogs), icon: Package, color: "text-orange-600" },
-    { label: "Dépenses", value: formatDZD(totalExpenses), icon: Receipt, color: "text-red-600" },
-    { label: "Profit net", value: formatDZD(netProfit), icon: Wallet, color: netProfit >= 0 ? "text-green-600" : "text-red-600" },
+    { label: "Revenu (mois)", value: formatDZD(revenue), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400", valueColor: "text-emerald-600 dark:text-emerald-400" },
+    { label: "Coût des marchandises", value: formatDZD(cogs), icon: Package, accentBg: "bg-orange-500/10 dark:bg-orange-500/15", accentIcon: "text-orange-600 dark:text-orange-400", valueColor: "text-orange-600 dark:text-orange-400" },
+    { label: "Dépenses", value: formatDZD(totalExpenses), icon: Receipt, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400", valueColor: "text-red-600 dark:text-red-400" },
+    { label: "Profit net", value: formatDZD(netProfit), icon: Wallet, accentBg: netProfit >= 0 ? "bg-emerald-500/10 dark:bg-emerald-500/15" : "bg-red-500/10 dark:bg-red-500/15", accentIcon: netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400", valueColor: netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400" },
   ];
 
   return (
     <div className="space-y-6 p-6">
-      <div>
+      <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">{t("nav.accounting")}</h1>
         <p className="text-sm text-muted-foreground">
           Suivi financier de {now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
         </p>
       </div>
 
-      {/* P&L Summary */}
+      {/* P&L Summary — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+        {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
                 </CardTitle>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
+                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
+                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                <div className={`text-2xl font-bold tabular-nums ${stat.valueColor}`}>{stat.value}</div>
               </CardContent>
             </Card>
           );
@@ -110,9 +113,14 @@ export default async function AccountingPage() {
       </div>
 
       {/* Revenue vs Expenses chart */}
-      <Card>
+      <Card className="card-hover animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardHeader>
-          <CardTitle className="text-base">Revenu vs Dépenses (6 mois)</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 dark:bg-violet-500/15">
+              <PiggyBank className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+            </div>
+            Revenu vs Dépenses (6 mois)
+          </CardTitle>
         </CardHeader>
         <CardContent>
 <DualBarChart data={monthlyData} />
@@ -120,16 +128,21 @@ export default async function AccountingPage() {
       </Card>
 
       {/* Expenses list */}
-      <Card>
+      <Card className="card-hover animate-fade-up" style={{ animationDelay: "300ms" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Receipt className="h-4 w-4" />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 dark:bg-red-500/15">
+              <CreditCard className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+            </div>
             Dépenses du mois
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
+                <Receipt className="h-8 w-8 text-primary" />
+              </div>
               <p className="text-sm text-muted-foreground">
                 Aucune dépense enregistrée ce mois-ci.
               </p>
@@ -147,7 +160,7 @@ export default async function AccountingPage() {
                       {formatDate(expense.date, "fr")}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-red-600">
+                  <span className="text-sm font-medium text-red-600 dark:text-red-400 tabular-nums">
                     −{formatDZD(expense.amount)}
                   </span>
                 </div>

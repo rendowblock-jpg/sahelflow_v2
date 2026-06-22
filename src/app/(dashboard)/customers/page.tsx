@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Eye } from "lucide-react";
+import { Users, Eye, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import type { Customer } from "@/types/domain";
@@ -21,92 +20,67 @@ import type { Customer } from "@/types/domain";
 // Always fetch fresh data (local-first app, no ISR)
 export const dynamic = "force-dynamic";
 
-/** Risk level thresholds — low: 0-2, medium: 3-5, high: 6+. */
-function getRiskLevel(score: number): "low" | "medium" | "high" {
-  if (score >= 6) return "high";
-  if (score >= 3) return "medium";
-  return "low";
-}
-
 export default async function CustomersPage() {
   const { t } = await getI18n();
   const customers = await customerService.list({ prisma: db });
 
-  const riskBadgeVariant: Record<"low" | "medium" | "high", "default" | "secondary" | "destructive" | "outline"> = {
-    low: "secondary",
-    medium: "outline",
-    high: "destructive",
-  };
-
-  const riskLabel: Record<"low" | "medium" | "high", string> = {
-    low: t("risk.lowRisk"),
-    medium: t("risk.mediumRisk"),
-    high: t("risk.highRisk"),
-  };
-
   const totalCustomers = customers.length;
   const totalSpent = customers.reduce((sum, c) => sum + c.totalSpent, 0);
-  const atRiskCount = customers.filter((c) => getRiskLevel(c.riskScore) === "high").length;
+  const activeCount = customers.filter((c) => c.orderCount > 0).length;
+  const atRiskCount = customers.filter((c) => c.riskScore >= 6).length;
+
+  const stats = [
+    { label: t("customers.totalCustomers"), value: String(totalCustomers), icon: Users, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
+    { label: t("customers.totalSpent"), value: formatDZD(totalSpent), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
+    { label: "Clients actifs", value: String(activeCount), icon: UserCheck, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
+    { label: t("customers.atRisk"), value: String(atRiskCount), icon: AlertTriangle, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400" },
+  ];
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 animate-fade-up">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("customers.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {t("customers.totalCustomers")}: {totalCustomers} ·{" "}
-            {t("customers.totalSpent")}: {formatDZD(totalSpent)}
+            Gérez votre base de clients et suivez les risques
           </p>
         </div>
         <CustomerFormDialog />
       </div>
 
-      {/* Stat strip */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("customers.totalCustomers")}
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCustomers}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("customers.totalSpent")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatDZD(totalSpent)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("customers.atRisk")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{atRiskCount}</div>
-          </CardContent>
-        </Card>
+      {/* Stat strip — upgraded with accent icons */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {stat.label}
+                </CardTitle>
+                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
+                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Customers table */}
-      <Card>
+      {/* Customers table — upgraded with shared status/risk configs */}
+      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardHeader>
           <CardTitle className="text-base">{t("customers.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {customers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Users className="h-8 w-8 text-muted-foreground" />
+              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
+                <Users className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold mb-1">{t("customers.noCustomers")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
@@ -129,7 +103,7 @@ export default async function CustomersPage() {
               </TableHeader>
               <TableBody>
                 {customers.map((customer: Customer) => {
-                  const level = getRiskLevel(customer.riskScore);
+                  const riskConfig = getRiskConfig(customer.riskScore * 10); // Scale 0-100
                   return (
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
@@ -145,9 +119,9 @@ export default async function CustomersPage() {
                         {formatDZD(customer.totalSpent)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={riskBadgeVariant[level]}>
-                          {riskLabel[level]} · {customer.riskScore}
-                        </Badge>
+                        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${riskConfig.color} bg-muted/50 border-border`}>
+                          {riskConfig.label} · {customer.riskScore}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" asChild>

@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag } from "lucide-react";
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
+import { orderStatusStyles } from "@/lib/shared";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Commandes — SahelFlow" };
@@ -16,7 +17,6 @@ export const revalidate = 30;
 
 const STATUS_FILTERS = [
   { value: "all", label: "Toutes" },
-  { value: "draft", label: "Brouillons" },
   { value: "pending", label: "En attente" },
   { value: "confirmed", label: "Confirmées" },
   { value: "shipped", label: "Expédiées" },
@@ -24,28 +24,6 @@ const STATUS_FILTERS = [
   { value: "returned", label: "Retournées" },
   { value: "cancelled", label: "Annulées" },
 ] as const;
-
-const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "outline",
-  pending: "secondary",
-  confirmed: "default",
-  shipped: "default",
-  delivered: "default",
-  returned: "destructive",
-  refused: "destructive",
-  cancelled: "destructive",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Brouillon",
-  pending: "En attente",
-  confirmed: "Confirmée",
-  shipped: "Expédiée",
-  delivered: "Livrée",
-  returned: "Retournée",
-  refused: "Refusée",
-  cancelled: "Annulée",
-};
 
 export default async function OrdersPage({
   searchParams,
@@ -73,7 +51,7 @@ export default async function OrdersPage({
     counts[o.status] = (counts[o.status] ?? 0) + 1;
   }
 
-  // Stat cards
+  // Stat cards — upgraded with accent icons
   const activeOrders = allOrders.filter((o) =>
     ["pending", "confirmed", "shipped"].includes(o.status),
   );
@@ -84,33 +62,17 @@ export default async function OrdersPage({
   const todayRevenue = deliveredToday.reduce((sum, o) => sum + o.totalPrice, 0);
   const pendingCount = allOrders.filter((o) => o.status === "pending").length;
 
-  const stats = [
-    {
-      label: "Commandes actives",
-      value: String(activeOrders.length),
-      icon: ShoppingBag,
-    },
-    {
-      label: "En attente",
-      value: String(pendingCount),
-      icon: Clock,
-    },
-    {
-      label: "Livrées aujourd'hui",
-      value: String(deliveredToday.length),
-      icon: CheckCircle2,
-    },
-    {
-      label: "Revenu du jour",
-      value: formatDZD(todayRevenue),
-      icon: TrendingUp,
-    },
+  const statItems = [
+    { label: "Commandes actives", value: String(activeOrders.length), icon: ShoppingBag, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
+    { label: "En attente", value: String(pendingCount), icon: Clock, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
+    { label: "Livrées aujourd'hui", value: String(deliveredToday.length), icon: CheckCircle2, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
+    { label: "Revenu du jour", value: formatDZD(todayRevenue), icon: TrendingUp, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
   ];
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-up">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("nav.orders")}</h1>
           <p className="text-sm text-muted-foreground">
@@ -120,20 +82,22 @@ export default async function OrdersPage({
         <OrderFormDialog customers={customers} products={products} />
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+        {statItems.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
+                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
               </CardContent>
             </Card>
           );
@@ -165,13 +129,13 @@ export default async function OrdersPage({
         </TabsList>
       </Tabs>
 
-      {/* Orders table */}
-      <Card>
+      {/* Orders table — upgraded with shared status styles */}
+      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {filteredOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Package className="h-8 w-8 text-muted-foreground" />
+              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
+                <Package className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold mb-1">Aucune commande</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
@@ -196,6 +160,7 @@ export default async function OrdersPage({
                 <tbody className="divide-y">
                   {filteredOrders.map((order) => {
                     const customer = order.customer;
+                    const statusStyle = orderStatusStyles[order.status as keyof typeof orderStatusStyles];
                     return (
                       <tr key={order.id} className="hover:bg-accent/50 transition-colors">
                         <td className="px-4 py-3 font-mono text-sm font-medium">
@@ -211,13 +176,18 @@ export default async function OrdersPage({
                         <td className="px-4 py-3 hidden sm:table-cell text-sm">
                           {order.wilaya}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-sm">
+                        <td className="px-4 py-3 text-right font-medium text-sm tabular-nums">
                           {formatDZD(order.totalPrice)}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={STATUS_BADGE[order.status] ?? "outline"}>
-                            {STATUS_LABELS[order.status] ?? order.status}
-                          </Badge>
+                          {statusStyle ? (
+                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                              <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
+                              {statusStyle.label}
+                            </span>
+                          ) : (
+                            <Badge variant="outline">{order.status}</Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
                           {formatDate(order.createdAt, "fr")}

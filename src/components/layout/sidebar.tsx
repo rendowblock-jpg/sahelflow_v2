@@ -30,26 +30,26 @@ export function Sidebar() {
       )}
       aria-label="Sidebar navigation"
     >
-      {/* Logo / brand */}
-      <div className="flex h-16 items-center gap-2 border-b px-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
-          SF
+      {/* Logo / brand — upgraded with gradient */}
+      <div className="flex h-16 items-center gap-3 border-b px-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-primary/90 to-primary/70 shadow-sm shadow-glow">
+          <span className="text-sm font-bold text-primary-foreground tracking-tight">SF</span>
         </div>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight">SahelFlow</span>
+          <span className="font-semibold text-lg tracking-tight text-gradient">SahelFlow</span>
         )}
       </div>
 
       {/* Navigation */}
       <ScrollArea className="flex-1">
-        <nav className="flex flex-col gap-4 p-2">
+        <nav className="flex flex-col gap-3 p-2">
           {navGroups.map((group) => {
             const groupItems = navItems.filter((item) => item.group === group.id);
             if (groupItems.length === 0) return null;
             return (
-              <div key={group.id} className="flex flex-col gap-1">
+              <div key={group.id} className="flex flex-col gap-0.5">
                 {!collapsed && (
-                  <span className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <span className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.08em]">
                     {t(group.labelKey)}
                   </span>
                 )}
@@ -63,15 +63,19 @@ export function Sidebar() {
                       href={item.href}
                       title={collapsed ? t(item.labelKey) : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                        "hover:bg-accent hover:text-accent-foreground",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        isActive && "bg-accent text-accent-foreground",
+                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                         collapsed && "justify-center px-2",
                       )}
                     >
-                      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                      {!collapsed && <span>{t(item.labelKey)}</span>}
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
+                      {/* Active indicator line */}
+                      {isActive && !collapsed && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-primary-foreground" />
+                      )}
                     </Link>
                   );
                 })}

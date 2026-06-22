@@ -5,24 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { RotateCcw, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { RotateCcw, CheckCircle2, Clock, ArrowLeftRight } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Retours — SahelFlow" };
 export const dynamic = "force-dynamic";
 
-const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  requested: "secondary",
-  approved: "default",
-  rejected: "destructive",
-  completed: "default",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  requested: "Demandé",
-  approved: "Approuvé",
-  rejected: "Refusé",
-  completed: "Terminé",
+// Return status styling — theme-aware
+const returnStatusStyles: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
+  requested: { label: "Demandé", dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800/50" },
+  approved: { label: "Approuvé", dot: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-700 dark:text-sky-400", border: "border-sky-200 dark:border-sky-800/50" },
+  rejected: { label: "Refusé", dot: "bg-red-500", bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-800/50" },
+  completed: { label: "Terminé", dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/50" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -39,16 +33,20 @@ export default async function ReturnsPage() {
     take: 200,
   });
 
+  const requestedCount = returns.filter((r) => r.status === "requested").length;
+  const completedCount = returns.filter((r) => r.status === "completed").length;
+  const exchangeCount = returns.filter((r) => r.type === "exchange").length;
+
   const stats = [
-    { label: "Total retours", value: String(returns.length), icon: RotateCcw },
-    { label: "En attente", value: String(returns.filter((r) => r.status === "requested").length), icon: Clock },
-    { label: "Terminés", value: String(returns.filter((r) => r.status === "completed").length), icon: CheckCircle2 },
-    { label: "Échanges", value: String(returns.filter((r) => r.type === "exchange").length), icon: AlertTriangle },
+    { label: "Total retours", value: String(returns.length), icon: RotateCcw, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
+    { label: "En attente", value: String(requestedCount), icon: Clock, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
+    { label: "Terminés", value: String(completedCount), icon: CheckCircle2, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
+    { label: "Échanges", value: String(exchangeCount), icon: ArrowLeftRight, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
   ];
 
   return (
     <div className="space-y-6 p-6">
-      <div>
+      <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">{t("nav.returns")}</h1>
         <p className="text-sm text-muted-foreground">
           Gérez les retours et échanges de vos commandes
@@ -56,33 +54,35 @@ export default async function ReturnsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+        {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
+                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      <Card>
+      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardHeader>
           <CardTitle className="text-base">Historique des retours</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {returns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <RotateCcw className="h-8 w-8 text-muted-foreground" />
+              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
+                <RotateCcw className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold mb-1">Aucun retour</h3>
               <p className="text-sm text-muted-foreground max-w-md">
@@ -104,42 +104,50 @@ export default async function ReturnsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {returns.map((ret) => (
-                    <tr key={ret.id} className="hover:bg-accent/50 transition-colors">
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/orders/${ret.orderId}`}
-                          className="font-mono text-sm font-medium text-primary hover:underline"
-                        >
-                          {ret.order.orderNumber}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {ret.order.customer?.name ?? "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline">{TYPE_LABELS[ret.type] ?? ret.type}</Badge>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground max-w-xs truncate">
-                        {ret.reason}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={STATUS_BADGE[ret.status] ?? "outline"}>
-                          {STATUS_LABELS[ret.status] ?? ret.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                        {formatDate(ret.createdAt, "fr")}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/orders/${ret.orderId}`}>
-                            Voir
+                  {returns.map((ret) => {
+                    const statusStyle = returnStatusStyles[ret.status];
+                    return (
+                      <tr key={ret.id} className="hover:bg-accent/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/orders/${ret.orderId}`}
+                            className="font-mono text-sm font-medium text-primary hover:underline"
+                          >
+                            {ret.order.orderNumber}
                           </Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {ret.order.customer?.name ?? "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">{TYPE_LABELS[ret.type] ?? ret.type}</Badge>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground max-w-xs truncate">
+                          {ret.reason}
+                        </td>
+                        <td className="px-4 py-3">
+                          {statusStyle ? (
+                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                              <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
+                              {statusStyle.label}
+                            </span>
+                          ) : (
+                            <Badge variant="outline">{ret.status}</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
+                          {formatDate(ret.createdAt, "fr")}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/orders/${ret.orderId}`}>
+                              Voir
+                            </Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
