@@ -126,7 +126,10 @@ Sensitive columns (API keys, customer PII) are encrypted with AES-256-GCM at the
 ## ADR-004: OS keychain for all third-party credentials
 
 **Date:** 2026-06-21
-**Status:** ✅ Accepted (locked in design system v2.2) — **amended: interim SQLite-backed encrypted store (see below)**
+**Status:** ✅ Accepted (locked in design system v2.2) — **IMPLEMENTED in PR #32 (Tauri Stronghold)**
+
+### Implementation note (2026-06-21, session 10)
+The production target is now implemented. The master key is stored in a Tauri Stronghold vault (encrypted, OS-backed secure storage) via `tauri-plugin-stronghold`. Two Tauri commands (`get_master_key_from_stronghold` + `save_master_key_to_stronghold`) bridge the vault to the Node.js server. The `master-key.ts` module uses a hybrid resolution: Stronghold (production) → keyfile (browser dev) → `SF_MASTER_KEY` env var (tests). See `src/lib/crypto/master-key.ts` + `src-tauri/src/lib.rs`.
 
 ### Context
 Where do delivery provider credentials (Yalidine API ID/token, ZR Express API ID/key, Maystro API token), e-commerce integration tokens (Shopify/WooCommerce/YouCan), and AI keys (Gemini API key) live locally?
@@ -318,13 +321,61 @@ Tauri's production build needs a `frontendDist`. The v3.0 app uses Next.js **API
 
 ---
 
+## ADR-011: TikTok DM integration — KILLED
+
+**Status:** ❌ Killed (2026-06-21, founder decision)
+
+**Context:** The original Phase 0 roadmap (item #8) included TikTok DM integration as a polling-based message channel alongside WhatsApp. The design system v2.0 listed it as a 1-week effort. The strategic analysis noted that ~50-60% of Algerian COD sellers are WhatsApp-first, with TikTok being a secondary channel.
+
+**Decision:** Kill TikTok DM integration for v1 and the foreseeable future. SahelFlow is WhatsApp-first.
+
+**Rationale:**
+1. **Focus.** WhatsApp is the dominant channel for Algerian COD. Splitting attention to TikTok dilutes the core value proposition.
+2. **API uncertainty.** TikTok Business API access is unpredictable and the DM integration would require ongoing maintenance against an unstable API.
+3. **Market reality.** The target seller (5-50 orders/day, solo) is overwhelmingly WhatsApp-first. TikTok sellers are a secondary segment that can be served later if demand materializes.
+4. **Simpler roadmap.** Removing TikTok eliminates a non-trivial integration + its maintenance burden.
+
+**Consequences:**
+- The `Conversation.channel` field remains in the schema (could hold `"tiktok"` if a future pivot happens), but no integration work is planned.
+- TikTok references removed from the Settings UI + user-facing strings (PR #33).
+- Internal code comments + AI prompts mentioning TikTok are kept (harmless, don't affect users).
+- Market is capped at ~50-60% of Algerian COD sellers (TikTok-first sellers are out, though they likely also use WhatsApp).
+
+**Revisit:** Only if 10+ paying clients explicitly request TikTok support (Phase 3+).
+
+---
+
+## ADR-012: Meta business verification — KILLED
+
+**Status:** ❌ Killed (2026-06-21, founder decision)
+
+**Context:** The original Phase -1 Gate 2 required a decision on Meta business verification. The strategic analysis noted that Instagram-first sellers represent ~50-60% of the Algerian COD market, and Meta integration was "deferred" — a hedge that left the decision open. The analysis recommended either committing to pursue it (by client #30) or killing it.
+
+**Decision:** Kill Meta business verification. Will NOT be pursued. No Instagram DM integration, no Facebook Messenger integration.
+
+**Rationale:**
+1. **Meta verification is unpredictable.** The process is opaque, can take months, and can be revoked. Building a business on it is risky.
+2. **API is restrictive.** Even with verification, the Instagram/Messenger API has rate limits, review processes, and policy restrictions that would constrain the product.
+3. **Effort better spent elsewhere.** The engineering effort for Meta integration (~10 days per Phase 3 #25) is better spent on deepening the WhatsApp + COD experience.
+4. **Final decision, not "maybe later."** The "deferred" status was the worst of both worlds — it left uncertainty without committing. Killing it is a clean break.
+
+**Consequences:**
+- Market capped at ~50-60% of Algerian COD sellers (Instagram-first sellers are out).
+- No Meta dependencies in the codebase (no Facebook SDK, no Instagram Graph API).
+- The roadmap is simpler: WhatsApp is the only messaging channel.
+- If demand is overwhelming, this decision can be revisited in Phase 3+ — but the expectation is that it stays killed.
+
+**Revisit:** Only if 30+ paying clients explicitly request Instagram support AND the founder is willing to accept Meta's verification overhead.
+
+---
+
 ## Open decisions (to be resolved)
 
 | ID | Topic | When to resolve | Lean |
 |---|---|---|---|
-| — | Meta business verification | Before Phase 0 starts | Kill for v1 (WhatsApp + TikTok only) |
+| — | Bundled runtime approach | Before production distribution | Bundle Bun with Tauri (research needed) |
 | — | Marketing strategy details | Before client #1 | Direct outreach for first 10, then organic + referral |
 
 ---
 
-_Last updated: 2026-06-21 — 10 ADRs (10 accepted, 0 open). ADR-003 (encryption) resolved → application-layer field-level AES-256-GCM._
+_Last updated: 2026-06-21 (session 10) — 12 ADRs (12 accepted, 0 open). ADR-003 (encryption) resolved → application-layer field-level AES-256-GCM. ADR-004 (Stronghold) implemented in PR #32. ADR-011 (TikTok) killed. ADR-012 (Meta verification) killed. Main = `bffae33`._

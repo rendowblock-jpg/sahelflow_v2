@@ -5,6 +5,90 @@
 
 ---
 
+## Session 10 — 2026-06-21: Phase 0 completion + founder kills (13 PRs)
+
+**Branches affected:** `main`, `agent-handoff`
+**Main HEAD:** `bffae33`
+**PRs:** #20–#33 (14 PRs merged this session)
+
+### What was built
+
+**Session 9 (PRs #20-#22):**
+- **PR #20** — Extended PII encryption to Order (phone, address, notes) + Conversation (contactName, contactPhone). New generic `pii-fields.ts` module (non-searchable in-place pattern, no schema change). 12 new tests (93 total).
+- **PR #21** — Storefront management UI: /storefronts (list with active toggle + delete), /storefronts/new (auto-slugify), /storefronts/[id] (builder: searchable product picker, 3 templates + color picker, contact info). 3 new API routes.
+- **PR #22** — AI chat SSE streaming: `runAgentStream()` async generator using Gemini `streamGenerateContent`. 5 event types. Client renders token-by-token with live tool indicators + cancel button.
+
+**Session 9 cont. (PRs #23-#26):**
+- **PR #23** — Daily WhatsApp reports: Setting model (non-secret config), report generator (yesterday stats), cron API route (x-cron-secret auth), Settings API, DailyReportPanel.
+- **PR #24** — 12 new AI tools (18 total): get_order_details, list_recent_orders, get_customer_details, get_low_stock_products, get_revenue_report, get_delivery_status, search_conversations, get_pending_deliveries, get_top_products, update_product_stock, cancel_order, get_wilaya_risk.
+- **PR #25** — E-commerce sync (Shopify/WooCommerce/YouCan): 3 polling adapters with full API research, sync engine with dedup by sourceOrderId, POST /api/integrations/sync.
+- **PR #26** — Maystro + ZR Express delivery adapters (full implementations replacing stubs). Maystro: Token auth, product auto-create, 17 numeric status codes. ZR Express: token+key headers, POST /tarification + /add_colis + /lire.
+
+**Session 9 final (PRs #27-#28):**
+- **PR #27** — Multi-shop UI: shop registry (data/app-meta.json), createShop (slug ID + prisma db push), deleteShop, 4 API routes, API-backed Zustand store, topbar selector, CreateShopDialog.
+- **PR #28** — PWA for Android: manifest + service worker + AI-generated icon. Installable on Android.
+
+**Session 10 (PRs #29-#32):**
+- **PR #29** — Active-shop DB routing: `db` is now a Proxy that resolves the active shop's client on every access. Zero call-site changes (all 52 files keep working). Completes multi-shop.
+- **PR #30** — 12 advanced AI tools (30 total — spec target reached): create_product, update_product_price, get_product_details, create_customer, update_customer_notes, get_customer_orders, assign_order_to_delivery, get_delivery_cost_comparison, get_returns_summary, get_sales_by_wilaya, get_conversation_messages, search_orders.
+- **PR #31** — Auto-updater: tauri.conf.json config (Ed25519 pubkey + GitHub Releases endpoint), UpdateChecker component (auto-check + dialog + download progress + relaunch), generate-update-manifest.ts script, UPDATES.md docs.
+- **PR #32** — Tauri Stronghold master key (ADR-004 production target): tauri-plugin-stronghold + 2 Tauri commands, master-key.ts hybrid resolution (Stronghold → keyfile → env), getMasterKeyAsync().
+
+**Founder kills (PR #33):**
+- **PR #33** — Removed TikTok from Settings UI + user-facing strings. TikTok DM integration (Phase 0 #8) KILLED. Meta business verification (Phase -1 Gate 2) KILLED. WhatsApp-first.
+
+### Decisions made
+- ❌ TikTok DM integration killed — WhatsApp-first, out of scope for v1
+- ❌ Meta business verification killed — no Instagram integration, market capped at ~50-60%
+- ✅ Stronghold as production master key store (ADR-004 implemented)
+- ✅ Auto-updater via signed GitHub Releases (Ed25519)
+- ✅ 30 AI tools reached spec target
+
+### Stats
+- LOC: ~22,600 → ~36,000 (+13,400)
+- Tests: 81 → 93 (+12)
+- API routes: 34 → 46 (+12)
+- AI tools: 6 → 30 (+24, spec target reached)
+- Delivery adapters: 1 full → 3 full
+- Prisma models: 21 → 22 (+Setting)
+- Pages: 17 → 20 (+storefronts list/new/edit)
+
+### What's next
+- 3 missing Phase 0 items: feature flags, support chatbot, manual mode
+- v2-legacy feature audit (find gaps)
+- Bundled runtime research (bundle Bun with Tauri)
+- Darija validation (founder action — load-bearing)
+- Marketing site + strategy (founder)
+
+---
+
+## Session 8 — 2026-06-21: Phase 0 core features (WhatsApp, crypto, delivery, import/export, AI chat, storefront, risk engine)
+
+**Branches affected:** `main`
+**Commits:** merged to `54b11bf`
+
+### What was built
+
+- **Encryption foundation (ADR-003)** — AES-256-GCM field crypto + Secret model + 21 tests
+- **Gemini AI key wizard (Phase 0 #9)** — Settings → IA: test+save encrypted
+- **Baileys WhatsApp sidecar (Phase 0 #1)** — live inbox, QR pairing, WS push, replies, seeded fallback
+- **Tauri production build config (ADR-010)** — standalone server + sidecar externalBin + Rust setup hook
+- **Customer PII field encryption** — transparent Prisma $extends interceptor
+- **Delivery integrations (Phase 0 #16)** — Yalidine full; Maystro + ZR Express stubs
+- **CSV/XLSX import + export** — import engine, /imports page, 3 export routes
+- **AI chat agent (Phase 0 #19)** — 6 tools, Gemini function-calling loop, sessions API
+- **COD storefront foundation (Phase 0 #14)** — StorefrontConfig model, public page, COD API
+- **Wilaya risk engine (Phase 0 #17)** — 58 risk profiles seeded, assessOrderRisk()
+- **Notifications API** — list, mark-read, delete
+
+### Stats
+- LOC: ~11,500 → ~22,600 (+11,100)
+- Tests: 48 → 81 (+33)
+- API routes: 8 → 34 (+26)
+- Pages: 16 → 17 (+1)
+
+---
+
 ## Session 7 — 2026-06-21: Desktop-ready polish (dark mode, communes, mobile, Tauri CLI, loading states)
 
 **Branches affected:** `main`
