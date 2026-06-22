@@ -5,6 +5,14 @@
 //     nothing (cfg!(debug_assertions) is true) — preserves hot-reload.
 //   - `tauri build` (release): this hook spawns the WhatsApp sidecar
 //     and the Next.js standalone server, waits for the server port to open.
+//
+// Stronghold:
+//   The tauri-plugin-stronghold v2 plugin is registered here and provides
+//   built-in commands (plugin:stronghold|*) that can be invoked from the
+//   webview. Custom Rust-side Stronghold commands are NOT used because the
+//   plugin's internal StrongholdCollection state is private. The master key
+//   is stored via the keyfile (data/master.key) on the server side; the
+//   webview can use the plugin's commands for other secure storage needs.
 
 #[cfg(not(debug_assertions))]
 use std::net::TcpStream;
@@ -41,85 +49,8 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            get_master_key_from_stronghold,
-            save_master_key_to_stronghold,
-        ])
         .run(tauri::generate_context!())
         .expect("error while running SahelFlow application");
-}
-
-/// Tauri command: get the master encryption key from Stronghold.
-///
-/// Returns the key as a hex string (64 chars = 32 bytes = 256 bits), or null
-/// if no key is stored yet (first run).
-#[tauri::command]
-async fn get_master_key_from_stronghold(
-    app: tauri::AppHandle,
-    vault_path: String,
-) -> Result<Option<String>, String> {
-    use tauri_plugin_stronghold::stronghold::Stronghold;
-
-    let stronghold = app
-        .state::<Stronghold>()
-        .map_err(|e| format!("Stronghold not available: {e}"))?;
-
-    let _ = vault_path; // vault path is configured at plugin init; accepted for API symmetry
-
-    // Load the vault (it's created on first access if missing)
-    stronghold
-        .load_client("sahelflow-master-key")
-        .map_err(|e| format!("Failed to load Stronghold client: {e}"))?;
-
-    // Read the key from the store
-    match stronghold.get_store().get("master-key".as_bytes()) {
-        Ok(Some(bytes)) => {
-            let hex = bytes
-                .iter()
-                .map(|b| format!("{:02x}", b))
-                .collect::<String>();
-            Ok(Some(hex))
-        }
-        Ok(None) => Ok(None), // first run — no key stored yet
-        Err(e) => Err(format!("Failed to read master key from Stronghold: {e}")),
-    }
-}
-
-/// Tauri command: save the master encryption key to Stronghold.
-///
-/// Called on first run (after generating a new key) or during key rotation.
-#[tauri::command]
-async fn save_master_key_to_stronghold(
-    app: tauri::AppHandle,
-    vault_path: String,
-    key_hex: String,
-) -> Result<(), String> {
-    use tauri_plugin_stronghold::stronghold::Stronghold;
-
-    let stronghold = app
-        .state::<Stronghold>()
-        .map_err(|e| format!("Stronghold not available: {e}"))?;
-
-    let _ = vault_path;
-
-    // Decode hex to bytes
-    let bytes = hex::decode(&key_hex).map_err(|e| format!("Invalid hex key: {e}"))?;
-
-    stronghold
-        .load_client("sahelflow-master-key")
-        .map_err(|e| format!("Failed to load Stronghold client: {e}"))?;
-
-    stronghold
-        .get_store()
-        .insert("master-key".as_bytes().to_vec(), bytes, None)
-        .map_err(|e| format!("Failed to save master key to Stronghold: {e}"))?;
-
-    // Persist the vault to disk (encrypted)
-    stronghold
-        .save()
-        .map_err(|e| format!("Failed to persist Stronghold vault: {e}"))?;
-
-    Ok(())
 }
 
 /// In production: spawn the WhatsApp sidecar + the Next.js standalone server,
@@ -128,13 +59,13 @@ async fn save_master_key_to_stronghold(
 fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::Manager;
     use tauri_plugin_shell::ShellExt;
+    use tauri_plugin_shell::process::CommandEvent;
 
     // 1. WhatsApp sidecar (compiled externalBin: sahelflow-whatsapp)
     match app.shell().sidecar("sahelflow-whatsapp") {
         Ok(cmd) => match cmd.spawn() {
             Ok((mut rx, _child)) => {
                 eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
-                use tauri_plugin_shell::process::CommandEvent;
                 tauri::async_runtime::spawn(async move {
                     while let Some(event) = rx.recv().await {
                         match event {
