@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
+import { useI18n } from "@/hooks/use-i18n";
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 import {
   messageText,
@@ -66,6 +67,7 @@ interface NormalizedMessage {
 type Mode = "loading" | "live" | "seeded";
 
 export function InboxLive() {
+  const { t, locale } = useI18n();
   const [mode, setMode] = useState<Mode>("loading");
   const [chats, setChats] = useState<NormalizedChat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -252,7 +254,7 @@ export function InboxLive() {
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Échec de l'envoi");
+        throw new Error(data.error ?? t("inbox.sendFailed"));
       }
       setMessages((prev) => [
         ...prev,
@@ -265,7 +267,7 @@ export function InboxLive() {
       ]);
       setReplyText("");
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Échec de l'envoi");
+      setSendError(err instanceof Error ? err.message : t("inbox.sendFailed"));
     } finally {
       setSending(false);
     }
@@ -281,7 +283,7 @@ export function InboxLive() {
   }
 
   async function handleLogout() {
-    if (!confirm("Déconnecter WhatsApp ? Vous devrez scanner le QR à nouveau.")) return;
+    if (!confirm(t("inbox.confirmLogout"))) return;
     try {
       await fetch("/api/whatsapp/logout", { method: "DELETE" });
       reconnect();
@@ -314,24 +316,26 @@ export function InboxLive() {
           <div className="p-4 border-b">
             <h1 className="text-lg font-bold flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
-              Messagerie
+              {t("inbox.title")}
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
-              {chats.length} conversation{chats.length > 1 ? "s" : ""}
+              {chats.length > 1
+                ? t("inbox.conversationsCountPlural", { count: chats.length })
+                : t("inbox.conversationsCount", { count: chats.length })}
               {mode === "seeded" && status !== "connected" && (
-                <span className="ml-1 text-amber-600">(démo)</span>
+                <span className="ml-1 text-amber-600">({t("inbox.demo")})</span>
               )}
-              {mode === "live" && <span className="ml-1 text-green-600">(live)</span>}
+              {mode === "live" && <span className="ml-1 text-green-600">({t("inbox.live")})</span>}
             </p>
           </div>
           <ScrollArea className="flex-1">
             {chats.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                Aucune conversation.
+                {t("inbox.noConversationsShort")}
                 <br />
                 {status === "connected"
-                  ? "Les nouveaux messages WhatsApp apparaîtront ici."
-                  : "Connectez WhatsApp pour recevoir des messages."}
+                  ? t("inbox.noConversationsConnected")
+                  : t("inbox.noConversationsDisconnected")}
               </div>
             ) : (
               <div className="divide-y">
@@ -356,7 +360,7 @@ export function InboxLive() {
                           {c.lastMessageAt && (
                             <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                               <Clock className="h-2.5 w-2.5" />
-                              {formatRelative(c.lastMessageAt)}
+                              {formatRelative(c.lastMessageAt, t, locale)}
                             </span>
                           )}
                         </div>
@@ -368,7 +372,7 @@ export function InboxLive() {
                         )}
                         <div className="flex items-center justify-between mt-1">
                           <Badge variant="outline" className="text-xs">
-                            {c.channel === "whatsapp" ? "WhatsApp" : "Démo"}
+                            {c.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
                           </Badge>
                           {c.unread > 0 && (
                             <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0">
@@ -402,7 +406,7 @@ export function InboxLive() {
                   </div>
                 </div>
                 <Badge variant="outline">
-                  {activeChat.channel === "whatsapp" ? "WhatsApp" : "Démo"}
+                  {activeChat.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
                 </Badge>
               </div>
 
@@ -413,7 +417,7 @@ export function InboxLive() {
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
                   ) : messages.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground py-8">Aucun message.</p>
+                    <p className="text-center text-sm text-muted-foreground py-8">{t("inbox.noMessages")}</p>
                   ) : (
                     messages.map((msg) => (
                       <div key={msg.id} className="space-y-2">
@@ -427,7 +431,7 @@ export function InboxLive() {
                           >
                             <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
                             <p className={`text-xs mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
-                              {new Date(msg.timestamp).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              {new Date(msg.timestamp).toLocaleTimeString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         </div>
@@ -452,7 +456,7 @@ export function InboxLive() {
                   <div className="flex items-center gap-2">
                     <Input
                       type="text"
-                      placeholder="Répondez..."
+                      aria-label={t("inbox.replyPlaceholder")} placeholder={t("inbox.replyPlaceholder")}
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       onKeyDown={(e) => {
@@ -463,7 +467,7 @@ export function InboxLive() {
                       }}
                       disabled={sending}
                     />
-                    <Button size="icon" onClick={handleSend} disabled={sending || !replyText.trim()}>
+                    <Button size="icon" aria-label={t("inbox.send")} onClick={handleSend} disabled={sending || !replyText.trim()}>
                       {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -473,8 +477,8 @@ export function InboxLive() {
                       type="text"
                       placeholder={
                         activeChat.channel === "seeded"
-                          ? "Conversation démo — connectez WhatsApp pour répondre"
-                          : "WhatsApp non connecté"
+                          ? t("inbox.seededReplyPlaceholder")
+                          : t("inbox.disconnectedReplyPlaceholder")
                       }
                       disabled
                       className="flex-1"
@@ -498,9 +502,9 @@ export function InboxLive() {
                 <div className="rounded-full bg-muted p-4 mb-4 mx-auto w-fit">
                   <MessageSquare className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-1">Aucune conversation sélectionnée</h3>
+                <h3 className="text-lg font-semibold mb-1">{t("inbox.noConversationSelected")}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Sélectionnez une conversation dans la liste.
+                  {t("inbox.selectConversationHint")}
                 </p>
               </div>
             </div>
@@ -529,11 +533,12 @@ function StatusBar({
   onLogout: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   if (status === null) {
     return (
       <div className="border-b bg-muted/30 px-4 py-2 text-sm text-muted-foreground flex items-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Vérification de la connexion WhatsApp...
+        {t("inbox.checkingConnection")}
       </div>
     );
   }
@@ -542,11 +547,11 @@ function StatusBar({
       <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2 text-sm flex items-center justify-between">
         <span className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
           <AlertCircle className="h-4 w-4" />
-          Service WhatsApp non démarré. Affichage des conversations démo.
+          {t("inbox.serviceNotStarted")}
         </span>
         <Button variant="outline" size="sm" onClick={onRetry}>
           <RefreshCw className="h-3 w-3 mr-1" />
-          Réessayer
+          {t("inbox.retry")}
         </Button>
       </div>
     );
@@ -556,13 +561,13 @@ function StatusBar({
       <div className="border-b bg-green-50 dark:bg-green-950/30 px-4 py-2 text-sm flex items-center justify-between">
         <span className="flex items-center gap-2 text-green-700 dark:text-green-300">
           <CheckCircle2 className="h-4 w-4" />
-          WhatsApp connecté
+          {t("inbox.whatsappConnected")}
           {user?.id && <span className="font-mono text-xs">· {user.id.split("@")[0]}</span>}
-          {!wsOpen && <span className="text-xs">(reconnexion...)</span>}
+          {!wsOpen && <span className="text-xs">{t("inbox.reconnecting")}</span>}
         </span>
         <Button variant="outline" size="sm" onClick={onLogout} className="text-destructive">
           <LogOut className="h-3 w-3 mr-1" />
-          Déconnecter
+          {t("inbox.disconnect")}
         </Button>
       </div>
     );
@@ -571,7 +576,7 @@ function StatusBar({
     return (
       <div className="border-b bg-blue-50 dark:bg-blue-950/30 px-4 py-2 text-sm flex items-center gap-2 text-blue-700 dark:text-blue-300">
         <QrCode className="h-4 w-4" />
-        Scannez le QR code ci-dessous avec WhatsApp (Settings → Linked Devices)
+        {t("inbox.scanQrHint")}
       </div>
     );
   }
@@ -579,7 +584,7 @@ function StatusBar({
     return (
       <div className="border-b bg-muted/30 px-4 py-2 text-sm flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Connexion à WhatsApp en cours...
+        {t("inbox.connecting")}
       </div>
     );
   }
@@ -587,11 +592,11 @@ function StatusBar({
     <div className="border-b bg-muted/30 px-4 py-2 text-sm flex items-center justify-between">
       <span className="flex items-center gap-2 text-muted-foreground">
         <Plug className="h-4 w-4" />
-        WhatsApp déconnecté. Affichage des conversations démo.
+        {t("inbox.disconnected")}
       </span>
       <Button variant="outline" size="sm" onClick={onConnect}>
         <Smartphone className="h-3 w-3 mr-1" />
-        Connecter
+        {t("inbox.connect")}
       </Button>
     </div>
   );
@@ -599,6 +604,7 @@ function StatusBar({
 
 // ── QR pairing card ─────────────────────────────────────────────────────────
 function QrPairingCard({ qrKey, onRefresh }: { qrKey: number; onRefresh: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="border-b bg-blue-50/50 dark:bg-blue-950/20 px-4 py-6 flex flex-col items-center gap-3">
       <Card className="p-4">
@@ -609,33 +615,33 @@ function QrPairingCard({ qrKey, onRefresh }: { qrKey: number; onRefresh: () => v
           <img
             key={qrKey}
             src="/api/whatsapp/qr-image"
-            alt="QR code WhatsApp"
+            alt={t("inbox.qrAlt")}
             className="h-64 w-64"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
             }}
           />
           <p className="text-xs text-muted-foreground text-center max-w-xs">
-            Ouvrez WhatsApp sur votre téléphone → Paramètres → Appareils liés → Scanner un QR code
+            {t("inbox.qrInstructions")}
           </p>
         </CardContent>
       </Card>
       <Button variant="ghost" size="sm" onClick={onRefresh}>
         <RefreshCw className="h-3 w-3 mr-1" />
-        Actualiser le QR
+        {t("inbox.refreshQr")}
       </Button>
     </div>
   );
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-function formatRelative(ms: number): string {
+function formatRelative(ms: number, t: (key: string, params?: Record<string, string | number>) => string, locale: string): string {
   const diff = Date.now() - ms;
   const hours = diff / (1000 * 60 * 60);
-  if (hours < 1) return "à l'instant";
-  if (hours < 24) return `il y a ${Math.floor(hours)}h`;
+  if (hours < 1) return t("inbox.justNow");
+  if (hours < 24) return t("inbox.hoursAgo", { hours: Math.floor(hours) });
   const days = Math.floor(hours / 24);
-  if (days === 1) return "hier";
-  if (days < 7) return `il y a ${days}j`;
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  if (days === 1) return t("inbox.yesterday");
+  if (days < 7) return t("inbox.daysAgo", { days });
+  return new Date(ms).toLocaleDateString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { day: "numeric", month: "short" });
 }

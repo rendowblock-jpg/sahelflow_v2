@@ -57,10 +57,12 @@ export default async function ProductsPage() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              {lowStockCount} produit{lowStockCount > 1 ? "s" : ""} en stock faible
+              {lowStockCount > 1
+                ? t("products.lowStockAlertMany", { count: lowStockCount })
+                : t("products.lowStockAlertOne", { count: lowStockCount })}
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Pensez à réapprovisionner pour éviter les ruptures.
+              {t("products.lowStockAlertHint")}
             </p>
           </div>
         </div>

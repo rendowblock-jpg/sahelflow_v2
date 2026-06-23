@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +60,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
 ];
 
 export function DeliveryCredentialsPanel() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<Record<string, ProviderStatus>>({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
@@ -102,21 +104,21 @@ export function DeliveryCredentialsPanel() {
       });
       const data = (await res.json()) as { ok: boolean; message?: string; error?: string };
       if (data.ok) {
-        setResult({ ok: true, message: data.message ?? "Enregistré." });
+        setResult({ ok: true, message: data.message ?? t("delivery.saved") });
         setEditing(null);
         await loadStatus();
       } else {
-        setResult({ ok: false, message: data.error ?? "Échec." });
+        setResult({ ok: false, message: data.error ?? t("delivery.failed") });
       }
     } catch {
-      setResult({ ok: false, message: "Échec de la connexion." });
+      setResult({ ok: false, message: t("delivery.connectionFailed") });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(providerId: string) {
-    if (!confirm(`Supprimer les identifiants ${providerId} ?`)) return;
+    if (!confirm(t("delivery.confirmDelete", { provider: providerId }))) return;
     try {
       await fetch(`/api/delivery/credentials?provider=${providerId}`, { method: "DELETE" });
       await loadStatus();
@@ -138,18 +140,17 @@ export function DeliveryCredentialsPanel() {
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
             <Truck className="h-5 w-5 text-primary" />
           </span>
-          Transporteurs
+          {t("delivery.providersTitle")}
         </CardTitle>
         <CardDescription>
-          Connectez vos comptes de livraison (Yalidine, Maystro, ZR Express) pour
-          créer des expéditions et suivre les colis depuis les commandes.
+          {t("delivery.providersDesc")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Chargement...
+            {t("common.loading")}
           </div>
         ) : (
           PROVIDER_CONFIGS.map((provider) => {
@@ -165,11 +166,11 @@ export function DeliveryCredentialsPanel() {
                   {configured ? (
                     <Badge className="gap-1 bg-green-600 text-white hover:bg-green-600">
                       <CheckCircle2 className="h-3 w-3" />
-                      Configuré
+                      {t("delivery.configured")}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-amber-600 border-amber-300">
-                      Non configuré
+                      {t("delivery.notConfigured")}
                     </Badge>
                   )}
                 </div>
@@ -199,17 +200,17 @@ export function DeliveryCredentialsPanel() {
                         ) : (
                           <Save className="h-4 w-4 mr-1.5" />
                         )}
-                        Enregistrer
+                        {t("common.save")}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
-                        Annuler
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => startEditing(provider.id)}>
-                      {configured ? "Modifier" : "Configurer"}
+                      {configured ? t("common.edit") : t("delivery.configureButton")}
                     </Button>
                     {configured && (
                       <Button
@@ -219,7 +220,7 @@ export function DeliveryCredentialsPanel() {
                         className="text-destructive"
                       >
                         <Trash2 className="h-3 w-3 mr-1" />
-                        Supprimer
+                        {t("common.delete")}
                       </Button>
                     )}
                   </div>

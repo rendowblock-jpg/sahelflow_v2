@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function StorefrontsListClient({ configs: initial }: Props) {
+  const { t } = useI18n();
   const [configs, setConfigs] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<StorefrontConfig | null>(null);
@@ -41,15 +43,15 @@ export function StorefrontsListClient({ configs: initial }: Props) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Échec de la mise à jour");
+        throw new Error(data.error || t("storefront.list.error.updateFailed"));
       }
-      toast.success(newValue ? "Boutique activée" : "Boutique désactivée");
+      toast.success(newValue ? t("storefront.list.activated") : t("storefront.list.deactivated"));
     } catch (err) {
       // Revert on failure
       setConfigs((prev) =>
         prev.map((c) => (c.id === config.id ? { ...c, isActive: config.isActive } : c)),
       );
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("storefront.list.error.generic"));
     }
   }
 
@@ -63,13 +65,13 @@ export function StorefrontsListClient({ configs: initial }: Props) {
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Échec de la suppression");
+          throw new Error(data.error || t("storefront.list.error.deleteFailed"));
         }
         setConfigs((prev) => prev.filter((c) => c.id !== target.id));
-        toast.success("Boutique supprimée");
+        toast.success(t("storefront.list.deleted"));
         setDeleteTarget(null);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erreur");
+        toast.error(err instanceof Error ? err.message : t("storefront.list.error.generic"));
       }
     });
   }
@@ -85,9 +87,9 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                   {config.name}
                 </CardTitle>
                 {config.isActive ? (
-                  <Badge>Active</Badge>
+                  <Badge>{t("storefront.list.active")}</Badge>
                 ) : (
-                  <Badge variant="outline">Inactive</Badge>
+                  <Badge variant="outline">{t("storefront.list.inactive")}</Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground font-mono">
@@ -102,7 +104,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
               )}
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>
-                  <span className="font-medium">{config.productIds.length}</span> produit(s)
+                  {t("storefront.list.productsCount", { count: config.productIds.length })}
                   {" · "}
                   <span className="font-medium capitalize">{config.theme.template}</span>
                 </div>
@@ -112,10 +114,10 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                 <Button asChild size="sm" variant="outline" className="flex-1">
                   <Link href={`/storefronts/${config.id}`}>
                     <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                    Modifier
+                    {t("storefront.list.edit")}
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="ghost" title="Aperçu public">
+                <Button asChild size="sm" variant="ghost" title={t("storefront.list.publicPreview")}>
                   <a
                     href={`/storefront/${config.slug}`}
                     target="_blank"
@@ -127,7 +129,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  title={config.isActive ? "Désactiver" : "Activer"}
+                  title={config.isActive ? t("storefront.list.deactivate") : t("storefront.list.activate")}
                   onClick={() => toggleActive(config)}
                 >
                   {config.isActive ? (
@@ -139,7 +141,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  title="Supprimer"
+                  title={t("storefront.list.delete")}
                   className="text-destructive hover:text-destructive"
                   onClick={() => setDeleteTarget(config)}
                 >
@@ -155,17 +157,15 @@ export function StorefrontsListClient({ configs: initial }: Props) {
       <Dialog open={deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Supprimer la boutique ?</DialogTitle>
+            <DialogTitle>{t("storefront.list.deleteTitle")}</DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer <strong>{deleteTarget?.name}</strong> ?
-              Cette action est irréversible. La page publique{" "}
-              <code className="text-xs">/storefront/{deleteTarget?.slug}</code> ne sera
-              plus accessible.
+              {t("storefront.list.deleteConfirm", { name: deleteTarget?.name ?? "" })}{" "}
+              {t("storefront.list.deleteWarning", { slug: `/storefront/${deleteTarget?.slug ?? ""}` })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Annuler
+              {t("storefront.list.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -173,7 +173,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
               disabled={pending}
             >
               {pending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Supprimer
+              {t("storefront.list.confirmDelete")}
             </Button>
           </DialogFooter>
         </DialogContent>

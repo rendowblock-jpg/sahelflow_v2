@@ -15,19 +15,21 @@ import {
   Ban,
   Loader2,
 } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
+// Action config holds the i18n key (resolved at render time via t()).
 const ACTION_CONFIG: Record<
   OrderStatus,
-  { label: string; icon: typeof CheckCircle2; variant: "default" | "destructive" | "outline" }
+  { labelKey: string; icon: typeof CheckCircle2; variant: "default" | "destructive" | "outline" }
 > = {
-  confirmed: { label: "Confirmer", icon: CheckCircle2, variant: "default" },
-  shipped: { label: "Expédier", icon: Truck, variant: "default" },
-  delivered: { label: "Marquer livrée", icon: PackageCheck, variant: "default" },
-  returned: { label: "Retour", icon: RotateCcw, variant: "destructive" },
-  refused: { label: "Refusée", icon: XCircle, variant: "destructive" },
-  cancelled: { label: "Annuler", icon: Ban, variant: "destructive" },
-  draft: { label: "", icon: CheckCircle2, variant: "outline" },
-  pending: { label: "", icon: CheckCircle2, variant: "outline" },
+  confirmed: { labelKey: "orders.confirmOrder", icon: CheckCircle2, variant: "default" },
+  shipped: { labelKey: "orders.shipOrder", icon: Truck, variant: "default" },
+  delivered: { labelKey: "orders.statusActions.markDelivered", icon: PackageCheck, variant: "default" },
+  returned: { labelKey: "orders.statusActions.returnButton", icon: RotateCcw, variant: "destructive" },
+  refused: { labelKey: "orders.status.refused", icon: XCircle, variant: "destructive" },
+  cancelled: { labelKey: "common.cancel", icon: Ban, variant: "destructive" },
+  draft: { labelKey: "", icon: CheckCircle2, variant: "outline" },
+  pending: { labelKey: "", icon: CheckCircle2, variant: "outline" },
 };
 
 interface OrderStatusActionsProps {
@@ -37,6 +39,7 @@ interface OrderStatusActionsProps {
 
 export function OrderStatusActions({ orderId, currentStatus }: OrderStatusActionsProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [loading, setLoading] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,11 +56,11 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error ?? "Échec de la mise à jour");
+        throw new Error(data.error ?? t("orders.statusActions.updateFailed"));
       }
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      setError(err instanceof Error ? err.message : t("errors.somethingWrong"));
     } finally {
       setLoading(null);
     }
@@ -66,8 +69,8 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
   if (allowed.length === 0) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Badge variant="outline">Statut final</Badge>
-        <span>Aucune action possible sur cette commande.</span>
+        <Badge variant="outline">{t("orders.statusActions.finalStatus")}</Badge>
+        <span>{t("orders.statusActions.noActions")}</span>
       </div>
     );
   }
@@ -75,10 +78,10 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">Actions:</span>
+        <span className="text-sm font-medium text-muted-foreground">{t("orders.statusActions.actionsLabel")}</span>
         {allowed.map((target) => {
           const config = ACTION_CONFIG[target];
-          if (!config || !config.label) return null;
+          if (!config || !config.labelKey) return null;
           const Icon = config.icon;
           const isLoading = loading === target;
           return (
@@ -94,7 +97,7 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
               ) : (
                 <Icon className="h-4 w-4 mr-1.5" />
               )}
-              {config.label}
+              {t(config.labelKey)}
             </Button>
           );
         })}

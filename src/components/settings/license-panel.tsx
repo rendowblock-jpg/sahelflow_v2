@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
 import { useLicenseStore } from "@/stores/license-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 
 export function LicensePanel() {
+  const { t } = useI18n();
   const { license, validation, machineId, isLoading } = useLicense();
   const setLicense = useLicenseStore((s) => s.setLicense);
   const setHasChecked = useLicenseStore((s) => s.setHasChecked);
@@ -42,7 +44,7 @@ export function LicensePanel() {
     try {
       const parsed = JSON.parse(keyInput);
       if (!parsed.payload || !parsed.signature) {
-        setError("Format de licence invalide.");
+        setError(t("license.invalidFormat"));
         return;
       }
       setLicense(parsed);
@@ -51,7 +53,7 @@ export function LicensePanel() {
       setKeyInput("");
       window.location.reload();
     } catch {
-      setError("JSON invalide. Vérifiez le format.");
+      setError(t("license.invalidJson"));
     }
   }
 
@@ -68,7 +70,7 @@ export function LicensePanel() {
       <Card>
         <CardContent className="flex items-center gap-2 py-6 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Vérification de la licence...
+          {t("license.checking")}
         </CardContent>
       </Card>
     );
@@ -87,24 +89,24 @@ export function LicensePanel() {
           ) : (
             <ShieldAlert className="h-5 w-5 text-destructive" />
           )}
-          Licence
+          {t("license.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Statut</span>
+          <span className="text-sm text-muted-foreground">{t("license.statusLabel")}</span>
           <Badge variant={isValid ? "default" : "destructive"}>
-            {validation?.message ?? "Aucune licence"}
+            {validation?.message ?? t("license.status.missing")}
           </Badge>
         </div>
 
         {license && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Type</span>
+            <span className="text-sm text-muted-foreground">{t("license.typeLabel")}</span>
             <span className="text-sm font-medium capitalize">
-              {license.payload.type === "permanent" && "Permanente"}
-              {license.payload.type === "trial" && "Essai 7 jours"}
-              {license.payload.type === "extension" && "Extension"}
+              {license.payload.type === "permanent" && t("license.typePermanent")}
+              {license.payload.type === "trial" && t("license.typeTrial")}
+              {license.payload.type === "extension" && t("license.typeExtension")}
             </span>
           </div>
         )}
@@ -113,7 +115,7 @@ export function LicensePanel() {
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              Expire le
+              {t("license.expiresOn")}
             </span>
             <span className="text-sm font-medium">
               {new Date(license.payload.expiresAt).toLocaleDateString("fr-FR")}
@@ -126,7 +128,7 @@ export function LicensePanel() {
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Cpu className="h-3.5 w-3.5" />
-            Identifiant machine
+            {t("license.machineId")}
           </div>
           <div className="flex items-center gap-2">
             <code className="flex-1 rounded bg-muted px-2 py-1.5 text-xs font-mono break-all">
@@ -137,13 +139,13 @@ export function LicensePanel() {
               size="icon"
               onClick={copyMachineId}
               disabled={!machineId}
-              title="Copier"
+              title={t("settings.copy")}
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Communiquez cet identifiant au fondateur après paiement pour recevoir votre licence permanente.
+            {t("license.machineIdHelp")}
           </p>
         </div>
 
@@ -154,25 +156,25 @@ export function LicensePanel() {
             <DialogTrigger asChild>
               <Button variant="default" size="sm">
                 <Key className="h-4 w-4 mr-1.5" />
-                Entrer une licence
+                {t("license.enterKey")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Activer une licence permanente</DialogTitle>
+                <DialogTitle>{t("license.activatePermanent")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="license-key">Clé de licence</Label>
+                  <Label htmlFor="license-key">{t("license.licenseKey")}</Label>
                   <Input
                     id="license-key"
-                    placeholder="Collez le JSON reçu par email..."
+                    placeholder={t("license.pasteJsonPlaceholder")}
                     value={keyInput}
                     onChange={(e) => setKeyInput(e.target.value)}
                     className="font-mono text-xs"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Format: {"{ \"payload\": {...}, \"signature\": \"...\" }"}
+                    {t("license.formatHelp")} {"{ \"payload\": {...}, \"signature\": \"...\" }"}
                   </p>
                 </div>
                 {error && (
@@ -181,10 +183,10 @@ export function LicensePanel() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setPasteOpen(false)}>
-                  Annuler
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={handlePasteKey} disabled={!keyInput.trim()}>
-                  Activer
+                  {t("license.activate")}
                 </Button>
               </DialogFooter>
             </DialogContent>

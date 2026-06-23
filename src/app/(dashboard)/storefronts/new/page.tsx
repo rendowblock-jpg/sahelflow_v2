@@ -4,7 +4,7 @@ import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
 import { db } from "@/lib/db";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Nouvelle boutique — SahelFlow" };
+export const metadata: Metadata = { title: "New storefront — SahelFlow" };
 export const dynamic = "force-dynamic";
 
 export default async function NewStorefrontPage() {
@@ -45,8 +45,7 @@ export default async function NewStorefrontPage() {
           {t("storefronts.newTitle")}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Configurez votre nouvelle boutique en ligne. Vous pourrez modifier ces
-          réglages à tout moment.
+          {t("storefronts.newDesc")}
         </p>
       </div>
       <StorefrontBuilder config={emptyConfig} products={products} mode="create" />

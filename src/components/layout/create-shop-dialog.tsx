@@ -16,10 +16,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
 import { useShopStore } from "@/stores/shop-store";
+import { useI18n } from "@/hooks/use-i18n";
 
 const EMOJI_OPTIONS = ["🏪", "🛍️", "📦", "📱", "👕", "💻", "🏠", "💄", "⚽", "🎮"];
 
 export function CreateShopDialog() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🏪");
@@ -33,17 +35,17 @@ export function CreateShopDialog() {
 
   async function handleCreate() {
     if (!name.trim()) {
-      toast.error("Le nom de la boutique est requis");
+      toast.error(t("shops.nameRequired"));
       return;
     }
     startTransition(async () => {
       try {
         const shop = await createShop({ name: name.trim(), icon });
-        toast.success(`Boutique "${shop.name}" créée`);
+        toast.success(t("shops.created", { name: shop.name }));
         setOpen(false);
         reset();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erreur");
+        toast.error(err instanceof Error ? err.message : t("shops.error"));
       }
     });
   }
@@ -53,25 +55,24 @@ export function CreateShopDialog() {
       <DialogTrigger asChild>
         <button className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground">
           <Plus className="h-4 w-4" />
-          <span>Nouvelle boutique</span>
+          <span>{t("shops.newShop")}</span>
         </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Créer une nouvelle boutique</DialogTitle>
+          <DialogTitle>{t("shops.createTitle")}</DialogTitle>
           <DialogDescription>
-            Chaque boutique a sa propre base de données séparée. Vous pouvez
-            gérer jusqu&apos;à 10 boutiques (maximum 10).
+            {t("shops.createDescription")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="shop-name">Nom de la boutique *</Label>
+            <Label htmlFor="shop-name">{t("shops.nameLabel")}</Label>
             <Input
               id="shop-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ma Boutique"
+              placeholder={t("shops.namePlaceholder")}
               maxLength={50}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -82,7 +83,7 @@ export function CreateShopDialog() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Icône</Label>
+            <Label>{t("shops.iconLabel")}</Label>
             <div className="flex flex-wrap gap-2">
               {EMOJI_OPTIONS.map((emoji) => (
                 <button
@@ -103,11 +104,11 @@ export function CreateShopDialog() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Annuler
+            {t("shops.cancel")}
           </Button>
           <Button onClick={handleCreate} disabled={pending || !name.trim()}>
             {pending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Créer
+            {t("shops.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

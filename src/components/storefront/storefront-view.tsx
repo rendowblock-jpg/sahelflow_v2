@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ interface StorefrontViewProps {
 }
 
 export function StorefrontView({ config, products }: StorefrontViewProps) {
+  const { t } = useI18n();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; orderNumber?: string } | null>(null);
@@ -115,10 +117,10 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
         setCart([]);
         setForm({ name: "", phone: "", wilaya: "", commune: "", address: "", notes: "" });
       } else {
-        setResult({ ok: false, message: data.error ?? "Échec de la commande" });
+        setResult({ ok: false, message: data.error ?? t("storefront.view.error.orderFailed") });
       }
     } catch {
-      setResult({ ok: false, message: "Échec de la connexion" });
+      setResult({ ok: false, message: t("storefront.view.error.connectionFailed") });
     } finally {
       setSubmitting(false);
     }
@@ -130,16 +132,16 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center space-y-4">
             <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
-            <h1 className="text-2xl font-bold">Commande confirmée !</h1>
+            <h1 className="text-2xl font-bold">{t("storefront.view.orderConfirmed")}</h1>
             <p className="text-muted-foreground">{result.message}</p>
             {result.orderNumber && (
               <div className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">Numéro de commande</p>
+                <p className="text-xs text-muted-foreground">{t("storefront.view.orderNumber")}</p>
                 <p className="font-mono text-lg font-bold">{result.orderNumber}</p>
               </div>
             )}
             <Button onClick={() => setResult(null)} variant="outline">
-              Passer une autre commande
+              {t("storefront.view.anotherOrder")}
             </Button>
           </CardContent>
         </Card>
@@ -165,9 +167,9 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       <div className="max-w-5xl mx-auto px-4 py-8 grid md:grid-cols-3 gap-6">
         {/* Product grid */}
         <div className="md:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold">Nos produits</h2>
+          <h2 className="text-lg font-semibold">{t("storefront.view.ourProducts")}</h2>
           {products.length === 0 ? (
-            <p className="text-muted-foreground">Aucun produit disponible pour le moment.</p>
+            <p className="text-muted-foreground">{t("storefront.view.noProducts")}</p>
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">
               {products.map((product) => (
@@ -182,7 +184,9 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                       </div>
                       {config.theme.showStock && (
                         <Badge variant={product.stock > 0 ? "default" : "destructive"}>
-                          {product.stock > 0 ? `${product.stock} en stock` : "Rupture"}
+                          {product.stock > 0
+                            ? t("storefront.view.inStock", { count: product.stock })
+                            : t("storefront.view.outOfStock")}
                         </Badge>
                       )}
                     </div>
@@ -199,7 +203,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                       style={{ backgroundColor: config.theme.primaryColor }}
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      Ajouter au panier
+                      {t("storefront.view.addToCart")}
                     </Button>
                   </CardContent>
                 </Card>
@@ -214,13 +218,13 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ShoppingCart className="h-4 w-4" />
-                Panier ({cart.length})
+                {t("storefront.view.cart", { count: cart.length })}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {cart.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Panier vide
+                  {t("storefront.view.emptyCart")}
                 </p>
               ) : (
                 <>
@@ -233,21 +237,21 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, -1)}>
+                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, -1)} aria-label={t("storefront.view.decreaseQty")}>
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="w-6 text-center text-xs">{item.quantity}</span>
-                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, 1)}>
+                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, 1)} aria-label={t("storefront.view.increaseQty")}>
                           <Plus className="h-3 w-3" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeFromCart(item.product.id)}>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeFromCart(item.product.id)} aria-label={t("storefront.view.removeItem")}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   ))}
                   <div className="border-t pt-2 flex justify-between font-bold">
-                    <span>Total</span>
+                    <span>{t("storefront.view.total")}</span>
                     <span>{cartTotal.toLocaleString("fr-DZ")} DA</span>
                   </div>
                 </>
@@ -259,34 +263,34 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
           {cart.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Commander (Paiement à la livraison)</CardTitle>
+                <CardTitle className="text-base">{t("storefront.view.checkout")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <div className="space-y-1">
-                    <Label htmlFor="name">Nom complet *</Label>
+                    <Label htmlFor="name">{t("storefront.view.fullName")} *</Label>
                     <Input id="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="phone">Téléphone *</Label>
+                    <Label htmlFor="phone">{t("storefront.view.phone")} *</Label>
                     <Input id="phone" required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0XXXXXXXXX" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label htmlFor="wilaya">Wilaya *</Label>
+                      <Label htmlFor="wilaya">{t("storefront.view.wilaya")} *</Label>
                       <Input id="wilaya" required value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: e.target.value })} />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="commune">Commune *</Label>
+                      <Label htmlFor="commune">{t("storefront.view.commune")} *</Label>
                       <Input id="commune" required value={form.commune} onChange={(e) => setForm({ ...form, commune: e.target.value })} />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="address">Adresse *</Label>
+                    <Label htmlFor="address">{t("storefront.view.address")} *</Label>
                     <Input id="address" required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="notes">Notes (optionnel)</Label>
+                    <Label htmlFor="notes">{t("storefront.view.notes")}</Label>
                     <Input id="notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
                   </div>
                   {result && !result.ok && (
@@ -299,10 +303,10 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                     {submitting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                        Envoi...
+                        {t("storefront.view.sending")}
                       </>
                     ) : (
-                      "Confirmer la commande"
+                      t("storefront.view.confirmOrder")
                     )}
                   </Button>
                 </form>
@@ -314,7 +318,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
           {config.contact && (
             <Card>
               <CardContent className="pt-4 text-sm space-y-1">
-                <p className="font-medium">Contact</p>
+                <p className="font-medium">{t("storefront.view.contact")}</p>
                 {config.contact.phone && <p className="text-muted-foreground">📞 {config.contact.phone}</p>}
                 {config.contact.whatsapp && <p className="text-muted-foreground">💬 {config.contact.whatsapp}</p>}
                 {config.contact.email && <p className="text-muted-foreground">✉️ {config.contact.email}</p>}

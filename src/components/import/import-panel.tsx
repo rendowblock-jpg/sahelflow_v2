@@ -28,6 +28,7 @@ import {
   AlertCircle,
   Download,
 } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface ImportPanelProps {
   /** Entity type: "products" | "customers" */
@@ -55,6 +56,7 @@ interface CommitResult {
 }
 
 export function ImportPanel({ entity, title, description }: ImportPanelProps) {
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -88,11 +90,11 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
       });
       const data = (await res.json()) as PreviewResult & { error?: string };
       if (!res.ok) {
-        throw new Error(data.error ?? "Échec de l'analyse");
+        throw new Error(data.error ?? t("import.previewFailed"));
       }
       setPreview(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Échec");
+      setError(err instanceof Error ? err.message : t("import.failed"));
     } finally {
       setPreviewing(false);
     }
@@ -116,12 +118,12 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
       });
       const data = (await res.json()) as CommitResult & { error?: string };
       if (!res.ok) {
-        throw new Error(data.error ?? "Échec de l'import");
+        throw new Error(data.error ?? t("import.importFailed"));
       }
       setCommitResult(data);
       setPreview(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Échec");
+      setError(err instanceof Error ? err.message : t("import.failed"));
     } finally {
       setCommitting(false);
     }
@@ -139,7 +141,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
       <CardContent className="space-y-4">
         {/* File input */}
         <div className="space-y-2">
-          <Label htmlFor={`file-${entity}`}>Fichier CSV ou XLSX</Label>
+          <Label htmlFor={`file-${entity}`}>{t("import.fileLabel")}</Label>
           <div className="flex items-center gap-2">
             <Input
               id={`file-${entity}`}
@@ -153,12 +155,12 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
               {previewing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  Analyse...
+                  {t("import.analyzing")}
                 </>
               ) : (
                 <>
                   <FileSpreadsheet className="h-4 w-4 mr-1.5" />
-                  Analyser
+                  {t("import.analyze")}
                 </>
               )}
             </Button>
@@ -175,15 +177,15 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
           <div className="space-y-3 rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm">
-                <span>Total: <strong>{preview.totalRows}</strong></span>
+                <span>{t("import.totalLabel")} <strong>{preview.totalRows}</strong></span>
                 <Badge className="gap-1 bg-green-600 text-white hover:bg-green-600">
                   <CheckCircle2 className="h-3 w-3" />
-                  {preview.validCount} valides
+                  {preview.validCount} {t("import.valid")}
                 </Badge>
                 {preview.invalidCount > 0 && (
                   <Badge variant="destructive" className="gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    {preview.invalidCount} erreurs
+                    {preview.invalidCount} {t("import.errors")}
                   </Badge>
                 )}
               </div>
@@ -194,12 +196,12 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
                 {committing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                    Import...
+                    {t("import.importing")}
                   </>
                 ) : (
                   <>
                     <Upload className="h-4 w-4 mr-1.5" />
-                    Importer {preview.validCount} ligne(s)
+                    {t("import.importRows", { count: preview.validCount })}
                   </>
                 )}
               </Button>
@@ -235,11 +237,11 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             {preview.invalid.length > 0 && (
               <div className="space-y-1 max-h-32 overflow-auto">
                 <p className="text-xs font-medium text-destructive">
-                  Lignes invalides ({preview.invalid.length}):
+                  {t("import.invalidLines", { count: preview.invalid.length })}
                 </p>
                 {preview.invalid.map((inv, i) => (
                   <p key={i} className="text-xs text-muted-foreground">
-                    Ligne {inv.rowIndex + 2}: {inv.errors.join(", ")}
+                    {t("import.lineN", { n: inv.rowIndex + 2 })} {inv.errors.join(", ")}
                   </p>
                 ))}
               </div>
@@ -253,17 +255,17 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <span className="font-medium">
-                {commitResult.inserted} sur {commitResult.totalRows} importé(s)
+                {t("import.insertedCount", { inserted: commitResult.inserted, total: commitResult.totalRows })}
               </span>
             </div>
             {commitResult.errors.length > 0 && (
               <div className="space-y-1 max-h-32 overflow-auto">
                 <p className="text-xs font-medium text-amber-600">
-                  {commitResult.errors.length} erreur(s):
+                  {t("import.errorCount", { count: commitResult.errors.length })}
                 </p>
                 {commitResult.errors.slice(0, 10).map((e, i) => (
                   <p key={i} className="text-xs text-muted-foreground">
-                    Ligne {e.rowIndex + 2}: {e.error}
+                    {t("import.lineN", { n: e.rowIndex + 2 })} {e.error}
                   </p>
                 ))}
               </div>

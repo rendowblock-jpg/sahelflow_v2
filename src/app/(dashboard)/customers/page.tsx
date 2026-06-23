@@ -34,7 +34,7 @@ export default async function CustomersPage() {
   const stats = [
     { label: t("customers.totalCustomers"), value: String(totalCustomers), icon: Users, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
     { label: t("customers.totalSpent"), value: formatDZD(totalSpent), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: "Clients actifs", value: String(activeCount), icon: UserCheck, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
+    { label: t("customers.activeCustomers"), value: String(activeCount), icon: UserCheck, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
     { label: t("customers.atRisk"), value: String(atRiskCount), icon: AlertTriangle, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400" },
   ];
 
@@ -96,7 +96,7 @@ export default async function CustomersPage() {
                   <TableHead className="text-right">{t("customers.ordersCount")}</TableHead>
                   <TableHead className="text-right">{t("customers.spent")}</TableHead>
                   <TableHead>{t("customers.risk")}</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

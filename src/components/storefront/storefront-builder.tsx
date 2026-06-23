@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,15 +43,16 @@ interface Props {
   mode: "create" | "edit";
 }
 
-const TEMPLATES: { value: StorefrontTheme["template"]; label: string; description: string }[] = [
-  { value: "minimal", label: "Minimal", description: "Épuré, blanc, focus sur les produits" },
-  { value: "modern", label: "Moderne", description: "Cartes arrondies, accents colorés" },
-  { value: "classic", label: "Classique", description: "Style boutique traditionnelle" },
+const TEMPLATES: { value: StorefrontTheme["template"]; labelKey: string; descKey: string }[] = [
+  { value: "minimal", labelKey: "storefront.builder.template.minimal", descKey: "storefront.builder.template.minimalDesc" },
+  { value: "modern", labelKey: "storefront.builder.template.modern", descKey: "storefront.builder.template.modernDesc" },
+  { value: "classic", labelKey: "storefront.builder.template.classic", descKey: "storefront.builder.template.classicDesc" },
 ];
 
 const PRESET_COLORS = ["#0f766e", "#b45309", "#9f1239", "#1e3a8a", "#166534", "#7c2d12"];
 
 export function StorefrontBuilder({ config: initialConfig, products, mode }: Props) {
+  const { t } = useI18n();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -112,10 +114,10 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
   }
 
   function validate(): string | null {
-    if (!name.trim()) return "Le nom est requis";
-    if (!slug.trim()) return "Le slug est requis";
-    if (!/^[a-z0-9-]+$/.test(slug)) return "Le slug doit contenir uniquement des minuscules, chiffres ou tirets";
-    if (selectedProductIds.length === 0) return "Sélectionnez au moins un produit";
+    if (!name.trim()) return t("storefront.builder.error.nameRequired");
+    if (!slug.trim()) return t("storefront.builder.error.slugRequired");
+    if (!/^[a-z0-9-]+$/.test(slug)) return t("storefront.builder.error.slugFormat");
+    if (selectedProductIds.length === 0) return t("storefront.builder.error.productRequired");
     return null;
   }
 
@@ -137,10 +139,10 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
           });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || "Échec de la création");
+            throw new Error(data.error || t("storefront.builder.error.createFailed"));
           }
           const { config: created } = await res.json();
-          toast.success("Boutique créée");
+          toast.success(t("storefront.builder.created"));
           router.push(`/storefronts/${created.id}`);
           router.refresh();
         } else {
@@ -151,13 +153,13 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
           });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || "Échec de la mise à jour");
+            throw new Error(data.error || t("storefront.builder.error.updateFailed"));
           }
-          toast.success("Boutique enregistrée");
+          toast.success(t("storefront.builder.saved"));
           router.refresh();
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erreur");
+        toast.error(err instanceof Error ? err.message : t("storefront.builder.error.generic"));
       }
     });
   }
@@ -169,7 +171,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
         <Button asChild variant="ghost" size="sm">
           <Link href="/storefronts">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
+            {t("storefront.builder.back")}
           </Link>
         </Button>
         <div className="flex items-center gap-2">
@@ -181,13 +183,13 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                 rel="noopener noreferrer"
               >
                 <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                Voir la boutique
+                {t("storefront.builder.viewStore")}
               </a>
             </Button>
           )}
           <Button onClick={handleSave} disabled={pending}>
             {pending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            {mode === "create" ? "Créer" : "Enregistrer"}
+            {mode === "create" ? t("storefront.builder.create") : t("storefront.builder.save")}
           </Button>
         </div>
       </div>
@@ -195,53 +197,53 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
       {/* General settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Informations générales</CardTitle>
+          <CardTitle className="text-lg">{t("storefront.builder.generalInfo")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Nom de la boutique *</Label>
+              <Label htmlFor="name">{t("storefront.builder.shopName")} *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Ma Boutique"
+                placeholder={t("storefront.builder.shopNamePlaceholder")}
                 maxLength={100}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug (URL) *</Label>
+              <Label htmlFor="slug">{t("storefront.builder.slug")} *</Label>
               <div className="flex items-center gap-1">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">/storefront/</span>
                 <Input
                   id="slug"
                   value={slug}
                   onChange={(e) => setSlug(slugify(e.target.value))}
-                  placeholder="ma-boutique"
+                  placeholder={t("storefront.builder.slugPlaceholder")}
                   className="font-mono"
                   maxLength={50}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Minuscules, chiffres et tirets uniquement
+                {t("storefront.builder.slugHint")}
               </p>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description (optionnel)</Label>
+            <Label htmlFor="description">{t("storefront.builder.description")}</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Découvrez nos produits..."
+              placeholder={t("storefront.builder.descriptionPlaceholder")}
               maxLength={500}
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <Label htmlFor="active" className="cursor-pointer">Boutique active</Label>
+              <Label htmlFor="active" className="cursor-pointer">{t("storefront.builder.active")}</Label>
               <p className="text-xs text-muted-foreground">
-                Si désactivée, la page publique affiche &quot;introuvable&quot;
+                {t("storefront.builder.activeHint")}
               </p>
             </div>
             <Switch
@@ -257,8 +259,8 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center justify-between">
-            <span>Produits affichés *</span>
-            <Badge variant="secondary">{selectedProductIds.length} sélectionné(s)</Badge>
+            <span>{t("storefront.builder.productsDisplayed")} *</span>
+            <Badge variant="secondary">{t("storefront.builder.selectedCount", { count: selectedProductIds.length })}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -267,15 +269,15 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un produit..."
+              placeholder={t("storefront.builder.searchProduct")}
               className="pl-9"
             />
           </div>
           {filteredProducts.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               {products.length === 0
-                ? "Aucun produit actif. Ajoutez des produits d'abord."
-                : "Aucun produit ne correspond à votre recherche."}
+                ? t("storefront.builder.noActiveProducts")
+                : t("storefront.builder.noMatchingProducts")}
             </p>
           ) : (
             <div className="border rounded-lg max-h-96 overflow-y-auto divide-y">
@@ -307,7 +309,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                       <div className="text-sm font-medium truncate">{product.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {product.sku && <span className="font-mono">{product.sku} · </span>}
-                        Stock: {product.stock}
+                        {t("storefront.builder.stock")}: {product.stock}
                       </div>
                     </div>
                     <div className="text-sm font-semibold whitespace-nowrap">
@@ -324,11 +326,11 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
       {/* Theme */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Apparence</CardTitle>
+          <CardTitle className="text-lg">{t("storefront.builder.appearance")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Modèle</Label>
+            <Label>{t("storefront.builder.template")}</Label>
             <div className="grid gap-2 sm:grid-cols-3">
               {TEMPLATES.map((tpl) => (
                 <button
@@ -341,9 +343,9 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                       : "border-border hover:border-foreground/20"
                   }`}
                 >
-                  <div className="text-sm font-medium">{tpl.label}</div>
+                  <div className="text-sm font-medium">{t(tpl.labelKey)}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {tpl.description}
+                    {t(tpl.descKey)}
                   </div>
                 </button>
               ))}
@@ -351,7 +353,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
           </div>
 
           <div className="space-y-2">
-            <Label>Couleur principale</Label>
+            <Label>{t("storefront.builder.primaryColor")}</Label>
             <div className="flex items-center gap-2 flex-wrap">
               {PRESET_COLORS.map((color) => (
                 <button
@@ -383,9 +385,9 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
 
           <div className="flex items-center justify-between">
             <div>
-              <Label className="cursor-pointer">Afficher les prix</Label>
+              <Label className="cursor-pointer">{t("storefront.builder.showPrices")}</Label>
               <p className="text-xs text-muted-foreground">
-                Masquer pour une boutique &quot;sur demande&quot;
+                {t("storefront.builder.showPricesHint")}
               </p>
             </div>
             <Switch
@@ -395,9 +397,9 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="cursor-pointer">Afficher le stock</Label>
+              <Label className="cursor-pointer">{t("storefront.builder.showStock")}</Label>
               <p className="text-xs text-muted-foreground">
-                Indique &quot;En rupture&quot; si stock = 0
+                {t("storefront.builder.showStockHint")}
               </p>
             </div>
             <Switch
@@ -411,15 +413,15 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
       {/* Contact info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Coordonnées (optionnel)</CardTitle>
+          <CardTitle className="text-lg">{t("storefront.builder.contactInfo")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Affichées sur la page publique pour que les clients puissent vous contacter.
+            {t("storefront.builder.contactInfoDesc")}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="contact-phone">Téléphone</Label>
+              <Label htmlFor="contact-phone">{t("storefront.builder.phone")}</Label>
               <Input
                 id="contact-phone"
                 value={contact.phone ?? ""}
@@ -428,7 +430,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-whatsapp">WhatsApp</Label>
+              <Label htmlFor="contact-whatsapp">{t("storefront.builder.whatsapp")}</Label>
               <Input
                 id="contact-whatsapp"
                 value={contact.whatsapp ?? ""}
@@ -437,7 +439,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-email">Email</Label>
+              <Label htmlFor="contact-email">{t("storefront.builder.email")}</Label>
               <Input
                 id="contact-email"
                 type="email"
@@ -447,7 +449,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-address">Adresse</Label>
+              <Label htmlFor="contact-address">{t("storefront.builder.address")}</Label>
               <Input
                 id="contact-address"
                 value={contact.address ?? ""}

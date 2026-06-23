@@ -7,7 +7,7 @@ import { Plus, Store } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Boutiques — SahelFlow" };
+export const metadata: Metadata = { title: "Storefronts — SahelFlow" };
 export const dynamic = "force-dynamic";
 
 export default async function StorefrontsPage() {
