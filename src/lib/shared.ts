@@ -5,17 +5,8 @@
 
 import { type OrderStatus } from '@/types/domain'
 
-// ── Currency Formatting ──────────────────────────────────────────────────────
-
-export function formatDZD(amount: number): string {
-  return new Intl.NumberFormat('fr-DZ').format(amount) + ' دج'
-}
-
-export function formatDZDShort(amount: number): string {
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M دج`
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)}K دج`
-  return formatDZD(amount)
-}
+// Currency formatting (formatDZD, formatDZDShort, formatDZDBare) lives in
+// src/lib/utils.ts — the canonical source. Was duplicated here (Z-013).
 
 // ── Date Formatting ──────────────────────────────────────────────────────────
 

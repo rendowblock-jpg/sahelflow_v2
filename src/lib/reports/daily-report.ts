@@ -16,6 +16,7 @@ import "server-only";
 
 
 import { db } from "@/lib/db";
+import { formatDZDBare as formatDZD } from "@/lib/utils";
 
 export interface DailyReport {
   date: Date; // the day being reported (yesterday)
@@ -31,9 +32,9 @@ export interface DailyReport {
 }
 
 /** Format a DZD amount with thousands separators. */
-function formatDZD(amount: number): string {
-  return amount.toLocaleString("fr-DZ");
-}
+// Currency formatting uses formatDZDBare from utils.ts (Z-013: was a
+// local formatDZD that returned just the number, inconsistent with the
+// "DA" suffix used elsewhere. Now uses the canonical bare formatter.)
 
 /** Format a date as "lun. 21 juin 2026" (French, short). */
 function formatDateFR(date: Date): string {

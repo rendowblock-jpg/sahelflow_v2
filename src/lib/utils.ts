@@ -7,11 +7,40 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 /** Format integer DZD amount with thousands separator (no decimals — integer money) */
+/**
+ * Format an amount in Algerian Dinars with the "DA" suffix.
+ * Canonical currency formatter for the entire app (Z-013: was defined
+ * 3 times with 3 different outputs — "DA" / "دج" / "DZD").
+ *
+ * @param amount  Amount in DZD (integer — DZD has no subunits in practice)
+ * @returns       Formatted string like "1,000 DA"
+ */
 export function formatDZD(amount: number): string {
   return new Intl.NumberFormat("fr-DZ", {
     style: "decimal",
     maximumFractionDigits: 0,
   }).format(amount) + " DA";
+}
+
+/**
+ * Format an amount as a bare number (no suffix). For templates that add
+ * their own currency suffix (e.g. WhatsApp reports: `${formatDZDBare(rev)} DZD`).
+ */
+export function formatDZDBare(amount: number): string {
+  return new Intl.NumberFormat("fr-DZ", {
+    style: "decimal",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
+ * Format an amount with a short suffix (K/M) for compact UI spaces.
+ * @returns "1.2K DA" or "3.4M DA" or "500 DA"
+ */
+export function formatDZDShort(amount: number): string {
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M DA`;
+  if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)}K DA`;
+  return formatDZD(amount);
 }
 
 /** Format date in a locale-aware way */
