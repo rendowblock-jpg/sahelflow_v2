@@ -3,8 +3,11 @@
 /**
  * AreaTrendChart — premium gradient-filled area chart for time-series
  * (revenue, orders, AOV). Supports one or more series, smooth monotone
- * curves, custom currency/number formatting, and a shared design-system
- * tooltip. Theme-aware via the OKLCH chart tokens.
+ * curves, and a shared design-system tooltip. Theme-aware via the OKLCH
+ * chart tokens.
+ *
+ * Formatters are passed as STRING keys (ChartFormatter) — not functions —
+ * because functions cannot cross the React Server Component boundary.
  */
 import {
   Area,
@@ -14,15 +17,20 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
 
+interface AreaSeries {
+  key: string;
+  label: string;
+  format?: ChartFormatter;
+}
 interface AreaTrendChartProps {
   data: Array<Record<string, string | number>>;
   xKey: string;
-  series: Array<{ key: string; label: string; format?: (v: number) => string }>;
+  series: AreaSeries[];
   config: ChartConfig;
   height?: number;
-  formatY?: (v: number) => string;
-  formatX?: (v: string) => string;
+  formatY?: ChartFormatter;
   showGrid?: boolean;
   curve?: "monotone" | "linear" | "step";
 }
@@ -33,14 +41,14 @@ export function AreaTrendChart({
   series,
   config,
   height = 300,
-  formatY = (v) => String(v),
-  formatX,
+  formatY,
   showGrid = true,
   curve = "monotone",
 }: AreaTrendChartProps) {
+  const fmtY = resolveFormatter(formatY);
   if (!data.length) {
     return (
-      <div className="flex h-[var(--chart-height,300px)] items-center justify-center text-sm text-muted-foreground" style={{ height }}>
+      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
         No data
       </div>
     );
@@ -67,25 +75,23 @@ export function AreaTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={24}
-          tickFormatter={formatX}
           className="text-[11px]"
         />
         <YAxis
-          width={48}
+          width={52}
           tickLine={false}
           axisLine={false}
           tickMargin={4}
-          tickFormatter={(v: number) => formatY(v)}
+          tickFormatter={(v: number) => fmtY(v)}
           className="text-[11px]"
         />
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(value) => (formatX ? formatX(String(value)) : String(value))}
               formatter={(value, name) => {
                 const s = series.find((x) => x.key === name);
                 const num = Number(value);
-                return [s?.format ? s.format(num) : formatY(num), s?.label ?? name];
+                return [s?.format ? resolveFormatter(s.format)(num) : fmtY(num), s?.label ?? name];
               }}
             />
           }
@@ -108,4 +114,3 @@ export function AreaTrendChart({
     </ChartContainer>
   );
 }
-

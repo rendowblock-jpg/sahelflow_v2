@@ -124,7 +124,7 @@ export default async function DashboardPage() {
         <StatCard
           label={t("nav.orders")}
           value={stats.ordersToday}
-          icon={ShoppingCart}
+          icon={<ShoppingCart />}
           accentBg="bg-sky-500/10 dark:bg-sky-500/15"
           accentIcon="text-sky-600 dark:text-sky-400"
           trend={stats.ordersTrend}
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
         <StatCard
           label={t("nav.accounting")}
           value={formatDZD(stats.revenueToday)}
-          icon={Banknote}
+          icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-emerald-600 dark:text-emerald-400"
           trend={stats.revenueTrend}
@@ -148,7 +148,7 @@ export default async function DashboardPage() {
         <StatCard
           label={t("nav.customers")}
           value={stats.newCustomers}
-          icon={Users}
+          icon={<Users />}
           accentBg="bg-violet-500/10 dark:bg-violet-500/15"
           accentIcon="text-violet-600 dark:text-violet-400"
           style={{ animationDelay: "180ms" }}
@@ -156,7 +156,7 @@ export default async function DashboardPage() {
         <StatCard
           label={t("nav.inbox")}
           value={stats.activeConversations}
-          icon={MessageSquare}
+          icon={<MessageSquare />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
           style={{ animationDelay: "240ms" }}
@@ -167,7 +167,7 @@ export default async function DashboardPage() {
       <ChartCard
         title={t("dashboard.revenueTrend")}
         description={t("dashboard.last7Days")}
-        icon={TrendingUp}
+        icon={<TrendingUp />}
         accent="bg-emerald-500/10 dark:bg-emerald-500/15"
         config={revenueConfig}
         height={300}
@@ -181,10 +181,10 @@ export default async function DashboardPage() {
         <AreaTrendChart
           data={revenueData}
           xKey="label"
-          series={[{ key: "revenue", label: t("analytics.revenueLabel"), format: (v) => formatDZD(v) }]}
+          series={[{ key: "revenue", label: t("analytics.revenueLabel"), format: "currency" }]}
           config={revenueConfig}
           height={300}
-          formatY={(v) => formatDZDShort(v)}
+          formatY="currencyShort"
         />
       </ChartCard>
 
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
           title={t("dashboard.ordersByStatus")}
-          icon={ShoppingCart}
+          icon={<ShoppingCart />}
           accent="bg-sky-500/10 dark:bg-sky-500/15"
           config={donutConfig}
           height={300}
@@ -208,7 +208,7 @@ export default async function DashboardPage() {
 
         <ChartCard
           title={t("dashboard.topProducts")}
-          icon={Package}
+          icon={<Package />}
           accent="bg-amber-500/10 dark:bg-amber-500/15"
           config={topProductsConfig}
           height={300}
@@ -226,7 +226,7 @@ export default async function DashboardPage() {
               data={topProductsData}
               config={topProductsConfig}
               height={300}
-              formatValue={(v) => formatDZDShort(v)}
+              formatValue="currencyShort"
             />
           ) : (
             <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
       <ChartCard
         title={t("dashboard.salesByHour")}
         description={t("analytics.salesByHourDesc")}
-        icon={Clock}
+        icon={<Clock />}
         accent="bg-violet-500/10 dark:bg-violet-500/15"
         config={hourConfig}
         height={280}
@@ -250,12 +250,12 @@ export default async function DashboardPage() {
           xKey="hour"
           series={[
             { kind: "bar", key: "orders", label: t("analytics.ordersLabel"), yAxis: "left" },
-            { kind: "line", key: "revenue", label: t("analytics.revenueLabel"), format: (v) => formatDZD(v), yAxis: "right" },
+            { kind: "line", key: "revenue", label: t("analytics.revenueLabel"), format: "currency", yAxis: "right" },
           ]}
           config={hourConfig}
           height={280}
-          formatLeftY={(v) => String(v)}
-          formatRightY={(v) => formatDZDShort(v)}
+          formatLeftY="number"
+          formatRightY="currencyShort"
         />
       </ChartCard>
 

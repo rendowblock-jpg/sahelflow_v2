@@ -3,6 +3,7 @@
 /**
  * ComposedTrendChart — bars + line on dual axes. Ideal for
  * "orders (bar) × revenue (line)" or "volume × value" combos.
+ * Formatters are string keys (ChartFormatter) for RSC compatibility.
  */
 import {
   ComposedChart,
@@ -13,21 +14,20 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
 
 interface BarSeries {
   kind: "bar";
   key: string;
   label: string;
-  format?: (v: number) => string;
-  color?: string;
+  format?: ChartFormatter;
   yAxis?: "left" | "right";
 }
 interface LineSeries {
   kind: "line";
   key: string;
   label: string;
-  format?: (v: number) => string;
-  color?: string;
+  format?: ChartFormatter;
   yAxis?: "left" | "right";
 }
 type ComposedSeries = BarSeries | LineSeries;
@@ -38,9 +38,8 @@ interface ComposedTrendChartProps {
   series: ComposedSeries[];
   config: ChartConfig;
   height?: number;
-  formatLeftY?: (v: number) => string;
-  formatRightY?: (v: number) => string;
-  formatX?: (v: string) => string;
+  formatLeftY?: ChartFormatter;
+  formatRightY?: ChartFormatter;
 }
 
 export function ComposedTrendChart({
@@ -49,10 +48,11 @@ export function ComposedTrendChart({
   series,
   config,
   height = 300,
-  formatLeftY = (v) => String(v),
-  formatRightY = (v) => String(v),
-  formatX,
+  formatLeftY,
+  formatRightY,
 }: ComposedTrendChartProps) {
+  const fmtLeft = resolveFormatter(formatLeftY);
+  const fmtRight = resolveFormatter(formatRightY);
   if (!data.length) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
@@ -71,7 +71,6 @@ export function ComposedTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={20}
-          tickFormatter={formatX}
           className="text-[11px]"
         />
         <YAxis
@@ -80,29 +79,29 @@ export function ComposedTrendChart({
           tickLine={false}
           axisLine={false}
           tickMargin={4}
-          tickFormatter={(v: number) => formatLeftY(v)}
+          tickFormatter={(v: number) => fmtLeft(v)}
           className="text-[11px]"
         />
         {hasRight && (
           <YAxis
             yAxisId="right"
             orientation="right"
-            width={52}
+            width={56}
             tickLine={false}
             axisLine={false}
             tickMargin={4}
-            tickFormatter={(v: number) => formatRightY(v)}
+            tickFormatter={(v: number) => fmtRight(v)}
             className="text-[11px]"
           />
         )}
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(value) => (formatX ? formatX(String(value)) : String(value))}
               formatter={(value, name) => {
                 const s = series.find((x) => x.key === name);
                 const num = Number(value);
-                return [s?.format ? s.format(num) : String(num), s?.label ?? name];
+                const fmt = s?.format ? resolveFormatter(s.format) : fmtLeft;
+                return [fmt(num), s?.label ?? name];
               }}
             />
           }

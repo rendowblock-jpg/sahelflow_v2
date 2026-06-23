@@ -3,6 +3,7 @@
 /**
  * LineTrendChart — multi-series line chart for comparing trends
  * (e.g. revenue vs. last period, AOV across weeks). Dots appear on hover.
+ * Formatters are string keys (ChartFormatter) for RSC compatibility.
  */
 import {
   Line,
@@ -12,15 +13,20 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
 
+interface LineSeries {
+  key: string;
+  label: string;
+  format?: ChartFormatter;
+}
 interface LineTrendChartProps {
   data: Array<Record<string, string | number>>;
   xKey: string;
-  series: Array<{ key: string; label: string; format?: (v: number) => string }>;
+  series: LineSeries[];
   config: ChartConfig;
   height?: number;
-  formatY?: (v: number) => string;
-  formatX?: (v: string) => string;
+  formatY?: ChartFormatter;
 }
 
 export function LineTrendChart({
@@ -29,9 +35,9 @@ export function LineTrendChart({
   series,
   config,
   height = 300,
-  formatY = (v) => String(v),
-  formatX,
+  formatY,
 }: LineTrendChartProps) {
+  const fmtY = resolveFormatter(formatY);
   if (!data.length) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
@@ -49,25 +55,23 @@ export function LineTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={24}
-          tickFormatter={formatX}
           className="text-[11px]"
         />
         <YAxis
-          width={48}
+          width={52}
           tickLine={false}
           axisLine={false}
           tickMargin={4}
-          tickFormatter={(v: number) => formatY(v)}
+          tickFormatter={(v: number) => fmtY(v)}
           className="text-[11px]"
         />
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(value) => (formatX ? formatX(String(value)) : String(value))}
               formatter={(value, name) => {
                 const s = series.find((x) => x.key === name);
                 const num = Number(value);
-                return [s?.format ? s.format(num) : formatY(num), s?.label ?? name];
+                return [s?.format ? resolveFormatter(s.format)(num) : fmtY(num), s?.label ?? name];
               }}
             />
           }

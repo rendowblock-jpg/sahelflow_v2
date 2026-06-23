@@ -8,7 +8,26 @@
 import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { cn } from "@/lib/utils";
+import { cn, formatDZD, formatDZDShort } from "@/lib/utils";
+
+/**
+ * Serializable formatter registry. Server components pass a string key
+ * (e.g. "currencyShort") instead of a function — functions cannot cross
+ * the React Server Component boundary (hydration would break).
+ */
+export type ChartFormatter = "currency" | "currencyShort" | "number" | "percent" | "identity";
+
+export const chartFormatters: Record<ChartFormatter, (v: number) => string> = {
+  currency: (v) => formatDZD(v),
+  currencyShort: (v) => formatDZDShort(v),
+  number: (v) => String(v),
+  percent: (v) => `${Math.round(v)}%`,
+  identity: (v) => String(v),
+};
+
+export function resolveFormatter(f?: ChartFormatter): (v: number) => string {
+  return f ? (chartFormatters[f] ?? chartFormatters.identity) : chartFormatters.identity;
+}
 
 /** Canonical chart palette — references the OKLCH design tokens. */
 export const CHART_COLORS = {
@@ -42,7 +61,7 @@ export function buildChartConfig(
 interface ChartCardProps {
   title: React.ReactNode;
   description?: React.ReactNode;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: React.ReactNode;
   accent?: string;
   action?: React.ReactNode;
   className?: string;
@@ -56,7 +75,7 @@ interface ChartCardProps {
 export function ChartCard({
   title,
   description,
-  icon: Icon,
+  icon,
   accent = "bg-primary/10 dark:bg-primary/15",
   action,
   className,
@@ -68,9 +87,9 @@ export function ChartCard({
     <Card className={cn("card-hover animate-fade-up", className)}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div className="flex items-center gap-2.5">
-          {Icon && (
-            <div className={cn("flex size-8 items-center justify-center rounded-lg", accent)}>
-              <Icon className="h-4 w-4" />
+          {icon && (
+            <div className={cn("flex size-8 items-center justify-center rounded-lg", accent, "[&>svg]:h-4 [&>svg]:w-4")}>
+              {icon}
             </div>
           )}
           <div className="space-y-0.5">

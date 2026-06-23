@@ -7,7 +7,7 @@ import { Sparkline } from "@/components/charts/sparkline";
 interface StatCardProps {
   label: React.ReactNode;
   value: React.ReactNode;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ReactNode;
   accentBg?: string;
   accentIcon?: string;
   trend?: number;
@@ -25,7 +25,7 @@ interface StatCardProps {
 export function StatCard({
   label,
   value,
-  icon: Icon,
+  icon,
   accentBg = "bg-primary/10 dark:bg-primary/15",
   accentIcon = "text-primary",
   trend,
@@ -57,8 +57,8 @@ export function StatCard({
               </div>
             )}
           </div>
-          <div className={cn("flex size-9 items-center justify-center rounded-lg", accentBg)}>
-            <Icon className={cn("h-4 w-4", accentIcon)} />
+          <div className={cn("flex size-9 items-center justify-center rounded-lg", accentBg, accentIcon, "[&>svg]:h-4 [&>svg]:w-4")}>
+            {icon}
           </div>
         </div>
         {spark && spark.length > 1 && (
