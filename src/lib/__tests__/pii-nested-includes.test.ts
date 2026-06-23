@@ -5,8 +5,11 @@
  * returns the nested customer with ciphertext `name` and blind-index `phone`. This test verifies
  * that claim. If the test PASSES (assertion holds), the audit is wrong. If it FAILS, the audit is
  * right and we need to fix the extension.
+ *
+ * Hermetic: tracks created IDs and cleans up only those in afterAll. Does NOT
+ * wipe the dev DB (T-001 from tests-perf audit).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/lib/db";
 
 describe("PII extension — nested includes (D-001 verification)", () => {
@@ -16,10 +19,6 @@ describe("PII extension — nested includes (D-001 verification)", () => {
   const customerPhone = `05${Date.now().toString().slice(-8)}`;
 
   beforeAll(async () => {
-    // Clean slate
-    await db.order.deleteMany({});
-    await db.customer.deleteMany({});
-
     // Create a customer (extension encrypts on write, decrypts on return)
     const customer = await db.customer.create({
       data: {
@@ -50,6 +49,17 @@ describe("PII extension — nested includes (D-001 verification)", () => {
       },
     });
     orderId = order.id;
+  });
+
+  afterAll(async () => {
+    // Clean up ONLY the records we created — do NOT wipe the dev DB (T-001).
+    if (orderId) {
+      await db.orderItem.deleteMany({ where: { orderId } });
+      await db.order.deleteMany({ where: { id: orderId } });
+    }
+    if (customerId) {
+      await db.customer.deleteMany({ where: { id: customerId } });
+    }
   });
 
   it("top-level customer query returns decrypted data", async () => {

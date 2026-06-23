@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,8 @@ import {
 import { Plus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import wilayasData from "../../../data/wilayas.json";
-import communesData from "../../../data/communes.json";
+// communes.json (197KB, 1,541 entries) is fetched from /api/communes?wilaya=X
+// when the user selects a wilaya — keeps it out of the client bundle (T-019).
 
 interface Customer {
   id: string;
@@ -85,7 +86,34 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const [deliveryCost, setDeliveryCost] = useState("600");
 
   const wilayas = wilayasData as Wilaya[];
-  const allCommunes = communesData as Commune[];
+  // Fetch communes for the selected wilaya from the API (T-019: was importing
+  // 197KB communes.json into the client bundle). Now fetches ~2KB per wilaya.
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [communesLoading, setCommunesLoading] = useState(false);
+  const wilayaCode = wilayas.find((w) => w.name === wilaya)?.code;
+
+  useEffect(() => {
+    if (!wilayaCode) return; // no wilaya selected — keep existing communes (cleared by render logic)
+
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate: set loading before async fetch
+    setCommunesLoading(true);
+    fetch(`/api/communes?wilaya=${wilayaCode}`)
+      .then((res) => (res.ok ? res.json() : { communes: [] }))
+      .then((data) => {
+        if (!cancelled) setCommunes(data.communes ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setCommunes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCommunesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [wilayaCode]);
 
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
 
@@ -298,7 +326,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Wilaya</Label>
-                <Select value={wilaya} onValueChange={setWilaya}>
+                <Select value={wilaya} onValueChange={(v) => { setWilaya(v); setCommune(""); setCommunes([]); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Wilaya..." />
                   </SelectTrigger>
@@ -318,16 +346,21 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                     <SelectValue placeholder={wilaya ? "Sélectionnez..." : "Choisissez d'abord une wilaya"} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    {allCommunes
-                      .filter((c) => {
-                        const wilayaCode = wilayas.find((w) => w.name === wilaya)?.code;
-                        return c.wilayaCode === wilayaCode;
-                      })
-                      .map((c) => (
+                    {communesLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : communes.length === 0 ? (
+                      <div className="py-4 text-center text-sm text-muted-foreground">
+                        Aucune commune
+                      </div>
+                    ) : (
+                      communes.map((c) => (
                         <SelectItem key={c.code} value={c.name}>
                           {c.name}
                         </SelectItem>
-                      ))}
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
