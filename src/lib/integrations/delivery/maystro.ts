@@ -30,6 +30,7 @@
  *   - Commune resolution requires a wilaya→commune lookup. We cache the
  *     commune list per wilaya in-process.
  */
+import { env } from "@/lib/env";
 import "server-only";
 
 
@@ -46,7 +47,7 @@ import type {
 import { retryFetch } from "./retry";
 
 const BACKEND_BASE =
-  process.env.MAYSTRO_API_BASE || "https://backend.maystro-delivery.com/api";
+  env.maystroApiBase || "https://backend.maystro-delivery.com/api";
 const B_BASE = "https://b.maystro-delivery.com/api";
 
 const FETCH_TIMEOUT_MS = 15000;

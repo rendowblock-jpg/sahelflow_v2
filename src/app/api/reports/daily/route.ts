@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
@@ -90,7 +91,7 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
 function verifyCronSecret(req: NextRequest): boolean {
   const headerSecret = req.headers.get("x-cron-secret");
   if (!headerSecret) return false;
-  const envSecret = process.env.CRON_SECRET;
+  const envSecret = env.cronSecret;
   if (!envSecret) return false;
   // Constant-time comparison
   if (headerSecret.length !== envSecret.length) return false;

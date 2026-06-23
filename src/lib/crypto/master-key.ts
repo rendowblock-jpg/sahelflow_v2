@@ -20,6 +20,7 @@
  *   3. Keyfile
  *   4. Generate new key + persist to keyfile
  */
+import { env } from "@/lib/env";
 import "server-only";
 
 
@@ -37,7 +38,7 @@ const KEY_LENGTH = 32; // 256 bits
 
 /** Resolve the data dir: SF_DATA_DIR > cwd/data > repo data/ */
 function getDataDir(): string {
-  if (process.env.SF_DATA_DIR) return process.env.SF_DATA_DIR;
+  if (env.sfDataDir) return env.sfDataDir;
   return join(process.cwd(), "data");
 }
 
@@ -55,8 +56,8 @@ export function getMasterKey(): Buffer {
   if (cachedKey) return cachedKey;
 
   // 1. Env override (tests / CI / explicit config)
-  if (process.env.SF_MASTER_KEY) {
-    cachedKey = parseHexKey(process.env.SF_MASTER_KEY, "SF_MASTER_KEY");
+  if (env.sfMasterKey) {
+    cachedKey = parseHexKey(env.sfMasterKey, "SF_MASTER_KEY");
     return cachedKey;
   }
 

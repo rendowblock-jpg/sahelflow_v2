@@ -1,5 +1,6 @@
 "use client";
 
+import { env } from "@/lib/env";
 import { useState, useEffect, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export function DailyReportPanel() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-cron-secret": process.env.NEXT_PUBLIC_CRON_SECRET ?? "dev",
+            "x-cron-secret": env.publicCronSecret ?? "dev",
           },
         });
         const data = await res.json();

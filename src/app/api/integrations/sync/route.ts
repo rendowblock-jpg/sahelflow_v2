@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -31,7 +32,7 @@ const syncSchema = z.object({
 export async function POST(req: NextRequest): Promise<NextResponse> {
   // Verify cron secret
   const headerSecret = req.headers.get("x-cron-secret");
-  const envSecret = process.env.CRON_SECRET;
+  const envSecret = env.cronSecret;
   if (!headerSecret || !envSecret || headerSecret !== envSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

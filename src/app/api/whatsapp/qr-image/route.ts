@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 
@@ -14,7 +15,7 @@ export async function GET() {
   try {
     const token = sidecar.wsToken();
     const res = await fetch(
-      `${process.env.WHATSAPP_SIDECAR_URL ?? "http://localhost:3001"}/qr.png`,
+      `${env.whatsappSidecarUrl ?? "http://localhost:3001"}/qr.png`,
       {
         cache: "no-store",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
