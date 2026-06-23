@@ -1,14 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { nextOrderNumber } from "@/lib/data/service-base";
+import { dzPhone } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
+
+// ─── Rate limiting (D-006) ───────────────────────────────────────────────────
+// Simple in-memory IP-based rate limiter. Limits per-IP because storefronts
+// are public (especially the future Cloudflare Pages deployment). Without
+// this, a malicious actor can spam thousands of garbage orders, exhaust
+// order-number space, and pollute the seller's dashboard.
+//
+// 5 submissions per minute per IP — generous enough for a real customer
+// who's retrying after a typo, tight enough to stop spam.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 5;
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfterMs: number } {
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipHits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, retryAfterMs: 0 };
+  }
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfterMs: entry.resetAt - now };
+  }
+  entry.count++;
+  return { allowed: true, retryAfterMs: 0 };
+}
+
+// Periodically clean up expired entries (every 5 min) to prevent memory leak
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of ipHits) {
+      if (now > entry.resetAt) ipHits.delete(ip);
+    }
+  }, 300_000).unref?.();
+}
 
 const submitSchema = z.object({
   slug: z.string().min(1),
   customer: z.object({
     name: z.string().min(1).max(100),
-    phone: z.string().min(1).max(20),
+    phone: dzPhone,
     wilaya: z.string().min(1),
     commune: z.string().min(1),
     address: z.string().min(1).max(500),
@@ -25,8 +63,26 @@ const submitSchema = z.object({
  *
  * Creates a customer (or finds by phone) + creates a draft order with
  * source="storefront". The seller sees it in their orders list + dashboard.
+ *
+ * Rate limited: 5 submissions/minute per IP (D-006).
+ * Transactional: customer find-or-create + order create are atomic (D-007).
  */
 export async function POST(req: NextRequest) {
+  // Rate limit check
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? req.headers.get("x-real-ip")?.trim()
+    ?? "unknown";
+  const rl = checkRateLimit(ip);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Trop de commandes. Veuillez réessayer dans un instant." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   try {
     const body = await req.json();
     const input = submitSchema.parse(body);
@@ -60,22 +116,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Find or create the customer
-    let customer = await db.customer.findUnique({
-      where: { phone: input.customer.phone },
-    });
-    if (!customer) {
-      customer = await db.customer.create({
-        data: {
-          name: input.customer.name,
-          phone: input.customer.phone,
-          wilaya: input.customer.wilaya,
-          commune: input.customer.commune,
-          address: input.customer.address,
-        },
-      });
-    }
-
     // Build order items
     const orderItems = input.items.map((item) => {
       const product = productMap.get(item.productId)!;
@@ -90,27 +130,48 @@ export async function POST(req: NextRequest) {
 
     const total = orderItems.reduce((sum, i) => sum + i.total, 0);
 
-    // Generate order number
-    const orderCount = await db.order.count();
-    const orderNumber = `ORD-${String(orderCount + 1).padStart(4, "0")}`;
+    // Generate order number atomically (D-005: was racy count()+1)
+    const orderNumber = await nextOrderNumber(db);
 
-    // Create the order
-    const order = await db.order.create({
-      data: {
-        orderNumber,
-        customerId: customer.id,
-        status: "draft",
-        items: { create: orderItems },
-        totalPrice: total,
-        wilaya: input.customer.wilaya,
-        commune: input.customer.commune,
-        address: input.customer.address,
-        phone: input.customer.phone,
-        source: "storefront",
-        sourceMetadata: JSON.stringify({ storefrontSlug: input.slug }),
-        notes: input.notes,
-      },
-      include: { items: true },
+    // Create customer + order in a transaction (D-007: was not transactional).
+    // Use upsert for idempotency — if two concurrent submissions come in with
+    // the same new phone, the second finds the customer the first created.
+    const order = await db.$transaction(async (tx) => {
+      const customer = await tx.customer.upsert({
+        where: { phone: input.customer.phone },
+        update: {
+          // Update name/address on subsequent orders (customer may have moved)
+          name: input.customer.name,
+          wilaya: input.customer.wilaya,
+          commune: input.customer.commune,
+          address: input.customer.address,
+        },
+        create: {
+          name: input.customer.name,
+          phone: input.customer.phone,
+          wilaya: input.customer.wilaya,
+          commune: input.customer.commune,
+          address: input.customer.address,
+        },
+      });
+
+      return tx.order.create({
+        data: {
+          orderNumber,
+          customerId: customer.id,
+          status: "draft",
+          items: { create: orderItems },
+          totalPrice: total,
+          wilaya: input.customer.wilaya,
+          commune: input.customer.commune,
+          address: input.customer.address,
+          phone: input.customer.phone,
+          source: "storefront",
+          sourceMetadata: JSON.stringify({ storefrontSlug: input.slug }),
+          notes: input.notes,
+        },
+        include: { items: true },
+      });
     });
 
     return NextResponse.json({
@@ -126,7 +187,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("[POST /api/storefront/submit]", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Erreur lors de la commande" },
+      { error: "Erreur lors de la commande" },
       { status: 500 },
     );
   }

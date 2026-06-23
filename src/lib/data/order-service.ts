@@ -18,7 +18,7 @@ import {
   triggersCustomerStatsUpdate,
 } from "@/lib/order-transitions";
 import type { ServiceContext } from "./service-base";
-import { withServiceError, generateOrderNumber } from "./service-base";
+import { withServiceError, nextOrderNumber } from "./service-base";
 
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
@@ -79,9 +79,8 @@ export const orderService = {
       );
       const totalPrice = itemsTotal + (data.deliveryCost ?? 0);
 
-      // Generate order number (count existing + 1)
-      const existingCount = await ctx.prisma.order.count();
-      const orderNumber = generateOrderNumber(existingCount + 1);
+      // Generate order number atomically (D-005/T-011: was racy count()+1)
+      const orderNumber = await nextOrderNumber(ctx.prisma);
 
       // Create order + items in a transaction
       const row = await ctx.prisma.$transaction(async (tx) => {

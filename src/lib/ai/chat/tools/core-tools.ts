@@ -14,6 +14,7 @@ import { registerTool } from "./registry";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
+import { nextOrderNumber } from "@/lib/data/service-base";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -85,11 +86,17 @@ const searchCustomersSchema = z.object({
 registerTool({
   definition: {
     name: "search_customers",
-    description: "Search customers by name or phone. Returns matching customers with order count + total spent.",
+    description:
+      "Search customers by name or phone. " +
+      "Phone search uses exact match (the phone is stored as a blind index, " +
+      "so substring search is not supported). " +
+      "Name search fetches all customers and filters in memory after decryption " +
+      "(names are encrypted at rest, so DB-level contains is not possible). " +
+      "Returns matching customers with order count + total spent.",
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search by name or phone" },
+        query: { type: "string", description: "Search by name (substring) or phone (exact match)" },
         limit: { type: "number", description: "Max results (default 10)" },
       },
       required: ["query"],
@@ -99,19 +106,54 @@ registerTool({
     try {
       const input = searchCustomersSchema.parse(params);
       const db = getDb(ctx);
-      const customers = await db.customer.findMany({
-        where: {
-          OR: [
-            { name: { contains: input.query } },
-            { phone: { contains: input.query } },
-          ],
-        },
-        take: input.limit,
+
+      // D-004 fix: Customer.name is AES-GCM ciphertext and Customer.phone is
+      // an HMAC blind index. Neither supports DB-level `contains` — the
+      // old query silently returned 0 results for every search.
+      //
+      // Strategy:
+      //   1. Try exact phone match first (the PII extension rewrites
+      //      where.phone to the blind index — this works correctly).
+      //   2. If no phone match, fetch all customers (the extension decrypts
+      //      on read), then filter by name in memory. Acceptable for small
+      //      tables (<10k customers); for larger tables, a blind index for
+      //      name would be needed (future improvement).
+      const query = input.query.trim();
+
+      // Try exact phone match first
+      const byPhone = await db.customer.findUnique({
+        where: { phone: query },
+      });
+
+      if (byPhone) {
+        return {
+          success: true,
+          data: [{
+            id: byPhone.id,
+            name: byPhone.name,
+            phone: byPhone.phone,
+            wilaya: byPhone.wilaya,
+            orderCount: byPhone.orderCount,
+            totalSpent: byPhone.totalSpent,
+          }],
+        };
+      }
+
+      // No phone match — fetch all customers and filter by name in memory.
+      // The extension decrypts name/phone on read, so we see plaintext here.
+      const all = await db.customer.findMany({
+        take: 500, // cap to prevent memory issues on very large shops
         orderBy: { createdAt: "desc" },
       });
+
+      const lowerQuery = query.toLowerCase();
+      const filtered = all
+        .filter((c) => c.name.toLowerCase().includes(lowerQuery))
+        .slice(0, input.limit);
+
       return {
         success: true,
-        data: customers.map((c) => ({
+        data: filtered.map((c) => ({
           id: c.id,
           name: c.name,
           phone: c.phone,
@@ -194,9 +236,8 @@ registerTool({
 
       const total = items.reduce((sum, i) => sum + i.total, 0);
 
-      // Generate order number
-      const orderCount = await db.order.count();
-      const orderNumber = `ORD-${String(orderCount + 1).padStart(4, "0")}`;
+      // Generate order number atomically (D-005: was racy count()+1)
+      const orderNumber = await nextOrderNumber(db);
 
       const order = await db.order.create({
         data: {

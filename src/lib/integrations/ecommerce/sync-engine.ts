@@ -19,6 +19,7 @@ import "server-only";
 
 
 import { db } from "@/lib/db";
+import { nextOrderNumber } from "@/lib/data/service-base";
 import { syntheticPhone } from "@/lib/shared/phone";
 import { getEcommerceAdapter, loadEcommerceCredentials } from "./index";
 import type { EcommercePlatform, NormalizedOrder } from "./types";
@@ -180,9 +181,9 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
     });
   }
 
-  // Generate an internal order number
-  const existingCount = await db.order.count();
-  const orderNumber = `SYNC-${normalized.source.toUpperCase()}-${String(existingCount + 1).padStart(4, "0")}`;
+  // Generate an internal order number atomically (D-005: was racy count()+1)
+  const syncPrefix = `SYNC-${normalized.source.toUpperCase()}`;
+  const orderNumber = await nextOrderNumber(db, syncPrefix);
 
   // Calculate total
   const itemsTotal = normalized.items.reduce(

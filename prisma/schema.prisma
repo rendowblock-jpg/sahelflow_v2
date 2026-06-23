@@ -434,3 +434,21 @@ model Setting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Counter — atomic sequence generator for order numbers
+// ─────────────────────────────────────────────────────────────────────────────
+// Used by `nextOrderNumber()` to generate race-free sequential order numbers.
+// Replaces the old `db.order.count() + 1` pattern which raced on concurrent
+// inserts (two concurrent storefront submits could both read count=N, both
+// generate ORD-(N+1), and the second would hit @@unique([orderNumber]) and
+// throw a 500 — D-005/T-011 from the AAA audit).
+//
+// The `upsert` + `increment` pattern translates to a single atomic
+// `INSERT ... ON CONFLICT UPDATE SET value = value + 1 RETURNING value`
+// in SQLite, so concurrent callers always get distinct values.
+model Counter {
+  name      String   @id // e.g. "ORD", "SYNC-SHOPIFY", "SYNC-WOOCOMMERCE"
+  value     Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
