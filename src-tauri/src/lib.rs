@@ -38,7 +38,7 @@ pub fn run() {
             })
             .build(),
         )
-        .setup(|app| {
+        .setup(|_app| {
             // Only spawn services in release builds. In dev, the user runs
             // `bun run dev` + `bun run sidecar` manually (hot reload).
             #[cfg(not(debug_assertions))]
