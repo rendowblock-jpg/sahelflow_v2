@@ -59,6 +59,11 @@ export function useI18n() {
   const setLocale = useCallback(
     (newLocale: Locale) => {
       setLocaleStore(newLocale);
+      // Also set a cookie so the server can read the locale for SSR-correct
+      // <html lang/dir> attributes (eliminates hydration flash for Arabic).
+      if (typeof document !== "undefined") {
+        document.cookie = `sahelflow-locale=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      }
     },
     [setLocaleStore],
   );

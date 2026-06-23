@@ -1,14 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Inter, Amiri } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { UpdateChecker } from "@/components/updater/update-checker";
+import { getDirection, type Locale } from "@/lib/i18n";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-geist-sans",
   display: "swap",
 });
 
@@ -46,11 +48,23 @@ export const viewport: Viewport = {
   maximumScale: 5, // allows zoom for accessibility
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Read the locale from the cookie (set by useI18n.setLocale) so the
+  // <html lang/dir> attributes are correct on the very first server render.
+  // This eliminates the hydration flash for Arabic users (U-005) and
+  // improves SEO (search engines see the correct language immediately).
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("sahelflow-locale")?.value;
+  const validLocales: readonly string[] = ["ar", "fr", "en"];
+  const locale: Locale = localeCookie && validLocales.includes(localeCookie)
+    ? (localeCookie as Locale)
+    : "fr"; // French is the business default in Algeria
+  const dir = getDirection(locale);
+
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <TooltipProvider delayDuration={300}>

@@ -104,7 +104,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
         </CardTitle>
         <CardDescription>
           {delivery?.trackingNumber
-            ? "Suivre ou mettre à jour le statut de l&apos;expédition"
+            ? "Suivre ou mettre à jour le statut de l'expédition"
             : "Créer une expédition avec un transporteur"}
         </CardDescription>
       </CardHeader>
@@ -147,7 +147,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             ) : (
               <p className="text-sm text-muted-foreground">
                 {orderStatus === "draft"
-                  ? "La commande doit être confirmée avant l&apos;expédition."
+                  ? "La commande doit être confirmée avant l'expédition."
                   : orderStatus === "shipped" || orderStatus === "delivered"
                     ? "Expédition déjà créée (voir ci-dessous)."
                     : "Statut de commande non expédiable."}

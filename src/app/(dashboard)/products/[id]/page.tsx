@@ -233,7 +233,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                     <TableRow key={item.id}>
                       <TableCell className="font-mono text-sm">
                         <Link
-                          href="/orders"
+                          href={`/orders/${item.order.id}`}
                           className="font-medium hover:underline"
                         >
                           {item.order.orderNumber}

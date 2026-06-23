@@ -219,7 +219,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                     <TableRow key={order.id}>
                       <TableCell className="font-mono text-sm">
                         <Link
-                          href={`/orders`}
+                          href={`/orders/${order.id}`}
                           className="font-medium hover:underline"
                         >
                           {order.orderNumber}
