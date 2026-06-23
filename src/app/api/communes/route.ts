@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -23,25 +24,20 @@ function getCommunes() {
  * Used by the order form dialog to populate the commune dropdown without
  * bundling the full 197KB communes.json into the client JS (T-019).
  */
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const wilayaCode = req.nextUrl.searchParams.get("wilaya");
 
-  try {
-    const all = getCommunes();
-    if (!all) {
-      return NextResponse.json({ error: "Failed to load communes" }, { status: 500 });
-    }
-    if (wilayaCode) {
-      const code = parseInt(wilayaCode, 10);
-      if (Number.isNaN(code)) {
-        return NextResponse.json({ error: "Invalid wilaya code" }, { status: 400 });
-      }
-      const filtered = all.filter((c) => c.wilayaCode === code);
-      return NextResponse.json({ communes: filtered });
-    }
-    return NextResponse.json({ communes: all });
-  } catch (err) {
-    console.error("[GET /api/communes]", err);
+  const all = getCommunes();
+  if (!all) {
     return NextResponse.json({ error: "Failed to load communes" }, { status: 500 });
   }
-}
+  if (wilayaCode) {
+    const code = parseInt(wilayaCode, 10);
+    if (Number.isNaN(code)) {
+      return NextResponse.json({ error: "Invalid wilaya code" }, { status: 400 });
+    }
+    const filtered = all.filter((c) => c.wilayaCode === code);
+    return NextResponse.json({ communes: filtered });
+  }
+  return NextResponse.json({ communes: all });
+}, "GET /api/communes");

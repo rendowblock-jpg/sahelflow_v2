@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
  * Returns { qr: null } when no QR is available (already connected, or
  * sidecar down). The client uses status() to decide whether to poll.
  */
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   try {
     const { qr } = await sidecar.qr();
     return NextResponse.json({ qr, qrPngUrl: qr ? "/api/whatsapp/qr-image" : null });
@@ -18,7 +19,6 @@ export async function GET() {
     if (err instanceof SidecarUnavailableError) {
       return NextResponse.json({ qr: null, qrPngUrl: null, sidecarReachable: false }, { status: 503 });
     }
-    console.error("[GET /api/whatsapp/qr]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    throw err;
   }
-}
+}, "GET /api/whatsapp/qr");

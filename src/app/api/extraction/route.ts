@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractOrder } from "@/lib/ai/extraction";
 import { getSecret } from "@/lib/secrets";
 import { z } from "zod";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -24,34 +25,20 @@ const extractionSchema = z.object({
  *
  * The key never needs to be present on the client in normal use.
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const input = extractionSchema.parse(body);
+export const POST = withErrorHandler(async (req: NextRequest) => {
+  const body = await req.json();
+  const input = extractionSchema.parse(body);
 
-    // Resolve the Gemini key: explicit override > stored secret > none
-    let geminiApiKey = input.geminiApiKey;
-    if (!geminiApiKey) {
-      geminiApiKey = (await getSecret("gemini_api_key")) ?? undefined;
-    }
-
-    const result = await extractOrder(
-      { body: input.body, channel: input.channel, knownPhone: input.knownPhone },
-      { geminiApiKey, forceGemini: input.forceGemini },
-    );
-
-    return NextResponse.json({ result });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: err.issues },
-        { status: 400 },
-      );
-    }
-    console.error("[POST /api/extraction] Error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  // Resolve the Gemini key: explicit override > stored secret > none
+  let geminiApiKey = input.geminiApiKey;
+  if (!geminiApiKey) {
+    geminiApiKey = (await getSecret("gemini_api_key")) ?? undefined;
   }
-}
+
+  const result = await extractOrder(
+    { body: input.body, channel: input.channel, knownPhone: input.knownPhone },
+    { geminiApiKey, forceGemini: input.forceGemini },
+  );
+
+  return NextResponse.json({ result });
+}, "POST /api/extraction");

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
+type RouteContext = { params: Promise<{ jid: string }> };
+
 /** GET /api/whatsapp/chats/[jid]/messages?limit=100 — messages for a chat. */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ jid: string }> },
-) {
+export const GET = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   const { jid: rawJid } = await params;
   const jid = decodeURIComponent(rawJid);
   const limit = req.nextUrl.searchParams.get("limit") ?? "100";
@@ -18,7 +18,6 @@ export async function GET(
     if (err instanceof SidecarUnavailableError) {
       return NextResponse.json({ jid, messages: [], sidecarReachable: false }, { status: 503 });
     }
-    console.error("[GET /api/whatsapp/chats/[jid]/messages]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    throw err;
   }
-}
+}, "GET /api/whatsapp/chats/[jid]/messages");

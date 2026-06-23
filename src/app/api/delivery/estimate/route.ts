@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -13,36 +14,22 @@ const estimateSchema = z.object({
 });
 
 /** POST /api/delivery/estimate — estimate delivery cost for a shipment. */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const input = estimateSchema.parse(body);
+export const POST = withErrorHandler(async (req: NextRequest) => {
+  const body = await req.json();
+  const input = estimateSchema.parse(body);
 
-    const adapter = getDeliveryAdapter(input.provider);
-    const creds = await loadDeliveryCredentials(input.provider);
+  const adapter = getDeliveryAdapter(input.provider);
+  const creds = await loadDeliveryCredentials(input.provider);
 
-    const estimate = await adapter.estimateCost(
-      {
-        wilaya: input.wilaya,
-        commune: input.commune,
-        weight: input.weight,
-        codAmount: input.codAmount,
-      },
-      creds,
-    );
+  const estimate = await adapter.estimateCost(
+    {
+      wilaya: input.wilaya,
+      commune: input.commune,
+      weight: input.weight,
+      codAmount: input.codAmount,
+    },
+    creds,
+  );
 
-    return NextResponse.json(estimate);
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: err.issues },
-        { status: 400 },
-      );
-    }
-    console.error("[POST /api/delivery/estimate]", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
-  }
-}
+  return NextResponse.json(estimate);
+}, "POST /api/delivery/estimate");

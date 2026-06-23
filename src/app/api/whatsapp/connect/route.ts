@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
 /** POST /api/whatsapp/connect — start the sidecar's WhatsApp connection. */
-export async function POST() {
+export const POST = withErrorHandler(async () => {
   try {
     const result = await sidecar.connect();
     return NextResponse.json(result);
@@ -15,7 +16,6 @@ export async function POST() {
         { status: 503 },
       );
     }
-    console.error("[POST /api/whatsapp/connect]", err);
-    return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });
+    throw err;
   }
-}
+}, "POST /api/whatsapp/connect");

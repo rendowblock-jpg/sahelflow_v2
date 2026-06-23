@@ -10,3 +10,11 @@ export { orderService } from "./order-service";
 export { deliveryService } from "./delivery-service";
 export { statsService } from "./stats-service";
 export type { ServiceContext } from "./service-base";
+
+// Extensions — search, stats, bulk operations
+export { customerServiceExtensions } from "./extensions/customer-extensions";
+export type { CustomerStats, CustomerListItem } from "./extensions/customer-extensions";
+export { orderServiceExtensions } from "./extensions/order-extensions";
+export type { BulkResult } from "./extensions/order-extensions";
+export { productServiceExtensions } from "./extensions/product-extensions";
+export type { ProductStats, ProductListItem } from "./extensions/product-extensions";

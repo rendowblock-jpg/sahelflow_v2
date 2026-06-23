@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { syncPlatform, syncAllPlatforms } from "@/lib/integrations/ecommerce/sync-engine";
 import type { EcommercePlatform } from "@/lib/integrations/ecommerce/types";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ const syncSchema = z.object({
  * Auth: requires x-cron-secret header (same as /api/reports/daily) OR can be
  * called from the Settings UI (future). For now, cron-secret only.
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export const POST = withErrorHandler(async (req: NextRequest): Promise<NextResponse> => {
   // Verify cron secret
   const headerSecret = req.headers.get("x-cron-secret");
   const envSecret = env.cronSecret;
@@ -37,37 +38,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const body = await req.json().catch(() => ({}));
-    const input = syncSchema.parse(body);
+  const body = await req.json().catch(() => ({}));
+  const input = syncSchema.parse(body);
 
-    if (input.platform) {
-      const result = await syncPlatform(input.platform as EcommercePlatform, input.maxPages);
-      return NextResponse.json({ results: [result] });
-    }
-
-    const results = await syncAllPlatforms(input.maxPages);
-    if (results.length === 0) {
-      return NextResponse.json({
-        results: [],
-        message: "No e-commerce platforms configured. Add credentials in Settings.",
-      });
-    }
-    return NextResponse.json({ results });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: err.issues },
-        { status: 400 },
-      );
-    }
-    console.error("[POST /api/integrations/sync]", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+  if (input.platform) {
+    const result = await syncPlatform(input.platform as EcommercePlatform, input.maxPages);
+    return NextResponse.json({ results: [result] });
   }
-}
+
+  const results = await syncAllPlatforms(input.maxPages);
+  if (results.length === 0) {
+    return NextResponse.json({
+      results: [],
+      message: "No e-commerce platforms configured. Add credentials in Settings.",
+    });
+  }
+  return NextResponse.json({ results });
+}, "POST /api/integrations/sync");
 
 /**
  * GET /api/integrations/sync — returns the last sync status for each platform.
