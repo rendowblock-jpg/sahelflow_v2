@@ -238,24 +238,25 @@ registerTool({
   async execute(_params, ctx): Promise<ToolResult> {
     try {
       const db = getDb(ctx);
-      const [orders, customers, products, lowStock] = await Promise.all([
+      // Revenue = sum of totalPrice for orders that are confirmed/shipped/delivered.
+      // Excludes drafts, cancellations, and returns — those are not realized revenue.
+      const [totalOrders, revenueAgg, totalCustomers, lowStockCount] = await Promise.all([
         db.order.count(),
-        db.order.aggregate({ _sum: { totalPrice: true }, where: { status: { not: "cancelled" } } }),
+        db.order.aggregate({
+          _sum: { totalPrice: true },
+          where: { status: { in: ["confirmed", "shipped", "delivered"] } },
+        }),
         db.customer.count(),
         db.product.count({ where: { stock: { lte: 5 }, isActive: true } }),
       ]);
+      const totalRevenue = revenueAgg._sum.totalPrice ?? 0;
       return {
         success: true,
         data: {
-          totalOrders: orders,
-          totalRevenue: lowStock,
-          totalCustomers: customers,
-          lowStockCount: products,
-          // Note: _sum on totalPrice is the actual revenue
-          revenue: (await db.order.aggregate({
-            _sum: { totalPrice: true },
-            where: { status: { in: ["confirmed", "shipped", "delivered"] } },
-          }))._sum.totalPrice ?? 0,
+          totalOrders,
+          totalRevenue,
+          totalCustomers,
+          lowStockCount,
         },
       };
     } catch (err) {

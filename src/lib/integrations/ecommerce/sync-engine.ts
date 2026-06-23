@@ -17,6 +17,7 @@
  */
 
 import { db } from "@/lib/db";
+import { syntheticPhone } from "@/lib/shared/phone";
 import { getEcommerceAdapter, loadEcommerceCredentials } from "./index";
 import type { EcommercePlatform, NormalizedOrder } from "./types";
 import type { Prisma } from "@prisma/client";
@@ -156,18 +157,20 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
     throw new AlreadySyncedError();
   }
 
-  // Find-or-create the customer by phone (blind index lookup via the extension)
-  let customer = null;
-  if (normalized.customerPhone) {
-    customer = await db.customer.findUnique({
-      where: { phone: normalized.customerPhone },
-    });
-  }
+  // Find-or-create the customer by phone (blind index lookup via the extension).
+  // If the source order has no customer phone, generate a deterministic synthetic
+  // phone keyed on (source, sourceOrderId) so re-syncs find the same record
+  // instead of colliding on a shared fake phone. See `syntheticPhone` docs.
+  const customerPhone =
+    normalized.customerPhone || syntheticPhone(normalized.source, sourceOrderId);
+  let customer = await db.customer.findUnique({
+    where: { phone: customerPhone },
+  });
   if (!customer) {
     customer = await db.customer.create({
       data: {
         name: normalized.customerName,
-        phone: normalized.customerPhone || "0000000000", // fallback for orders without phone
+        phone: customerPhone,
         wilaya: normalized.wilaya,
         commune: normalized.commune,
         address: normalized.address,
@@ -195,7 +198,11 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
     wilaya: normalized.wilaya ?? "Inconnu",
     commune: normalized.commune ?? "Inconnu",
     address: normalized.address,
-    phone: normalized.customerPhone || customer.phone,
+    // Use the resolved plaintext phone (real or synthetic) — the Prisma
+    // extension will HMAC it into the order's `phone` blind index and AES
+    // it into `phoneEnc`. (Do NOT use `customer.phone` here — that's already
+    // a blind index, would produce a double-HMAC.)
+    phone: customerPhone,
     source: normalized.source,
     sourceMetadata: JSON.stringify(normalized.sourceMetadata),
     notes: null,

@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import type { ExtractedOrder } from "@/lib/ai/extraction";
+import { dzPhone } from "@/lib/validation";
 
 interface MessageExtractionProps {
   messageId: string;
@@ -28,6 +31,11 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // Editable phone — pre-filled from extraction or known phone; user can correct
+  // it before creating the order. Required: a customer cannot be created without
+  // a valid Algerian phone (it's the @unique blind-index key).
+  const [phone, setPhone] = useState<string>("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
 
   async function handleExtract() {
     setLoading(true);
@@ -43,6 +51,9 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
       }
       const data = await res.json();
       setResult(data.result);
+      // Pre-fill the editable phone from the extraction result or the known phone.
+      setPhone(data.result?.order?.phone || knownPhone || "");
+      setPhoneTouched(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
     } finally {
@@ -52,6 +63,15 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
 
   async function handleCreateOrder() {
     if (!result?.order) return;
+    // Validate the phone before submitting — a customer cannot be created
+    // without a valid Algerian phone (it's the @unique blind-index key).
+    setPhoneTouched(true);
+    const phoneCheck = dzPhone.safeParse(phone.trim());
+    if (!phoneCheck.success) {
+      setError("Téléphone invalide — format attendu: 0[5-7]XXXXXXXX");
+      return;
+    }
+    const validPhone = phoneCheck.data;
     setCreating(true);
     setError(null);
     try {
@@ -61,7 +81,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: result.order.customerName || "Client",
-          phone: result.order.phone || knownPhone || "0000000000",
+          phone: validPhone,
           wilaya: result.order.wilaya,
           commune: result.order.commune,
           address: result.order.address,
@@ -74,11 +94,10 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
         customerId = customerData.customer.id;
       } else if (customerRes.status === 409) {
         // Customer already exists — find by phone
-        const phone = result.order.phone || knownPhone;
         const listRes = await fetch(`/api/customers?limit=100`);
         if (listRes.ok) {
           const listData = await listRes.json();
-          const existing = listData.customers?.find((c: { phone: string }) => c.phone === phone);
+          const existing = listData.customers?.find((c: { phone: string }) => c.phone === validPhone);
           if (existing) {
             customerId = existing.id;
           } else {
@@ -105,7 +124,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
           wilaya: result.order.wilaya || "",
           commune: result.order.commune || "",
           address: result.order.address || "",
-          phone: result.order.phone || knownPhone || "",
+          phone: validPhone,
           source: "whatsapp",
           sourceMetadata: { messageId },
           deliveryCost: 600,
@@ -211,8 +230,35 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
               </div>
             )}
 
+            {result.order && (
+              <div className="space-y-2">
+                <Label htmlFor={`phone-${messageId}`} className="text-xs">
+                  Téléphone <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id={`phone-${messageId}`}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  onBlur={() => setPhoneTouched(true)}
+                  placeholder="0[5-7]XXXXXXXX"
+                  className="font-mono h-8"
+                  aria-invalid={phoneTouched && !dzPhone.safeParse(phone.trim()).success}
+                  inputMode="tel"
+                />
+                {phoneTouched && !dzPhone.safeParse(phone.trim()).success && (
+                  <p className="text-xs text-destructive" role="alert">
+                    Format invalide — attendu: 0[5-7]XXXXXXXX
+                  </p>
+                )}
+              </div>
+            )}
+
             {result.order && result.order.items.length > 0 && (
-              <Button size="sm" onClick={handleCreateOrder} disabled={creating}>
+              <Button
+                size="sm"
+                onClick={handleCreateOrder}
+                disabled={creating || !dzPhone.safeParse(phone.trim()).success}
+              >
                 {creating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
