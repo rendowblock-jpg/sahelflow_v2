@@ -11,6 +11,7 @@ import type { ToolContext, ToolResult } from "./registry";
 import { registerTool } from "./registry";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
+import { orderService } from "@/lib/data/order-service";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -247,7 +248,7 @@ registerTool({
           where: { status: { in: ["confirmed", "shipped", "delivered"] } },
         }),
         db.customer.count(),
-        db.product.count({ where: { stock: { lte: 5 }, isActive: true } }),
+        db.product.count({ where: { stock: { lte: db.product.fields.lowStockThreshold }, isActive: true } }),
       ]);
       const totalRevenue = revenueAgg._sum.totalPrice ?? 0;
       return {
@@ -269,18 +270,21 @@ registerTool({
 
 const updateOrderStatusSchema = z.object({
   orderId: z.string(),
-  status: z.enum(["draft", "confirmed", "shipped", "delivered", "cancelled", "returned"]),
+  status: z.enum(["draft", "pending", "confirmed", "shipped", "delivered", "cancelled", "returned"]),
 });
 
 registerTool({
   definition: {
     name: "update_order_status",
-    description: "Update the status of an order. Valid statuses: draft, confirmed, shipped, delivered, cancelled, returned.",
+    description:
+      "Update the status of an order. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned. " +
+      "Transitions are validated by the order state machine — invalid transitions are rejected. " +
+      "Side effects (stock deduction on confirm, stock restoration on cancel/return, customer stats update on deliver) are applied automatically.",
     parameters: {
       type: "object",
       properties: {
         orderId: { type: "string" },
-        status: { type: "string", description: "draft|confirmed|shipped|delivered|cancelled|returned" },
+        status: { type: "string", description: "draft|pending|confirmed|shipped|delivered|cancelled|returned" },
       },
       required: ["orderId", "status"],
     },
@@ -289,12 +293,26 @@ registerTool({
     try {
       const input = updateOrderStatusSchema.parse(params);
       const db = getDb(ctx);
-      const order = await db.order.update({
-        where: { id: input.orderId },
-        data: { status: input.status },
-        select: { id: true, orderNumber: true, status: true },
-      });
-      return { success: true, data: order };
+      // Route through orderService.updateStatus — NOT a direct db.order.update.
+      // The service enforces the order state machine (assertCanTransition),
+      // applies stock side-effects (triggersStockDeduction /
+      // triggersStockRestoration), updates customer stats
+      // (triggersCustomerStatsUpdate), and sets timestamp fields
+      // (confirmedAt / shippedAt / deliveredAt) — all in a transaction.
+      // A direct db.order.update would bypass all of this (D-002).
+      const order = await orderService.updateStatus(
+        { prisma: db },
+        input.orderId,
+        input.status,
+      );
+      return {
+        success: true,
+        data: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+        },
+      };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }

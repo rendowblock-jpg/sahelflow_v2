@@ -43,7 +43,7 @@ export const statsService = {
         where: { status: { in: ["pending", "created"] } },
       }),
       ctx.prisma.product.count({
-        where: { isActive: true, stock: { lte: 5 } },
+        where: { isActive: true, stock: { lte: ctx.prisma.product.fields.lowStockThreshold } },
       }),
     ]);
 

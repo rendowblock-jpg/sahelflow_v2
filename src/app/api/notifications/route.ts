@@ -35,9 +35,9 @@ export async function GET() {
       select: { id: true, trackingNumber: true, status: true, updatedAt: true },
     });
 
-    // 3. Low-stock products
+    // 3. Low-stock products (per-product threshold, not hardcoded 5)
     const lowStockProducts = await db.product.findMany({
-      where: { stock: { lte: 5 }, isActive: true },
+      where: { stock: { lte: db.product.fields.lowStockThreshold }, isActive: true },
       take: 5,
       select: { id: true, name: true, stock: true },
     });

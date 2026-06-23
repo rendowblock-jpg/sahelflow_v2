@@ -83,7 +83,7 @@ export async function generateDailyReport(): Promise<DailyReport | null> {
       select: { productName: true, quantity: true, total: true },
     }),
     db.product.findMany({
-      where: { isActive: true, stock: { lte: 5 } },
+      where: { isActive: true, stock: { lte: db.product.fields.lowStockThreshold } },
       select: { name: true, stock: true },
       orderBy: { stock: "asc" },
       take: 5,

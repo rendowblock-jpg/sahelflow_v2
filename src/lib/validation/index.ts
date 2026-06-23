@@ -77,6 +77,21 @@ export const updateOrderStatusSchema = z.object({
   status: orderStatusSchema,
 });
 
+/**
+ * Schema for `orderService.update` — only notes / deliveryCost / address
+ * are updatable via this method (items + status have their own dedicated
+ * methods: `updateStatus`, item add/remove). Strict validation prevents
+ * callers from passing arbitrary keys (which would be silently ignored
+ * by Prisma's strict `data` shape — confusing for the caller).
+ */
+export const updateOrderSchema = z.object({
+  notes: z.string().nullable().optional(),
+  deliveryCost: nonNegInt.nullable().optional(),
+  // Order.address is a required String in the schema (not nullable) —
+  // it's the delivery destination, always present.
+  address: z.string().optional(),
+});
+
 // ─── Customer ─────────────────────────────────────────────────────────────────
 
 export const createCustomerSchema = z.object({

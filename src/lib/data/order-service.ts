@@ -10,7 +10,7 @@
  */
 import type { Order, OrderStatus } from "@/types/domain";
 import { NotFoundError } from "@/types/errors";
-import { createOrderSchema } from "@/lib/validation";
+import { createOrderSchema, updateOrderSchema } from "@/lib/validation";
 import {
   assertCanTransition,
   triggersStockDeduction,
@@ -200,8 +200,11 @@ export const orderService = {
 
   async update(ctx: ServiceContext, id: string, input: unknown): Promise<Order> {
     return withServiceError(async () => {
-      // Only allow updating notes + deliveryCost + address fields (not items or status)
-      const data = input as { notes?: string; deliveryCost?: number; address?: string };
+      // Validate input — only notes + deliveryCost + address are updatable
+      // via this method (items + status have their own dedicated methods:
+      // `updateStatus`, item add/remove). Zod rejects unknown keys + invalid
+      // types instead of silently ignoring them (D-020).
+      const data = updateOrderSchema.parse(input);
       const row = await ctx.prisma.order.update({
         where: { id },
         data: {
