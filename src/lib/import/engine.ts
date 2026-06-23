@@ -18,7 +18,11 @@
  */
 
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+// Use @e965/xlsx (community-maintained fork) instead of the original `xlsx`
+// package — the original is frozen at 0.18.5 on npm with known CVEs
+// (CVE-2023-30533 prototype pollution, CVE-2024-22363 ReDoS). The fork is
+// API-compatible. See https://github.com/SheetJS/sheetjs/issues
+import * as XLSX from "@e965/xlsx";
 import { z } from "zod";
 
 export interface ParsedFile {

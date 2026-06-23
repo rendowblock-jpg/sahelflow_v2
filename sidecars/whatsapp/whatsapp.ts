@@ -28,7 +28,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import P from "pino";
-import { mkdirSync, rmSync, existsSync } from "fs";
+import { mkdirSync, rmSync, existsSync, chmodSync } from "fs";
 import { join, resolve } from "path";
 
 // Resolve data dir the same way the main app does
@@ -122,7 +122,18 @@ class WhatsAppManager {
     this.emit({ type: "status", status: "connecting" });
 
     if (!existsSync(AUTH_FOLDER)) {
-      mkdirSync(AUTH_FOLDER, { recursive: true });
+      // mode 0o700 — only the current user can read/write the WhatsApp auth
+      // credentials (which would let another local process clone the session
+      // and impersonate the user). The umask may relax this, so we chmod
+      // explicitly after creation as well.
+      mkdirSync(AUTH_FOLDER, { recursive: true, mode: 0o700 });
+    }
+    try {
+      chmodSync(AUTH_FOLDER, 0o700);
+    } catch {
+      // best-effort — if chmod fails, the creds are still protected by the
+      // directory's default permissions (typically 0755) and the sidecar's
+      // 127.0.0.1 bind + bearer-token auth.
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);

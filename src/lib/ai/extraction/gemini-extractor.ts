@@ -82,14 +82,17 @@ export async function extractWithGemini(
   // Try each model in order until one works
   for (const model of MODELS) {
     try {
-      const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+      const url = `${GEMINI_API_URL}/${model}:generateContent`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: EXTRACTION_SYSTEM_PROMPT }] },
@@ -190,13 +193,16 @@ export async function verifyGeminiKey(
 
   for (const model of MODELS) {
     try {
-      const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+      const url = `${GEMINI_API_URL}/${model}:generateContent`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: "ping" }] }],

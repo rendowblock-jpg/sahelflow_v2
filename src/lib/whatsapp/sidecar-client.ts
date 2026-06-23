@@ -2,14 +2,21 @@
  * Server-side client for the WhatsApp sidecar.
  *
  * Used by /api/whatsapp/* routes to proxy requests to the sidecar (running on
- * localhost:3001). Centralizes the base URL + error handling so routes stay
- * thin. The browser never talks to the sidecar directly over REST (single
+ * localhost:3001). Centralizes the base URL + auth + error handling so routes
+ * stay thin. The browser never talks to the sidecar directly over REST (single
  * origin); only the WebSocket goes direct (for low-latency push).
+ *
+ * Auth: the sidecar requires `Authorization: Bearer <SIDECAR_TOKEN>` on every
+ * REST call and `?token=<SIDECAR_TOKEN>` on the WS upgrade. The token is read
+ * from the SIDECAR_TOKEN env var. If not set, the sidecar will have generated
+ * one and written it to SIDECAR_TOKEN_FILE (default /tmp/sahelflow-sidecar-token,
+ * chmod 600) — we read it from there as a dev convenience.
  *
  * SIDECAR_URL: configurable via env (default http://localhost:3001). In Tauri
  * production both processes run on the same host.
  */
 
+import { readFileSync } from "node:fs";
 import type {
   SidecarStatus,
   SidecarChat,
@@ -18,6 +25,28 @@ import type {
 
 const SIDECAR_URL =
   process.env.WHATSAPP_SIDECAR_URL ?? "http://localhost:3001";
+
+const SIDECAR_TOKEN_FILE =
+  process.env.SIDECAR_TOKEN_FILE ?? "/tmp/sahelflow-sidecar-token";
+
+/**
+ * Resolve the bearer token to authenticate to the sidecar.
+ * Priority: SIDECAR_TOKEN env var > contents of SIDECAR_TOKEN_FILE.
+ * Returns undefined if neither is available — the sidecar will reject with 401.
+ */
+function resolveSidecarToken(): string | undefined {
+  const fromEnv = process.env.SIDECAR_TOKEN;
+  if (fromEnv && fromEnv.length >= 16) return fromEnv;
+  try {
+    const fromFile = readFileSync(SIDECAR_TOKEN_FILE, "utf8").trim();
+    if (fromFile.length >= 16) return fromFile;
+  } catch {
+    // File doesn't exist or unreadable — token only set via env
+  }
+  return undefined;
+}
+
+const SIDECAR_TOKEN = resolveSidecarToken();
 
 /** Custom error so routes can distinguish sidecar-down from sidecar-error. */
 export class SidecarUnavailableError extends Error {
@@ -35,8 +64,15 @@ async function sidecarFetch<T>(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const headers: Record<string, string> = {
+      ...(init?.headers as Record<string, string> | undefined),
+    };
+    if (SIDECAR_TOKEN) {
+      headers["Authorization"] = `Bearer ${SIDECAR_TOKEN}`;
+    }
     const res = await fetch(`${SIDECAR_URL}${path}`, {
       ...init,
+      headers,
       signal: controller.signal,
     });
     if (!res.ok) {
@@ -97,4 +133,7 @@ export const sidecar = {
 
   logout: () =>
     sidecarFetch<{ ok: boolean; message: string }>("/logout", { method: "DELETE" }),
+
+  /** The bearer token to pass as ?token= on the WS upgrade URL (browser side). */
+  wsToken: (): string | undefined => SIDECAR_TOKEN,
 };

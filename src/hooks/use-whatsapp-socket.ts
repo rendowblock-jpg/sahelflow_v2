@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getWhatsAppWsUrl } from "@/lib/whatsapp/ws-url";
+import { getWhatsAppWsUrlWithToken } from "@/lib/whatsapp/ws-url";
 import type { SidecarEvent, WhatsAppStatus, WhatsAppUser, IncomingMessage } from "@/lib/whatsapp/types";
 
 interface UseWhatsAppSocketOptions {
@@ -75,50 +75,58 @@ export function useWhatsAppSocket(
 
     const open = () => {
       if (closed) return;
-      try {
-        ws = new WebSocket(getWhatsAppWsUrl());
-      } catch {
-        scheduleReconnect();
-        return;
-      }
-
-      ws.onopen = () => {
-        setWsOpen(true);
-        reconnectAttempt.current = 0;
-      };
-
-      ws.onmessage = (event) => {
+      // Fetch the WS URL with auth token first (async). If the sidecar is not
+      // ready (token unavailable), schedule a reconnect.
+      void getWhatsAppWsUrlWithToken().then((url) => {
+        if (closed || !url) {
+          if (!closed) scheduleReconnect();
+          return;
+        }
         try {
-          const data = JSON.parse(event.data as string) as SidecarEvent;
-          if (data.type === "status") {
-            if (data.status) {
-              setStatus(data.status);
-              setUser(data.user ?? null);
-              onStatusChangeRef.current?.(data.status, data.user ?? null);
+          ws = new WebSocket(url);
+        } catch {
+          scheduleReconnect();
+          return;
+        }
+
+        ws.onopen = () => {
+          setWsOpen(true);
+          reconnectAttempt.current = 0;
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data as string) as SidecarEvent;
+            if (data.type === "status") {
+              if (data.status) {
+                setStatus(data.status);
+                setUser(data.user ?? null);
+                onStatusChangeRef.current?.(data.status, data.user ?? null);
+              }
+            } else if (data.type === "qr") {
+              setStatus("qr");
+              onStatusChangeRef.current?.("qr", null);
+            } else if (data.type === "message" && data.message) {
+              onMessageRef.current?.(data.message);
             }
-          } else if (data.type === "qr") {
-            setStatus("qr");
-            onStatusChangeRef.current?.("qr", null);
-          } else if (data.type === "message" && data.message) {
-            onMessageRef.current?.(data.message);
+          } catch {
+            /* ignore malformed frames */
           }
-        } catch {
-          /* ignore malformed frames */
-        }
-      };
+        };
 
-      ws.onclose = () => {
-        setWsOpen(false);
-        scheduleReconnect();
-      };
+        ws.onclose = () => {
+          setWsOpen(false);
+          scheduleReconnect();
+        };
 
-      ws.onerror = () => {
-        try {
-          ws?.close();
-        } catch {
-          /* ignore */
-        }
-      };
+        ws.onerror = () => {
+          try {
+            ws?.close();
+          } catch {
+            /* ignore */
+          }
+        };
+      });
     };
 
     open();

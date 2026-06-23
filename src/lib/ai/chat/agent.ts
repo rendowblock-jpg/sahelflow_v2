@@ -100,13 +100,18 @@ export async function runAgent(
 
     for (const model of MODELS) {
       try {
-        const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+        const url = `${GEMINI_API_URL}/${model}:generateContent`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            // Use the header instead of `?key=` in the URL — keeps the API key
+            // out of server access logs, proxy logs, and fetch error messages.
+            "x-goog-api-key": apiKey,
+          },
           signal: controller.signal,
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -258,13 +263,16 @@ export async function* runAgentStream(
     // Try each model until one streams successfully
     for (const model of MODELS) {
       try {
-        const url = `${GEMINI_API_URL}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+        const url = `${GEMINI_API_URL}/${model}:streamGenerateContent?alt=sse`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
           signal: controller.signal,
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },

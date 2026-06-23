@@ -1,17 +1,25 @@
 import { NextResponse } from "next/server";
+import { sidecar } from "@/lib/whatsapp/sidecar-client";
 
 export const dynamic = "force-dynamic";
-
-const SIDECAR_URL =
-  process.env.WHATSAPP_SIDECAR_URL ?? "http://localhost:3001";
 
 /**
  * GET /api/whatsapp/qr-image — proxies the sidecar's QR PNG so the browser
  * can render it in an <img> without cross-origin issues.
+ *
+ * Uses the sidecar-client's bearer token for auth (the sidecar rejects
+ * unauthenticated requests since the AAA security audit fix).
  */
 export async function GET() {
   try {
-    const res = await fetch(`${SIDECAR_URL}/qr.png`, { cache: "no-store" });
+    const token = sidecar.wsToken();
+    const res = await fetch(
+      `${process.env.WHATSAPP_SIDECAR_URL ?? "http://localhost:3001"}/qr.png`,
+      {
+        cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      },
+    );
     if (!res.ok) {
       return NextResponse.json(
         { error: "No QR available. Connect a phone first or already connected." },

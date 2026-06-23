@@ -19,14 +19,60 @@ import type { NextConfig } from "next";
  *   4. `bunx tauri build`        → bundles the standalone server as a Tauri
  *                                  resource + compiles the WhatsApp sidecar
  *   5. Tauri Rust setup hook spawns the server + sidecar on launch
+ *
+ * Security headers: set on every response. CSP is also enforced by Tauri
+ * (see src-tauri/tauri.conf.json) — the Next.js CSP is a defense-in-depth
+ * for the dev workflow (browser at localhost:3000).
  */
+const securityHeaders = [
+  // CSP — slightly more permissive than the Tauri one because the dev server
+  // needs 'unsafe-eval' for HMR and 'unsafe-inline' for styled-jsx. In
+  // production (Tauri webview), the stricter Tauri CSP takes precedence.
+  {
+    key: "Content-Security-Policy",
+    value:
+      "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
+      "connect-src 'self' https://generativelanguage.googleapis.com https://api.yalidine.app " +
+      "https://api.youcan.shop https://*.myshopify.com https://backend.maystro-delivery.com " +
+      "https://b.maystro-delivery.com https://procolis.com ws://127.0.0.1:3001 ws://localhost:3001; " +
+      "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; " +
+      "object-src 'none'; base-uri 'self'; form-action 'self'",
+  },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
+  // HSTS only meaningful for HTTPS — harmless on localhost HTTP, enforced in
+  // production if the app is ever served over HTTPS (e.g. Cloudflare Pages).
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  // Don't allow the webview to be framed by other origins (clickjacking).
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
+  // Explicit — defaults to false in Next.js, but pin to prevent future
+  // regressions that would leak source code via source maps in production.
+  productionBrowserSourceMaps: false,
   experimental: {
     // Ensure server-only code never leaks into client bundles
     serverActions: { bodySizeLimit: "10mb" },
+    // Tree-shake unused exports from heavy libraries (lucide-react, etc.)
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "react-syntax-highlighter",
+    ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ];
   },
 };
 
