@@ -16,17 +16,17 @@
  */
 
 import type {
-  LicensePayload,
   LicenseValidationResult,
   MachineFingerprint,
   MachineId,
   SignedLicense,
 } from "./types";
+import { env } from "@/lib/env";
 import { getMachineId } from "./machine-id";
 import { validateLicense, issueTrial } from "./license-service";
 
 const STORAGE_KEY = "sahelflow-license";
-const APP_VERSION = "3.0.0";
+const APP_VERSION = env.appVersion;
 
 /**
  * Compute a machine ID from hardware fingerprints.
@@ -128,82 +128,89 @@ function storeLicense(license: SignedLicense): void {
  * This is the main entry point called by the app on startup.
  *
  * Flow:
- *   1. Get machine ID
- *   2. Read stored license
- *   3. If exists → verify it
- *   4. If missing or invalid → issue a trial
- *   5. Return the result
+ *   1. Dev mode → bypass (return valid)
+ *   2. Get machine ID
+ *   3. Read stored license
+ *   4. If exists → validate it (signature + machine ID + version + expiry)
+ *      - If valid → return valid
+ *      - If invalid/expired/mismatch → return that status (do NOT fall through
+ *        to auto-trial — the user had a license, it failed, they need to know)
+ *   5. If no stored license → issue a 7-day trial, store it, return valid
+ *
+ * Fail-closed: any UNEXPECTED error (crypto failure, storage corruption)
+ * returns `status: "invalid"` with the error message — NOT "valid" in a
+ * grace-mode catch-all. The previous grace-mode behavior (pre AAA audit
+ * fix, S-002) converted every failure into "license valid", which is the
+ * opposite of fail-closed.
+ *
+ * Expected errors (localStorage empty, JSON parse fail) are handled inline
+ * and fall through to the trial-issuance path — those are NOT propagated
+ * as "invalid".
  */
 export async function validateOnLaunch(): Promise<LicenseValidationResult> {
-  // Dev bypass
-  if (process.env.NODE_ENV === "development") {
+  // Dev bypass — only when no public key is configured (so dev tests with a
+  // real key still exercise the verification path).
+  if (env.isDev && !env.licensePublicKey) {
     return {
       status: "valid",
       message: "Development mode — license validation bypassed",
     };
   }
 
+  // Step 1: get the machine ID. If this fails, we can't validate or issue
+  // a trial — fail-closed.
+  let machineId: string;
   try {
-    const machineId = await getMachineId();
+    machineId = await getMachineId();
+  } catch (err) {
+    console.error("[license] failed to get machine ID:", err);
+    return {
+      status: "invalid",
+      message: "Could not determine machine ID — license validation failed",
+    };
+  }
 
-    // 1. Try reading stored license
-    const stored = readStoredLicense();
-    if (stored) {
+  // Step 2: read the stored license. If storage is corrupted/missing, fall
+  // through to trial issuance (not an error).
+  const stored = readStoredLicense();
+
+  if (stored) {
+    // Step 3: validate the stored license. Propagate the result — do NOT
+    // fall through to trial issuance on failure. The user had a license;
+    // if it failed, they need to see the failure (expired, invalid,
+    // machine mismatch) so they can take action (renew, re-enter, contact
+    // support). Auto-issuing a fresh trial would hide the failure.
+    try {
       const result = await validateLicense(stored, machineId, APP_VERSION);
-      if (result.status === "valid") {
-        return result;
-      }
-      // If expired or invalid, fall through to issue new trial
+      return result;
+    } catch (err) {
+      // Unexpected error in validation itself (not a normal "invalid" result
+      // — those are returned, not thrown). Fail-closed.
+      console.error("[license] validateLicense threw:", err);
+      return {
+        status: "invalid",
+        message: "License validation error — please re-enter your license key",
+      };
     }
+  }
 
-    // 2. No valid license → issue a trial
+  // Step 4: no stored license → issue a 7-day trial.
+  try {
     const trial = await issueTrial(machineId);
     storeLicense(trial);
-
     return {
       status: "valid",
       license: trial,
       daysRemaining: 7,
       message: "Trial active — 7 day(s) remaining",
     };
-  } catch (error) {
-    console.error("License validation failed:", error);
+  } catch (err) {
+    console.error("[license] failed to issue trial:", err);
     return {
-      status: "valid",
-      message: "License validation error — running in grace mode",
+      status: "invalid",
+      message: "Could not issue a trial license — please enter a license key",
     };
   }
-}
-
-/**
- * Generate the founder's keypair (one-time, offline).
- * This is an OFFLINE TOOL — it should NEVER be called from the app.
- * Use the sf-license CLI tool instead.
- */
-export async function generateFounderKeypair(): Promise<{
-  publicKey: string;
-  privateKey: string;
-}> {
-  throw new Error(
-    "generateFounderKeypair is an offline-only operation. " +
-    "Use the sf-license CLI tool to generate keypairs. " +
-    "This function should never be called from the app.",
-  );
-}
-
-/**
- * Sign a license payload with the founder's private key.
- * This is an OFFLINE TOOL — used by the founder's license-issuance tool, NOT by the app.
- */
-export async function signLicense(
-  _payload: LicensePayload,
-  _privateKey: string,
-): Promise<SignedLicense> {
-  throw new Error(
-    "signLicense is an offline-only operation. " +
-    "Use the sf-license CLI tool to sign licenses. " +
-    "This function should never be called from the app.",
-  );
 }
 
 export type { LicensePayload, SignedLicense, LicenseValidationResult, MachineFingerprint, MachineId } from "./types";
