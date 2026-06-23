@@ -33,6 +33,8 @@
  *     API, which most merchants still use. A future PR can add a new-platform
  *     adapter when docs are available.
  */
+import "server-only";
+
 
 import type {
   DeliveryAdapter,

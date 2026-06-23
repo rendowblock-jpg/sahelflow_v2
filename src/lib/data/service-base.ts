@@ -5,6 +5,8 @@
  * see src/lib/db.ts) and exposes typed methods that validate input (Zod),
  * enforce business rules, and throw typed errors (from @/types/errors).
  */
+import "server-only";
+
 import type { DbClient } from "@/lib/db";
 import { SahelFlowError, NotFoundError, ValidationError } from "@/types/errors";
 

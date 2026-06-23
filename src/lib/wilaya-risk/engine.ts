@@ -5,6 +5,8 @@
  * risk due to distance + lower confirmation rates; north = lower risk). The
  * seller can override these defaults in the settings UI (future PR).
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 

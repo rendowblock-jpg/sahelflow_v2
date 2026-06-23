@@ -16,6 +16,8 @@
  *   - "zrexpress_api_key"       — (future) ZR Express delivery API
  *   - "maystro_api_token"       — (future) Maystro delivery API
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 import {

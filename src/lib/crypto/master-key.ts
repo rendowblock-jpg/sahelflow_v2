@@ -20,6 +20,8 @@
  *   3. Keyfile
  *   4. Generate new key + persist to keyfile
  */
+import "server-only";
+
 
 import {
   readFileSync,

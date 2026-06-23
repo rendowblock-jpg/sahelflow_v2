@@ -20,6 +20,8 @@
  * All tools use the extended Prisma client (PII-encryption-aware). Read tools
  * return plaintext; write tools encrypt transparently.
  */
+import "server-only";
+
 
 import { z } from "zod";
 import type { ToolContext, ToolResult } from "./registry";

@@ -15,6 +15,8 @@
  * The caller (API route) triggers a sync for one platform or all. The engine
  * is safe to call concurrently (dedup by sourceOrderId + unique constraint).
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 import { syntheticPhone } from "@/lib/shared/phone";

@@ -9,6 +9,8 @@
  * grid, cart, COD checkout. No custom domains, discount codes, or theming
  * beyond the 3 built-in templates (those are Phase 2).
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 

@@ -11,6 +11,8 @@
  * it's available before any shop DB is opened. A follow-up PR will route all
  * `db` calls through the active shop's client (via getShopClient).
  */
+import "server-only";
+
 
 import { execSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "fs";

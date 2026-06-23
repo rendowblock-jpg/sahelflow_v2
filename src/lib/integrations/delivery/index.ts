@@ -5,6 +5,8 @@
  * loader reads encrypted secrets from the Secret table (per ADR-003/004) and
  * returns them as a DeliveryCredentials object.
  */
+import "server-only";
+
 
 import type {
   DeliveryAdapter,

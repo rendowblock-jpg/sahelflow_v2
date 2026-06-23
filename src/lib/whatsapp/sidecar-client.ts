@@ -15,6 +15,8 @@
  * SIDECAR_URL: configurable via env (default http://localhost:3001). In Tauri
  * production both processes run on the same host.
  */
+import "server-only";
+
 
 import { readFileSync } from "node:fs";
 import type {

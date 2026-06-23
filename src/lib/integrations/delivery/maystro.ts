@@ -30,6 +30,8 @@
  *   - Commune resolution requires a wilaya→commune lookup. We cache the
  *     commune list per wilaya in-process.
  */
+import "server-only";
+
 
 import type {
   DeliveryAdapter,

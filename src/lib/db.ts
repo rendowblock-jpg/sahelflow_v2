@@ -22,6 +22,8 @@
  *   - Conversation (contactName, contactPhone — non-searchable): in-place
  *     ciphertext (see src/lib/crypto/pii-fields.ts)
  */
+import "server-only";
+
 
 import { PrismaClient } from "@prisma/client";
 import { existsSync, readFileSync } from "fs";

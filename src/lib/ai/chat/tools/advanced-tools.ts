@@ -17,6 +17,8 @@
  *
  * All tools use the extended Prisma client (PII-encryption-aware, active-shop-aware).
  */
+import "server-only";
+
 
 import { z } from "zod";
 import type { ToolContext, ToolResult } from "./registry";

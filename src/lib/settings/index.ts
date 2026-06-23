@@ -7,6 +7,8 @@
  * Values are stored as strings; callers parse them (boolean, number, JSON) as
  * needed. Helpers `getBool`, `getInt`, `getJson` are provided for convenience.
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 

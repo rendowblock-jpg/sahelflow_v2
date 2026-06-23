@@ -5,6 +5,8 @@
  * The agent can: search products, search customers, create orders, get stats,
  * update order status, and estimate delivery cost.
  */
+import "server-only";
+
 
 import { z } from "zod";
 import type { ToolContext, ToolResult } from "./registry";

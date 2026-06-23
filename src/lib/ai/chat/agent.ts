@@ -11,6 +11,8 @@
  * If no Gemini key is configured, returns a helpful message directing the user
  * to Settings → IA.
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 import { getSecret } from "@/lib/secrets";

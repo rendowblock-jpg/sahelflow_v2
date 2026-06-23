@@ -24,6 +24,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // `server-only` is a Next.js package that throws when imported on the
+      // client. In vitest (node environment) it should be a no-op — tests
+      // run server-side and can safely import server-only modules.
+      "server-only": path.resolve(__dirname, "./scripts/server-only-mock.ts"),
     },
   },
 });

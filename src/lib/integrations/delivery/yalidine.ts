@@ -14,6 +14,8 @@
  * Commune codes: Yalidine uses numeric commune IDs. We resolve them via the
  * /communes/ endpoint (cached in-memory for the process lifetime).
  */
+import "server-only";
+
 
 import type {
   DeliveryAdapter,

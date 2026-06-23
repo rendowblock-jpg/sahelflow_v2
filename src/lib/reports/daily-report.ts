@@ -12,6 +12,8 @@
  * If no orders were placed yesterday, the report is skipped (returns null).
  * The cron route uses this to decide whether to send.
  */
+import "server-only";
+
 
 import { db } from "@/lib/db";
 

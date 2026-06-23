@@ -17,6 +17,8 @@
  *   Collision risk with real `05XXXXXXXX` phones: ~1 in 10^8 per synthetic
  *   phone. Acceptable for the typical SahelFlow shop (<10k customers).
  */
+import "server-only";
+
 
 import { createHash } from "node:crypto";
 

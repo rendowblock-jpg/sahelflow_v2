@@ -4,6 +4,8 @@
  * Maps platform IDs → adapter instances. Credentials are loaded from the
  * encrypted Secret store (ADR-003/004).
  */
+import "server-only";
+
 
 import type {
   EcommerceAdapter,
