@@ -24,7 +24,8 @@ prisma/migrations/dev.db*
 # Database (local SQLite — never commit shop data)
 *.db
 *.db-journal
-data/shops/
+data/shops/*
+!data/shops/.gitkeep
 
 # Secrets & auth (never commit)
 data/master.key

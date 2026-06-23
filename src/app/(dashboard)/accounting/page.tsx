@@ -40,7 +40,7 @@ export default async function AccountingPage() {
   const revenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
   const cogs = deliveredOrders.reduce((sum, o) => {
     return sum + o.items.reduce((s, item) => {
-      const cost = (item as any).product?.cost ?? item.unitPrice * 0.6;
+      const cost = (item as { product?: { cost?: number } }).product?.cost ?? item.unitPrice * 0.6;
       return s + (cost * item.quantity);
     }, 0);
   }, 0);

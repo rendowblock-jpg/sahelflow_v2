@@ -73,8 +73,8 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
       item.keywords.some(k => k.toLowerCase().includes(search.toLowerCase()))
     );
     for (const item of filtered) {
-      if (!groups[item.group]) groups[item.group] = [];
-      groups[item.group].push(item);
+      const list = groups[item.group] ?? (groups[item.group] = []);
+      list.push(item);
     }
     return groups;
   }, [items, search]);

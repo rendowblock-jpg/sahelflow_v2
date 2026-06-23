@@ -82,7 +82,6 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
 
   // Real notification state
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [notifLoading, setNotifLoading] = useState(false);
 
   // Load the shop list + active shop ID from the API on mount
   useEffect(() => {
@@ -91,7 +90,6 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
 
   // Load real notifications from API
   const loadNotifications = useCallback(async () => {
-    setNotifLoading(true);
     try {
       const res = await fetch("/api/notifications");
       if (res.ok) {
@@ -100,16 +98,18 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
       }
     } catch {
       // Silently fail — notifications are non-critical
-    } finally {
-      setNotifLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadNotifications();
-    // Poll every 60 seconds for new notifications
+    // Defer the initial fetch to a timer so no setState runs synchronously
+    // in the effect body (avoids cascading renders). Polling continues every 60s.
+    const initial = setTimeout(() => void loadNotifications(), 0);
     const interval = setInterval(() => void loadNotifications(), 60_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
   }, [loadNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -250,17 +250,22 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
                   return (
                     <DropdownMenuItem
                       key={notif.id}
-                      className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                      className="flex items-start gap-3 p-3 cursor-pointer"
                     >
-                      <div className="flex items-center gap-2 w-full">
-                        {!notif.read && (
-                          <span className={`h-2 w-2 rounded-full ${dotColor} shrink-0`} />
-                        )}
-                        <span className={`text-sm font-medium flex-1 ${notif.read ? "text-muted-foreground" : ""}`}>
-                          {notif.title}
-                        </span>
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
+                        <IconComp className="h-4 w-4" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {!notif.read && (
+                            <span className={`h-1.5 w-1.5 rounded-full ${dotColor} shrink-0`} />
+                          )}
+                          <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
+                            {notif.title}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{notif.time}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground pl-4">{notif.time}</span>
                     </DropdownMenuItem>
                   );
                 })

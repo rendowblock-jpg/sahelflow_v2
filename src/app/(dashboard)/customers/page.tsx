@@ -2,6 +2,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
+import { getRiskConfig } from "@/lib/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
