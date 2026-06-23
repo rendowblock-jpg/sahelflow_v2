@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Package, Eye, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/page-header";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import type { Product } from "@/types/domain";
 
@@ -66,16 +67,11 @@ export default async function ProductsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("products.title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("products.totalStock")}: {totalProducts} ·{" "}
-            {t("products.inventoryValue")}: {formatDZD(inventoryValue)}
-          </p>
-        </div>
-        <ProductFormDialog categories={categories} />
-      </div>
+      <PageHeader
+        title={t("products.title")}
+        description={`${t("products.totalStock")}: ${totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(inventoryValue)}`}
+        actions={<ProductFormDialog categories={categories} />}
+      />
 
       {/* Stat strip — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

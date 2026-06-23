@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Users, Eye, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/page-header";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import type { Customer } from "@/types/domain";
 
@@ -40,15 +41,11 @@ export default async function CustomersPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("customers.title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            Gérez votre base de clients et suivez les risques
-          </p>
-        </div>
-        <CustomerFormDialog />
-      </div>
+      <PageHeader
+        title={t("customers.title")}
+        description={t("customers.subtitle")}
+        actions={<CustomerFormDialog />}
+      />
 
       {/* Stat strip — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
