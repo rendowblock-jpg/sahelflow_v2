@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -10,37 +11,32 @@ export const dynamic = "force-dynamic";
  *   ?slug=...       → public storefront config + products (for the public storefront page).
  *                    Only returns active storefronts.
  */
-export async function GET(req: NextRequest) {
-  try {
-    const slug = req.nextUrl.searchParams.get("slug");
+export const GET = withErrorHandler(async (req: NextRequest) => {
+  const slug = req.nextUrl.searchParams.get("slug");
 
-    // Public path: fetch by slug for the storefront page
-    if (slug) {
-      const { storefrontService } = await import("@/lib/storefront/service");
-      const config = await storefrontService.getBySlug(slug);
-      if (!config || !config.isActive) {
-        return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
-      }
-
-      const products = config.productIds.length > 0
-        ? await db.product.findMany({
-            where: { id: { in: config.productIds }, isActive: true },
-            select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
-          })
-        : [];
-
-      return NextResponse.json({ config, products });
+  // Public path: fetch by slug for the storefront page
+  if (slug) {
+    const { storefrontService } = await import("@/lib/storefront/service");
+    const config = await storefrontService.getBySlug(slug);
+    if (!config || !config.isActive) {
+      return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
     }
 
-    // Seller path: list all storefronts (management view)
-    const { storefrontService } = await import("@/lib/storefront/service");
-    const configs = await storefrontService.list();
-    return NextResponse.json({ configs });
-  } catch (err) {
-    console.error("[GET /api/storefront/config]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const products = config.productIds.length > 0
+      ? await db.product.findMany({
+          where: { id: { in: config.productIds }, isActive: true },
+          select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
+        })
+      : [];
+
+    return NextResponse.json({ config, products });
   }
-}
+
+  // Seller path: list all storefronts (management view)
+  const { storefrontService } = await import("@/lib/storefront/service");
+  const configs = await storefrontService.list();
+  return NextResponse.json({ configs });
+}, "GET /api/storefront/config");
 
 const createConfigSchema = z.object({
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase, digits, or hyphens"),
@@ -62,30 +58,19 @@ const createConfigSchema = z.object({
 });
 
 /** POST /api/storefront/config — create a new storefront config (seller-only). */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const input = createConfigSchema.parse(body);
+export const POST = withErrorHandler(async (req: NextRequest) => {
+  const body = await req.json();
+  const input = createConfigSchema.parse(body);
 
-    const { storefrontService, DEFAULT_THEME } = await import("@/lib/storefront/service");
-    const config = await storefrontService.create({
-      slug: input.slug,
-      name: input.name,
-      description: input.description,
-      theme: input.theme,
-      productIds: input.productIds,
-      contact: input.contact,
-    });
-    void DEFAULT_THEME;
-    return NextResponse.json({ config }, { status: 201 });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: err.issues }, { status: 400 });
-    }
-    console.error("[POST /api/storefront/config]", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
-  }
-}
+  const { storefrontService, DEFAULT_THEME } = await import("@/lib/storefront/service");
+  const config = await storefrontService.create({
+    slug: input.slug,
+    name: input.name,
+    description: input.description,
+    theme: input.theme,
+    productIds: input.productIds,
+    contact: input.contact,
+  });
+  void DEFAULT_THEME;
+  return NextResponse.json({ config }, { status: 201 });
+}, "POST /api/storefront/config");

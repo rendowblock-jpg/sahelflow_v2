@@ -17,8 +17,12 @@ import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credent
 import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Paramètres — SahelFlow" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("settings.metaTitle") };
+}
 
 export default async function SettingsPage() {
   const { t } = await getI18n();

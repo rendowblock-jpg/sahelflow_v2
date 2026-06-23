@@ -15,6 +15,8 @@
  * Never logs secrets or PII — callers must pass safe context objects.
  */
 
+import { env } from "@/lib/env";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
@@ -25,8 +27,8 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 };
 
 function getCurrentLevel(): LogLevel {
-  const env = process.env.SF_LOG_LEVEL?.toLowerCase();
-  if (env && env in LEVEL_PRIORITY) return env as LogLevel;
+  const level = env.logLevel?.toLowerCase();
+  if (level && level in LEVEL_PRIORITY) return level as LogLevel;
   return process.env.NODE_ENV === "development" ? "debug" : "info";
 }
 

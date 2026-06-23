@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ interface SaveResult {
 }
 
 export function AiKeyPanel() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<Status>("loading");
   const [keyInput, setKeyInput] = useState("");
   const [testing, setTesting] = useState(false);
@@ -63,7 +65,7 @@ export function AiKeyPanel() {
   async function handleSave() {
     const trimmed = keyInput.trim();
     if (!trimmed) {
-      setResult({ ok: false, error: "Veuillez saisir une clé." });
+      setResult({ ok: false, error: t("aiKey.errorEmpty") });
       setStatus("error");
       return;
     }
@@ -85,7 +87,7 @@ export function AiKeyPanel() {
         setStatus("error");
       }
     } catch {
-      setResult({ ok: false, error: "Échec de la connexion au serveur." });
+      setResult({ ok: false, error: t("aiKey.errorServer") });
       setStatus("error");
     } finally {
       setTesting(false);
@@ -93,7 +95,7 @@ export function AiKeyPanel() {
   }
 
   async function handleDelete() {
-    if (!confirm("Supprimer la clé Gemini ? L'extraction IA utilisera uniquement le regex.")) {
+    if (!confirm(t("aiKey.confirmDelete"))) {
       return;
     }
     setDeleting(true);
@@ -108,7 +110,7 @@ export function AiKeyPanel() {
         setResult(data);
       }
     } catch {
-      setResult({ ok: false, error: "Échec de la suppression." });
+      setResult({ ok: false, error: t("aiKey.errorDelete") });
     } finally {
       setDeleting(false);
     }
@@ -121,11 +123,10 @@ export function AiKeyPanel() {
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
             <Bot className="h-5 w-5 text-primary" />
           </span>
-          Intelligence artificielle
+          {t("aiKey.title")}
         </CardTitle>
         <CardDescription>
-          Connectez votre clé Google AI Studio pour activer l&apos;extraction de commandes par Gemini.
-          Sans clé, l&apos;extraction fonctionne en mode regex (hors ligne, gratuit).
+          {t("aiKey.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -133,19 +134,19 @@ export function AiKeyPanel() {
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Clé API Gemini</span>
+            <span className="text-sm font-medium">{t("aiKey.geminiKeyLabel")}</span>
           </div>
           {status === "loading" ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : status === "configured" || status === "editing" ? (
             <Badge className="gap-1 bg-green-600 text-white hover:bg-green-600">
               <CheckCircle2 className="h-3 w-3" />
-              Configuré
+              {t("aiKey.configured")}
             </Badge>
           ) : (
             <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
               <XCircle className="h-3 w-3" />
-              Non configuré
+              {t("aiKey.notConfigured")}
             </Badge>
           )}
         </div>
@@ -155,7 +156,7 @@ export function AiKeyPanel() {
           <div className="space-y-3">
             {activeModel && (
               <p className="text-xs text-muted-foreground">
-                Modèle actif&nbsp;: <span className="font-mono">{activeModel}</span>
+                {t("aiKey.activeModel")} <span className="font-mono">{activeModel}</span>
               </p>
             )}
             <div className="flex flex-wrap gap-2">
@@ -167,7 +168,7 @@ export function AiKeyPanel() {
                   setResult(null);
                 }}
               >
-                Remplacer la clé
+                {t("aiKey.replaceKey")}
               </Button>
               <Button
                 variant="outline"
@@ -181,7 +182,7 @@ export function AiKeyPanel() {
                 ) : (
                   <Trash2 className="h-4 w-4 mr-1.5" />
                 )}
-                Supprimer
+                {t("common.delete")}
               </Button>
             </div>
           </div>
@@ -191,7 +192,7 @@ export function AiKeyPanel() {
         {(status === "not-configured" || status === "editing" || status === "error") && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="gemini-key">Clé API</Label>
+              <Label htmlFor="gemini-key">{t("aiKey.apiKeyLabel")}</Label>
               <Input
                 id="gemini-key"
                 type="password"
@@ -203,8 +204,7 @@ export function AiKeyPanel() {
                 disabled={testing}
               />
               <p className="text-xs text-muted-foreground">
-                Votre clé est chiffrée (AES-256-GCM) avant d&apos;être enregistrée localement.
-                Elle n&apos;est jamais envoyée ailleurs qu&apos;à Google.
+                {t("aiKey.encryptionHelp")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -212,12 +212,12 @@ export function AiKeyPanel() {
                 {testing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                    Test en cours...
+                    {t("aiKey.testing")}
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4 mr-1.5" />
-                    Tester et enregistrer
+                    {t("aiKey.testAndSave")}
                   </>
                 )}
               </Button>
@@ -227,7 +227,7 @@ export function AiKeyPanel() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                Obtenir une clé gratuite
+                {t("aiKey.getFreeKey")}
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
@@ -249,7 +249,7 @@ export function AiKeyPanel() {
             ) : (
               <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
             )}
-            <span>{result.ok ? result.message ?? "Clé enregistrée." : result.error ?? "Erreur."}</span>
+            <span>{result.ok ? result.message ?? t("aiKey.saved") : result.error ?? t("aiKey.error")}</span>
           </div>
         )}
       </CardContent>

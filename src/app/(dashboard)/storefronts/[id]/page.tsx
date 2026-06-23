@@ -5,7 +5,7 @@ import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
 import { db } from "@/lib/db";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Modifier la boutique — SahelFlow" };
+export const metadata: Metadata = { title: "Edit storefront — SahelFlow" };
 export const dynamic = "force-dynamic";
 
 export default async function EditStorefrontPage({
@@ -42,8 +42,7 @@ export default async function EditStorefrontPage({
           {t("storefronts.editTitle")}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Modifiez les réglages de votre boutique. Les changements sont visibles
-          immédiatement sur la page publique.
+          {t("storefronts.editDesc")}
         </p>
       </div>
       <StorefrontBuilder config={config} products={products} mode="edit" />

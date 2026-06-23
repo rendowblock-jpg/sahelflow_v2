@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
+import { useI18n } from "@/hooks/use-i18n";
 import wilayasData from "../../../data/wilayas.json";
 // communes.json (197KB, 1,541 entries) is fetched from /api/communes?wilaya=X
 // when the user selects a wilaya — keeps it out of the client bundle (T-019).
@@ -72,6 +73,7 @@ interface OrderFormDialogProps {
 
 export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,15 +165,15 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     setError(null);
 
     if (!customerId) {
-      setError("Veuillez sélectionner un client");
+      setError(t("orders.form.errorNoCustomer"));
       return;
     }
     if (items.length === 0) {
-      setError("Veuillez ajouter au moins un article");
+      setError(t("orders.form.errorNoItems"));
       return;
     }
     if (!wilaya || !commune || !address || !phone) {
-      setError("Veuillez remplir toutes les informations de livraison");
+      setError(t("orders.form.errorMissingDelivery"));
       return;
     }
 
@@ -199,7 +201,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error ?? "Échec de la création");
+        throw new Error(data.error ?? t("orders.form.createFailed"));
       }
 
       const { order } = await res.json();
@@ -207,7 +209,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
       resetForm();
       router.push(`/orders/${order.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      setError(err instanceof Error ? err.message : t("errors.somethingWrong"));
     } finally {
       setLoading(false);
     }
@@ -229,24 +231,24 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-1.5" />
-          Nouvelle commande
+          {t("orders.newOrder")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            Nouvelle commande
+            {t("orders.newOrder")}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Customer selection */}
           <div className="space-y-2">
-            <Label>Client</Label>
+            <Label>{t("orders.customer")}</Label>
             <Select value={customerId} onValueChange={selectCustomer}>
               <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez un client..." />
+                <SelectValue placeholder={t("orders.form.selectCustomerPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((c) => (
@@ -258,18 +260,18 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
             </Select>
             {customerId && (
               <p className="text-xs text-muted-foreground">
-                Les informations de livraison sont pré-remplies depuis la fiche client.
+                {t("orders.form.customerDeliveryHint")}
               </p>
             )}
           </div>
 
           {/* Products */}
           <div className="space-y-3">
-            <Label>Articles</Label>
+            <Label>{t("orders.items")}</Label>
             {activeProducts.length > 0 && (
               <Select onValueChange={addProduct}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Ajouter un produit..." />
+                  <SelectValue placeholder={t("orders.form.addProductPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {activeProducts
@@ -313,7 +315,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground py-4 text-center rounded-lg border border-dashed">
-                Aucun article ajouté
+                {t("orders.form.noItems")}
               </p>
             )}
           </div>
@@ -322,13 +324,13 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
           {/* Delivery info */}
           <div className="space-y-4">
-            <Label className="text-base">Livraison</Label>
+            <Label className="text-base">{t("orders.form.delivery")}</Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Wilaya</Label>
+                <Label className="text-xs">{t("orders.wilaya")}</Label>
                 <Select value={wilaya} onValueChange={(v) => { setWilaya(v); setCommune(""); setCommunes([]); }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wilaya..." />
+                    <SelectValue placeholder={t("orders.form.wilayaPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {wilayas.map((w) => (
@@ -340,10 +342,10 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Commune</Label>
+                <Label className="text-xs">{t("orders.commune")}</Label>
                 <Select value={commune} onValueChange={setCommune} disabled={!wilaya}>
                   <SelectTrigger>
-                    <SelectValue placeholder={wilaya ? "Sélectionnez..." : "Choisissez d'abord une wilaya"} />
+                    <SelectValue placeholder={wilaya ? t("orders.form.selectCommunePlaceholder") : t("orders.form.chooseWilayaFirst")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {communesLoading ? (
@@ -352,7 +354,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                       </div>
                     ) : communes.length === 0 ? (
                       <div className="py-4 text-center text-sm text-muted-foreground">
-                        Aucune commune
+                        {t("orders.form.noCommunes")}
                       </div>
                     ) : (
                       communes.map((c) => (
@@ -366,16 +368,16 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Adresse</Label>
+              <Label className="text-xs">{t("orders.form.address")}</Label>
               <Input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Adresse de livraison..."
+                placeholder={t("orders.form.addressPlaceholder")}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Téléphone</Label>
+                <Label className="text-xs">{t("orders.phone")}</Label>
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -383,7 +385,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Frais de livraison (DA)</Label>
+                <Label className="text-xs">{t("orders.form.deliveryCostLabel")}</Label>
                 <Input
                   type="number"
                   value={deliveryCost}
@@ -398,7 +400,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
           {/* Total */}
           <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-            <span className="text-sm font-medium">Total</span>
+            <span className="text-sm font-medium">{t("orders.total")}</span>
             <span className="text-xl font-bold">{formatDZD(total)}</span>
           </div>
 
@@ -409,16 +411,16 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Annuler
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                Création...
+                {t("orders.form.creating")}
               </>
             ) : (
-              "Créer la commande"
+              t("orders.createOrder")
             )}
           </Button>
         </DialogFooter>

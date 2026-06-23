@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
 import { CreateShipment } from "@/components/orders/create-shipment";
+import { getI18n } from "@/lib/i18n-server";
 import {
   ArrowRight,
   Phone,
@@ -28,7 +29,6 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-export const metadata: Metadata = { title: "Commande — SahelFlow" };
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
@@ -43,32 +43,17 @@ const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "ou
   cancelled: "destructive",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Brouillon",
-  pending: "En attente",
-  confirmed: "Confirmée",
-  shipped: "Expédiée",
-  delivered: "Livrée",
-  returned: "Retournée",
-  refused: "Refusée",
-  cancelled: "Annulée",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  whatsapp: "WhatsApp",
-  tiktok: "TikTok",
-  manual: "Saisie manuelle",
-  webstore: "Boutique en ligne",
-  shopify: "Shopify",
-  woocommerce: "WooCommerce",
-  youcan: "YouCan",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("orders.detail.metadataTitle") };
+}
 
 export default async function OrderDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t, locale } = await getI18n();
   const { id } = await params;
 
   let order;
@@ -88,12 +73,33 @@ export default async function OrderDetailPage({
   const itemsTotal = order.items.reduce((sum, item) => sum + item.total, 0);
   const deliveryCost = order.deliveryCost ?? 0;
 
+  const STATUS_LABELS: Record<string, string> = {
+    draft: t("orders.status.draft"),
+    pending: t("orders.status.pending"),
+    confirmed: t("orders.status.confirmed"),
+    shipped: t("orders.status.shipped"),
+    delivered: t("orders.status.delivered"),
+    returned: t("orders.status.returned"),
+    refused: t("orders.status.refused"),
+    cancelled: t("orders.status.cancelled"),
+  };
+
+  const SOURCE_LABELS: Record<string, string> = {
+    whatsapp: "WhatsApp",
+    tiktok: "TikTok",
+    manual: t("orders.source.manual"),
+    webstore: t("orders.source.webstore"),
+    shopify: "Shopify",
+    woocommerce: "WooCommerce",
+    youcan: "YouCan",
+  };
+
   // Status timeline
   const timeline: Array<{ label: string; date: Date | null; done: boolean }> = [
-    { label: "Créée", date: order.createdAt, done: true },
-    { label: "Confirmée", date: order.confirmedAt, done: !!order.confirmedAt },
-    { label: "Expédiée", date: order.shippedAt, done: !!order.shippedAt },
-    { label: "Livrée", date: order.deliveredAt, done: !!order.deliveredAt },
+    { label: t("orders.created"), date: order.createdAt, done: true },
+    { label: t("orders.status.confirmed"), date: order.confirmedAt, done: !!order.confirmedAt },
+    { label: t("orders.status.shipped"), date: order.shippedAt, done: !!order.shippedAt },
+    { label: t("orders.status.delivered"), date: order.deliveredAt, done: !!order.deliveredAt },
   ];
 
   return (
@@ -103,7 +109,7 @@ export default async function OrderDetailPage({
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/orders">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Retour aux commandes
+            {t("orders.detail.backToOrders")}
           </Link>
         </Button>
 
@@ -119,7 +125,7 @@ export default async function OrderDetailPage({
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              {formatDate(order.createdAt, "fr")}
+              {formatDate(order.createdAt, locale)}
               <span className="mx-1">·</span>
               <MessageSquare className="h-3.5 w-3.5" />
               {SOURCE_LABELS[order.source] ?? order.source}
@@ -143,7 +149,7 @@ export default async function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Package className="h-4 w-4" />
-                Articles ({order.items.length})
+                {t("orders.detail.itemsWithCount", { n: order.items.length })}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -169,16 +175,16 @@ export default async function OrderDetailPage({
               {/* Totals */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Sous-total</span>
+                  <span className="text-muted-foreground">{t("orders.detail.subtotal")}</span>
                   <span>{formatDZD(itemsTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Livraison</span>
+                  <span className="text-muted-foreground">{t("orders.detail.shipping")}</span>
                   <span>{deliveryCost > 0 ? formatDZD(deliveryCost) : "—"}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-base font-bold">
-                  <span>Total</span>
+                  <span>{t("orders.total")}</span>
                   <span>{formatDZD(order.totalPrice)}</span>
                 </div>
               </div>
@@ -202,7 +208,7 @@ export default async function OrderDetailPage({
           {order.notes && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Notes</CardTitle>
+                <CardTitle className="text-base">{t("orders.notes")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -220,7 +226,7 @@ export default async function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <User className="h-4 w-4" />
-                Client
+                {t("orders.customer")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -230,7 +236,10 @@ export default async function OrderDetailPage({
                     <p className="text-sm font-medium">{customer.name}</p>
                     {customer.orderCount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {customer.orderCount} commande{customer.orderCount > 1 ? "s" : ""} ·{" "}
+                        {customer.orderCount > 1
+                          ? t("orders.detail.ordersCountPlural", { n: customer.orderCount })
+                          : t("orders.detail.ordersCountSingular", { n: customer.orderCount })}
+                        {" · "}
                         {formatDZD(customer.totalSpent)}
                       </p>
                     )}
@@ -254,13 +263,13 @@ export default async function OrderDetailPage({
                   </div>
                   <Button variant="outline" size="sm" className="w-full" asChild>
                     <Link href={`/customers/${customer.id}`}>
-                      Voir la fiche client
+                      {t("orders.detail.viewCustomer")}
                       <ArrowRight className="h-3.5 w-3.5 ml-1" />
                     </Link>
                   </Button>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">Client introuvable</p>
+                <p className="text-sm text-muted-foreground">{t("orders.detail.customerNotFound")}</p>
               )}
             </CardContent>
           </Card>
@@ -270,7 +279,7 @@ export default async function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <MapPin className="h-4 w-4" />
-                Adresse de livraison
+                {t("orders.address")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
@@ -285,7 +294,7 @@ export default async function OrderDetailPage({
           {/* Status timeline */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Suivi</CardTitle>
+              <CardTitle className="text-base">{t("orders.detail.tracking")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -311,7 +320,7 @@ export default async function OrderDetailPage({
                       </p>
                       {step.date && (
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(step.date, "fr")}
+                          {formatDate(step.date, locale)}
                         </p>
                       )}
                     </div>

@@ -33,6 +33,7 @@
  *     API, which most merchants still use. A future PR can add a new-platform
  *     adapter when docs are available.
  */
+import { env } from "@/lib/env";
 import "server-only";
 
 
@@ -49,7 +50,7 @@ import type {
 import { retryFetch } from "./retry";
 
 const ZR_BASE =
-  process.env.ZREXPRESS_API_BASE || "https://procolis.com/api_v1";
+  env.zrExpressApiBase || "https://procolis.com/api_v1";
 
 const FETCH_TIMEOUT_MS = 15000;
 

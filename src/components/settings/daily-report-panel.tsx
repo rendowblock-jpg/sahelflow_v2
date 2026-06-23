@@ -1,6 +1,8 @@
 "use client";
 
+import { env } from "@/lib/env";
 import { useState, useEffect, useTransition } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,7 @@ interface DailyReportSettings {
 }
 
 export function DailyReportPanel() {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<DailyReportSettings>({
     daily_report_enabled: "false",
     daily_report_phone: "",
@@ -56,11 +59,11 @@ export function DailyReportPanel() {
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Échec de l'enregistrement");
+          throw new Error(data.error || t("reports.saveFailed"));
         }
-        toast.success("Réglages enregistrés");
+        toast.success(t("reports.settingsSaved"));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erreur");
+        toast.error(err instanceof Error ? err.message : t("reports.errorShort"));
       }
     });
   }
@@ -72,19 +75,19 @@ export function DailyReportPanel() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-cron-secret": process.env.NEXT_PUBLIC_CRON_SECRET ?? "dev",
+            "x-cron-secret": env.publicCronSecret ?? "dev",
           },
         });
         const data = await res.json();
         if (data.ok) {
-          toast.success("Rapport envoyé (vérifiez WhatsApp)");
+          toast.success(t("reports.reportSent"));
         } else if (data.reason) {
-          toast.info(`Rapport: ${data.reason}`);
+          toast.info(t("reports.reportInfo", { reason: String(data.reason) }));
         } else {
-          toast.error(data.error || "Échec");
+          toast.error(data.error || t("reports.failedShort"));
         }
       } catch {
-        toast.error("Erreur de connexion");
+        toast.error(t("reports.connectionError"));
       }
     });
   }
@@ -104,21 +107,19 @@ export function DailyReportPanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Bell className="h-5 w-5" />
-          Rapport quotidien WhatsApp
+          {t("reports.dailyTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Recevez un résumé quotidien de votre activité (commandes, chiffre
-          d&apos;affaires, livraisons, top produits, stock faible) directement
-          sur WhatsApp.
+          {t("reports.dailyDesc")}
         </p>
 
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
-            <Label className="cursor-pointer">Activer le rapport quotidien</Label>
+            <Label className="cursor-pointer">{t("reports.enableDaily")}</Label>
             <p className="text-xs text-muted-foreground">
-              Envoi automatique chaque jour à l&apos;heure configurée
+              {t("reports.enableDailyHint")}
             </p>
           </div>
           <Switch
@@ -131,7 +132,7 @@ export function DailyReportPanel() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="report-phone">Numéro WhatsApp (destinataire)</Label>
+            <Label htmlFor="report-phone">{t("reports.phoneLabel")}</Label>
             <Input
               id="report-phone"
               value={settings.daily_report_phone}
@@ -142,11 +143,11 @@ export function DailyReportPanel() {
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Format international sans + ni espaces
+              {t("reports.phoneFormatHint")}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="report-time">Heure d&apos;envoi</Label>
+            <Label htmlFor="report-time">{t("reports.timeLabel")}</Label>
             <Input
               id="report-time"
               type="time"
@@ -156,7 +157,7 @@ export function DailyReportPanel() {
               }
             />
             <p className="text-xs text-muted-foreground">
-              Heure locale (format 24h)
+              {t("reports.timeFormatHint")}
             </p>
           </div>
         </div>
@@ -166,22 +167,18 @@ export function DailyReportPanel() {
         <div className="flex items-center gap-2">
           <Button onClick={handleSave} disabled={pending}>
             {pending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            Enregistrer
+            {t("common.save")}
           </Button>
           <Button onClick={handleTestReport} variant="outline" disabled={pending}>
             <Send className="h-4 w-4 mr-2" />
-            Tester maintenant
+            {t("reports.testNow")}
           </Button>
         </div>
 
         <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-          <p className="font-medium mb-1">Configuration du cron :</p>
+          <p className="font-medium mb-1">{t("reports.cronConfig")}</p>
           <p>
-            Configurez un cron externe qui appelle{" "}
-            <code className="font-mono">POST /api/reports/daily</code> avec le
-            header{" "}
-            <code className="font-mono">x-cron-secret: $CRON_SECRET</code> à
-            l&apos;heure souhaitée. Exemple crontab (09:00 chaque jour) :
+            {t("reports.cronHelp")}
           </p>
           <pre className="mt-1 font-mono bg-background p-2 rounded overflow-x-auto">
             0 9 * * * curl -X POST -H &quot;x-cron-secret: $SECRET&quot; http://localhost:3000/api/reports/daily

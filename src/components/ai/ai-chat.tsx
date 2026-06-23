@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Send, Loader2, Plus, MessageSquare, Wrench } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface Message {
   id: string;
@@ -37,6 +38,7 @@ interface StreamingToolCall {
 }
 
 export function AiChat() {
+  const { t, locale } = useI18n();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -257,7 +259,7 @@ export function AiChat() {
                 m.id === assistantId
                   ? {
                       ...m,
-                      content: response || m.content || "(pas de réponse)",
+                      content: response || m.content || t("ai.noResponse"),
                       streaming: false,
                       streamingToolCalls: undefined,
                       toolCalls: toolCalls && toolCalls.length > 0 ? toolCalls : m.toolCalls,
@@ -272,7 +274,7 @@ export function AiChat() {
                 m.id === assistantId
                   ? {
                       ...m,
-                      content: m.content || `Erreur: ${message}`,
+                      content: m.content || t("ai.errorPrefix", { message }),
                       streaming: false,
                       streamingToolCalls: undefined,
                     }
@@ -314,7 +316,7 @@ export function AiChat() {
             m.id === assistantId
               ? {
                   ...m,
-                  content: "Échec de la connexion au serveur.",
+                  content: t("ai.connectionFailed"),
                   streaming: false,
                   streamingToolCalls: undefined,
                 }
@@ -338,7 +340,7 @@ export function AiChat() {
         <div className="p-3 border-b">
           <Button onClick={handleNewSession} className="w-full" size="sm">
             <Plus className="h-4 w-4 mr-1.5" />
-            Nouvelle conversation
+            {t("ai.newConversation")}
           </Button>
         </div>
         <ScrollArea className="flex-1">
@@ -348,7 +350,7 @@ export function AiChat() {
             </div>
           ) : sessions.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              Aucune conversation. Créez-en une pour commencer.
+              {t("ai.noSessions")}
             </div>
           ) : (
             <div className="divide-y">
@@ -362,9 +364,9 @@ export function AiChat() {
                 >
                   <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.title || "Sans titre"}</p>
+                    <p className="text-sm font-medium truncate">{s.title || t("ai.untitled")}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(s.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                      {new Date(s.updatedAt).toLocaleDateString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { day: "numeric", month: "short" })}
                     </p>
                   </div>
                 </button>
@@ -379,9 +381,9 @@ export function AiChat() {
           <>
             <div className="p-4 border-b flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold">Assistant IA</h2>
+              <h2 className="font-semibold">{t("ai.assistantTitle")}</h2>
               <Badge variant="outline" className="ml-auto text-xs">
-                30 outils
+                {t("ai.toolsCount")}
               </Badge>
             </div>
 
@@ -396,10 +398,9 @@ export function AiChat() {
                     <div className="rounded-full bg-primary/10 p-4 mb-4 mx-auto w-fit">
                       <Bot className="h-8 w-8 text-primary" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">Comment puis-je vous aider ?</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t("ai.howCanIHelp")}</h3>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Je peux rechercher des produits, des clients, créer des commandes,
-                      obtenir des statistiques, et estimer les frais de livraison.
+                      {t("ai.capabilities")}
                     </p>
                   </div>
                 ) : (
@@ -449,7 +450,7 @@ export function AiChat() {
                               <Wrench className="h-3 w-3" />
                               <span className="font-mono">{tc.name}</span>
                               {tc.result === undefined ? (
-                                <span className="italic">exécution…</span>
+                                <span className="italic">{t("ai.executing")}</span>
                               ) : (
                                 <>
                                   <span>→</span>
@@ -475,7 +476,7 @@ export function AiChat() {
               <div className="flex items-center gap-2 max-w-3xl mx-auto">
                 <Input
                   type="text"
-                  placeholder="Posez votre question..."
+                  placeholder={t("ai.askPlaceholder")}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -487,11 +488,11 @@ export function AiChat() {
                   disabled={sending}
                 />
                 {sending ? (
-                  <Button size="icon" variant="destructive" onClick={handleCancel} title="Arrêter">
+                  <Button size="icon" variant="destructive" onClick={handleCancel} title={t("ai.stop")}>
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </Button>
                 ) : (
-                  <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
+                  <Button size="icon" onClick={handleSend} disabled={!input.trim()} aria-label={t("ai.send")}>
                     <Send className="h-4 w-4" />
                   </Button>
                 )}
@@ -504,13 +505,13 @@ export function AiChat() {
               <div className="rounded-full bg-primary/10 p-4 mb-4 mx-auto w-fit">
                 <Bot className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Assistant IA SahelFlow</h3>
+              <h3 className="text-lg font-semibold mb-1">{t("ai.assistantSahelFlow")}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                Créez une nouvelle conversation pour interagir avec l&apos;assistant.
+                {t("ai.createConversationPrompt")}
               </p>
               <Button onClick={handleNewSession} className="mt-4">
                 <Plus className="h-4 w-4 mr-1.5" />
-                Nouvelle conversation
+                {t("ai.newConversation")}
               </Button>
             </div>
           </div>

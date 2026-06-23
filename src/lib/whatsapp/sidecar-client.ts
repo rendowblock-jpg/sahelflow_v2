@@ -15,6 +15,7 @@
  * SIDECAR_URL: configurable via env (default http://localhost:3001). In Tauri
  * production both processes run on the same host.
  */
+import { env } from "@/lib/env";
 import "server-only";
 
 
@@ -26,10 +27,10 @@ import type {
 } from "./types";
 
 const SIDECAR_URL =
-  process.env.WHATSAPP_SIDECAR_URL ?? "http://localhost:3001";
+  env.whatsappSidecarUrl ?? "http://localhost:3001";
 
 const SIDECAR_TOKEN_FILE =
-  process.env.SIDECAR_TOKEN_FILE ?? "/tmp/sahelflow-sidecar-token";
+  env.sidecarTokenFile ?? "/tmp/sahelflow-sidecar-token";
 
 /**
  * Resolve the bearer token to authenticate to the sidecar.
@@ -37,7 +38,7 @@ const SIDECAR_TOKEN_FILE =
  * Returns undefined if neither is available — the sidecar will reject with 401.
  */
 function resolveSidecarToken(): string | undefined {
-  const fromEnv = process.env.SIDECAR_TOKEN;
+  const fromEnv = env.sidecarToken;
   if (fromEnv && fromEnv.length >= 16) return fromEnv;
   try {
     const fromFile = readFileSync(SIDECAR_TOKEN_FILE, "utf8").trim();

@@ -1,0 +1,95 @@
+"use client";
+
+/**
+ * LineTrendChart — multi-series line chart for comparing trends
+ * (e.g. revenue vs. last period, AOV across weeks). Dots appear on hover.
+ * Formatters are string keys (ChartFormatter) for RSC compatibility.
+ */
+import {
+  Line,
+  LineChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
+
+interface LineSeries {
+  key: string;
+  label: string;
+  format?: ChartFormatter;
+}
+interface LineTrendChartProps {
+  data: Array<Record<string, string | number>>;
+  xKey: string;
+  series: LineSeries[];
+  config: ChartConfig;
+  height?: number;
+  formatY?: ChartFormatter;
+}
+
+export function LineTrendChart({
+  data,
+  xKey,
+  series,
+  config,
+  height = 300,
+  formatY,
+}: LineTrendChartProps) {
+  const fmtY = resolveFormatter(formatY);
+  if (!data.length) {
+    return (
+      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
+        No data
+      </div>
+    );
+  }
+  return (
+    <ChartContainer config={config} style={{ height }} className="w-full">
+      <LineChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/50" />
+        <XAxis
+          dataKey={xKey}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          minTickGap={24}
+          className="text-[11px]"
+        />
+        <YAxis
+          width={52}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={4}
+          tickFormatter={(v: number) => fmtY(v)}
+          className="text-[11px]"
+        />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              formatter={(value, name) => {
+                const s = series.find((x) => x.key === name);
+                const num = Number(value);
+                return [s?.format ? resolveFormatter(s.format)(num) : fmtY(num), s?.label ?? name];
+              }}
+            />
+          }
+        />
+        {series.map((s) => (
+          <Line
+            key={s.key}
+            dataKey={s.key}
+            type="monotone"
+            stroke={`var(--color-${s.key})`}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
+            isAnimationActive
+            animationDuration={600}
+          />
+        ))}
+      </LineChart>
+    </ChartContainer>
+  );
+}

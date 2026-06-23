@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Command } from "@/components/ui/command";
+import { useI18n } from "@/hooks/use-i18n";
 import {
   Dialog,
   DialogContent,
@@ -42,26 +43,27 @@ interface CommandItem {
 
 export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const items = React.useMemo<CommandItem[]>(() => [
     // Navigation
-    { id: "nav-dashboard", label: "Tableau de bord", icon: BarChart3, group: "Navigation", keywords: ["dashboard", "accueil", "home"], action: () => router.push("/dashboard") },
-    { id: "nav-orders", label: "Commandes", icon: ShoppingCart, group: "Navigation", keywords: ["orders", "commandes", "طلبات"], action: () => router.push("/orders") },
-    { id: "nav-customers", label: "Clients", icon: Users, group: "Navigation", keywords: ["customers", "clients", "عملاء"], action: () => router.push("/customers") },
-    { id: "nav-products", label: "Produits", icon: Package, group: "Navigation", keywords: ["products", "produits", "منتجات"], action: () => router.push("/products") },
-    { id: "nav-deliveries", label: "Livraisons", icon: Truck, group: "Navigation", keywords: ["deliveries", "livraisons", "توصيل"], action: () => router.push("/deliveries") },
-    { id: "nav-returns", label: "Retours", icon: RotateCcw, group: "Navigation", keywords: ["returns", "retours", "مرتجعات"], action: () => router.push("/returns") },
-    { id: "nav-inbox", label: "Boîte de réception", icon: MessageCircle, group: "Navigation", keywords: ["inbox", "messages", "whatsapp", "رسائل"], action: () => router.push("/inbox") },
-    { id: "nav-ai", label: "Agent IA", icon: Bot, group: "Navigation", keywords: ["ai", "agent", "intelligence", "ذكاء"], action: () => router.push("/agents") },
-    { id: "nav-analytics", label: "Analytique", icon: BarChart3, group: "Navigation", keywords: ["analytics", "analytique", "إحصائيات"], action: () => router.push("/analytics") },
-    { id: "nav-accounting", label: "Comptabilité", icon: Calculator, group: "Navigation", keywords: ["accounting", "comptabilité", "محاسبة"], action: () => router.push("/accounting") },
-    { id: "nav-settings", label: "Paramètres", icon: Settings, group: "Navigation", keywords: ["settings", "paramètres", "إعدادات"], action: () => router.push("/settings") },
+    { id: "nav-dashboard", label: t("command.nav.dashboard"), icon: BarChart3, group: t("command.group.navigation"), keywords: ["dashboard", "accueil", "home"], action: () => router.push("/dashboard") },
+    { id: "nav-orders", label: t("command.nav.orders"), icon: ShoppingCart, group: t("command.group.navigation"), keywords: ["orders", "commandes", "طلبات"], action: () => router.push("/orders") },
+    { id: "nav-customers", label: t("command.nav.customers"), icon: Users, group: t("command.group.navigation"), keywords: ["customers", "clients", "عملاء"], action: () => router.push("/customers") },
+    { id: "nav-products", label: t("command.nav.products"), icon: Package, group: t("command.group.navigation"), keywords: ["products", "produits", "منتجات"], action: () => router.push("/products") },
+    { id: "nav-deliveries", label: t("command.nav.deliveries"), icon: Truck, group: t("command.group.navigation"), keywords: ["deliveries", "livraisons", "توصيل"], action: () => router.push("/deliveries") },
+    { id: "nav-returns", label: t("command.nav.returns"), icon: RotateCcw, group: t("command.group.navigation"), keywords: ["returns", "retours", "مرتجعات"], action: () => router.push("/returns") },
+    { id: "nav-inbox", label: t("command.nav.inbox"), icon: MessageCircle, group: t("command.group.navigation"), keywords: ["inbox", "messages", "whatsapp", "رسائل"], action: () => router.push("/inbox") },
+    { id: "nav-ai", label: t("command.nav.ai"), icon: Bot, group: t("command.group.navigation"), keywords: ["ai", "agent", "intelligence", "ذكاء"], action: () => router.push("/agents") },
+    { id: "nav-analytics", label: t("command.nav.analytics"), icon: BarChart3, group: t("command.group.navigation"), keywords: ["analytics", "analytique", "إحصائيات"], action: () => router.push("/analytics") },
+    { id: "nav-accounting", label: t("command.nav.accounting"), icon: Calculator, group: t("command.group.navigation"), keywords: ["accounting", "comptabilité", "محاسبة"], action: () => router.push("/accounting") },
+    { id: "nav-settings", label: t("command.nav.settings"), icon: Settings, group: t("command.group.navigation"), keywords: ["settings", "paramètres", "إعدادات"], action: () => router.push("/settings") },
     // Actions
-    { id: "action-new-order", label: "Nouvelle commande", icon: Plus, group: "Actions rapides", keywords: ["new order", "nouvelle commande", "طلب جديد"], action: () => { router.push("/orders"); onAction?.("new-order"); } },
-    { id: "action-new-product", label: "Ajouter un produit", icon: Plus, group: "Actions rapides", keywords: ["new product", "nouveau produit", "منتج جديد"], action: () => { router.push("/products"); onAction?.("new-product"); } },
-    { id: "action-export", label: "Exporter les données", icon: FileDown, group: "Actions rapides", keywords: ["export", "csv", "excel", "تصدير"], action: () => onAction?.("export") },
-    { id: "action-ai", label: "Demander à l'IA", icon: Sparkles, group: "Actions rapides", keywords: ["ai", "ask", "question", "سؤال"], action: () => router.push("/agents") },
-  ], [router, onAction]);
+    { id: "action-new-order", label: t("command.action.newOrder"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new order", "nouvelle commande", "طلب جديد"], action: () => { router.push("/orders"); onAction?.("new-order"); } },
+    { id: "action-new-product", label: t("command.action.newProduct"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new product", "nouveau produit", "منتج جديد"], action: () => { router.push("/products"); onAction?.("new-product"); } },
+    { id: "action-export", label: t("command.action.export"), icon: FileDown, group: t("command.group.quickActions"), keywords: ["export", "csv", "excel", "تصدير"], action: () => onAction?.("export") },
+    { id: "action-ai", label: t("command.action.askAi"), icon: Sparkles, group: t("command.group.quickActions"), keywords: ["ai", "ask", "question", "سؤال"], action: () => router.push("/agents") },
+  ], [router, onAction, t]);
 
   const [search, setSearch] = React.useState("");
 
@@ -94,7 +96,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <input
               cmdk-input=""
-              placeholder="Rechercher une page ou une action..."
+              placeholder={t("command.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
@@ -124,17 +126,17 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
             ))}
             {Object.keys(grouped).length === 0 && (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                Aucun résultat pour &ldquo;{search}&rdquo;
+                {t("command.noResults", { search })}
               </div>
             )}
           </div>
           <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-[10px] text-muted-foreground">
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
-            <span>naviguer</span>
+            <span>{t("command.navigate")}</span>
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ml-2">↵</kbd>
-            <span>sélectionner</span>
+            <span>{t("command.select")}</span>
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ml-2">esc</kbd>
-            <span>fermer</span>
+            <span>{t("command.close")}</span>
           </div>
         </Command>
       </DialogContent>

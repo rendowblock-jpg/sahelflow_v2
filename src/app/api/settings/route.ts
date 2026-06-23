@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAllSettings, setSetting } from "@/lib/settings";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -19,28 +20,14 @@ const updateSchema = z.object({
  * Body: { settings: { key: value, ... } }
  * Values are coerced to strings (booleans → "true"/"false", numbers → "123").
  */
-export async function PUT(req: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await req.json();
-    const input = updateSchema.parse(body);
+export const PUT = withErrorHandler(async (req: NextRequest) => {
+  const body = await req.json();
+  const input = updateSchema.parse(body);
 
-    for (const [key, value] of Object.entries(input.settings)) {
-      await setSetting(key, value);
-    }
-
-    const settings = await getAllSettings();
-    return NextResponse.json({ settings });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: err.issues },
-        { status: 400 },
-      );
-    }
-    console.error("[PUT /api/settings]", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+  for (const [key, value] of Object.entries(input.settings)) {
+    await setSetting(key, value);
   }
-}
+
+  const settings = await getAllSettings();
+  return NextResponse.json({ settings });
+}, "PUT /api/settings");

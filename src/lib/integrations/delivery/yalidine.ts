@@ -14,6 +14,7 @@
  * Commune codes: Yalidine uses numeric commune IDs. We resolve them via the
  * /communes/ endpoint (cached in-memory for the process lifetime).
  */
+import { env } from "@/lib/env";
 import "server-only";
 
 
@@ -30,7 +31,7 @@ import type {
 import { retryFetch } from "./retry";
 
 const YALIDINE_BASE =
-  process.env.YALIDINE_API_BASE || "https://api.yalidine.app/v1";
+  env.yalidineApiBase || "https://api.yalidine.app/v1";
 
 const FETCH_TIMEOUT_MS = 15000;
 

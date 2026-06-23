@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Package, Eye, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/page-header";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import type { Product } from "@/types/domain";
 
@@ -56,26 +57,23 @@ export default async function ProductsPage() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              {lowStockCount} produit{lowStockCount > 1 ? "s" : ""} en stock faible
+              {lowStockCount > 1
+                ? t("products.lowStockAlertMany", { count: lowStockCount })
+                : t("products.lowStockAlertOne", { count: lowStockCount })}
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Pensez à réapprovisionner pour éviter les ruptures.
+              {t("products.lowStockAlertHint")}
             </p>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("products.title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("products.totalStock")}: {totalProducts} ·{" "}
-            {t("products.inventoryValue")}: {formatDZD(inventoryValue)}
-          </p>
-        </div>
-        <ProductFormDialog categories={categories} />
-      </div>
+      <PageHeader
+        title={t("products.title")}
+        description={`${t("products.totalStock")}: ${totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(inventoryValue)}`}
+        actions={<ProductFormDialog categories={categories} />}
+      />
 
       {/* Stat strip — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

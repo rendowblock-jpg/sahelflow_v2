@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/whatsapp/status — sidecar connection status. */
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   try {
     const status = await sidecar.status();
     return NextResponse.json(status);
@@ -15,7 +16,6 @@ export async function GET() {
         { status: 503 },
       );
     }
-    console.error("[GET /api/whatsapp/status]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    throw err;
   }
-}
+}, "GET /api/whatsapp/status");

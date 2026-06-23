@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Users, Eye, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/page-header";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import type { Customer } from "@/types/domain";
 
@@ -33,22 +34,18 @@ export default async function CustomersPage() {
   const stats = [
     { label: t("customers.totalCustomers"), value: String(totalCustomers), icon: Users, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
     { label: t("customers.totalSpent"), value: formatDZD(totalSpent), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: "Clients actifs", value: String(activeCount), icon: UserCheck, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
+    { label: t("customers.activeCustomers"), value: String(activeCount), icon: UserCheck, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
     { label: t("customers.atRisk"), value: String(atRiskCount), icon: AlertTriangle, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400" },
   ];
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("customers.title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            Gérez votre base de clients et suivez les risques
-          </p>
-        </div>
-        <CustomerFormDialog />
-      </div>
+      <PageHeader
+        title={t("customers.title")}
+        description={t("customers.subtitle")}
+        actions={<CustomerFormDialog />}
+      />
 
       {/* Stat strip — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -99,7 +96,7 @@ export default async function CustomersPage() {
                   <TableHead className="text-right">{t("customers.ordersCount")}</TableHead>
                   <TableHead className="text-right">{t("customers.spent")}</TableHead>
                   <TableHead>{t("customers.risk")}</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

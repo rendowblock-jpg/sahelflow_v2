@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
 /** DELETE /api/whatsapp/logout — clear auth + disconnect (next connect → fresh QR). */
-export async function DELETE() {
+export const DELETE = withErrorHandler(async () => {
   try {
     const result = await sidecar.logout();
     return NextResponse.json(result);
@@ -15,7 +16,6 @@ export async function DELETE() {
         { status: 503 },
       );
     }
-    console.error("[DELETE /api/whatsapp/logout]", err);
-    return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });
+    throw err;
   }
-}
+}, "DELETE /api/whatsapp/logout");

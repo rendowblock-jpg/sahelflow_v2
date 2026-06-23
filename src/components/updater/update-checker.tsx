@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Download, RefreshCw, CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface UpdateInfo {
   version: string;
@@ -35,6 +36,7 @@ interface UpdateInfo {
  * Updates are hosted on GitHub Releases.
  */
 export function UpdateChecker() {
+  const { t, locale } = useI18n();
   const [isTauri, setIsTauri] = useState(false);
   const [checking, setChecking] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo | null>(null);
@@ -72,15 +74,15 @@ export function UpdateChecker() {
         });
         setDialogOpen(true);
       } else if (showToast) {
-        toast.success("SahelFlow est à jour", {
-          description: "Aucune mise à jour disponible.",
+        toast.success(t("updater.upToDate"), {
+          description: t("updater.upToDateDesc"),
         });
       }
     } catch (err) {
       // Silently fail on auto-check; show error only on manual check
       if (showToast) {
-        toast.error("Vérification impossible", {
-          description: err instanceof Error ? err.message : "Erreur inconnue",
+        toast.error(t("updater.checkFailed"), {
+          description: err instanceof Error ? err.message : t("updater.unknownError"),
         });
       }
       console.warn("[updater] check failed:", err);
@@ -98,7 +100,7 @@ export function UpdateChecker() {
 
       const update = await check();
       if (!update) {
-        toast.info("La mise à jour n'est plus disponible.");
+        toast.info(t("updater.noLongerAvailable"));
         setDialogOpen(false);
         return;
       }
@@ -123,8 +125,8 @@ export function UpdateChecker() {
         }
       });
 
-      toast.success("Mise à jour installée", {
-        description: "L'application va redémarrer...",
+      toast.success(t("updater.installed"), {
+        description: t("updater.restarting"),
       });
 
       // Relaunch the app after a short delay so the user sees the toast
@@ -132,8 +134,8 @@ export function UpdateChecker() {
         void relaunch();
       }, 1500);
     } catch (err) {
-      toast.error("Échec de la mise à jour", {
-        description: err instanceof Error ? err.message : "Erreur inconnue",
+      toast.error(t("updater.installFailed"), {
+        description: err instanceof Error ? err.message : t("updater.unknownError"),
       });
     } finally {
       setDownloading(false);
@@ -157,7 +159,7 @@ export function UpdateChecker() {
         ) : (
           <RefreshCw className="h-4 w-4 mr-2" />
         )}
-        Vérifier les mises à jour
+        {t("updater.checkButton")}
       </Button>
 
       {/* Update available dialog */}
@@ -166,10 +168,10 @@ export function UpdateChecker() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Mise à jour disponible
+              {t("updater.available")}
             </DialogTitle>
             <DialogDescription>
-              Une nouvelle version de SahelFlow est disponible.
+              {t("updater.availableDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -179,7 +181,7 @@ export function UpdateChecker() {
                 <Badge variant="outline">v{updateAvailable.version}</Badge>
                 {updateAvailable.date && (
                   <span className="text-xs text-muted-foreground">
-                    {new Date(updateAvailable.date).toLocaleDateString("fr-FR")}
+                    {new Date(updateAvailable.date).toLocaleDateString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR")}
                   </span>
                 )}
               </div>
@@ -195,7 +197,7 @@ export function UpdateChecker() {
               {downloading && (
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Téléchargement...</span>
+                    <span>{t("updater.downloading")}</span>
                     <span>{downloadProgress}%</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -215,7 +217,7 @@ export function UpdateChecker() {
               onClick={() => setDialogOpen(false)}
               disabled={downloading}
             >
-              Plus tard
+              {t("updater.later")}
             </Button>
             <Button onClick={downloadAndInstall} disabled={downloading}>
               {downloading ? (
@@ -223,7 +225,7 @@ export function UpdateChecker() {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              {downloading ? "Installation..." : "Télécharger et installer"}
+              {downloading ? t("updater.installing") : t("updater.downloadInstall")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -234,6 +236,7 @@ export function UpdateChecker() {
 
 /** Compact status indicator for the settings page (shows "up to date"). */
 export function UpdaterStatus() {
+  const { t } = useI18n();
   const [isTauri, setIsTauri] = useState(false);
 
   useEffect(() => {
@@ -246,7 +249,7 @@ export function UpdaterStatus() {
   if (!isTauri) {
     return (
       <Badge variant="outline" className="text-muted-foreground">
-        Mode web — mises à jour via git pull
+        {t("updater.webMode")}
       </Badge>
     );
   }
@@ -254,7 +257,7 @@ export function UpdaterStatus() {
   return (
     <Badge variant="outline" className="gap-1.5 text-green-600">
       <CheckCircle2 className="h-3 w-3" />
-      Auto-update activé
+      {t("updater.autoUpdateEnabled")}
     </Badge>
   );
 }

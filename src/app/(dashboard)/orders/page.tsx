@@ -1,39 +1,40 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
-import { formatDZD, formatDate } from "@/lib/utils";
+import { formatDZD } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag } from "lucide-react";
+import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download } from "lucide-react";
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
-import { orderStatusStyles } from "@/lib/shared";
+import { OrdersTableClient } from "@/components/orders/orders-table-client";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Commandes — SahelFlow" };
+export const metadata: Metadata = { title: "Orders — SahelFlow" };
 export const revalidate = 30;
 
-const STATUS_FILTERS = [
-  { value: "all", label: "Toutes" },
-  { value: "pending", label: "En attente" },
-  { value: "confirmed", label: "Confirmées" },
-  { value: "shipped", label: "Expédiées" },
-  { value: "delivered", label: "Livrées" },
-  { value: "returned", label: "Retournées" },
-  { value: "cancelled", label: "Annulées" },
-] as const;
+const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = [
+  { value: "all", labelKey: "common.all" },
+  { value: "pending", labelKey: "orders.status.pending" },
+  { value: "confirmed", labelKey: "orders.status.confirmed" },
+  { value: "shipped", labelKey: "orders.status.shipped" },
+  { value: "delivered", labelKey: "orders.status.delivered" },
+  { value: "returned", labelKey: "orders.status.returned" },
+  { value: "cancelled", labelKey: "orders.status.cancelled" },
+];
 
 export default async function OrdersPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
   const { status: statusFilter } = await searchParams;
 
-  // Fetch all orders (for counts) + filtered list — include customer for display
   const where = statusFilter && statusFilter !== "all"
     ? { status: statusFilter as OrderStatus }
     : undefined;
@@ -45,13 +46,11 @@ export default async function OrdersPage({
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true } }),
   ]);
 
-  // Count by status for the tab badges
   const counts: Record<string, number> = { all: allOrders.length };
   for (const o of allOrders) {
     counts[o.status] = (counts[o.status] ?? 0) + 1;
   }
 
-  // Stat cards — upgraded with accent icons
   const activeOrders = allOrders.filter((o) =>
     ["pending", "confirmed", "shipped"].includes(o.status),
   );
@@ -60,48 +59,60 @@ export default async function OrdersPage({
     new Date(o.deliveredAt).toDateString() === new Date().toDateString(),
   );
   const todayRevenue = deliveredToday.reduce((sum, o) => sum + o.totalPrice, 0);
-  const pendingCount = allOrders.filter((o) => o.status === "pending").length;
-
-  const statItems = [
-    { label: "Commandes actives", value: String(activeOrders.length), icon: ShoppingBag, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
-    { label: "En attente", value: String(pendingCount), icon: Clock, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
-    { label: "Livrées aujourd'hui", value: String(deliveredToday.length), icon: CheckCircle2, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: "Revenu du jour", value: formatDZD(todayRevenue), icon: TrendingUp, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
-  ];
+  const pendingCount = counts["pending"] ?? 0;
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("nav.orders")}</h1>
-          <p className="text-sm text-muted-foreground">
-            Gérez toutes vos commandes en un seul endroit
-          </p>
-        </div>
-        <OrderFormDialog customers={customers} products={products} />
-      </div>
+      <PageHeader
+        title={t("nav.orders")}
+        description={t("orders.subtitle")}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/api/export/orders">
+                <Download className="mr-1.5 h-4 w-4" />
+                {t("orders.exportCSV")}
+              </Link>
+            </Button>
+            <OrderFormDialog customers={customers} products={products} />
+          </div>
+        }
+      />
 
-      {/* Stat cards — upgraded with accent icons */}
+      {/* KPI stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statItems.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
-                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <StatCard
+          label={t("orders.activeOrders")}
+          value={activeOrders.length}
+          icon={<ShoppingBag />}
+          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
+          accentIcon="text-sky-600 dark:text-sky-400"
+          style={{ animationDelay: "60ms" }}
+        />
+        <StatCard
+          label={t("orders.pendingLabel")}
+          value={pendingCount}
+          icon={<Clock />}
+          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
+          accentIcon="text-amber-600 dark:text-amber-400"
+          style={{ animationDelay: "120ms" }}
+        />
+        <StatCard
+          label={t("orders.deliveredToday")}
+          value={deliveredToday.length}
+          icon={<CheckCircle2 />}
+          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+          accentIcon="text-emerald-600 dark:text-emerald-400"
+          style={{ animationDelay: "180ms" }}
+        />
+        <StatCard
+          label={t("orders.todayRevenue")}
+          value={formatDZD(todayRevenue)}
+          icon={<TrendingUp />}
+          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
+          accentIcon="text-violet-600 dark:text-violet-400"
+          style={{ animationDelay: "240ms" }}
+        />
       </div>
 
       {/* Status filter tabs */}
@@ -110,14 +121,10 @@ export default async function OrdersPage({
           {STATUS_FILTERS.map((filter) => (
             <TabsTrigger key={filter.value} value={filter.value} asChild>
               <Link
-                href={
-                  filter.value === "all"
-                    ? "/orders"
-                    : `/orders?status=${filter.value}`
-                }
+                href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
                 className="flex items-center gap-1.5"
               >
-                {filter.label}
+                {t(filter.labelKey)}
                 {counts[filter.value] !== undefined && (
                   <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
                     {counts[filter.value]}
@@ -129,7 +136,7 @@ export default async function OrdersPage({
         </TabsList>
       </Tabs>
 
-      {/* Orders table — upgraded with shared status styles */}
+      {/* Orders table with bulk selection */}
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {filteredOrders.length === 0 ? (
@@ -137,73 +144,19 @@ export default async function OrdersPage({
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
                 <Package className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Aucune commande</h3>
+              <h3 className="text-lg font-semibold mb-1">{t("orders.noOrders")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
-                Les commandes apparaîtront ici une fois reçues via WhatsApp ou saisie manuelle.
+                {t("orders.noOrdersDesc")}
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    <th className="px-4 py-3">N° Commande</th>
-                    <th className="px-4 py-3">Client</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Articles</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Wilaya</th>
-                    <th className="px-4 py-3 text-right">Total</th>
-                    <th className="px-4 py-3">Statut</th>
-                    <th className="px-4 py-3 hidden lg:table-cell">Date</th>
-                    <th className="px-4 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredOrders.map((order) => {
-                    const customer = order.customer;
-                    const statusStyle = orderStatusStyles[order.status as keyof typeof orderStatusStyles];
-                    return (
-                      <tr key={order.id} className="hover:bg-accent/50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-sm font-medium">
-                          {order.orderNumber}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium">{customer?.name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">{order.phone}</div>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground">
-                          {order.items.length} article{order.items.length > 1 ? "s" : ""}
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell text-sm">
-                          {order.wilaya}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-sm tabular-nums">
-                          {formatDZD(order.totalPrice)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {statusStyle ? (
-                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                              <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                              {statusStyle.label}
-                            </span>
-                          ) : (
-                            <Badge variant="outline">{order.status}</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDate(order.createdAt, "fr")}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/orders/${order.id}`}>
-                              Détails
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-3 p-4">
+              <OrdersTableClient orders={filteredOrders as unknown as Array<{
+                id: string; orderNumber: string; status: string; totalPrice: number;
+                wilaya: string; phone: string; createdAt: Date;
+                items: Array<{ id: string }>;
+                customer: { name: string | null; phone: string | null } | null;
+              }>} locale={locale} />
             </div>
           )}
         </CardContent>

@@ -1,0 +1,61 @@
+"use client";
+
+/**
+ * RadialGauge — single-value semicircular gauge for KPIs like delivery
+ * rate, confirmation rate, stock health. Shows the percentage in the
+ * center and a colored arc proportional to the value.
+ */
+import { RadialBar, RadialBarChart, PolarAngleAxis } from "recharts";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+
+interface RadialGaugeProps {
+  /** 0–100 */
+  value: number;
+  config: ChartConfig;
+  dataKey?: string;
+  height?: number;
+  centerLabel?: string;
+  colorVar?: string;
+}
+
+export function RadialGauge({
+  value,
+  config,
+  dataKey = "value",
+  height = 220,
+  centerLabel,
+  colorVar,
+}: RadialGaugeProps) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const data = [{ [dataKey]: clamped }];
+
+  return (
+    <div className="relative" style={{ height }}>
+      <ChartContainer config={config} style={{ height }} className="w-full">
+        <RadialBarChart
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+          innerRadius={72}
+          outerRadius={100}
+        >
+          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+          <RadialBar
+            dataKey={dataKey}
+            background={{ fill: "var(--muted)", opacity: 0.5 }}
+            cornerRadius={12}
+            fill={colorVar ?? `var(--color-${dataKey})`}
+            isAnimationActive
+            animationDuration={700}
+          />
+        </RadialBarChart>
+      </ChartContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-bold tabular-nums">{Math.round(clamped)}%</span>
+        {centerLabel && (
+          <span className="mt-1 text-xs text-muted-foreground">{centerLabel}</span>
+        )}
+      </div>
+    </div>
+  );
+}

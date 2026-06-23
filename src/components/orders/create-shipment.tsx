@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface CreateShipmentProps {
   orderId: string;
@@ -41,6 +42,7 @@ interface CreateShipmentProps {
 
 export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmentProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [provider, setProvider] = useState<string>("yalidine");
   const [creating, setCreating] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -61,12 +63,12 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; delivery?: { trackingNumber: string }; labelUrl?: string };
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Échec de la création de l'expédition");
+        throw new Error(data.error ?? t("orders.shipment.createFailed"));
       }
-      setResult(`Expédition créée — suivi: ${data.delivery?.trackingNumber ?? ""}`);
+      setResult(t("orders.shipment.createdResult", { tracking: data.delivery?.trackingNumber ?? "" }));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Échec");
+      setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
     } finally {
       setCreating(false);
     }
@@ -84,12 +86,12 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; status?: string };
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Échec de la synchronisation");
+        throw new Error(data.error ?? t("orders.shipment.syncFailed"));
       }
-      setResult(`Suivi mis à jour — statut: ${data.status ?? ""}`);
+      setResult(t("orders.shipment.updatedResult", { status: data.status ?? "" }));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Échec");
+      setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
     } finally {
       setSyncing(false);
     }
@@ -100,12 +102,12 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Truck className="h-4 w-4" />
-          Expédition
+          {t("orders.shipment.title")}
         </CardTitle>
         <CardDescription>
           {delivery?.trackingNumber
-            ? "Suivre ou mettre à jour le statut de l'expédition"
-            : "Créer une expédition avec un transporteur"}
+            ? t("orders.shipment.descTracking")
+            : t("orders.shipment.descCreate")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -115,7 +117,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             {canCreate ? (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="provider">Transporteur</Label>
+                  <Label htmlFor="provider">{t("orders.shipment.carrier")}</Label>
                   <Select value={provider} onValueChange={setProvider}>
                     <SelectTrigger id="provider">
                       <SelectValue />
@@ -127,19 +129,19 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Configurez vos identifiants dans Paramètres → Intégrations.
+                    {t("orders.shipment.configureCredentialsHint")}
                   </p>
                 </div>
                 <Button onClick={handleCreate} disabled={creating}>
                   {creating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                      Création...
+                      {t("orders.shipment.creating")}
                     </>
                   ) : (
                     <>
                       <Truck className="h-4 w-4 mr-1.5" />
-                      Créer l&apos;expédition
+                      {t("orders.shipment.create")}
                     </>
                   )}
                 </Button>
@@ -147,10 +149,10 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             ) : (
               <p className="text-sm text-muted-foreground">
                 {orderStatus === "draft"
-                  ? "La commande doit être confirmée avant l'expédition."
+                  ? t("orders.shipment.mustConfirmFirst")
                   : orderStatus === "shipped" || orderStatus === "delivered"
-                    ? "Expédition déjà créée (voir ci-dessous)."
-                    : "Statut de commande non expédiable."}
+                    ? t("orders.shipment.alreadyCreated")
+                    : t("orders.shipment.notShippable")}
               </p>
             )}
           </>
@@ -161,15 +163,15 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
           <div className="space-y-3">
             <div className="rounded-lg border p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Transporteur</span>
+                <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
                 <span className="font-medium capitalize">{delivery.provider}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Suivi</span>
+                <span className="text-muted-foreground">{t("orders.shipment.tracking")}</span>
                 <span className="font-mono text-xs">{delivery.trackingNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Statut</span>
+                <span className="text-muted-foreground">{t("common.status")}</span>
                 <span className="capitalize">{delivery.status.replace(/_/g, " ")}</span>
               </div>
             </div>
@@ -177,12 +179,12 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
               {syncing ? (
                 <>
                   <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                  Synchronisation...
+                  {t("orders.shipment.syncing")}
                 </>
               ) : (
                 <>
                   <RefreshCw className="h-3 w-3 mr-1.5" />
-                  Synchroniser le suivi
+                  {t("orders.shipment.syncTracking")}
                 </>
               )}
             </Button>
