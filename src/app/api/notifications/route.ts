@@ -1,70 +1,103 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
-/** GET /api/notifications — list notifications (unread first, then by date). */
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/notifications — Compute real-time notifications from recent events.
+ *
+ * Instead of a dedicated Notification table, we derive notifications from:
+ *  1. New orders in the last 24h (unconfirmed)
+ *  2. Recent deliveries status changes
+ *  3. Low-stock products
+ *
+ * This is a hybrid approach — lightweight, zero schema migration, and always up-to-date.
+ */
+export async function GET() {
   try {
-    const unreadOnly = req.nextUrl.searchParams.get("unreadOnly") === "true";
-    const limit = Math.min(
-      Number(req.nextUrl.searchParams.get("limit") ?? "50"),
-      200,
-    );
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const notifications = await db.notification.findMany({
-      where: unreadOnly ? { read: false } : {},
-      orderBy: [{ read: "asc" }, { createdAt: "desc" }],
-      take: limit,
+    // 1. New orders (pending) in last 24h
+    const recentOrders = await db.order.findMany({
+      where: {
+        createdAt: { gte: oneDayAgo },
+        status: { in: ["pending", "draft"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: { id: true, orderNumber: true, createdAt: true, status: true },
     });
 
-    const unreadCount = await db.notification.count({ where: { read: false } });
+    // 2. Recent deliveries (status updates in last 24h)
+    const recentDeliveries = await db.delivery.findMany({
+      where: { updatedAt: { gte: oneDayAgo } },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      select: { id: true, trackingNumber: true, status: true, updatedAt: true },
+    });
 
-    return NextResponse.json({ notifications, unreadCount });
-  } catch (err) {
-    console.error("[GET /api/notifications]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
-  }
-}
+    // 3. Low-stock products
+    const lowStockProducts = await db.product.findMany({
+      where: { stock: { lte: 5 }, isActive: true },
+      take: 5,
+      select: { id: true, name: true, stock: true },
+    });
 
-/** POST /api/notifications — mark a notification as read (body: { id } | { markAll: true }). */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
+    // Build notification list
+    const notifications = [];
 
-    if (body.markAll === true) {
-      const result = await db.notification.updateMany({
-        where: { read: false },
-        data: { read: true },
+    for (const order of recentOrders) {
+      const minutesAgo = Math.round((now.getTime() - order.createdAt.getTime()) / 60000);
+      notifications.push({
+        id: `order-${order.id}`,
+        type: "order" as const,
+        title: `${order.orderNumber}`,
+        body: order.status,
+        time: formatRelativeTime(minutesAgo),
+        read: false,
       });
-      return NextResponse.json({ ok: true, marked: result.count });
     }
 
-    const id = body.id as string | undefined;
-    if (!id) {
-      return NextResponse.json({ error: "id required (or markAll: true)" }, { status: 400 });
+    for (const delivery of recentDeliveries) {
+      const minutesAgo = Math.round((now.getTime() - delivery.updatedAt.getTime()) / 60000);
+      notifications.push({
+        id: `delivery-${delivery.id}`,
+        type: "delivery" as const,
+        title: delivery.trackingNumber ?? "Delivery",
+        body: delivery.status,
+        time: formatRelativeTime(minutesAgo),
+        read: minutesAgo > 60, // Mark as read if older than 1h
+      });
     }
 
-    await db.notification.update({
-      where: { id },
-      data: { read: true },
+    for (const product of lowStockProducts) {
+      notifications.push({
+        id: `stock-${product.id}`,
+        type: "stock" as const,
+        title: product.name,
+        body: `Stock: ${product.stock}`,
+        time: "",
+        read: false,
+      });
+    }
+
+    // Sort by unread first, then newest
+    notifications.sort((a, b) => {
+      if (a.read !== b.read) return a.read ? 1 : -1;
+      return 0;
     });
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("[POST /api/notifications]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+
+    return NextResponse.json({ notifications: notifications.slice(0, 10) });
+  } catch (error) {
+    console.error("GET /api/notifications error:", error);
+    return NextResponse.json({ notifications: [] });
   }
 }
 
-/** DELETE /api/notifications — delete all read notifications (or all if ?all=true). */
-export async function DELETE(req: NextRequest) {
-  try {
-    const all = req.nextUrl.searchParams.get("all") === "true";
-    const where = all ? {} : { read: true };
-    const result = await db.notification.deleteMany({ where });
-    return NextResponse.json({ ok: true, deleted: result.count });
-  } catch (err) {
-    console.error("[DELETE /api/notifications]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
-  }
+function formatRelativeTime(minutesAgo: number): string {
+  if (minutesAgo < 1) return "now";
+  if (minutesAgo < 60) return `${minutesAgo}m`;
+  const hours = Math.round(minutesAgo / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(hours / 24);
+  return `${days}d`;
 }

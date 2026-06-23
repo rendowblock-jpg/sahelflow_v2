@@ -63,9 +63,13 @@ export default async function DashboardPage() {
     },
   ];
 
-  // Get current hour for greeting
+  // Get current hour for i18n greeting
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const greeting = hour < 12
+    ? t("dashboard.greetingMorning")
+    : hour < 18
+      ? t("dashboard.greetingAfternoon")
+      : t("dashboard.greetingEvening");
 
   return (
     <div className="space-y-6 p-6">
@@ -75,7 +79,7 @@ export default async function DashboardPage() {
           {greeting} 👋
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {t("app.tagline")} — Voici un aperçu de votre activité
+          {t("app.tagline")} — {t("dashboard.activityOverview")}
         </p>
       </div>
 
@@ -104,7 +108,7 @@ export default async function DashboardPage() {
                     <span className={isPositive ? "text-emerald-600" : "text-red-600"}>
                       {Math.abs(stat.trend)}%
                     </span>
-                    <span className="text-muted-foreground">vs hier</span>
+                    <span className="text-muted-foreground">{t("dashboard.vsYesterday")}</span>
                   </div>
                 )}
               </CardContent>
@@ -128,7 +132,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold tabular-nums">{stats.pendingDeliveries}</p>
-                <p className="text-xs text-muted-foreground">en attente</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.pending")}</p>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/deliveries">{t("nav.delivery")}</Link>
@@ -150,7 +154,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold tabular-nums">{stats.lowStockProducts}</p>
-                <p className="text-xs text-muted-foreground">stock faible</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.lowStock")}</p>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/products">{t("nav.products")}</Link>
@@ -163,7 +167,7 @@ export default async function DashboardPage() {
       {/* Recent orders — upgraded with shared status styles */}
       <Card className="animate-fade-up" style={{ animationDelay: "360ms" }}>
         <CardHeader>
-          <CardTitle className="text-base">Commandes récentes</CardTitle>
+          <CardTitle className="text-base">{t("dashboard.recentOrders")}</CardTitle>
         </CardHeader>
         <CardContent>
           {recentOrders.length === 0 ? (
@@ -171,9 +175,9 @@ export default async function DashboardPage() {
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
                 <ShoppingCart className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Aucune commande</h3>
+              <h3 className="text-lg font-semibold mb-1">{t("dashboard.noOrders")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
-                Les commandes apparaîtront ici une fois reçues via WhatsApp.
+                {t("dashboard.ordersWillAppear")}
               </p>
               <Button asChild>
                 <Link href="/orders">{t("nav.orders")}</Link>
@@ -183,6 +187,10 @@ export default async function DashboardPage() {
             <div className="space-y-2">
               {recentOrders.map((order) => {
                 const statusStyle = orderStatusStyles[order.status as keyof typeof orderStatusStyles];
+                const itemCount = order.items.length;
+                const itemLabel = itemCount > 1
+                  ? t("dashboard.itemsPlural").replace("{n}", String(itemCount))
+                  : t("dashboard.items").replace("{n}", String(itemCount));
                 return (
                   <div
                     key={order.id}
@@ -193,7 +201,7 @@ export default async function DashboardPage() {
                       <div>
                         <p className="text-sm font-medium">{order.customer.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {order.items.length} article{order.items.length > 1 ? "s" : ""} · {order.wilaya}
+                          {itemLabel} · {order.wilaya}
                         </p>
                       </div>
                     </div>

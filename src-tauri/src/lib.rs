@@ -19,6 +19,81 @@ use std::net::TcpStream;
 #[cfg(not(debug_assertions))]
 use std::time::{Duration, Instant};
 
+#[tauri::command]
+fn get_machine_id() -> String {
+    // Get unique Machine ID (on Windows: Win32_ComputerSystemProduct UUID or MachineGuid registry)
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(output) = std::process::Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg("(Get-CimInstance Win32_ComputerSystemProduct).UUID")
+            .output()
+        {
+            let uuid = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !uuid.is_empty() && uuid != "00000000-0000-0000-0000-000000000000" {
+                return uuid;
+            }
+        }
+        // Registry fallback
+        if let Ok(output) = std::process::Command::new("reg")
+            .args(&["query", "HKLM\\SOFTWARE\\Microsoft\\Cryptography", "/v", "MachineGuid"])
+            .output()
+        {
+            let out = String::from_utf8_lossy(&output.stdout);
+            for line in out.lines() {
+                if line.contains("MachineGuid") {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if let Some(guid) = parts.last() {
+                        if !guid.is_empty() {
+                            return guid.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(output) = std::process::Command::new("ioreg")
+            .args(&["-rd1", "-c", "IOPlatformExpertDevice"])
+            .output()
+        {
+            let out = String::from_utf8_lossy(&output.stdout);
+            for line in out.lines() {
+                if line.contains("IOPlatformUUID") {
+                    let parts: Vec<&str> = line.split("=").collect();
+                    if let Some(uuid) = parts.last() {
+                        let trimmed = uuid.trim().trim_matches('"');
+                        if !trimmed.is_empty() {
+                            return trimmed.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(id) = std::fs::read_to_string("/etc/machine-id") {
+            let trimmed = id.trim().to_string();
+            if !trimmed.is_empty() {
+                return trimmed;
+            }
+        }
+        if let Ok(id) = std::fs::read_to_string("/var/lib/dbus/machine-id") {
+            let trimmed = id.trim().to_string();
+            if !trimmed.is_empty() {
+                return trimmed;
+            }
+        }
+    }
+
+    "DEV-MOCK-MACHINE-ID-FALLBACK".to_string()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -38,12 +113,13 @@ pub fn run() {
             })
             .build(),
         )
+        .invoke_handler(tauri::generate_handler![get_machine_id])
         .setup(|_app| {
             // Only spawn services in release builds. In dev, the user runs
             // `bun run dev` + `bun run sidecar` manually (hot reload).
             #[cfg(not(debug_assertions))]
             {
-                if let Err(e) = spawn_services(app) {
+                if let Err(e) = spawn_services(_app) {
                     eprintln!("[sahelflow] service spawn error: {e}");
                 }
             }

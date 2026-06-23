@@ -1,0 +1,12 @@
+{
+  "shops": [
+    {
+      "id": "default",
+      "name": "Ma Boutique",
+      "dbPath": "data/shops/dev.db",
+      "icon": "🏪",
+      "createdAt": "2026-06-22T01:47:59.729Z"
+    }
+  ],
+  "activeShopId": "default"
+}

@@ -24,14 +24,13 @@ export default async function StorefrontsPage() {
             {t("nav.storefronts")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Créez et gérez vos boutiques en ligne (COD). Chaque boutique a sa
-            propre page publique avec votre sélection de produits.
+            {t("storefronts.subtitle")}
           </p>
         </div>
         <Button asChild>
           <Link href="/storefronts/new">
             <Plus className="h-4 w-4 mr-2" />
-            Nouvelle boutique
+            {t("storefronts.newShop")}
           </Link>
         </Button>
       </div>
@@ -40,15 +39,14 @@ export default async function StorefrontsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Store className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucune boutique</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("storefronts.noShop")}</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md">
-              Créez votre première boutique en ligne. Vos clients pourront
-              commander en cash à la livraison via une page publique simple.
+              {t("storefronts.noShopDesc")}
             </p>
             <Button asChild>
               <Link href="/storefronts/new">
                 <Plus className="h-4 w-4 mr-2" />
-                Créer une boutique
+                {t("storefronts.createShop")}
               </Link>
             </Button>
           </CardContent>

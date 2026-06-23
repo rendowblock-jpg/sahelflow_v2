@@ -16,6 +16,7 @@ export const statsService = {
       ordersToday,
       ordersYesterday,
       revenueToday,
+      revenueYesterday,
       newCustomersToday,
       activeConversations,
       pendingDeliveries,
@@ -29,6 +30,13 @@ export const statsService = {
         where: { createdAt: { gte: startOfDay }, status: { not: "cancelled" } },
         _sum: { totalPrice: true },
       }),
+      ctx.prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfYesterday, lt: startOfDay },
+          status: { not: "cancelled" },
+        },
+        _sum: { totalPrice: true },
+      }),
       ctx.prisma.customer.count({ where: { createdAt: { gte: startOfDay } } }),
       ctx.prisma.conversation.count({ where: { unreadCount: { gt: 0 } } }),
       ctx.prisma.delivery.count({
@@ -40,16 +48,20 @@ export const statsService = {
     ]);
 
     const todayRev = revenueToday._sum.totalPrice ?? 0;
+    const yesterdayRev = revenueYesterday._sum.totalPrice ?? 0;
 
     // Calculate trends (avoid division by zero)
     const ordersTrend =
       ordersYesterday === 0 ? 0 : Math.round(((ordersToday - ordersYesterday) / ordersYesterday) * 100);
 
+    const revenueTrend =
+      yesterdayRev === 0 ? 0 : Math.round(((todayRev - yesterdayRev) / yesterdayRev) * 100);
+
     return {
       ordersToday,
       ordersTrend,
       revenueToday: todayRev,
-      revenueTrend: 0, // TODO: fetch yesterday's revenue for trend
+      revenueTrend,
       newCustomers: newCustomersToday,
       activeConversations,
       pendingDeliveries,

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { formatDZD } from "@/lib/utils";
+import { getI18n } from "@/lib/i18n-server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RevenueChart } from "@/components/charts/revenue-chart";
 import { StatusPieChart } from "@/components/charts/status-pie-chart";
@@ -20,18 +21,21 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
   cancelled: "#6b7280",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Brouillon",
-  pending: "En attente",
-  confirmed: "Confirmée",
-  shipped: "Expédiée",
-  delivered: "Livrée",
-  returned: "Retournée",
-  refused: "Refusée",
-  cancelled: "Annulée",
+/** Map status keys to i18n keys */
+const STATUS_I18N_KEYS: Record<string, string> = {
+  draft: "orders.status.draft",
+  pending: "orders.status.pending",
+  confirmed: "orders.status.confirmed",
+  shipped: "orders.status.shipped",
+  delivered: "orders.status.delivered",
+  returned: "orders.status.returned",
+  refused: "orders.status.refused",
+  cancelled: "orders.status.cancelled",
 };
 
 export default async function AnalyticsPage() {
+  const { t, locale } = await getI18n();
+
   // Fetch data for charts
   const [orders] = await Promise.all([
     db.order.findMany({
@@ -49,6 +53,9 @@ export default async function AnalyticsPage() {
     return date;
   });
 
+  // Use locale-aware date formatting
+  const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
+
   const revenueByDay = last7Days.map((date) => {
     const nextDate = new Date(date);
     nextDate.setDate(nextDate.getDate() + 1);
@@ -57,19 +64,19 @@ export default async function AnalyticsPage() {
     );
     const revenue = dayOrders.reduce((sum, o) => sum + o.totalPrice, 0);
     return {
-      day: date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
+      day: date.toLocaleDateString(dateLocale, { weekday: "short", day: "numeric" }),
       revenue,
       orders: dayOrders.length,
     };
   });
 
-  // Orders by status
+  // Orders by status — using i18n labels
   const statusCounts: Record<string, number> = {};
   for (const order of orders) {
     statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1;
   }
   const statusData = Object.entries(statusCounts).map(([status, count]) => ({
-    name: STATUS_LABELS[status] ?? status,
+    name: t(STATUS_I18N_KEYS[status] ?? status),
     value: count,
     color: ORDER_STATUS_COLORS[status] ?? "#94a3b8",
   }));
@@ -100,18 +107,18 @@ export default async function AnalyticsPage() {
   const deliveryRate = totalOrders > 0 ? Math.round((deliveredCount / totalOrders) * 100) : 0;
 
   const summaryStats = [
-    { label: "Revenu total", value: formatDZD(totalRevenue), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: "Commandes", value: String(totalOrders), icon: ShoppingCart, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
-    { label: "Valeur moyenne", value: formatDZD(avgOrderValue), icon: Package, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
-    { label: "Taux de livraison", value: `${deliveryRate}%`, icon: Users, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
+    { label: t("analytics.totalRevenue"), value: formatDZD(totalRevenue), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
+    { label: t("nav.orders"), value: String(totalOrders), icon: ShoppingCart, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
+    { label: t("analytics.avgValue"), value: formatDZD(avgOrderValue), icon: Package, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
+    { label: t("analytics.deliveryRate"), value: `${deliveryRate}%`, icon: Users, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
   ];
 
   return (
     <div className="space-y-6 p-6">
       <div className="animate-fade-up">
-        <h1 className="text-2xl font-bold tracking-tight">Analytique</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("nav.analytics")}</h1>
         <p className="text-sm text-muted-foreground">
-          Vue d&apos;ensemble de votre activité
+          {t("analytics.subtitle")}
         </p>
       </div>
 
@@ -144,7 +151,7 @@ export default async function AnalyticsPage() {
             <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15">
               <Activity className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            Revenu des 7 derniers jours
+            {t("analytics.revenueLast7")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -160,7 +167,7 @@ export default async function AnalyticsPage() {
               <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 dark:bg-violet-500/15">
                 <PieChart className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
               </div>
-              Commandes par statut
+              {t("analytics.ordersByStatus")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -175,32 +182,37 @@ export default async function AnalyticsPage() {
               <div className="flex size-7 items-center justify-center rounded-lg bg-sky-500/10 dark:bg-sky-500/15">
                 <BarChart3 className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
               </div>
-              Top produits (par revenu)
+              {t("analytics.topProductsByRevenue")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topProducts.length > 0 ? (
               <div className="space-y-3">
-                {topProducts.map((product, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                        {i + 1}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {product.count} vendu{product.count > 1 ? "s" : ""}
-                        </p>
+                {topProducts.map((product, i) => {
+                  const soldLabel = product.count > 1
+                    ? t("analytics.soldCountPlural").replace("{n}", String(product.count))
+                    : t("analytics.soldCount").replace("{n}", String(product.count));
+                  return (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold">
+                          {i + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {soldLabel}
+                          </p>
+                        </div>
                       </div>
+                      <span className="text-sm font-medium tabular-nums">{formatDZD(product.revenue)}</span>
                     </div>
-                    <span className="text-sm font-medium tabular-nums">{formatDZD(product.revenue)}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className='flex items-center justify-center h-[300px] text-muted-foreground text-sm'>
-                Aucune donnée
+                {t("analytics.noData")}
               </div>
             )}
           </CardContent>

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
           unitPrice: i.unitPrice,
         })),
         totalPrice: order.totalPrice,
-        weight: 1, // TODO: calculate from product weights (not yet in schema)
+        weight: Math.max(1, order.items.reduce((sum, i) => sum + i.quantity, 0)), // Estimate: 1kg per unit, minimum 1kg
         notes: order.notes ?? undefined,
       },
       creds,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error ?? "Échec de la création de l'expédition" },
+        { error: result.error ?? "Failed to create shipment" },
         { status: 502 },
       );
     }

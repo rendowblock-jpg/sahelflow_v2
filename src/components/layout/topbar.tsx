@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useI18n } from "@/hooks/use-i18n";
 import { useShopStore } from "@/stores/shop-store";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  ShoppingCart,
+  Truck,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
@@ -40,6 +43,30 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "ar", label: "العربية", flag: "🇩🇿" },
   { value: "en", label: "English", flag: "🇬🇧" },
 ];
+
+/** Notification shape from the API. */
+interface Notification {
+  id: string;
+  type: "order" | "delivery" | "stock" | "info";
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+}
+
+const NOTIFICATION_ICONS: Record<string, typeof ShoppingCart> = {
+  order: ShoppingCart,
+  delivery: Truck,
+  stock: Package,
+  info: Bell,
+};
+
+const NOTIFICATION_COLORS: Record<string, string> = {
+  order: "bg-primary",
+  delivery: "bg-emerald-500",
+  stock: "bg-amber-500",
+  info: "bg-sky-500",
+};
 
 interface TopbarProps {
   onCommandPaletteOpen?: () => void;
@@ -53,11 +80,39 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
   const setActiveShop = useShopStore((s) => s.setActiveShop);
   const loadShops = useShopStore((s) => s.loadShops);
 
+  // Real notification state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+
   // Load the shop list + active shop ID from the API on mount
   useEffect(() => {
     void loadShops();
   }, [loadShops]);
 
+  // Load real notifications from API
+  const loadNotifications = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications ?? []);
+      }
+    } catch {
+      // Silently fail — notifications are non-critical
+    } finally {
+      setNotifLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadNotifications();
+    // Poll every 60 seconds for new notifications
+    const interval = setInterval(() => void loadNotifications(), 60_000);
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
 
   return (
@@ -83,7 +138,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
             <Button variant="ghost" className="gap-2 px-2">
               <Store className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium hidden sm:inline">
-                {loaded ? (activeShop?.name ?? "Sélectionner") : "Chargement…"}
+                {loaded ? (activeShop?.name ?? t("topbar.selectShop")) : t("topbar.loading")}
               </span>
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </Button>
@@ -115,7 +170,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
           className="hidden sm:flex flex-1 max-w-md items-center gap-3 h-9 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted/80 hover:border-border/80 transition-colors cursor-pointer"
         >
           <Search className="size-4 shrink-0" />
-          <span className="flex-1 text-left truncate">Rechercher...</span>
+          <span className="flex-1 text-left truncate">{t("topbar.searchPlaceholder")}</span>
           <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
             <Command className="size-2.5" />K
           </kbd>
@@ -157,50 +212,68 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
         {/* Theme toggle */}
         <ThemeToggle />
 
-        {/* Notifications */}
+        {/* Notifications — real data */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="size-8 relative">
               <Bell className="size-4" />
-              <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white animate-pulse-subtle">
-                3
-              </span>
-              <span className="sr-only">Notifications</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white animate-pulse-subtle">
+                  {unreadCount}
+                </span>
+              )}
+              <span className="sr-only">{t("common.notifications")}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 shadow-elevated">
             <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Notifications</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5">3 nouvelles</Badge>
+              <span>{t("common.notifications")}</span>
+              {unreadCount > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5">
+                  {t("topbar.newNotifications").replace("{n}", String(unreadCount))}
+                </Badge>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                <div className="flex items-center gap-2 w-full">
-                  <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                  <span className="text-sm font-medium flex-1">Nouvelle commande #2847</span>
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Bell className="h-6 w-6 text-muted-foreground/40 mb-2" />
+                  <p className="text-xs text-muted-foreground">
+                    {t("topbar.noNotifications")}
+                  </p>
                 </div>
-                <span className="text-xs text-muted-foreground pl-4">Il y a 5 minutes</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                <div className="flex items-center gap-2 w-full">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-sm font-medium flex-1">Livraison confirmée — Alger Centre</span>
-                </div>
-                <span className="text-xs text-muted-foreground pl-4">Il y a 23 minutes</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                <div className="flex items-center gap-2 w-full">
-                  <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
-                  <span className="text-sm font-medium flex-1">Alerte stock faible</span>
-                </div>
-                <span className="text-xs text-muted-foreground pl-4">Il y a 1 heure</span>
-              </DropdownMenuItem>
+              ) : (
+                notifications.slice(0, 5).map((notif) => {
+                  const IconComp = NOTIFICATION_ICONS[notif.type] ?? Bell;
+                  const dotColor = NOTIFICATION_COLORS[notif.type] ?? "bg-primary";
+                  return (
+                    <DropdownMenuItem
+                      key={notif.id}
+                      className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        {!notif.read && (
+                          <span className={`h-2 w-2 rounded-full ${dotColor} shrink-0`} />
+                        )}
+                        <span className={`text-sm font-medium flex-1 ${notif.read ? "text-muted-foreground" : ""}`}>
+                          {notif.title}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground pl-4">{notif.time}</span>
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-center justify-center text-primary text-sm cursor-pointer">
-              Voir toutes les notifications
-            </DropdownMenuItem>
+            {notifications.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-center justify-center text-primary text-sm cursor-pointer">
+                  {t("topbar.viewAllNotifications")}
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -217,30 +290,30 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 shadow-elevated">
             <DropdownMenuLabel className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">Utilisateur</span>
+              <span className="text-sm font-medium">{t("topbar.user")}</span>
               <span className="text-xs text-muted-foreground font-normal">SahelFlow</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem className="cursor-pointer">
                 <User className="mr-2 size-4" />
-                Profil
+                {t("topbar.profile")}
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" asChild>
                 <Link href="/settings">
                   <Settings className="mr-2 size-4" />
-                  Paramètres
+                  {t("nav.settings")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">
                 <HelpCircle className="mr-2 size-4" />
-                Aide & Support
+                {t("topbar.helpSupport")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" className="cursor-pointer">
               <LogOut className="mr-2 size-4" />
-              Déconnexion
+              {t("topbar.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

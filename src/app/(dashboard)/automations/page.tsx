@@ -3,35 +3,37 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Bot, Zap, Clock, CheckCircle2, Plus } from "lucide-react";
+import { Bot, Zap, Clock, CheckCircle2 } from "lucide-react";
+import { AutomationActions } from "./automation-actions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Automatisations — SahelFlow" };
 export const dynamic = "force-dynamic";
 
-const TRIGGER_LABELS: Record<string, string> = {
-  "order.created": "Commande créée",
-  "order.confirmed": "Commande confirmée",
-  "order.shipped": "Commande expédiée",
-  "order.delivered": "Commande livrée",
-  "order.returned": "Commande retournée",
-  "customer.created": "Client créé",
-  "message.received": "Message reçu",
-  "stock.low": "Stock faible",
+/** i18n keys for trigger events */
+const TRIGGER_I18N: Record<string, string> = {
+  "order.created": "automations.triggers.orderCreated",
+  "order.confirmed": "automations.triggers.orderConfirmed",
+  "order.shipped": "automations.triggers.orderShipped",
+  "order.delivered": "automations.triggers.orderDelivered",
+  "order.returned": "automations.triggers.orderReturned",
+  "customer.created": "automations.triggers.customerCreated",
+  "message.received": "automations.triggers.messageReceived",
+  "stock.low": "automations.triggers.stockLow",
 };
 
-const ACTION_LABELS: Record<string, string> = {
-  "send_whatsapp": "Envoyer WhatsApp",
-  "create_order": "Créer commande",
-  "update_status": "Mettre à jour le statut",
-  "send_notification": "Envoyer notification",
-  "tag_customer": "Taguer le client",
+/** i18n keys for actions */
+const ACTION_I18N: Record<string, string> = {
+  "send_whatsapp": "automations.actions.sendWhatsapp",
+  "create_order": "automations.actions.createOrder",
+  "update_status": "automations.actions.updateStatus",
+  "send_notification": "automations.actions.sendNotification",
+  "tag_customer": "automations.actions.tagCustomer",
 };
 
 export default async function AutomationsPage() {
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
 
   const automations = await db.automation.findMany({
     orderBy: { createdAt: "desc" },
@@ -41,36 +43,36 @@ export default async function AutomationsPage() {
   const totalRuns = automations.reduce((sum, a) => sum + a.runCount, 0);
 
   const stats = [
-    { label: "Total automatisations", value: String(automations.length), icon: Bot },
-    { label: "Actives", value: String(activeCount), icon: Zap },
-    { label: "Exécutions totales", value: String(totalRuns), icon: CheckCircle2 },
+    { label: t("automations.total"), value: String(automations.length), icon: Bot },
+    { label: t("common.active"), value: String(activeCount), icon: Zap },
+    { label: t("automations.totalRuns"), value: String(totalRuns), icon: CheckCircle2 },
   ];
 
   // Pre-built recipe templates
   const recipes = [
     {
-      name: "Confirmation automatique",
+      nameKey: "automations.recipes.autoConfirm",
       trigger: "order.created",
       action: "send_whatsapp",
-      description: "Envoie un message WhatsApp de confirmation quand une commande est créée",
+      descKey: "automations.recipes.autoConfirmDesc",
     },
     {
-      name: "Suivi de livraison",
+      nameKey: "automations.recipes.deliveryTracking",
       trigger: "order.shipped",
       action: "send_whatsapp",
-      description: "Notifie le client avec le numéro de suivi quand la commande est expédiée",
+      descKey: "automations.recipes.deliveryTrackingDesc",
     },
     {
-      name: "Alerte stock faible",
+      nameKey: "automations.recipes.lowStockAlert",
       trigger: "stock.low",
       action: "send_notification",
-      description: "Crée une notification quand un produit atteint son seuil de stock faible",
+      descKey: "automations.recipes.lowStockAlertDesc",
     },
     {
-      name: "Remerciement post-livraison",
+      nameKey: "automations.recipes.postDeliveryThanks",
       trigger: "order.delivered",
       action: "send_whatsapp",
-      description: "Envoie un message de remerciement après la livraison",
+      descKey: "automations.recipes.postDeliveryThanksDesc",
     },
   ];
 
@@ -80,13 +82,10 @@ export default async function AutomationsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("nav.automations")}</h1>
           <p className="text-sm text-muted-foreground">
-            Automatisez vos tâches répétitives
+            {t("automations.subtitle")}
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Nouvelle automatisation
-        </Button>
+        <AutomationActions variant="create" />
       </div>
 
       {/* Stats */}
@@ -113,7 +112,7 @@ export default async function AutomationsPage() {
       {automations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Vos automatisations</CardTitle>
+            <CardTitle className="text-base">{t("automations.yourAutomations")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
@@ -123,27 +122,25 @@ export default async function AutomationsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{auto.name}</span>
                       <Badge variant={auto.isActive ? "default" : "outline"}>
-                        {auto.isActive ? "Active" : "Inactive"}
+                        {auto.isActive ? t("common.active") : t("common.inactive")}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Déclencheur: {TRIGGER_LABELS[auto.trigger] ?? auto.trigger}</span>
+                      <span>{t("automations.triggerLabel")}: {t(TRIGGER_I18N[auto.trigger] ?? auto.trigger)}</span>
                       <span>·</span>
-                      <span>Exécutions: {auto.runCount}</span>
+                      <span>{t("automations.runsLabel")}: {auto.runCount}</span>
                       {auto.lastRunAt && (
                         <>
                           <span>·</span>
                           <span className="flex items-center gap-0.5">
                             <Clock className="h-2.5 w-2.5" />
-                            {formatDate(auto.lastRunAt, "fr")}
+                            {formatDate(auto.lastRunAt, locale)}
                           </span>
                         </>
                       )}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Configurer
-                  </Button>
+                  <AutomationActions variant="toggle" automationId={auto.id} isActive={auto.isActive} />
                 </div>
               ))}
             </div>
@@ -154,32 +151,35 @@ export default async function AutomationsPage() {
       {/* Recipe templates */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Modèles dModèles d&apos;automatisationapos;automatisation</CardTitle>
+          <CardTitle className="text-base">{t("automations.templates")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
             {recipes.map((recipe) => (
-              <div key={recipe.name} className="p-4">
+              <div key={recipe.nameKey} className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-primary" />
-                      <span className="font-medium">{recipe.name}</span>
+                      <span className="font-medium">{t(recipe.nameKey)}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{recipe.description}</p>
+                    <p className="text-sm text-muted-foreground">{t(recipe.descKey)}</p>
                     <div className="flex items-center gap-2 text-xs">
                       <Badge variant="outline">
-                        {TRIGGER_LABELS[recipe.trigger] ?? recipe.trigger}
+                        {t(TRIGGER_I18N[recipe.trigger] ?? recipe.trigger)}
                       </Badge>
                       <span className="text-muted-foreground">→</span>
                       <Badge variant="outline">
-                        {ACTION_LABELS[recipe.action] ?? recipe.action}
+                        {t(ACTION_I18N[recipe.action] ?? recipe.action)}
                       </Badge>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Activer
-                  </Button>
+                  <AutomationActions
+                    variant="activate"
+                    recipeName={t(recipe.nameKey)}
+                    trigger={recipe.trigger}
+                    action={recipe.action}
+                  />
                 </div>
               </div>
             ))}
@@ -192,7 +192,7 @@ export default async function AutomationsPage() {
       <div className="rounded-lg border border-dashed p-6 text-center">
         <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm text-muted-foreground">
-          LL&apos;exécution des automatisationsapos;exécution des automatisations sera disponible une fois les intégrations WhatsApp et IA connectées.
+          {t("automations.engineNotice")}
         </p>
       </div>
     </div>

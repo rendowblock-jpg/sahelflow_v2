@@ -30,43 +30,43 @@ export default async function SettingsPage() {
 
   const integrationCategories = [
     {
-      title: "IA",
+      title: t("settings.categoryAI"),
       icon: Bot,
       accentBg: "bg-violet-500/10 dark:bg-violet-500/15",
       accentIcon: "text-violet-600 dark:text-violet-400",
       items: [
-        { platform: "gemini", name: "Gemini 3.5 Flash", type: "AI", description: "Extraction de commandes + chat IA" },
+        { platform: "gemini", name: "Gemini 3.5 Flash", type: "AI", description: t("settings.geminiDesc") },
       ],
     },
     {
-      title: "Messagerie",
+      title: t("settings.categoryMessaging"),
       icon: MessageSquare,
       accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
       accentIcon: "text-emerald-600 dark:text-emerald-400",
       items: [
-        { platform: "whatsapp", name: "WhatsApp (Baileys)", type: "Social", description: "Réception des commandes WhatsApp" },
+        { platform: "whatsapp", name: "WhatsApp (Baileys)", type: "Social", description: t("settings.whatsappDesc") },
       ],
     },
     {
-      title: "Livraison",
+      title: t("settings.categoryDelivery"),
       icon: Truck,
       accentBg: "bg-sky-500/10 dark:bg-sky-500/15",
       accentIcon: "text-sky-600 dark:text-sky-400",
       items: [
-        { platform: "yalidine", name: "Yalidine", type: "Delivery", description: "Création + suivi des livraisons" },
-        { platform: "maystro", name: "Maystro Delivery", type: "Delivery", description: "Création + suivi des livraisons" },
-        { platform: "zrexpress", name: "ZR Express", type: "Delivery", description: "Création + suivi des livraisons" },
+        { platform: "yalidine", name: "Yalidine", type: "Delivery", description: t("settings.deliveryDesc") },
+        { platform: "maystro", name: "Maystro Delivery", type: "Delivery", description: t("settings.deliveryDesc") },
+        { platform: "zrexpress", name: "ZR Express", type: "Delivery", description: t("settings.deliveryDesc") },
       ],
     },
     {
-      title: "E-commerce",
+      title: t("settings.categoryEcommerce"),
       icon: ShoppingCart,
       accentBg: "bg-amber-500/10 dark:bg-amber-500/15",
       accentIcon: "text-amber-600 dark:text-amber-400",
       items: [
-        { platform: "shopify", name: "Shopify", type: "E-commerce", description: "Synchronisation des commandes" },
-        { platform: "woocommerce", name: "WooCommerce", type: "E-commerce", description: "Synchronisation des commandes" },
-        { platform: "youcan", name: "YouCan", type: "E-commerce", description: "Synchronisation des commandes" },
+        { platform: "shopify", name: "Shopify", type: "E-commerce", description: t("settings.ecommerceDesc") },
+        { platform: "woocommerce", name: "WooCommerce", type: "E-commerce", description: t("settings.ecommerceDesc") },
+        { platform: "youcan", name: "YouCan", type: "E-commerce", description: t("settings.ecommerceDesc") },
       ],
     },
   ];
@@ -77,7 +77,7 @@ export default async function SettingsPage() {
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">{t("nav.settings")}</h1>
         <p className="text-sm text-muted-foreground">
-          Gérez votre licence, vos intégrations et vos préférences
+          {t("settings.subtitle")}
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default async function SettingsPage() {
             <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
               <Globe className="h-3.5 w-3.5 text-primary" />
             </div>
-            Intégrations
+            {t("settings.integrations")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -133,10 +133,10 @@ export default async function SettingsPage() {
                         {isActive ? (
                           <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">
                             <span className="size-1.5 rounded-full bg-emerald-500" />
-                            Connecté
+                            {t("settings.connected")}
                           </span>
                         ) : (
-                          <Badge variant="outline">Non connecté</Badge>
+                          <Badge variant="outline">{t("settings.notConnected")}</Badge>
                         )}
                       </div>
                     );
@@ -161,24 +161,24 @@ export default async function SettingsPage() {
             <div className="flex size-7 items-center justify-center rounded-lg bg-muted">
               <Shield className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            À propos
+            {t("settings.about")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Version</span>
+            <span className="text-muted-foreground">{t("settings.version")}</span>
             <span className="font-mono">3.0.0</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Architecture</span>
+            <span className="text-muted-foreground">{t("settings.architecture")}</span>
             <span className="font-medium">Local-first (Tauri)</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Base de données</span>
-            <span className="font-medium">SQLite local</span>
+            <span className="text-muted-foreground">{t("settings.database")}</span>
+            <span className="font-medium">SQLite</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Coût mensuel</span>
+            <span className="text-muted-foreground">{t("settings.monthlyCost")}</span>
             <span className="font-medium text-emerald-600 dark:text-emerald-400">0 DA</span>
           </div>
         </CardContent>

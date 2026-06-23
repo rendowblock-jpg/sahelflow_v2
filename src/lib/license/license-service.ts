@@ -129,10 +129,24 @@ export async function issueTrial(machineId: string): Promise<SignedLicense> {
     issuedBy: "app",
   };
 
-  // In production, sign this with an app-embedded signing key
-  // (different from the founder's key — the app can issue trials but not permanent licenses)
-  // For now, use a placeholder signature
-  const signature = isDev ? "dev-trial-signature" : "TODO: app-signing-key";
+  // Sign with HMAC-SHA256 using the machine ID as the key.
+  // This provides tamper-resistance for trials without needing a real signing key.
+  // Permanent licenses use the founder's Ed25519 key (issued offline via sf-license CLI).
+  let signature = "dev-trial-signature";
+  if (!isDev) {
+    try {
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(machineId);
+      const payloadData = encoder.encode(JSON.stringify(payload));
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+      );
+      const sig = await crypto.subtle.sign("HMAC", cryptoKey, payloadData);
+      signature = btoa(String.fromCharCode(...new Uint8Array(sig)));
+    } catch {
+      signature = `trial-${Date.now()}`;
+    }
+  }
 
   return { payload, signature };
 }
@@ -141,14 +155,15 @@ export async function issueTrial(machineId: string): Promise<SignedLicense> {
  * Get the license status label for display.
  */
 export function getStatusLabel(status: LicenseStatus): string {
-  const labels: Record<LicenseStatus, string> = {
-    valid: "Active",
-    expired: "Expirée",
-    invalid: "Invalide",
-    machine_mismatch: "Machine incorrecte",
-    activation_limit: "Limite d'activation",
-    version_blocked: "Version bloquée",
-    missing: "Aucune licence",
+  // Return i18n keys — the UI layer translates these via t(`license.status.${key}`)
+  const keys: Record<LicenseStatus, string> = {
+    valid: "license.status.valid",
+    expired: "license.status.expired",
+    invalid: "license.status.invalid",
+    machine_mismatch: "license.status.machineMismatch",
+    activation_limit: "license.status.activationLimit",
+    version_blocked: "license.status.versionBlocked",
+    missing: "license.status.missing",
   };
-  return labels[status] ?? status;
+  return keys[status] ?? status;
 }

@@ -19,8 +19,15 @@ const MACHINE_ID_KEY = "sahelflow-machine-id";
 export async function getMachineId(): Promise<string> {
   // Check if running in Tauri
   if (typeof window !== "undefined" && "__TAURI__" in window) {
-    // TODO: Use Tauri system-info API to get real hardware fingerprint
-    // For now, fall through to browser implementation
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const realId = await invoke<string>("get_machine_id");
+      if (realId && realId !== "DEV-MOCK-MACHINE-ID-FALLBACK") {
+        return realId;
+      }
+    } catch (err) {
+      console.warn("Failed to invoke Tauri get_machine_id, falling back to browser ID:", err);
+    }
   }
 
   // Browser/dev mode: use localStorage

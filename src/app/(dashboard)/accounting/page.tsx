@@ -17,7 +17,8 @@ export const metadata: Metadata = { title: "Comptabilité — SahelFlow" };
 export const dynamic = "force-dynamic";
 
 export default async function AccountingPage() {
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
+  const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
 
   // Fetch orders + expenses for the current month
   const now = new Date();
@@ -26,7 +27,7 @@ export default async function AccountingPage() {
   const [orders, expenses] = await Promise.all([
     db.order.findMany({
       where: { createdAt: { gte: startOfMonth } },
-      include: { items: true, delivery: true },
+      include: { items: { include: { product: { select: { cost: true } } } }, delivery: true },
     }),
     db.expense.findMany({
       where: { date: { gte: startOfMonth } },
@@ -34,12 +35,13 @@ export default async function AccountingPage() {
     }),
   ]);
 
-  // Calculate P&L
+  // Calculate P&L — use actual product costPrice when available, fall back to 60% margin estimate
   const deliveredOrders = orders.filter((o) => o.status === "delivered");
   const revenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
   const cogs = deliveredOrders.reduce((sum, o) => {
     return sum + o.items.reduce((s, item) => {
-      return s + (item.unitPrice * 0.6 * item.quantity);
+      const cost = (item as any).product?.cost ?? item.unitPrice * 0.6;
+      return s + (cost * item.quantity);
     }, 0);
   }, 0);
   const deliveryCosts = deliveredOrders.reduce((sum, o) => sum + (o.delivery?.cost ?? 0), 0);
@@ -67,7 +69,7 @@ export default async function AccountingPage() {
       });
       const monthRevenue = monthOrders.reduce((sum, o) => sum + o.totalPrice, 0);
       return {
-        month: date.toLocaleDateString("fr-FR", { month: "short" }),
+        month: date.toLocaleDateString(dateLocale, { month: "short" }),
         revenue: monthRevenue,
         expenses: monthExpenses._sum.amount ?? 0,
       };
@@ -75,10 +77,10 @@ export default async function AccountingPage() {
   );
 
   const stats = [
-    { label: "Revenu (mois)", value: formatDZD(revenue), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400", valueColor: "text-emerald-600 dark:text-emerald-400" },
-    { label: "Coût des marchandises", value: formatDZD(cogs), icon: Package, accentBg: "bg-orange-500/10 dark:bg-orange-500/15", accentIcon: "text-orange-600 dark:text-orange-400", valueColor: "text-orange-600 dark:text-orange-400" },
-    { label: "Dépenses", value: formatDZD(totalExpenses), icon: Receipt, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400", valueColor: "text-red-600 dark:text-red-400" },
-    { label: "Profit net", value: formatDZD(netProfit), icon: Wallet, accentBg: netProfit >= 0 ? "bg-emerald-500/10 dark:bg-emerald-500/15" : "bg-red-500/10 dark:bg-red-500/15", accentIcon: netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400", valueColor: netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400" },
+    { label: t("accounting.revenueMonth"), value: formatDZD(revenue), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400", valueColor: "text-emerald-600 dark:text-emerald-400" },
+    { label: t("accounting.cogs"), value: formatDZD(cogs), icon: Package, accentBg: "bg-orange-500/10 dark:bg-orange-500/15", accentIcon: "text-orange-600 dark:text-orange-400", valueColor: "text-orange-600 dark:text-orange-400" },
+    { label: t("accounting.expenses"), value: formatDZD(totalExpenses), icon: Receipt, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400", valueColor: "text-red-600 dark:text-red-400" },
+    { label: t("accounting.netProfit"), value: formatDZD(netProfit), icon: Wallet, accentBg: netProfit >= 0 ? "bg-emerald-500/10 dark:bg-emerald-500/15" : "bg-red-500/10 dark:bg-red-500/15", accentIcon: netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400", valueColor: netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400" },
   ];
 
   return (
@@ -86,7 +88,7 @@ export default async function AccountingPage() {
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">{t("nav.accounting")}</h1>
         <p className="text-sm text-muted-foreground">
-          Suivi financier de {now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
+          {t("accounting.subtitle")} — {now.toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}
         </p>
       </div>
 
@@ -119,7 +121,7 @@ export default async function AccountingPage() {
             <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 dark:bg-violet-500/15">
               <PiggyBank className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
             </div>
-            Revenu vs Dépenses (6 mois)
+            {t("accounting.revenueVsExpenses")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -134,7 +136,7 @@ export default async function AccountingPage() {
             <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 dark:bg-red-500/15">
               <CreditCard className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
             </div>
-            Dépenses du mois
+            {t("accounting.monthlyExpenses")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -144,7 +146,7 @@ export default async function AccountingPage() {
                 <Receipt className="h-8 w-8 text-primary" />
               </div>
               <p className="text-sm text-muted-foreground">
-                Aucune dépense enregistrée ce mois-ci.
+                {t("accounting.noExpenses")}
               </p>
             </div>
           ) : (
@@ -157,7 +159,7 @@ export default async function AccountingPage() {
                       <p className="text-xs text-muted-foreground">{expense.notes}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(expense.date, "fr")}
+                      {formatDate(expense.date, locale)}
                     </p>
                   </div>
                   <span className="text-sm font-medium text-red-600 dark:text-red-400 tabular-nums">
