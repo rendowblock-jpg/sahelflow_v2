@@ -1,6 +1,6 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
-import { formatDZD, formatDate } from "@/lib/utils";
+import { formatDZD } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download } from "lucide-react";
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
-import { orderStatusStyles } from "@/lib/shared";
-import { statusI18nKey } from "@/lib/shared/status-colors";
+import { OrdersTableClient } from "@/components/orders/orders-table-client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import type { Metadata } from "next";
@@ -137,7 +136,7 @@ export default async function OrdersPage({
         </TabsList>
       </Tabs>
 
-      {/* Orders table */}
+      {/* Orders table with bulk selection */}
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {filteredOrders.length === 0 ? (
@@ -151,71 +150,13 @@ export default async function OrdersPage({
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    <th className="px-4 py-3">{t("orders.orderNumber")}</th>
-                    <th className="px-4 py-3">{t("orders.customer")}</th>
-                    <th className="px-4 py-3 hidden md:table-cell">{t("orders.items")}</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
-                    <th className="px-4 py-3 text-right">{t("orders.total")}</th>
-                    <th className="px-4 py-3">{t("orders.status")}</th>
-                    <th className="px-4 py-3 hidden lg:table-cell">{t("orders.date")}</th>
-                    <th className="px-4 py-3 text-right">{t("orders.action")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredOrders.map((order) => {
-                    const customer = order.customer;
-                    const statusStyle = orderStatusStyles[order.status as OrderStatus];
-                    const itemCount = order.items.length;
-                    const itemLabel = itemCount > 1
-                      ? t("orders.itemsCount").replace("{n}", String(itemCount))
-                      : t("orders.itemsCountSingular").replace("{n}", String(itemCount));
-                    return (
-                      <tr key={order.id} className="hover:bg-accent/50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-sm font-medium">
-                          {order.orderNumber}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium">{customer?.name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">{order.phone}</div>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground">
-                          {itemLabel}
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell text-sm">
-                          {order.wilaya}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-sm tabular-nums">
-                          {formatDZD(order.totalPrice)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {statusStyle ? (
-                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                              <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                              {locale === "ar" ? statusStyle.labelAr : statusStyle.label}
-                            </span>
-                          ) : (
-                            <Badge variant="outline">{t(statusI18nKey(order.status))}</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDate(order.createdAt, locale)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/orders/${order.id}`}>
-                              {t("orders.details")}
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-3 p-4">
+              <OrdersTableClient orders={filteredOrders as unknown as Array<{
+                id: string; orderNumber: string; status: string; totalPrice: number;
+                wilaya: string; phone: string; createdAt: Date;
+                items: Array<{ id: string }>;
+                customer: { name: string | null; phone: string | null } | null;
+              }>} locale={locale} />
             </div>
           )}
         </CardContent>
