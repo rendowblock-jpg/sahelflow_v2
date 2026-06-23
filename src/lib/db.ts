@@ -38,6 +38,7 @@ import {
   ORDER_PII_FIELDS,
   CONVERSATION_PII_FIELDS,
 } from "@/lib/crypto/pii-fields";
+import { decryptNestedPii, ensureNestedCustomerPhoneEnc } from "@/lib/crypto/nested";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
@@ -74,6 +75,18 @@ if (process.env.NODE_ENV !== "production") {
  *   - Tampered ciphertext → decrypt fails silently (raw value preserved).
  */
 function withPiiEncryption<T extends PrismaClient>(client: T) {
+  // Helpers: decrypt the row's own PII, then walk the result for nested
+  // relations (which Prisma's $extends query callbacks don't intercept —
+  // verified by src/lib/__tests__/pii-nested-includes.test.ts). Without
+  // this, `db.order.findUnique({ include: { customer: true } })` returns
+  // the nested customer with ciphertext name + blind-index phone (D-001).
+  const decryptOrderResult = (row: Record<string, unknown>) =>
+    decryptNestedPii(decryptPiiRow(row, ORDER_PII_FIELDS));
+  const decryptConversationResult = (row: Record<string, unknown>) =>
+    decryptNestedPii(decryptPiiRow(row, CONVERSATION_PII_FIELDS));
+  const decryptCustomerResult = (row: Record<string, unknown>) =>
+    decryptNestedPii(decryptCustomerRow(row));
+
   return client.$extends({
     query: {
       customer: {
@@ -85,9 +98,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
             ) as never;
           }
           const result = await query(args);
-          return decryptCustomerRow(
-            result as Record<string, unknown>,
-          ) as never;
+          return decryptCustomerResult(result as Record<string, unknown>) as never;
         },
 
         async createMany({ args, query }) {
@@ -111,9 +122,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
             ) as never;
           }
           const result = await query(args);
-          return decryptCustomerRow(
-            result as Record<string, unknown>,
-          ) as never;
+          return decryptCustomerResult(result as Record<string, unknown>) as never;
         },
 
         async upsert({ args, query }) {
@@ -129,9 +138,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
           }
           args.where = rewriteCustomerWhere(args.where) as never;
           const result = await query(args);
-          return decryptCustomerRow(
-            result as Record<string, unknown>,
-          ) as never;
+          return decryptCustomerResult(result as Record<string, unknown>) as never;
         },
 
         // ── Read path ───────────────────────────────────────────────────
@@ -146,7 +153,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
           const result = (await query(args)) as unknown;
           if (Array.isArray(result)) {
             return result.map((r) =>
-              decryptCustomerRow(r as Record<string, unknown>),
+              decryptCustomerResult(r as Record<string, unknown>),
             ) as never;
           }
           return result as never;
@@ -162,9 +169,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
           args.include = include as never;
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptCustomerRow(
-            result as Record<string, unknown>,
-          ) as never;
+          return decryptCustomerResult(result as Record<string, unknown>) as never;
         },
 
         async findFirst({ args, query }) {
@@ -177,9 +182,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
           args.include = include as never;
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptCustomerRow(
-            result as Record<string, unknown>,
-          ) as never;
+          return decryptCustomerResult(result as Record<string, unknown>) as never;
         },
 
         // ── Delete path: rewrite where.phone (no row decryption needed) ─
@@ -187,9 +190,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
           args.where = rewriteCustomerWhere(args.where) as never;
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptCustomerRow(
-            result as Record<string, unknown>,
-          ) as never;
+          return decryptCustomerResult(result as Record<string, unknown>) as never;
         },
 
         async deleteMany({ args, query }) {
@@ -209,11 +210,9 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
               ORDER_PII_FIELDS,
             ) as never;
           }
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            ORDER_PII_FIELDS,
-          ) as never;
+          return decryptOrderResult(result as Record<string, unknown>) as never;
         },
 
         async createMany({ args, query }) {
@@ -238,11 +237,9 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
               ORDER_PII_FIELDS,
             ) as never;
           }
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            ORDER_PII_FIELDS,
-          ) as never;
+          return decryptOrderResult(result as Record<string, unknown>) as never;
         },
 
         async upsert({ args, query }) {
@@ -258,48 +255,41 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
               ORDER_PII_FIELDS,
             ) as never;
           }
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            ORDER_PII_FIELDS,
-          ) as never;
+          return decryptOrderResult(result as Record<string, unknown>) as never;
         },
 
         async findMany({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = (await query(args)) as unknown;
           if (Array.isArray(result)) {
             return result.map((r) =>
-              decryptPiiRow(r as Record<string, unknown>, ORDER_PII_FIELDS),
+              decryptOrderResult(r as Record<string, unknown>),
             ) as never;
           }
           return result as never;
         },
 
         async findUnique({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            ORDER_PII_FIELDS,
-          ) as never;
+          return decryptOrderResult(result as Record<string, unknown>) as never;
         },
 
         async findFirst({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            ORDER_PII_FIELDS,
-          ) as never;
+          return decryptOrderResult(result as Record<string, unknown>) as never;
         },
 
         async delete({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            ORDER_PII_FIELDS,
-          ) as never;
+          return decryptOrderResult(result as Record<string, unknown>) as never;
         },
 
         // deleteMany + count + aggregate: no PII in results — no interception
@@ -316,11 +306,9 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
               CONVERSATION_PII_FIELDS,
             ) as never;
           }
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            CONVERSATION_PII_FIELDS,
-          ) as never;
+          return decryptConversationResult(result as Record<string, unknown>) as never;
         },
 
         async createMany({ args, query }) {
@@ -347,11 +335,9 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
               CONVERSATION_PII_FIELDS,
             ) as never;
           }
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            CONVERSATION_PII_FIELDS,
-          ) as never;
+          return decryptConversationResult(result as Record<string, unknown>) as never;
         },
 
         async upsert({ args, query }) {
@@ -367,51 +353,41 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
               CONVERSATION_PII_FIELDS,
             ) as never;
           }
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            CONVERSATION_PII_FIELDS,
-          ) as never;
+          return decryptConversationResult(result as Record<string, unknown>) as never;
         },
 
         async findMany({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = (await query(args)) as unknown;
           if (Array.isArray(result)) {
             return result.map((r) =>
-              decryptPiiRow(
-                r as Record<string, unknown>,
-                CONVERSATION_PII_FIELDS,
-              ),
+              decryptConversationResult(r as Record<string, unknown>),
             ) as never;
           }
           return result as never;
         },
 
         async findUnique({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            CONVERSATION_PII_FIELDS,
-          ) as never;
+          return decryptConversationResult(result as Record<string, unknown>) as never;
         },
 
         async findFirst({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            CONVERSATION_PII_FIELDS,
-          ) as never;
+          return decryptConversationResult(result as Record<string, unknown>) as never;
         },
 
         async delete({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
           const result = await query(args);
           if (result === null) return null as never;
-          return decryptPiiRow(
-            result as Record<string, unknown>,
-            CONVERSATION_PII_FIELDS,
-          ) as never;
+          return decryptConversationResult(result as Record<string, unknown>) as never;
         },
       },
     },
