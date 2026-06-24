@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,31 +67,78 @@ const formSchema = createProductSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
+/**
+ * Shape accepted by ProductFormDialog in edit mode. Nullable fields accept
+ * `null` (the domain type stores them nullable) — the dialog normalizes
+ * null → "" / 0 for the form inputs.
+ */
+export interface ProductFormDialogProduct {
+  id: string;
+  name: string;
+  sku?: string | null;
+  price: number;
+  cost?: number | null;
+  stock: number;
+  lowStockThreshold: number;
+  categoryId?: string | null;
+  isActive: boolean;
+}
+
 interface ProductFormDialogProps {
   /** Categories to populate the category <Select>. */
   categories?: Category[];
+  /** If provided, the dialog operates in EDIT mode (PATCH). */
+  product?: ProductFormDialogProduct;
+  /** Custom trigger element (e.g. an edit icon button). Defaults to "Add Product" in uncontrolled mode. */
+  trigger?: ReactNode;
+  /** Controlled open state. When provided, the dialog is controlled by the parent. */
+  open?: boolean;
+  /** Called when the dialog requests to open/close (controlled mode). */
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ProductFormDialog({ categories = [] }: ProductFormDialogProps) {
+export function ProductFormDialog({
+  categories = [],
+  product,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: ProductFormDialogProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const isEdit = !!product;
+  const isControlled = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen;
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const buildDefaults = (p?: ProductFormDialogProduct): FormValues => ({
+    name: p?.name ?? "",
+    sku: p?.sku ?? "",
+    price: p?.price ?? "",
+    cost: p?.cost ?? "",
+    stock: p?.stock ?? 0,
+    lowStockThreshold: p?.lowStockThreshold ?? 5,
+    categoryId: p?.categoryId ?? "",
+    isActive: p?.isActive ?? true,
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      sku: "",
-      price: "",
-      cost: "",
-      stock: 0,
-      lowStockThreshold: 5,
-      categoryId: "",
-      isActive: true,
-    },
+    defaultValues: buildDefaults(product),
   });
+
+  // Keep the form in sync if the `product` prop changes after a server
+  // refresh (e.g. another agent edited the row, or we just saved).
+  useEffect(() => {
+    if (product) {
+      form.reset(buildDefaults(product));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product]);
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
@@ -106,8 +154,10 @@ export function ProductFormDialog({ categories = [] }: ProductFormDialogProps) {
     }
 
     try {
-      const res = await fetch("/api/products", {
-        method: "POST",
+      const url = product ? `/api/products/${product.id}` : "/api/products";
+      const method = product ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -145,28 +195,38 @@ export function ProductFormDialog({ categories = [] }: ProductFormDialogProps) {
     if (!next && submitting) return; // don't allow closing mid-submit
     setOpen(next);
     if (!next) {
-      form.reset();
+      form.reset(buildDefaults(product));
       setServerError(null);
     }
   }
 
+  const formId = isEdit ? "product-edit-form" : "product-create-form";
+
+  const triggerNode = trigger ?? (isControlled ? null : (
+    <Button>
+      <Plus className="h-4 w-4" />
+      {t("products.addProduct")}
+    </Button>
+  ));
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4" />
-          {t("products.addProduct")}
-        </Button>
-      </DialogTrigger>
+      {triggerNode && (
+        <DialogTrigger asChild>{triggerNode}</DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("products.newProduct")}</DialogTitle>
-          <DialogDescription>{t("products.noProductsDesc")}</DialogDescription>
+          <DialogTitle>
+            {isEdit ? t("products.editProduct") : t("products.newProduct")}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit ? t("products.editProductDesc") : t("products.noProductsDesc")}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form
-            id="product-create-form"
+            id={formId}
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-3"
           >
@@ -376,11 +436,11 @@ export function ProductFormDialog({ categories = [] }: ProductFormDialogProps) {
           </Button>
           <Button
             type="submit"
-            form="product-create-form"
+            form={formId}
             disabled={submitting}
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t("common.save")}
+            {isEdit ? t("common.saveChanges") : t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -17,6 +17,7 @@ import { Package, Eye, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { ProductRowActions } from "@/components/products/product-row-actions";
 import type { Product } from "@/types/domain";
 
 // Always fetch fresh data (local-first app, no ISR)
@@ -167,12 +168,15 @@ export default async function ProductsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/products/${product.id}`}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">{t("products.product")}</span>
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon-sm" asChild>
+                            <Link href={`/products/${product.id}`}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">{t("products.product")}</span>
+                            </Link>
+                          </Button>
+                          <ProductRowActions product={product} categories={categories} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

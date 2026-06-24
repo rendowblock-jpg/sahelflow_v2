@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,25 +50,73 @@ const formSchema = createCustomerSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CustomerFormDialog() {
+/**
+ * Shape accepted by CustomerFormDialog in edit mode. Optional fields accept
+ * `null` (the domain type stores them nullable) — the dialog normalizes
+ * null → "" for the form inputs.
+ */
+export interface CustomerFormDialogCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  phone2?: string | null;
+  wilaya?: string | null;
+  commune?: string | null;
+  address?: string | null;
+  notes?: string | null;
+}
+
+interface CustomerFormDialogProps {
+  /** If provided, the dialog operates in EDIT mode (PATCH). */
+  customer?: CustomerFormDialogCustomer;
+  /** Custom trigger element (e.g. an edit icon button). Defaults to "Add Customer" in uncontrolled mode. */
+  trigger?: ReactNode;
+  /** Controlled open state. When provided, the dialog is controlled by the parent (no default trigger is rendered unless `trigger` is also given). */
+  open?: boolean;
+  /** Called when the dialog requests to open/close (controlled mode). */
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function CustomerFormDialog({
+  customer,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: CustomerFormDialogProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const isEdit = !!customer;
+  const isControlled = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen;
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const buildDefaults = (c?: CustomerFormDialogCustomer): FormValues => ({
+    name: c?.name ?? "",
+    phone: c?.phone ?? "",
+    phone2: c?.phone2 ?? "",
+    wilaya: c?.wilaya ?? "",
+    commune: c?.commune ?? "",
+    address: c?.address ?? "",
+    notes: c?.notes ?? "",
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      phone2: "",
-      wilaya: "",
-      commune: "",
-      address: "",
-      notes: "",
-    },
+    defaultValues: buildDefaults(customer),
   });
+
+  // Keep the form in sync if the `customer` prop changes after a server
+  // refresh (e.g. another agent edited the row, or we just saved).
+  useEffect(() => {
+    if (customer) {
+      form.reset(buildDefaults(customer));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer]);
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
@@ -81,8 +130,10 @@ export function CustomerFormDialog() {
     }
 
     try {
-      const res = await fetch("/api/customers", {
-        method: "POST",
+      const url = customer ? `/api/customers/${customer.id}` : "/api/customers";
+      const method = customer ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -118,28 +169,41 @@ export function CustomerFormDialog() {
     if (!next && submitting) return; // don't allow closing mid-submit
     setOpen(next);
     if (!next) {
-      form.reset();
+      form.reset(buildDefaults(customer));
       setServerError(null);
     }
   }
 
+  const formId = isEdit ? "customer-edit-form" : "customer-create-form";
+
+  // In controlled mode without an explicit trigger, no trigger is rendered —
+  // the parent opens the dialog via `open`. In uncontrolled mode, fall back
+  // to the default "Add Customer" button when no trigger is supplied.
+  const triggerNode = trigger ?? (isControlled ? null : (
+    <Button>
+      <Plus className="h-4 w-4" />
+      {t("common.create")}
+    </Button>
+  ));
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4" />
-          {t("common.create")}
-        </Button>
-      </DialogTrigger>
+      {triggerNode && (
+        <DialogTrigger asChild>{triggerNode}</DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("customers.title")}</DialogTitle>
-          <DialogDescription>{t("customers.noCustomersDesc")}</DialogDescription>
+          <DialogTitle>
+            {isEdit ? t("customers.editCustomer") : t("customers.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit ? t("customers.editCustomerDesc") : t("customers.noCustomersDesc")}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form
-            id="customer-create-form"
+            id={formId}
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-3"
           >
@@ -273,11 +337,11 @@ export function CustomerFormDialog() {
           </Button>
           <Button
             type="submit"
-            form="customer-create-form"
+            form={formId}
             disabled={submitting}
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t("common.save")}
+            {isEdit ? t("common.saveChanges") : t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

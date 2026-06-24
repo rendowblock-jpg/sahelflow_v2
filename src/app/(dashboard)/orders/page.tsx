@@ -11,6 +11,7 @@ import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download } from 
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { OrdersTableClient } from "@/components/orders/orders-table-client";
 import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import type { Metadata } from "next";
 
@@ -140,15 +141,13 @@ export default async function OrdersPage({
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {filteredOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
-                <Package className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">{t("orders.noOrders")}</h3>
-              <p className="text-sm text-muted-foreground max-w-md mb-4">
-                {t("orders.noOrdersDesc")}
-              </p>
-            </div>
+            <EmptyState
+              icon={Package}
+              title={t("orders.empty.title")}
+              description={t("orders.empty.description")}
+              actionLabel={t("orders.createOrder")}
+              actionHref="/orders"
+            />
           ) : (
             <div className="space-y-3 p-4">
               <OrdersTableClient orders={filteredOrders as unknown as Array<{
