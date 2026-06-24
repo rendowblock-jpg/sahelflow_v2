@@ -97,7 +97,7 @@ export default async function DeliveriesPage({
   }));
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">{t("nav.delivery")}</h1>
         <p className="text-sm text-muted-foreground">
@@ -138,7 +138,7 @@ export default async function DeliveriesPage({
               >
                 {filter.label}
                 {counts[filter.value] !== undefined && (
-                  <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
+                  <Badge variant="secondary" className="ms-1 text-xs px-1.5 py-0">
                     {counts[filter.value]}
                   </Badge>
                 )}
@@ -163,15 +163,15 @@ export default async function DeliveriesPage({
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b bg-muted/50">
-                  <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     <th className="px-4 py-3">{t("deliveries.table.tracking")}</th>
                     <th className="px-4 py-3">{t("deliveries.table.order")}</th>
                     <th className="px-4 py-3">{t("deliveries.table.customer")}</th>
                     <th className="px-4 py-3 hidden sm:table-cell">{t("deliveries.table.carrier")}</th>
-                    <th className="px-4 py-3 text-right hidden md:table-cell">{t("deliveries.table.cost")}</th>
+                    <th className="px-4 py-3 text-end hidden md:table-cell">{t("deliveries.table.cost")}</th>
                     <th className="px-4 py-3">{t("deliveries.table.status")}</th>
                     <th className="px-4 py-3 hidden lg:table-cell">{t("deliveries.table.date")}</th>
-                    <th className="px-4 py-3 text-right">{t("deliveries.table.action")}</th>
+                    <th className="px-4 py-3 text-end">{t("deliveries.table.action")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -209,7 +209,7 @@ export default async function DeliveriesPage({
                             <span className="text-sm">{delivery.provider}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right hidden md:table-cell text-sm tabular-nums">
+                        <td className="px-4 py-3 text-end hidden md:table-cell text-sm tabular-nums">
                           {delivery.cost ? formatDZD(delivery.cost) : "—"}
                         </td>
                         <td className="px-4 py-3">
@@ -225,7 +225,7 @@ export default async function DeliveriesPage({
                         <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
                           {formatDate(delivery.createdAt, locale)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-end">
                           <DeliveryRowActions
                             deliveryId={delivery.id}
                             provider={delivery.provider}

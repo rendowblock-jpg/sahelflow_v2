@@ -8,14 +8,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { customerServiceExtensions } from "@/lib/data";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
+type RouteContext = { params: Promise<{ id: string }> };
+
+export const GET = withErrorHandler(async (
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+  { params }: RouteContext,
+) => {
   const { id } = await params;
   const stats = await customerServiceExtensions.getStats({ prisma: db }, id);
   return NextResponse.json({ stats });
-}
+}, "GET /api/customers/[id]/stats");

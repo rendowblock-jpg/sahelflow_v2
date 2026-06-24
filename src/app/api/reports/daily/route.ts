@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
 import { generateDailyReport } from "@/lib/reports/daily-report";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -102,17 +103,17 @@ function verifyCronSecret(req: NextRequest): boolean {
   return diff === 0;
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export const POST = withErrorHandler(async (req: NextRequest) => {
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return handleReport("cron");
-}
+}, "POST /api/reports/daily");
 
 /** GET variant for cron services that only support GET (less secure). */
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return handleReport("cron");
-}
+}, "GET /api/reports/daily");

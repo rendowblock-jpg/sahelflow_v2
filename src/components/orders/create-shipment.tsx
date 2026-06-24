@@ -135,12 +135,12 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                 <Button onClick={handleCreate} disabled={creating}>
                   {creating ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                       {t("orders.shipment.creating")}
                     </>
                   ) : (
                     <>
-                      <Truck className="h-4 w-4 mr-1.5" />
+                      <Truck className="h-4 w-4 me-1.5" />
                       {t("orders.shipment.create")}
                     </>
                   )}
@@ -178,12 +178,12 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
               {syncing ? (
                 <>
-                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                  <Loader2 className="h-3 w-3 me-1.5 animate-spin" />
                   {t("orders.shipment.syncing")}
                 </>
               ) : (
                 <>
-                  <RefreshCw className="h-3 w-3 mr-1.5" />
+                  <RefreshCw className="h-3 w-3 me-1.5" />
                   {t("orders.shipment.syncTracking")}
                 </>
               )}

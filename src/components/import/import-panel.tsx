@@ -154,12 +154,12 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             <Button onClick={handlePreview} disabled={!file || previewing}>
               {previewing ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                   {t("import.analyzing")}
                 </>
               ) : (
                 <>
-                  <FileSpreadsheet className="h-4 w-4 mr-1.5" />
+                  <FileSpreadsheet className="h-4 w-4 me-1.5" />
                   {t("import.analyze")}
                 </>
               )}
@@ -195,12 +195,12 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
               >
                 {committing ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                     {t("import.importing")}
                   </>
                 ) : (
                   <>
-                    <Upload className="h-4 w-4 mr-1.5" />
+                    <Upload className="h-4 w-4 me-1.5" />
                     {t("import.importRows", { count: preview.validCount })}
                   </>
                 )}
@@ -295,7 +295,7 @@ export function ExportButton({
   return (
     <Button asChild variant="outline" size="sm">
       <a href={`/api/export/${entity}`} download>
-        <Download className="h-4 w-4 mr-1.5" />
+        <Download className="h-4 w-4 me-1.5" />
         {label}
       </a>
     </Button>

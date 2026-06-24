@@ -10,9 +10,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, MoreVertical, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatDZD, formatDate } from "@/lib/utils";
@@ -142,7 +149,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="border-b bg-muted/50">
-            <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <th className="px-4 py-3 w-10">
                 <Checkbox
                   checked={allSelected ? true : someSelected ? "indeterminate" : false}
@@ -154,10 +161,10 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
               <th className="px-4 py-3">{t("orders.customer")}</th>
               <th className="px-4 py-3 hidden md:table-cell">{t("orders.items")}</th>
               <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
-              <th className="px-4 py-3 text-right">{t("orders.total")}</th>
+              <th className="px-4 py-3 text-end">{t("orders.total")}</th>
               <th className="px-4 py-3">{t("orders.status")}</th>
               <th className="px-4 py-3 hidden lg:table-cell">{t("orders.date")}</th>
-              <th className="px-4 py-3 text-right">{t("orders.action")}</th>
+              <th className="px-4 py-3 text-end">{t("orders.action")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -188,7 +195,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground">{itemLabel}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-sm">{order.wilaya}</td>
-                  <td className="px-4 py-3 text-right font-medium text-sm tabular-nums">{formatDZD(order.totalPrice)}</td>
+                  <td className="px-4 py-3 text-end font-medium text-sm tabular-nums">{formatDZD(order.totalPrice)}</td>
                   <td className="px-4 py-3">
                     {style ? (
                       <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
@@ -200,10 +207,47 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{formatDate(order.createdAt, locale)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/orders/${order.id}`}>{t("orders.details")}</Link>
-                    </Button>
+                  <td className="px-4 py-3 text-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">{t("orders.actions")}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/orders/${order.id}`}>
+                            <Eye className="me-2 h-4 w-4" />
+                            {t("orders.viewDetails")}
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/orders/${order.id}?edit=true`}>
+                            <Pencil className="me-2 h-4 w-4" />
+                            {t("orders.edit")}
+                          </Link>
+                        </DropdownMenuItem>
+                        {(order.status === "draft" || order.status === "cancelled") && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                if (confirm(t("orders.confirmDelete"))) {
+                                  fetch(`/api/orders/${order.id}`, { method: "DELETE" })
+                                    .then(() => router.refresh())
+                                    .catch(() => {});
+                                }
+                              }}
+                            >
+                              <Trash2 className="me-2 h-4 w-4" />
+                              {t("orders.delete")}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               );

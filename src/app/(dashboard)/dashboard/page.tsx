@@ -105,14 +105,14 @@ export default async function DashboardPage() {
   const dp = analytics.deliveryPerformance;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <PageHeader
         title={<span suppressHydrationWarning>{`${greeting} 👋`}</span>}
         description={t("dashboard.activityOverview")}
         actions={
           <Button asChild>
             <Link href="/orders">
-              <Plus className="mr-1.5 h-4 w-4" />
+              <Plus className="me-1.5 h-4 w-4" />
               {t("dashboard.newOrder")}
             </Link>
           </Button>
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
             <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link href="/products">
                 {t("dashboard.viewAll")}
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="me-1 h-3 w-3" />
               </Link>
             </Button>
           }
@@ -267,7 +267,7 @@ export default async function DashboardPage() {
             <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link href="/orders">
                 {t("dashboard.viewAll")}
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="me-1 h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>

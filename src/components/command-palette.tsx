@@ -93,7 +93,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
       <DialogContent className="overflow-hidden p-0 shadow-elevated max-w-lg">
         <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5">
           <div className="flex items-center border-b border-border px-3" cmdk-input-wrapper="">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <Search className="me-2 h-4 w-4 shrink-0 opacity-50" />
             <input
               cmdk-input=""
               placeholder={t("command.searchPlaceholder")}
@@ -117,7 +117,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                       className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-3 py-2.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 transition-colors"
                       onClick={() => runAndClose(item.action)}
                     >
-                      <Icon className="mr-3 h-4 w-4 text-muted-foreground" />
+                      <Icon className="me-3 h-4 w-4 text-muted-foreground" />
                       <span>{item.label}</span>
                     </button>
                   );
@@ -133,9 +133,9 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
           <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-[10px] text-muted-foreground">
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
             <span>{t("command.navigate")}</span>
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ml-2">↵</kbd>
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ms-2">↵</kbd>
             <span>{t("command.select")}</span>
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ml-2">esc</kbd>
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ms-2">esc</kbd>
             <span>{t("command.close")}</span>
           </div>
         </Command>

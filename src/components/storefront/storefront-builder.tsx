@@ -170,7 +170,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
       <div className="flex items-center justify-between gap-4">
         <Button asChild variant="ghost" size="sm">
           <Link href="/storefronts">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 me-2" />
             {t("storefront.builder.back")}
           </Link>
         </Button>
@@ -182,13 +182,13 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                <ExternalLink className="h-3.5 w-3.5 me-2" />
                 {t("storefront.builder.viewStore")}
               </a>
             </Button>
           )}
           <Button onClick={handleSave} disabled={pending}>
-            {pending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Save className="h-4 w-4 me-2" />}
             {mode === "create" ? t("storefront.builder.create") : t("storefront.builder.save")}
           </Button>
         </div>
@@ -265,12 +265,12 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("storefront.builder.searchProduct")}
-              className="pl-9"
+              className="ps-9"
             />
           </div>
           {filteredProducts.length === 0 ? (
@@ -337,7 +337,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                   key={tpl.value}
                   type="button"
                   onClick={() => setTheme({ ...theme, template: tpl.value })}
-                  className={`text-left p-3 rounded-lg border-2 transition-colors ${
+                  className={`text-start p-3 rounded-lg border-2 transition-colors ${
                     theme.template === tpl.value
                       ? "border-primary bg-accent/30"
                       : "border-border hover:border-foreground/20"
@@ -375,7 +375,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                 onChange={(e) => setTheme({ ...theme, primaryColor: e.target.value })}
                 className="h-8 w-8 rounded cursor-pointer border border-input"
               />
-              <span className="text-sm text-muted-foreground font-mono ml-1">
+              <span className="text-sm text-muted-foreground font-mono ms-1">
                 {theme.primaryColor}
               </span>
             </div>

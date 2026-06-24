@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export const dynamic = "force-dynamic";
  * If the token is unavailable (sidecar not started yet, env not set, file
  * unreadable), returns 503 so the client can show a "sidecar not ready" state.
  */
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   const token = sidecar.wsToken();
   if (!token) {
     return NextResponse.json(
@@ -37,4 +38,4 @@ export async function GET() {
   return NextResponse.json({ token }, {
     headers: { "Cache-Control": "no-store" },
   });
-}
+}, "GET /api/whatsapp/ws-token");

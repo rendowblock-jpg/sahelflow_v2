@@ -155,9 +155,9 @@ export function UpdateChecker() {
         disabled={checking}
       >
         {checking ? (
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <Loader2 className="h-4 w-4 me-2 animate-spin" />
         ) : (
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-4 w-4 me-2" />
         )}
         {t("updater.checkButton")}
       </Button>
@@ -221,9 +221,9 @@ export function UpdateChecker() {
             </Button>
             <Button onClick={downloadAndInstall} disabled={downloading}>
               {downloading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               ) : (
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 me-2" />
               )}
               {downloading ? t("updater.installing") : t("updater.downloadInstall")}
             </Button>

@@ -95,7 +95,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild>
         <Link href="/products">
@@ -220,9 +220,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 <TableRow>
                   <TableHead>#</TableHead>
                   <TableHead>{t("common.status")}</TableHead>
-                  <TableHead className="text-right">{t("orders.quantity")}</TableHead>
-                  <TableHead className="text-right">{t("orders.price")}</TableHead>
-                  <TableHead className="text-right">{t("products.value")}</TableHead>
+                  <TableHead className="text-end">{t("orders.quantity")}</TableHead>
+                  <TableHead className="text-end">{t("orders.price")}</TableHead>
+                  <TableHead className="text-end">{t("products.value")}</TableHead>
                   <TableHead>{t("common.date")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -244,13 +244,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
                           {statusLabels[status]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {item.quantity}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {formatDZD(item.unitPrice)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {formatDZD(item.total)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">

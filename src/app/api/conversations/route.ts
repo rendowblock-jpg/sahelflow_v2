@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
  * when the WhatsApp sidecar is not running or not connected). Live WhatsApp
  * conversations come from /api/whatsapp/chats.
  */
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   const conversations = await db.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     take: 100,
@@ -22,4 +23,4 @@ export async function GET() {
     },
   });
   return NextResponse.json({ conversations, source: "seeded" });
-}
+}, "GET /api/conversations");

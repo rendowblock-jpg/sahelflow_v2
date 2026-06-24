@@ -464,3 +464,125 @@
   --status-refused: oklch(0.65 0.23 27);
   --status-cancelled: oklch(0.60 0.01 250);
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SahelFlow Design System — Foundation v2 (Session 16)
+   Spacing scale, typography scale, RTL-first utilities
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* Spacing scale — 4px base, consistent across all pages */
+    --space-1: 0.25rem;   /* 4px  */
+    --space-2: 0.5rem;    /* 8px  */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.5rem;    /* 24px */
+    --space-6: 2rem;      /* 32px */
+    --space-7: 3rem;      /* 48px */
+    --space-8: 4rem;      /* 64px */
+
+    /* Typography scale — modular, 1.125 ratio */
+    --text-xs:   0.75rem;   /* 12px */
+    --text-sm:   0.875rem;  /* 14px */
+    --text-base: 1rem;      /* 16px */
+    --text-lg:   1.125rem;  /* 18px */
+    --text-xl:   1.25rem;   /* 20px */
+    --text-2xl:  1.5rem;    /* 24px */
+    --text-3xl:  1.875rem;  /* 30px */
+    --text-4xl:  2.25rem;   /* 36px */
+
+    /* Line heights */
+    --leading-tight: 1.25;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+
+    /* Font weights */
+    --weight-normal: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    /* Letter spacing */
+    --tracking-tight: -0.02em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.025em;
+
+    /* Content max-widths */
+    --content-sm: 640px;
+    --content-md: 768px;
+    --content-lg: 1024px;
+    --content-xl: 1280px;
+    --content-2xl: 1536px;
+  }
+}
+
+/* ── RTL-aware utilities ──────────────────────────────────────────────────────
+   These complement Tailwind's logical properties (ms-*, me-*, ps-*, pe-*,
+   start-*, end-*, border-s-*, border-e-*). Use logical properties EVERYWHERE
+   instead of physical (ml-*, mr-*, pl-*, pr-*, left-*, right-*, border-l-*, border-r-*).
+   The helper below auto-flips directional icons in RTL contexts. */
+@layer utilities {
+  /* Direction-aware icon flip — use on chevrons/arrows that must point
+     the "forward" direction. In RTL, forward = left. */
+  [dir="rtl"] .icon-rtl-flip {
+    transform: scaleX(-1);
+  }
+
+  /* Force a specific direction for elements that must not flip
+     (e.g. phone numbers, prices with currency) */
+  .force-ltr {
+    direction: ltr;
+    unicode-bidi: embed;
+  }
+
+  /* Tabular figures for all numeric data — tighter, aligned */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Premium text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Premium text pretty for paragraphs */
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* ── AppShell layout helpers ────────────────────────────────────────────────── */
+@layer utilities {
+  /* The main content scroll container — consistent padding + max-width */
+  .app-content {
+    @apply mx-auto w-full max-w-[var(--content-2xl)] p-4 sm:p-6 lg:p-8;
+  }
+
+  /* Tighter content for form-heavy pages */
+  .app-content-narrow {
+    @apply mx-auto w-full max-w-[var(--content-lg)] p-4 sm:p-6 lg:p-8;
+  }
+
+  /* Page section spacing — consistent vertical rhythm between sections */
+  .page-sections {
+    @apply space-y-6 lg:space-y-8;
+  }
+
+  /* Card grid — responsive auto-fit that works at ANY width */
+  .card-grid-2 {
+    @apply grid gap-4 sm:gap-5;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+
+  .card-grid-3 {
+    @apply grid gap-4 sm:gap-5;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  }
+
+  .card-grid-4 {
+    @apply grid gap-4 sm:gap-5;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  }
+}

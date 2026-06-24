@@ -8,14 +8,15 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAnalyticsReport } from "@/lib/data/analytics-data";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const daysParam = req.nextUrl.searchParams.get("days");
   const days = Number(daysParam);
   const validDays = [7, 14, 30, 90].includes(days) ? days : 30;
 
   const report = await getAnalyticsReport(validDays);
   return NextResponse.json({ report, days: validDays });
-}
+}, "GET /api/analytics");

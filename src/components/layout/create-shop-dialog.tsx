@@ -107,7 +107,7 @@ export function CreateShopDialog() {
             {t("shops.cancel")}
           </Button>
           <Button onClick={handleCreate} disabled={pending || !name.trim()}>
-            {pending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {pending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
             {t("shops.create")}
           </Button>
         </DialogFooter>

@@ -5,6 +5,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -66,6 +67,7 @@ export function DeliveryCredentialsPanel() {
   const [editing, setEditing] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [deleteProvider, setDeleteProvider] = useState<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
@@ -117,10 +119,14 @@ export function DeliveryCredentialsPanel() {
     }
   }
 
-  async function handleDelete(providerId: string) {
-    if (!confirm(t("delivery.confirmDelete", { provider: providerId }))) return;
+  function handleDelete(providerId: string) {
+    setDeleteProvider(providerId);
+  }
+
+  async function performDelete() {
+    if (!deleteProvider) return;
     try {
-      await fetch(`/api/delivery/credentials?provider=${providerId}`, { method: "DELETE" });
+      await fetch(`/api/delivery/credentials?provider=${deleteProvider}`, { method: "DELETE" });
       await loadStatus();
     } catch {
       /* ignore */
@@ -134,6 +140,7 @@ export function DeliveryCredentialsPanel() {
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
@@ -196,9 +203,9 @@ export function DeliveryCredentialsPanel() {
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => handleSave(provider.id)} disabled={saving}>
                         {saving ? (
-                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                         ) : (
-                          <Save className="h-4 w-4 mr-1.5" />
+                          <Save className="h-4 w-4 me-1.5" />
                         )}
                         {t("common.save")}
                       </Button>
@@ -219,7 +226,7 @@ export function DeliveryCredentialsPanel() {
                         onClick={() => handleDelete(provider.id)}
                         className="text-destructive"
                       >
-                        <Trash2 className="h-3 w-3 mr-1" />
+                        <Trash2 className="h-3 w-3 me-1" />
                         {t("common.delete")}
                       </Button>
                     )}
@@ -246,5 +253,16 @@ export function DeliveryCredentialsPanel() {
         )}
       </CardContent>
     </Card>
+      <ConfirmDialog
+        open={deleteProvider !== null}
+        onOpenChange={(open) => { if (!open) setDeleteProvider(null); }}
+        title={t("delivery.confirmDelete", { provider: deleteProvider ?? "" })}
+        description={t("delivery.confirmDeleteDesc")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={performDelete}
+      />
+    </>
   );
 }

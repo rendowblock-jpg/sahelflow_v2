@@ -96,7 +96,7 @@ export default async function AccountingPage() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <PageHeader
         title={t("nav.accounting")}
         description={`${t("accounting.subtitle")} — ${now.toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}`}
@@ -166,9 +166,9 @@ export default async function AccountingPage() {
                 <TableRow>
                   <TableHead>{t("accounting.expenseDate")}</TableHead>
                   <TableHead>{t("accounting.expenseCategory")}</TableHead>
-                  <TableHead className="text-right">{t("accounting.expenseAmount")}</TableHead>
+                  <TableHead className="text-end">{t("accounting.expenseAmount")}</TableHead>
                   <TableHead>{t("accounting.expenseNotes")}</TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                  <TableHead className="text-end">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -180,13 +180,13 @@ export default async function AccountingPage() {
                     <TableCell className="font-medium">
                       {t(`accounting.category.${expense.category}`)}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-red-600 dark:text-red-400 tabular-nums">
+                    <TableCell className="text-end font-medium text-red-600 dark:text-red-400 tabular-nums">
                       −{formatDZD(expense.amount)}
                     </TableCell>
                     <TableCell className="max-w-xs text-sm text-muted-foreground">
                       {expense.notes ?? "—"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       <ExpenseRowActions
                         expense={{
                           id: expense.id,

@@ -8,11 +8,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orderServiceExtensions } from "@/lib/data";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const q = req.nextUrl.searchParams.get("q") ?? "";
   const status = req.nextUrl.searchParams.get("status") as OrderStatus | null;
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10), 100);
@@ -24,4 +25,4 @@ export async function GET(req: NextRequest) {
   ]);
 
   return NextResponse.json({ orders: results, total, query: q });
-}
+}, "GET /api/orders/search");

@@ -113,7 +113,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
               <div className="flex items-center gap-1.5 mt-auto pt-2">
                 <Button asChild size="sm" variant="outline" className="flex-1">
                   <Link href={`/storefronts/${config.id}`}>
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    <Pencil className="h-3.5 w-3.5 me-1.5" />
                     {t("storefront.list.edit")}
                   </Link>
                 </Button>
@@ -172,7 +172,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
               onClick={confirmDelete}
               disabled={pending}
             >
-              {pending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {pending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
               {t("storefront.list.confirmDelete")}
             </Button>
           </DialogFooter>

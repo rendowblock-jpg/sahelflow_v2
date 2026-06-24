@@ -40,7 +40,7 @@ export default async function CustomersPage() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       {/* Header */}
       <PageHeader
         title={t("customers.title")}
@@ -94,10 +94,10 @@ export default async function CustomersPage() {
                   <TableHead>{t("customers.name")}</TableHead>
                   <TableHead>{t("customers.phone")}</TableHead>
                   <TableHead>{t("customers.location")}</TableHead>
-                  <TableHead className="text-right">{t("customers.ordersCount")}</TableHead>
-                  <TableHead className="text-right">{t("customers.spent")}</TableHead>
+                  <TableHead className="text-end">{t("customers.ordersCount")}</TableHead>
+                  <TableHead className="text-end">{t("customers.spent")}</TableHead>
                   <TableHead>{t("customers.risk")}</TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                  <TableHead className="text-end">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,10 +111,10 @@ export default async function CustomersPage() {
                         {customer.wilaya ?? "—"}
                         {customer.commune ? ` · ${customer.commune}` : ""}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {customer.orderCount}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {formatDZD(customer.totalSpent)}
                       </TableCell>
                       <TableCell>
@@ -122,7 +122,7 @@ export default async function CustomersPage() {
                           {riskConfig.label} · {customer.riskScore}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon-sm" asChild>
                             <Link href={`/customers/${customer.id}`}>

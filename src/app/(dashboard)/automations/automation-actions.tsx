@@ -69,7 +69,7 @@ export function AutomationActions({
   if (variant === "create") {
     return (
       <Button onClick={handleActivateRecipe} disabled={loading}>
-        <Plus className="h-4 w-4 mr-1.5" />
+        <Plus className="h-4 w-4 me-1.5" />
         {t("automations.newAutomation")}
       </Button>
     );

@@ -63,7 +63,7 @@ export default async function OrdersPage({
   const pendingCount = counts["pending"] ?? 0;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <PageHeader
         title={t("nav.orders")}
         description={t("orders.subtitle")}
@@ -71,7 +71,7 @@ export default async function OrdersPage({
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href="/api/export/orders">
-                <Download className="mr-1.5 h-4 w-4" />
+                <Download className="me-1.5 h-4 w-4" />
                 {t("orders.exportCSV")}
               </Link>
             </Button>
@@ -127,7 +127,7 @@ export default async function OrdersPage({
               >
                 {t(filter.labelKey)}
                 {counts[filter.value] !== undefined && (
-                  <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
+                  <Badge variant="secondary" className="me-1 text-xs px-1.5 py-0">
                     {counts[filter.value]}
                   </Badge>
                 )}

@@ -5,6 +5,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -37,6 +38,7 @@ export function AiKeyPanel() {
   const { t } = useI18n();
   const [status, setStatus] = useState<Status>("loading");
   const [keyInput, setKeyInput] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [testing, setTesting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [result, setResult] = useState<SaveResult | null>(null);
@@ -95,9 +97,10 @@ export function AiKeyPanel() {
   }
 
   async function handleDelete() {
-    if (!confirm(t("aiKey.confirmDelete"))) {
-      return;
-    }
+    setDeleteConfirmOpen(true);
+  }
+
+  async function performDelete() {
     setDeleting(true);
     try {
       const res = await fetch("/api/secrets/gemini-key", { method: "DELETE" });
@@ -117,6 +120,7 @@ export function AiKeyPanel() {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
@@ -178,9 +182,9 @@ export function AiKeyPanel() {
                 className="text-destructive hover:text-destructive"
               >
                 {deleting ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                 ) : (
-                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  <Trash2 className="h-4 w-4 me-1.5" />
                 )}
                 {t("common.delete")}
               </Button>
@@ -211,12 +215,12 @@ export function AiKeyPanel() {
               <Button onClick={handleSave} disabled={testing || !keyInput.trim()}>
                 {testing ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                     {t("aiKey.testing")}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4 mr-1.5" />
+                    <Sparkles className="h-4 w-4 me-1.5" />
                     {t("aiKey.testAndSave")}
                   </>
                 )}
@@ -254,5 +258,16 @@ export function AiKeyPanel() {
         )}
       </CardContent>
     </Card>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t("aiKey.confirmDelete")}
+        description={t("aiKey.confirmDeleteDesc")}
+        confirmLabel={t("aiKey.delete")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={performDelete}
+      />
+    </>
   );
 }

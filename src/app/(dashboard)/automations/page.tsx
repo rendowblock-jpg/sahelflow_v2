@@ -78,7 +78,7 @@ export default async function AutomationsPage() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("nav.automations")}</h1>

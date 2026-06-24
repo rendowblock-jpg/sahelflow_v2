@@ -202,7 +202,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                       className="w-full"
                       style={{ backgroundColor: config.theme.primaryColor }}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus className="h-4 w-4 me-1" />
                       {t("storefront.view.addToCart")}
                     </Button>
                   </CardContent>
@@ -302,7 +302,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   <Button type="submit" disabled={submitting} className="w-full" style={{ backgroundColor: config.theme.primaryColor }}>
                     {submitting ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                        <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                         {t("storefront.view.sending")}
                       </>
                     ) : (

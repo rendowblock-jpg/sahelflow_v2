@@ -49,7 +49,7 @@ export default async function ProductsPage() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       {/* Low stock alert banner */}
       {lowStockCount > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/30 p-3 animate-fade-up">
@@ -122,10 +122,10 @@ export default async function ProductsPage() {
                   <TableHead>{t("products.productName")}</TableHead>
                   <TableHead>{t("products.sku")}</TableHead>
                   <TableHead>{t("products.category")}</TableHead>
-                  <TableHead className="text-right">{t("orders.price")}</TableHead>
-                  <TableHead className="text-right">{t("products.stock")}</TableHead>
+                  <TableHead className="text-end">{t("orders.price")}</TableHead>
+                  <TableHead className="text-end">{t("products.stock")}</TableHead>
                   <TableHead>{t("common.status")}</TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                  <TableHead className="text-end">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -143,15 +143,15 @@ export default async function ProductsPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {categoryName ?? t("products.noCategory")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {formatDZD(product.price)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         <span className={isLowStock ? "text-destructive font-medium" : ""}>
                           {product.stock}
                         </span>
                         {isLowStock && (
-                          <Badge variant="destructive" className="ml-2">
+                          <Badge variant="destructive" className="ms-2">
                             <AlertTriangle className="h-3 w-3" />
                             {t("products.low")}
                           </Badge>
@@ -167,7 +167,7 @@ export default async function ProductsPage() {
                           <Badge variant="secondary">{t("common.inactive")}</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon-sm" asChild>
                             <Link href={`/products/${product.id}`}>
