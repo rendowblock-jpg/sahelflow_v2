@@ -2,7 +2,19 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DualBarChart } from "@/components/charts/dual-bar-chart";
+import { PageHeader } from "@/components/shared/page-header";
+import type { ExpenseCategory } from "@/lib/validation";
+import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
+import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
 import {
   TrendingUp,
   Wallet,
@@ -85,12 +97,11 @@ export default async function AccountingPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="animate-fade-up">
-        <h1 className="text-2xl font-bold tracking-tight">{t("nav.accounting")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("accounting.subtitle")} — {now.toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}
-        </p>
-      </div>
+      <PageHeader
+        title={t("nav.accounting")}
+        description={`${t("accounting.subtitle")} — ${now.toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}`}
+        actions={<ExpenseFormDialog />}
+      />
 
       {/* P&L Summary — upgraded with accent icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -125,21 +136,21 @@ export default async function AccountingPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-<DualBarChart data={monthlyData} />
+          <DualBarChart data={monthlyData} />
         </CardContent>
       </Card>
 
-      {/* Expenses list */}
+      {/* Recent expenses — full CRUD table */}
       <Card className="card-hover animate-fade-up" style={{ animationDelay: "300ms" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 dark:bg-red-500/15">
               <CreditCard className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
             </div>
-            {t("accounting.monthlyExpenses")}
+            {t("accounting.recentExpenses")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           {expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
@@ -150,24 +161,46 @@ export default async function AccountingPage() {
               </p>
             </div>
           ) : (
-            <div className="divide-y">
-              {expenses.map((expense) => (
-                <div key={expense.id} className="flex items-center justify-between p-4">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">{expense.category}</p>
-                    {expense.notes && (
-                      <p className="text-xs text-muted-foreground">{expense.notes}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("accounting.expenseDate")}</TableHead>
+                  <TableHead>{t("accounting.expenseCategory")}</TableHead>
+                  <TableHead className="text-right">{t("accounting.expenseAmount")}</TableHead>
+                  <TableHead>{t("accounting.expenseNotes")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {expenses.map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell className="text-sm text-muted-foreground">
                       {formatDate(expense.date, locale)}
-                    </p>
-                  </div>
-                  <span className="text-sm font-medium text-red-600 dark:text-red-400 tabular-nums">
-                    −{formatDZD(expense.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {t(`accounting.category.${expense.category}`)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-red-600 dark:text-red-400 tabular-nums">
+                      −{formatDZD(expense.amount)}
+                    </TableCell>
+                    <TableCell className="max-w-xs text-sm text-muted-foreground">
+                      {expense.notes ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ExpenseRowActions
+                        expense={{
+                          id: expense.id,
+                          category: expense.category as ExpenseCategory,
+                          amount: expense.amount,
+                          date: expense.date.toISOString(),
+                          notes: expense.notes,
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
