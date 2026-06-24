@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/empty-state";
+import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import {
@@ -12,7 +13,6 @@ import {
   PackageCheck,
   Clock,
   AlertCircle,
-  ArrowRight,
 } from "lucide-react";
 import { deliveryProviderConfig } from "@/lib/shared";
 import type { Metadata } from "next";
@@ -152,15 +152,13 @@ export default async function DeliveriesPage({
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {filteredDeliveries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
-                <Truck className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">{t("deliveries.noDeliveries")}</h3>
-              <p className="text-sm text-muted-foreground max-w-md mb-4">
-                {t("deliveries.willAppear")}
-              </p>
-            </div>
+            <EmptyState
+              icon={Truck}
+              title={t("deliveries.empty.title")}
+              description={t("deliveries.empty.description")}
+              actionLabel={t("deliveries.empty.action")}
+              actionHref="/orders"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -228,13 +226,12 @@ export default async function DeliveriesPage({
                           {formatDate(delivery.createdAt, locale)}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {order && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link href={`/orders/${order.id}`}>
-                                <ArrowRight className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          )}
+                          <DeliveryRowActions
+                            deliveryId={delivery.id}
+                            provider={delivery.provider}
+                            trackingNumber={delivery.trackingNumber}
+                            orderId={order?.id ?? null}
+                          />
                         </td>
                       </tr>
                     );

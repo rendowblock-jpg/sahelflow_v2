@@ -2,6 +2,8 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -46,11 +48,14 @@ export default async function ReturnsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="animate-fade-up">
-        <h1 className="text-2xl font-bold tracking-tight">{t("nav.returns")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("returns.subtitle")}
-        </p>
+      <div className="flex items-start justify-between gap-4 animate-fade-up">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.returns")}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t("returns.subtitle")}
+          </p>
+        </div>
+        <ReturnFormDialog />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -80,15 +85,13 @@ export default async function ReturnsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {returns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
-                <RotateCcw className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">{t("returns.noReturns")}</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                {t("returns.willAppear")}
-              </p>
-            </div>
+            <EmptyState
+              icon={RotateCcw}
+              title={t("returns.empty.title")}
+              description={t("returns.empty.description")}
+              actionLabel={t("returns.empty.action")}
+              actionHref="/orders"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">

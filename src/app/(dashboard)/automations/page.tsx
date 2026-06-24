@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Bot, Zap, Clock, CheckCircle2 } from "lucide-react";
 import { AutomationActions } from "./automation-actions";
+import { EmptyState } from "@/components/shared/empty-state";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Automatisations — SahelFlow" };
@@ -109,7 +110,7 @@ export default async function AutomationsPage() {
       </div>
 
       {/* Active automations */}
-      {automations.length > 0 && (
+      {automations.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("automations.yourAutomations")}</CardTitle>
@@ -144,6 +145,18 @@ export default async function AutomationsPage() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={Bot}
+              title={t("automations.empty.title")}
+              description={t("automations.empty.description")}
+              actionLabel={t("automations.empty.action")}
+              actionHref="/automations"
+            />
           </CardContent>
         </Card>
       )}

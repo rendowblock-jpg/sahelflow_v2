@@ -107,7 +107,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title={`${greeting} 👋`}
+        title={<span suppressHydrationWarning>{`${greeting} 👋`}</span>}
         description={t("dashboard.activityOverview")}
         actions={
           <Button asChild>

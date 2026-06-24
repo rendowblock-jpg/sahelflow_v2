@@ -3,6 +3,7 @@ import { storefrontService } from "@/lib/storefront/service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StorefrontsListClient } from "@/components/storefront/storefronts-list-client";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Plus, Store } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -37,18 +38,14 @@ export default async function StorefrontsPage() {
 
       {configs.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Store className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t("storefronts.noShop")}</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-md">
-              {t("storefronts.noShopDesc")}
-            </p>
-            <Button asChild>
-              <Link href="/storefronts/new">
-                <Plus className="h-4 w-4 mr-2" />
-                {t("storefronts.createShop")}
-              </Link>
-            </Button>
+          <CardContent>
+            <EmptyState
+              icon={Store}
+              title={t("storefronts.empty.title")}
+              description={t("storefronts.empty.description")}
+              actionLabel={t("storefronts.empty.action")}
+              actionHref="/storefronts/new"
+            />
           </CardContent>
         </Card>
       ) : (
