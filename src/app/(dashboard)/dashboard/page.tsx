@@ -108,7 +108,7 @@ export default async function DashboardPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         title={`${greeting} 👋`}
-        description={`${t("app.tagline")} — ${t("dashboard.activityOverview")}`}
+        description={t("dashboard.activityOverview")}
         actions={
           <Button asChild>
             <Link href="/orders">

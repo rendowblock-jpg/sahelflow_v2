@@ -49,7 +49,7 @@ export function Sidebar() {
             return (
               <div key={group.id} className="flex flex-col gap-0.5">
                 {!collapsed && (
-                  <span className="px-3 pb-1 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-wider">
+                  <span className="px-3 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider text-[10px] font-semibold">
                     {t(group.labelKey)}
                   </span>
                 )}
