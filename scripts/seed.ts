@@ -10,7 +10,7 @@
  *   - 8 orders (various statuses, covering the full lifecycle)
  *   - 2 deliveries (for confirmed/shipped orders)
  */
-import { db as prisma } from "@/lib/db";
+import { db as prisma } from "./db";
 
 // `prisma` is the PII-encryption-extended client. Customer create/update/find
 // are transparently encrypted/decrypted (ADR-003). For migrating pre-existing
