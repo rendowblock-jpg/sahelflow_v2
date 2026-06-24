@@ -122,7 +122,7 @@ export interface DeliveryAdapter {
 }
 
 /** Known provider IDs (convention: lowercase, no spaces). */
-export const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress"] as const;
+export const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "dhd"] as const;
 export type DeliveryProvider = (typeof DELIVERY_PROVIDERS)[number];
 
 /** Secret-store key convention for delivery credentials. */
@@ -139,6 +139,8 @@ export function deliverySecretKeys(provider: string): string[] {
       return [deliverySecretKey("maystro", "api_token")];
     case "zrexpress":
       return [deliverySecretKey("zrexpress", "api_id"), deliverySecretKey("zrexpress", "api_key")];
+    case "dhd":
+      return [deliverySecretKey("dhd", "api_token")];
     default:
       return [];
   }
