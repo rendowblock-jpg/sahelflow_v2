@@ -8,6 +8,7 @@ import { LicensePanel } from "@/components/settings/license-panel";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { DailyReportPanel } from "@/components/settings/daily-report-panel";
+import { IntegrationsPanel } from "@/components/settings/integrations-panel";
 
 type Tab = "general" | "ai" | "delivery" | "reports" | "integrations" | "license";
 
@@ -59,32 +60,7 @@ export function SettingsTabs({
         {active === "delivery" && <DeliveryCredentialsPanel />}
         {active === "reports" && <DailyReportPanel />}
         {active === "integrations" && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">{t("settings.tab.integrations")}</h2>
-            <div className="grid gap-3">
-              {integrations.map((int) => (
-                <div
-                  key={int.platform}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div>
-                    <p className="font-medium capitalize">{int.platform}</p>
-                    <p className="text-xs text-muted-foreground">{int.status}</p>
-                  </div>
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-xs font-medium",
-                      int.status === "active"
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {int.status === "active" ? t("common.active") : t("common.inactive")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <IntegrationsPanel integrations={integrations} />
         )}
       </div>
     </div>
