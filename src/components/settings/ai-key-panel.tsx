@@ -5,6 +5,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -37,6 +38,7 @@ export function AiKeyPanel() {
   const { t } = useI18n();
   const [status, setStatus] = useState<Status>("loading");
   const [keyInput, setKeyInput] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [testing, setTesting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [result, setResult] = useState<SaveResult | null>(null);
@@ -95,9 +97,10 @@ export function AiKeyPanel() {
   }
 
   async function handleDelete() {
-    if (!confirm(t("aiKey.confirmDelete"))) {
-      return;
-    }
+    setDeleteConfirmOpen(true);
+  }
+
+  async function performDelete() {
     setDeleting(true);
     try {
       const res = await fetch("/api/secrets/gemini-key", { method: "DELETE" });
@@ -117,6 +120,7 @@ export function AiKeyPanel() {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
@@ -254,5 +258,16 @@ export function AiKeyPanel() {
         )}
       </CardContent>
     </Card>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t("aiKey.confirmDelete")}
+        description={t("aiKey.confirmDeleteDesc")}
+        confirmLabel={t("aiKey.delete")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={performDelete}
+      />
+    </>
   );
 }

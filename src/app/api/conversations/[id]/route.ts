@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
+
+type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/conversations/[id] — a seeded conversation + its messages (fallback
  * for the live inbox when the sidecar is down).
  */
-export async function GET(
+export const GET = withErrorHandler(async (
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+  { params }: RouteContext,
+) => {
   const { id } = await params;
   const conversation = await db.conversation.findUnique({
     where: { id },
@@ -27,4 +30,4 @@ export async function GET(
     });
   }
   return NextResponse.json({ conversation, source: "seeded" });
-}
+}, "GET /api/conversations/[id]");

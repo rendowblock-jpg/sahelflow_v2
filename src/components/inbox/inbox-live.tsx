@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { useI18n } from "@/hooks/use-i18n";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 import {
   messageText,
@@ -73,6 +74,7 @@ export function InboxLive() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<NormalizedMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -282,8 +284,11 @@ export function InboxLive() {
     }
   }
 
-  async function handleLogout() {
-    if (!confirm(t("inbox.confirmLogout"))) return;
+  function handleLogout() {
+    setLogoutConfirmOpen(true);
+  }
+
+  async function performLogout() {
     try {
       await fetch("/api/whatsapp/logout", { method: "DELETE" });
       reconnect();
@@ -295,6 +300,7 @@ export function InboxLive() {
   const activeChat = chats.find((c) => c.id === activeChatId) ?? null;
 
   return (
+    <>
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <StatusBar
         status={status}
@@ -512,6 +518,17 @@ export function InboxLive() {
         </div>
       </div>
     </div>
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title={t("inbox.confirmLogout")}
+        description={t("inbox.confirmLogoutDesc")}
+        confirmLabel={t("inbox.logout")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={performLogout}
+      />
+    </>
   );
 }
 
