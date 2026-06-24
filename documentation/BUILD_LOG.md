@@ -5,6 +5,96 @@
 
 ---
 
+## Session 15 — 2026-06-24: UI polish from screenshot review (7 PRs)
+
+**Branches affected:** `main`
+**Main HEAD:** `af0a3b5`
+**PRs:** #37, #38, #39, #40, #41, #42 (7 PRs merged this session)
+
+### What was fixed
+
+**PR #37 — UI polish from screenshot review:**
+- Dark theme: softer background (0.13→0.16), better contrast (muted-foreground 0.60→0.70)
+- Dark mode as default (was light)
+- Sidebar: RTL alignment fix (dir attr), removed redundant active indicator, cleaner spacing
+- Topbar: replaced useless "agents: —" badge with clean "Live" indicator
+- Dashboard KPI labels: time context ("Today's Orders", "Today's Revenue")
+- Chart gradient opacity increased for dark mode visibility
+- PII decryption fix: orders page customer include now selects phoneEnc (phones were showing as blind-index hashes)
+- Missing i18n keys added (storefront.builder, dashboard KPIs)
+
+**PR #38 — Deep polish: CRUD actions, empty states, settings jargon:**
+- Customers + Products: edit (pencil) + delete (trash) buttons per row with AlertDialog confirmation
+- CustomerFormDialog + ProductFormDialog extended to support EDIT mode (PATCH, pre-fill)
+- Reusable RowActions component + per-row client action wrappers
+- EmptyState component created + applied to orders page
+- Settings cron/curl/localhost jargon hidden behind "Advanced configuration" toggle
+- +15 i18n keys × 3 locales
+
+**PR #39 — Round 3: order delete, returns CRUD, delivery actions:**
+- Orders detail: delete button (AlertDialog, draft/cancelled only)
+- New DELETE /api/orders/[id] API route
+- Returns: full create functionality (ReturnFormDialog + POST /api/returns)
+- Deliveries: DeliveryRowActions (Sync + Track buttons per row)
+- EmptyState applied to deliveries, returns, storefronts, automations
+- Hydration fix: dashboard greeting suppressHydrationWarning
+- Seed script: orders spread across 7 days for realistic chart trends
+
+**PR #40 — Full expense CRUD + animated stat cards + tabbed settings:**
+- Expense CRUD: POST/PATCH/DELETE /api/expenses + ExpenseFormDialog + ExpenseRowActions
+- Accounting page rebuilt with expenses table (Date/Category/Amount/Notes/Actions)
+- 8 expense categories (ads, packaging, delivery_fees, returns, supplies, salary, rent, other)
+- StatCard: count-up animation (v2-inspired, cubic ease-out 800ms)
+- Settings page: tabbed sidebar UI (License/AI/Delivery/Reports/Integrations)
+- +29 i18n keys × 3 locales
+
+**PR #41 — Seed script server-only fix:**
+- scripts/db.ts: standalone PrismaClient with manual PII encryption wrapper
+- Seed script no longer crashes with "server-only" error
+
+**PR #42 — ThemeToggle hydration crash fix:**
+- ThemeToggle rendered <Moon> on SSR, <Sun> on client → hydration mismatch
+- Fixed with mounted check (standard next-themes SSR pattern)
+
+### Verification
+- sf-verify full green: prisma + tsc + eslint + vitest (109 tests)
+- Vision-model verified: PII fixed (real names/phones), CRUD buttons confirmed, settings jargon hidden
+- All 12 routes HTTP 200, 0 RSC errors
+
+---
+
+## Session 14 — 2026-06-24: UI/UX perfection + analytics suite + backend completeness
+
+**Branches affected:** `main`
+**Main HEAD:** `1b919c7` (squash-merged PR #36)
+**PRs:** #36 (12 commits squashed)
+
+### What was built
+
+**Frontend — Premium data visualization:**
+- Premium chart library (7 components: AreaTrendChart, LineTrendChart, ComposedTrendChart, DonutChart, HorizontalBarChart, RadialGauge, Sparkline) on shadcn ChartContainer with OKLCH tokens
+- Analytics data service (8 aggregations: time-series, status distribution, top products/wilayas, sales-by-hour, delivery performance, customer growth)
+- World-class dashboard (4 KPI StatCards with sparklines, revenue area chart, orders donut, top products h-bar, sales-by-hour composed, delivery summary)
+- Deep analytics suite (7/14/30/90-day URL-driven range, 9 charts)
+- Critical RSC hydration fix (chart components received function props from server pages — string formatter keys + ReactNode icons)
+- Customer 360 page (LTV, delivery rate, AOV, spending sparkline)
+- Orders bulk operations toolbar (checkbox select + confirm/ship/cancel)
+
+**Backend — Full merchant control:**
+- Service extensions (customer/order/product search + stats + bulk ops)
+- 6 new API endpoints (/api/analytics, /api/orders/bulk, /api/customers/[id]/stats, 3 search endpoints)
+- withErrorHandler HOF rolled out to 37/47 API routes (~600 lines boilerplate removed)
+
+**Technical AAA:**
+- GitHub Actions CI (lint + tsc + vitest on every push/PR)
+- env.ts centralization (10 modules routed through centralized env)
+- Prisma baseline migration (20260624000000_init)
+- 13 analytics service unit tests (109 total)
+- Complete i18n (31 files, +359 keys → 1,677 × 3 locales)
+- A11y sweep (aria-labels on icon buttons + inputs)
+
+---
+
 ## Session 10 — 2026-06-21: Phase 0 completion + founder kills (13 PRs)
 
 **Branches affected:** `main`, `agent-handoff`

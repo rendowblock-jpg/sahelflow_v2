@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For next-session prep, see `NEXT_SESSION_PREP.md`.
 
-**Last updated:** 2026-06-21 (session 10)
-**Main HEAD:** `bffae33`
+**Last updated:** 2026-06-24 (session 15)
+**Main HEAD:** `af0a3b5`
 **Design system version:** v2.2
 
 ---
@@ -13,133 +13,144 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Phase 0 ~99% done (core complete; remaining = 3 polish items + founder gates) |
-| LOC | ~36,000 (src/ + sidecars/) |
-| Pages | 20 (dashboard, inbox, orders, customers, products, deliveries, returns, analytics, accounting, automations, agents, settings, imports, storefronts list/new/edit, + order/customer detail + public storefront) |
-| API routes | 46 (orders, customers, products, categories, extraction, whatsapp/*, conversations, secrets, delivery/*, import/*, export/*, ai/sessions + stream, storefront + [id], wilaya-risk, notifications, reports/daily, settings, integrations/sync, shops) |
-| Tests | 93 (order state machine 32 + regex extractor 16 + field-crypto 21 + customer-PII-encryption 12 + order-conversation-PII-encryption 12) |
-| Prisma models | 22 (19 original + Secret + StorefrontConfig + Setting) |
-| i18n keys | 1,095 × 3 locales (AR/FR/EN + RTL) |
+| Phase | Phase 0 complete + UI/UX polish rounds (sessions 14-15) |
+| LOC | ~33,700 (src/ + sidecars/) |
+| Pages | 21 (dashboard, inbox, orders, customers, products, deliveries, returns, analytics, accounting, automations, agents, settings, imports, storefronts list/new/edit, + order/customer detail + public storefront) |
+| API routes | 57 (orders + [id] + [id]/status + [id]/bulk + search, customers + [id] + [id]/stats + search, products + [id] + search, expenses + [id], analytics, deliveries + sync/credentials/estimate/create, returns, categories, communes, extraction, whatsapp/*, conversations, secrets, ai/sessions + stream, storefront + [id], wilaya-risk, notifications, reports/daily, settings, integrations/sync, shops, health, export/*, import/*) |
+| Tests | 109 (order state machine 32 + regex extractor 16 + field-crypto 21 + customer-PII-encryption 12 + order-conversation-PII-encryption 12 + pii-nested-includes 3 + analytics 13) |
+| Prisma models | 24 (22 original + Counter + DailyAnalyticsReport) |
+| i18n keys | 1,762 × 3 locales (AR/FR/EN + RTL) — was 1,095 at session 10 |
 | AI tools | 30 (6 core + 12 extended + 12 advanced — spec target reached) |
 | Delivery adapters | 3 fully implemented (Yalidine + Maystro + ZR Express) |
 | E-commerce adapters | 3 fully implemented (Shopify + WooCommerce + YouCan) |
-| ADRs | 12 accepted (10 original + ADR-011 TikTok kill + ADR-012 Meta kill), 0 open |
-| Quality gate | ✅ tsc + eslint + 93/93 tests green |
+| ADRs | 12 accepted, 0 open |
+| Quality gate | ✅ tsc + eslint + 109/109 tests green |
+| CI | ✅ GitHub Actions (lint + tsc + vitest on every push/PR) |
 
 ---
 
-## ✅ Done (sessions 1-10)
+## ✅ Done (sessions 1-15)
 
 ### Foundation (sessions 1-7)
 - ✅ Tauri + Next.js 16 + Prisma + shadcn/ui scaffold
-- ✅ Data: 58 wilayas, 1,541 communes, 1,095 i18n keys × 3 locales
+- ✅ Data: 58 wilayas, 1,541 communes, i18n keys × 3 locales
 - ✅ UI shell (sidebar, topbar, dashboard, dark mode, mobile responsive)
 - ✅ Data layer (6 services, Zod validation, order state machine)
 - ✅ CRUD UI (orders, customers, products, deliveries, returns, analytics, accounting)
 - ✅ License validation (Ed25519 crypto, trial self-issuance, settings UI)
 - ✅ AI extraction (regex + Gemini smart router, 16 tests)
-- ✅ Inbox UI (conversations, messages, "Extraire la commande")
-- ✅ Tauri CLI + icons
+- ✅ Inbox UI (conversations, messages, "Extraire la commande" → draft order)
+- ✅ Automations + AI agents pages
+- ✅ Loading/error/404 pages
+- ✅ Tauri CLI + icons (desktop-ready)
+- ✅ Encryption foundation (AES-256-GCM + blind index) + Secret model
+- ✅ Gemini AI key wizard
+- ✅ Baileys WhatsApp sidecar (port 3001, loopback + bearer token)
+- ✅ Tauri production build config (ADR-010)
+- ✅ Customer PII field encryption (transparent Prisma extension)
+- ✅ Delivery integrations (Yalidine full + Maystro + ZR Express)
+- ✅ CSV/XLSX import + CSV export
+- ✅ AI chat agent (30 tools, SSE streaming)
+- ✅ COD storefront (builder + public page + rate-limited submit)
+- ✅ Wilaya risk engine (58 profiles seeded)
+- ✅ Notifications API
+- ✅ Order + Conversation PII encryption
+- ✅ Storefront management UI
+- ✅ E-commerce sync (Shopify/WooCommerce/YouCan)
+- ✅ Multi-shop (registry + selector + DB routing)
+- ✅ PWA (manifest + service worker + icon)
+- ✅ Auto-updater (signed GitHub Releases)
+- ✅ Stronghold master key (Tauri plugin)
 
-### Phase 0 core (session 8)
-- ✅ **Encryption foundation (ADR-003)** — AES-256-GCM field crypto + Secret model + 21 tests
-- ✅ **Gemini AI key wizard (Phase 0 #9)** — Settings → IA: test+save encrypted; server-side key loading
-- ✅ **Baileys WhatsApp sidecar (Phase 0 #1)** — live inbox, QR pairing, WS push, replies, seeded fallback
-- ✅ **Tauri production build config (ADR-010)** — standalone server + sidecar externalBin + Rust setup hook
-- ✅ **Customer PII field encryption** — transparent Prisma $extends interceptor (name/phone/address/notes encrypted; phone = blind index)
-- ✅ **Delivery integrations (Phase 0 #16)** — Yalidine fully implemented; Maystro + ZR Express structural stubs (now full — see session 9-10)
-- ✅ **CSV/XLSX import + export** — import engine (parse, column-map, validate, batch-insert); products + customers import; CSV export for orders/customers/products; /imports page
-- ✅ **AI chat agent (Phase 0 #19)** — 6 tools; Gemini function-calling loop; sessions API; Agents page is now live chat
-- ✅ **COD landing page builder foundation (Phase 0 #14)** — StorefrontConfig model, public storefront page, COD order-placement API, cart + checkout UI
-- ✅ **Wilaya risk engine (Phase 0 #17)** — 58 risk profiles seeded, zone-based defaults, assessOrderRisk(), /api/wilaya-risk
-- ✅ **Notifications API** — list, mark-read, delete
+### Session 13 — AAA audit (2026-06-24)
+- ✅ Systematic 6-dimension audit (~254 findings)
+- ✅ 12 P0 bugs fixed (data corruption, security holes, PII bypass, UI font system, hydration)
+- ✅ 20+ P1 issues fixed (server-only guards, order-number race, storefront rate limit, formatDZD consolidation, structured logger, health endpoint, fail-closed license, Baileys auth folder chmod, Tauri capabilities stripped)
+- ✅ 14 fix commits to main (`0f9b226`)
 
-### Phase 0 completion (sessions 9-10)
-- ✅ **Order + Conversation PII encryption (PR #20)** — extended field crypto to Order (phone, address, notes) + Conversation (contactName, contactPhone). Non-searchable in-place pattern. 12 new tests.
-- ✅ **Storefront management UI (PR #21)** — /storefronts (list with active/inactive badge, preview/edit/toggle/delete), /storefronts/new (auto-slugify), /storefronts/[id] (builder: searchable product picker, 3 templates + color picker, contact info). 3 new API routes.
-- ✅ **AI chat SSE streaming (PR #22)** — runAgentStream() async generator using Gemini streamGenerateContent. 5 event types (tool_call/tool_result/text_delta/done/error). Client renders token-by-token with live tool indicators + cancel button.
-- ✅ **Daily WhatsApp reports (PR #23)** — Setting model (non-secret config), report generator (yesterday stats), cron API route (POST /api/reports/daily, x-cron-secret auth), Settings API (GET/PUT /api/settings), DailyReportPanel in Settings.
-- ✅ **12 new AI tools → 18 total (PR #24)** — get_order_details, list_recent_orders, get_customer_details, get_low_stock_products, get_revenue_report, get_delivery_status, search_conversations, get_pending_deliveries, get_top_products, update_product_stock, cancel_order, get_wilaya_risk.
-- ✅ **E-commerce sync (PR #25)** — Shopify + WooCommerce + YouCan polling adapters. Full API research (Shopify since_id, WooCommerce modified_after, YouCan id-dedup). Sync engine with dedup by sourceOrderId. POST /api/integrations/sync.
-- ✅ **Maystro + ZR Express adapters full (PR #26)** — Maystro (Token auth, product auto-create, 17 numeric status codes, cancel via PATCH). ZR Express (token+key headers, POST /tarification + /add_colis + /lire, 2-digit wilaya codes, French situation strings).
-- ✅ **Multi-shop UI (PR #27)** — shop registry (data/app-meta.json with first-run bootstrap), createShop (slug ID + prisma db push to init SQLite), deleteShop (last-shop protection), setActiveShopId, 4 API routes, API-backed Zustand store, topbar loadShops on mount, CreateShopDialog.
-- ✅ **PWA for Android (PR #28)** — manifest (name, icons, shortcuts, dir:auto for RTL), service worker (stale-while-revalidate shell, network-first nav, network-only /api/*), ServiceWorkerRegister component, AI-generated 1024x1024 icon.
-- ✅ **Active-shop DB routing (PR #29)** — db is now a Proxy that resolves the active shop's client on every access (reads data/app-meta.json → gets dbPath → getShopClient). Zero call-site changes (all 52 files keep working). Completes multi-shop.
-- ✅ **12 advanced AI tools → 30 total (PR #30)** — create_product, update_product_price, get_product_details, create_customer, update_customer_notes, get_customer_orders, assign_order_to_delivery (full shipment creation flow), get_delivery_cost_comparison (all 3 providers), get_returns_summary, get_sales_by_wilaya, get_conversation_messages, search_orders. Spec target reached.
-- ✅ **Auto-updater (PR #31)** — tauri.conf.json updater config (endpoint + Ed25519 pubkey + passive installMode), UpdateChecker component (auto-check on launch + dialog with release notes + download progress + relaunch), generate-update-manifest.ts script, UPDATES.md founder guide.
-- ✅ **Tauri Stronghold master key (PR #32)** — tauri-plugin-stronghold + hex crate, 2 Tauri commands (get/save master key), master-key.ts hybrid resolution (Stronghold → keyfile → env), getMasterKeyAsync() for await-able call sites. ADR-004 production target implemented.
+### Session 14 — UI/UX perfection + backend feature completeness (2026-06-24)
+- ✅ Premium chart library (7 components: area/line/composed/donut/h-bar/radial/sparkline, OKLCH tokens)
+- ✅ Analytics data service (8 aggregations: time-series, status dist, top products/wilayas, sales-by-hour, delivery perf, customer growth)
+- ✅ World-class dashboard (KPI sparklines, revenue area, status donut, top products, sales-by-hour composed, delivery summary)
+- ✅ Deep analytics suite (7/14/30/90-day URL-driven range, 9 charts)
+- ✅ Critical RSC hydration fix (chart components received function props — string formatter keys + ReactNode icons)
+- ✅ Customer 360 page (LTV, delivery rate, AOV, spending sparkline)
+- ✅ Orders bulk operations (checkbox select + confirm/ship/cancel toolbar)
+- ✅ Service extensions (search, stats, bulk ops for customers/orders/products)
+- ✅ 6 new API endpoints (/api/analytics, /api/orders/bulk, /api/customers/[id]/stats, 3 search endpoints)
+- ✅ withErrorHandler HOF (37/47 routes, ~600 lines boilerplate removed)
+- ✅ Complete i18n (31 files internationalized, 1,677 keys × 3 locales)
+- ✅ GitHub Actions CI
+- ✅ env.ts centralization (10 modules)
+- ✅ Prisma baseline migration
+- ✅ 13 analytics tests (109 total)
 
-### Founder decisions (session 10)
-- ❌ **TikTok DM integration KILLED (PR #33)** — removed from Settings UI + user-facing strings. WhatsApp-first. Conversation.channel field kept for potential future use.
-- ❌ **Meta business verification KILLED** — will NOT be pursued. Market capped at ~50-60% of Algerian COD sellers (Instagram-first out) but eliminates Meta uncertainty.
+### Session 15 — UI polish from screenshot review (2026-06-24)
+- ✅ Dark theme contrast fix (softer background, muted-foreground 0.60→0.70)
+- ✅ Dark mode as default
+- ✅ Sidebar RTL alignment fix (dir attribute, removed redundant active indicator)
+- ✅ Topbar "2 Issues" badge replaced with clean "Live" indicator
+- ✅ Dashboard KPI labels with time context ("Today's Orders", "Today's Revenue")
+- ✅ Chart gradient opacity increased for dark mode visibility
+- ✅ PII decryption fix (orders page customer include now selects phoneEnc)
+- ✅ Missing i18n keys added (storefront.builder, dashboard KPIs)
+- ✅ CRUD: edit/delete on customers + products list (RowActions, AlertDialog)
+- ✅ CRUD: order delete on detail page (draft/cancelled only)
+- ✅ CRUD: returns create (ReturnFormDialog + POST /api/returns)
+- ✅ CRUD: delivery row actions (Sync + Track buttons)
+- ✅ CRUD: full expense management (ExpenseFormDialog + POST/PATCH/DELETE /api/expenses)
+- ✅ Empty states (reusable EmptyState component, applied to orders/deliveries/returns/storefronts/automations)
+- ✅ Settings jargon hidden behind "Advanced configuration" toggle
+- ✅ Animated stat cards (count-up animation, v2-inspired)
+- ✅ Tabbed settings UI (v2-inspired: License/AI/Delivery/Reports/Integrations)
+- ✅ Seed script server-only fix (scripts/db.ts with manual PII encryption)
+- ✅ Seed script date spread (orders across 7 days for realistic charts)
+- ✅ ThemeToggle hydration fix (mounted check for SSR/client icon mismatch)
+- ✅ Hydration fix on dashboard greeting (suppressHydrationWarning)
+- ✅ +85 i18n keys × 3 locales (1,677 → 1,762)
 
 ---
 
-## 🟡 Partially done (foundation laid, needs completion)
+## 🔴 Known Issues (carry forward)
 
-| Feature | What's done | What's missing |
-|---|---|---|
-| Feature flags in license | `features[]` field in license type | No `hasFeature()` checker gating UI — all licenses get `["all"]` (Phase 0 #7, 1 day) |
-| Support chatbot | AI agent exists (operations) | Separate support chatbot for common onboarding questions (Phase 0 #19, 1 week) |
-| Manual mode (no AI keys) | Regex extractor works without AI | No explicit "you're in manual mode" UI flow when keys missing (Phase 0 #10, 2-3 days) |
-| Bundled runtime | Tauri build config done | Production builds need bun/node on PATH — bundle Bun for non-technical sellers (ADR-010 follow-up) |
+### Production blockers (must fix before paying clients)
+1. **Zero authentication on 51/53 API endpoints** — anyone on the same WiFi can read customer PII, steal the Gemini key, impersonate on WhatsApp. Needs NextAuth or local-auth middleware.
+2. **License validation is cosmetic** — no API-level enforcement. App runs fully without a valid license.
+3. **Test coverage thin** — 109 tests for ~33.7K LOC (~5%). AI agent (30 tools, ~2,000 LOC), Magic Moment flow, all 6 integrations = 0 tests.
 
----
-
-## ⏳ Not started
-
-| Feature | Effort | Notes |
-|---|---|---|
-| Marketing site + download | ~1 week | Phase 0 #15; Cloudflare Pages. Founder action. |
-| v2-legacy feature audit | 1-2 days | Compare v2 features vs v3 to find gaps. Next session. |
-
----
-
-## 🚫 Founder-action gates (Phase −1, BLOCKING)
-
-| Gate | Description | Status |
-|---|---|---|
-| 1 | Real Darija validation (50 real WhatsApp messages → Gemini ≥85%) | ⏳ Needs founder action — load-bearing assumption |
-| 2 | ~~Meta business verification decision~~ | ❌ KILLED (2026-06-21) — WhatsApp-first, no Meta |
-| 3 | Marketing strategy section in design system | ⏳ Needs founder input |
+### Polish items
+4. **3 remaining confirm() calls** — should use AlertDialog (inbox logout, ai-key delete, delivery-credentials delete)
+5. **Storefront [slug] not-found metadata** — hardcoded French title
+6. **withErrorHandler on 6 routes** with custom error shapes (SSE stream, whatsapp/send, notifications, health, reports/daily, qr-image)
+7. **Image upload** — Product.images exists in schema but no upload UI
+8. **Print labels/invoices** — Yalidine returns labelUrl but it's never rendered
+9. **Backup/restore** — only CSV exports, no full-DB backup
+10. **Message.body encryption** (S-010) — WhatsApp history sits in plaintext
+11. **SSRF in WooCommerce adapter** — siteUrl taken raw
 
 ---
 
-## Branch Map
+## 📊 Branch Map
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `bffae33` | v3.0 + Phase 0 ~99% done (13 PRs sessions 9-10: PII ext, storefront UI, AI streaming, reports, 30 AI tools, e-commerce sync, delivery adapters, multi-shop, PWA, active-shop DB, auto-updater, Stronghold, TikTok kill) |
-| `v2-legacy` | `1ffd327` | Old v2 code (reference only — do NOT merge). Needs feature audit next session. |
-| `agent-handoff` | `ff64b5e` | Agent metadata + toolkit + handoff doc (orphan branch). Updated with kill decisions. |
+| `main` | `af0a3b5` | v3.0 + session 14-15 polish. sf-verify full green. 109 tests. |
+| `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
+| `agent-handoff` | (this commit) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit |
 
 ---
 
-## Verification
+## 📚 Documentation
 
-- ✅ `tsc --noEmit` — 0 errors
-- ✅ `eslint .` — 0 errors (warnings: non-null assertions in adapters, acceptable)
-- ✅ `vitest run` — 93/93 tests pass
-- ✅ `sf-verify --fast` — green
-- ✅ WhatsApp sidecar — compiles to 95MB binary, boots, serves QR
-- ⚠️ Full `tauri:build` — needs user's Rust toolchain (not verified in sandbox)
-- ⚠️ Delivery adapters — Yalidine/Maystro/ZR Express API calls untested against live APIs (need real credentials)
-- ⚠️ AI chat — agent loop untested against live Gemini (needs real API key)
-- ⚠️ E-commerce sync — untested against live Shopify/Woo/YouCan APIs (need credentials)
-- ⚠️ Auto-updater — config done but no signed release published yet to test against
-- ⚠️ Stronghold — Rust code added but not compiled (needs `tauri:build`)
-
----
-
-## What's left for launch (priority order)
-
-1. **Darija validation** (founder) — 50 real WhatsApp messages through Gemini. If <85%, the moat is broken.
-2. **3 missing Phase 0 items** (next session A) — feature flags, support chatbot, manual mode
-3. **Bundled runtime** (next session C) — research how to bundle Bun with Tauri for non-technical sellers
-4. **v2-legacy feature audit** (next session B) — find any gaps between v2 and v3
-5. **Marketing site** — Cloudflare Pages site for self-serve download
-6. **Marketing strategy** (founder) — FB/IG content, WhatsApp groups, referral program
-
----
-
-_Last updated: 2026-06-21 (session 10). Main = bffae33. 93 tests green. 46 API routes, 20 pages, 22 models, ~36,000 LOC. Phase 0 ~99% done. TikTok + Meta killed. Next: 3 Phase 0 polish items + v2 audit + bundled runtime research._
+| Document | Purpose |
+|---|---|
+| `documentation/ultimate-design-system.md` | The spec (v2.2) |
+| `documentation/full_build.md` | The execution plan |
+| `documentation/PROJECT_STATE.md` | This file — current state |
+| `documentation/BUILD_LOG.md` | Session-by-session history |
+| `documentation/DECISIONS.md` | 12 ADRs |
+| `documentation/PRE_FLIGHT_CHECKLIST.md` | v2 mistakes to not repeat |
+| `documentation/ARCHITECTURE.md` | v3 technical blueprint |
+| `documentation/DESKTOP_BUILD.md` | How to build/run the desktop app |
+| `documentation/UPDATES.md` | Auto-updater guide |
+| `documentation/VISION.md` | Business context |
