@@ -22,6 +22,7 @@ interface DonutChartProps {
   centerValue?: string;
   innerRadius?: number;
   outerRadius?: number;
+  emptyMessage?: string;
 }
 
 export function DonutChart({
@@ -30,6 +31,7 @@ export function DonutChart({
   height = 300,
   centerLabel,
   centerValue,
+  emptyMessage,
   innerRadius = 60,
   outerRadius = 90,
 }: DonutChartProps) {
@@ -38,7 +40,7 @@ export function DonutChart({
   if (!total) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
-        No data
+        {emptyMessage ?? "—"}
       </div>
     );
   }
