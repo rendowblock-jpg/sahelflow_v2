@@ -151,7 +151,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
     <div className="space-y-3">
       {!result && !loading && (
         <Button variant="outline" size="sm" onClick={handleExtract}>
-          <Sparkles className="h-4 w-4 mr-1.5" />
+          <Sparkles className="h-4 w-4 me-1.5" />
           {t("inbox.extractOrder")}
         </Button>
       )}
@@ -215,7 +215,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
                   <div className="space-y-1">
                     <span className="text-muted-foreground">{t("inbox.itemsLabel")}</span>
                     {result.order.items.map((item, i) => (
-                      <div key={i} className="ml-4 flex justify-between">
+                      <div key={i} className="ms-4 flex justify-between">
                         <span>{item.quantity}× {item.productName}</span>
                         {item.unitPrice && <span className="font-medium">{item.unitPrice} DA</span>}
                       </div>
@@ -263,13 +263,13 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
               >
                 {creating ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                     {t("inbox.creating")}
                   </>
                 ) : (
                   <>
                     {t("inbox.createOrder")}
-                    <ArrowRight className="h-4 w-4 ml-1.5" />
+                    <ArrowRight className="h-4 w-4 ms-1.5" />
                   </>
                 )}
               </Button>

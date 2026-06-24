@@ -203,9 +203,9 @@ export function DeliveryCredentialsPanel() {
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => handleSave(provider.id)} disabled={saving}>
                         {saving ? (
-                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                         ) : (
-                          <Save className="h-4 w-4 mr-1.5" />
+                          <Save className="h-4 w-4 me-1.5" />
                         )}
                         {t("common.save")}
                       </Button>
@@ -226,7 +226,7 @@ export function DeliveryCredentialsPanel() {
                         onClick={() => handleDelete(provider.id)}
                         className="text-destructive"
                       >
-                        <Trash2 className="h-3 w-3 mr-1" />
+                        <Trash2 className="h-3 w-3 me-1" />
                         {t("common.delete")}
                       </Button>
                     )}

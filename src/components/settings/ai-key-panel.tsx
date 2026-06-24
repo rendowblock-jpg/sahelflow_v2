@@ -182,9 +182,9 @@ export function AiKeyPanel() {
                 className="text-destructive hover:text-destructive"
               >
                 {deleting ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                 ) : (
-                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  <Trash2 className="h-4 w-4 me-1.5" />
                 )}
                 {t("common.delete")}
               </Button>
@@ -215,12 +215,12 @@ export function AiKeyPanel() {
               <Button onClick={handleSave} disabled={testing || !keyInput.trim()}>
                 {testing ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                     {t("aiKey.testing")}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4 mr-1.5" />
+                    <Sparkles className="h-4 w-4 me-1.5" />
                     {t("aiKey.testAndSave")}
                   </>
                 )}

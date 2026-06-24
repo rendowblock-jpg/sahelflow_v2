@@ -230,7 +230,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="h-4 w-4 mr-1.5" />
+          <Plus className="h-4 w-4 me-1.5" />
           {t("orders.newOrder")}
         </Button>
       </DialogTrigger>
@@ -416,7 +416,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
                 {t("orders.form.creating")}
               </>
             ) : (

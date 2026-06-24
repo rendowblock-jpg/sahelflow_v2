@@ -336,10 +336,10 @@ export function AiChat() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
-      <div className="w-72 border-r flex flex-col">
+      <div className="w-72 border-e flex flex-col">
         <div className="p-3 border-b">
           <Button onClick={handleNewSession} className="w-full" size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
+            <Plus className="h-4 w-4 me-1.5" />
             {t("ai.newConversation")}
           </Button>
         </div>
@@ -358,7 +358,7 @@ export function AiChat() {
                 <button
                   key={s.id}
                   onClick={() => setActiveSessionId(s.id)}
-                  className={`flex items-start gap-2 p-3 text-left w-full hover:bg-accent/50 transition-colors ${
+                  className={`flex items-start gap-2 p-3 text-start w-full hover:bg-accent/50 transition-colors ${
                     s.id === activeSessionId ? "bg-accent" : ""
                   }`}
                 >
@@ -417,17 +417,17 @@ export function AiChat() {
                           <p className="text-sm whitespace-pre-wrap">
                             {msg.content}
                             {msg.streaming && !msg.content && (
-                              <Loader2 className="inline h-3 w-3 animate-spin ml-1" />
+                              <Loader2 className="inline h-3 w-3 animate-spin ms-1" />
                             )}
                             {msg.streaming && msg.content && (
-                              <span className="inline-block w-1.5 h-3.5 bg-foreground/60 ml-0.5 animate-pulse" />
+                              <span className="inline-block w-1.5 h-3.5 bg-foreground/60 ms-0.5 animate-pulse" />
                             )}
                           </p>
                         </div>
                       </div>
                       {/* Persisted tool calls (from DB) */}
                       {msg.toolCalls && msg.toolCalls.length > 0 && (
-                        <div className="ml-4 space-y-1">
+                        <div className="ms-4 space-y-1">
                           {msg.toolCalls.map((tc, i) => (
                             <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Wrench className="h-3 w-3" />
@@ -444,7 +444,7 @@ export function AiChat() {
                       )}
                       {/* Live streaming tool calls */}
                       {msg.streamingToolCalls && msg.streamingToolCalls.length > 0 && (
-                        <div className="ml-4 space-y-1">
+                        <div className="ms-4 space-y-1">
                           {msg.streamingToolCalls.map((tc, i) => (
                             <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Wrench className="h-3 w-3" />
@@ -510,7 +510,7 @@ export function AiChat() {
                 {t("ai.createConversationPrompt")}
               </p>
               <Button onClick={handleNewSession} className="mt-4">
-                <Plus className="h-4 w-4 mr-1.5" />
+                <Plus className="h-4 w-4 me-1.5" />
                 {t("ai.newConversation")}
               </Button>
             </div>

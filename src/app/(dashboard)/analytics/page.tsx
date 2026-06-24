@@ -126,7 +126,7 @@ export default async function AnalyticsPage({
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <PageHeader
         title={t("nav.analytics")}
         description={t("analytics.depth")}

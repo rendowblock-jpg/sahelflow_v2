@@ -318,7 +318,7 @@ export function InboxLive() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Conversation list */}
-        <div className="w-80 border-r flex flex-col">
+        <div className="w-80 border-e flex flex-col">
           <div className="p-4 border-b">
             <h1 className="text-lg font-bold flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
@@ -329,9 +329,9 @@ export function InboxLive() {
                 ? t("inbox.conversationsCountPlural", { count: chats.length })
                 : t("inbox.conversationsCount", { count: chats.length })}
               {mode === "seeded" && status !== "connected" && (
-                <span className="ml-1 text-amber-600">({t("inbox.demo")})</span>
+                <span className="ms-1 text-amber-600">({t("inbox.demo")})</span>
               )}
-              {mode === "live" && <span className="ml-1 text-green-600">({t("inbox.live")})</span>}
+              {mode === "live" && <span className="ms-1 text-green-600">({t("inbox.live")})</span>}
             </p>
           </div>
           <ScrollArea className="flex-1">
@@ -351,7 +351,7 @@ export function InboxLive() {
                     <button
                       key={c.id}
                       onClick={() => handleSelectChat(c)}
-                      className={`flex w-full items-start gap-3 p-3 text-left hover:bg-accent/50 transition-colors ${
+                      className={`flex w-full items-start gap-3 p-3 text-start hover:bg-accent/50 transition-colors ${
                         isActive ? "bg-accent" : ""
                       }`}
                     >
@@ -442,7 +442,7 @@ export function InboxLive() {
                           </div>
                         </div>
                         {msg.direction === "inbound" && msg.body.length > 10 && (
-                          <div className="ml-4">
+                          <div className="ms-4">
                             <MessageExtraction
                               messageId={msg.id}
                               messageBody={msg.body}
@@ -567,7 +567,7 @@ function StatusBar({
           {t("inbox.serviceNotStarted")}
         </span>
         <Button variant="outline" size="sm" onClick={onRetry}>
-          <RefreshCw className="h-3 w-3 mr-1" />
+          <RefreshCw className="h-3 w-3 me-1" />
           {t("inbox.retry")}
         </Button>
       </div>
@@ -583,7 +583,7 @@ function StatusBar({
           {!wsOpen && <span className="text-xs">{t("inbox.reconnecting")}</span>}
         </span>
         <Button variant="outline" size="sm" onClick={onLogout} className="text-destructive">
-          <LogOut className="h-3 w-3 mr-1" />
+          <LogOut className="h-3 w-3 me-1" />
           {t("inbox.disconnect")}
         </Button>
       </div>
@@ -612,7 +612,7 @@ function StatusBar({
         {t("inbox.disconnected")}
       </span>
       <Button variant="outline" size="sm" onClick={onConnect}>
-        <Smartphone className="h-3 w-3 mr-1" />
+        <Smartphone className="h-3 w-3 me-1" />
         {t("inbox.connect")}
       </Button>
     </div>
@@ -644,7 +644,7 @@ function QrPairingCard({ qrKey, onRefresh }: { qrKey: number; onRefresh: () => v
         </CardContent>
       </Card>
       <Button variant="ghost" size="sm" onClick={onRefresh}>
-        <RefreshCw className="h-3 w-3 mr-1" />
+        <RefreshCw className="h-3 w-3 me-1" />
         {t("inbox.refreshQr")}
       </Button>
     </div>

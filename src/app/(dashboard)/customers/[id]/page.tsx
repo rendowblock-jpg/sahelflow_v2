@@ -77,7 +77,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     .map((o) => ({ value: o.totalPrice }));
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <Button variant="ghost" size="sm" asChild>
         <Link href="/customers">
           <ArrowLeft className="h-4 w-4" />
@@ -222,7 +222,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                 <TableRow>
                   <TableHead>#</TableHead>
                   <TableHead>{t("orders.status")}</TableHead>
-                  <TableHead className="text-right">{t("orders.total")}</TableHead>
+                  <TableHead className="text-end">{t("orders.total")}</TableHead>
                   <TableHead>{t("orders.date")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -247,7 +247,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                           <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {formatDZD(order.totalPrice)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">

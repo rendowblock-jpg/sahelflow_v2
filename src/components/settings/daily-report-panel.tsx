@@ -166,11 +166,11 @@ export function DailyReportPanel() {
 
         <div className="flex items-center gap-2">
           <Button onClick={handleSave} disabled={pending}>
-            {pending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Save className="h-4 w-4 me-2" />}
             {t("common.save")}
           </Button>
           <Button onClick={handleTestReport} variant="outline" disabled={pending}>
-            <Send className="h-4 w-4 mr-2" />
+            <Send className="h-4 w-4 me-2" />
             {t("reports.testNow")}
           </Button>
         </div>

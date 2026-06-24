@@ -155,7 +155,7 @@ export function LicensePanel() {
           <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
             <DialogTrigger asChild>
               <Button variant="default" size="sm">
-                <Key className="h-4 w-4 mr-1.5" />
+                <Key className="h-4 w-4 me-1.5" />
                 {t("license.enterKey")}
               </Button>
             </DialogTrigger>

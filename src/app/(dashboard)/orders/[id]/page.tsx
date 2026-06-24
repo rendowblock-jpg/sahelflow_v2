@@ -107,9 +107,9 @@ export default async function OrderDetailPage({
     <div className="space-y-6 p-6 max-w-5xl mx-auto">
       {/* Breadcrumb + header */}
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
+        <Button variant="ghost" size="sm" asChild className="-ms-2">
           <Link href="/orders">
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 me-1" />
             {t("orders.detail.backToOrders")}
           </Link>
         </Button>
@@ -266,7 +266,7 @@ export default async function OrderDetailPage({
                   <Button variant="outline" size="sm" className="w-full" asChild>
                     <Link href={`/customers/${customer.id}`}>
                       {t("orders.detail.viewCustomer")}
-                      <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                      <ArrowRight className="h-3.5 w-3.5 ms-1" />
                     </Link>
                   </Button>
                 </>

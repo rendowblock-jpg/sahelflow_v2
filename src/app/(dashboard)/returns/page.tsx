@@ -47,7 +47,7 @@ export default async function ReturnsPage() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="app-content page-sections">
       <div className="flex items-start justify-between gap-4 animate-fade-up">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("nav.returns")}</h1>
@@ -96,14 +96,14 @@ export default async function ReturnsPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b bg-muted/50">
-                  <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     <th className="px-4 py-3">{t("returns.table.order")}</th>
                     <th className="px-4 py-3">{t("returns.table.customer")}</th>
                     <th className="px-4 py-3">{t("returns.table.type")}</th>
                     <th className="px-4 py-3 hidden md:table-cell">{t("returns.table.reason")}</th>
                     <th className="px-4 py-3">{t("returns.table.status")}</th>
                     <th className="px-4 py-3 hidden lg:table-cell">{t("returns.table.date")}</th>
-                    <th className="px-4 py-3 text-right">{t("returns.table.action")}</th>
+                    <th className="px-4 py-3 text-end">{t("returns.table.action")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -141,7 +141,7 @@ export default async function ReturnsPage() {
                         <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
                           {formatDate(ret.createdAt, locale)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-end">
                           <Button variant="ghost" size="sm" asChild>
                             <Link href={`/orders/${ret.orderId}`}>
                               {t("returns.view")}

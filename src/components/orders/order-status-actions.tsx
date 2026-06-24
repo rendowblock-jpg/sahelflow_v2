@@ -93,9 +93,9 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
               disabled={loading !== null}
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
               ) : (
-                <Icon className="h-4 w-4 mr-1.5" />
+                <Icon className="h-4 w-4 me-1.5" />
               )}
               {t(config.labelKey)}
             </Button>
