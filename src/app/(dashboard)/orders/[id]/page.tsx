@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
+import { OrderDeleteButton } from "@/components/orders/order-delete-button";
 import { CreateShipment } from "@/components/orders/create-shipment";
 import { getI18n } from "@/lib/i18n-server";
 import {
@@ -131,6 +132,7 @@ export default async function OrderDetailPage({
               {SOURCE_LABELS[order.source] ?? order.source}
             </p>
           </div>
+          <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
         </div>
 
         {/* Status actions (client component) */}

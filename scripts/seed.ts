@@ -154,12 +154,16 @@ async function main() {
     const { items, ...orderFields } = orderData;
     const itemsTotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
     const deliveryCost = 600;
+    // Spread orders across the last 7 days so charts show a trend
+    const dayOffset = Math.floor(Math.random() * 7);
+    const createdAt = new Date(Date.now() - dayOffset * 24 * 60 * 60 * 1000);
     await prisma.order.create({
       data: {
         ...orderFields,
         totalPrice: itemsTotal + deliveryCost,
         deliveryCost,
         sourceMetadata: null,
+        createdAt,
         items: {
           create: items.map((i) => ({
             productId: i.product.id,
