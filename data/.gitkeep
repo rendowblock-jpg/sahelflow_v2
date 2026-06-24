@@ -1,4 +1,0 @@
-# This directory holds:
-# - wilayas.json (58 wilayas — Algerian government data, ported as raw JSON)
-# - communes.json (1,541 communes — Algerian government data, ported as raw JSON)
-# - shops/ (per-shop SQLite files — gitignored, created at runtime)

@@ -71,16 +71,16 @@ export function ComposedTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={20}
-          className="text-[11px]"
+          className="text-xs fill-muted-foreground"
         />
         <YAxis
           yAxisId="left"
-          width={44}
+          width={48}
           tickLine={false}
           axisLine={false}
           tickMargin={4}
           tickFormatter={(v: number) => fmtLeft(v)}
-          className="text-[11px]"
+          className="text-xs fill-muted-foreground"
         />
         {hasRight && (
           <YAxis
@@ -91,7 +91,7 @@ export function ComposedTrendChart({
             axisLine={false}
             tickMargin={4}
             tickFormatter={(v: number) => fmtRight(v)}
-            className="text-[11px]"
+            className="text-xs fill-muted-foreground"
           />
         )}
         <ChartTooltip
