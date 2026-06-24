@@ -167,3 +167,18 @@ export const ORDER_PII_FIELDS = ["phone", "address", "notes"] as const;
  * migrate to the blind-index pattern.
  */
 export const CONVERSATION_PII_FIELDS = ["contactName", "contactPhone"] as const;
+
+/**
+ * PII fields on the Message model (non-searchable, encrypted in place).
+ *
+ *   body — the WhatsApp message content (customer's order details, address,
+ *          personal info, etc.). This is the most sensitive PII in the app —
+ *          it contains whatever the customer typed in their messages.
+ *
+ * Messages are looked up by id, conversationId, or createdAt — never by body
+ * content. Encryption is transparent (call sites pass plaintext, get plaintext).
+ *
+ * S-010: WhatsApp history was previously stored in plaintext. This encrypts it
+ * at rest so a stolen SQLite file can't reveal customer conversations.
+ */
+export const MESSAGE_PII_FIELDS = ["body"] as const;

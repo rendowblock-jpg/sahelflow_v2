@@ -39,6 +39,7 @@ import {
   decryptPiiRow,
   ORDER_PII_FIELDS,
   CONVERSATION_PII_FIELDS,
+  MESSAGE_PII_FIELDS,
 } from "@/lib/crypto/pii-fields";
 import { decryptNestedPii, ensureNestedCustomerPhoneEnc } from "@/lib/crypto/nested";
 
@@ -88,6 +89,8 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
     decryptNestedPii(decryptPiiRow(row, CONVERSATION_PII_FIELDS));
   const decryptCustomerResult = (row: Record<string, unknown>) =>
     decryptNestedPii(decryptCustomerRow(row));
+  const decryptMessageResult = (row: Record<string, unknown>) =>
+    decryptNestedPii(decryptPiiRow(row, MESSAGE_PII_FIELDS));
 
   return client.$extends({
     query: {
@@ -390,6 +393,83 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
           const result = await query(args);
           if (result === null) return null as never;
           return decryptConversationResult(result as Record<string, unknown>) as never;
+        },
+      },
+
+      message: {
+        async create({ args, query }) {
+          if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              MESSAGE_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptMessageResult(result as Record<string, unknown>) as never;
+        },
+        async createMany({ args, query }) {
+          if (Array.isArray(args.data)) {
+            args.data = args.data.map((d) =>
+              encryptPiiFields(d as Record<string, unknown>, MESSAGE_PII_FIELDS),
+            ) as never;
+          } else if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              MESSAGE_PII_FIELDS,
+            ) as never;
+          }
+          return query(args);
+        },
+        async update({ args, query }) {
+          if (args.data && typeof args.data === "object") {
+            args.data = encryptPiiFields(
+              args.data as Record<string, unknown>,
+              MESSAGE_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptMessageResult(result as Record<string, unknown>) as never;
+        },
+        async upsert({ args, query }) {
+          if (args.create && typeof args.create === "object") {
+            args.create = encryptPiiFields(
+              args.create as Record<string, unknown>,
+              MESSAGE_PII_FIELDS,
+            ) as never;
+          }
+          if (args.update && typeof args.update === "object") {
+            args.update = encryptPiiFields(
+              args.update as Record<string, unknown>,
+              MESSAGE_PII_FIELDS,
+            ) as never;
+          }
+          const result = await query(args);
+          return decryptMessageResult(result as Record<string, unknown>) as never;
+        },
+        async findFirst({ args, query }) {
+          const result = await query(args);
+          return result
+            ? (decryptMessageResult(result as Record<string, unknown>) as never)
+            : null;
+        },
+        async findUnique({ args, query }) {
+          const result = await query(args);
+          return result
+            ? (decryptMessageResult(result as Record<string, unknown>) as never)
+            : null;
+        },
+        async findMany({ args, query }) {
+          const results = await query(args);
+          return (Array.isArray(results)
+            ? results.map((r) => decryptMessageResult(r as Record<string, unknown>))
+            : results) as never;
+        },
+        async delete({ args, query }) {
+          const result = await query(args);
+          return decryptMessageResult(result as Record<string, unknown>) as never;
+        },
+        async deleteMany({ args, query }) {
+          return query(args);
         },
       },
     },
