@@ -145,6 +145,33 @@ export const createDeliverySchema = z.object({
   provider: deliveryProviderSchema,
 });
 
+// ─── Expense ──────────────────────────────────────────────────────────────────
+
+/**
+ * Expense categories (from v2). Stored as a plain string column on the
+ * Expense model — no normalized lookup table. Mirrors the 8 fixed buckets
+ * the merchant uses to classify operational outflows.
+ */
+export const expenseCategorySchema = z.enum([
+  "ads",
+  "packaging",
+  "delivery_fees",
+  "returns",
+  "supplies",
+  "salary",
+  "rent",
+  "other",
+]);
+
+export const createExpenseSchema = z.object({
+  category: expenseCategorySchema,
+  amount: posInt,
+  date: isoDate,
+  notes: z.string().nullable().optional(),
+});
+
+export const updateExpenseSchema = createExpenseSchema.partial();
+
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
@@ -155,3 +182,6 @@ export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type CreateDeliveryInput = z.infer<typeof createDeliverySchema>;
+export type ExpenseCategory = z.infer<typeof expenseCategorySchema>;
+export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
