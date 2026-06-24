@@ -38,11 +38,11 @@ export default async function OrdersPage({
   const where = statusFilter && statusFilter !== "all"
     ? { status: statusFilter as OrderStatus }
     : undefined;
-  const include = { items: true, customer: { select: { name: true, phone: true } } };
+  const include = { items: true, customer: { select: { id: true, name: true, phone: true, phoneEnc: true } } };
   const [allOrders, filteredOrders, customers, products] = await Promise.all([
     db.order.findMany({ include, orderBy: { createdAt: "desc" }, take: 200 }),
     db.order.findMany({ where, include, orderBy: { createdAt: "desc" }, take: 200 }),
-    db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, wilaya: true, commune: true, address: true } }),
+    db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true } }),
   ]);
 

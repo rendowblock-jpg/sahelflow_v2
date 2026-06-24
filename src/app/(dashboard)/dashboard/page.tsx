@@ -108,7 +108,7 @@ export default async function DashboardPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         title={`${greeting} 👋`}
-        description={`${t("app.tagline")} — ${t("dashboard.activityOverview")}`}
+        description={t("dashboard.activityOverview")}
         actions={
           <Button asChild>
             <Link href="/orders">
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
       {/* KPI stat cards with sparklines */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label={t("nav.orders")}
+          label={t("dashboard.todaysOrders")}
           value={stats.ordersToday}
           icon={<ShoppingCart />}
           accentBg="bg-sky-500/10 dark:bg-sky-500/15"
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
-          label={t("nav.accounting")}
+          label={t("dashboard.todaysRevenue")}
           value={formatDZD(stats.revenueToday)}
           icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
-          label={t("nav.customers")}
+          label={t("dashboard.newCustomersToday")}
           value={stats.newCustomers}
           icon={<Users />}
           accentBg="bg-violet-500/10 dark:bg-violet-500/15"
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
-          label={t("nav.inbox")}
+          label={t("dashboard.activeConversations")}
           value={stats.activeConversations}
           icon={<MessageSquare />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"

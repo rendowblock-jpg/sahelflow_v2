@@ -55,15 +55,15 @@ export function LineTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={24}
-          className="text-[11px]"
+          className="text-xs fill-muted-foreground"
         />
         <YAxis
-          width={52}
+          width={56}
           tickLine={false}
           axisLine={false}
           tickMargin={4}
           tickFormatter={(v: number) => fmtY(v)}
-          className="text-[11px]"
+          className="text-xs fill-muted-foreground"
         />
         <ChartTooltip
           content={

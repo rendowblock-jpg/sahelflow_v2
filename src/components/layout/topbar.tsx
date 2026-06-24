@@ -179,9 +179,9 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
 
       {/* Right: Language + Theme + Notifications + Avatar */}
       <div className="flex items-center gap-1 ml-auto">
-        <Badge variant="outline" className="gap-1.5 text-muted-foreground hidden md:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span className="text-xs">{t("nav.agents")}: —</span>
+        <Badge variant="outline" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hidden md:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
+          <span className="text-xs font-medium">Live</span>
         </Badge>
 
         <Separator orientation="vertical" className="h-6 hidden md:block" />
