@@ -1760,5 +1760,17 @@
   "updater.unknownError": "Erreur inconnue",
   "updater.upToDate": "SahelFlow est à jour",
   "updater.upToDateDesc": "Aucune mise à jour disponible.",
-  "updater.webMode": "Mode web — mises à jour via git pull"
+  "updater.webMode": "Mode web — mises à jour via git pull",
+  "auth.login": "Déverrouiller",
+  "auth.loginDescription": "Entrez votre code PIN pour accéder à votre tableau de bord",
+  "auth.pin": "Code PIN",
+  "auth.goToSetup": "Configurer le PIN",
+  "auth.setupTitle": "Bienvenue sur SahelFlow",
+  "auth.setupDescription": "Créez un code PIN pour sécuriser les données de votre boutique",
+  "auth.createPin": "Créer le PIN",
+  "auth.confirmPin": "Confirmer le PIN",
+  "auth.createPinButton": "Commencer",
+  "auth.pinSecurityNote": "Ce PIN chiffre les données de votre boutique localement. Conservez-le en sécurité — il ne peut pas être récupéré.",
+  "auth.pinMinLength": "Le PIN doit contenir au moins 4 caractères",
+  "auth.pinMismatch": "Les PIN ne correspondent pas"
 }

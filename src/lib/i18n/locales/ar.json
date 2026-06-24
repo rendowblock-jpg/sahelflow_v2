@@ -1760,5 +1760,17 @@
   "updater.unknownError": "خطأ غير معروف",
   "updater.upToDate": "SahelFlow محدث",
   "updater.upToDateDesc": "لا يتوفر تحديث.",
-  "updater.webMode": "وضع الويب — التحديثات عبر git pull"
+  "updater.webMode": "وضع الويب — التحديثات عبر git pull",
+  "auth.login": "فتح",
+  "auth.loginDescription": "أدخل رمز PIN للوصول إلى لوحة التحكم",
+  "auth.pin": "رمز PIN",
+  "auth.goToSetup": "إعداد رمز PIN",
+  "auth.setupTitle": "مرحبًا بك في SahelFlow",
+  "auth.setupDescription": "أنشئ رمز PIN لتأمين بيانات متجرك",
+  "auth.createPin": "إنشاء رمز PIN",
+  "auth.confirmPin": "تأكيد رمز PIN",
+  "auth.createPinButton": "ابدأ",
+  "auth.pinSecurityNote": "هذا الرمز يشفر بيانات متجرك محليًا. احتفظ به بأمان — لا يمكن استعادته.",
+  "auth.pinMinLength": "يجب أن يحتوي رمز PIN على 4 أحرف على الأقل",
+  "auth.pinMismatch": "رموز PIN غير متطابقة"
 }

@@ -1760,5 +1760,17 @@
   "updater.unknownError": "Unknown error",
   "updater.upToDate": "SahelFlow is up to date",
   "updater.upToDateDesc": "No update available.",
-  "updater.webMode": "Web mode — updates via git pull"
+  "updater.webMode": "Web mode — updates via git pull",
+  "auth.login": "Unlock",
+  "auth.loginDescription": "Enter your PIN to access your dashboard",
+  "auth.pin": "PIN",
+  "auth.goToSetup": "Set up PIN",
+  "auth.setupTitle": "Welcome to SahelFlow",
+  "auth.setupDescription": "Create a PIN to secure your shop data",
+  "auth.createPin": "Create PIN",
+  "auth.confirmPin": "Confirm PIN",
+  "auth.createPinButton": "Get Started",
+  "auth.pinSecurityNote": "This PIN encrypts your shop data locally. Store it safely — it cannot be recovered.",
+  "auth.pinMinLength": "PIN must be at least 4 characters",
+  "auth.pinMismatch": "PINs do not match"
 }
