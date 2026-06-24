@@ -73,7 +73,7 @@ interface TopbarProps {
 }
 
 export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, dir } = useI18n();
   const shops = useShopStore((s) => s.shops);
   const activeShopId = useShopStore((s) => s.activeShopId);
   const loaded = useShopStore((s) => s.loaded);
@@ -114,11 +114,12 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
+  const isRtl = dir === "rtl";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-background/80 glass px-4 sm:px-6">
-      {/* Left: Mobile sidebar toggle + shop selector */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 glass px-3 sm:gap-4 sm:px-6">
+      {/* Start: Mobile sidebar toggle + shop selector */}
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile sidebar (hidden on desktop) */}
         <div className="lg:hidden">
           <Sheet>
@@ -127,7 +128,8 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
+            {/* RTL: sidebar slides from the end side (right in RTL, left in LTR) */}
+            <SheetContent side={isRtl ? "right" : "left"} className="w-64 p-0">
               <Sidebar />
             </SheetContent>
           </Sheet>
@@ -167,18 +169,18 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
       {onCommandPaletteOpen && (
         <button
           onClick={onCommandPaletteOpen}
-          className="hidden sm:flex flex-1 max-w-md items-center gap-3 h-9 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted/80 hover:border-border/80 transition-colors cursor-pointer"
+          className="hidden sm:flex flex-1 max-w-md items-center gap-3 h-9 rounded-lg border bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
         >
           <Search className="size-4 shrink-0" />
-          <span className="flex-1 text-left truncate">{t("topbar.searchPlaceholder")}</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
+          <span className="flex-1 text-start truncate">{t("topbar.searchPlaceholder")}</span>
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
             <Command className="size-2.5" />K
           </kbd>
         </button>
       )}
 
-      {/* Right: Language + Theme + Notifications + Avatar */}
-      <div className="flex items-center gap-1 ml-auto">
+      {/* End: Language + Theme + Notifications + Avatar */}
+      <div className="flex items-center gap-1 ms-auto">
         <Badge variant="outline" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hidden md:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
           <span className="text-xs font-medium">Live</span>
@@ -218,7 +220,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
             <Button variant="ghost" size="icon" className="size-8 relative">
               <Bell className="size-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white animate-pulse-subtle">
+                <span className="absolute end-0 top-0 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white animate-pulse-subtle">
                   {unreadCount}
                 </span>
               )}
@@ -285,7 +287,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 rounded-full ml-1">
+            <Button variant="ghost" size="icon" className="size-8 rounded-full ms-1">
               <Avatar className="size-8 ring-1 ring-border">
                 <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
                   {activeShop?.name.charAt(0).toUpperCase() ?? "S"}
@@ -301,23 +303,23 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem className="cursor-pointer">
-                <User className="mr-2 size-4" />
+                <User className="me-2 size-4" />
                 {t("topbar.profile")}
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" asChild>
                 <Link href="/settings">
-                  <Settings className="mr-2 size-4" />
+                  <Settings className="me-2 size-4" />
                   {t("nav.settings")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">
-                <HelpCircle className="mr-2 size-4" />
+                <HelpCircle className="me-2 size-4" />
                 {t("topbar.helpSupport")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" className="cursor-pointer">
-              <LogOut className="mr-2 size-4" />
+              <LogOut className="me-2 size-4" />
               {t("topbar.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>

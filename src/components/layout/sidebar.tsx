@@ -7,7 +7,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { useUIStore } from "@/stores/ui-store";
 import { navItems, navGroups } from "./navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Sidebar() {
@@ -17,21 +17,25 @@ export function Sidebar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const isRtl = dir === "rtl";
 
-  const CollapseIcon = collapsed
-    ? (isRtl ? ChevronRight : ChevronLeft)
-    : (isRtl ? ChevronLeft : ChevronRight);
+  // Logical collapse icons — in RTL the "collapse" chevron points right,
+  // "expand" points left. We use PanelLeft* icons which are direction-neutral
+  // and flip via CSS transform for cleaner RTL handling.
+  const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r bg-sidebar transition-[width] duration-200",
+        "flex h-full flex-col border-e bg-sidebar transition-[width] duration-200 ease-out",
         collapsed ? "w-[60px]" : "w-60",
       )}
       aria-label="Sidebar navigation"
       dir={dir}
     >
       {/* Logo / brand */}
-      <div className={cn("flex h-14 items-center gap-2.5 border-b border-sidebar-border px-3", collapsed && "justify-center px-0")}>
+      <div className={cn(
+        "flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-3",
+        collapsed && "justify-center px-0",
+      )}>
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-sm">
           <span className="text-sm font-bold text-primary-foreground tracking-tight">SF</span>
         </div>
@@ -49,7 +53,7 @@ export function Sidebar() {
             return (
               <div key={group.id} className="flex flex-col gap-0.5">
                 {!collapsed && (
-                  <span className="px-3 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider text-[10px] font-semibold">
+                  <span className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                     {t(group.labelKey)}
                   </span>
                 )}
@@ -69,7 +73,10 @@ export function Sidebar() {
                           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                       )}
                     >
-                      <Icon className="h-[18px] w-[18px] shrink-0 transition-colors" />
+                      <Icon className={cn(
+                        "h-[18px] w-[18px] shrink-0 transition-colors",
+                        isRtl && "icon-rtl-flip",
+                      )} />
                       {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
                     </Link>
                   );
@@ -81,16 +88,19 @@ export function Sidebar() {
       </ScrollArea>
 
       {/* Collapse toggle */}
-      <div className="border-t border-sidebar-border p-2">
+      <div className="shrink-0 border-t border-sidebar-border p-2">
         <Button
           variant="ghost"
           size="sm"
           onClick={toggleSidebar}
-          className={cn("w-full text-muted-foreground hover:text-foreground", collapsed ? "justify-center" : "justify-start")}
+          className={cn(
+            "w-full text-muted-foreground hover:text-foreground",
+            collapsed ? "justify-center" : "justify-start",
+          )}
           aria-label={t("nav.collapse")}
         >
-          <CollapseIcon className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">{t("nav.collapse")}</span>}
+          <CollapseIcon className={cn("h-4 w-4", isRtl && "icon-rtl-flip")} />
+          {!collapsed && <span className="ms-2">{t("nav.collapse")}</span>}
         </Button>
       </div>
     </aside>

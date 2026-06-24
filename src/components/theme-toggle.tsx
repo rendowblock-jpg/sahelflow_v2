@@ -1,19 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 
+/**
+ * Subscribe to next-themes' resolved theme without triggering a synchronous
+ * setState inside an effect (which the eslint rule forbids).
+ *
+ * useSyncExternalStore gives us a server snapshot (false = "not mounted yet")
+ * and a client snapshot (true = "mounted") — the standard SSR-safe pattern
+ * for "is this client-rendered yet?" checks.
+ */
+function useIsMounted(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Only render the icon AFTER mounting to avoid SSR/client mismatch.
-  // During SSR + first paint, resolvedTheme is undefined → we render a
-  // stable placeholder (Moon). After mount, resolvedTheme resolves and
-  // we show the correct icon. This is the standard next-themes pattern.
-  useEffect(() => setMounted(true), []);
+  const mounted = useIsMounted();
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -23,7 +33,7 @@ export function ThemeToggle() {
       size="icon"
       className="h-8 w-8"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label="Toggle theme"
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
     >
       {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </Button>
