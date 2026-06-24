@@ -62,8 +62,8 @@ export function AreaTrendChart({
             const id = `grad-${s.key}`;
             return (
               <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={`var(--color-${s.key})`} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={`var(--color-${s.key})`} stopOpacity={0.02} />
+                <stop offset="0%" stopColor={`var(--color-${s.key})`} stopOpacity={0.5} />
+                <stop offset="100%" stopColor={`var(--color-${s.key})`} stopOpacity={0.05} />
               </linearGradient>
             );
           })}

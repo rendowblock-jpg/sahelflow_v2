@@ -17,6 +17,7 @@ import { Users, Eye, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
+import { CustomerRowActions } from "@/components/customers/customer-row-actions";
 import type { Customer } from "@/types/domain";
 
 // Always fetch fresh data (local-first app, no ISR)
@@ -122,12 +123,15 @@ export default async function CustomersPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/customers/${customer.id}`}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">{t("customers.customerDetails")}</span>
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon-sm" asChild>
+                            <Link href={`/customers/${customer.id}`}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">{t("customers.customerDetails")}</span>
+                            </Link>
+                          </Button>
+                          <CustomerRowActions customer={customer} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

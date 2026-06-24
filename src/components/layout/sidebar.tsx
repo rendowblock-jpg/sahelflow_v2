@@ -69,7 +69,7 @@ export function Sidebar() {
                           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                       )}
                     >
-                      <Icon className="h-[18px] w-[18px] shrink-0" />
+                      <Icon className="h-[18px] w-[18px] shrink-0 transition-colors" />
                       {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
                     </Link>
                   );
