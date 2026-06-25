@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, Eye, AlertTriangle, Boxes, DollarSign } from "lucide-react";
+import { Package, Eye, AlertTriangle, Boxes, DollarSign, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
@@ -73,7 +73,17 @@ export default async function ProductsPage() {
       <PageHeader
         title={t("products.title")}
         description={`${t("products.totalStock")}: ${totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(inventoryValue)}`}
-        actions={<ProductFormDialog categories={categories} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/api/export/products">
+                <Download className="me-1.5 h-4 w-4" />
+                {t("products.export")}
+              </Link>
+            </Button>
+            <ProductFormDialog categories={categories} />
+          </div>
+        }
       />
 
       {/* Stat strip — upgraded with accent icons */}
