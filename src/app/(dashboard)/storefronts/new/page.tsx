@@ -42,7 +42,7 @@ export default async function NewStorefrontPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 max-w-4xl mx-auto">
+    <div className="app-content page-sections">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           {t("storefronts.newTitle")}

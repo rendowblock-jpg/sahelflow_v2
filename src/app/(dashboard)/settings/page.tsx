@@ -21,7 +21,7 @@ export default async function SettingsPage() {
 
 
   return (
-    <div className="space-y-6 p-6 max-w-5xl mx-auto">
+    <div className="app-content page-sections">
       <PageHeader
         title={t("nav.settings")}
         description={t("settings.subtitle") || "Configure your store, AI, delivery, and integrations"}

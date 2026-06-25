@@ -14,7 +14,7 @@ export default async function ImportsPage() {
   const { t } = await getI18n();
 
   return (
-    <div className="space-y-6 p-6 max-w-4xl mx-auto">
+    <div className="app-content page-sections">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("imports.title")}</h1>
         <p className="text-sm text-muted-foreground">

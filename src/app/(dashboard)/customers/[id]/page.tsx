@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   Phone,
   MapPin,
-  ArrowLeft,
   ShoppingBag,
   TrendingUp,
   AlertTriangle,
@@ -17,7 +16,6 @@ import { customerService, customerServiceExtensions } from "@/lib/data";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -31,6 +29,7 @@ import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import type { OrderStatus } from "@/types/domain";
 import { PageHeader } from "@/components/shared/page-header";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { StatCard } from "@/components/shared/stat-card";
 
 export const dynamic = "force-dynamic";
@@ -78,12 +77,13 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
   return (
     <div className="app-content page-sections">
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/customers">
-          <ArrowLeft className="h-4 w-4" />
-          {t("customers.title")}
-        </Link>
-      </Button>
+      <Breadcrumbs
+        items={[
+          { label: t("customers.title"), href: "/customers" },
+          { label: customer.name },
+        ]}
+        className="mb-4"
+      />
 
       <PageHeader
         title={customer.name}

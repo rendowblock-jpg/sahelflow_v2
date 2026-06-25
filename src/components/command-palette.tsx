@@ -17,6 +17,11 @@ import {
   Plus,
   FileDown,
   Sparkles,
+  Store,
+  Upload,
+  UserCircle,
+  Zap,
+  DatabaseBackup,
 } from "lucide-react";
 import { Command } from "@/components/ui/command";
 import { useI18n } from "@/hooks/use-i18n";
@@ -58,11 +63,16 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
     { id: "nav-analytics", label: t("command.nav.analytics"), icon: BarChart3, group: t("command.group.navigation"), keywords: ["analytics", "analytique", "إحصائيات"], action: () => router.push("/analytics") },
     { id: "nav-accounting", label: t("command.nav.accounting"), icon: Calculator, group: t("command.group.navigation"), keywords: ["accounting", "comptabilité", "محاسبة"], action: () => router.push("/accounting") },
     { id: "nav-settings", label: t("command.nav.settings"), icon: Settings, group: t("command.group.navigation"), keywords: ["settings", "paramètres", "إعدادات"], action: () => router.push("/settings") },
+    { id: "nav-storefronts", label: t("command.nav.storefronts"), icon: Store, group: t("command.group.navigation"), keywords: ["storefronts", "boutiques", "متاجر"], action: () => router.push("/storefronts") },
+    { id: "nav-imports", label: t("command.nav.imports"), icon: Upload, group: t("command.group.navigation"), keywords: ["imports", "import", "استيراد"], action: () => router.push("/imports") },
+    { id: "nav-profile", label: t("command.nav.profile"), icon: UserCircle, group: t("command.group.navigation"), keywords: ["profile", "profil", "ملف شخصي"], action: () => router.push("/profile") },
+    { id: "nav-automations", label: t("command.nav.automations"), icon: Zap, group: t("command.group.navigation"), keywords: ["automations", "automatisation", "أتمتة"], action: () => router.push("/automations") },
     // Actions
     { id: "action-new-order", label: t("command.action.newOrder"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new order", "nouvelle commande", "طلب جديد"], action: () => { router.push("/orders"); onAction?.("new-order"); } },
     { id: "action-new-product", label: t("command.action.newProduct"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new product", "nouveau produit", "منتج جديد"], action: () => { router.push("/products"); onAction?.("new-product"); } },
     { id: "action-export", label: t("command.action.export"), icon: FileDown, group: t("command.group.quickActions"), keywords: ["export", "csv", "excel", "تصدير"], action: () => onAction?.("export") },
     { id: "action-ai", label: t("command.action.askAi"), icon: Sparkles, group: t("command.group.quickActions"), keywords: ["ai", "ask", "question", "سؤال"], action: () => router.push("/agents") },
+    { id: "action-backup", label: t("command.action.backup"), icon: DatabaseBackup, group: t("command.group.quickActions"), keywords: ["backup", "sauvegarde", "نسخ احتياطي"], action: () => router.push("/settings") },
   ], [router, onAction, t]);
 
   const [search, setSearch] = React.useState("");

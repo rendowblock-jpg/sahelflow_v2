@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Eye, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
+import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
@@ -45,7 +45,17 @@ export default async function CustomersPage() {
       <PageHeader
         title={t("customers.title")}
         description={t("customers.subtitle")}
-        actions={<CustomerFormDialog />}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/api/export/customers">
+                <Download className="me-1.5 h-4 w-4" />
+                {t("customers.export")}
+              </Link>
+            </Button>
+            <CustomerFormDialog />
+          </div>
+        }
       />
 
       {/* Stat strip — upgraded with accent icons */}

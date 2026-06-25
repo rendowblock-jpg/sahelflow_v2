@@ -270,8 +270,10 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
             {notifications.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-center justify-center text-primary text-sm cursor-pointer">
-                  {t("topbar.viewAllNotifications")}
+                <DropdownMenuItem className="text-center justify-center text-primary text-sm cursor-pointer" asChild>
+                  <Link href="/settings">
+                    {t("topbar.viewAllNotifications")}
+                  </Link>
                 </DropdownMenuItem>
               </>
             )}
@@ -308,13 +310,22 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
                   {t("nav.settings")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                <HelpCircle className="me-2 size-4" />
-                {t("topbar.helpSupport")}
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <a href="https://sahelflow.com/help" target="_blank" rel="noopener noreferrer">
+                  <HelpCircle className="me-2 size-4" />
+                  {t("topbar.helpSupport")}
+                </a>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" className="cursor-pointer">
+            <DropdownMenuItem
+              variant="destructive"
+              className="cursor-pointer"
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                window.location.assign("/login");
+              }}
+            >
               <LogOut className="me-2 size-4" />
               {t("topbar.logout")}
             </DropdownMenuItem>
