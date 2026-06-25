@@ -111,7 +111,7 @@ export default async function AccountingPage() {
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+            <Card key={stat.label} className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
@@ -129,7 +129,7 @@ export default async function AccountingPage() {
       </div>
 
       {/* Revenue vs Expenses chart */}
-      <Card className="card-hover animate-fade-up" style={{ animationDelay: "240ms" }}>
+      <Card className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 dark:bg-violet-500/15">
@@ -144,7 +144,7 @@ export default async function AccountingPage() {
       </Card>
 
       {/* Recent expenses — full CRUD table */}
-      <Card className="card-hover animate-fade-up" style={{ animationDelay: "300ms" }}>
+      <Card className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: "300ms" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 dark:bg-red-500/15">

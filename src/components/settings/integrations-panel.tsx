@@ -284,7 +284,7 @@ export function IntegrationsPanel({
               {items.map((integration) => {
                 const Icon = integration.icon;
                 return (
-                  <Card key={integration.id} className="card-hover">
+                  <Card key={integration.id} className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${integration.iconBg}`}>
