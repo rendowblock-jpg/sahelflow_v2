@@ -5,23 +5,23 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { Toaster } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
 
 /**
  * AppShell — the single source of truth for app layout.
  *
- * Responsive behavior:
- *  - mobile (<lg): sidebar hidden, slides in via Sheet (Topbar handles)
- *  - tablet (lg): sidebar visible, collapsible to 60px rail
- *  - desktop (xl+): same as tablet, content max-width capped for readability
+ * Premium patterns (Dub + Trigger.dev):
+ * - Grid layout: grid-cols-[auto_1fr] with overflow-hidden root
+ * - Floating content panel: rounded-xl bg-background on neutral gutter
+ * - Only <main> scrolls — no double scrollbars, no page bounce
+ * - Responsive: sidebar hidden on mobile (Sheet handles it)
  *
- * RTL: the sidebar is placed on the inline-start side automatically by flexbox
- * (no physical left/right). The main content area takes flex-1.
+ * Responsive behavior:
+ *  - mobile (<lg): sidebar hidden, slides in via Sheet
+ *  - tablet/desktop (lg+): sidebar visible, collapsible to 68px rail
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
 
-  // Cmd+K / Ctrl+K shortcut for command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -34,34 +34,31 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background">
-      {/* Sidebar: hidden on mobile, shown on lg+ */}
+    <div className="grid h-dvh grid-cols-[auto_1fr] overflow-hidden bg-muted/30 lg:bg-muted/40">
+      {/* Sidebar — hidden on mobile, shown on lg+ */}
       <div className="hidden lg:flex h-full">
         <Sidebar />
       </div>
 
-      {/* Main content column */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} />
-        <main className={cn("flex-1 overflow-y-auto overflow-x-hidden")}>
-          {children}
-        </main>
+      {/* Main content column — floating panel on lg+ */}
+      <div className="flex flex-col overflow-hidden p-0 lg:p-2 lg:ps-0">
+        <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
+          <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} />
+          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+            {children}
+          </main>
+        </div>
       </div>
 
       {/* Command Palette */}
-      <CommandPalette
-        open={commandOpen}
-        onOpenChange={setCommandOpen}
-      />
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
 
       {/* Toast Provider */}
       <Toaster
         position="bottom-right"
         richColors
         closeButton
-        toastOptions={{
-          className: "shadow-elevated",
-        }}
+        toastOptions={{ className: "shadow-popover" }}
       />
     </div>
   );

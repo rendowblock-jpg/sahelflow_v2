@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sparkline } from "@/components/charts/sparkline";
@@ -14,16 +15,13 @@ interface StatCardProps {
   accentIcon?: string;
   trend?: number;
   trendLabel?: React.ReactNode;
+  subtitle?: React.ReactNode;
   spark?: Array<{ value: number }>;
   sparkColor?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
-/**
- * Parse a value string into {prefix, num, suffix} for count-up animation.
- * E.g. "45 100 DA" → {prefix: "", num: 45100, suffix: " DA"}
- */
 function parseNumeric(value: React.ReactNode): { prefix: string; num: number; suffix: string } | null {
   if (typeof value !== "string") return null;
   const match = value.match(/^([^0-9]*)([0-9,.]+)([^0-9]*)$/);
@@ -34,9 +32,15 @@ function parseNumeric(value: React.ReactNode): { prefix: string; num: number; su
 }
 
 /**
- * Premium KPI stat card with count-up animation (inspired by v2's
- * AnimatedStatCard). Accent icon chip, animated tabular value, trend
- * arrow with delta, optional inline sparkline.
+ * Premium KPI stat card — shadcn v4 pattern.
+ * 
+ * Features:
+ * - Gradient tint background (from-primary/5 to-card)
+ * - Container-query responsive number sizing
+ * - Count-up animation with cubic ease-out
+ * - Trend badge in CardAction slot
+ * - Optional sparkline with gradient fill
+ * - Subtle hover elevation
  */
 export function StatCard({
   label,
@@ -46,6 +50,7 @@ export function StatCard({
   accentIcon = "text-primary",
   trend,
   trendLabel,
+  subtitle,
   spark,
   sparkColor,
   className,
@@ -55,7 +60,6 @@ export function StatCard({
   const isNegative = (trend ?? 0) < 0;
   const showTrend = trend !== undefined && trend !== 0;
 
-  // Count-up animation for numeric string values
   const parsed = parseNumeric(value);
   const [displayValue, setDisplayValue] = useState(value);
   const rafRef = useRef<number | undefined>(undefined);
@@ -73,7 +77,7 @@ export function StatCard({
     const tick = (now: number) => {
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3); // cubic ease-out
+      const eased = 1 - Math.pow(1 - t, 3);
       const current = Math.round(eased * parsed.num);
       setDisplayValue(
         `${parsed.prefix}${current.toLocaleString("fr-FR")}${parsed.suffix}`,
@@ -85,37 +89,74 @@ export function StatCard({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, parsed]);
 
   return (
-    <Card className={cn("card-hover animate-fade-up overflow-hidden", className)} style={style}>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <div className="text-2xl font-bold tabular-nums">{displayValue}</div>
-            {showTrend && (
-              <div className="flex items-center gap-1 text-xs">
-                {isPositive && <ArrowUpRight className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
-                {isNegative && <ArrowDownRight className="h-3 w-3 text-red-600 dark:text-red-400" />}
-                <span className={isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
-                  {Math.abs(trend!)}%
-                </span>
-                {trendLabel && <span className="text-muted-foreground">{trendLabel}</span>}
-              </div>
+    <Card
+      className={cn(
+        "@container/card overflow-hidden border shadow-xs transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "hover:shadow-md hover:-translate-y-0.5",
+        // Gradient tint — shadcn v4 pattern
+        "bg-gradient-to-t from-primary/5 to-card dark:from-primary/10 dark:to-card",
+        className,
+      )}
+      style={style}
+    >
+      <CardHeader className="relative">
+        {/* Accent icon — top end */}
+        <div className={cn(
+          "absolute end-4 top-4 flex size-9 items-center justify-center rounded-xl",
+          accentBg,
+          accentIcon,
+          "[&>svg]:h-4 [&>svg]:w-4",
+        )}>
+          {icon}
+        </div>
+
+        <CardDescription className="text-[13px] font-medium text-muted-foreground">
+          {label}
+        </CardDescription>
+
+        <CardTitle className="text-2xl font-semibold tabular-nums tracking-tight @[250px]/card:text-3xl">
+          {displayValue}
+        </CardTitle>
+
+        {showTrend && (
+          <CardAction className="mt-1">
+            <Badge
+              variant="outline"
+              className={cn(
+                "gap-1 rounded-full px-1.5 py-0 text-xs font-medium",
+                isPositive
+                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                  : "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400",
+              )}
+            >
+              {isPositive && <ArrowUpRight className="size-3" />}
+              {isNegative && <ArrowDownRight className="size-3" />}
+              {Math.abs(trend!)}%
+            </Badge>
+          </CardAction>
+        )}
+      </CardHeader>
+
+      {(spark || trendLabel || subtitle) && (
+        <CardFooter className="flex-col items-start gap-2 border-t bg-muted/20 px-6 py-3">
+          {spark && spark.length > 1 && (
+            <div className="w-full -mx-1">
+              <Sparkline data={spark} color={sparkColor} height={32} />
+            </div>
+          )}
+          <div className="flex w-full items-center justify-between gap-2 text-[13px]">
+            {trendLabel && (
+              <span className="line-clamp-1 font-medium text-foreground/80">{trendLabel}</span>
+            )}
+            {subtitle && (
+              <span className="text-muted-foreground">{subtitle}</span>
             )}
           </div>
-          <div className={cn("flex size-9 items-center justify-center rounded-lg", accentBg, accentIcon, "[&>svg]:h-4 [&>svg]:w-4")}>
-            {icon}
-          </div>
-        </div>
-        {spark && spark.length > 1 && (
-          <div className="mt-3 -mx-1">
-            <Sparkline data={spark} color={sparkColor} height={36} />
-          </div>
-        )}
-      </CardContent>
+        </CardFooter>
+      )}
     </Card>
   );
 }

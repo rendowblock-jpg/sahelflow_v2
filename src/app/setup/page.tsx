@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Loader2, ArrowRight, Check } from "lucide-react";
+import { Lock, Loader2, ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 
 export default function SetupPage() {
@@ -18,7 +18,6 @@ export default function SetupPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // If already set up, redirect to login
     fetch("/api/auth/status")
       .then((r) => r.json())
       .then((data) => {
@@ -66,19 +65,24 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm shadow-elevated animate-scale-in">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm">
-            <Lock className="h-6 w-6 text-primary-foreground" />
+    <div className="relative flex min-h-dvh items-center justify-center bg-muted/30 p-4">
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5"
+        aria-hidden="true"
+      />
+
+      <Card className="relative w-full max-w-sm border shadow-popover animate-scale-in">
+        <CardHeader className="text-center pb-4">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
+            <Lock className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-xl tracking-tight">{t("auth.setupTitle")}</CardTitle>
-          <CardDescription>{t("auth.setupDescription")}</CardDescription>
+          <CardTitle className="text-xl font-semibold tracking-tight">{t("auth.setupTitle")}</CardTitle>
+          <CardDescription className="text-sm">{t("auth.setupDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="pin">{t("auth.createPin")}</Label>
+              <Label htmlFor="pin" className="text-sm font-medium">{t("auth.createPin")}</Label>
               <Input
                 id="pin"
                 type="password"
@@ -88,13 +92,13 @@ export default function SetupPage() {
                 autoFocus
                 autoComplete="new-password"
                 disabled={loading}
-                className="text-center text-lg tracking-widest"
+                className="h-11 text-center text-lg tracking-[0.3em]"
                 inputMode="numeric"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPin">{t("auth.confirmPin")}</Label>
+              <Label htmlFor="confirmPin" className="text-sm font-medium">{t("auth.confirmPin")}</Label>
               <Input
                 id="confirmPin"
                 type="password"
@@ -103,7 +107,7 @@ export default function SetupPage() {
                 placeholder="••••••"
                 autoComplete="new-password"
                 disabled={loading}
-                className="text-center text-lg tracking-widest"
+                className="h-11 text-center text-lg tracking-[0.3em]"
                 inputMode="numeric"
               />
             </div>
@@ -114,7 +118,7 @@ export default function SetupPage() {
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading || pin.length < 4 || confirmPin.length < 4}>
+            <Button type="submit" className="w-full h-10" disabled={loading || pin.length < 4 || confirmPin.length < 4}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -126,9 +130,10 @@ export default function SetupPage() {
               )}
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground">
-              {t("auth.pinSecurityNote")}
-            </p>
+            <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <ShieldCheck className="size-4 shrink-0 mt-0.5 text-primary" />
+              <span>{t("auth.pinSecurityNote")}</span>
+            </div>
           </form>
         </CardContent>
       </Card>

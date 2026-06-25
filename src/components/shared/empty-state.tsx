@@ -14,9 +14,13 @@ interface EmptyStateProps {
 }
 
 /**
- * Professional empty state — icon in a gradient container, title,
- * description, and an optional CTA button. Used across all list pages
- * when there's no data, so the merchant knows what to do next.
+ * Premium empty state — taxonomy + Dub pattern.
+ * 
+ * - min-h-[400px] for consistent vertical space
+ * - Dashed border container
+ * - Square icon tile (rounded-2xl, not circle)
+ * - text-balance for description
+ * - Centered, max-w-[420px] content
  */
 export function EmptyState({
   icon: Icon,
@@ -28,21 +32,30 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div className={cn("flex flex-col items-center justify-center py-16 text-center", className)}>
-      <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
-        <Icon className="h-8 w-8 text-primary" />
+    <div className={cn(
+      "flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center",
+      className,
+    )}>
+      <div className="mx-auto flex max-w-[420px] flex-col items-center gap-4">
+        <div className="flex size-14 items-center justify-center rounded-2xl border bg-muted">
+          <Icon className="size-6 text-muted-foreground" />
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          <p className="text-balance text-sm text-muted-foreground">{description}</p>
+        </div>
+        {actionLabel && (actionHref || onAction) && (
+          <div className="mt-2">
+            {actionHref ? (
+              <Button asChild>
+                <Link href={actionHref}>{actionLabel}</Link>
+              </Button>
+            ) : (
+              <Button onClick={onAction}>{actionLabel}</Button>
+            )}
+          </div>
+        )}
       </div>
-      <h3 className="text-lg font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-md mb-4">{description}</p>
-      {actionLabel && (actionHref || onAction) && (
-        actionHref ? (
-          <Button asChild>
-            <Link href={actionHref}>{actionLabel}</Link>
-          </Button>
-        ) : (
-          <Button onClick={onAction}>{actionLabel}</Button>
-        )
-      )}
     </div>
   );
 }

@@ -44,7 +44,6 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "en", label: "English", flag: "🇬🇧" },
 ];
 
-/** Notification shape from the API. */
 interface Notification {
   id: string;
   type: "order" | "delivery" | "stock" | "info";
@@ -80,15 +79,12 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
   const setActiveShop = useShopStore((s) => s.setActiveShop);
   const loadShops = useShopStore((s) => s.loadShops);
 
-  // Real notification state
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Load the shop list + active shop ID from the API on mount
   useEffect(() => {
     void loadShops();
   }, [loadShops]);
 
-  // Load real notifications from API
   const loadNotifications = useCallback(async () => {
     try {
       const res = await fetch("/api/notifications");
@@ -102,8 +98,6 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
   }, []);
 
   useEffect(() => {
-    // Defer the initial fetch to a timer so no setState runs synchronously
-    // in the effect body (avoids cascading renders). Polling continues every 60s.
     const initial = setTimeout(() => void loadNotifications(), 0);
     const interval = setInterval(() => void loadNotifications(), 60_000);
     return () => {
@@ -117,18 +111,17 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
   const isRtl = dir === "rtl";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 glass px-3 sm:gap-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4">
       {/* Start: Mobile sidebar toggle + shop selector */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2">
         {/* Mobile sidebar (hidden on desktop) */}
         <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon-sm" aria-label="Open menu">
+                <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            {/* RTL: sidebar slides from the end side (right in RTL, left in LTR) */}
             <SheetContent side={isRtl ? "right" : "left"} className="w-64 p-0">
               <Sidebar />
             </SheetContent>
@@ -137,15 +130,15 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 px-2">
+            <Button variant="ghost" size="sm" className="gap-2 px-2 font-medium">
               <Store className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium hidden sm:inline">
+              <span className="hidden sm:inline">
                 {loaded ? (activeShop?.name ?? t("topbar.selectShop")) : t("topbar.loading")}
               </span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuContent align="start" className="w-56 shadow-dropdown">
             <DropdownMenuLabel>{t("nav.groupWorkspace")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {shops.map((shop) => (
@@ -154,10 +147,10 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
                 onClick={() => void setActiveShop(shop.id)}
                 className="gap-2"
               >
-                <span className="text-lg">{shop.icon ?? "🏪"}</span>
+                <span className="text-base">{shop.icon ?? "🏪"}</span>
                 <span className="flex-1">{shop.name}</span>
                 {shop.id === activeShopId && (
-                  <span className="text-xs text-muted-foreground">●</span>
+                  <span className="size-1.5 rounded-full bg-primary" />
                 )}
               </DropdownMenuItem>
             ))}
@@ -169,34 +162,35 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
       {onCommandPaletteOpen && (
         <button
           onClick={onCommandPaletteOpen}
-          className="hidden sm:flex flex-1 max-w-md items-center gap-3 h-9 rounded-lg border bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+          className="hidden sm:flex h-8 flex-1 max-w-md items-center gap-2 rounded-lg border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:border-border"
         >
-          <Search className="size-4 shrink-0" />
+          <Search className="size-3.5 shrink-0" />
           <span className="flex-1 text-start truncate">{t("topbar.searchPlaceholder")}</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
             <Command className="size-2.5" />K
           </kbd>
         </button>
       )}
 
-      {/* End: Language + Theme + Notifications + Avatar */}
+      {/* End: Live indicator + Language + Theme + Notifications + Avatar */}
       <div className="flex items-center gap-1 ms-auto">
-        <Badge variant="outline" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hidden md:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
-          <span className="text-xs font-medium">{t("common.live")}</span>
-        </Badge>
+        {/* Live indicator — hidden on mobile */}
+        <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
+          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Live</span>
+        </div>
 
-        <Separator orientation="vertical" className="h-6 hidden md:block" />
+        <Separator orientation="vertical" className="mx-1 h-5 hidden md:block" />
 
         {/* Language switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-1.5">
+            <Button variant="ghost" size="sm" className="gap-1.5 px-2">
               <Globe className="h-4 w-4" />
-              <span className="text-sm uppercase">{locale}</span>
+              <span className="text-xs font-medium uppercase">{locale}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="shadow-dropdown">
             {LOCALE_OPTIONS.map((opt) => (
               <DropdownMenuItem
                 key={opt.value}
@@ -205,7 +199,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
               >
                 <span className="text-base">{opt.flag}</span>
                 <span className="flex-1">{opt.label}</span>
-                {opt.value === locale && <span className="text-xs">●</span>}
+                {opt.value === locale && <span className="size-1.5 rounded-full bg-primary" />}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -214,20 +208,20 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
         {/* Theme toggle */}
         <ThemeToggle />
 
-        {/* Notifications — real data */}
+        {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 relative">
+            <Button variant="ghost" size="icon-sm" className="relative">
               <Bell className="size-4" />
               {unreadCount > 0 && (
-                <span className="absolute end-0 top-0 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white animate-pulse-subtle">
-                  {unreadCount}
+                <span className="absolute end-0 top-0 flex size-3.5 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
               <span className="sr-only">{t("common.notifications")}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 shadow-elevated">
+          <DropdownMenuContent align="end" className="w-80 shadow-dropdown">
             <DropdownMenuLabel className="flex items-center justify-between">
               <span>{t("common.notifications")}</span>
               {unreadCount > 0 && (
@@ -239,7 +233,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Bell className="h-6 w-6 text-muted-foreground/40 mb-2" />
                   <p className="text-xs text-muted-foreground">
                     {t("topbar.noNotifications")}
@@ -254,13 +248,13 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
                       key={notif.id}
                       className="flex items-start gap-3 p-3 cursor-pointer"
                     >
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
-                        <IconComp className="h-4 w-4" />
+                      <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
+                        <IconComp className="h-3.5 w-3.5" />
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           {!notif.read && (
-                            <span className={`h-1.5 w-1.5 rounded-full ${dotColor} shrink-0`} />
+                            <span className={`size-1.5 rounded-full ${dotColor} shrink-0`} />
                           )}
                           <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
                             {notif.title}
@@ -287,24 +281,26 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 rounded-full ms-1">
-              <Avatar className="size-8 ring-1 ring-border">
-                <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+            <Button variant="ghost" size="icon-sm" className="rounded-full ms-0.5">
+              <Avatar className="size-7 ring-1 ring-border">
+                <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
                   {activeShop?.name.charAt(0).toUpperCase() ?? "S"}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 shadow-elevated">
+          <DropdownMenuContent align="end" className="w-56 shadow-dropdown">
             <DropdownMenuLabel className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">{t("topbar.user")}</span>
               <span className="text-xs text-muted-foreground font-normal">SahelFlow</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer">
-                <User className="me-2 size-4" />
-                {t("topbar.profile")}
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <Link href="/profile">
+                  <User className="me-2 size-4" />
+                  {t("topbar.profile")}
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" asChild>
                 <Link href="/settings">
