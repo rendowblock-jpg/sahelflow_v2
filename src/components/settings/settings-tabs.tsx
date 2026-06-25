@@ -32,7 +32,7 @@ export function SettingsTabs({
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
-      {/* Tab sidebar */}
+      {/* Tab sidebar — premium tinted active state */}
       <nav className="flex lg:w-56 lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -42,13 +42,16 @@ export function SettingsTabs({
               key={tab.id}
               onClick={() => setActive(tab.id)}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap",
+                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  ? "bg-accent font-medium text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground",
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className={cn(
+                "h-4 w-4 shrink-0 transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground",
+              )} />
               {t(`settings.tab.${tab.id}`)}
             </button>
           );

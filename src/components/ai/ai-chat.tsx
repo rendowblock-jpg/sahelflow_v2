@@ -335,9 +335,9 @@ export function AiChat() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      <div className="w-72 border-e flex flex-col">
-        <div className="p-3 border-b">
+    <div className="flex h-full">
+      <div className="w-72 border-e flex flex-col bg-muted/20">
+        <div className="p-3 border-b bg-background">
           <Button onClick={handleNewSession} className="w-full" size="sm">
             <Plus className="h-4 w-4 me-1.5" />
             {t("ai.newConversation")}
@@ -353,13 +353,15 @@ export function AiChat() {
               {t("ai.noSessions")}
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="space-y-1 p-2">
               {sessions.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setActiveSessionId(s.id)}
-                  className={`flex items-start gap-2 p-3 text-start w-full hover:bg-accent/50 transition-colors ${
-                    s.id === activeSessionId ? "bg-accent" : ""
+                  className={`flex items-start gap-2 p-3 text-start w-full rounded-lg transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    s.id === activeSessionId
+                      ? "bg-background shadow-sm ring-1 ring-border"
+                      : "hover:bg-background/60"
                   }`}
                 >
                   <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -379,10 +381,10 @@ export function AiChat() {
       <div className="flex-1 flex flex-col">
         {activeSessionId ? (
           <>
-            <div className="p-4 border-b flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold">{t("ai.assistantTitle")}</h2>
-              <Badge variant="outline" className="ml-auto text-xs">
+            <div className="p-3 border-b bg-background flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold tracking-tight">{t("ai.assistantTitle")}</h2>
+              <Badge variant="outline" className="ms-auto text-xs">
                 {t("ai.toolsCount")}
               </Badge>
             </div>
@@ -395,11 +397,11 @@ export function AiChat() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="rounded-full bg-primary/10 p-4 mb-4 mx-auto w-fit">
-                      <Bot className="h-8 w-8 text-primary" />
+                    <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border bg-muted w-fit">
+                      <Bot className="size-6 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">{t("ai.howCanIHelp")}</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    <h3 className="text-base font-semibold mb-2">{t("ai.howCanIHelp")}</h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto text-balance">
                       {t("ai.capabilities")}
                     </p>
                   </div>
@@ -408,10 +410,10 @@ export function AiChat() {
                     <div key={msg.id} className="space-y-2">
                       <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         <div
-                          className={`max-w-[80%] rounded-lg p-3 ${
+                          className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm ${
                             msg.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-muted text-foreground rounded-bl-md"
                           }`}
                         >
                           <p className="text-sm whitespace-pre-wrap">
@@ -472,7 +474,7 @@ export function AiChat() {
               </div>
             </ScrollArea>
 
-            <div className="p-4 border-t">
+            <div className="p-3 border-t bg-background">
               <div className="flex items-center gap-2 max-w-3xl mx-auto">
                 <Input
                   type="text"
@@ -500,16 +502,16 @@ export function AiChat() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="rounded-full bg-primary/10 p-4 mb-4 mx-auto w-fit">
-                <Bot className="h-8 w-8 text-primary" />
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center max-w-sm">
+              <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl border bg-muted">
+                <Bot className="size-6 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("ai.assistantSahelFlow")}</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
+              <h3 className="text-base font-semibold mb-1.5">{t("ai.assistantSahelFlow")}</h3>
+              <p className="text-sm text-muted-foreground text-balance mb-4">
                 {t("ai.createConversationPrompt")}
               </p>
-              <Button onClick={handleNewSession} className="mt-4">
+              <Button onClick={handleNewSession} size="sm">
                 <Plus className="h-4 w-4 me-1.5" />
                 {t("ai.newConversation")}
               </Button>

@@ -120,7 +120,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       />
 
       {/* Customer 360 stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t("customers.lifetimeValue")}
           value={formatDZD(stats.totalSpent)}
@@ -158,7 +158,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       </div>
 
       {/* Delivery breakdown + Notes */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1 animate-fade-up">
           <CardHeader>
             <CardTitle className="text-base">{t("customers.deliveryRate")}</CardTitle>

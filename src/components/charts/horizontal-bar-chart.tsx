@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * HorizontalBarChart — ranked horizontal bars for top products, top
- * wilayas, etc. Sorted descending by the caller, value labels on the
- * right, rounded bars, theme-aware colors.
- * Formatters are string keys (ChartFormatter) for RSC compatibility.
+ * HorizontalBarChart — ranked horizontal bars (shadcn v4 pattern).
+ * 
+ * - Rounded bars: radius [0, 4, 4, 0]
+ * - cursor with muted fill
+ * - indicator="dot" tooltip
+ * - Value labels on the right (LabelList)
+ * - maxBarSize={22} for clean density
  */
 import { Bar, BarChart, XAxis, YAxis, Cell, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
@@ -44,7 +47,7 @@ export function HorizontalBarChart({
   const maxLabelLen = Math.max(...data.map((d) => d.label.length), 4);
 
   return (
-    <ChartContainer config={config} style={{ height }} className="w-full">
+    <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
       <BarChart
         data={data}
         layout="vertical"
@@ -58,13 +61,14 @@ export function HorizontalBarChart({
           tickLine={false}
           axisLine={false}
           width={Math.min(maxLabelLen * 7 + 8, 120)}
-          className="text-[11px]"
+          className="text-[11px] fill-muted-foreground"
         />
         <ChartTooltip
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}
           content={
             <ChartTooltipContent
               nameKey="key"
+              indicator="dot"
               hideLabel
               formatter={(_value, name) => {
                 const d = data.find((x) => x.key === name);

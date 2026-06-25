@@ -1,9 +1,14 @@
 "use client";
 
 /**
- * LineTrendChart — multi-series line chart for comparing trends
- * (e.g. revenue vs. last period, AOV across weeks). Dots appear on hover.
- * Formatters are string keys (ChartFormatter) for RSC compatibility.
+ * LineTrendChart — multi-series line chart (shadcn v4 pattern).
+ * 
+ * - CartesianGrid: horizontal only, dashed, var(--border)
+ * - No axis lines (tickLine={false} axisLine={false})
+ * - minTickGap={32} to prevent crowded labels
+ * - type="natural" curve
+ * - cursor={false} on tooltip
+ * - indicator="dot"
  */
 import {
   Line,
@@ -48,15 +53,15 @@ export function LineTrendChart({
     );
   }
   return (
-    <ChartContainer config={config} style={{ height }} className="w-full">
+    <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
       <LineChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/50" />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey={xKey}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          minTickGap={24}
+          minTickGap={32}
           className="text-xs fill-muted-foreground"
         />
         <YAxis
@@ -68,8 +73,10 @@ export function LineTrendChart({
           className="text-xs fill-muted-foreground"
         />
         <ChartTooltip
+          cursor={false}
           content={
             <ChartTooltipContent
+              indicator="dot"
               formatter={(value, name) => {
                 const s = series.find((x) => x.key === name);
                 const num = Number(value);
@@ -82,7 +89,7 @@ export function LineTrendChart({
           <Line
             key={s.key}
             dataKey={s.key}
-            type="monotone"
+            type="natural"
             stroke={`var(--color-${s.key})`}
             strokeWidth={2}
             dot={false}

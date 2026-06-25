@@ -301,7 +301,7 @@ export function InboxLive() {
 
   return (
     <>
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-full flex-col">
       <StatusBar
         status={status}
         user={user}
@@ -318,10 +318,10 @@ export function InboxLive() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Conversation list */}
-        <div className="w-80 border-e flex flex-col">
-          <div className="p-4 border-b">
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
+        <div className="w-80 border-e flex flex-col bg-muted/20">
+          <div className="p-4 border-b bg-background">
+            <h1 className="text-base font-semibold flex items-center gap-2 tracking-tight">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
               {t("inbox.title")}
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
@@ -344,15 +344,17 @@ export function InboxLive() {
                   : t("inbox.noConversationsDisconnected")}
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="space-y-1 p-2">
                 {chats.map((c) => {
                   const isActive = c.id === activeChatId;
                   return (
                     <button
                       key={c.id}
                       onClick={() => handleSelectChat(c)}
-                      className={`flex w-full items-start gap-3 p-3 text-start hover:bg-accent/50 transition-colors ${
-                        isActive ? "bg-accent" : ""
+                      className={`flex w-full items-start gap-3 rounded-lg p-3 text-start transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                        isActive
+                          ? "bg-background shadow-sm ring-1 ring-border"
+                          : "hover:bg-background/60"
                       }`}
                     >
                       <Avatar className="h-10 w-10 mt-1">
@@ -399,15 +401,15 @@ export function InboxLive() {
         <div className="flex-1 flex flex-col">
           {activeChat ? (
             <>
-              <div className="p-4 border-b flex items-center justify-between">
+              <div className="p-3 border-b bg-background flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
+                  <Avatar className="size-9">
+                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}>
                       {activeChat.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className="font-semibold">{activeChat.name}</h2>
+                    <h2 className="text-sm font-semibold tracking-tight">{activeChat.name}</h2>
                     <p className="text-xs text-muted-foreground font-mono">{activeChat.phone}</p>
                   </div>
                 </div>
@@ -429,14 +431,14 @@ export function InboxLive() {
                       <div key={msg.id} className="space-y-2">
                         <div className={`flex ${msg.direction === "inbound" ? "justify-start" : "justify-end"}`}>
                           <div
-                            className={`max-w-[70%] rounded-lg p-3 ${
+                            className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
                               msg.direction === "inbound"
-                                ? "bg-muted text-foreground"
-                                : "bg-primary text-primary-foreground"
+                                ? "bg-muted text-foreground rounded-bl-md"
+                                : "bg-primary text-primary-foreground rounded-br-md"
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
-                            <p className={`text-xs mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
+                            <p className={`text-[10px] mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
                               {new Date(msg.timestamp).toLocaleTimeString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -457,7 +459,7 @@ export function InboxLive() {
                 </div>
               </ScrollArea>
 
-              <div className="p-4 border-t">
+              <div className="p-3 border-t bg-background">
                 {activeChat.channel === "whatsapp" && status === "connected" ? (
                   <div className="flex items-center gap-2">
                     <Input
@@ -503,13 +505,13 @@ export function InboxLive() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="rounded-full bg-muted p-4 mb-4 mx-auto w-fit">
-                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center max-w-sm">
+                <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl border bg-muted">
+                  <MessageSquare className="size-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-1">{t("inbox.noConversationSelected")}</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
+                <h3 className="text-base font-semibold mb-1.5">{t("inbox.noConversationSelected")}</h3>
+                <p className="text-sm text-muted-foreground text-balance">
                   {t("inbox.selectConversationHint")}
                 </p>
               </div>
