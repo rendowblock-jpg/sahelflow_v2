@@ -154,7 +154,7 @@ export default async function AnalyticsPage({
       />
 
       {/* Summary KPIs with trend deltas */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t("analytics.totalRevenue")}
           value={formatDZD(s.totalRevenue)}
