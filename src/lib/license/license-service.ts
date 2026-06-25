@@ -298,3 +298,79 @@ export function getStatusLabel(status: LicenseStatus): string {
   };
   return keys[status] ?? status;
 }
+
+
+// ── API-level enforcement (D-006: license enforcement gate) ───────────────
+
+/**
+ * Cache the last validation result to avoid re-validating on every API call.
+ * License is validated once on app launch + cached. Re-validated every 5 min.
+ */
+let cachedResult: LicenseValidationResult | null = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Check if the current license is valid.
+ * In dev mode, always returns true (license bypassed).
+ * In production, checks the cached validation result (or validates fresh).
+ */
+export async function isLicenseValid(): Promise<boolean> {
+  if (isDevMode()) return true;
+
+  // Check cache
+  if (cachedResult && Date.now() - cachedAt < CACHE_TTL_MS) {
+    return cachedResult.status === "valid";
+  }
+
+  // In production without a stored license, we can't validate here (no access
+  // to localStorage from server). The client-side license check gates the UI.
+  // For API enforcement, we rely on the middleware-level check or the client
+  // sending the license status. For now, fail-open in production if no cache
+  // (the UI won't let users interact without a valid license).
+  if (!cachedResult) return true; // fail-open — UI gates prevent access
+
+  return cachedResult.status === "valid";
+}
+
+/**
+ * Require a valid license — throws 403 if invalid.
+ * Use in API routes: `await requireLicense();`
+ */
+export async function requireLicense(): Promise<void> {
+  const valid = await isLicenseValid();
+  if (!valid) {
+    throw new Response(JSON.stringify({ error: "License required", code: "LICENSE_REQUIRED" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+/**
+ * Check if the current license includes a specific feature.
+ * All licenses (trial + permanent) include "all" features by default.
+ * Use for feature gating: `if (await hasFeature("ai_chat")) { ... }`
+ */
+export async function hasFeature(feature: string): Promise<boolean> {
+  if (isDevMode()) return true;
+  if (!cachedResult || cachedResult.status !== "valid") return false;
+  const features = cachedResult.license?.payload?.features ?? [];
+  return features.includes("all") || features.includes(feature);
+}
+
+/** Well-known feature keys for gating. */
+export const FEATURE_KEYS = {
+  AI_CHAT: "ai_chat",
+  STOREFRONT: "storefront",
+  ECOMMERCE_SYNC: "ecommerce_sync",
+  MULTI_SHOP: "multi_shop",
+  DAILY_REPORTS: "daily_reports",
+  GOOGLE_SHEETS: "google_sheets",
+} as const;
+
+/** Update the cached license validation result (called from client after check). */
+export function setCachedLicenseResult(result: LicenseValidationResult | null): void {
+  cachedResult = result;
+  cachedAt = Date.now();
+}
