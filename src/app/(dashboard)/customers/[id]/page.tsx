@@ -241,7 +241,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                         {style ? (
                           <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
                             <span className={`size-1.5 rounded-full ${style.dot}`} />
-                            {locale === "ar" ? style.labelAr : style.label}
+                            {t(style.i18nKey)}
                           </span>
                         ) : (
                           <Badge variant="outline">{t(statusI18nKey(status))}</Badge>

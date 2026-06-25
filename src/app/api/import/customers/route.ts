@@ -10,6 +10,7 @@ import {
 } from "@/lib/import/engine";
 import { CUSTOMER_FIELDS, normalizePhone } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,20 +26,21 @@ const customerImportSchema = z.object({
 
 /** POST /api/import/customers — preview (commit=false) or insert (commit=true). */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const commit = formData.get("commit") === "true";
   const mappingJson = formData.get("mapping") as string | null;
 
   if (!file) {
-    return NextResponse.json({ error: "Fichier manquant" }, { status: 400 });
+    return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
   }
 
   const buffer = await file.arrayBuffer();
   const parsed = parseFile(buffer, file.name);
 
   if (parsed.rows.length === 0) {
-    return NextResponse.json({ error: "Le fichier est vide" }, { status: 400 });
+    return NextResponse.json({ error: t("import.emptyFile") }, { status: 400 });
   }
 
   let mapping = parsed.headers.reduce<Record<string, string>>((acc, h) => {
@@ -101,9 +103,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           error:
             err instanceof Error
               ? err.message.includes("Unique")
-                ? "Téléphone déjà existant"
+                ? t("import.duplicatePhone")
                 : err.message
-              : "Erreur",
+              : t("common.errorGeneric"),
         });
       }
     }

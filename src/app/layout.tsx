@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { UpdateChecker } from "@/components/updater/update-checker";
 import { getDirection, type Locale } from "@/lib/i18n";
+import { getI18n } from "@/lib/i18n-server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,25 +22,28 @@ const amiri = Amiri({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "SahelFlow",
-  description: "AI-powered back-office for Algerian COD sellers",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return {
     title: "SahelFlow",
-  },
-  icons: {
-    icon: [
-      { url: "/icons/icon-1024.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-1024.png", sizes: "512x512", type: "image/png" },
-      { url: "/icons/icon.svg", sizes: "any", type: "image/svg+xml" },
-    ],
-    apple: "/icons/icon-1024.png",
-    shortcut: "/icons/icon-1024.png",
-  },
-};
+    description: t("metadata.description"),
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "SahelFlow",
+    },
+    icons: {
+      icon: [
+        { url: "/icons/icon-1024.png", sizes: "192x192", type: "image/png" },
+        { url: "/icons/icon-1024.png", sizes: "512x512", type: "image/png" },
+        { url: "/icons/icon.svg", sizes: "any", type: "image/svg+xml" },
+      ],
+      apple: "/icons/icon-1024.png",
+      shortcut: "/icons/icon-1024.png",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#0f766e",

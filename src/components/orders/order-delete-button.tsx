@@ -37,13 +37,13 @@ export function OrderDeleteButton({ orderId, orderStatus }: OrderDeleteButtonPro
       const res = await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+      if (!res.ok) throw new Error(data.error ?? t("common.deleteFailed"));
 
       toast.success(t("orders.orderDeleted"));
       router.push("/orders");
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Delete failed");
+      toast.error(err instanceof Error ? err.message : t("common.deleteFailed"));
     } finally {
       setPending(false);
       setOpen(false);

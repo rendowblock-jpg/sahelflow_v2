@@ -18,7 +18,10 @@ import { TrendingUp, ShoppingCart, Package, Truck, Activity, PieChart, BarChart3
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Analytics — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.analytics") };
+}
 export const dynamic = "force-dynamic";
 
 const RANGES = [

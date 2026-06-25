@@ -26,7 +26,7 @@ import Link from "next/link";
 export const revalidate = 30;
 
 export default async function DashboardPage() {
-  const { t, locale } = await getI18n();
+  const { t } = await getI18n();
   const [stats, recentOrders, analytics] = await Promise.all([
     getDashboardStats(),
     getRecentOrders(8),
@@ -213,7 +213,7 @@ export default async function DashboardPage() {
                         {statusStyle ? (
                           <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
                             <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                            {locale === "ar" ? statusStyle.labelAr : statusStyle.label}
+                            {t(statusStyle.i18nKey)}
                           </span>
                         ) : (
                           <Badge variant="outline">{order.status}</Badge>

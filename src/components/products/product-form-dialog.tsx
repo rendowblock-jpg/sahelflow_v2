@@ -44,6 +44,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  ProductImageUpload,
+  MAX_PRODUCT_IMAGES,
+} from "@/components/products/product-image-upload";
 
 /**
  * Client-side form schema — mirrors createProductSchema but:
@@ -62,6 +66,10 @@ const formSchema = createProductSchema.extend({
   stock: z.union([z.number().int(), z.literal("")]).optional(),
   lowStockThreshold: z.union([nonNegInt, z.literal("")]).optional(),
   categoryId: z.union([cuid, z.literal("")]).optional(),
+  // Override the parent's nullable/optional images field with a required
+  // string[] — the form always has a concrete list (possibly empty) so the
+  // upload component can be a controlled input.
+  images: z.array(nonEmptyString),
   isActive: z.boolean(),
 });
 
@@ -81,6 +89,8 @@ export interface ProductFormDialogProduct {
   stock: number;
   lowStockThreshold: number;
   categoryId?: string | null;
+  /** List of image URLs (already uploaded). Stored as a JSON string in DB. */
+  images?: string[] | null;
   isActive: boolean;
 }
 
@@ -123,6 +133,7 @@ export function ProductFormDialog({
     stock: p?.stock ?? 0,
     lowStockThreshold: p?.lowStockThreshold ?? 5,
     categoryId: p?.categoryId ?? "",
+    images: p?.images ?? [],
     isActive: p?.isActive ?? true,
   });
 
@@ -148,9 +159,21 @@ export function ProductFormDialog({
     // Zod schema (which expects null/undefined for optional fields, not "")
     // accepts the payload. Numeric fields that are "" become undefined and
     // rely on the schema's `.default()` values where applicable.
+    //
+    // For `images`: always send the array (even when empty) so PATCH can
+    // clear existing images when the user removes all of them. The service
+    // layer JSON-stringifies the array before persisting.
     const payload: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(values)) {
-      payload[k] = v === "" ? undefined : v;
+      if (v === "") {
+        payload[k] = undefined;
+      } else if (k === "images" && Array.isArray(v) && v.length === 0) {
+        // Send an empty array rather than `undefined` so PATCH explicitly
+        // clears the column (sending undefined would leave it untouched).
+        payload[k] = [];
+      } else {
+        payload[k] = v;
+      }
     }
 
     try {
@@ -171,7 +194,7 @@ export function ProductFormDialog({
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
           setServerError(
-            first ? `${first.path.join(".")}: ${first.message}` : "Validation failed",
+            first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
           );
         } else {
           setServerError(data?.error ?? `Request failed (${res.status})`);
@@ -413,6 +436,30 @@ export function ProductFormDialog({
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("products.images")}</FormLabel>
+                  <FormControl>
+                    <ProductImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      maxImages={MAX_PRODUCT_IMAGES}
+                      disabled={submitting}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t("products.imagesHint", {
+                      count: MAX_PRODUCT_IMAGES,
+                    })}
+                  </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />

@@ -124,13 +124,14 @@ export type DeliveryStatus =
   | "refused"
   | "failed";
 
-export type DeliveryProvider = "yalidine" | "maystro" | "zrexpress";
+export type DeliveryProvider = "yalidine" | "maystro" | "zrexpress" | "dhd";
 
 export interface Delivery {
   id: string;
   orderId: string;
   provider: DeliveryProvider;
   trackingNumber: string | null;
+  labelUrl: string | null;
   cost: number | null;
   status: DeliveryStatus;
   estimatedDelivery: Date | null;

@@ -20,7 +20,10 @@ import {
 import { deliveryProviderConfig } from "@/lib/shared";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Livraisons — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.deliveries") };
+}
 export const revalidate = 30;
 export const dynamic = "force-dynamic";
 

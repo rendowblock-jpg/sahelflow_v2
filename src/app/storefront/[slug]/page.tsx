@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { storefrontService } from "@/lib/storefront/service";
 import { StorefrontView } from "@/components/storefront/storefront-view";
 import type { Metadata } from "next";
+import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const config = await storefrontService.getBySlug(slug);
-  if (!config) return { title: "Boutique introuvable" };
+  const { t } = await getI18n();
+  if (!config) return { title: t("metadata.title.storefrontNotFound") };
   return { title: `${config.name} — SahelFlow` };
 }
 

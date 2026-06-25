@@ -5,6 +5,7 @@ import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
 import { generateDailyReport } from "@/lib/reports/daily-report";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,11 @@ export const dynamic = "force-dynamic";
  *
  * Also accepts GET (same behavior, same auth) for cron services that can't
  * send custom headers — but GET is less secure, prefer POST.
+ *
+ * Localization: when triggered from the in-app UI (manual), the user's locale
+ * cookie is read via getI18n(). When triggered by an external cron (no
+ * cookie), the report falls back to the default locale (fr — the business
+ * default in Algeria).
  */
 async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
   // 1. Check if the daily report is enabled
@@ -43,24 +49,28 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "no phone configured" });
   }
 
-  // 3. Generate the report
-  const report = await generateDailyReport();
+  // 3. Read locale (manual trigger has cookie; cron falls back to default fr)
+  const { t, locale } = await getI18n();
+
+  // 4. Generate the report
+  const report = await generateDailyReport(locale);
   if (!report) {
     return NextResponse.json({ ok: false, reason: "no orders yesterday" });
   }
 
-  // 4. Create an in-app Notification (always — so the report is visible even
+  // 5. Create an in-app Notification (always — so the report is visible even
   //    if the WhatsApp send fails)
+  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
   await db.notification.create({
     data: {
       type: "daily_report",
-      title: `Rapport du ${report.date.toLocaleDateString("fr-FR")}`,
-      body: `${report.ordersCount} commande(s) · ${report.revenue.toLocaleString("fr-DZ")} DZD`,
+      title: t("dailyReport.notificationTitle", { date: report.date.toLocaleDateString(localeTag) }),
+      body: t("dailyReport.notificationBody", { count: report.ordersCount, revenue: report.revenue.toLocaleString(localeTag) }),
       read: false,
     },
   });
 
-  // 5. Send via WhatsApp
+  // 6. Send via WhatsApp
   let whatsappSent = false;
   let whatsappError: string | undefined;
   try {

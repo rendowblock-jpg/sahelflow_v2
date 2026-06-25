@@ -15,7 +15,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Orders — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.orders") };
+}
 export const revalidate = 30;
 
 const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = [

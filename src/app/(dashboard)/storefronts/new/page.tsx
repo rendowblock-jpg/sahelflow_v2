@@ -4,7 +4,10 @@ import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
 import { db } from "@/lib/db";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "New storefront — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.storefrontNew") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function NewStorefrontPage() {

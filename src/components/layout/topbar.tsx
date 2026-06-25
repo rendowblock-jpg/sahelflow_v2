@@ -183,7 +183,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
       <div className="flex items-center gap-1 ms-auto">
         <Badge variant="outline" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hidden md:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
-          <span className="text-xs font-medium">Live</span>
+          <span className="text-xs font-medium">{t("common.live")}</span>
         </Badge>
 
         <Separator orientation="vertical" className="h-6 hidden md:block" />

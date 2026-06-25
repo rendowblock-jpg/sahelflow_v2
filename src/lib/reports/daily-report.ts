@@ -11,12 +11,17 @@
  *
  * If no orders were placed yesterday, the report is skipped (returns null).
  * The cron route uses this to decide whether to send.
+ *
+ * Localization: the report content is fully i18n-aware — pass the recipient's
+ * preferred Locale to generateDailyReport(). Defaults to "fr" (the business
+ * default in Algeria) when no locale is supplied (e.g. cron context).
  */
 import "server-only";
 
-
 import { db } from "@/lib/db";
 import { formatDZDBare as formatDZD } from "@/lib/utils";
+import type { Locale } from "@/lib/i18n";
+import { loadTranslationsSync } from "@/lib/i18n-server";
 
 export interface DailyReport {
   date: Date; // the day being reported (yesterday)
@@ -29,16 +34,19 @@ export interface DailyReport {
   lowStockProducts: Array<{ name: string; stock: number }>;
   newCustomers: number;
   message: string; // formatted WhatsApp message
+  locale: Locale;
 }
 
-/** Format a DZD amount with thousands separators. */
-// Currency formatting uses formatDZDBare from utils.ts (Z-013: was a
-// local formatDZD that returned just the number, inconsistent with the
-// "DA" suffix used elsewhere. Now uses the canonical bare formatter.)
+/** Locale tag for date formatting. */
+const LOCALE_TAG: Record<Locale, string> = {
+  ar: "ar-DZ",
+  fr: "fr-FR",
+  en: "en-GB",
+};
 
-/** Format a date as "lun. 21 juin 2026" (French, short). */
-function formatDateFR(date: Date): string {
-  return date.toLocaleDateString("fr-FR", {
+/** Format a date with weekday + day + month + year in the given locale. */
+function formatDateLocalized(date: Date, locale: Locale): string {
+  return date.toLocaleDateString(LOCALE_TAG[locale], {
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -46,11 +54,26 @@ function formatDateFR(date: Date): string {
   });
 }
 
+/** Build a t() function for the given locale. */
+function makeT(locale: Locale) {
+  const translations = loadTranslationsSync(locale);
+  return (key: string, params?: Record<string, string | number>): string => {
+    let value = translations[key] ?? key;
+    if (params) {
+      for (const [param, val] of Object.entries(params)) {
+        value = value.replace(new RegExp(`\\{\\{${param}\\}\\}`, "g"), String(val));
+      }
+    }
+    return value;
+  };
+}
+
 /**
  * Generate the daily report for yesterday.
  * Returns null if there were no orders yesterday (nothing to report).
  */
-export async function generateDailyReport(): Promise<DailyReport | null> {
+export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyReport | null> {
+  const t = makeT(locale);
   // yesterday (local midnight boundaries)
   const now = new Date();
   const startOfYesterday = new Date(now);
@@ -129,25 +152,25 @@ export async function generateDailyReport(): Promise<DailyReport | null> {
 
   const revenue = revenueAgg._sum.totalPrice ?? 0;
 
-  // Build the WhatsApp message (French, emoji-formatted, WhatsApp-friendly)
+  // Build the WhatsApp message (locale-aware, emoji-formatted, WhatsApp-friendly)
   const lines: string[] = [];
-  lines.push(`📊 *Rapport quotidien — ${formatDateFR(startOfYesterday)}*`);
+  lines.push(`📊 *${t("dailyReport.title")} — ${formatDateLocalized(startOfYesterday, locale)}*`);
   lines.push("");
-  lines.push(`🛒 *Commandes:* ${orders.length}`);
-  lines.push(`💰 *Chiffre d'affaires:* ${formatDZD(revenue)} DZD`);
+  lines.push(`🛒 *${t("dailyReport.orders")}:* ${orders.length}`);
+  lines.push(`💰 *${t("dailyReport.revenue")}:* ${formatDZD(revenue)} DZD`);
   if (newCustomers > 0) {
-    lines.push(`👤 *Nouveaux clients:* ${newCustomers}`);
+    lines.push(`👤 *${t("dailyReport.newCustomers")}:* ${newCustomers}`);
   }
   lines.push("");
   if (deliveredCount > 0 || inTransitCount > 0 || returnedCount > 0) {
-    lines.push("📦 *Livraisons:*");
-    if (deliveredCount > 0) lines.push(`   ✅ Livrées: ${deliveredCount}`);
-    if (inTransitCount > 0) lines.push(`   🚚 En cours: ${inTransitCount}`);
-    if (returnedCount > 0) lines.push(`   ↩️ Retournées: ${returnedCount}`);
+    lines.push(`📦 *${t("dailyReport.deliveries")}:*`);
+    if (deliveredCount > 0) lines.push(`   ✅ ${t("dailyReport.delivered")}: ${deliveredCount}`);
+    if (inTransitCount > 0) lines.push(`   🚚 ${t("dailyReport.inTransit")}: ${inTransitCount}`);
+    if (returnedCount > 0) lines.push(`   ↩️ ${t("dailyReport.returned")}: ${returnedCount}`);
     lines.push("");
   }
   if (topProducts.length > 0) {
-    lines.push("🏆 *Top produits:*");
+    lines.push(`🏆 *${t("dailyReport.topProducts")}:*`);
     for (let i = 0; i < topProducts.length; i++) {
       const p = topProducts[i]!;
       lines.push(`   ${i + 1}. ${p.name} (${p.quantity}x — ${formatDZD(p.revenue)} DZD)`);
@@ -155,13 +178,13 @@ export async function generateDailyReport(): Promise<DailyReport | null> {
     lines.push("");
   }
   if (lowStockProducts.length > 0) {
-    lines.push("⚠️ *Stock faible:*");
+    lines.push(`⚠️ *${t("dailyReport.lowStock")}:*`);
     for (const p of lowStockProducts) {
-      lines.push(`   • ${p.name} — ${p.stock} restant(s)`);
+      lines.push(`   • ${p.name} — ${p.stock} ${t("dailyReport.unitsRemaining")}`);
     }
     lines.push("");
   }
-  lines.push("_Généré par SahelFlow_");
+  lines.push(`_${t("dailyReport.generatedBy")}_`);
 
   return {
     date: startOfYesterday,
@@ -174,5 +197,6 @@ export async function generateDailyReport(): Promise<DailyReport | null> {
     lowStockProducts,
     newCustomers,
     message: lines.join("\n"),
+    locale,
   };
 }

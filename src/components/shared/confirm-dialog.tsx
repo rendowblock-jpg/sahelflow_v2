@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function ConfirmDialog({
   destructive = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = useCallback(async () => {
@@ -59,7 +61,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{cancelLabel ?? "Cancel"}</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{cancelLabel ?? t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
@@ -69,7 +71,7 @@ export function ConfirmDialog({
             className={destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
           >
             {loading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
-            {confirmLabel ?? "Confirm"}
+            {confirmLabel ?? t("common.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

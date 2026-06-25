@@ -50,7 +50,7 @@ export function AiKeyPanel() {
     async function load() {
       try {
         const res = await fetch("/api/secrets/gemini-key", { method: "GET" });
-        if (!res.ok) throw new Error("fetch failed");
+        if (!res.ok) throw new Error(t("common.fetchFailed"));
         const data = (await res.json()) as { configured: boolean };
         if (cancelled) return;
         setStatus(data.configured ? "configured" : "not-configured");

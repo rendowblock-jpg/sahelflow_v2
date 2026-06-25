@@ -55,7 +55,7 @@ export function PhotoUpload({
       formData.append("file", file);
       const res = await fetch(endpoint, { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      if (!res.ok) throw new Error(data.error ?? t("common.uploadFailed"));
       onChange(data.url);
       toast.success(t("profile.photoUpdated"));
     } catch (err) {

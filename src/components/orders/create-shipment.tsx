@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
+  Printer,
+
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/use-i18n";
@@ -35,6 +37,7 @@ interface CreateShipmentProps {
     id: string;
     provider: string;
     trackingNumber: string | null;
+    labelUrl: string | null;
     cost: number | null;
     status: string;
   } | null;
@@ -126,6 +129,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                       <SelectItem value="yalidine">📦 Yalidine</SelectItem>
                       <SelectItem value="maystro">🚚 Maystro Delivery</SelectItem>
                       <SelectItem value="zrexpress">📦 ZR Express</SelectItem>
+                      <SelectItem value="dhd">📦 DHD Delivery</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -175,19 +179,29 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                 <span className="capitalize">{delivery.status.replace(/_/g, " ")}</span>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
-              {syncing ? (
-                <>
-                  <Loader2 className="h-3 w-3 me-1.5 animate-spin" />
-                  {t("orders.shipment.syncing")}
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-3 w-3 me-1.5" />
-                  {t("orders.shipment.syncTracking")}
-                </>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+                {syncing ? (
+                  <>
+                    <Loader2 className="h-3 w-3 me-1.5 animate-spin" />
+                    {t("orders.shipment.syncing")}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-3 w-3 me-1.5" />
+                    {t("orders.shipment.syncTracking")}
+                  </>
+                )}
+              </Button>
+              {delivery?.labelUrl && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={delivery.labelUrl} target="_blank" rel="noopener noreferrer">
+                    <Printer className="h-3 w-3 me-1.5" />
+                    {t("orders.shipment.printLabel")}
+                  </a>
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
         )}
 

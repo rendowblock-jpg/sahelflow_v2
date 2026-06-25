@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Bot, Truck, Bell, Store } from "lucide-react";
+import { Shield, Bot, Truck, Bell, Store, DatabaseBackup } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { LicensePanel } from "@/components/settings/license-panel";
@@ -9,8 +9,9 @@ import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import { IntegrationsPanel } from "@/components/settings/integrations-panel";
+import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
 
-type Tab = "general" | "ai" | "delivery" | "reports" | "integrations" | "license";
+type Tab = "general" | "ai" | "delivery" | "reports" | "integrations" | "license" | "backup";
 
 const TABS: Array<{ id: Tab; icon: typeof Shield }> = [
   { id: "license", icon: Shield },
@@ -18,6 +19,7 @@ const TABS: Array<{ id: Tab; icon: typeof Shield }> = [
   { id: "delivery", icon: Truck },
   { id: "reports", icon: Bell },
   { id: "integrations", icon: Store },
+  { id: "backup", icon: DatabaseBackup },
 ];
 
 export function SettingsTabs({
@@ -62,6 +64,7 @@ export function SettingsTabs({
         {active === "integrations" && (
           <IntegrationsPanel integrations={integrations} />
         )}
+        {active === "backup" && <BackupRestorePanel />}
       </div>
     </div>
   );

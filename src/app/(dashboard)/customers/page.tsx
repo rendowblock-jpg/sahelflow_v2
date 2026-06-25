@@ -119,7 +119,7 @@ export default async function CustomersPage() {
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${riskConfig.color} bg-muted/50 border-border`}>
-                          {riskConfig.label} · {customer.riskScore}
+                          {t(riskConfig.i18nKey)} · {customer.riskScore}
                         </span>
                       </TableCell>
                       <TableCell className="text-end">

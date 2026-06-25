@@ -153,6 +153,7 @@ model Delivery {
   order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   provider          String
   trackingNumber    String?
+  labelUrl          String?
   cost              Int?
   status            String    @default("pending")
   estimatedDelivery DateTime?

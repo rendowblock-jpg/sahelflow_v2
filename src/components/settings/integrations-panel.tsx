@@ -253,7 +253,7 @@ export function IntegrationsPanel({
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Connection failed");
+      if (!res.ok) throw new Error(data.error ?? t("common.connectionFailed"));
 
       toast.success(t("integrations.connectedSuccess").replace("{name}", integration.name));
       setDialogOpen(false);

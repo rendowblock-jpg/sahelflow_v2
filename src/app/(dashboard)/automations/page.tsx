@@ -9,7 +9,10 @@ import { AutomationActions } from "./automation-actions";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Automatisations — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.automations") };
+}
 export const dynamic = "force-dynamic";
 
 /** i18n keys for trigger events */

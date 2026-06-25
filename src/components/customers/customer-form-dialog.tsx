@@ -146,7 +146,7 @@ export function CustomerFormDialog({
           // Zod validation error from the server — surface the first issue
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
-          setServerError(first ? `${first.path.join(".")}: ${first.message}` : "Validation failed");
+          setServerError(first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"));
         } else {
           setServerError(data?.error ?? `Request failed (${res.status})`);
         }
