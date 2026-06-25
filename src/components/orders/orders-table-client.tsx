@@ -1,11 +1,14 @@
 "use client";
 
 /**
- * OrdersTableClient — client-side orders table with checkbox selection
- * and bulk-action toolbar. Receives server-fetched orders as props.
- *
- * Bulk actions call POST /api/orders/bulk with the selected IDs + target
- * status. Shows toast feedback + refreshes the page on success.
+ * OrdersTableClient — premium data table with checkbox selection + bulk actions.
+ * 
+ * Pattern: shadcn v4 data table
+ * - Rounded border wrapper
+ * - Sticky bg-muted header
+ * - hover:bg-muted/50 rows
+ * - Proper empty row (h-24 text-center)
+ * - Row actions dropdown (View/Edit/Delete)
  */
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -13,6 +16,7 @@ import Link from "next/link";
 import { CheckCircle2, XCircle, Loader2, MoreVertical, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +24,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { orderStatusStyles } from "@/lib/shared";
@@ -85,7 +88,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
         });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error ?? t("common.bulkOperationFailed"));
+        if (!res.ok) throw new Error(data.error ?? "Bulk operation failed");
 
         const succeeded = data.succeeded?.length ?? 0;
         const failed = data.failed?.length ?? 0;
@@ -101,7 +104,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
         setSelected(new Set());
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("common.bulkOperationFailed"));
+        toast.error(err instanceof Error ? err.message : "Bulk operation failed");
       }
     });
   };
@@ -115,29 +118,14 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
             {t("orders.selected").replace("{n}", String(selected.size))}
           </span>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => handleBulk("confirmed")}
-              disabled={isPending}
-            >
+            <Button size="sm" onClick={() => handleBulk("confirmed")} disabled={isPending}>
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
               {t("orders.confirmSelected")}
             </Button>
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => handleBulk("shipped")}
-              disabled={isPending}
-            >
+            <Button size="sm" onClick={() => handleBulk("shipped")} disabled={isPending}>
               {t("orders.shipSelected")}
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => handleBulk("cancelled")}
-              disabled={isPending}
-            >
+            <Button size="sm" variant="destructive" onClick={() => handleBulk("cancelled")} disabled={isPending}>
               <XCircle className="h-3.5 w-3.5" />
               {t("orders.cancelSelectedShort")}
             </Button>
@@ -145,115 +133,125 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
         </div>
       )}
 
-      {/* Orders table with checkboxes */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b bg-muted/50">
-            <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <th className="px-4 py-3 w-10">
-                <Checkbox
-                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                  onCheckedChange={toggleAll}
-                  aria-label="Select all"
-                />
-              </th>
-              <th className="px-4 py-3">{t("orders.orderNumber")}</th>
-              <th className="px-4 py-3">{t("orders.customer")}</th>
-              <th className="px-4 py-3 hidden md:table-cell">{t("orders.items")}</th>
-              <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
-              <th className="px-4 py-3 text-end">{t("orders.total")}</th>
-              <th className="px-4 py-3">{t("orders.status")}</th>
-              <th className="px-4 py-3 hidden lg:table-cell">{t("orders.date")}</th>
-              <th className="px-4 py-3 text-end">{t("orders.action")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {resolvedOrders.map((order) => {
-              const status = order.status as OrderStatus;
-              const style = orderStatusStyles[status];
-              const isSelected = selected.has(order.id);
-              const itemCount = order.items.length;
-              const itemLabel = itemCount > 1
-                ? t("orders.itemsCount").replace("{n}", String(itemCount))
-                : t("orders.itemsCountSingular").replace("{n}", String(itemCount));
-              return (
-                <tr
-                  key={order.id}
-                  className={`hover:bg-accent/50 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
-                >
-                  <td className="px-4 py-3">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleOne(order.id)}
-                      aria-label={`Select ${order.orderNumber}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3 font-mono text-sm font-medium">{order.orderNumber}</td>
-                  <td className="px-4 py-3">
-                    <div className="text-sm font-medium">{order.customer?.name ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground">{order.phone}</div>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground">{itemLabel}</td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-sm">{order.wilaya}</td>
-                  <td className="px-4 py-3 text-end font-medium text-sm tabular-nums">{formatDZD(order.totalPrice)}</td>
-                  <td className="px-4 py-3">
-                    {style ? (
-                      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
-                        <span className={`size-1.5 rounded-full ${style.dot}`} />
-                        {t(style.i18nKey)}
-                      </span>
-                    ) : (
-                      <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{formatDate(order.createdAt, locale)}</td>
-                  <td className="px-4 py-3 text-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">{t("orders.actions")}</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/orders/${order.id}`}>
-                            <Eye className="me-2 h-4 w-4" />
-                            {t("orders.viewDetails")}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/orders/${order.id}?edit=true`}>
-                            <Pencil className="me-2 h-4 w-4" />
-                            {t("orders.edit")}
-                          </Link>
-                        </DropdownMenuItem>
-                        {(order.status === "draft" || order.status === "cancelled") && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                if (confirm(t("orders.confirmDelete"))) {
-                                  fetch(`/api/orders/${order.id}`, { method: "DELETE" })
-                                    .then(() => router.refresh())
-                                    .catch(() => {});
-                                }
-                              }}
-                            >
-                              <Trash2 className="me-2 h-4 w-4" />
-                              {t("orders.delete")}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+      {/* Table — rounded border wrapper, sticky header */}
+      <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="sticky top-0 z-10 border-b bg-muted/50">
+              <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-4 py-3 w-10">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </th>
+                <th className="px-4 py-3">{t("orders.orderNumber")}</th>
+                <th className="px-4 py-3">{t("orders.customer")}</th>
+                <th className="px-4 py-3 hidden md:table-cell">{t("orders.items")}</th>
+                <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
+                <th className="px-4 py-3 text-end">{t("orders.total")}</th>
+                <th className="px-4 py-3">{t("orders.status")}</th>
+                <th className="px-4 py-3 hidden lg:table-cell">{t("orders.date")}</th>
+                <th className="px-4 py-3 text-end w-12">{t("orders.action")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {resolvedOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="h-24 text-center text-muted-foreground">
+                    {t("orders.empty.title")}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : (
+                resolvedOrders.map((order) => {
+                  const status = order.status as OrderStatus;
+                  const style = orderStatusStyles[status];
+                  const isSelected = selected.has(order.id);
+                  const itemCount = order.items.length;
+                  const itemLabel = itemCount > 1
+                    ? t("orders.itemsCount").replace("{n}", String(itemCount))
+                    : t("orders.itemsCountSingular").replace("{n}", String(itemCount));
+                  return (
+                    <tr
+                      key={order.id}
+                      className={`transition-colors hover:bg-muted/50 ${isSelected ? "bg-primary/5" : ""}`}
+                    >
+                      <td className="px-4 py-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleOne(order.id)}
+                          aria-label={`Select ${order.orderNumber}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-mono text-sm font-medium">{order.orderNumber}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium">{order.customer?.name ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">{order.phone}</div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground">{itemLabel}</td>
+                      <td className="px-4 py-3 hidden sm:table-cell text-sm">{order.wilaya}</td>
+                      <td className="px-4 py-3 text-end font-medium text-sm tabular-nums">{formatDZD(order.totalPrice)}</td>
+                      <td className="px-4 py-3">
+                        {style ? (
+                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
+                            <span className={`size-1.5 rounded-full ${style.dot}`} />
+                            {t(style.i18nKey)}
+                          </span>
+                        ) : (
+                          <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{formatDate(order.createdAt, locale)}</td>
+                      <td className="px-4 py-3 text-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">{t("orders.actions")}</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="shadow-dropdown">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/orders/${order.id}`}>
+                                <Eye className="me-2 h-4 w-4" />
+                                {t("orders.viewDetails")}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/orders/${order.id}?edit=true`}>
+                                <Pencil className="me-2 h-4 w-4" />
+                                {t("orders.edit")}
+                              </Link>
+                            </DropdownMenuItem>
+                            {(order.status === "draft" || order.status === "cancelled") && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => {
+                                    if (confirm(t("orders.confirmDelete"))) {
+                                      fetch(`/api/orders/${order.id}`, { method: "DELETE" })
+                                        .then(() => router.refresh())
+                                        .catch(() => {});
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="me-2 h-4 w-4" />
+                                  {t("orders.delete")}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   );
