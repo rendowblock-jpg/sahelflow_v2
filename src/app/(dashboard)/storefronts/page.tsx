@@ -19,7 +19,7 @@ export default async function StorefrontsPage() {
   const configs = await storefrontService.list();
 
   return (
-    <div className="space-y-6 p-6 max-w-5xl mx-auto">
+    <div className="app-content page-sections">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
