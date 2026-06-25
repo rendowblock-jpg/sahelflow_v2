@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
 
 /**
@@ -21,6 +22,7 @@ import { Toaster } from "@/components/ui/sonner";
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
+  useKeyboardShortcuts();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
