@@ -110,6 +110,28 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.55 0.18 250);
 
+  /* ── Named shadow system (Cal.com pattern) ── */
+  --shadow-btn-rested:
+    0px 1px 1px 0px oklch(0 0 0 / 0.06),
+    0px 2px 3px 0px oklch(0 0 0 / 0.08),
+    inset 0px 1px 0px oklch(1 0 0 / 0.12);
+  --shadow-btn-hover:
+    0px 1px 1px 0px oklch(0 0 0 / 0.10),
+    0px 4px 8px 0px oklch(0 0 0 / 0.12),
+    inset 0px 1px 0px oklch(1 0 0 / 0.20);
+  --shadow-btn-active:
+    inset 0px 2px 3px 0px oklch(0 0 0 / 0.25),
+    inset 0px 0px 2px 1px oklch(0 0 0 / 0.15);
+  --shadow-btn-focused:
+    0 0 0 2px var(--background),
+    0 0 0 4px oklch(0.55 0.18 250 / 0.4);
+  --shadow-dropdown:
+    0px 5px 20px 0px oklch(0 0 0 / 0.10),
+    0px 10px 40px 0px oklch(0 0 0 / 0.03);
+  --shadow-popover:
+    0px 4px 16px 0px oklch(0 0 0 / 0.08),
+    0px 8px 32px 0px oklch(0 0 0 / 0.04);
+
   /* Charts */
   --chart-1: oklch(0.55 0.18 250);
   --chart-2: oklch(0.65 0.2 145);
@@ -163,6 +185,28 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.68 0.19 250);
+
+  /* ── Named shadow system (dark mode) ── */
+  --shadow-btn-rested:
+    0px 1px 1px 0px oklch(0 0 0 / 0.30),
+    0px 2px 3px 0px oklch(0 0 0 / 0.40),
+    inset 0px 1px 0px oklch(1 0 0 / 0.06);
+  --shadow-btn-hover:
+    0px 1px 1px 0px oklch(0 0 0 / 0.40),
+    0px 4px 8px 0px oklch(0 0 0 / 0.50),
+    inset 0px 1px 0px oklch(1 0 0 / 0.10);
+  --shadow-btn-active:
+    inset 0px 2px 3px 0px oklch(0 0 0 / 0.50),
+    inset 0px 0px 2px 1px oklch(0 0 0 / 0.30);
+  --shadow-btn-focused:
+    0 0 0 2px var(--background),
+    0 0 0 4px oklch(0.68 0.19 250 / 0.5);
+  --shadow-dropdown:
+    0px 5px 20px 0px oklch(0 0 0 / 0.50),
+    0px 10px 40px 0px oklch(0 0 0 / 0.20);
+  --shadow-popover:
+    0px 4px 16px 0px oklch(0 0 0 / 0.40),
+    0px 8px 32px 0px oklch(0 0 0 / 0.20);
 
   /* Charts */
   --chart-1: oklch(0.68 0.19 250);
@@ -324,6 +368,57 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+
+  /* ── Named shadow utilities (Cal.com pattern) ── */
+  .shadow-btn {
+    box-shadow: var(--shadow-btn-rested);
+    transition: box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+                transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .shadow-btn:hover {
+    box-shadow: var(--shadow-btn-hover);
+  }
+  .shadow-btn:active {
+    box-shadow: var(--shadow-btn-active);
+    transform: translateY(1px);
+  }
+  .shadow-btn:focus-visible {
+    box-shadow: var(--shadow-btn-focused);
+  }
+  .shadow-dropdown {
+    box-shadow: var(--shadow-dropdown);
+  }
+  .shadow-popover {
+    box-shadow: var(--shadow-popover);
+  }
+
+  /* Container query support */
+  .container-card {
+    container-type: inline-size;
+    container-name: card;
+  }
+  .container-main {
+    container-type: inline-size;
+    container-name: main;
+  }
+
+  /* Fluid number sizing (Trigger.dev pattern) */
+  .fluid-number {
+    font-size: clamp(1.5rem, 12cqw, 3rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  /* Gradient tint for stat cards (shadcn v4 pattern) */
+  .card-gradient-tint {
+    background: linear-gradient(
+      to top,
+      oklch(from var(--primary) l c h / 0.05),
+      var(--card)
+    );
   }
 
   /* Stagger delay utilities for child animations */

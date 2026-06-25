@@ -70,13 +70,14 @@ interface ChartCardProps {
   children: React.ComponentProps<typeof ChartContainer>["children"];
 }
 
-/** A Card that wraps a ChartContainer — gives every chart a consistent
- *  header (icon + title + description + action slot) and theme-aware frame. */
+/** A Card that wraps a ChartContainer — premium chart frame.
+ * 
+ * Pattern: shadcn v4 — compact header, no icon chip (title stands alone),
+ * ChartContainer with aspect-auto, subtle hover elevation.
+ */
 export function ChartCard({
   title,
   description,
-  icon,
-  accent = "bg-primary/10 dark:bg-primary/15",
   action,
   className,
   config,
@@ -84,25 +85,22 @@ export function ChartCard({
   children,
 }: ChartCardProps) {
   return (
-    <Card className={cn("card-hover animate-fade-up", className)}>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0">
-        <div className="flex items-center gap-2.5">
-          {icon && (
-            <div className={cn("flex size-8 items-center justify-center rounded-lg", accent, "[&>svg]:h-4 [&>svg]:w-4")}>
-              {icon}
-            </div>
+    <Card className={cn(
+      "border shadow-xs transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+      "hover:shadow-md",
+      className,
+    )}>
+      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
+        <div className="space-y-0.5">
+          <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
+          {description && (
+            <CardDescription className="text-xs text-muted-foreground">{description}</CardDescription>
           )}
-          <div className="space-y-0.5">
-            <CardTitle className="text-base">{title}</CardTitle>
-            {description && (
-              <CardDescription className="text-xs">{description}</CardDescription>
-            )}
-          </div>
         </div>
         {action}
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={config} className="w-full" style={{ height }}>
+      <CardContent className="pt-2">
+        <ChartContainer config={config} className="aspect-auto w-full" style={{ height }}>
           {children}
         </ChartContainer>
       </CardContent>

@@ -64,7 +64,7 @@ export default async function DashboardPage() {
       />
 
       {/* KPI stat cards with sparklines — the at-a-glance snapshot */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t("dashboard.todaysOrders")}
           value={stats.ordersToday}
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick action bar — the 4 most common actions */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Button variant="outline" asChild className="h-auto justify-start gap-3 py-3">
           <Link href="/inbox">
             <span className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 dark:bg-amber-500/15">
@@ -156,7 +156,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent orders + Delivery snapshot */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Recent orders — takes 2/3 width */}
         <Card className="lg:col-span-2 animate-fade-up">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
