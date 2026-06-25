@@ -25,7 +25,10 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Comptabilité — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.accounting") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function AccountingPage() {
@@ -136,7 +139,7 @@ export default async function AccountingPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <DualBarChart data={monthlyData} />
+          <DualBarChart data={monthlyData} revenueLabel={t("accounting.revenue")} expensesLabel={t("accounting.expenses")} />
         </CardContent>
       </Card>
 

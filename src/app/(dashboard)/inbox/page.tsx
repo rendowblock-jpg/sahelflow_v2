@@ -1,7 +1,11 @@
 import { InboxLive } from "@/components/inbox/inbox-live";
 import type { Metadata } from "next";
+import { getI18n } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Messagerie — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.inbox") };
+}
 export const dynamic = "force-dynamic";
 
 /**

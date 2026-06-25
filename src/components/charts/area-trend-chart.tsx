@@ -33,6 +33,7 @@ interface AreaTrendChartProps {
   formatY?: ChartFormatter;
   showGrid?: boolean;
   curve?: "monotone" | "linear" | "step";
+  emptyMessage?: string;
 }
 
 export function AreaTrendChart({
@@ -44,12 +45,13 @@ export function AreaTrendChart({
   formatY,
   showGrid = true,
   curve = "monotone",
+  emptyMessage,
 }: AreaTrendChartProps) {
   const fmtY = resolveFormatter(formatY);
   if (!data.length) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
-        No data
+        {emptyMessage ?? "—"}
       </div>
     );
   }

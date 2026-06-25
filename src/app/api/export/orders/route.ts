@@ -2,20 +2,23 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toCsv } from "@/lib/import/export";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/export/orders — download all orders as CSV. */
 export const GET = withErrorHandler(async () => {
+  const { t, locale } = await getI18n();
   const orders = await db.order.findMany({
     include: { customer: true },
     orderBy: { createdAt: "desc" },
     take: 10000,
   });
 
+  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
   const rows = orders.map((o) => ({
     orderNumber: o.orderNumber,
-    status: o.status,
+    status: t(`orders.status.${o.status}`),
     customerName: o.customer.name,
     phone: o.phone,
     wilaya: o.wilaya,
@@ -23,26 +26,27 @@ export const GET = withErrorHandler(async () => {
     totalPrice: o.totalPrice,
     deliveryCost: o.deliveryCost ?? 0,
     source: o.source,
-    createdAt: new Date(o.createdAt).toLocaleString("fr-FR"),
+    createdAt: new Date(o.createdAt).toLocaleString(localeTag),
   }));
 
   const csv = toCsv(rows, [
-    { key: "orderNumber", label: "N° Commande" },
-    { key: "status", label: "Statut" },
-    { key: "customerName", label: "Client" },
-    { key: "phone", label: "Téléphone" },
-    { key: "wilaya", label: "Wilaya" },
-    { key: "commune", label: "Commune" },
-    { key: "totalPrice", label: "Total (DA)" },
-    { key: "deliveryCost", label: "Livraison (DA)" },
-    { key: "source", label: "Source" },
-    { key: "createdAt", label: "Date" },
+    { key: "orderNumber", label: t("export.orders.orderNumber") },
+    { key: "status", label: t("export.orders.status") },
+    { key: "customerName", label: t("export.orders.customer") },
+    { key: "phone", label: t("export.orders.phone") },
+    { key: "wilaya", label: t("export.orders.wilaya") },
+    { key: "commune", label: t("export.orders.commune") },
+    { key: "totalPrice", label: t("export.orders.total") },
+    { key: "deliveryCost", label: t("export.orders.deliveryCost") },
+    { key: "source", label: t("export.orders.source") },
+    { key: "createdAt", label: t("export.orders.date") },
   ]);
 
+  const filePrefix = locale === "ar" ? "طلبات" : locale === "fr" ? "commandes" : "orders";
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="commandes-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="${filePrefix}-${new Date().toISOString().slice(0, 10)}.csv"`,
     },
   });
 }, "GET /api/export/orders");

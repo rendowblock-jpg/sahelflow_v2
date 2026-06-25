@@ -14,7 +14,7 @@ import { cookies } from "next/headers";
 // Cache translations (module-level)
 const translationCache = new Map<Locale, Record<string, string>>();
 
-function loadTranslationsSync(locale: Locale): Record<string, string> {
+export function loadTranslationsSync(locale: Locale): Record<string, string> {
   const cached = translationCache.get(locale);
   if (cached) {
     return cached;

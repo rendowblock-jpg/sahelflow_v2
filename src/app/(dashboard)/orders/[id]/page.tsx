@@ -201,6 +201,7 @@ export default async function OrderDetailPage({
               id: delivery.id,
               provider: delivery.provider,
               trackingNumber: delivery.trackingNumber,
+              labelUrl: delivery.labelUrl,
               cost: delivery.cost,
               status: delivery.status,
             } : null}

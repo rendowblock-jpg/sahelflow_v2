@@ -40,6 +40,7 @@ interface ComposedTrendChartProps {
   height?: number;
   formatLeftY?: ChartFormatter;
   formatRightY?: ChartFormatter;
+  emptyMessage?: string;
 }
 
 export function ComposedTrendChart({
@@ -50,13 +51,14 @@ export function ComposedTrendChart({
   height = 300,
   formatLeftY,
   formatRightY,
+  emptyMessage,
 }: ComposedTrendChartProps) {
   const fmtLeft = resolveFormatter(formatLeftY);
   const fmtRight = resolveFormatter(formatRightY);
   if (!data.length) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
-        No data
+        {emptyMessage ?? "—"}
       </div>
     );
   }

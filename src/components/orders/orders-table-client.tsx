@@ -85,7 +85,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
         });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error ?? "Bulk operation failed");
+        if (!res.ok) throw new Error(data.error ?? t("common.bulkOperationFailed"));
 
         const succeeded = data.succeeded?.length ?? 0;
         const failed = data.failed?.length ?? 0;
@@ -101,7 +101,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
         setSelected(new Set());
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Bulk operation failed");
+        toast.error(err instanceof Error ? err.message : t("common.bulkOperationFailed"));
       }
     });
   };
@@ -200,7 +200,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                     {style ? (
                       <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
                         <span className={`size-1.5 rounded-full ${style.dot}`} />
-                        {locale === "ar" ? style.labelAr : style.label}
+                        {t(style.i18nKey)}
                       </span>
                     ) : (
                       <Badge variant="outline">{t(statusI18nKey(status))}</Badge>

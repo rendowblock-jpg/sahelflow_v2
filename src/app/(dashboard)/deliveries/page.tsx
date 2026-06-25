@@ -2,22 +2,28 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 
 import { formatDZD, formatDate } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { getBrandIcon } from "@/components/brand/brand-icons";
 import Link from "next/link";
 import {
   Truck,
   PackageCheck,
-  Clock,
   AlertCircle,
+  Banknote,
 } from "lucide-react";
 import { deliveryProviderConfig } from "@/lib/shared";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Livraisons — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.deliveries") };
+}
 export const revalidate = 30;
 export const dynamic = "force-dynamic";
 
@@ -76,20 +82,16 @@ export default async function DeliveriesPage({
     counts[d.status] = (counts[d.status] ?? 0) + 1;
   }
 
-  // Stat cards
+  // Stat cards — using the premium StatCard component
   const active = allDeliveries.filter((d) =>
     ["pending", "created", "picked_up", "in_transit", "at_hub", "out_for_delivery"].includes(d.status),
   );
   const delivered = allDeliveries.filter((d) => d.status === "delivered");
   const returned = allDeliveries.filter((d) => ["returned", "refused", "failed"].includes(d.status));
   const totalCost = allDeliveries.reduce((sum, d) => sum + (d.cost ?? 0), 0);
-
-  const stats = [
-    { label: t("deliveries.activeDeliveries"), value: String(active.length), icon: Truck, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
-    { label: t("deliveries.delivered"), value: String(delivered.length), icon: PackageCheck, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: t("deliveries.returnsFailed"), value: String(returned.length), icon: AlertCircle, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400" },
-    { label: t("deliveries.totalCost"), value: formatDZD(totalCost), icon: Clock, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
-  ];
+  const deliveryRate = allDeliveries.length > 0
+    ? Math.round((delivered.length / allDeliveries.length) * 100)
+    : 0;
 
   const STATUS_FILTERS = Object.entries(FILTER_I18N).map(([value, key]) => ({
     value,
@@ -98,33 +100,47 @@ export default async function DeliveriesPage({
 
   return (
     <div className="app-content page-sections">
-      <div className="animate-fade-up">
-        <h1 className="text-2xl font-bold tracking-tight">{t("nav.delivery")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("deliveries.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("nav.delivery")}
+        description={t("deliveries.subtitle")}
+      />
 
-      {/* Stat cards */}
+      {/* Stat cards — premium StatCard with proper icons */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="card-hover animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
-                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <StatCard
+          label={t("deliveries.activeDeliveries")}
+          value={active.length}
+          icon={<Truck />}
+          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
+          accentIcon="text-sky-600 dark:text-sky-400"
+          style={{ animationDelay: "60ms" }}
+        />
+        <StatCard
+          label={t("deliveries.delivered")}
+          value={delivered.length}
+          icon={<PackageCheck />}
+          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+          accentIcon="text-emerald-600 dark:text-emerald-400"
+          trend={deliveryRate}
+          trendLabel={t("dashboard.deliveryRate")}
+          style={{ animationDelay: "120ms" }}
+        />
+        <StatCard
+          label={t("deliveries.returnsFailed")}
+          value={returned.length}
+          icon={<AlertCircle />}
+          accentBg="bg-red-500/10 dark:bg-red-500/15"
+          accentIcon="text-red-600 dark:text-red-400"
+          style={{ animationDelay: "180ms" }}
+        />
+        <StatCard
+          label={t("deliveries.totalCost")}
+          value={formatDZD(totalCost)}
+          icon={<Banknote />}
+          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
+          accentIcon="text-violet-600 dark:text-violet-400"
+          style={{ animationDelay: "240ms" }}
+        />
       </div>
 
       {/* Status filter */}
@@ -180,6 +196,7 @@ export default async function DeliveriesPage({
                     const customer = order?.customer;
                     const statusStyle = DELIVERY_STATUS_STYLES[delivery.status];
                     const providerConfig = deliveryProviderConfig[delivery.provider];
+                    const BrandIcon = getBrandIcon(delivery.provider);
                     return (
                       <tr key={delivery.id} className="hover:bg-accent/50 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs">
@@ -202,7 +219,11 @@ export default async function DeliveriesPage({
                         <td className="px-4 py-3 hidden sm:table-cell">
                           {providerConfig ? (
                             <span className="inline-flex items-center gap-1.5 text-sm">
-                              <span className={`size-2 rounded-full ${providerConfig.color}`} />
+                              {BrandIcon ? (
+                                <BrandIcon className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <span className={`size-2 rounded-full ${providerConfig.color}`} />
+                              )}
                               {providerConfig.label}
                             </span>
                           ) : (

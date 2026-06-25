@@ -27,6 +27,7 @@ interface LineTrendChartProps {
   config: ChartConfig;
   height?: number;
   formatY?: ChartFormatter;
+  emptyMessage?: string;
 }
 
 export function LineTrendChart({
@@ -36,12 +37,13 @@ export function LineTrendChart({
   config,
   height = 300,
   formatY,
+  emptyMessage,
 }: LineTrendChartProps) {
   const fmtY = resolveFormatter(formatY);
   if (!data.length) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
-        No data
+        {emptyMessage ?? "—"}
       </div>
     );
   }

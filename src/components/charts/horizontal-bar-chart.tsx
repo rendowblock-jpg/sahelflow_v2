@@ -22,6 +22,7 @@ interface HorizontalBarChartProps {
   config: ChartConfig;
   height?: number;
   formatValue?: ChartFormatter;
+  emptyMessage?: string;
 }
 
 export function HorizontalBarChart({
@@ -29,12 +30,13 @@ export function HorizontalBarChart({
   config,
   height = 300,
   formatValue,
+  emptyMessage,
 }: HorizontalBarChartProps) {
   const fmt = resolveFormatter(formatValue);
   if (!data.length) {
     return (
       <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
-        No data
+        {emptyMessage ?? "—"}
       </div>
     );
   }

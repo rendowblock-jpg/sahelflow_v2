@@ -1,73 +1,75 @@
 // ════════════════════════════════════════════════════════════════════════════
 // SahelFlow — Shared Utilities & Status Configuration
 // Single source of truth for status colors, labels, formatting
+//
+// NOTE: This module returns i18n KEYS (not translated strings). Callers must
+// pass the key through `t()` (client) or `t()` from `getI18n()` (server) so
+// the rendered label respects the active locale (en / fr / ar).
 // ════════════════════════════════════════════════════════════════════════════
 
+import { type Locale } from '@/lib/i18n'
 import { type OrderStatus } from '@/types/domain'
 
 // Currency formatting (formatDZD, formatDZDShort, formatDZDBare) lives in
 // src/lib/utils.ts — the canonical source. Was duplicated here (Z-013).
 
 // ── Date Formatting ──────────────────────────────────────────────────────────
+//
+// Locale-aware variants. The legacy `formatDate` / `formatDateShort` /
+// `formatTime` / `timeAgo` / `getGreeting` / `getFormattedDate` helpers that
+// hard-coded `fr-DZ` and French text have been removed — all call sites use
+// the locale-aware versions in src/lib/utils.ts (which accept a `locale`
+// argument) instead. The functions below are kept for any future callers that
+// need a locale-aware variant from this module.
 
-export function formatDate(iso: string | Date): string {
+const LOCALE_TAG: Record<Locale, string> = {
+  ar: 'ar-DZ',
+  fr: 'fr-DZ',
+  en: 'en-GB',
+}
+
+/** Locale-aware short date (e.g. "12 Jan 2025"). */
+export function formatDate(iso: string | Date, locale: Locale = 'fr'): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
-  return d.toLocaleDateString('fr-DZ', {
+  return d.toLocaleDateString(LOCALE_TAG[locale], {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   })
 }
 
-export function formatDateShort(iso: string | Date): string {
+/** Locale-aware very-short date (e.g. "12 Jan"). */
+export function formatDateShort(iso: string | Date, locale: Locale = 'fr'): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
-  return d.toLocaleDateString('fr-DZ', {
+  return d.toLocaleDateString(LOCALE_TAG[locale], {
     day: '2-digit',
     month: 'short',
   })
 }
 
-export function formatTime(iso: string | Date): string {
+/** Locale-aware time (e.g. "14:32"). */
+export function formatTime(iso: string | Date, locale: Locale = 'fr'): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
-  return d.toLocaleTimeString('fr-DZ', {
+  return d.toLocaleTimeString(LOCALE_TAG[locale], {
     hour: '2-digit',
     minute: '2-digit',
   })
 }
 
-export function timeAgo(iso: string | Date): string {
-  const d = typeof iso === 'string' ? new Date(iso) : iso
-  const diff = Date.now() - d.getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return "À l'instant"
-  if (mins < 60) return `Il y a ${mins}min`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `Il y a ${hrs}h`
-  const days = Math.floor(hrs / 24)
-  return `Il y a ${days}j`
-}
-
-export function getGreeting(): string {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Bonjour'
-  if (hour < 18) return "Bon après-midi"
-  return 'Bonsoir'
-}
-
-export function getFormattedDate(): string {
-  return new Date().toLocaleDateString('fr-DZ', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+/** Locale-aware number formatting. */
+export function formatNumber(n: number, locale: Locale = 'fr'): string {
+  return new Intl.NumberFormat(LOCALE_TAG[locale]).format(n)
 }
 
 // ── Status Configuration ─────────────────────────────────────────────────────
+//
+// Each style carries an `i18nKey` instead of a hardcoded label. Callers render
+// the label by passing the key through their `t()` function:
+//   const style = orderStatusStyles[status]
+//   <span>{t(style.i18nKey)}</span>
 
 export interface StatusStyle {
-  label: string
-  labelAr: string
+  i18nKey: string
   dot: string
   bg: string
   text: string
@@ -78,8 +80,7 @@ export interface StatusStyle {
 
 export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
   draft: {
-    label: 'Brouillon',
-    labelAr: 'مسودة',
+    i18nKey: 'orders.status.draft',
     dot: 'bg-slate-400',
     bg: 'bg-slate-50 dark:bg-slate-900/40',
     text: 'text-slate-700 dark:text-slate-400',
@@ -88,8 +89,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-slate-400/20',
   },
   pending: {
-    label: 'En attente',
-    labelAr: 'قيد الانتظار',
+    i18nKey: 'orders.status.pending',
     dot: 'bg-amber-500',
     bg: 'bg-amber-50 dark:bg-amber-950/40',
     text: 'text-amber-700 dark:text-amber-400',
@@ -98,8 +98,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-amber-500/20',
   },
   confirmed: {
-    label: 'Confirmé',
-    labelAr: 'مؤكد',
+    i18nKey: 'orders.status.confirmed',
     dot: 'bg-sky-500',
     bg: 'bg-sky-50 dark:bg-sky-950/40',
     text: 'text-sky-700 dark:text-sky-400',
@@ -108,8 +107,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-sky-500/20',
   },
   shipped: {
-    label: 'Expédié',
-    labelAr: 'مشحون',
+    i18nKey: 'orders.status.shipped',
     dot: 'bg-violet-500',
     bg: 'bg-violet-50 dark:bg-violet-950/40',
     text: 'text-violet-700 dark:text-violet-400',
@@ -118,8 +116,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-violet-500/20',
   },
   delivered: {
-    label: 'Livré',
-    labelAr: 'تم التسليم',
+    i18nKey: 'orders.status.delivered',
     dot: 'bg-emerald-500',
     bg: 'bg-emerald-50 dark:bg-emerald-950/40',
     text: 'text-emerald-700 dark:text-emerald-400',
@@ -128,8 +125,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-emerald-500/20',
   },
   returned: {
-    label: 'Retourné',
-    labelAr: 'مرتجع',
+    i18nKey: 'orders.status.returned',
     dot: 'bg-red-500',
     bg: 'bg-red-50 dark:bg-red-950/40',
     text: 'text-red-700 dark:text-red-400',
@@ -138,8 +134,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-red-500/20',
   },
   refused: {
-    label: 'Refusé',
-    labelAr: 'مرفوض',
+    i18nKey: 'orders.status.refused',
     dot: 'bg-rose-500',
     bg: 'bg-rose-50 dark:bg-rose-950/40',
     text: 'text-rose-700 dark:text-rose-400',
@@ -148,8 +143,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
     ring: 'ring-rose-500/20',
   },
   cancelled: {
-    label: 'Annulé',
-    labelAr: 'ملغى',
+    i18nKey: 'orders.status.cancelled',
     dot: 'bg-gray-400',
     bg: 'bg-gray-50 dark:bg-gray-800/40',
     text: 'text-gray-600 dark:text-gray-400',
@@ -160,31 +154,37 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
 }
 
 // ── Delivery Provider Config ─────────────────────────────────────────────────
+//
+// Brand names ("Yalidine", "ZR Express", "DHD", "Maystro") are proper nouns
+// and are intentionally NOT translated — they appear the same in all locales.
 
 export const deliveryProviderConfig: Record<string, { color: string; label: string }> = {
   yalidine: { color: 'bg-orange-500', label: 'Yalidine' },
   maystro: { color: 'bg-blue-500', label: 'Maystro' },
   zrexpress: { color: 'bg-teal-500', label: 'ZR Express' },
+  zr_express: { color: 'bg-teal-500', label: 'ZR Express' },
+  dhd: { color: 'bg-rose-500', label: 'DHD' },
 }
 
 // ── Customer Status Config ───────────────────────────────────────────────────
 
-export const customerStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  active: { label: 'Actif', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
-  inactive: { label: 'Inactif', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50' },
-  blocked: { label: 'Bloqué', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50' },
+export const customerStatusConfig: Record<string, { i18nKey: string; color: string; bg: string }> = {
+  active: { i18nKey: 'common.active', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
+  inactive: { i18nKey: 'common.inactive', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50' },
+  blocked: { i18nKey: 'common.blocked', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50' },
 }
 
 // ── Risk Score Helper ────────────────────────────────────────────────────────
 
-export function getRiskConfig(score: number): { label: string; color: string; bg: string; progressColor: string } {
-  if (score <= 30) return { label: 'Faible', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-500', progressColor: 'bg-emerald-500' }
-  if (score <= 60) return { label: 'Moyen', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500', progressColor: 'bg-amber-500' }
-  return { label: 'Élevé', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-500', progressColor: 'bg-red-500' }
+export interface RiskConfig {
+  i18nKey: string
+  color: string
+  bg: string
+  progressColor: string
 }
 
-// ── Number Formatting ────────────────────────────────────────────────────────
-
-export function formatNumber(n: number): string {
-  return new Intl.NumberFormat('fr-DZ').format(n)
+export function getRiskConfig(score: number): RiskConfig {
+  if (score <= 30) return { i18nKey: 'customers.riskLow', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-500', progressColor: 'bg-emerald-500' }
+  if (score <= 60) return { i18nKey: 'customers.riskMedium', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500', progressColor: 'bg-amber-500' }
+  return { i18nKey: 'customers.riskHigh', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-500', progressColor: 'bg-red-500' }
 }

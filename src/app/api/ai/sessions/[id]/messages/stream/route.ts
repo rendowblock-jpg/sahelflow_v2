@@ -62,7 +62,7 @@ export async function POST(
   });
 
   if (!session) {
-    return new Response(JSON.stringify({ error: "Session introuvable" }), {
+    return new Response(JSON.stringify({ error: "Session not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });

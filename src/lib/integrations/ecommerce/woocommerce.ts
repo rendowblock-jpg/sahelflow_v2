@@ -106,6 +106,50 @@ function normalizeOrder(order: WooOrder): NormalizedOrder {
   };
 }
 
+/**
+ * Validate a WooCommerce site URL to prevent SSRF attacks.
+ * Rejects: non-HTTP(S) protocols, localhost, private IPs, link-local addresses.
+ */
+function validateSiteUrl(siteUrl: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(siteUrl);
+  } catch {
+    throw new Error("Invalid WooCommerce site URL: not a valid URL");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Invalid WooCommerce site URL: protocol must be http or https");
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "::1"
+  ) {
+    throw new Error("WooCommerce site URL cannot point to localhost");
+  }
+
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    const parts = hostname.split(".").map(Number);
+    const isPrivate =
+      parts[0] === 10 ||
+      (parts[0] === 172 && (parts[1] ?? 0) >= 16 && (parts[1] ?? 0) <= 31) ||
+      (parts[0] === 192 && parts[1] === 168) ||
+      (parts[0] === 169 && parts[1] === 254) ||
+      parts[0] === 0;
+    if (isPrivate) {
+      throw new Error("WooCommerce site URL cannot point to a private or link-local IP address");
+    }
+  }
+
+  return parsed;
+}
+
 export const woocommerceAdapter: EcommerceAdapter = {
   platform: "woocommerce",
   displayName: "WooCommerce",
@@ -120,7 +164,9 @@ export const woocommerceAdapter: EcommerceAdapter = {
     }
 
     const { siteUrl, consumerKey, consumerSecret } = credentials;
-    const baseApi = `${siteUrl.replace(/\/$/, "")}/wp-json/wc/v3/orders`;
+
+    const validatedUrl = validateSiteUrl(siteUrl as string);
+    const baseApi = `${validatedUrl.origin}/wp-json/wc/v3/orders`;
     const auth = "Basic " + Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
 
     let allOrders: NormalizedOrder[] = [];

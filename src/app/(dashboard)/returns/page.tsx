@@ -10,7 +10,10 @@ import Link from "next/link";
 import { RotateCcw, CheckCircle2, Clock, ArrowLeftRight } from "lucide-react";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Retours — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.returns") };
+}
 export const dynamic = "force-dynamic";
 
 /** i18n-driven return status styles */

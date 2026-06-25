@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Import / Export — SahelFlow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.importExport") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function ImportsPage() {

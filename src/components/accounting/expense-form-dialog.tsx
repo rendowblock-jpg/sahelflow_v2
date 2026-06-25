@@ -180,7 +180,7 @@ export function ExpenseFormDialog({
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
           setServerError(
-            first ? `${first.path.join(".")}: ${first.message}` : "Validation failed",
+            first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
           );
         } else {
           setServerError(data?.error ?? `Request failed (${res.status})`);
