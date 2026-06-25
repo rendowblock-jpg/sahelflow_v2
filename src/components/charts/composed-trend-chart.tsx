@@ -1,9 +1,14 @@
 "use client";
 
 /**
- * ComposedTrendChart — bars + line on dual axes. Ideal for
- * "orders (bar) × revenue (line)" or "volume × value" combos.
- * Formatters are string keys (ChartFormatter) for RSC compatibility.
+ * ComposedTrendChart — bars + line on dual axes (shadcn v4 pattern).
+ * 
+ * - CartesianGrid: horizontal only, dashed, var(--border)
+ * - No axis lines
+ * - cursor={false} on tooltip
+ * - indicator="dot"
+ * - type="natural" for line
+ * - Rounded bar tops: radius [4, 4, 0, 0]
  */
 import {
   ComposedChart,
@@ -64,15 +69,15 @@ export function ComposedTrendChart({
   }
   const hasRight = series.some((s) => s.yAxis === "right");
   return (
-    <ChartContainer config={config} style={{ height }} className="w-full">
+    <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
       <ComposedChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/50" />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey={xKey}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          minTickGap={20}
+          minTickGap={24}
           className="text-xs fill-muted-foreground"
         />
         <YAxis
@@ -97,8 +102,10 @@ export function ComposedTrendChart({
           />
         )}
         <ChartTooltip
+          cursor={false}
           content={
             <ChartTooltipContent
+              indicator="dot"
               formatter={(value, name) => {
                 const s = series.find((x) => x.key === name);
                 const num = Number(value);
@@ -125,7 +132,7 @@ export function ComposedTrendChart({
               key={s.key}
               dataKey={s.key}
               yAxisId={s.yAxis ?? "right"}
-              type="monotone"
+              type="natural"
               stroke={`var(--color-${s.key})`}
               strokeWidth={2}
               dot={false}
