@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toCsv } from "@/lib/import/export";
+import { toCsv, toXlsx } from "@/lib/import/export";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/export/customers — download all customers as CSV. */
-export const GET = withErrorHandler(async () => {
+/** GET /api/export/customers?format=csv|xlsx */
+export const GET = withErrorHandler(async (req: NextRequest) => {
+  const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const { t, locale } = await getI18n();
   const customers = await db.customer.findMany({
     orderBy: { createdAt: "desc" },
@@ -25,7 +26,7 @@ export const GET = withErrorHandler(async () => {
     totalSpent: c.totalSpent,
   }));
 
-  const csv = toCsv(rows, [
+  const columns = [
     { key: "name", label: t("export.customers.name") },
     { key: "phone", label: t("export.customers.phone") },
     { key: "phone2", label: t("export.customers.phone2") },
@@ -34,13 +35,26 @@ export const GET = withErrorHandler(async () => {
     { key: "address", label: t("export.customers.address") },
     { key: "orderCount", label: t("export.customers.orderCount") },
     { key: "totalSpent", label: t("export.customers.totalSpent") },
-  ]);
+  ];
 
   const filePrefix = locale === "ar" ? "عملاء" : locale === "fr" ? "clients" : "customers";
+  const fileSuffix = new Date().toISOString().slice(0, 10);
+
+  if (format === "xlsx") {
+    const buf = toXlsx(rows, columns);
+    return new NextResponse(buf, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.xlsx"`,
+      },
+    });
+  }
+
+  const csv = toCsv(rows, columns);
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filePrefix}-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
     },
   });
 }, "GET /api/export/customers");

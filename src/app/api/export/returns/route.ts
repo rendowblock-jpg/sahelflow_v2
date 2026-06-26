@@ -6,37 +6,37 @@ import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/export/products?format=csv|xlsx */
+/** GET /api/export/returns?format=csv|xlsx */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const { t, locale } = await getI18n();
-  const products = await db.product.findMany({
-    include: { category: true },
+  const format = req.nextUrl.searchParams.get("format") ?? "csv";
+
+  const returns = await db.return.findMany({
+    include: { order: { include: { customer: { select: { name: true } } } } },
     orderBy: { createdAt: "desc" },
     take: 10000,
   });
 
-  const rows = products.map((p) => ({
-    name: p.name,
-    sku: p.sku ?? "",
-    price: p.price,
-    cost: p.cost ?? 0,
-    stock: p.stock,
-    category: p.category?.name ?? "",
-    isActive: p.isActive ? t("common.yes") : t("common.no"),
+  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
+  const rows = returns.map((r) => ({
+    orderNumber: r.order.orderNumber,
+    customerName: r.order.customer?.name ?? "",
+    type: t(`returns.type.${r.type}`),
+    status: t(`returns.status.${r.status}`),
+    reason: r.reason,
+    createdAt: new Date(r.createdAt).toLocaleString(localeTag),
   }));
 
   const columns = [
-    { key: "name", label: t("export.products.name") },
-    { key: "sku", label: t("export.products.sku") },
-    { key: "price", label: t("export.products.price") },
-    { key: "cost", label: t("export.products.cost") },
-    { key: "stock", label: t("export.products.stock") },
-    { key: "category", label: t("export.products.category") },
-    { key: "isActive", label: t("export.products.isActive") },
+    { key: "orderNumber", label: t("export.returns.orderNumber") },
+    { key: "customerName", label: t("export.returns.customer") },
+    { key: "type", label: t("export.returns.type") },
+    { key: "status", label: t("export.returns.status") },
+    { key: "reason", label: t("export.returns.reason") },
+    { key: "createdAt", label: t("export.returns.date") },
   ];
 
-  const filePrefix = locale === "ar" ? "منتجات" : locale === "fr" ? "produits" : "products";
+  const filePrefix = locale === "ar" ? "إرجاعات" : locale === "fr" ? "retours" : "returns";
   const fileSuffix = new Date().toISOString().slice(0, 10);
 
   if (format === "xlsx") {
@@ -56,4 +56,4 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
     },
   });
-}, "GET /api/export/products");
+}, "GET /api/export/returns");

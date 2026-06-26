@@ -10,6 +10,7 @@ import { Package, Eye, AlertTriangle, Boxes, DollarSign, Download } from "lucide
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { ProductRowActions } from "@/components/products/product-row-actions";
 import type { Product } from "@/types/domain";
@@ -62,6 +63,7 @@ export default async function ProductsPage() {
         description={`${t("products.totalStock")}: ${totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(inventoryValue)}`}
         actions={
           <div className="flex items-center gap-2">
+            <ImportExportButtons exportRoute="/api/export/products" importRoute="/api/import/products" />
             <Button variant="outline" size="sm" asChild>
               <Link href="/api/export/products">
                 <Download className="me-1.5 h-4 w-4" />

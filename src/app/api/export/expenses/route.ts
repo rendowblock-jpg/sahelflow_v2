@@ -6,37 +6,32 @@ import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/export/products?format=csv|xlsx */
+/** GET /api/export/expenses?format=csv|xlsx */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const { t, locale } = await getI18n();
-  const products = await db.product.findMany({
-    include: { category: true },
-    orderBy: { createdAt: "desc" },
+  const format = req.nextUrl.searchParams.get("format") ?? "csv";
+
+  const expenses = await db.expense.findMany({
+    orderBy: { date: "desc" },
     take: 10000,
   });
 
-  const rows = products.map((p) => ({
-    name: p.name,
-    sku: p.sku ?? "",
-    price: p.price,
-    cost: p.cost ?? 0,
-    stock: p.stock,
-    category: p.category?.name ?? "",
-    isActive: p.isActive ? t("common.yes") : t("common.no"),
+  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
+  const rows = expenses.map((e) => ({
+    date: new Date(e.date).toLocaleDateString(localeTag),
+    category: t(`accounting.category.${e.category}`),
+    description: e.notes ?? "",
+    amount: e.amount,
   }));
 
   const columns = [
-    { key: "name", label: t("export.products.name") },
-    { key: "sku", label: t("export.products.sku") },
-    { key: "price", label: t("export.products.price") },
-    { key: "cost", label: t("export.products.cost") },
-    { key: "stock", label: t("export.products.stock") },
-    { key: "category", label: t("export.products.category") },
-    { key: "isActive", label: t("export.products.isActive") },
+    { key: "date", label: t("export.expenses.date") },
+    { key: "category", label: t("export.expenses.category") },
+    { key: "description", label: t("export.expenses.description") },
+    { key: "amount", label: t("export.expenses.amount") },
   ];
 
-  const filePrefix = locale === "ar" ? "منتجات" : locale === "fr" ? "produits" : "products";
+  const filePrefix = locale === "ar" ? "مصاريف" : locale === "fr" ? "depenses" : "expenses";
   const fileSuffix = new Date().toISOString().slice(0, 10);
 
   if (format === "xlsx") {
@@ -56,4 +51,4 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
     },
   });
-}, "GET /api/export/products");
+}, "GET /api/export/expenses");

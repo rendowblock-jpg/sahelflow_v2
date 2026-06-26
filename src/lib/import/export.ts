@@ -1,11 +1,14 @@
 /**
- * CSV export helper — converts rows to a CSV string with proper escaping.
- * RFC 4180 compliant (quotes fields containing commas, quotes, or newlines).
+ * CSV + XLSX export helper — converts rows to a spreadsheet with proper escaping.
+ *
+ * CSV is RFC 4180 compliant (quotes fields containing commas, quotes, or newlines).
+ * XLSX uses @e965/xlsx (community fork of SheetJS) for the same API, fewer CVEs.
  *
  * NOTE: column definitions export `i18nKey` (NOT translated labels). Callers
  * must pass the key through `t()` (from getI18n() on the server) to render
- * the localized header text in the resulting CSV.
+ * the localized header text in the resulting file.
  */
+import * as XLSX from "@e965/xlsx";
 export interface ExportColumn<T> {
   /** Property name on the row object. */
   key: keyof T;
@@ -24,7 +27,7 @@ function escapeField(value: string): string {
 }
 
 /** Convert rows to a CSV string. Column labels must already be translated. */
-export function toCsv<T>(rows: T[], columns: { key: keyof T; label: string; format?: (value: T[keyof T], row: T) => string }[]): string {
+export function toCsv<T extends Record<string, unknown>>(rows: T[], columns: { key: string; label: string; format?: (value: unknown, row: T) => string }[]): string {
   const header = columns.map((c) => escapeField(c.label)).join(",");
   const lines = rows.map((row) =>
     columns
@@ -36,6 +39,30 @@ export function toCsv<T>(rows: T[], columns: { key: keyof T; label: string; form
       .join(","),
   );
   return [header, ...lines].join("\r\n");
+}
+
+/** Convert rows to an XLSX file (as ArrayBuffer) with localized headers. */
+export function toXlsx<T extends Record<string, unknown>>(rows: T[], columns: { key: string; label: string; format?: (value: unknown, row: T) => string }[]): ArrayBuffer {
+  const headerRow = columns.map((c) => c.label);
+  const dataRows = rows.map((row) =>
+    columns.map((col) => {
+      const value = row[col.key];
+      const formatted = col.format ? col.format(value, row) : String(value ?? "");
+      return formatted;
+    }),
+  );
+
+  const worksheet = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+  const binaryString = XLSX.write(workbook, { type: "binary", bookType: "xlsx" });
+  const buffer = new ArrayBuffer(binaryString.length);
+  const view = new Uint8Array(buffer);
+  for (let i = 0; i < binaryString.length; i++) {
+    view[i] = binaryString.charCodeAt(i);
+  }
+  return buffer;
 }
 
 /**
@@ -79,4 +106,33 @@ export const PRODUCT_EXPORT_COLUMNS: Array<{ key: string; i18nKey: string }> = [
   { key: "stock", i18nKey: "export.products.stock" },
   { key: "category", i18nKey: "export.products.category" },
   { key: "isActive", i18nKey: "export.products.isActive" },
+];
+
+export const DELIVERY_EXPORT_COLUMNS: Array<{ key: string; i18nKey: string }> = [
+  { key: 'trackingNumber', i18nKey: 'export.deliveries.tracking' },
+  { key: 'provider', i18nKey: 'export.deliveries.provider' },
+  { key: 'orderNumber', i18nKey: 'export.deliveries.orderNumber' },
+  { key: 'customerName', i18nKey: 'export.deliveries.customer' },
+  { key: 'phone', i18nKey: 'export.deliveries.phone' },
+  { key: 'wilaya', i18nKey: 'export.deliveries.wilaya' },
+  { key: 'commune', i18nKey: 'export.deliveries.commune' },
+  { key: 'status', i18nKey: 'export.deliveries.status' },
+  { key: 'cost', i18nKey: 'export.deliveries.cost' },
+  { key: 'createdAt', i18nKey: 'export.deliveries.date' },
+];
+
+export const RETURN_EXPORT_COLUMNS: Array<{ key: string; i18nKey: string }> = [
+  { key: 'orderNumber', i18nKey: 'export.returns.orderNumber' },
+  { key: 'customerName', i18nKey: 'export.returns.customer' },
+  { key: 'type', i18nKey: 'export.returns.type' },
+  { key: 'status', i18nKey: 'export.returns.status' },
+  { key: 'reason', i18nKey: 'export.returns.reason' },
+  { key: 'createdAt', i18nKey: 'export.returns.date' },
+];
+
+export const EXPENSE_EXPORT_COLUMNS: Array<{ key: string; i18nKey: string }> = [
+  { key: 'date', i18nKey: 'export.expenses.date' },
+  { key: 'category', i18nKey: 'export.expenses.category' },
+  { key: 'description', i18nKey: 'export.expenses.description' },
+  { key: 'amount', i18nKey: 'export.expenses.amount' },
 ];

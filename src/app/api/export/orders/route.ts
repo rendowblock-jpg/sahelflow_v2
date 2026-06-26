@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toCsv } from "@/lib/import/export";
+import { toCsv, toXlsx } from "@/lib/import/export";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/export/orders — download all orders as CSV. */
-export const GET = withErrorHandler(async () => {
+/** GET /api/export/orders?format=csv|xlsx — download all orders. */
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const { t, locale } = await getI18n();
+  const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const orders = await db.order.findMany({
     include: { customer: true },
     orderBy: { createdAt: "desc" },
@@ -43,10 +44,33 @@ export const GET = withErrorHandler(async () => {
   ]);
 
   const filePrefix = locale === "ar" ? "طلبات" : locale === "fr" ? "commandes" : "orders";
+  const fileSuffix = new Date().toISOString().slice(0, 10);
+
+  if (format === "xlsx") {
+    const xlsxBuffer = toXlsx(rows, [
+      { key: "orderNumber", label: t("export.orders.orderNumber") },
+      { key: "status", label: t("export.orders.status") },
+      { key: "customerName", label: t("export.orders.customer") },
+      { key: "phone", label: t("export.orders.phone") },
+      { key: "wilaya", label: t("export.orders.wilaya") },
+      { key: "commune", label: t("export.orders.commune") },
+      { key: "totalPrice", label: t("export.orders.total") },
+      { key: "deliveryCost", label: t("export.orders.deliveryCost") },
+      { key: "source", label: t("export.orders.source") },
+      { key: "createdAt", label: t("export.orders.date") },
+    ]);
+    return new NextResponse(xlsxBuffer, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.xlsx"`,
+      },
+    });
+  }
+
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filePrefix}-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
     },
   });
 }, "GET /api/export/orders");

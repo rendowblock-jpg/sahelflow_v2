@@ -49,3 +49,81 @@ export function normalizePhone(value: string): string {
   if (digits.startsWith("00")) digits = "0" + digits.slice(2);
   return digits;
 }
+
+export const ORDER_FIELDS: FieldConfig[] = [
+  { key: 'orderNumber', i18nKey: 'orders.orderNumber', aliases: ['numero', 'commande', 'order', 'order_number', 'ref'], required: false },
+  { key: 'customerName', i18nKey: 'customers.name', aliases: ['client', 'nom', 'customer', 'name'], required: true },
+  { key: 'phone', i18nKey: 'customers.phone', aliases: ['tel', 'telephone', 'phone', 'mobile', 'gsm'], required: true },
+  { key: 'wilaya', i18nKey: 'customers.wilaya', aliases: ['wilaya', 'state', 'province'], required: true },
+  { key: 'commune', i18nKey: 'customers.commune', aliases: ['commune', 'city', 'ville'], required: false },
+  { key: 'address', i18nKey: 'customers.address', aliases: ['adresse', 'address', 'rue'], required: false },
+  { key: 'productName', i18nKey: 'products.productName', aliases: ['produit', 'product', 'article', 'designation'], required: true },
+  { key: 'quantity', i18nKey: 'orders.quantity', aliases: ['quantite', 'qty', 'quantity', 'qte'], required: true },
+  { key: 'unitPrice', i18nKey: 'orders.price', aliases: ['prix', 'price', 'montant', 'amount'], required: true },
+  { key: 'deliveryCost', i18nKey: 'orders.deliveryCost', aliases: ['livraison', 'shipping', 'delivery_cost'], required: false },
+  { key: 'status', i18nKey: 'orders.status', aliases: ['statut', 'status', 'etat'], required: false },
+];
+
+export const EXPENSE_FIELDS: FieldConfig[] = [
+  { key: 'date', i18nKey: 'accounting.expenseDate', aliases: ['date', 'jour'], required: true },
+  { key: 'category', i18nKey: 'accounting.expenseCategory', aliases: ['categorie', 'category', 'type'], required: true },
+  { key: 'description', i18nKey: 'accounting.expenseNotes', aliases: ['description', 'notes', 'libelle', 'label'], required: false },
+  { key: 'amount', i18nKey: 'accounting.expenseAmount', aliases: ['montant', 'amount', 'prix', 'total'], required: true },
+];
+
+/**
+ * ECOMANAGER column mapping preset.
+ *
+ * ECOMANAGER is a popular Algerian COD management platform. Its CSV exports
+ * use specific French column names. This preset maps them to SahelFlow's
+ * internal field keys so migration is frictionless.
+ *
+ * Usage: when the user selects the ECOMANAGER preset in the import UI,
+ * skip auto-detection and use this mapping directly.
+ */
+export const ECOMANAGER_CUSTOMER_MAPPING: Record<string, string> = {
+  'Nom': 'name',
+  'Téléphone': 'phone',
+  'Téléphone 2': 'phone2',
+  'Wilaya': 'wilaya',
+  'Commune': 'commune',
+  'Adresse': 'address',
+  'Notes': 'notes',
+};
+
+export const ECOMANAGER_ORDER_MAPPING: Record<string, string> = {
+  'N° Commande': 'orderNumber',
+  'Client': 'customerName',
+  'Téléphone': 'phone',
+  'Wilaya': 'wilaya',
+  'Commune': 'commune',
+  'Adresse': 'address',
+  'Produit': 'productName',
+  'Quantité': 'quantity',
+  'Prix': 'unitPrice',
+  'Livraison': 'deliveryCost',
+  'Statut': 'status',
+};
+
+export const ECOMANAGER_PRODUCT_MAPPING: Record<string, string> = {
+  'Nom': 'name',
+  'Référence': 'sku',
+  'Prix': 'price',
+  'Coût': 'cost',
+  'Stock': 'stock',
+  'Catégorie': 'category',
+};
+
+/** Shopify CSV column mapping preset (orders export). */
+export const SHOPIFY_ORDER_MAPPING: Record<string, string> = {
+  'Name': 'orderNumber',
+  'Customer Name': 'customerName',
+  'Phone': 'phone',
+  'Shipping Province': 'wilaya',
+  'Shipping City': 'commune',
+  'Shipping Address1': 'address',
+  'Lineitem name': 'productName',
+  'Lineitem quantity': 'quantity',
+  'Lineitem price': 'unitPrice',
+  'Status': 'status',
+};
