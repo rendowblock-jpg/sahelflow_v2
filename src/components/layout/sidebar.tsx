@@ -62,7 +62,6 @@ export function Sidebar() {
                   )}
                   <Icon className={cn(
                     "h-[18px] w-[18px] shrink-0 transition-transform duration-200",
-                    isRtl && "icon-rtl-flip",
                     isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
                   )} />
                   {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}

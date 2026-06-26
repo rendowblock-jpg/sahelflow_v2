@@ -5,6 +5,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -275,16 +276,14 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                     <Label htmlFor="phone">{t("storefront.view.phone")} *</Label>
                     <Input id="phone" required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0XXXXXXXXX" />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="wilaya">{t("storefront.view.wilaya")} *</Label>
-                      <Input id="wilaya" required value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="commune">{t("storefront.view.commune")} *</Label>
-                      <Input id="commune" required value={form.commune} onChange={(e) => setForm({ ...form, commune: e.target.value })} />
-                    </div>
-                  </div>
+                  <WilayaCommuneSelect
+                    wilaya={form.wilaya}
+                    commune={form.commune}
+                    onWilayaChange={(v) => setForm({ ...form, wilaya: v })}
+                    onCommuneChange={(v) => setForm({ ...form, commune: v })}
+                    wilayaLabel={`${t("storefront.view.wilaya")} *`}
+                    communeLabel={`${t("storefront.view.commune")} *`}
+                  />
                   <div className="space-y-1">
                     <Label htmlFor="address">{t("storefront.view.address")} *</Label>
                     <Input id="address" required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />

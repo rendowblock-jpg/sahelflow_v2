@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Loader2 } from "lucide-react";
@@ -34,6 +34,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 
 /**
  * Client-side form schema — mirrors createCustomerSchema but allows empty
@@ -108,6 +109,10 @@ export function CustomerFormDialog({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaults(customer),
   });
+
+  // Subscribe to wilaya/commune changes without re-rendering the whole form on every keystroke.
+  const watchedWilaya = useWatch({ control: form.control, name: "wilaya" });
+  const watchedCommune = useWatch({ control: form.control, name: "commune" });
 
   // Keep the form in sync if the `customer` prop changes after a server
   // refresh (e.g. another agent edited the row, or we just saved).
@@ -261,34 +266,14 @@ export function CustomerFormDialog({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="wilaya"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("publicForm.wilaya")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Alger" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="commune"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("publicForm.commune")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Bab Ezzouar" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <WilayaCommuneSelect
+              wilaya={watchedWilaya ?? ""}
+              commune={watchedCommune ?? ""}
+              onWilayaChange={(v) => form.setValue("wilaya", v, { shouldValidate: true })}
+              onCommuneChange={(v) => form.setValue("commune", v, { shouldValidate: true })}
+              wilayaLabel={t("publicForm.wilaya")}
+              communeLabel={t("publicForm.commune")}
+            />
 
             <FormField
               control={form.control}

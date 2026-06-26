@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,10 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
+import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { useI18n } from "@/hooks/use-i18n";
-import wilayasData from "../../../data/wilayas.json";
-// communes.json (197KB, 1,541 entries) is fetched from /api/communes?wilaya=X
-// when the user selects a wilaya — keeps it out of the client bundle (T-019).
 
 interface Customer {
   id: string;
@@ -52,19 +50,7 @@ interface OrderFormItem {
   unitPrice: number;
 }
 
-interface Wilaya {
-  code: number;
-  name: string;
-  nameAr: string;
-  zone: string;
-}
 
-interface Commune {
-  code: number;
-  wilayaCode: number;
-  name: string;
-  nameAr: string;
-}
 
 interface OrderFormDialogProps {
   customers: Customer[];
@@ -87,35 +73,6 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const [phone, setPhone] = useState("");
   const [deliveryCost, setDeliveryCost] = useState("600");
 
-  const wilayas = wilayasData as Wilaya[];
-  // Fetch communes for the selected wilaya from the API (T-019: was importing
-  // 197KB communes.json into the client bundle). Now fetches ~2KB per wilaya.
-  const [communes, setCommunes] = useState<Commune[]>([]);
-  const [communesLoading, setCommunesLoading] = useState(false);
-  const wilayaCode = wilayas.find((w) => w.name === wilaya)?.code;
-
-  useEffect(() => {
-    if (!wilayaCode) return; // no wilaya selected — keep existing communes (cleared by render logic)
-
-    let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate: set loading before async fetch
-    setCommunesLoading(true);
-    fetch(`/api/communes?wilaya=${wilayaCode}`)
-      .then((res) => (res.ok ? res.json() : { communes: [] }))
-      .then((data) => {
-        if (!cancelled) setCommunes(data.communes ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setCommunes([]);
-      })
-      .finally(() => {
-        if (!cancelled) setCommunesLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [wilayaCode]);
 
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
 
@@ -325,48 +282,13 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
           {/* Delivery info */}
           <div className="space-y-4">
             <Label className="text-base">{t("orders.form.delivery")}</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">{t("orders.wilaya")}</Label>
-                <Select value={wilaya} onValueChange={(v) => { setWilaya(v); setCommune(""); setCommunes([]); }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("orders.form.wilayaPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {wilayas.map((w) => (
-                      <SelectItem key={w.code} value={w.name}>
-                        {w.code} — {w.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">{t("orders.commune")}</Label>
-                <Select value={commune} onValueChange={setCommune} disabled={!wilaya}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={wilaya ? t("orders.form.selectCommunePlaceholder") : t("orders.form.chooseWilayaFirst")} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {communesLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : communes.length === 0 ? (
-                      <div className="py-4 text-center text-sm text-muted-foreground">
-                        {t("orders.form.noCommunes")}
-                      </div>
-                    ) : (
-                      communes.map((c) => (
-                        <SelectItem key={c.code} value={c.name}>
-                          {c.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <WilayaCommuneSelect
+              wilaya={wilaya}
+              commune={commune}
+              onWilayaChange={setWilaya}
+              onCommuneChange={setCommune}
+              required
+            />
             <div className="space-y-1.5">
               <Label className="text-xs">{t("orders.form.address")}</Label>
               <Input
