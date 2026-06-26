@@ -1980,5 +1980,11 @@
   "orders.detail.items": "Articles",
   "orders.detail.qty": "Qté",
   "orders.detail.price": "Prix",
-  "orders.notesPlaceholder": "Ajouter des notes sur cette commande..."
+  "orders.notesPlaceholder": "Ajouter des notes sur cette commande...",
+  "returns.changeStatus": "Changer le statut",
+  "returns.statusUpdated": "Statut de retour mis à jour",
+  "returns.updateFailed": "Échec de la mise à jour du retour",
+  "deliveries.changeStatus": "Changer le statut",
+  "deliveries.statusUpdated": "Statut de livraison mis à jour",
+  "deliveries.updateFailed": "Échec de la mise à jour de la livraison"
 }
