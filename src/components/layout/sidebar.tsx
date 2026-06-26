@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -16,37 +15,28 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { Locale } from "@/lib/i18n";
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Server-rendered locale (from cookie) — used for initial render */
+  serverLocale: Locale;
+  /** Server-rendered direction (from cookie) — used for initial render */
+  serverDir: "ltr" | "rtl";
+}
+
+export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps) {
   const pathname = usePathname();
-  const { t, dir } = useI18n();
+  // useI18n() for translations + live locale changes (when user switches language)
+  const { t, dir: liveDir } = useI18n();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
-  // Bulletproof RTL: use useI18n()'s dir as primary, but also check
-  // document.documentElement.dir as a fallback. The <html> dir is set by:
-  //   1. Server render (from cookie)
-  //   2. No-flash inline script (from cookie, before React)
-  //   3. useI18n() useEffect (after locale change)
-  // If useI18n() hasn't hydrated yet, document.documentElement.dir is still correct.
-  const [htmlDir, setHtmlDir] = useState<"ltr" | "rtl">(
-    typeof document !== "undefined" && document.documentElement.dir === "rtl" ? "rtl" : "ltr"
-  );
-  useEffect(() => {
-    // Sync on mount + when dir changes
-    const syncDir = () => {
-      const d = document.documentElement.dir;
-      if (d === "rtl" || d === "ltr") setHtmlDir(d);
-    };
-    syncDir();
-    // Observe changes to <html> dir attribute
-    const observer = new MutationObserver(syncDir);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["dir"] });
-    return () => observer.disconnect();
-  }, []);
-
-  const effectiveDir = dir ?? htmlDir;
-  const isRtl = effectiveDir === "rtl";
+  // Use server values for the FIRST render (prevents hydration mismatch),
+  // then switch to live values from useI18n() after hydration.
+  // The live values will match the server values in normal usage (both read
+  // the same cookie), but useI18n() also handles the case where the user
+  // switches language without a full page reload.
+  const isRtl = (liveDir ?? serverDir) === "rtl";
 
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
@@ -76,7 +66,7 @@ export function Sidebar() {
                       : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  {/* Active indicator bar — left side in LTR, right in RTL */}
+                  {/* Active indicator bar — start side in LTR, end in RTL (logical property) */}
                   {isActive && (
                     <span
                       className={cn(
@@ -122,7 +112,7 @@ export function Sidebar() {
         collapsed ? "w-[68px]" : "w-64",
       )}
       aria-label="Sidebar navigation"
-      dir={effectiveDir}
+      dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Logo / brand */}
       <div className={cn(

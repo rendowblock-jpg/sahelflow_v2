@@ -6,6 +6,15 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
+import type { Locale } from "@/lib/i18n";
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  /** Server-rendered locale (from cookie) — passed to Sidebar + Topbar */
+  locale: Locale;
+  /** Server-rendered direction (from cookie) — passed to Sidebar + Topbar */
+  dir: "ltr" | "rtl";
+}
 
 /**
  * AppShell — the single source of truth for app layout.
@@ -16,11 +25,15 @@ import { Toaster } from "@/components/ui/sonner";
  * - Only <main> scrolls — no double scrollbars, no page bounce
  * - Responsive: sidebar hidden on mobile (Sheet handles it)
  *
+ * RTL: locale + dir are passed from the Server Component parent (which reads
+ * the cookie). This ensures the server render + client hydration use the same
+ * values — no hydration mismatch, no flash.
+ *
  * Responsive behavior:
  *  - mobile (<lg): sidebar hidden, slides in via Sheet
  *  - tablet/desktop (lg+): sidebar visible, collapsible to 68px rail
  */
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({ children, locale, dir }: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   useKeyboardShortcuts();
 
@@ -39,13 +52,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="grid h-dvh grid-cols-[auto_1fr] overflow-hidden bg-muted/30 lg:bg-muted/40">
       {/* Sidebar — hidden on mobile, shown on lg+ */}
       <div className="hidden lg:flex h-full">
-        <Sidebar />
+        <Sidebar serverLocale={locale} serverDir={dir} />
       </div>
 
       {/* Main content column — floating panel on lg+ */}
       <div className="flex flex-col overflow-hidden p-0 lg:p-2 lg:ps-0">
         <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
-          <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} />
+          <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
           <main className="flex-1 overflow-y-auto overflow-x-hidden">
             {children}
           </main>

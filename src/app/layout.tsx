@@ -70,7 +70,6 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
-        <script dangerouslySetInnerHTML={{__html: `(function(){try{var c=document.cookie.match(/sahelflow-locale=([^;]+)/);var l=c?c[1]:'fr';var d=l==='ar'?'rtl':'ltr';document.documentElement.lang=l;document.documentElement.dir=d;}catch(e){}})()`}} />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <TooltipProvider delayDuration={300}>
             {children}
