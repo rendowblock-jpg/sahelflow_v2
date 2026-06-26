@@ -11,6 +11,7 @@ import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download } from 
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { OrdersTableClient } from "@/components/orders/orders-table-client";
 import { PageHeader } from "@/components/shared/page-header";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import type { Metadata } from "next";
@@ -72,6 +73,7 @@ export default async function OrdersPage({
         description={t("orders.subtitle")}
         actions={
           <div className="flex items-center gap-2">
+            <ImportExportButtons exportRoute="/api/export/orders" importRoute="/api/import/orders" />
             <Button variant="outline" size="sm" asChild>
               <Link href="/api/export/orders">
                 <Download className="me-1.5 h-4 w-4" />

@@ -6,6 +6,7 @@ import { PremiumTable } from "@/components/shared/premium-table";
 import { DualBarChart } from "@/components/charts/dual-bar-chart";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import type { ExpenseCategory } from "@/lib/validation";
 import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
 import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
@@ -90,7 +91,7 @@ export default async function AccountingPage() {
       <PageHeader
         title={t("nav.accounting")}
         description={`${t("accounting.subtitle")} — ${now.toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}`}
-        actions={<ExpenseFormDialog />}
+        actions={<div className="flex items-center gap-2"><ImportExportButtons exportRoute="/api/export/expenses" importRoute={undefined} /><ExpenseFormDialog /></div>}
       />
 
       {/* P&L Summary — upgraded with accent icons */}

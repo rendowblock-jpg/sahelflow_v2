@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
 import { PremiumTable } from "@/components/shared/premium-table";
 import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { StatCard } from "@/components/shared/stat-card";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import Link from "next/link";
@@ -92,6 +93,7 @@ export default async function DeliveriesPage({
       <PageHeader
         title={t("nav.delivery")}
         description={t("deliveries.subtitle")}
+        actions={<ImportExportButtons exportRoute="/api/export/deliveries" />}
       />
 
       {/* Stat cards — premium StatCard with proper icons */}

@@ -10,6 +10,7 @@ import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download } from "luci
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomerRowActions } from "@/components/customers/customer-row-actions";
 import type { Customer } from "@/types/domain";
@@ -38,6 +39,7 @@ export default async function CustomersPage() {
         description={t("customers.subtitle")}
         actions={
           <div className="flex items-center gap-2">
+            <ImportExportButtons exportRoute="/api/export/customers" importRoute="/api/import/customers" />
             <Button variant="outline" size="sm" asChild>
               <Link href="/api/export/customers">
                 <Download className="me-1.5 h-4 w-4" />
