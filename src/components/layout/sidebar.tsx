@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,31 @@ export function Sidebar() {
   const { t, dir } = useI18n();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const isRtl = dir === "rtl";
+
+  // Bulletproof RTL: use useI18n()'s dir as primary, but also check
+  // document.documentElement.dir as a fallback. The <html> dir is set by:
+  //   1. Server render (from cookie)
+  //   2. No-flash inline script (from cookie, before React)
+  //   3. useI18n() useEffect (after locale change)
+  // If useI18n() hasn't hydrated yet, document.documentElement.dir is still correct.
+  const [htmlDir, setHtmlDir] = useState<"ltr" | "rtl">(
+    typeof document !== "undefined" && document.documentElement.dir === "rtl" ? "rtl" : "ltr"
+  );
+  useEffect(() => {
+    // Sync on mount + when dir changes
+    const syncDir = () => {
+      const d = document.documentElement.dir;
+      if (d === "rtl" || d === "ltr") setHtmlDir(d);
+    };
+    syncDir();
+    // Observe changes to <html> dir attribute
+    const observer = new MutationObserver(syncDir);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["dir"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const effectiveDir = dir ?? htmlDir;
+  const isRtl = effectiveDir === "rtl";
 
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
@@ -97,7 +122,7 @@ export function Sidebar() {
         collapsed ? "w-[68px]" : "w-64",
       )}
       aria-label="Sidebar navigation"
-      dir={dir}
+      dir={effectiveDir}
     >
       {/* Logo / brand */}
       <div className={cn(
