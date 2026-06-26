@@ -2,11 +2,11 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SahelFlow",
   "version": "3.1.0",
-  "identifier": "com.sahelflow.app",
+  "identifier": "com.sahelflow.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "bash src-tauri/build-frontend.sh",
+    "beforeBuildCommand": "bun run src-tauri/build-frontend.ts",
     "frontendDist": "http://localhost:3000"
   },
   "app": {
