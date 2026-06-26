@@ -24,7 +24,8 @@
     "seed:expanded": "bun --conditions react-server scripts/seed-expanded.ts",
     "postinstall": "prisma generate",
     "tauri:dev:fast": "bun run scripts/tauri-dev-fast.ts",
-    "dev:clean": "rm -rf .next && bun run dev"
+    "dev:clean": "rm -rf .next && bun run dev",
+    "build:installer": "bun run scripts/build-installer-local.ts"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
