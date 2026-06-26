@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -121,26 +121,9 @@ export function StatCard({
           {displayValue}
         </CardTitle>
 
-        {showTrend && (
-          <CardAction className="mt-1">
-            <Badge
-              variant="outline"
-              className={cn(
-                "gap-1 rounded-full px-1.5 py-0 text-xs font-medium",
-                isPositive
-                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
-                  : "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400",
-              )}
-            >
-              {isPositive && <ArrowUpRight className="size-3" />}
-              {isNegative && <ArrowDownRight className="size-3" />}
-              {Math.abs(trend!)}%
-            </Badge>
-          </CardAction>
-        )}
       </CardHeader>
 
-      {(spark || trendLabel || subtitle) && (
+      {(spark || trendLabel || subtitle || showTrend) && (
         <CardFooter className="flex-col items-start gap-2 border-t bg-muted/20 px-6 py-3">
           {spark && spark.length > 1 && (
             <div className="w-full -mx-1">
@@ -153,6 +136,21 @@ export function StatCard({
             )}
             {subtitle && (
               <span className="text-muted-foreground">{subtitle}</span>
+            )}
+            {showTrend && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-0.5 rounded-full px-1.5 py-0 text-[11px] font-medium shrink-0",
+                  isPositive
+                    ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                    : "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400",
+                )}
+              >
+                {isPositive && <ArrowUpRight className="size-2.5" />}
+                {isNegative && <ArrowDownRight className="size-2.5" />}
+                {Math.abs(trend!)}%
+              </Badge>
             )}
           </div>
         </CardFooter>

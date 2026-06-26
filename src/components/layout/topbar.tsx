@@ -44,6 +44,14 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "en", label: "English", flag: "🇬🇧" },
 ];
 
+interface TopbarProps {
+  onCommandPaletteOpen: () => void;
+  /** Server-rendered locale (from cookie) — used for initial render */
+  serverLocale: Locale;
+  /** Server-rendered direction (from cookie) — used for initial render */
+  serverDir: "ltr" | "rtl";
+}
+
 interface Notification {
   id: string;
   type: "order" | "delivery" | "stock" | "info";
@@ -67,11 +75,7 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   info: "bg-sky-500",
 };
 
-interface TopbarProps {
-  onCommandPaletteOpen?: () => void;
-}
-
-export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
+export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: TopbarProps) {
   const { t, locale, setLocale, dir } = useI18n();
   const shops = useShopStore((s) => s.shops);
   const activeShopId = useShopStore((s) => s.activeShopId);
@@ -108,7 +112,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
-  const isRtl = dir === "rtl";
+  const isRtl = (dir ?? serverDir) === "rtl";
 
   return (
     <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4">
@@ -123,7 +127,7 @@ export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side={isRtl ? "right" : "left"} className="w-64 p-0">
-              <Sidebar />
+              <Sidebar serverLocale={serverLocale} serverDir={serverDir} />
             </SheetContent>
           </Sheet>
         </div>
