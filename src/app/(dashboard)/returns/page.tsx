@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { StatCard } from "@/components/shared/stat-card";
+
 import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,12 +44,8 @@ export default async function ReturnsPage() {
   const completedCount = returns.filter((r) => r.status === "completed").length;
   const exchangeCount = returns.filter((r) => r.type === "exchange").length;
 
-  const stats = [
-    { label: t("returns.totalReturns"), value: String(returns.length), icon: RotateCcw, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
-    { label: t("returns.waiting"), value: String(requestedCount), icon: Clock, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
-    { label: t("returns.completed"), value: String(completedCount), icon: CheckCircle2, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: t("returns.exchanges"), value: String(exchangeCount), icon: ArrowLeftRight, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
-  ];
+  const completedPct = returns.length > 0 ? Math.round((completedCount / returns.length) * 100) : 0;
+  const exchangePct = returns.length > 0 ? Math.round((exchangeCount / returns.length) * 100) : 0;
 
   return (
     <div className="app-content page-sections">
@@ -61,25 +59,45 @@ export default async function ReturnsPage() {
         <ReturnFormDialog />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
-                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label={t("returns.totalReturns")}
+          value={returns.length}
+          icon={<RotateCcw />}
+          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
+          accentIcon="text-sky-600 dark:text-sky-400"
+          subtitle={t("returns.completedPct", { pct: completedPct })}
+          style={{ animationDelay: "60ms" }}
+        />
+        <StatCard
+          label={t("returns.waiting")}
+          value={requestedCount}
+          icon={<Clock />}
+          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
+          accentIcon="text-amber-600 dark:text-amber-400"
+          trend={requestedCount > 0 ? -1 : 0}
+          trendLabel={t("returns.waitingTrend")}
+          style={{ animationDelay: "120ms" }}
+        />
+        <StatCard
+          label={t("returns.completed")}
+          value={completedCount}
+          icon={<CheckCircle2 />}
+          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+          accentIcon="text-emerald-600 dark:text-emerald-400"
+          trend={completedPct > 50 ? 1 : 0}
+          trendLabel={t("returns.completedPct", { pct: completedPct })}
+          style={{ animationDelay: "180ms" }}
+        />
+        <StatCard
+          label={t("returns.exchanges")}
+          value={exchangeCount}
+          icon={<ArrowLeftRight />}
+          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
+          accentIcon="text-violet-600 dark:text-violet-400"
+          subtitle={t("returns.exchangePct", { pct: exchangePct })}
+          style={{ animationDelay: "240ms" }}
+        />
       </div>
 
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>

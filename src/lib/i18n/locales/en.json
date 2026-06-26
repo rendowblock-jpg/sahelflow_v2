@@ -1936,5 +1936,19 @@
   "updater.unknownError": "Unknown error",
   "updater.upToDate": "SahelFlow is up to date",
   "updater.upToDateDesc": "No update available.",
-  "updater.webMode": "Web mode — updates via git pull"
+  "updater.webMode": "Web mode — updates via git pull",
+  "dashboard.pendingDeliveries": "{{count}} pending deliveries",
+  "dashboard.lowStockWarning": "{{count}} low-stock products",
+  "dashboard.stockOk": "Stock OK",
+  "customers.activePct": "{{pct}}% active",
+  "customers.avgSpent": "Avg: {{amount}}",
+  "customers.atRiskPct": "{{pct}}% of base",
+  "customers.noRisk": "No risk",
+  "returns.completedPct": "{{pct}}% completed",
+  "returns.waitingTrend": "Needs action",
+  "returns.exchangePct": "{{pct}}% of returns",
+  "accounting.loss": "Loss",
+  "products.activeOutOf": "of {{total}} products",
+  "products.needsRestock": "Needs restock",
+  "products.stockOk": "Stock OK"
 }

@@ -16,6 +16,7 @@ import {
 import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomerRowActions } from "@/components/customers/customer-row-actions";
 import type { Customer } from "@/types/domain";
@@ -32,12 +33,9 @@ export default async function CustomersPage() {
   const activeCount = customers.filter((c) => c.orderCount > 0).length;
   const atRiskCount = customers.filter((c) => c.riskScore >= 6).length;
 
-  const stats = [
-    { label: t("customers.totalCustomers"), value: String(totalCustomers), icon: Users, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
-    { label: t("customers.totalSpent"), value: formatDZD(totalSpent), icon: TrendingUp, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: t("customers.activeCustomers"), value: String(activeCount), icon: UserCheck, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
-    { label: t("customers.atRisk"), value: String(atRiskCount), icon: AlertTriangle, accentBg: "bg-red-500/10 dark:bg-red-500/15", accentIcon: "text-red-600 dark:text-red-400" },
-  ];
+  const activePct = totalCustomers > 0 ? Math.round((activeCount / totalCustomers) * 100) : 0;
+  const avgSpent = totalCustomers > 0 ? Math.round(totalSpent / totalCustomers) : 0;
+  const atRiskPct = totalCustomers > 0 ? Math.round((atRiskCount / totalCustomers) * 100) : 0;
 
   return (
     <div className="app-content page-sections">
@@ -58,26 +56,45 @@ export default async function CustomersPage() {
         }
       />
 
-      {/* Stat strip — upgraded with accent icons */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
-                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Stat cards — shared premium StatCard component */}
+      <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label={t("customers.totalCustomers")}
+          value={totalCustomers}
+          icon={<Users />}
+          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
+          accentIcon="text-sky-600 dark:text-sky-400"
+          subtitle={t("customers.activePct", { pct: activePct })}
+          style={{ animationDelay: "60ms" }}
+        />
+        <StatCard
+          label={t("customers.totalSpent")}
+          value={formatDZD(totalSpent)}
+          icon={<TrendingUp />}
+          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+          accentIcon="text-emerald-600 dark:text-emerald-400"
+          subtitle={t("customers.avgSpent", { amount: formatDZD(avgSpent) })}
+          style={{ animationDelay: "120ms" }}
+        />
+        <StatCard
+          label={t("customers.activeCustomers")}
+          value={activeCount}
+          icon={<UserCheck />}
+          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
+          accentIcon="text-violet-600 dark:text-violet-400"
+          subtitle={t("customers.activePct", { pct: activePct })}
+          style={{ animationDelay: "180ms" }}
+        />
+        <StatCard
+          label={t("customers.atRisk")}
+          value={atRiskCount}
+          icon={<AlertTriangle />}
+          accentBg="bg-red-500/10 dark:bg-red-500/15"
+          accentIcon="text-red-600 dark:text-red-400"
+          trend={atRiskPct > 20 ? -1 : 0}
+          trendLabel={atRiskPct > 0 ? t("customers.atRiskPct", { pct: atRiskPct }) : t("customers.noRisk")}
+          style={{ animationDelay: "240ms" }}
+        />
       </div>
 
       {/* Customers table — upgraded with shared status/risk configs */}

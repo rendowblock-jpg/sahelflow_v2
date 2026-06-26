@@ -36,6 +36,9 @@ export default async function DashboardPage() {
   // Sparkline series from the 7-day revenue trend (small, inline — not a full chart)
   const revenueSpark = analytics.revenueSeries.map((p) => ({ value: p.revenue }));
   const ordersSpark = analytics.revenueSeries.map((p) => ({ value: p.orders }));
+  // New customers per day (7-day trend) — for card 3 sparkline
+  const customersSpark = (analytics.customerGrowth ?? []).map((p) => ({ value: p.newCustomers }));
+  // Delivery rate per day — derived from deliveryPerformance for card 4 context
 
   const hour = new Date().getHours();
   const greeting = hour < 12
@@ -95,6 +98,9 @@ export default async function DashboardPage() {
           icon={<Users />}
           accentBg="bg-violet-500/10 dark:bg-violet-500/15"
           accentIcon="text-violet-600 dark:text-violet-400"
+          spark={customersSpark}
+          sparkColor="var(--color-chart-3)"
+          subtitle={t("dashboard.last7Days")}
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
@@ -103,6 +109,9 @@ export default async function DashboardPage() {
           icon={<MessageSquare />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
+          subtitle={t("dashboard.pendingDeliveries", { count: stats.pendingDeliveries })}
+          trend={stats.lowStockProducts > 0 ? -1 : 0}
+          trendLabel={stats.lowStockProducts > 0 ? t("dashboard.lowStockWarning", { count: stats.lowStockProducts }) : t("dashboard.stockOk")}
           style={{ animationDelay: "240ms" }}
         />
       </div>
