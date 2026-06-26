@@ -5,14 +5,7 @@ import { formatDZD } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { PremiumTable } from "@/components/shared/premium-table";
 import { Package, Eye, AlertTriangle, Boxes, DollarSign, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -137,37 +130,37 @@ export default async function ProductsPage() {
               <ProductFormDialog categories={categories} />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("products.productName")}</TableHead>
-                  <TableHead>{t("products.sku")}</TableHead>
-                  <TableHead>{t("products.category")}</TableHead>
-                  <TableHead className="text-end">{t("orders.price")}</TableHead>
-                  <TableHead className="text-end">{t("products.stock")}</TableHead>
-                  <TableHead>{t("common.status")}</TableHead>
-                  <TableHead className="text-end">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <PremiumTable>
+              <PremiumTable.Header>
+                <PremiumTable.Row>
+                  <PremiumTable.Head>{t("products.productName")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="md">{t("products.sku")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="lg">{t("products.category")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end">{t("orders.price")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end">{t("products.stock")}</PremiumTable.Head>
+                  <PremiumTable.Head align="center">{t("common.status")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end" width="w-20">{t("common.actions")}</PremiumTable.Head>
+                </PremiumTable.Row>
+              </PremiumTable.Header>
+              <PremiumTable.Body>
                 {products.map((product: Product) => {
                   const isLowStock = product.stock <= product.lowStockThreshold;
                   const categoryName = product.categoryId
                     ? categoryNames.get(product.categoryId) ?? null
                     : null;
                   return (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
+                    <PremiumTable.Row key={product.id}>
+                      <PremiumTable.Cell className="font-medium">{product.name}</PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="md" className="font-mono text-muted-foreground">
                         {product.sku ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="lg" className="text-muted-foreground">
                         {categoryName ?? t("products.noCategory")}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end" className="tabular-nums">
                         {formatDZD(product.price)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end" className="tabular-nums">
                         <span className={isLowStock ? "text-destructive font-medium" : ""}>
                           {product.stock}
                         </span>
@@ -177,8 +170,8 @@ export default async function ProductsPage() {
                             {t("products.low")}
                           </Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="center">
                         {product.isActive ? (
                           <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">
                             <span className="size-1.5 rounded-full bg-emerald-500" />
@@ -187,8 +180,8 @@ export default async function ProductsPage() {
                         ) : (
                           <Badge variant="secondary">{t("common.inactive")}</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-end">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon-sm" asChild>
                             <Link href={`/products/${product.id}`}>
@@ -198,12 +191,12 @@ export default async function ProductsPage() {
                           </Button>
                           <ProductRowActions product={product} categories={categories} />
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </PremiumTable.Cell>
+                    </PremiumTable.Row>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </PremiumTable.Body>
+            </PremiumTable>
           )}
         </CardContent>
       </Card>

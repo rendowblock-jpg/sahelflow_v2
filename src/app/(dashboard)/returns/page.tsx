@@ -4,7 +4,7 @@ import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
-
+import { PremiumTable } from "@/components/shared/premium-table";
 import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,67 +114,65 @@ export default async function ReturnsPage() {
               actionHref="/orders"
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    <th className="px-4 py-3">{t("returns.table.order")}</th>
-                    <th className="px-4 py-3">{t("returns.table.customer")}</th>
-                    <th className="px-4 py-3">{t("returns.table.type")}</th>
-                    <th className="px-4 py-3 hidden md:table-cell">{t("returns.table.reason")}</th>
-                    <th className="px-4 py-3">{t("returns.table.status")}</th>
-                    <th className="px-4 py-3 hidden lg:table-cell">{t("returns.table.date")}</th>
-                    <th className="px-4 py-3 text-end">{t("returns.table.action")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {returns.map((ret) => {
-                    const statusStyle = RETURN_STATUS_STYLES[ret.status];
-                    return (
-                      <tr key={ret.id} className="hover:bg-accent/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <Link
-                            href={`/orders/${ret.orderId}`}
-                            className="font-mono text-sm font-medium text-primary hover:underline"
-                          >
-                            {ret.order.orderNumber}
+            <PremiumTable>
+              <PremiumTable.Header>
+                <PremiumTable.Row>
+                  <PremiumTable.Head>{t("returns.table.order")}</PremiumTable.Head>
+                  <PremiumTable.Head>{t("returns.table.customer")}</PremiumTable.Head>
+                  <PremiumTable.Head>{t("returns.table.type")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="md">{t("returns.table.reason")}</PremiumTable.Head>
+                  <PremiumTable.Head align="center">{t("returns.table.status")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="lg">{t("returns.table.date")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end" width="w-20">{t("returns.table.action")}</PremiumTable.Head>
+                </PremiumTable.Row>
+              </PremiumTable.Header>
+              <PremiumTable.Body>
+                {returns.map((ret) => {
+                  const statusStyle = RETURN_STATUS_STYLES[ret.status];
+                  return (
+                    <PremiumTable.Row key={ret.id}>
+                      <PremiumTable.Cell>
+                        <Link
+                          href={`/orders/${ret.orderId}`}
+                          className="font-mono text-sm font-medium text-primary hover:underline"
+                        >
+                          {ret.order.orderNumber}
+                        </Link>
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell>
+                        {ret.order.customer?.name ?? "—"}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell>
+                        <Badge variant="outline">{t(TYPE_I18N[ret.type] ?? ret.type)}</Badge>
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="md" className="text-muted-foreground max-w-xs truncate">
+                        {ret.reason}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="center">
+                        {statusStyle ? (
+                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                            <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
+                            {t(statusStyle.i18nKey)}
+                          </span>
+                        ) : (
+                          <Badge variant="outline">{ret.status}</Badge>
+                        )}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="lg" className="text-muted-foreground">
+                        {formatDate(ret.createdAt, locale)}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/orders/${ret.orderId}`}>
+                            {t("returns.view")}
                           </Link>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {ret.order.customer?.name ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline">{t(TYPE_I18N[ret.type] ?? ret.type)}</Badge>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground max-w-xs truncate">
-                          {ret.reason}
-                        </td>
-                        <td className="px-4 py-3">
-                          {statusStyle ? (
-                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                              <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                              {t(statusStyle.i18nKey)}
-                            </span>
-                          ) : (
-                            <Badge variant="outline">{ret.status}</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDate(ret.createdAt, locale)}
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/orders/${ret.orderId}`}>
-                              {t("returns.view")}
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </Button>
+                      </PremiumTable.Cell>
+                    </PremiumTable.Row>
+                  );
+                })}
+              </PremiumTable.Body>
+            </PremiumTable>
           )}
         </CardContent>
       </Card>
