@@ -23,7 +23,7 @@
     "seed": "bun --conditions react-server scripts/seed.ts",
     "seed:expanded": "bun --conditions react-server scripts/seed-expanded.ts",
     "postinstall": "prisma generate",
-    "tauri:dev:fast": "bash scripts/tauri-dev-fast.sh",
+    "tauri:dev:fast": "bun run scripts/tauri-dev-fast.ts",
     "dev:clean": "rm -rf .next && bun run dev"
   },
   "dependencies": {
