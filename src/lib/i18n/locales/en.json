@@ -1980,5 +1980,11 @@
   "orders.detail.items": "Items",
   "orders.detail.qty": "Qty",
   "orders.detail.price": "Price",
-  "orders.notesPlaceholder": "Add notes about this order..."
+  "orders.notesPlaceholder": "Add notes about this order...",
+  "returns.changeStatus": "Change status",
+  "returns.statusUpdated": "Return status updated",
+  "returns.updateFailed": "Failed to update return status",
+  "deliveries.changeStatus": "Change status",
+  "deliveries.statusUpdated": "Delivery status updated",
+  "deliveries.updateFailed": "Failed to update delivery status"
 }

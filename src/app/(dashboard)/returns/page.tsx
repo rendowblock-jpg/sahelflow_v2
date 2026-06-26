@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import { PremiumTable } from "@/components/shared/premium-table";
 import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -18,13 +19,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-/** i18n-driven return status styles */
-const RETURN_STATUS_STYLES: Record<string, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
-  requested: { i18nKey: "returns.status.requested", dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800/50" },
-  approved: { i18nKey: "returns.status.approved", dot: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-700 dark:text-sky-400", border: "border-sky-200 dark:border-sky-800/50" },
-  rejected: { i18nKey: "returns.status.rejected", dot: "bg-red-500", bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-800/50" },
-  completed: { i18nKey: "returns.status.completed", dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/50" },
-};
 
 const TYPE_I18N: Record<string, string> = {
   return: "returns.type.return",
@@ -128,7 +122,6 @@ export default async function ReturnsPage() {
               </PremiumTable.Header>
               <PremiumTable.Body>
                 {returns.map((ret) => {
-                  const statusStyle = RETURN_STATUS_STYLES[ret.status];
                   return (
                     <PremiumTable.Row key={ret.id}>
                       <PremiumTable.Cell>
@@ -149,14 +142,11 @@ export default async function ReturnsPage() {
                         {ret.reason}
                       </PremiumTable.Cell>
                       <PremiumTable.Cell align="center">
-                        {statusStyle ? (
-                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                            <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                            {t(statusStyle.i18nKey)}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">{ret.status}</Badge>
-                        )}
+                        <ReturnStatusBadge
+                          returnId={ret.id}
+                          status={ret.status as "requested" | "approved" | "rejected" | "completed"}
+                          size="sm"
+                        />
                       </PremiumTable.Cell>
                       <PremiumTable.Cell hideOn="lg" className="text-muted-foreground">
                         {formatDate(ret.createdAt, locale)}

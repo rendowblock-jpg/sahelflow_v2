@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
 import { PremiumTable } from "@/components/shared/premium-table";
+import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
 import { StatCard } from "@/components/shared/stat-card";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import Link from "next/link";
@@ -28,19 +29,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export const revalidate = 30;
 export const dynamic = "force-dynamic";
 
-/** i18n-driven delivery status styles */
-const DELIVERY_STATUS_STYLES: Record<string, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
-  pending: { i18nKey: "deliveries.status.pending", dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800/50" },
-  created: { i18nKey: "deliveries.status.created", dot: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-700 dark:text-sky-400", border: "border-sky-200 dark:border-sky-800/50" },
-  picked_up: { i18nKey: "deliveries.status.pickedUp", dot: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-700 dark:text-sky-400", border: "border-sky-200 dark:border-sky-800/50" },
-  in_transit: { i18nKey: "deliveries.status.inTransit", dot: "bg-violet-500", bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-700 dark:text-violet-400", border: "border-violet-200 dark:border-violet-800/50" },
-  at_hub: { i18nKey: "deliveries.status.atHub", dot: "bg-violet-500", bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-700 dark:text-violet-400", border: "border-violet-200 dark:border-violet-800/50" },
-  out_for_delivery: { i18nKey: "deliveries.status.outForDelivery", dot: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-400", border: "border-blue-200 dark:border-blue-800/50" },
-  delivered: { i18nKey: "deliveries.status.delivered", dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/50" },
-  returned: { i18nKey: "deliveries.status.returned", dot: "bg-red-500", bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-800/50" },
-  refused: { i18nKey: "deliveries.status.refused", dot: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/40", text: "text-rose-700 dark:text-rose-400", border: "border-rose-200 dark:border-rose-800/50" },
-  failed: { i18nKey: "deliveries.status.failed", dot: "bg-red-500", bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-800/50" },
-};
 
 const FILTER_I18N: Record<string, string> = {
   all: "deliveries.filter.all",
@@ -194,7 +182,6 @@ export default async function DeliveriesPage({
                 {filteredDeliveries.map((delivery) => {
                   const order = delivery.order;
                   const customer = order?.customer;
-                  const statusStyle = DELIVERY_STATUS_STYLES[delivery.status];
                   const providerConfig = deliveryProviderConfig[delivery.provider];
                   const BrandIcon = getBrandIcon(delivery.provider);
                   return (
@@ -234,14 +221,11 @@ export default async function DeliveriesPage({
                         {delivery.cost ? formatDZD(delivery.cost) : "—"}
                       </PremiumTable.Cell>
                       <PremiumTable.Cell align="center">
-                        {statusStyle ? (
-                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                            <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                            {t(statusStyle.i18nKey)}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">{delivery.status}</Badge>
-                        )}
+                        <DeliveryStatusBadge
+                          deliveryId={delivery.id}
+                          status={delivery.status}
+                          size="sm"
+                        />
                       </PremiumTable.Cell>
                       <PremiumTable.Cell hideOn="lg" className="text-muted-foreground">
                         {formatDate(delivery.createdAt, locale)}

@@ -1980,5 +1980,11 @@
   "orders.detail.items": "المنتجات",
   "orders.detail.qty": "الكمية",
   "orders.detail.price": "السعر",
-  "orders.notesPlaceholder": "أضف ملاحظات حول هذا الطلب..."
+  "orders.notesPlaceholder": "أضف ملاحظات حول هذا الطلب...",
+  "returns.changeStatus": "تغيير الحالة",
+  "returns.statusUpdated": "تم تحديث حالة الإرجاع",
+  "returns.updateFailed": "فشل تحديث حالة الإرجاع",
+  "deliveries.changeStatus": "تغيير الحالة",
+  "deliveries.statusUpdated": "تم تحديث حالة التوصيل",
+  "deliveries.updateFailed": "فشل تحديث حالة التوصيل"
 }
