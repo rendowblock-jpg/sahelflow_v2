@@ -47,7 +47,7 @@ export default async function OrdersPage({
     db.order.findMany({ include, orderBy: { createdAt: "desc" }, take: 200 }),
     db.order.findMany({ where, include, orderBy: { createdAt: "desc" }, take: 200 }),
     db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
-    db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true } }),
+    db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
   ]);
 
   const counts: Record<string, number> = { all: allOrders.length };

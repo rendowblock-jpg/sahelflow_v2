@@ -9,6 +9,8 @@ import { withServiceError } from "./service-base";
 
 function toDomainProduct(row: Record<string, unknown>): Product {
   const r = { ...row };
+  // Legacy: variants was a JSON string. Keep parsing for backward compat,
+  // but the canonical source is now the ProductVariant relation.
   if (typeof r.variants === "string") {
     try { r.variants = JSON.parse(r.variants as string); } catch { r.variants = null; }
   }
@@ -27,6 +29,7 @@ export const productService = {
     const rows = await ctx.prisma.product.findMany({
       where: opts?.activeOnly ? { isActive: true } : undefined,
       orderBy: { createdAt: "desc" },
+      include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
     });
@@ -35,7 +38,10 @@ export const productService = {
 
   async getById(ctx: ServiceContext, id: string): Promise<Product> {
     return withServiceError(async () => {
-      const row = await ctx.prisma.product.findUnique({ where: { id } });
+      const row = await ctx.prisma.product.findUnique({
+        where: { id },
+        include: { productVariants: { orderBy: { sortOrder: "asc" } } },
+      });
       if (!row) throw new NotFoundError("Product", id);
       return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
@@ -44,6 +50,7 @@ export const productService = {
   async create(ctx: ServiceContext, input: unknown): Promise<Product> {
     return withServiceError(async () => {
       const data = createProductSchema.parse(input);
+      const { variants: legacyVariants, ...productData } = data;
 
       // Check SKU uniqueness if provided
       if (data.sku) {
@@ -53,12 +60,34 @@ export const productService = {
         }
       }
 
+      // Build variant rows: use the new variants array (from the form), or
+      // fall back to a single "Default" variant with the product's stock.
+      const variantRows = Array.isArray(legacyVariants) && legacyVariants.length > 0
+        ? legacyVariants.map((v, i) => ({
+            name: v.name,
+            sku: v.sku ?? null,
+            price: v.price ?? null,
+            stock: v.stock ?? 0,
+            isActive: v.isActive ?? true,
+            sortOrder: v.sortOrder ?? i,
+          }))
+        : [{
+            name: "Default",
+            sku: data.sku ?? null,
+            price: data.price,
+            stock: data.stock,
+            isActive: true,
+            sortOrder: 0,
+          }];
+
       const row = await ctx.prisma.product.create({
         data: {
-          ...data,
-          variants: data.variants ? JSON.stringify(data.variants) : null,
+          ...productData,
+          variants: legacyVariants ? JSON.stringify(legacyVariants) : null,
           images: data.images ? JSON.stringify(data.images) : null,
+          productVariants: { create: variantRows },
         },
+        include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       });
       return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
@@ -67,6 +96,7 @@ export const productService = {
   async update(ctx: ServiceContext, id: string, input: unknown): Promise<Product> {
     return withServiceError(async () => {
       const data = updateProductSchema.parse(input);
+      const { variants: legacyVariants, ...productData } = data;
 
       if (data.sku) {
         const conflict = await ctx.prisma.product.findUnique({ where: { sku: data.sku } });
@@ -75,13 +105,48 @@ export const productService = {
         }
       }
 
+      // If variants array is provided, sync ProductVariant rows:
+      // - variants with an id → update
+      // - variants without an id → create
+      // - existing rows not in the array → delete
+      if (Array.isArray(legacyVariants)) {
+        const existing = await ctx.prisma.productVariant.findMany({ where: { productId: id } });
+        const incomingIds = legacyVariants.filter(v => v.id).map(v => v.id);
+        const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
+
+        await Promise.all([
+          // Delete removed variants
+          ...toDelete.map(variantId =>
+            ctx.prisma.productVariant.delete({ where: { id: variantId } })
+          ),
+          // Upsert kept/new variants
+          ...legacyVariants.map((v, i) => {
+            const payload = {
+              name: v.name,
+              sku: v.sku ?? null,
+              price: v.price ?? null,
+              stock: v.stock ?? 0,
+              isActive: v.isActive ?? true,
+              sortOrder: v.sortOrder ?? i,
+            };
+            if (v.id) {
+              return ctx.prisma.productVariant.update({ where: { id: v.id }, data: payload });
+            }
+            return ctx.prisma.productVariant.create({
+              data: { ...payload, productId: id },
+            });
+          }),
+        ]);
+      }
+
       const row = await ctx.prisma.product.update({
         where: { id },
         data: {
-          ...data,
-          variants: data.variants !== undefined ? (data.variants ? JSON.stringify(data.variants) : null) : undefined,
+          ...productData,
+          variants: legacyVariants !== undefined ? (legacyVariants ? JSON.stringify(legacyVariants) : null) : undefined,
           images: data.images !== undefined ? (data.images ? JSON.stringify(data.images) : null) : undefined,
         },
+        include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       });
       return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");

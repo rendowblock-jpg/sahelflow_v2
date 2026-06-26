@@ -55,7 +55,9 @@ export const orderSourceSchema = z.enum([
 
 export const createOrderItemSchema = z.object({
   productId: cuid.nullable().optional(),
+  productVariantId: cuid.nullable().optional(),
   productName: nonEmptyString,
+  productVariantName: nonEmptyString.nullable().optional(),
   quantity: posInt,
   unitPrice: nonNegInt,
 });
@@ -109,10 +111,13 @@ export const updateCustomerSchema = createCustomerSchema.partial();
 // ─── Product ──────────────────────────────────────────────────────────────────
 
 export const productVariantSchema = z.object({
+  id: z.string().optional(), // present when editing existing variant
   name: nonEmptyString,
-  value: nonEmptyString,
-  priceDelta: z.number().int(), // can be negative (discount)
-  stock: nonNegInt,
+  sku: nonEmptyString.nullable().optional(),
+  price: nonNegInt.nullable().optional(), // overrides product.price if set
+  stock: z.number().int().default(0),
+  isActive: z.boolean().default(true),
+  sortOrder: z.number().int().default(0),
 });
 
 export const createProductSchema = z.object({

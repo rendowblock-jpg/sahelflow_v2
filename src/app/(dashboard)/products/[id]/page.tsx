@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SahelFlowError } from "@/types/errors";
+import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const isLowStock = product.stock <= product.lowStockThreshold;
   const inventoryValue = product.price * Math.max(0, product.stock);
+
+  // Extract variants from the product relation (loaded by the service)
+  const productVariants: VariantOption[] = ((product as { productVariants?: VariantOption[] }).productVariants ?? []).map((v) => ({
+    id: v.id,
+    name: v.name,
+    sku: v.sku,
+    price: v.price,
+    stock: v.stock,
+    isActive: v.isActive,
+  }));
   const margin =
     product.cost !== null && product.cost > 0
       ? product.price - product.cost
@@ -202,6 +213,45 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Variants section — per-variant stock + price */}
+      {productVariants.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("products.variantsSection")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <ProductVariantPicker
+                  variants={productVariants}
+                  defaultPrice={product.price}
+                />
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {t("products.allVariants")}
+                  </div>
+                  <div className="space-y-2">
+                    {productVariants.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{v.name}</span>
+                        <div className="flex items-center gap-3 text-muted-foreground">
+                          <span className="tabular-nums">
+                            {v.price !== null ? formatDZD(v.price) : formatDZD(product.price)}
+                          </span>
+                          <span className={`tabular-nums ${v.stock <= 5 ? "text-destructive font-medium" : ""}`}>
+                            {v.stock} {t("products.inStock")}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent orders containing this product */}
       <Card>

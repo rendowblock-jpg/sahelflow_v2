@@ -59,6 +59,7 @@ model Product {
   isActive         Boolean    @default(true)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
+  productVariants  ProductVariant[]
   orderItems       OrderItem[]
 
   @@unique([sku])
@@ -74,6 +75,24 @@ model Product {
 // phone. Callers pass plaintext — the Prisma extension in src/lib/db.ts
 // encrypts on write, decrypts on read, and rewrites `where.phone` to the blind
 // index. See src/lib/crypto/customer-encryption.ts.
+model ProductVariant {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String
+  sku         String?
+  price       Int?
+  stock       Int      @default(0)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
+
+  @@index([productId])
+  @@index([isActive])
+}
+
 model Customer {
   id         String    @id @default(cuid())
   name       String
@@ -129,18 +148,22 @@ model Order {
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productName String
-  quantity    Int
-  unitPrice   Int
-  total       Int
+  id                String          @id @default(cuid())
+  orderId           String
+  order             Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId         String?
+  product           Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productVariantId  String?
+  productVariant    ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  productName       String
+  productVariantName String?
+  quantity          Int
+  unitPrice         Int
+  total             Int
 
   @@index([orderId])
   @@index([productId])
+  @@index([productVariantId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

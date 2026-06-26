@@ -26,7 +26,9 @@ export interface OrderItem {
   id: string;
   orderId: string;
   productId: string | null;
+  productVariantId: string | null;
   productName: string;
+  productVariantName: string | null;
   quantity: number;
   unitPrice: number;
   total: number;
@@ -81,10 +83,16 @@ export interface Customer {
 // ─── Product ──────────────────────────────────────────────────────────────────
 
 export interface ProductVariant {
+  id: string;
+  productId: string;
   name: string;
-  value: string;
-  priceDelta: number;
+  sku: string | null;
+  price: number | null;
   stock: number;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Product {
