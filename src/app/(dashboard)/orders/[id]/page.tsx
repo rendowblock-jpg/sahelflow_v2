@@ -12,10 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
+import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { OrderEditPanel } from "@/components/orders/order-edit-panel";
 import { OrderDeleteButton } from "@/components/orders/order-delete-button";
 import { CreateShipment } from "@/components/orders/create-shipment";
 import { getI18n } from "@/lib/i18n-server";
@@ -32,17 +33,6 @@ import {
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
-
-const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "outline",
-  pending: "secondary",
-  confirmed: "default",
-  shipped: "default",
-  delivered: "default",
-  returned: "destructive",
-  refused: "destructive",
-  cancelled: "destructive",
-};
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -73,17 +63,6 @@ export default async function OrderDetailPage({
 
   const itemsTotal = order.items.reduce((sum, item) => sum + item.total, 0);
   const deliveryCost = order.deliveryCost ?? 0;
-
-  const STATUS_LABELS: Record<string, string> = {
-    draft: t("orders.status.draft"),
-    pending: t("orders.status.pending"),
-    confirmed: t("orders.status.confirmed"),
-    shipped: t("orders.status.shipped"),
-    delivered: t("orders.status.delivered"),
-    returned: t("orders.status.returned"),
-    refused: t("orders.status.refused"),
-    cancelled: t("orders.status.cancelled"),
-  };
 
   const SOURCE_LABELS: Record<string, string> = {
     whatsapp: "WhatsApp",
@@ -120,9 +99,10 @@ export default async function OrderDetailPage({
               <h1 className="text-2xl font-bold tracking-tight font-mono">
                 {order.orderNumber}
               </h1>
-              <Badge variant={STATUS_BADGE[order.status] ?? "outline"} className="text-sm">
-                {STATUS_LABELS[order.status] ?? order.status}
-              </Badge>
+              <OrderStatusBadge
+                orderId={order.id}
+                status={order.status}
+              />
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
@@ -146,87 +126,106 @@ export default async function OrderDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column: items + totals */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Package className="h-4 w-4" />
-                {t("orders.detail.itemsWithCount", { n: order.items.length })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {order.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between py-3 border-b last:border-0"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">{item.productName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.quantity} × {formatDZD(item.unitPrice)}
-                      </p>
-                      {item.productVariantName && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5">
-                            {t("products.variant")}: {item.productVariantName}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                    <p className="text-sm font-medium">{formatDZD(item.total)}</p>
-                  </div>
-                ))}
-              </div>
-
-              <Separator className="my-4" />
-
-              {/* Totals */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("orders.detail.subtotal")}</span>
-                  <span>{formatDZD(itemsTotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("orders.detail.shipping")}</span>
-                  <span>{deliveryCost > 0 ? formatDZD(deliveryCost) : "—"}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-base font-bold">
-                  <span>{t("orders.total")}</span>
-                  <span>{formatDZD(order.totalPrice)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Delivery / shipment */}
-          <CreateShipment
+          <OrderEditPanel
             orderId={order.id}
-            orderStatus={order.status}
-            delivery={delivery ? {
-              id: delivery.id,
-              provider: delivery.provider,
-              trackingNumber: delivery.trackingNumber,
-              labelUrl: delivery.labelUrl,
-              cost: delivery.cost,
-              status: delivery.status,
-            } : null}
-          />
-
-          {/* Notes */}
-          {order.notes && (
+            initialItems={order.items.map((i) => ({
+              id: i.id,
+              productId: i.productId,
+              productName: i.productName,
+              productVariantName: i.productVariantName ?? null,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              total: i.total,
+            }))}
+            initialDeliveryCost={deliveryCost}
+            initialWilaya={order.wilaya}
+            initialCommune={order.commune}
+            initialAddress={order.address}
+            initialPhone={order.phone}
+            initialNotes={order.notes}
+          >
+            {/* Items */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("orders.notes")}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Package className="h-4 w-4" />
+                  {t("orders.detail.itemsWithCount", { n: order.items.length })}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {order.notes}
-                </p>
+                <div className="space-y-3">
+                  {order.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between py-3 border-b last:border-0"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">{item.productName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.quantity} × {formatDZD(item.unitPrice)}
+                        </p>
+                        {item.productVariantName && (
+                          <p className="text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5">
+                              {t("products.variant")}: {item.productVariantName}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">{formatDZD(item.total)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Totals */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("orders.detail.subtotal")}</span>
+                    <span>{formatDZD(itemsTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("orders.detail.shipping")}</span>
+                    <span>{deliveryCost > 0 ? formatDZD(deliveryCost) : "—"}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-base font-bold">
+                    <span>{t("orders.total")}</span>
+                    <span>{formatDZD(order.totalPrice)}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          )}
+
+            {/* Delivery / shipment */}
+            <CreateShipment
+              orderId={order.id}
+              orderStatus={order.status}
+              delivery={delivery ? {
+                id: delivery.id,
+                provider: delivery.provider,
+                trackingNumber: delivery.trackingNumber,
+                labelUrl: delivery.labelUrl,
+                cost: delivery.cost,
+                status: delivery.status,
+              } : null}
+            />
+
+            {/* Notes */}
+            {order.notes && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t("orders.notes")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {order.notes}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </OrderEditPanel>
         </div>
 
         {/* Right column: customer + timeline */}

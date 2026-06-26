@@ -201,17 +201,50 @@ export const orderService = {
 
   async update(ctx: ServiceContext, id: string, input: unknown): Promise<Order> {
     return withServiceError(async () => {
-      // Validate input — only notes + deliveryCost + address are updatable
-      // via this method (items + status have their own dedicated methods:
-      // `updateStatus`, item add/remove). Zod rejects unknown keys + invalid
-      // types instead of silently ignoring them (D-020).
+      // Validate input — notes, deliveryCost, address, wilaya, commune, phone,
+      // totalPrice, and items are updatable. Status has its own dedicated method.
       const data = updateOrderSchema.parse(input);
+
+      // If items are provided, sync them (delete removed, update existing, create new)
+      if (data.items) {
+        const existing = await ctx.prisma.orderItem.findMany({ where: { orderId: id } });
+        const incomingIds = data.items.filter(i => i.id).map(i => i.id);
+        const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
+
+        await Promise.all([
+          ...toDelete.map(itemId =>
+            ctx.prisma.orderItem.delete({ where: { id: itemId } })
+          ),
+          ...data.items.map((item) => {
+            const payload = {
+              productName: item.productName,
+              productVariantName: item.productVariantName ?? null,
+              productId: item.productId ?? null,
+              productVariantId: item.productVariantId ?? null,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.total,
+            };
+            if (item.id) {
+              return ctx.prisma.orderItem.update({ where: { id: item.id }, data: payload });
+            }
+            return ctx.prisma.orderItem.create({
+              data: { ...payload, orderId: id },
+            });
+          }),
+        ]);
+      }
+
       const row = await ctx.prisma.order.update({
         where: { id },
         data: {
           notes: data.notes,
           deliveryCost: data.deliveryCost,
           address: data.address,
+          wilaya: data.wilaya,
+          commune: data.commune,
+          phone: data.phone,
+          totalPrice: data.totalPrice,
         },
         include: { items: true },
       });

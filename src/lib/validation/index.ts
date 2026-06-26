@@ -86,12 +86,28 @@ export const updateOrderStatusSchema = z.object({
  * callers from passing arbitrary keys (which would be silently ignored
  * by Prisma's strict `data` shape — confusing for the caller).
  */
+export const updateOrderItemSchema = z.object({
+  id: z.string().optional(),
+  productId: cuid.nullable().optional(),
+  productVariantId: cuid.nullable().optional(),
+  productName: nonEmptyString,
+  productVariantName: nonEmptyString.nullable().optional(),
+  quantity: posInt,
+  unitPrice: nonNegInt,
+  total: nonNegInt,
+});
+
 export const updateOrderSchema = z.object({
   notes: z.string().nullable().optional(),
   deliveryCost: nonNegInt.nullable().optional(),
   // Order.address is a required String in the schema (not nullable) —
   // it's the delivery destination, always present.
   address: z.string().optional(),
+  wilaya: nonEmptyString.optional(),
+  commune: nonEmptyString.optional(),
+  phone: dzPhone.optional(),
+  totalPrice: nonNegInt.optional(),
+  items: z.array(updateOrderItemSchema).optional(),
 });
 
 // ─── Customer ─────────────────────────────────────────────────────────────────
