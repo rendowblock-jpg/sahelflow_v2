@@ -16,7 +16,7 @@
  */
 
 import { execSync } from "child_process";
-import { existsSync, readFileSync, mkdirSync, writeFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { resolve, join } from "path";
 
 const GREEN = "\x1b[0;32m";
@@ -88,11 +88,19 @@ try {
 
 // ── Step 3: Build the frontend ──────────────────────────────────────────────
 hdr("3. Building frontend (next build, ~30-60s)");
+// Increase Node.js heap size to 4GB (default is 2GB, which runs out during
+// TypeScript type-checking on large projects)
+const buildEnv = {
+  ...process.env,
+  NODE_OPTIONS: "--max-old-space-size=4096",
+};
 try {
-  execSync("bun run build", { stdio: "inherit", cwd: ROOT });
+  execSync("bun run build", { stdio: "inherit", cwd: ROOT, env: buildEnv });
   ok("Frontend built");
 } catch {
-  err("Frontend build failed");
+  err("Frontend build failed. If it ran out of memory, try:");
+  err("  set NODE_OPTIONS=--max-old-space-size=8192");
+  err("  bun run build");
   process.exit(1);
 }
 
@@ -100,7 +108,7 @@ try {
 hdr("4. Building desktop installer (this takes 5-15 min on first run)");
 warn("Rust compilation is slow the first time. Subsequent builds are faster.");
 
-const env: Record<string, string> = {
+const env: NodeJS.ProcessEnv = {
   ...process.env,
   ...(privateKey ? { TAURI_SIGNING_PRIVATE_KEY: privateKey } : {}),
   ...(process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD !== undefined
