@@ -5,6 +5,86 @@
 
 ---
 
+## Session 16 — 2026-06-26: Foundation + Auth + Integrations + Design Transformation (5 PRs)
+
+**Branches affected:** `main`
+**Main HEAD:** `d8cfd50`
+**PRs:** #43, #44, #45, #46, #47 (5 PRs merged this session)
+**Tests:** 109 → 134 (+25)
+
+### What was done
+
+**PR #43 — Phase A foundation + auth + integrations:**
+- Design system foundation: spacing scale, typography scale, RTL utilities, AppShell helpers
+- RTL-first shell: sidebar (border-e, ms-, logical icons), topbar (ms-auto, me-, end-0), dashboard-layout (h-[100dvh], floating panel)
+- Theme-toggle fix: useSyncExternalStore (eslint error resolved)
+- Local-first PIN auth system (#1 production blocker — Web Crypto API, middleware, 4 API routes, login/setup pages)
+- Polish: 3× confirm()→AlertDialog, withErrorHandler on 11 routes, ConfirmDialog component
+- Profile page + photo upload + Upload API
+- Orders table row actions (View/Edit/Delete dropdown)
+- RTL sweep: 28 files (zero physical properties remaining in app code)
+- 10 brand SVG icons (Shopify/YouCan/Yalidine/Maystro/ZR/DHD/WhatsApp/Gemini/Sheets)
+- DHD delivery adapter (new integration — EcoTrack platform)
+- Integration research doc (1,022 lines)
+
+**PR #44 — Phases B-E (charts, delivery, settings, integrations, features, tests):**
+- Dashboard rebuilt (dedup charts from analytics), dead charts deleted, chart i18n fixed
+- Delivery page rebuilt (StatCard + brand icons + DHD)
+- Settings IntegrationsPanel (10 connection cards with brand icons)
+- Google Sheets integration (Service Account auth)
+- Product photos upload (multi-image grid)
+- Print labels (labelUrl field + Print button)
+- Backup/restore (full-DB, WAL checkpoint)
+- Message.body encryption (S-010 — WhatsApp history encrypted at rest)
+- WooCommerce SSRF fix (URL validation)
+- License enforcement (requireLicense + hasFeature + FEATURE_KEYS)
+- 25 new tests (auth crypto 15 + DHD adapter 10)
+
+**PR #45 — Design transformation iteration 1 (research-backed):**
+- Deep audit of 5 top-tier open-source dashboards (shadcn/taxonomy, Dub.co, Cal.com, Trigger.dev, shadcn v4)
+- 1,534-line RESEARCH_REPORT.md documenting exact patterns
+- Named shadow system (Cal.com): btn-rested/hover/active/focused + dropdown + popover
+- Sidebar: tinted active state (THE #1 fix — bg-primary → bg-sidebar-accent), left bar indicator, tooltips when collapsed
+- Topbar: h-12, backdrop-blur, Live pill, shadow-dropdown menus
+- AppShell: floating content panel (Dub), grid layout (Trigger.dev)
+- StatCard: gradient tint, container-query numbers, trend badge, footer sparkline
+- EmptyState: dashed border, square icon, min-h-[400px], text-balance
+- All charts: gradient fills, cursor=false, indicator=dot, natural curves
+- Login + Setup: centered cards, gradient bg, shield icon
+- Button: Cal.com tactile shadows
+- Bulk sweep: all pages app-content, all components shadow-xs hover:shadow-md
+
+**PR #46 — Design iteration 2:**
+- All 5 chart components upgraded (sparkline, line, bar, composed, radial)
+- Inbox rebuilt: premium message bubbles (rounded-2xl with tails), conversation list (rounded-lg cards)
+- AI chat rebuilt with matching premium patterns
+- Settings tabs: tinted active state
+- Modal component (Dialog→Drawer swap) + useMediaQuery hook
+- Stagger animations on stat card grids
+
+**PR #47 — Full engineering loop (navigation + experience + functionality):**
+- Command palette: 5 missing pages added (now covers ALL pages)
+- Breadcrumbs component: RTL-aware, on detail pages
+- Keyboard shortcuts: Gmail-style g+letter navigation
+- Page transitions: template.tsx with fadeIn animation
+- Per-page loading states: 5 page-specific skeletons
+- Per-page error boundaries: 4 error.tsx files
+- Topbar: Help/Support, Logout, Notifications all functional
+- Export buttons: customers + products pages
+
+### Verification
+- tsc: 0 errors
+- eslint: 0 errors
+- vitest: 134/134 pass
+- sf-verify ALL PASS
+
+### Docs created
+- `RESEARCH_REPORT.md` (root) — 1,534 lines, premium UI patterns from 5 top-tier dashboards
+- `documentation/INTEGRATION_RESEARCH.md` — 1,022 lines, credentials + API details for all integrations
+- `documentation/HONEST_ASSESSMENT.md` — candid evaluation of app vs top-tier company product
+
+---
+
 ## Session 15 — 2026-06-24: UI polish from screenshot review (7 PRs)
 
 **Branches affected:** `main`
