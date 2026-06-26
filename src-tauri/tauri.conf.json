@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SahelFlow",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "identifier": "com.sahelflow.app",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -40,11 +40,11 @@
   },
   "plugins": {
     "updater": {
-      "active": false,
+      "active": true,
       "endpoints": [
         "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUzRDAxOTI0NzcyNjgxODMKUldTRGdTWjNKQm5RVXd0OFFlUVhLeEVDWitaaFFnVzZoQzBNYmdYUVpHS2xjK0JRSFpyU0JuU0QK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3MTgzNjkzQTA1ODlCNTUKUldSVm0xaWdrellZeDNWZ3BYU2xmakFsR0VQQkNQY1Y2VGxpN0F4bm5ib2kzT0xPb2cyMnlaRG0K",
       "windows": {
         "installMode": "passive"
       }
