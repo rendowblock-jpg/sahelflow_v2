@@ -53,7 +53,8 @@ bun run sidecar        # Baileys sidecar on port 3001 (separate terminal)
 Requires Rust toolchain + Tauri CLI. See `documentation/DESKTOP_BUILD.md` for full instructions.
 
 ```bash
-bun run tauri:dev     # Development (opens desktop window, hot reload)
+bun run tauri:dev:fast # ⚡ Fast review (pre-built frontend, instant page loads)
+bun run tauri:dev     # Full dev mode (hot reload, slower page loads)
 bun run tauri:build   # Production build (creates .dmg/.msi/.AppImage)
 ```
 
@@ -98,3 +99,4 @@ sf-verify --skip-tests # skip vitest
 - ❌ **Meta business verification** — killed. No Instagram integration. Market capped at ~50-60% of Algerian COD sellers.
 
 These are final decisions, not "maybe later."
+`bun run seed:expanded     # Populate dev DB with realistic demo data (20 customers, 50 orders, etc.)`
