@@ -21,7 +21,8 @@
     "tauri:dev": "bunx tauri dev",
     "tauri:build": "bunx tauri build",
     "seed": "bun --conditions react-server scripts/seed.ts",
-    "seed:expanded": "bun --conditions react-server scripts/seed-expanded.ts"
+    "seed:expanded": "bun --conditions react-server scripts/seed-expanded.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
