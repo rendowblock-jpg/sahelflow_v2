@@ -7,39 +7,18 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g. 3.0.0)'
+        description: 'Version to build (e.g. 3.1.0)'
         required: true
-        default: '3.0.0'
+        default: '3.1.0'
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            bundle: msi
-            platform: windows-x86_64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            bundle: dmg
-            platform: darwin-aarch64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            bundle: dmg
-            platform: darwin-x86_64
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            bundle: AppImage
-            platform: linux-x86_64
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,8 +28,6 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - name: Cache Rust
         uses: actions/cache@v4
@@ -59,18 +36,11 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.target }}-
+          key: windows-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-
 
       - name: Install dependencies
         run: bun install
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -81,28 +51,23 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: SahelFlow ${{ github.ref_name }}
-          releaseBody: See the assets below to download and install. The app will auto-update on future releases.
+          releaseBody: Download and install the file for your platform. The app auto-updates on future releases.
           releaseDraft: true
           prerelease: false
-          args: --target ${{ matrix.target }}
 
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SahelFlow-${{ matrix.platform }}
+          name: SahelFlow-windows
           path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.sig
-          if-no-files-found: ignore
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.msi.sig
+          if-no-files-found: warn
 
-  generate-manifest:
-    name: Generate latest.json manifest
-    needs: build
+  build-linux:
+    name: Build Linux
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -110,8 +75,58 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: linux-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-
+
       - name: Install dependencies
         run: bun install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: SahelFlow ${{ github.ref_name }}
+          releaseBody: Download and install the file for your platform. The app auto-updates on future releases.
+          releaseDraft: true
+          prerelease: false
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SahelFlow-linux
+          path: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.AppImage.sig
+          if-no-files-found: warn
+
+  generate-manifest:
+    name: Generate latest.json
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Download all platform artifacts
         uses: actions/download-artifact@v4
@@ -125,71 +140,41 @@ jobs:
         run: |
           set -e
           echo "=== Downloaded artifacts ==="
-          find artifacts -type f | head -30
-
-          mkdir -p src-tauri/target/release/bundle/msi
-          mkdir -p src-tauri/target/release/bundle/dmg
-          mkdir -p src-tauri/target/release/bundle/appimage
-
-          # Copy Windows artifacts
-          find artifacts/SahelFlow-windows-x86_64 -name "*.msi" -exec cp {} src-tauri/target/release/bundle/msi/ \; 2>/dev/null || true
-          find artifacts/SahelFlow-windows-x86_64 -name "*.msi.sig" -exec cp {} src-tauri/target/release/bundle/msi/ \; 2>/dev/null || true
-
-          # Copy macOS artifacts (both architectures)
-          find artifacts/SahelFlow-darwin-* -name "*.dmg" -exec cp {} src-tauri/target/release/bundle/dmg/ \; 2>/dev/null || true
-          find artifacts/SahelFlow-darwin-* -name "*.dmg.sig" -exec cp {} src-tauri/target/release/bundle/dmg/ \; 2>/dev/null || true
-
-          # Copy Linux artifacts
-          find artifacts/SahelFlow-linux-x86_64 -name "*.AppImage" -exec cp {} src-tauri/target/release/bundle/appimage/ \; 2>/dev/null || true
-          find artifacts/SahelFlow-linux-x86_64 -name "*.AppImage.sig" -exec cp {} src-tauri/target/release/bundle/appimage/ \; 2>/dev/null || true
-
-          echo "=== Arranged artifacts ==="
-          find src-tauri/target/release/bundle -type f
+          find artifacts -type f
 
           # Read version from tauri.conf.json
           VERSION=$(python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
-          echo "Version: $VERSION"
-          echo "Tag: $TAG"
+          echo "Version: $VERSION, Tag: $TAG"
 
           REPO="rendowblock-jpg/sahelflow_v2"
           BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
-          # Find the actual filenames + signatures
-          MSI_NAME=$(find src-tauri/target/release/bundle/msi -name "*.msi" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
-          DMG_AARCH64_NAME=$(find src-tauri/target/release/bundle/dmg -name "*aarch64*.dmg" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
-          DMG_X86_NAME=$(find src-tauri/target/release/bundle/dmg -name "*x86_64*.dmg" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
-          APPIMAGE_NAME=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
+          # Find filenames + signatures
+          MSI_NAME=$(find artifacts/SahelFlow-windows -name "*.msi" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
+          APPIMAGE_NAME=$(find artifacts/SahelFlow-linux -name "*.AppImage" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
 
-          echo "MSI: $MSI_NAME"
-          echo "DMG ARM: $DMG_AARCH64_NAME"
-          echo "DMG Intel: $DMG_X86_NAME"
-          echo "AppImage: $APPIMAGE_NAME"
+          MSI_SIG=$(find artifacts/SahelFlow-windows -name "*.msi.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
+          APPIMAGE_SIG=$(find artifacts/SahelFlow-linux -name "*.AppImage.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
 
-          # Read signatures (the .sig files contain the signature string)
-          MSI_SIG=$(find src-tauri/target/release/bundle/msi -name "*.msi.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
-          DMG_AARCH64_SIG=$(find src-tauri/target/release/bundle/dmg -name "*aarch64*.dmg.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
-          DMG_X86_SIG=$(find src-tauri/target/release/bundle/dmg -name "*x86_64*.dmg.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
-          APPIMAGE_SIG=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
+          echo "MSI: $MSI_NAME (sig: ${MSI_SIG:0:30}...)"
+          echo "AppImage: $APPIMAGE_NAME (sig: ${APPIMAGE_SIG:0:30}...)"
 
+          # Generate latest.json with Python
           mkdir -p src-tauri/target/release
-          # Generate latest.json using Python (avoids heredoc indentation issues)
-          python3 -c "
+          python3 << PYEOF
           import json, datetime
           manifest = {
-              'version': '${VERSION}',
-              'notes': 'SahelFlow ${VERSION}',
-              'pub_date': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-              'platforms': {
-                  'windows-x86_64': {'signature': '${MSI_SIG}', 'url': '${BASE_URL}/${MSI_NAME}'},
-                  'darwin-aarch64': {'signature': '${DMG_AARCH64_SIG}', 'url': '${BASE_URL}/${DMG_AARCH64_NAME}'},
-                  'darwin-x86_64': {'signature': '${DMG_X86_SIG}', 'url': '${BASE_URL}/${DMG_X86_NAME}'},
-                  'linux-x86_64': {'signature': '${APPIMAGE_SIG}', 'url': '${BASE_URL}/${APPIMAGE_NAME}'},
+              "version": "${VERSION}",
+              "notes": "SahelFlow ${VERSION}",
+              "pub_date": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "platforms": {
+                  "windows-x86_64": {"signature": "${MSI_SIG}", "url": "${BASE_URL}/${MSI_NAME}"},
+                  "linux-x86_64": {"signature": "${APPIMAGE_SIG}", "url": "${BASE_URL}/${APPIMAGE_NAME}"},
               }
           }
-          with open('src-tauri/target/release/latest.json', 'w') as f:
+          with open("src-tauri/target/release/latest.json", "w") as f:
               json.dump(manifest, f, indent=2)
-          "
-
+          PYEOF
 
           echo "=== Generated latest.json ==="
           cat src-tauri/target/release/latest.json
