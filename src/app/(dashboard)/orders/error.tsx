@@ -2,7 +2,7 @@
 
 import { PageError } from "@/components/shared/page-error";
 
-export default function OrdersError({
+export default function Error({
   error,
   reset,
 }: {

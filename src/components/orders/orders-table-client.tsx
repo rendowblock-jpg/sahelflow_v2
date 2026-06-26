@@ -28,6 +28,7 @@ import { formatDZD, formatDate } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 import { useI18n } from "@/hooks/use-i18n";
 import { OrderStatusBadge } from "./order-status-badge";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 interface OrderRow {
   id: string;
@@ -51,6 +52,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
   const { t } = useI18n();
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const allSelected = resolvedOrders.length > 0 && selected.size === resolvedOrders.length;
@@ -223,13 +225,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"
-                                  onClick={() => {
-                                    if (confirm(t("orders.confirmDelete"))) {
-                                      fetch(`/api/orders/${order.id}`, { method: "DELETE" })
-                                        .then(() => router.refresh())
-                                        .catch(() => {});
-                                    }
-                                  }}
+                                  onClick={() => setDeleteTarget(order.id)}
                                 >
                                   <Trash2 className="me-2 h-4 w-4" />
                                   {t("orders.delete")}
@@ -247,6 +243,20 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={t("orders.confirmDelete")}
+        description={t("orders.confirmDeleteDesc")}
+        destructive
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await fetch(`/api/orders/${deleteTarget}`, { method: "DELETE" });
+          setDeleteTarget(null);
+          router.refresh();
+        }}
+      />
     </>
   );
 }
