@@ -1,0 +1,192 @@
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 3.0.0)'
+        required: true
+        default: '3.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: msi
+            platform: windows-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundle: dmg
+            platform: darwin-aarch64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bundle: dmg
+            platform: darwin-x86_64
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundle: AppImage
+            platform: linux-x86_64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name || format('v{0}', inputs.version) }}
+          releaseName: 'SahelFlow ${{ github.ref_name || format('v{0}', inputs.version) }}'
+          releaseBody: 'See the assets below to download and install. The app will auto-update on future releases.'
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SahelFlow-${{ matrix.platform }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.sig
+          if-no-files-found: ignore
+
+  generate-manifest:
+    name: Generate latest.json manifest
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # List downloaded artifacts
+          find artifacts -type f | head -20
+
+          # Generate the latest.json manifest using the existing script
+          # The script reads built artifacts + signatures from the bundle dir
+          # We need to arrange the downloaded artifacts into the expected structure
+          mkdir -p src-tauri/target/release/bundle/msi
+          mkdir -p src-tauri/target/release/bundle/dmg
+          mkdir -p src-tauri/target/release/bundle/appimage
+
+          # Copy Windows artifacts
+          find artifacts/SahelFlow-windows-x86_64 -name "*.msi" -exec cp {} src-tauri/target/release/bundle/msi/ \; 2>/dev/null || true
+          find artifacts/SahelFlow-windows-x86_64 -name "*.msi.sig" -exec cp {} src-tauri/target/release/bundle/msi/ \; 2>/dev/null || true
+
+          # Copy macOS artifacts (both architectures)
+          find artifacts/SahelFlow-darwin-* -name "*.dmg" -exec cp {} src-tauri/target/release/bundle/dmg/ \; 2>/dev/null || true
+          find artifacts/SahelFlow-darwin-* -name "*.dmg.sig" -exec cp {} src-tauri/target/release/bundle/dmg/ \; 2>/dev/null || true
+
+          # Copy Linux artifacts
+          find artifacts/SahelFlow-linux-x86_64 -name "*.AppImage" -exec cp {} src-tauri/target/release/bundle/appimage/ \; 2>/dev/null || true
+          find artifacts/SahelFlow-linux-x86_64 -name "*.AppImage.sig" -exec cp {} src-tauri/target/release/bundle/appimage/ \; 2>/dev/null || true
+
+          # Run the manifest generator (it reads version from tauri.conf.json)
+          bun run scripts/generate-update-manifest.ts 2>&1 || echo "Manifest generation had issues, creating manually"
+
+          # If the script failed, create a basic manifest manually
+          if [ ! -f src-tauri/target/release/latest.json ]; then
+            echo "Creating manifest manually..."
+            VERSION=$(python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+            TAG="${{ github.ref_name || format('v{0}', inputs.version) }}"
+            REPO="rendowblock-jpg/sahelflow_v2"
+            BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+
+            # Find the actual filenames
+            MSI_NAME=$(find src-tauri/target/release/bundle/msi -name "*.msi" ! -name "*.sig" -exec basename {} \; | head -1)
+            DMG_AARCH64_NAME=$(find src-tauri/target/release/bundle/dmg -name "*aarch64*.dmg" ! -name "*.sig" -exec basename {} \; | head -1)
+            DMG_X86_NAME=$(find src-tauri/target/release/bundle/dmg -name "*x86_64*.dmg" ! -name "*.sig" -exec basename {} \; | head -1 || echo "")
+            APPIMAGE_NAME=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" ! -name "*.sig" -exec basename {} \; | head -1)
+
+            # Read signatures
+            MSI_SIG=$(cat src-tauri/target/release/bundle/msi/*.msi.sig 2>/dev/null | head -1 || echo "")
+            DMG_AARCH64_SIG=$(cat src-tauri/target/release/bundle/dmg/*aarch64*.dmg.sig 2>/dev/null | head -1 || echo "")
+            DMG_X86_SIG=$(cat src-tauri/target/release/bundle/dmg/*x86_64*.dmg.sig 2>/dev/null | head -1 || echo "")
+            APPIMAGE_SIG=$(cat src-tauri/target/release/bundle/appimage/*.AppImage.sig 2>/dev/null | head -1 || echo "")
+
+            cat > src-tauri/target/release/latest.json <<MANIFEST
+          {
+            "version": "${VERSION}",
+            "notes": "SahelFlow ${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": { "signature": "${MSI_SIG}", "url": "${BASE_URL}/${MSI_NAME}" },
+              "darwin-aarch64": { "signature": "${DMG_AARCH64_SIG}", "url": "${BASE_URL}/${DMG_AARCH64_NAME}" },
+              "darwin-x86_64": { "signature": "${DMG_X86_SIG}", "url": "${BASE_URL}/${DMG_X86_NAME}" },
+              "linux-x86_64": { "signature": "${APPIMAGE_SIG}", "url": "${BASE_URL}/${APPIMAGE_NAME}" }
+            }
+          }
+          MANIFEST
+          fi
+
+          cat src-tauri/target/release/latest.json
+
+      - name: Upload latest.json to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || format('v{0}', inputs.version) }}
+          files: src-tauri/target/release/latest.json
+          draft: true
