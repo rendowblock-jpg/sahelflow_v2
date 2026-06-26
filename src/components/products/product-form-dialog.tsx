@@ -11,6 +11,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   createProductSchema,
+  productVariantSchema,
   nonEmptyString,
   nonNegInt,
   cuid,
@@ -48,6 +49,7 @@ import {
   ProductImageUpload,
   MAX_PRODUCT_IMAGES,
 } from "@/components/products/product-image-upload";
+import { ProductVariantsManager } from "./product-variants-manager";
 
 /**
  * Client-side form schema — mirrors createProductSchema but:
@@ -71,9 +73,12 @@ const formSchema = createProductSchema.extend({
   // upload component can be a controlled input.
   images: z.array(nonEmptyString),
   isActive: z.boolean(),
+  // Variants: required array (empty if no variants) — ensures type stability
+  // for react-hook-form's Control inference.
+  variants: z.array(productVariantSchema).default([]),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.input<typeof formSchema>;
 
 /**
  * Shape accepted by ProductFormDialog in edit mode. Nullable fields accept
@@ -92,6 +97,16 @@ export interface ProductFormDialogProduct {
   /** List of image URLs (already uploaded). Stored as a JSON string in DB. */
   images?: string[] | null;
   isActive: boolean;
+  /** Product variants (loaded from the ProductVariant relation). */
+  productVariants?: Array<{
+    id: string;
+    name: string;
+    sku: string | null;
+    price: number | null;
+    stock: number;
+    isActive: boolean;
+    sortOrder: number;
+  }>;
 }
 
 interface ProductFormDialogProps {
@@ -135,6 +150,15 @@ export function ProductFormDialog({
     categoryId: p?.categoryId ?? "",
     images: p?.images ?? [],
     isActive: p?.isActive ?? true,
+    variants: (p?.productVariants ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      sku: v.sku,
+      price: v.price,
+      stock: v.stock,
+      isActive: v.isActive,
+      sortOrder: v.sortOrder,
+    })),
   });
 
   const form = useForm<FormValues>({
@@ -463,6 +487,8 @@ export function ProductFormDialog({
                 </FormItem>
               )}
             />
+
+            <ProductVariantsManager disabled={submitting} />
 
             {serverError && (
               <p className="text-sm text-destructive" role="alert">

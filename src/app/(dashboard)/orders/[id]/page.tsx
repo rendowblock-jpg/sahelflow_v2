@@ -166,6 +166,13 @@ export default async function OrderDetailPage({
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} × {formatDZD(item.unitPrice)}
                       </p>
+                      {item.productVariantName && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5">
+                            {t("products.variant")}: {item.productVariantName}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <p className="text-sm font-medium">{formatDZD(item.total)}</p>
                   </div>

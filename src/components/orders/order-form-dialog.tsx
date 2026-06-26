@@ -24,6 +24,7 @@ import {
 import { Plus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
+import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { useI18n } from "@/hooks/use-i18n";
 
 interface Customer {
@@ -41,11 +42,14 @@ interface Product {
   price: number;
   stock: number;
   isActive: boolean;
+  productVariants?: VariantOption[];
 }
 
 interface OrderFormItem {
   productId: string;
   productName: string;
+  productVariantId: string | null;
+  productVariantName: string | null;
   quantity: number;
   unitPrice: number;
 }
@@ -66,6 +70,8 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
   // Form state
   const [customerId, setCustomerId] = useState("");
+  const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
   const [items, setItems] = useState<OrderFormItem[]>([]);
   const [wilaya, setWilaya] = useState("");
   const [commune, setCommune] = useState("");
@@ -91,6 +97,8 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
       {
         productId: product.id,
         productName: product.name,
+        productVariantId: null,
+        productVariantName: null,
         quantity: 1,
         unitPrice: product.price,
       },
@@ -106,8 +114,24 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     setItems(items.map((item, i) => (i === index ? { ...item, quantity } : item)));
   }
 
+  function updateVariant(index: number, variantId: string | null) {
+    setItems(items.map((item, i) => {
+      if (i !== index) return item;
+      const product = activeProducts.find((p) => p.id === item.productId);
+      const variant = product?.productVariants?.find((v) => v.id === variantId) ?? null;
+      const variantPrice = variant?.price ?? product?.price ?? item.unitPrice;
+      return {
+        ...item,
+        productVariantId: variantId,
+        productVariantName: variant?.name ?? null,
+        unitPrice: variantPrice,
+      };
+    }));
+  }
+
   function selectCustomer(id: string) {
     setCustomerId(id);
+    setIsNewCustomerMode(false);
     // Auto-fill delivery info from customer
     const customer = customers.find((c) => c.id === id);
     if (customer) {
@@ -118,11 +142,28 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     }
   }
 
+  function toggleNewCustomerMode() {
+    setIsNewCustomerMode(!isNewCustomerMode);
+    setCustomerId("");
+    setNewCustomerName("");
+    // Clear delivery fields so the user can enter new ones
+    if (!isNewCustomerMode) {
+      setWilaya("");
+      setCommune("");
+      setAddress("");
+      setPhone("");
+    }
+  }
+
   async function handleSubmit() {
     setError(null);
 
-    if (!customerId) {
+    if (!isNewCustomerMode && !customerId) {
       setError(t("orders.form.errorNoCustomer"));
+      return;
+    }
+    if (isNewCustomerMode && !newCustomerName) {
+      setError(t("orders.form.errorNoCustomerName"));
       return;
     }
     if (items.length === 0) {
@@ -136,14 +177,40 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
     setLoading(true);
     try {
+      // If in new-customer mode, create the customer first
+      let finalCustomerId = customerId;
+      if (isNewCustomerMode) {
+        const custRes = await fetch("/api/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newCustomerName,
+            phone,
+            wilaya,
+            commune,
+            address,
+          }),
+        });
+        if (!custRes.ok) {
+          const err = await custRes.json().catch(() => ({}));
+          setError(err.error || t("orders.form.errorCreatingCustomer"));
+          setLoading(false);
+          return;
+        }
+        const custData = await custRes.json();
+        finalCustomerId = custData.customer.id;
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId,
+          customerId: finalCustomerId,
           items: items.map((i) => ({
             productId: i.productId,
             productName: i.productName,
+            productVariantId: i.productVariantId,
+            productVariantName: i.productVariantName,
             quantity: i.quantity,
             unitPrice: i.unitPrice,
           })),
@@ -202,20 +269,41 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
         <div className="space-y-6 py-4">
           {/* Customer selection */}
           <div className="space-y-2">
-            <Label>{t("orders.customer")}</Label>
-            <Select value={customerId} onValueChange={selectCustomer}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("orders.form.selectCustomerPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name} — {c.phone}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {customerId && (
+            <div className="flex items-center justify-between">
+              <Label>{t("orders.customer")}</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={toggleNewCustomerMode}
+                className="text-xs h-7"
+              >
+                {isNewCustomerMode
+                  ? t("orders.form.chooseExistingCustomer")
+                  : t("orders.form.createNewCustomer")}
+              </Button>
+            </div>
+            {isNewCustomerMode ? (
+              <Input
+                value={newCustomerName}
+                onChange={(e) => setNewCustomerName(e.target.value)}
+                placeholder={t("orders.form.newCustomerNamePlaceholder")}
+              />
+            ) : (
+              <Select value={customerId} onValueChange={selectCustomer}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("orders.form.selectCustomerPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} — {c.phone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {(customerId || isNewCustomerMode) && (
               <p className="text-xs text-muted-foreground">
                 {t("orders.form.customerDeliveryHint")}
               </p>
@@ -244,31 +332,47 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
             {items.length > 0 ? (
               <div className="space-y-2 rounded-lg border p-3">
-                {items.map((item, i) => (
-                  <div key={item.productId} className="flex items-center gap-3">
-                    <div className="flex-1 space-y-0.5">
-                      <p className="text-sm font-medium">{item.productName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDZD(item.unitPrice)} × {item.quantity} = {formatDZD(item.unitPrice * item.quantity)}
-                      </p>
+                {items.map((item, i) => {
+                  const product = activeProducts.find((p) => p.id === item.productId);
+                  const variants = product?.productVariants ?? [];
+                  return (
+                    <div key={item.productId} className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 space-y-0.5">
+                          <p className="text-sm font-medium">{item.productName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDZD(item.unitPrice)} × {item.quantity} = {formatDZD(item.unitPrice * item.quantity)}
+                          </p>
+                        </div>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
+                          className="w-16 text-center"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeItem(i)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {variants.length > 1 && (
+                        <ProductVariantPicker
+                          variants={variants}
+                          defaultPrice={product?.price ?? item.unitPrice}
+                          value={item.productVariantId}
+                          onChange={(vId) => updateVariant(i, vId)}
+                          showLabel={true}
+                          size="sm"
+                        />
+                      )}
                     </div>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
-                      className="w-16 text-center"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeItem(i)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground py-4 text-center rounded-lg border border-dashed">

@@ -101,7 +101,9 @@ export const orderService = {
             items: {
               create: data.items.map((item) => ({
                 productId: item.productId ?? null,
+                productVariantId: item.productVariantId ?? null,
                 productName: item.productName,
+                productVariantName: item.productVariantName ?? null,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 total: item.unitPrice * item.quantity,
