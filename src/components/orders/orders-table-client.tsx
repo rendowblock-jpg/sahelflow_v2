@@ -16,7 +16,6 @@ import Link from "next/link";
 import { CheckCircle2, XCircle, Loader2, MoreVertical, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,10 +25,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { formatDZD, formatDate } from "@/lib/utils";
-import { orderStatusStyles } from "@/lib/shared";
-import { statusI18nKey } from "@/lib/shared/status-colors";
 import type { OrderStatus } from "@/types/domain";
 import { useI18n } from "@/hooks/use-i18n";
+import { OrderStatusBadge } from "./order-status-badge";
 
 interface OrderRow {
   id: string;
@@ -166,7 +164,6 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
               ) : (
                 resolvedOrders.map((order) => {
                   const status = order.status as OrderStatus;
-                  const style = orderStatusStyles[status];
                   const isSelected = selected.has(order.id);
                   const itemCount = order.items.length;
                   const itemLabel = itemCount > 1
@@ -193,14 +190,11 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                       <td className="px-4 py-3 hidden sm:table-cell text-sm">{order.wilaya}</td>
                       <td className="px-4 py-3 text-end font-medium text-sm tabular-nums">{formatDZD(order.totalPrice)}</td>
                       <td className="px-4 py-3">
-                        {style ? (
-                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
-                            <span className={`size-1.5 rounded-full ${style.dot}`} />
-                            {t(style.i18nKey)}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
-                        )}
+                        <OrderStatusBadge
+                          orderId={order.id}
+                          status={status}
+                          size="sm"
+                        />
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{formatDate(order.createdAt, locale)}</td>
                       <td className="px-4 py-3 text-end">
