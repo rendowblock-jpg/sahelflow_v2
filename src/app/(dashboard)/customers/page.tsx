@@ -5,14 +5,7 @@ import { formatDZD } from "@/lib/utils";
 import { getRiskConfig } from "@/lib/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { PremiumTable } from "@/components/shared/premium-table";
 import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -115,41 +108,41 @@ export default async function CustomersPage() {
               <CustomerFormDialog />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("customers.name")}</TableHead>
-                  <TableHead>{t("customers.phone")}</TableHead>
-                  <TableHead>{t("customers.location")}</TableHead>
-                  <TableHead className="text-end">{t("customers.ordersCount")}</TableHead>
-                  <TableHead className="text-end">{t("customers.spent")}</TableHead>
-                  <TableHead>{t("customers.risk")}</TableHead>
-                  <TableHead className="text-end">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <PremiumTable>
+              <PremiumTable.Header>
+                <PremiumTable.Row>
+                  <PremiumTable.Head>{t("customers.name")}</PremiumTable.Head>
+                  <PremiumTable.Head>{t("customers.phone")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="md">{t("customers.location")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end">{t("customers.ordersCount")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end">{t("customers.spent")}</PremiumTable.Head>
+                  <PremiumTable.Head align="center">{t("customers.risk")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end" width="w-20">{t("common.actions")}</PremiumTable.Head>
+                </PremiumTable.Row>
+              </PremiumTable.Header>
+              <PremiumTable.Body>
                 {customers.map((customer: Customer) => {
-                  const riskConfig = getRiskConfig(customer.riskScore * 10); // Scale 0-100
+                  const riskConfig = getRiskConfig(customer.riskScore * 10);
                   return (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{customer.phone}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                    <PremiumTable.Row key={customer.id}>
+                      <PremiumTable.Cell className="font-medium">{customer.name}</PremiumTable.Cell>
+                      <PremiumTable.Cell className="font-mono">{customer.phone}</PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="md" className="text-muted-foreground">
                         {customer.wilaya ?? "—"}
                         {customer.commune ? ` · ${customer.commune}` : ""}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end" className="tabular-nums">
                         {customer.orderCount}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end" className="tabular-nums">
                         {formatDZD(customer.totalSpent)}
-                      </TableCell>
-                      <TableCell>
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="center">
                         <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${riskConfig.color} bg-muted/50 border-border`}>
                           {t(riskConfig.i18nKey)} · {customer.riskScore}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-end">
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon-sm" asChild>
                             <Link href={`/customers/${customer.id}`}>
@@ -159,12 +152,12 @@ export default async function CustomersPage() {
                           </Button>
                           <CustomerRowActions customer={customer} />
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </PremiumTable.Cell>
+                    </PremiumTable.Row>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </PremiumTable.Body>
+            </PremiumTable>
           )}
         </CardContent>
       </Card>

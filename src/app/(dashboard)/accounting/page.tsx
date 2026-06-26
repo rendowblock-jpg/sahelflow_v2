@@ -2,14 +2,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { PremiumTable } from "@/components/shared/premium-table";
 import { DualBarChart } from "@/components/charts/dual-bar-chart";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -174,32 +167,32 @@ export default async function AccountingPage() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("accounting.expenseDate")}</TableHead>
-                  <TableHead>{t("accounting.expenseCategory")}</TableHead>
-                  <TableHead className="text-end">{t("accounting.expenseAmount")}</TableHead>
-                  <TableHead>{t("accounting.expenseNotes")}</TableHead>
-                  <TableHead className="text-end">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <PremiumTable>
+              <PremiumTable.Header>
+                <PremiumTable.Row>
+                  <PremiumTable.Head>{t("accounting.expenseDate")}</PremiumTable.Head>
+                  <PremiumTable.Head>{t("accounting.expenseCategory")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end">{t("accounting.expenseAmount")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="md">{t("accounting.expenseNotes")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end" width="w-20">{t("common.actions")}</PremiumTable.Head>
+                </PremiumTable.Row>
+              </PremiumTable.Header>
+              <PremiumTable.Body>
                 {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="text-sm text-muted-foreground">
+                  <PremiumTable.Row key={expense.id}>
+                    <PremiumTable.Cell className="text-muted-foreground">
                       {formatDate(expense.date, locale)}
-                    </TableCell>
-                    <TableCell className="font-medium">
+                    </PremiumTable.Cell>
+                    <PremiumTable.Cell className="font-medium">
                       {t(`accounting.category.${expense.category}`)}
-                    </TableCell>
-                    <TableCell className="text-end font-medium text-red-600 dark:text-red-400 tabular-nums">
+                    </PremiumTable.Cell>
+                    <PremiumTable.Cell align="end" className="font-medium text-red-600 dark:text-red-400 tabular-nums">
                       −{formatDZD(expense.amount)}
-                    </TableCell>
-                    <TableCell className="max-w-xs text-sm text-muted-foreground">
+                    </PremiumTable.Cell>
+                    <PremiumTable.Cell hideOn="md" className="max-w-xs text-muted-foreground">
                       {expense.notes ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-end">
+                    </PremiumTable.Cell>
+                    <PremiumTable.Cell align="end">
                       <ExpenseRowActions
                         expense={{
                           id: expense.id,
@@ -209,11 +202,11 @@ export default async function AccountingPage() {
                           notes: expense.notes,
                         }}
                       />
-                    </TableCell>
-                  </TableRow>
+                    </PremiumTable.Cell>
+                  </PremiumTable.Row>
                 ))}
-              </TableBody>
-            </Table>
+              </PremiumTable.Body>
+            </PremiumTable>
           )}
         </CardContent>
       </Card>

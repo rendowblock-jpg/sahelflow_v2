@@ -8,6 +8,7 @@ import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
+import { PremiumTable } from "@/components/shared/premium-table";
 import { StatCard } from "@/components/shared/stat-card";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import Link from "next/link";
@@ -176,90 +177,88 @@ export default async function DeliveriesPage({
               actionHref="/orders"
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    <th className="px-4 py-3">{t("deliveries.table.tracking")}</th>
-                    <th className="px-4 py-3">{t("deliveries.table.order")}</th>
-                    <th className="px-4 py-3">{t("deliveries.table.customer")}</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">{t("deliveries.table.carrier")}</th>
-                    <th className="px-4 py-3 text-end hidden md:table-cell">{t("deliveries.table.cost")}</th>
-                    <th className="px-4 py-3">{t("deliveries.table.status")}</th>
-                    <th className="px-4 py-3 hidden lg:table-cell">{t("deliveries.table.date")}</th>
-                    <th className="px-4 py-3 text-end">{t("deliveries.table.action")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredDeliveries.map((delivery) => {
-                    const order = delivery.order;
-                    const customer = order?.customer;
-                    const statusStyle = DELIVERY_STATUS_STYLES[delivery.status];
-                    const providerConfig = deliveryProviderConfig[delivery.provider];
-                    const BrandIcon = getBrandIcon(delivery.provider);
-                    return (
-                      <tr key={delivery.id} className="hover:bg-accent/50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs">
-                          {delivery.trackingNumber ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {order ? (
-                            <Link
-                              href={`/orders/${order.id}`}
-                              className="font-mono text-sm font-medium text-primary hover:underline"
-                            >
-                              {order.orderNumber}
-                            </Link>
-                          ) : "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium">{customer?.name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">{order?.wilaya ?? "—"}</div>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          {providerConfig ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm">
-                              {BrandIcon ? (
-                                <BrandIcon className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <span className={`size-2 rounded-full ${providerConfig.color}`} />
-                              )}
-                              {providerConfig.label}
-                            </span>
-                          ) : (
-                            <span className="text-sm">{delivery.provider}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-end hidden md:table-cell text-sm tabular-nums">
-                          {delivery.cost ? formatDZD(delivery.cost) : "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {statusStyle ? (
-                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                              <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                              {t(statusStyle.i18nKey)}
-                            </span>
-                          ) : (
-                            <Badge variant="outline">{delivery.status}</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDate(delivery.createdAt, locale)}
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          <DeliveryRowActions
-                            deliveryId={delivery.id}
-                            provider={delivery.provider}
-                            trackingNumber={delivery.trackingNumber}
-                            orderId={order?.id ?? null}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <PremiumTable>
+              <PremiumTable.Header>
+                <PremiumTable.Row>
+                  <PremiumTable.Head>{t("deliveries.table.tracking")}</PremiumTable.Head>
+                  <PremiumTable.Head>{t("deliveries.table.order")}</PremiumTable.Head>
+                  <PremiumTable.Head>{t("deliveries.table.customer")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="sm">{t("deliveries.table.carrier")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end" hideOn="md">{t("deliveries.table.cost")}</PremiumTable.Head>
+                  <PremiumTable.Head align="center">{t("deliveries.table.status")}</PremiumTable.Head>
+                  <PremiumTable.Head hideOn="lg">{t("deliveries.table.date")}</PremiumTable.Head>
+                  <PremiumTable.Head align="end" width="w-20">{t("deliveries.table.action")}</PremiumTable.Head>
+                </PremiumTable.Row>
+              </PremiumTable.Header>
+              <PremiumTable.Body>
+                {filteredDeliveries.map((delivery) => {
+                  const order = delivery.order;
+                  const customer = order?.customer;
+                  const statusStyle = DELIVERY_STATUS_STYLES[delivery.status];
+                  const providerConfig = deliveryProviderConfig[delivery.provider];
+                  const BrandIcon = getBrandIcon(delivery.provider);
+                  return (
+                    <PremiumTable.Row key={delivery.id}>
+                      <PremiumTable.Cell className="font-mono text-xs">
+                        {delivery.trackingNumber ?? "—"}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell>
+                        {order ? (
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="font-mono text-sm font-medium text-primary hover:underline"
+                          >
+                            {order.orderNumber}
+                          </Link>
+                        ) : "—"}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell>
+                        <div className="text-sm font-medium">{customer?.name ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">{order?.wilaya ?? "—"}</div>
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="sm">
+                        {providerConfig ? (
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            {BrandIcon ? (
+                              <BrandIcon className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <span className={`size-2 rounded-full ${providerConfig.color}`} />
+                            )}
+                            {providerConfig.label}
+                          </span>
+                        ) : (
+                          <span className="text-sm">{delivery.provider}</span>
+                        )}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end" hideOn="md" className="tabular-nums">
+                        {delivery.cost ? formatDZD(delivery.cost) : "—"}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="center">
+                        {statusStyle ? (
+                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                            <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
+                            {t(statusStyle.i18nKey)}
+                          </span>
+                        ) : (
+                          <Badge variant="outline">{delivery.status}</Badge>
+                        )}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell hideOn="lg" className="text-muted-foreground">
+                        {formatDate(delivery.createdAt, locale)}
+                      </PremiumTable.Cell>
+                      <PremiumTable.Cell align="end">
+                        <DeliveryRowActions
+                          deliveryId={delivery.id}
+                          provider={delivery.provider}
+                          trackingNumber={delivery.trackingNumber}
+                          orderId={order?.id ?? null}
+                        />
+                      </PremiumTable.Cell>
+                    </PremiumTable.Row>
+                  );
+                })}
+              </PremiumTable.Body>
+            </PremiumTable>
           )}
         </CardContent>
       </Card>
