@@ -2,7 +2,7 @@
 
 import { PageError } from "@/components/shared/page-error";
 
-export default function SettingsError({
+export default function Error({
   error,
   reset,
 }: {

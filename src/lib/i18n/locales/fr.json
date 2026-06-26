@@ -700,7 +700,7 @@
   "import.emptyFile": "Le fichier est vide",
   "import.errorCount": "{{count}} erreur(s):",
   "import.errors": "erreurs",
-  "import.failed": "Échec de l'import",
+  "import.failed": "Échec",
   "import.fileLabel": "Fichier CSV ou XLSX",
   "import.importFailed": "Échec de l'import",
   "import.importRows": "Importer {{count}} ligne(s)",
@@ -2009,5 +2009,6 @@
   "export.expenses.amount": "Montant",
   "common.import": "Importer",
   "common.export": "Exporter",
-  "import.success": "{{count}} éléments importés avec succès"
+  "import.success": "{{count}} éléments importés avec succès",
+  "orders.confirmDeleteDesc": "Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible."
 }

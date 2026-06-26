@@ -2,7 +2,7 @@
 
 import { PageError } from "@/components/shared/page-error";
 
-export default function InboxError({
+export default function Error({
   error,
   reset,
 }: {

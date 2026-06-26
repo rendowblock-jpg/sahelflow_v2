@@ -700,7 +700,7 @@
   "import.emptyFile": "الملف فارغ",
   "import.errorCount": "{{count}} خطأ:",
   "import.errors": "أخطاء",
-  "import.failed": "فشل الاستيراد",
+  "import.failed": "فشل",
   "import.fileLabel": "ملف CSV أو XLSX",
   "import.importFailed": "فشل الاستيراد",
   "import.importRows": "استيراد {{count}} صف",
@@ -2009,5 +2009,6 @@
   "export.expenses.amount": "المبلغ",
   "common.import": "استيراد",
   "common.export": "تصدير",
-  "import.success": "تم استيراد {{count}} عنصر بنجاح"
+  "import.success": "تم استيراد {{count}} عنصر بنجاح",
+  "orders.confirmDeleteDesc": "هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
 }
