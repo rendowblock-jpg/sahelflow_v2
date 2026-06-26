@@ -16,6 +16,7 @@ import {
 import { Package, Eye, AlertTriangle, Boxes, DollarSign, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { ProductRowActions } from "@/components/products/product-row-actions";
 import type { Product } from "@/types/domain";
@@ -40,13 +41,6 @@ export default async function ProductsPage() {
     (sum, p) => sum + p.price * Math.max(0, p.stock),
     0,
   );
-
-  const stats = [
-    { label: t("products.product"), value: String(totalProducts), icon: Package, accentBg: "bg-sky-500/10 dark:bg-sky-500/15", accentIcon: "text-sky-600 dark:text-sky-400" },
-    { label: t("common.active"), value: String(activeCount), icon: Boxes, accentBg: "bg-emerald-500/10 dark:bg-emerald-500/15", accentIcon: "text-emerald-600 dark:text-emerald-400" },
-    { label: t("products.lowStock"), value: String(lowStockCount), icon: AlertTriangle, accentBg: "bg-amber-500/10 dark:bg-amber-500/15", accentIcon: "text-amber-600 dark:text-amber-400" },
-    { label: t("products.inventoryValue"), value: formatDZD(inventoryValue), icon: DollarSign, accentBg: "bg-violet-500/10 dark:bg-violet-500/15", accentIcon: "text-violet-600 dark:text-violet-400" },
-  ];
 
   return (
     <div className="app-content page-sections">
@@ -88,24 +82,41 @@ export default async function ProductsPage() {
 
       {/* Stat strip — upgraded with accent icons */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <div className={`flex size-8 items-center justify-center rounded-lg ${stat.accentBg}`}>
-                  <Icon className={`h-4 w-4 ${stat.accentIcon}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <StatCard
+          label={t("products.product")}
+          value={totalProducts}
+          icon={<Package />}
+          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
+          accentIcon="text-sky-600 dark:text-sky-400"
+          style={{ animationDelay: "60ms" }}
+        />
+        <StatCard
+          label={t("common.active")}
+          value={activeCount}
+          icon={<Boxes />}
+          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+          accentIcon="text-emerald-600 dark:text-emerald-400"
+          subtitle={t("products.activeOutOf", { total: totalProducts })}
+          style={{ animationDelay: "120ms" }}
+        />
+        <StatCard
+          label={t("products.lowStock")}
+          value={lowStockCount}
+          icon={<AlertTriangle />}
+          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
+          accentIcon="text-amber-600 dark:text-amber-400"
+          trend={lowStockCount > 0 ? -1 : 0}
+          trendLabel={lowStockCount > 0 ? t("products.needsRestock") : t("products.stockOk")}
+          style={{ animationDelay: "180ms" }}
+        />
+        <StatCard
+          label={t("products.inventoryValue")}
+          value={formatDZD(inventoryValue)}
+          icon={<DollarSign />}
+          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
+          accentIcon="text-violet-600 dark:text-violet-400"
+          style={{ animationDelay: "240ms" }}
+        />
       </div>
 
       {/* Products table — upgraded styling */}

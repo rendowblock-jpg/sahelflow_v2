@@ -16,6 +16,7 @@ export async function getDashboardAnalytics() {
   const report = await analyticsService.getReport({ prisma: db }, 7);
   return {
     revenueSeries: report.revenueTimeSeries,
+    customerGrowth: report.customerGrowth,
     statusDistribution: report.statusDistribution,
     topProducts: report.topProducts.slice(0, 5),
     salesByHour: report.salesByHour,

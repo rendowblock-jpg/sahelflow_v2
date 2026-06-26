@@ -27,14 +27,15 @@ export function Sparkline({
 
   return (
     <ResponsiveContainer width={width} height={height}>
-      <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
+      <AreaChart data={data} margin={{ top: 4, right: 2, bottom: 6, left: 2 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.4} />
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <YAxis domain={["dataMin", "dataMax"]} hide />
+        {/* Pad Y-axis domain so the line doesn't touch the top/bottom edges — prevents clipping */}
+        <YAxis domain={["dataMin - 1", "dataMax + 1"]} hide />
         <Area
           type="natural"
           dataKey="value"
