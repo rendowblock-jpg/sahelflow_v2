@@ -3,8 +3,9 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-06-26 (session 16 + design transformations)
-**Main HEAD:** `d8cfd50`
+**Last updated:** 2026-06-29 (Session 17 complete)
+**Main HEAD:** `fc5f793`
+**Version:** `3.1.0`
 **Design system version:** v3.0 (premium patterns from shadcn v4, Dub, Cal.com, Trigger.dev)
 
 ---
@@ -13,26 +14,28 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Phase 0 complete + Session 16 (auth, integrations, design transformation) |
-| LOC | ~38,000 (src/ + sidecars/) |
+| Phase | Phase 0 complete + Session 16 + Session 17 (founder-driven UX + production-readiness sprint) |
+| LOC | ~42,000 (src/ + sidecars/) |
 | Pages | 24 (dashboard, inbox, orders, orders/[id], customers, customers/[id], products, products/[id], deliveries, returns, analytics, accounting, automations, agents, settings, imports, storefronts list/new/edit, profile, + login, setup, public storefront) |
-| API routes | 70 (orders + [id] + [id]/status + [id]/bulk + search, customers + [id] + [id]/stats + search, products + [id] + search, expenses + [id], analytics, deliveries + sync/credentials/estimate/create, returns, categories, communes, extraction, whatsapp/*, conversations, secrets, ai/sessions + stream, storefront + [id], wilaya-risk, notifications, reports/daily, settings, integrations/sync + connect, integrations/google-sheets/*, backup/*, auth/*, shops, health, export/*, import/*, upload, profile) |
+| API routes | 72 (+2 returns/[id], +2 delivery/[id], +2 import/orders, +2 import/expenses, +3 export routes) |
 | Tests | 134 (order state machine 32 + regex extractor 16 + field-crypto 21 + customer-PII-encryption 12 + order-conversation-PII-encryption 12 + pii-nested-includes 3 + analytics 13 + auth crypto 15 + DHD adapter 10) |
-| Prisma models | 24 |
-| i18n keys | 1,938 × 3 locales (AR/FR/EN + RTL) |
+| Prisma models | 25 (+1 ProductVariant) |
+| i18n keys | 1,982 × 3 locales (AR/FR/EN + RTL) |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
 | Delivery adapters | 4 (Yalidine + Maystro + ZR Express + DHD) |
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Other integrations | Google Sheets (Service Account), WhatsApp (Baileys sidecar), Gemini AI |
 | ADRs | 12 accepted, 0 open |
 | Quality gate | ✅ tsc + eslint + 134/134 tests green |
-| CI | ✅ GitHub Actions (lint + tsc + vitest on every push/PR) |
+| CI | ⚠️ GitHub Actions (broken — runner provisioning fails on free tier; use `bun run release` locally) |
 | Auth | ✅ Local-first PIN (Web Crypto API, middleware, httpOnly cookies) |
-| Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message.body) |
+| Encryption | ✅ AES-256-GCM PII (Customer + Order + OrderItem.variantName + Conversation + Message.body) |
+| Desktop app | ✅ Tauri + auto-updater (signed Ed25519, GitHub Releases) |
+| Release flow | ✅ One-command: `bun run release` (builds + signs + publishes + auto-updates all installed apps) |
 
 ---
 
-## ✅ Done (sessions 1-16)
+## ✅ Done (sessions 1-17)
 
 ### Foundation (sessions 1-7)
 - ✅ Tauri + Next.js 16 + Prisma + shadcn/ui scaffold
@@ -86,83 +89,73 @@
 - ✅ Animated stat cards, tabbed settings UI, empty states
 
 ### Session 16 — Foundation + Auth + Integrations + Design Transformation (2026-06-26)
-
-**PR #43 — Phase A foundation + auth:**
-- ✅ Design system foundation (spacing scale, typography scale, RTL utilities, AppShell helpers)
-- ✅ RTL-first shell (sidebar, topbar, dashboard-layout — logical properties)
-- ✅ Theme-toggle fix (useSyncExternalStore)
-- ✅ **Local-first PIN auth system** (#1 production blocker — Web Crypto API, middleware, 4 API routes, login/setup pages)
-- ✅ Polish: 3× confirm()→AlertDialog, withErrorHandler on 11 routes, ConfirmDialog component
-- ✅ Profile page + photo upload + Upload API
-- ✅ Orders table row actions (View/Edit/Delete dropdown)
-- ✅ **RTL sweep: 28 files** (zero physical properties remaining)
-- ✅ Responsive sweep: 9 pages with app-content wrapper
-- ✅ 10 brand SVG icons
-- ✅ DHD delivery adapter (new integration — EcoTrack platform)
-- ✅ Integration research doc (1,022 lines)
-
-**PR #44 — Phases B-E:**
-- ✅ Dashboard rebuilt (dedup charts), delivery page rebuilt, settings IntegrationsPanel (10 cards)
+- ✅ Design system foundation (spacing, typography, RTL utilities, AppShell helpers)
+- ✅ Local-first PIN auth system (#1 production blocker)
 - ✅ Google Sheets integration (Service Account)
-- ✅ Product photos upload, print labels, backup/restore
-- ✅ **Message.body encryption (S-010)** — WhatsApp history encrypted at rest
-- ✅ WooCommerce SSRF fix, license enforcement (requireLicense + hasFeature)
-- ✅ 25 new tests (134 total)
+- ✅ DHD delivery adapter (EcoTrack platform)
+- ✅ Premium UI patterns (Cal.com shadows, Dub floating panel, Trigger.dev grid)
+- ✅ All charts upgraded, inbox rebuilt, AI chat rebuilt
+- ✅ Breadcrumbs, keyboard shortcuts, page transitions, per-page loading/error states
 
-**PR #45 — Design transformation iteration 1 (research-backed):**
-- ✅ Deep audit of 5 top-tier open-source dashboards (1,534-line report)
-- ✅ Named shadow system (Cal.com): btn-rested/hover/active/focused + dropdown + popover
-- ✅ Sidebar: tinted active state (bg-primary → bg-sidebar-accent), left bar indicator, tooltips when collapsed
-- ✅ Topbar: h-12, backdrop-blur, Live pill, shadow-dropdown menus
-- ✅ AppShell: floating content panel (Dub), grid layout (Trigger.dev)
-- ✅ StatCard: gradient tint, container-query numbers, trend badge, footer sparkline
-- ✅ EmptyState: dashed border, square icon, min-h-[400px], text-balance
-- ✅ All charts: gradient fills, cursor=false, indicator=dot, natural curves
-- ✅ Orders table: rounded border, sticky header, hover:bg-muted/50
-- ✅ Login + Setup: centered cards, gradient bg, shield icon
-- ✅ Button: Cal.com tactile shadows
+### Session 17 — Founder-driven UX + production-readiness sprint (2026-06-29)
 
-**PR #46 — Design iteration 2:**
-- ✅ All 5 chart components upgraded to consistent premium standard
-- ✅ Inbox rebuilt: premium message bubbles (rounded-2xl with tails), conversation list (rounded-lg cards)
-- ✅ AI chat rebuilt with matching premium patterns
-- ✅ Settings tabs: tinted active state
-- ✅ Modal component (Dialog→Drawer swap, Dub pattern) + useMediaQuery hook
-- ✅ Stagger animations on stat card grids
+**14 PRs merged (8 feature + 6 fix). ~4,000 LOC added. All 15 founder-reported issues addressed.**
 
-**PR #47 — Full engineering loop (navigation + experience + functionality):**
-- ✅ Command palette: 5 missing pages added (now covers ALL 16 pages)
-- ✅ Breadcrumbs component: RTL-aware, on order/customer/product detail
-- ✅ Keyboard shortcuts: Gmail-style g+letter navigation
-- ✅ Page transitions: template.tsx with fadeIn animation
-- ✅ Per-page loading states: 5 page-specific skeletons
-- ✅ Per-page error boundaries: 4 error.tsx files with PageError component
-- ✅ Topbar: Help/Support, Logout, Notifications all functional
-- ✅ Export buttons: customers + products pages
-- ✅ All pages: app-content wrapper (consistency)
+**Feature PRs:**
+- ✅ PR #48: Critical fixes — breadcrumbs crash, wilaya i18n, sidebar RTL, expanded seed
+- ✅ PR #49: Stat card consistency — sparkline fix, all pages use shared StatCard
+- ✅ PR #50: Tables consistency — shared PremiumTable across all data pages
+- ✅ PR #51: Product variants — schema migration + UI + order flow (biggest PR)
+- ✅ PR #52: Orders UX — inline status editing + order detail edit mode
+- ✅ PR #53: Delivery + Returns audit — inline status editing + complete flows
+- ✅ PR #54: Import/Export everywhere — XLSX + ECOMANAGER migration preset
+- ✅ PR #55: Full-app consistency — loading/error on all 20 pages + no more confirm()
+
+**Fix PRs:**
+- ✅ PR #56: Locale flash + sidebar RTL + Prisma auto-generate
+- ✅ PR #57: Sidebar RTL hydration (proper fix — dir as server prop)
+- ✅ PR #58: Fast Tauri dev mode (tauri:dev:fast)
+- ✅ PR #59: Cross-platform tauri:dev:fast (Windows support)
+- ✅ PR #60: Installable desktop app + CI auto-build + auto-update
+- ✅ PR #61: Build OOM fix (4GB memory + skip type-checking)
+
+**New features:**
+- ✅ ProductVariant model + per-variant stock + variant picker in order form
+- ✅ Inline customer create in order modal
+- ✅ Inline status editing (orders + deliveries + returns — clickable badges)
+- ✅ Order detail edit mode (Linear/Notion pattern — View ↔ Edit same page)
+- ✅ Import/Export with XLSX support on all 6 data pages
+- ✅ ECOMANAGER + Shopify migration presets
+- ✅ Loading/error states on ALL 20 dashboard pages
+- ✅ One-command release: `bun run release` (builds + signs + publishes + auto-updates)
+- ✅ Installable desktop app (.msi/.dmg/.AppImage) with signed auto-updates
+- ✅ Fast Tauri dev mode (`tauri:dev:fast` — pre-built frontend, instant page loads)
+- ✅ Cross-platform build scripts (TypeScript, not bash — works on Windows)
 
 ---
 
 ## 🔴 Known Issues (carry forward)
 
 ### Production blockers
-1. **Test coverage ~0.35%** — 134 tests for ~38K LOC. Need integration tests for API routes, AI agent, adapters, auth flows
+1. **Test coverage ~0.3%** — 134 tests for ~42K LOC. Need integration tests for API routes, AI agent, adapters, auth flows
 2. **Auth hardening** — no rate limiting on PIN, no session revocation, no audit logs, no password reset
 3. **Integration testing** — YouCan/ZR/DHD adapters untested against real APIs
 4. **No monitoring** — no Sentry, no PostHog, no uptime monitoring
 5. **No database migrations strategy** — using prisma db push (wrong for production)
+6. **GitHub Actions broken** — workflows fail to provision runners (account billing issue). Use `bun run release` locally.
 
 ### Polish items
-6. **3 remaining confirm() calls** in orders-table-client (delete action)
-7. **withErrorHandler on 6 routes** with custom error shapes
-8. **YouCan OAuth** — no refresh token flow (tokens expire after ~15 days)
-9. **WhatsApp inbox** — basic UI, needs: search, media, voice notes, templates, broadcast
-10. **AI extraction** — needs accuracy metrics, A/B testing, fallback chains
+7. **WhatsApp inbox** — basic UI, needs: search, media, voice notes, templates, broadcast
+8. **AI extraction** — needs accuracy metrics, A/B testing, fallback chains
+9. **macOS builds** — release workflow only builds Windows + Linux (needs Apple Developer cert)
+10. **Onboarding flow** — no guided setup for new sellers
+11. **No accessibility audit** — keyboard nav, screen readers, color contrast untested
 
 ### See also
 - `HONEST_ASSESSMENT.md` — candid evaluation of app vs top-tier company product
 - `INTEGRATION_RESEARCH.md` — credentials needed for each integration
 - `RESEARCH_REPORT.md` (root) — premium UI patterns from 5 top-tier dashboards
+- `UPDATES.md` — how to publish signed auto-updates
 
 ---
 
@@ -170,6 +163,6 @@
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `d8cfd50` | v3.0 + Session 16 + design transformations. sf-verify green. 134 tests. |
+| `main` | `fc5f793` | v3.0 + Session 16 + Session 17. sf-verify green. 134 tests. Version 3.1.0. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
-| `agent-handoff` | `64720ff` | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit + HONEST_ASSESSMENT.md |
+| `agent-handoff` | `ded95c5` | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit |

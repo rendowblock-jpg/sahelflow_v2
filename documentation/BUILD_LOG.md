@@ -5,6 +5,65 @@
 
 ---
 
+## Session 17 — 2026-06-29: Founder-driven UX + production-readiness sprint (14 PRs + 4 fixes)
+
+**Branches affected:** `main`
+**Main HEAD:** `fc5f793`
+**PRs:** #48-#61 (8 feature PRs + 6 fix PRs)
+**Tests:** 134 (unchanged — Session 17 was UX/features, not test coverage)
+**Version:** 3.0.0 → 3.1.0
+
+### What was done
+
+The founder reviewed the app on their desktop + reported 15 specific issues + 1 meta-principle ("apply every fix everywhere"). We shipped 8 feature PRs + 6 fix PRs to address all of them.
+
+**Feature PRs:**
+
+- **PR #48 — Critical fixes:** breadcrumbs crash (missing "use client"), wilaya/commune i18n (shared WilayaCommuneSelect component), sidebar RTL no-flash, expanded seed script (20 customers, 50 orders, 30 deliveries, 10 returns, 15 expenses)
+- **PR #49 — Stat card consistency:** sparkline clipping fix, dashboard cards 3+4 enriched, all pages use shared StatCard
+- **PR #50 — Tables consistency:** created shared PremiumTable, replaced raw <table> + shared <Table> in 5 pages, standardized alignment rules
+- **PR #51 — Product variants (biggest PR):** new ProductVariant model + migration script, product form variants manager, product detail variant picker, order form variant picker + inline customer create, order detail variant badge
+- **PR #52 — Orders UX:** OrderStatusBadge (clickable inline status), OrderEditPanel (Linear-style inline edit toggle), extended order service update + PATCH route
+- **PR #53 — Delivery + Returns audit:** ReturnStatusBadge + DeliveryStatusBadge, PATCH routes for both, delivery→order auto-sync
+- **PR #54 — Import/Export everywhere:** XLSX export support, 3 new export routes, 2 new import routes, ECOMANAGER + Shopify migration presets, ImportExportButtons on all 6 data pages
+- **PR #55 — Full-app consistency:** shared PageLoading component, loading.tsx + error.tsx on ALL 20 pages, replaced last confirm() with ConfirmDialog
+
+**Fix PRs:**
+
+- **PR #56 — Locale flash + sidebar RTL + Prisma auto-generate:** cookie-based initial state in zustand, postinstall script for prisma generate
+- **PR #57 — Sidebar RTL hydration (proper fix):** Server Component passes dir as prop to client Sidebar/Topbar, removed inline <script>, fixed StatCard trend overlap
+- **PR #58 — Fast Tauri dev mode:** tauri:dev:fast (pre-builds frontend → instant page loads in desktop window)
+- **PR #59 — Cross-platform tauri:dev:fast:** rewrote bash script as TypeScript (Windows support)
+- **PR #60 — Installable desktop app + CI auto-build + auto-update:** enabled Tauri updater, generated signing keypair, created release.yml workflow, bumped version to 3.1.0
+- **PR #61 — Build OOM fix:** 4GB memory limit + skip type-checking during build
+
+**Additional commits (post-PR):**
+
+- Cross-platform build script (src-tauri/build-frontend.ts — replaced bash)
+- Local installer builder (scripts/build-installer-local.ts)
+- One-command release (scripts/release.ts — `bun run release` builds + signs + publishes + auto-updates)
+- Fixed bundle identifier (com.sahelflow.app → com.sahelflow.desktop)
+
+### Key decisions
+
+- **Sidebar RTL:** Server Component reads cookie + passes dir as prop to client components (eliminates hydration mismatch)
+- **Product variants:** Full schema migration with backward compat (Product.variants JSON kept but unused; ProductVariant relation is canonical)
+- **Release flow:** Local builds via `bun run release` (GitHub Actions broken on free tier)
+- **Build performance:** Skip type-checking during `next build` (we run sf-verify separately)
+
+### What's NOT done (carry forward)
+
+- Test coverage still ~0.3% (134 tests / 42K LOC)
+- Auth hardening (rate limiting, session revocation, audit logs)
+- WhatsApp inbox depth (search, media, templates)
+- Integration testing (YouCan/ZR/DHD against real APIs)
+- AI extraction accuracy metrics
+- Monitoring (Sentry + PostHog)
+- macOS builds (needs Apple Developer cert)
+- GitHub Actions (broken — account billing issue)
+
+---
+
 ## Session 16 — 2026-06-26: Foundation + Auth + Integrations + Design Transformation (5 PRs)
 
 **Branches affected:** `main`
