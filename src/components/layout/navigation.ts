@@ -18,6 +18,7 @@ import {
   Upload,
   Store,
   UserCircle,
+  ShieldAlert,
 } from "lucide-react";
 
 export interface NavItem {
@@ -43,6 +44,7 @@ export const navItems: NavItem[] = [
 
   // Insights (secondary — periodic review)
   { labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, group: "insights" },
+  { labelKey: "nav.risk", href: "/risk", icon: ShieldAlert, group: "insights" },
   { labelKey: "nav.accounting", href: "/accounting", icon: Calculator, group: "insights" },
 
   // Administration
