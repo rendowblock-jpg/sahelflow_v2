@@ -55,7 +55,8 @@ Requires Rust toolchain + Tauri CLI. See `documentation/DESKTOP_BUILD.md` for fu
 ```bash
 bun run tauri:dev:fast # ⚡ Fast review (pre-built frontend, instant page loads)
 bun run tauri:dev     # Full dev mode (hot reload, slower page loads)
-bun run tauri:build   # Production build (creates .dmg/.msi/.AppImage)
+bun run release       # One-command release (builds + signs + publishes + auto-updates all installed apps)
+bun run build:installer # Manual build (fallback — produces signed .msi/.dmg/.AppImage)
 ```
 
 **Production build also needs:**
@@ -76,6 +77,7 @@ See `documentation/UPDATES.md` for how to publish signed updates.
 sf-verify              # full verification (all 4 steps)
 sf-verify --fast       # tsc + eslint only (quickest)
 sf-verify --skip-tests # skip vitest
+bun run release        # one-command release (builds + signs + publishes)
 ```
 
 ## Documentation
