@@ -6,13 +6,14 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
+import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  /** Server-rendered locale (from cookie) — passed to Sidebar + Topbar */
+  /** Server-rendered locale (from cookie) — used for initial render to prevent hydration mismatch */
   locale: Locale;
-  /** Server-rendered direction (from cookie) — passed to Sidebar + Topbar */
+  /** Server-rendered direction (from cookie) — used for initial render to prevent hydration mismatch */
   dir: "ltr" | "rtl";
 }
 
@@ -25,17 +26,32 @@ interface DashboardLayoutProps {
  * - Only <main> scrolls — no double scrollbars, no page bounce
  * - Responsive: sidebar hidden on mobile (Sheet handles it)
  *
- * RTL: locale + dir are passed from the Server Component parent (which reads
- * the cookie). This ensures the server render + client hydration use the same
- * values — no hydration mismatch, no flash.
+ * RTL (the definitive fix):
+ * The root grid container sets `dir` EXPLICITLY (not via CSS inheritance from <html>).
+ * This is critical because:
+ *   1. CSS Grid column placement (grid-cols-[auto_1fr]) only flips when the grid
+ *      container itself has `direction: rtl`. Inheriting from <html> works in theory
+ *      but breaks in practice when client-side locale switches update <html dir> via
+ *      useEffect — the grid doesn't reliably re-layout.
+ *   2. The `dir` prop from the Server Component gives the correct initial value
+ *      (matches SSR → no hydration mismatch).
+ *   3. The live `dir` from useI18n() ensures the grid updates immediately when the
+ *      user switches language via the Topbar (no full page reload required).
+ * The fallback chain is: liveDir (from useI18n) → serverDir (from prop/cookie).
  *
  * Responsive behavior:
  *  - mobile (<lg): sidebar hidden, slides in via Sheet
  *  - tablet/desktop (lg+): sidebar visible, collapsible to 68px rail
  */
-export function DashboardLayout({ children, locale, dir }: DashboardLayoutProps) {
+export function DashboardLayout({ children, locale, dir: serverDir }: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   useKeyboardShortcuts();
+
+  // Live direction from useI18n() — updates instantly on client-side locale switch.
+  // Falls back to the server-rendered dir for the first render (prevents hydration
+  // mismatch because useI18n() reads the same cookie the server read).
+  const { dir: liveDir } = useI18n();
+  const dir = liveDir ?? serverDir;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,7 +65,10 @@ export function DashboardLayout({ children, locale, dir }: DashboardLayoutProps)
   }, []);
 
   return (
-    <div className="grid h-dvh grid-cols-[auto_1fr] overflow-hidden bg-muted/30 lg:bg-muted/40">
+    <div
+      dir={dir}
+      className="grid h-dvh grid-cols-[auto_1fr] overflow-hidden bg-muted/30 lg:bg-muted/40"
+    >
       {/* Sidebar — hidden on mobile, shown on lg+ */}
       <div className="hidden lg:flex h-full">
         <Sidebar serverLocale={locale} serverDir={dir} />

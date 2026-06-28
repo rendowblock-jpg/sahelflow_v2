@@ -66,12 +66,18 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                       : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  {/* Active indicator bar — start side in LTR, end in RTL (logical property) */}
+                  {/* Active indicator bar — always on the START edge (logical property).
+                      In LTR, start=left (next to the icon on the left).
+                      In RTL, start=right (next to the icon on the right).
+                      This is the correct behavior — the indicator marks the leading
+                      edge of the active nav item. The previous code used
+                      `isRtl ? "end-0" : "start-0"` which placed the bar on the
+                      WRONG side (trailing edge) in Arabic mode. */}
                   {isActive && (
                     <span
                       className={cn(
                         "absolute top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary",
-                        isRtl ? "end-0" : "start-0",
+                        "start-0",
                       )}
                     />
                   )}
