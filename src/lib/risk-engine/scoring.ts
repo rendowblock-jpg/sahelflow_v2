@@ -177,7 +177,9 @@ function factorNewCustomer(
   input: RiskAssessmentInput,
   weight: number,
 ): RiskFactor | null {
-  if (!input.customerHistory || input.customerHistory.totalOrders > 0) return null;
+  // Return the factor ONLY when the customer has no order history.
+  // This means: customerHistory is undefined OR totalOrders === 0.
+  if (input.customerHistory && input.customerHistory.totalOrders > 0) return null;
   const points = Math.round(20 * weight);
   return {
     id: "new_customer",
