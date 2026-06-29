@@ -8,6 +8,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { UpdateChecker } from "@/components/updater/update-checker";
 import { getDirection, type Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
+import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -80,13 +81,15 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();` }} />
       </head>
       <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <TooltipProvider delayDuration={300}>
-            {children}
-            <ServiceWorkerRegister />
-            <UpdateChecker />
-          </TooltipProvider>
-        </ThemeProvider>
+        <ServerLocaleProvider locale={locale}>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+            <TooltipProvider delayDuration={300}>
+              {children}
+              <ServiceWorkerRegister />
+              <UpdateChecker />
+            </TooltipProvider>
+          </ThemeProvider>
+        </ServerLocaleProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/use-i18n";
 import { useShopStore } from "@/stores/shop-store";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,8 @@ const NOTIFICATION_COLORS: Record<string, string> = {
 };
 
 export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: TopbarProps) {
-  const { t, locale, setLocale, dir } = useI18n();
+  const { t, locale, setLocale } = useI18n();
+  const router = useRouter();
   const shops = useShopStore((s) => s.shops);
   const activeShopId = useShopStore((s) => s.activeShopId);
   const loaded = useShopStore((s) => s.loaded);
@@ -112,7 +114,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
-  const isRtl = (dir ?? serverDir) === "rtl";
+  const isRtl = serverDir === "rtl";
 
   return (
     <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4">
@@ -198,7 +200,12 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
             {LOCALE_OPTIONS.map((opt) => (
               <DropdownMenuItem
                 key={opt.value}
-                onClick={() => setLocale(opt.value)}
+                onClick={() => {
+                  setLocale(opt.value);
+                  // Refresh the server layout so it re-reads the cookie and
+                  // re-renders with the new locale + dir (no full page reload).
+                  router.refresh();
+                }}
                 className="gap-2"
               >
                 <span className="text-base">{opt.flag}</span>

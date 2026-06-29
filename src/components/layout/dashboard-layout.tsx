@@ -6,7 +6,6 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
-import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 
 interface DashboardLayoutProps {
@@ -47,11 +46,13 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   const [commandOpen, setCommandOpen] = useState(false);
   useKeyboardShortcuts();
 
-  // Live direction from useI18n() — updates instantly on client-side locale switch.
-  // Falls back to the server-rendered dir for the first render (prevents hydration
-  // mismatch because useI18n() reads the same cookie the server read).
-  const { dir: liveDir } = useI18n();
-  const dir = liveDir ?? serverDir;
+  // Use the server-rendered dir ONLY. This comes from the Server Component
+  // layout which reads the cookie via next/headers — it's always correct and
+  // matches on both server + client (no hydration mismatch).
+  //
+  // Live locale switching is handled by router.refresh() in the Topbar's
+  // setLocale handler, which re-runs the server layout → new serverDir prop.
+  const dir = serverDir;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
