@@ -6,7 +6,6 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 
 interface DashboardLayoutProps {
@@ -57,7 +56,6 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   // Live locale switching is handled by router.refresh() in the Topbar's
   // setLocale handler, which re-runs the server layout → new serverDir prop.
   const dir = serverDir;
-  const isRtl = dir === "rtl";
 
   // Cmd+K → toggle command palette (single listener — useKeyboardShortcuts skips this)
   useEffect(() => {
@@ -73,17 +71,14 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
 
   return (
     <div
-      dir={dir}
-      className={cn(
-        "flex h-dvh overflow-hidden bg-muted/30 lg:bg-muted/40",
-        // flex-row-reverse puts the sidebar on the RIGHT in RTL.
-        // We use explicit conditional classes instead of relying on CSS
-        // direction to flip grid/flex — this is 100% reliable across browsers.
-        isRtl && "flex-row-reverse",
-      )}
+      className="flex h-dvh overflow-hidden bg-muted/30 lg:bg-muted/40"
     >
-      {/* Sidebar — hidden on mobile, shown on lg+ */}
-      <div className="hidden lg:flex h-full">
+      {/* Sidebar — hidden on mobile, shown on lg+.
+          In RTL, the sidebar visually appears on the RIGHT because the
+          parent <html dir="rtl"> makes flexbox lay out children right-to-left.
+          We do NOT use flex-row-reverse here (that would double-reverse the
+          sidebar's internal content which already handles its own RTL layout). */}
+      <div className="hidden lg:flex h-full shrink-0">
         <Sidebar serverLocale={locale} serverDir={dir} />
       </div>
 

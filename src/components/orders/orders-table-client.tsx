@@ -1,19 +1,23 @@
 "use client";
 
 /**
- * OrdersTableClient — premium data table with checkbox selection + bulk actions.
- * 
- * Pattern: shadcn v4 data table
- * - Rounded border wrapper
- * - Sticky bg-muted header
- * - hover:bg-muted/50 rows
- * - Proper empty row (h-24 text-center)
+ * OrdersTableClient — premium data table with checkbox selection, bulk actions,
+ * column sorting, + responsive design.
+ *
+ * Features:
+ * - Checkbox selection + bulk action toolbar (confirm/ship/cancel)
+ * - Click column headers to sort (order number, customer, total, date)
+ * - Responsive: hides columns on mobile (items, wilaya, risk, date)
+ * - Row click navigates to order detail
  * - Row actions dropdown (View/Edit/Delete)
+ * - Risk badge column (when riskData provided)
+ * - Sticky header
+ * - Proper empty state
  */
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Loader2, MoreVertical, Eye, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, MoreVertical, Eye, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -31,6 +35,7 @@ import { OrderStatusBadge } from "./order-status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { RiskBadge } from "@/components/risk/risk-badge";
 import type { RiskLevel } from "@/lib/risk-engine/types";
+import { cn } from "@/lib/utils";
 
 interface OrderRow {
   id: string;
@@ -51,22 +56,56 @@ interface OrdersTableClientProps {
   riskData?: Record<string, { level: string; score: number }>;
 }
 
+type SortKey = "orderNumber" | "customer" | "totalPrice" | "createdAt";
+type SortDir = "asc" | "desc";
+
+function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (sortKey !== column) return <ArrowUpDown className="inline h-3 w-3 ms-1 opacity-40" />;
+  return sortDir === "asc"
+    ? <ArrowUp className="inline h-3 w-3 ms-1" />
+    : <ArrowDown className="inline h-3 w-3 ms-1" />;
+}
+
 export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClientProps) {
-  const resolvedOrders = orders;
   const { t } = useI18n();
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const allSelected = resolvedOrders.length > 0 && selected.size === resolvedOrders.length;
+  // Sort orders client-side
+  const sortedOrders = useMemo(() => {
+    const sorted = [...orders].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "orderNumber":
+          cmp = a.orderNumber.localeCompare(b.orderNumber);
+          break;
+        case "customer":
+          cmp = (a.customer?.name ?? "").localeCompare(b.customer?.name ?? "");
+          break;
+        case "totalPrice":
+          cmp = a.totalPrice - b.totalPrice;
+          break;
+        case "createdAt":
+          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [orders, sortKey, sortDir]);
+
+  const allSelected = sortedOrders.length > 0 && selected.size === sortedOrders.length;
   const someSelected = selected.size > 0 && !allSelected;
 
   const toggleAll = () => {
     if (allSelected) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(resolvedOrders.map((o) => o.id)));
+      setSelected(new Set(sortedOrders.map((o) => o.id)));
     }
   };
 
@@ -77,6 +116,15 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
       else next.add(id);
       return next;
     });
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
   };
 
   const handleBulk = (status: OrderStatus) => {
@@ -117,21 +165,23 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
     <>
       {/* Bulk action toolbar */}
       {selected.size > 0 && (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-2.5 animate-fade-up">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/50 px-4 py-2.5 animate-fade-up">
           <span className="text-sm font-medium">
             {t("orders.selected", { n: String(selected.size) })}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={() => handleBulk("confirmed")} disabled={isPending}>
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-              {t("orders.confirmSelected")}
+              <span className="hidden sm:inline">{t("orders.confirmSelected")}</span>
+              <span className="sm:hidden">{t("orders.status.confirmed")}</span>
             </Button>
             <Button size="sm" onClick={() => handleBulk("shipped")} disabled={isPending}>
               {t("orders.shipSelected")}
             </Button>
             <Button size="sm" variant="destructive" onClick={() => handleBulk("cancelled")} disabled={isPending}>
               <XCircle className="h-3.5 w-3.5" />
-              {t("orders.cancelSelectedShort")}
+              <span className="hidden sm:inline">{t("orders.cancelSelectedShort")}</span>
+              <span className="sm:hidden">{t("orders.status.cancelled")}</span>
             </Button>
           </div>
         </div>
@@ -150,26 +200,38 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                     aria-label="Select all"
                   />
                 </th>
-                <th className="px-4 py-3">{t("orders.orderNumber")}</th>
-                <th className="px-4 py-3">{t("orders.customer")}</th>
+                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("orderNumber")}>
+                  {t("orders.orderNumber")}
+                  <SortIcon column="orderNumber" sortKey={sortKey} sortDir={sortDir} />
+                </th>
+                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("customer")}>
+                  {t("orders.customer")}
+                  <SortIcon column="customer" sortKey={sortKey} sortDir={sortDir} />
+                </th>
                 <th className="px-4 py-3 hidden md:table-cell">{t("orders.items")}</th>
                 <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
-                <th className="px-4 py-3 text-end">{t("orders.total")}</th>
+                <th className="px-4 py-3 text-end cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("totalPrice")}>
+                  {t("orders.total")}
+                  <SortIcon column="totalPrice" sortKey={sortKey} sortDir={sortDir} />
+                </th>
                 <th className="px-4 py-3">{t("orders.status")}</th>
                 {riskData && <th className="px-4 py-3 hidden md:table-cell">{t("risk.assessment.score")}</th>}
-                <th className="px-4 py-3 hidden lg:table-cell">{t("orders.date")}</th>
+                <th className="px-4 py-3 hidden lg:table-cell cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("createdAt")}>
+                  {t("orders.date")}
+                  <SortIcon column="createdAt" sortKey={sortKey} sortDir={sortDir} />
+                </th>
                 <th className="px-4 py-3 text-end w-12">{t("orders.action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {resolvedOrders.length === 0 ? (
+              {sortedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={riskData ? 10 : 9} className="h-24 text-center text-muted-foreground">
                     {t("orders.empty.title")}
                   </td>
                 </tr>
               ) : (
-                resolvedOrders.map((order) => {
+                sortedOrders.map((order) => {
                   const status = order.status as OrderStatus;
                   const isSelected = selected.has(order.id);
                   const itemCount = order.items.length;
@@ -179,9 +241,18 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                   return (
                     <tr
                       key={order.id}
-                      className={`transition-colors hover:bg-muted/50 ${isSelected ? "bg-primary/5" : ""}`}
+                      className={cn(
+                        "transition-colors hover:bg-muted/50 cursor-pointer",
+                        isSelected && "bg-primary/5",
+                      )}
+                      onClick={(e) => {
+                        // Don't navigate if clicking checkbox or action button
+                        const target = e.target as HTMLElement;
+                        if (target.closest("button") || target.closest("a") || target.closest('[role="checkbox"]')) return;
+                        router.push(`/orders/${order.id}`);
+                      }}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggleOne(order.id)}
@@ -190,8 +261,8 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                       </td>
                       <td className="px-4 py-3 font-mono text-sm font-medium">{order.orderNumber}</td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium">{order.customer?.name ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">{order.phone}</div>
+                        <div className="text-sm font-medium truncate max-w-[150px]">{order.customer?.name ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{order.customer?.phone ?? order.phone}</div>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-sm text-muted-foreground">{itemLabel}</td>
                       <td className="px-4 py-3 hidden sm:table-cell text-sm">{order.wilaya}</td>
@@ -216,8 +287,8 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                           )}
                         </td>
                       )}
-                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{formatDate(order.createdAt, locale)}</td>
-                      <td className="px-4 py-3 text-end">
+                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">{formatDate(order.createdAt, locale)}</td>
+                      <td className="px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon-sm" className="h-8 w-8">
