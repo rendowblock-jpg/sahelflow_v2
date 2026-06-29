@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
@@ -22,13 +22,21 @@ interface StatCardProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * Parse a string value into prefix + number + suffix for count-up animation.
+ * Handles: "75", "75 DA", "75%", "1,234 DA", "12.5%", "DA 75", etc.
+ * Returns null if the value isn't a parseable numeric string.
+ */
 function parseNumeric(value: React.ReactNode): { prefix: string; num: number; suffix: string } | null {
   if (typeof value !== "string") return null;
-  const match = value.match(/^([^0-9]*)([0-9,.]+)([^0-9]*)$/);
+  // Match: optional non-digit prefix + digits/commas/dots + optional non-digit suffix
+  const match = value.match(/^([^0-9-]*)([0-9][0-9,.]*)([^0-9]*)$/);
   if (!match) return null;
-  if (!match[1] || !match[3]) return null;
+  const prefix = match[1] ?? "";
+  const suffix = match[3] ?? "";
   const num = parseFloat(match[2]!.replace(/[,\s]/g, ""));
-  return { prefix: match[1]!, num: isNaN(num) ? 0 : num, suffix: match[3]! };
+  if (isNaN(num)) return null;
+  return { prefix, num, suffix };
 }
 
 /**
@@ -60,7 +68,9 @@ export function StatCard({
   const isNegative = (trend ?? 0) < 0;
   const showTrend = trend !== undefined && trend !== 0;
 
-  const parsed = parseNumeric(value);
+  // Memoize parsed so the animation effect only restarts when the VALUE changes,
+  // not on every parent re-render (the old code recreated `parsed` every render).
+  const parsed = useMemo(() => parseNumeric(value), [value]);
   const [displayValue, setDisplayValue] = useState(value);
   const rafRef = useRef<number | undefined>(undefined);
 

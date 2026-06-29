@@ -1,5 +1,6 @@
 import { getI18n } from "@/lib/i18n-server";
 import { ImportPanel, ExportButton } from "@/components/import/import-panel";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
 import type { Metadata } from "next";
@@ -15,12 +16,7 @@ export default async function ImportsPage() {
 
   return (
     <div className="app-content page-sections">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("imports.title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("imports.subtitle")}
-        </p>
-      </div>
+      <PageHeader title={t("imports.title")} description={t("imports.subtitle")} />
 
       <ImportPanel
         entity="products"

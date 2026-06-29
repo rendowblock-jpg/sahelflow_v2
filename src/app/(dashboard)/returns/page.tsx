@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { PremiumTable } from "@/components/shared/premium-table";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
@@ -44,18 +45,16 @@ export default async function ReturnsPage() {
 
   return (
     <div className="app-content page-sections">
-      <div className="flex items-start justify-between gap-4 animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("nav.returns")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("returns.subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ImportExportButtons exportRoute="/api/export/returns" />
-          <ReturnFormDialog />
-        </div>
-      </div>
+      <PageHeader
+        title={t("nav.returns")}
+        description={t("returns.subtitle")}
+        actions={
+          <div className="flex items-center gap-2">
+            <ImportExportButtons exportRoute="/api/export/returns" />
+            <ReturnFormDialog />
+          </div>
+        }
+      />
 
       <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard

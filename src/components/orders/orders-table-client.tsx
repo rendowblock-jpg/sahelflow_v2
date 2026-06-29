@@ -98,10 +98,10 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
         const failed = data.failed?.length ?? 0;
 
         if (failed === 0) {
-          toast.success(t("orders.bulkSuccess").replace("{n}", String(succeeded)));
+          toast.success(t("orders.bulkSuccess", { n: String(succeeded) }));
         } else {
           toast.warning(
-            t("orders.bulkPartial").replace("{ok}", String(succeeded)).replace("{fail}", String(failed)),
+            t("orders.bulkPartial", { ok: String(succeeded), fail: String(failed) }),
           );
         }
 
@@ -119,7 +119,7 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
       {selected.size > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-2.5 animate-fade-up">
           <span className="text-sm font-medium">
-            {t("orders.selected").replace("{n}", String(selected.size))}
+            {t("orders.selected", { n: String(selected.size) })}
           </span>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={() => handleBulk("confirmed")} disabled={isPending}>
@@ -174,8 +174,8 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                   const isSelected = selected.has(order.id);
                   const itemCount = order.items.length;
                   const itemLabel = itemCount > 1
-                    ? t("orders.itemsCount").replace("{n}", String(itemCount))
-                    : t("orders.itemsCountSingular").replace("{n}", String(itemCount));
+                    ? t("orders.itemsCount", { n: String(itemCount) })
+                    : t("orders.itemsCountSingular", { n: String(itemCount) });
                   return (
                     <tr
                       key={order.id}

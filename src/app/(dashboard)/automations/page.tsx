@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Bot, Zap, Clock, CheckCircle2 } from "lucide-react";
 import { AutomationActions } from "./automation-actions";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -82,15 +83,11 @@ export default async function AutomationsPage() {
 
   return (
     <div className="app-content page-sections">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("nav.automations")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("automations.subtitle")}
-          </p>
-        </div>
-        <AutomationActions variant="create" />
-      </div>
+      <PageHeader
+        title={t("nav.automations")}
+        description={t("automations.subtitle")}
+        actions={<AutomationActions variant="create" />}
+      />
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">

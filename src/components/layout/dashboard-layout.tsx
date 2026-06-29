@@ -45,6 +45,9 @@ interface DashboardLayoutProps {
  */
 export function DashboardLayout({ children, locale, dir: serverDir }: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
+  // useKeyboardShortcuts handles g+letter navigation. It explicitly SKIPS
+  // Cmd+K (line 40 of the hook), so we handle that here — there's only ONE
+  // Cmd+K listener, not two.
   useKeyboardShortcuts();
 
   // Use the server-rendered dir ONLY. This comes from the Server Component
@@ -56,6 +59,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   const dir = serverDir;
   const isRtl = dir === "rtl";
 
+  // Cmd+K → toggle command palette (single listener — useKeyboardShortcuts skips this)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -84,12 +88,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       </div>
 
       {/* Main content column — floating panel on lg+ */}
-      <div className={cn(
-        "flex flex-col flex-1 overflow-hidden p-0 lg:p-2",
-        // In LTR: no left padding (sidebar is on the left, no gap).
-        // In RTL: no right padding (sidebar is on the right, no gap).
-        isRtl ? "lg:pe-0" : "lg:ps-0",
-      )}>
+      <div className="flex flex-col flex-1 overflow-hidden p-0 lg:p-2 lg:ps-0">
         <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
           <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
           <main className="flex-1 overflow-y-auto overflow-x-hidden">

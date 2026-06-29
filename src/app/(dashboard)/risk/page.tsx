@@ -1,6 +1,7 @@
 import { getI18n } from "@/lib/i18n-server";
 import { getRiskAnalyticsReport, getRiskConfig, getRiskRules, listBlacklistedCustomers } from "@/lib/risk-engine";
 import { formatDZD } from "@/lib/utils";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { PremiumTable } from "@/components/shared/premium-table";
@@ -115,7 +116,7 @@ export default async function RiskPage({
       {/* Range selector */}
       <div className="flex items-center gap-1 rounded-lg border bg-card p-1 w-fit">
         {RANGES.map((r) => (
-          <a
+          <Link
             key={r.days}
             href={`/risk?days=${r.days}&tab=${activeTab}`}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -125,7 +126,7 @@ export default async function RiskPage({
             }`}
           >
             {t(r.labelKey)}
-          </a>
+          </Link>
         ))}
       </div>
 
@@ -137,7 +138,7 @@ export default async function RiskPage({
           icon={<ShieldAlert />}
           accentBg="bg-sky-500/10 dark:bg-sky-500/15"
           accentIcon="text-sky-600 dark:text-sky-400"
-          subtitle={`/ 100`}
+          subtitle="/ 100"
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
@@ -164,7 +165,7 @@ export default async function RiskPage({
           icon={<AlertTriangle />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
-          subtitle={report.totalOrders > 0 ? `${Math.round((k.highRiskOrderCount / report.totalOrders) * 100)}% ${t("risk.confirmationByLevel.total").toLowerCase()}` : undefined}
+          subtitle={report.totalOrders > 0 ? `${Math.round((k.highRiskOrderCount / report.totalOrders) * 100)}% ${t("risk.confirmationByLevel.total")}` : undefined}
           style={{ animationDelay: "240ms" }}
         />
         <StatCard
@@ -190,19 +191,19 @@ export default async function RiskPage({
       <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="overview" asChild>
-            <a href={`/risk?days=${validDays}&tab=overview`}>{t("risk.overview")}</a>
+            <Link href={`/risk?days=${validDays}&tab=overview`}>{t("risk.overview")}</Link>
           </TabsTrigger>
           <TabsTrigger value="analysis" asChild>
-            <a href={`/risk?days=${validDays}&tab=analysis`}>{t("risk.analysis")}</a>
+            <Link href={`/risk?days=${validDays}&tab=analysis`}>{t("risk.analysis")}</Link>
           </TabsTrigger>
           <TabsTrigger value="control" asChild>
-            <a href={`/risk?days=${validDays}&tab=control`}>{t("risk.control")}</a>
+            <Link href={`/risk?days=${validDays}&tab=control`}>{t("risk.control")}</Link>
           </TabsTrigger>
           <TabsTrigger value="blacklist" asChild>
-            <a href={`/risk?days=${validDays}&tab=blacklist`}>{t("risk.blacklist")}</a>
+            <Link href={`/risk?days=${validDays}&tab=blacklist`}>{t("risk.blacklist")}</Link>
           </TabsTrigger>
           <TabsTrigger value="rules" asChild>
-            <a href={`/risk?days=${validDays}&tab=rules`}>{t("risk.rules")}</a>
+            <Link href={`/risk?days=${validDays}&tab=rules`}>{t("risk.rules")}</Link>
           </TabsTrigger>
         </TabsList>
 

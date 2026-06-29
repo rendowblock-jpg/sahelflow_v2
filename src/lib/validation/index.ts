@@ -159,7 +159,7 @@ export const createCategorySchema = z.object({
 
 // ─── Delivery ─────────────────────────────────────────────────────────────────
 
-export const deliveryProviderSchema = z.enum(["yalidine", "maystro", "zrexpress"]);
+export const deliveryProviderSchema = z.enum(["yalidine", "maystro", "zrexpress", "dhd"]);
 
 export const createDeliverySchema = z.object({
   orderId: cuid,

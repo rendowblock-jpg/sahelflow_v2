@@ -44,13 +44,17 @@ describe("isPublicApiRoute", () => {
     expect(isPublicApiRoute("/api/health")).toBe(true);
   });
 
-  it("returns true for /api/storefront/submit + /api/storefront/config", () => {
+  it("returns true for /api/storefront/submit + /api/storefront/config/[slug] (public GET)", () => {
     expect(isPublicApiRoute("/api/storefront/submit")).toBe(true);
     expect(isPublicApiRoute("/api/storefront/config/abc123")).toBe(true);
   });
 
-  it("returns true for /api/qr-image", () => {
-    expect(isPublicApiRoute("/api/qr-image")).toBe(true);
+  it("returns false for /api/storefront/config (protected POST/PUT/DELETE)", () => {
+    expect(isPublicApiRoute("/api/storefront/config")).toBe(false);
+  });
+
+  it("returns true for /api/whatsapp/qr-image", () => {
+    expect(isPublicApiRoute("/api/whatsapp/qr-image")).toBe(true);
   });
 
   it("returns false for protected routes", () => {
@@ -80,8 +84,8 @@ describe("PUBLIC_API_ROUTES + PUBLIC_PAGES arrays", () => {
     expect(PUBLIC_API_ROUTES).toContain("/api/auth");
     expect(PUBLIC_API_ROUTES).toContain("/api/health");
     expect(PUBLIC_API_ROUTES).toContain("/api/storefront/submit");
-    expect(PUBLIC_API_ROUTES).toContain("/api/storefront/config");
-    expect(PUBLIC_API_ROUTES).toContain("/api/qr-image");
+    expect(PUBLIC_API_ROUTES).toContain("/api/storefront/config/");
+    expect(PUBLIC_API_ROUTES).toContain("/api/whatsapp/qr-image");
   });
 
   it("contains the expected public pages", () => {

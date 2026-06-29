@@ -200,8 +200,8 @@ export default async function DashboardPage() {
                   const statusStyle = orderStatusStyles[order.status as OrderStatus];
                   const itemCount = order.items.length;
                   const itemLabel = itemCount > 1
-                    ? t("dashboard.itemsPlural").replace("{n}", String(itemCount))
-                    : t("dashboard.items").replace("{n}", String(itemCount));
+                    ? t("dashboard.itemsPlural", { n: String(itemCount) })
+                    : t("dashboard.items", { n: String(itemCount) });
                   return (
                     <Link
                       key={order.id}
