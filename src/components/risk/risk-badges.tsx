@@ -2,7 +2,7 @@
  * Risk badges — shared components for displaying risk level + action.
  */
 import { cn } from "@/lib/utils";
-import type { RiskLevel, RiskAction } from "@/lib/risk-engine";
+import type { RiskLevel, RiskAction } from "@/lib/risk-engine/types";
 import { useI18n } from "@/hooks/use-i18n";
 
 const LEVEL_STYLES: Record<RiskLevel, string> = {
