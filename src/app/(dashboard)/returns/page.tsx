@@ -72,7 +72,6 @@ export default async function ReturnsPage() {
           icon={<Clock />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
-          trend={requestedCount > 0 ? -1 : 0}
           trendLabel={t("returns.waitingTrend")}
           style={{ animationDelay: "120ms" }}
         />
@@ -82,8 +81,7 @@ export default async function ReturnsPage() {
           icon={<CheckCircle2 />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-emerald-600 dark:text-emerald-400"
-          trend={completedPct > 50 ? 1 : 0}
-          trendLabel={t("returns.completedPct", { pct: completedPct })}
+          subtitle={t("returns.completedPct", { pct: completedPct })}
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
