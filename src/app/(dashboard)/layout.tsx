@@ -11,7 +11,12 @@ const VALID_LOCALES: readonly string[] = ["ar", "fr", "en"];
  * This eliminates the hydration mismatch that occurred when the client-side
  * useI18n() hook returned a different dir than the server render. Now both
  * server + client start with the same cookie-derived values.
+ *
+ * force-dynamic ensures the cookie is always re-read on every request
+ * (no caching), so locale switching via router.refresh() works instantly.
  */
+export const dynamic = "force-dynamic";
+
 export default async function DashboardRouteLayout({
   children,
 }: {
