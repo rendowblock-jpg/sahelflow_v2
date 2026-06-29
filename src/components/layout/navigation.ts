@@ -19,6 +19,7 @@ import {
   Store,
   UserCircle,
   ShieldAlert,
+  Zap,
 } from "lucide-react";
 
 export interface NavItem {
@@ -49,7 +50,7 @@ export const navItems: NavItem[] = [
 
   // Administration
   { labelKey: "nav.agents", href: "/agents", icon: Bot, group: "administration" },
-  { labelKey: "nav.automations", href: "/automations", icon: Bot, group: "administration" },
+  { labelKey: "nav.automations", href: "/automations", icon: Zap, group: "administration" },
   { labelKey: "nav.storefronts", href: "/storefronts", icon: Store, group: "administration" },
   { labelKey: "nav.imports", href: "/imports", icon: Upload, group: "administration" },
   { labelKey: "nav.profile", href: "/profile", icon: UserCircle, group: "administration" },

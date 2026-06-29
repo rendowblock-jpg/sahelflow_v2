@@ -237,7 +237,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
               <span>{t("common.notifications")}</span>
               {unreadCount > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5">
-                  {t("topbar.newNotifications").replace("{n}", String(unreadCount))}
+                  {t("topbar.newNotifications", { n: String(unreadCount) })}
                 </Badge>
               )}
             </DropdownMenuLabel>

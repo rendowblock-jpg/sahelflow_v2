@@ -2095,7 +2095,7 @@
   "topbar.helpSupport": "Help & Support",
   "topbar.loading": "Loading…",
   "topbar.logout": "Log out",
-  "topbar.newNotifications": "{n} new",
+  "topbar.newNotifications": "{{n}} new",
   "topbar.noNotifications": "No new notifications",
   "topbar.profile": "Profile",
   "topbar.searchPlaceholder": "Search...",

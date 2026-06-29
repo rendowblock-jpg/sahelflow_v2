@@ -2095,7 +2095,7 @@
   "topbar.helpSupport": "Aide & Support",
   "topbar.loading": "Chargement…",
   "topbar.logout": "Déconnexion",
-  "topbar.newNotifications": "{n} nouvelles",
+  "topbar.newNotifications": "{{n}} nouvelles",
   "topbar.noNotifications": "Aucune nouvelle notification",
   "topbar.profile": "Profil",
   "topbar.searchPlaceholder": "Rechercher...",

@@ -2095,7 +2095,7 @@
   "topbar.helpSupport": "المساعدة والدعم",
   "topbar.loading": "جاري التحميل…",
   "topbar.logout": "تسجيل الخروج",
-  "topbar.newNotifications": "{n} جديدة",
+  "topbar.newNotifications": "{{n}} جديدة",
   "topbar.noNotifications": "لا توجد إشعارات جديدة",
   "topbar.profile": "الملف الشخصي",
   "topbar.searchPlaceholder": "بحث...",
