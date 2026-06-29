@@ -79,9 +79,6 @@ export default async function DeliveriesPage({
   const delivered = allDeliveries.filter((d) => d.status === "delivered");
   const returned = allDeliveries.filter((d) => ["returned", "refused", "failed"].includes(d.status));
   const totalCost = allDeliveries.reduce((sum, d) => sum + (d.cost ?? 0), 0);
-  const deliveryRate = allDeliveries.length > 0
-    ? Math.round((delivered.length / allDeliveries.length) * 100)
-    : 0;
 
   const STATUS_FILTERS = Object.entries(FILTER_I18N).map(([value, key]) => ({
     value,
@@ -112,8 +109,7 @@ export default async function DeliveriesPage({
           icon={<PackageCheck />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-emerald-600 dark:text-emerald-400"
-          trend={deliveryRate}
-          trendLabel={t("dashboard.deliveryRate")}
+          subtitle={t("dashboard.deliveryRate")}
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
