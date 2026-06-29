@@ -255,7 +255,7 @@ export function IntegrationsPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? t("common.connectionFailed"));
 
-      toast.success(t("integrations.connectedSuccess").replace("{name}", integration.name));
+      toast.success(t("integrations.connectedSuccess", { name: integration.name }));
       setDialogOpen(false);
       setConnecting(null);
     } catch (err) {
@@ -337,7 +337,7 @@ export function IntegrationsPanel({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {t("integrations.connectTitle").replace("{name}", integrationList.find((i) => i.id === connecting)?.name ?? "")}
+              {t("integrations.connectTitle", { name: integrationList.find((i) => i.id === connecting)?.name ?? "" })}
             </DialogTitle>
             <DialogDescription>
               {t("integrations.connectDescription")}
