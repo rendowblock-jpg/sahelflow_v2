@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/hooks/use-i18n";
-import type { RiskRule } from "@/lib/risk-engine";
+import type { RiskRule } from "@/lib/risk-engine/types";
 
 interface Props {
   rules: RiskRule[];

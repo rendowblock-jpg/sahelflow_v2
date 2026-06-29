@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
-import type { RiskLevel } from "@/lib/risk-engine";
+import type { RiskLevel } from "@/lib/risk-engine/types";
 
 interface RiskBadgeProps {
   level: RiskLevel;

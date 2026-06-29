@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useI18n } from "@/hooks/use-i18n";
-import { DEFAULT_RISK_CONFIG, type RiskEngineConfig } from "@/lib/risk-engine";
+import { DEFAULT_RISK_CONFIG, type RiskEngineConfig } from "@/lib/risk-engine/types";
 import { Save, RotateCcw } from "lucide-react";
 
 interface Props {

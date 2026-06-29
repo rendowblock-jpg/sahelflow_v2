@@ -30,7 +30,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { OrderStatusBadge } from "./order-status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { RiskBadge } from "@/components/risk/risk-badge";
-import type { RiskLevel } from "@/lib/risk-engine";
+import type { RiskLevel } from "@/lib/risk-engine/types";
 
 interface OrderRow {
   id: string;
