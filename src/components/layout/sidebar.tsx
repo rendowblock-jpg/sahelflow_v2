@@ -26,17 +26,16 @@ interface SidebarProps {
 
 export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps) {
   const pathname = usePathname();
-  // useI18n() for translations + live locale changes (when user switches language)
-  const { t, dir: liveDir } = useI18n();
+  // useI18n() for translations. The hook now uses ServerLocaleContext for the
+  // initial render (hydration-safe) + the store locale after mount.
+  const { t } = useI18n();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
-  // Use server values for the FIRST render (prevents hydration mismatch),
-  // then switch to live values from useI18n() after hydration.
-  // The live values will match the server values in normal usage (both read
-  // the same cookie), but useI18n() also handles the case where the user
-  // switches language without a full page reload.
-  const isRtl = (liveDir ?? serverDir) === "rtl";
+  // Use the server-rendered dir ONLY — it comes from the cookie (via the server
+  // layout) and matches on both server + client (no hydration mismatch).
+  // Live locale switching is handled by router.refresh() in the Topbar.
+  const isRtl = serverDir === "rtl";
 
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 

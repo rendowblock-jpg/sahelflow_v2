@@ -1,9 +1,15 @@
 /**
- * useI18n — client-side translation hook.
+ * useI18n — client-side translation hook (hydration-safe).
  *
  * Uses React 19's `use()` hook with a cached promise to load translations
  * without setState-in-effect violations. The promise is cached module-level
  * so switching locales is instant after first load.
+ *
+ * HYDRATION SAFETY:
+ * The initial locale comes from ServerLocaleContext (set by the Server Component
+ * layout from the cookie). This ensures the server + client first render use
+ * the SAME locale → no hydration mismatch. After mount, the store locale (from
+ * the cookie via getCookieLocale) takes over for live locale switching.
  *
  * Usage:
  *   const { t, locale, setLocale } = useI18n();
@@ -11,9 +17,10 @@
  */
 "use client";
 
-import { use, useCallback, useEffect, useMemo } from "react";
+import { use, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useUIStore } from "@/stores/ui-store";
 import { loadTranslations, getDirection, type Locale } from "@/lib/i18n";
+import { useServerLocale } from "@/lib/i18n/server-locale-context";
 
 type Translations = Record<string, string>;
 
@@ -29,15 +36,32 @@ function getTranslationPromise(locale: Locale): Promise<Translations> {
   return promise;
 }
 
+/** SSR-safe "are we on the client?" via useSyncExternalStore. */
+function useIsMounted(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function useI18n() {
-  const locale = useUIStore((s) => s.locale);
+  const serverLocale = useServerLocale();
+  const storeLocale = useUIStore((s) => s.locale);
   const setLocaleStore = useUIStore((s) => s.setLocale);
+  const mounted = useIsMounted();
+
+  // Use the server locale for the initial render (server + client first render),
+  // then switch to the store locale after mount. This ensures hydration matches
+  // (both use serverLocale) while still supporting live locale switching.
+  const locale = mounted ? storeLocale : serverLocale;
 
   // React 19 `use()` — suspends until the promise resolves.
   // The promise is cached, so subsequent renders with the same locale are instant.
   const translations = use(getTranslationPromise(locale));
 
   // Sync <html lang> + dir attributes (external DOM — legitimate effect use)
+  // Only runs after mount (no-op on server).
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
