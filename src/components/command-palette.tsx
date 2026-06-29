@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Search,
   ShoppingCart,
   Users,
   Package,
@@ -23,7 +22,14 @@ import {
   Zap,
   DatabaseBackup,
 } from "lucide-react";
-import { Command } from "@/components/ui/command";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   Dialog,
@@ -36,7 +42,7 @@ interface CommandPaletteProps {
   onAction?: (action: string) => void;
 }
 
-interface CommandItem {
+interface CmdItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -50,7 +56,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   const router = useRouter();
   const { t } = useI18n();
 
-  const items = React.useMemo<CommandItem[]>(() => [
+  const items = React.useMemo<CmdItem[]>(() => [
     // Navigation
     { id: "nav-dashboard", label: t("command.nav.dashboard"), icon: BarChart3, group: t("command.group.navigation"), keywords: ["dashboard", "accueil", "home"], action: () => router.push("/dashboard") },
     { id: "nav-orders", label: t("command.nav.orders"), icon: ShoppingCart, group: t("command.group.navigation"), keywords: ["orders", "commandes", "طلبات"], action: () => router.push("/orders") },
@@ -75,71 +81,46 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
     { id: "action-backup", label: t("command.action.backup"), icon: DatabaseBackup, group: t("command.group.quickActions"), keywords: ["backup", "sauvegarde", "نسخ احتياطي"], action: () => router.push("/settings") },
   ], [router, onAction, t]);
 
-  const [search, setSearch] = React.useState("");
-
-  // Group items
+  // Group items (preserving order)
   const grouped = React.useMemo(() => {
-    const groups: Record<string, CommandItem[]> = {};
-    const filtered = items.filter(item =>
-      item.label.toLowerCase().includes(search.toLowerCase()) ||
-      item.keywords.some(k => k.toLowerCase().includes(search.toLowerCase()))
-    );
-    for (const item of filtered) {
+    const groups: Record<string, CmdItem[]> = {};
+    for (const item of items) {
       const list = groups[item.group] ?? (groups[item.group] = []);
       list.push(item);
     }
     return groups;
-  }, [items, search]);
+  }, [items]);
 
   function runAndClose(action: () => void) {
     onOpenChange(false);
-    setSearch("");
-    // Small delay so dialog closes first
     setTimeout(action, 150);
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setSearch(""); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden p-0 shadow-elevated max-w-lg">
-        <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5">
-          <div className="flex items-center border-b border-border px-3" cmdk-input-wrapper="">
-            <Search className="me-2 h-4 w-4 shrink-0 opacity-50" />
-            <input
-              cmdk-input=""
-              placeholder={t("command.searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-          <div className="max-h-[320px] overflow-y-auto p-1">
+        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5">
+          <CommandInput placeholder={t("command.searchPlaceholder")} />
+          <CommandList className="max-h-[320px]">
+            <CommandEmpty>{t("command.noResults", { search: "" })}</CommandEmpty>
             {Object.entries(grouped).map(([group, groupItems]) => (
-              <div key={group} cmdk-group="" className="py-1.5">
-                <div cmdk-group-heading="" className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  {group}
-                </div>
+              <CommandGroup key={group} heading={group}>
                 {groupItems.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <button
+                    <CommandItem
                       key={item.id}
-                      cmdk-item=""
-                      className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-3 py-2.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 transition-colors"
-                      onClick={() => runAndClose(item.action)}
+                      value={`${item.label} ${item.keywords.join(" ")}`}
+                      onSelect={() => runAndClose(item.action)}
                     >
                       <Icon className="me-3 h-4 w-4 text-muted-foreground" />
                       <span>{item.label}</span>
-                    </button>
+                    </CommandItem>
                   );
                 })}
-              </div>
+              </CommandGroup>
             ))}
-            {Object.keys(grouped).length === 0 && (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                {t("command.noResults", { search })}
-              </div>
-            )}
-          </div>
+          </CommandList>
           <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-[10px] text-muted-foreground">
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
             <span>{t("command.navigate")}</span>
