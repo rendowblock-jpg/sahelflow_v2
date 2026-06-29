@@ -12,7 +12,7 @@ import { HorizontalBarChart, type HBarDatum } from "@/components/charts/horizont
 import { RiskControlPanel } from "@/components/risk/risk-control-panel";
 import { RiskRulesPanel } from "@/components/risk/risk-rules-panel";
 import { RiskBlacklistPanel } from "@/components/risk/risk-blacklist-panel";
-import { RiskLevelBadge, RiskActionBadge } from "@/components/risk/risk-badges";
+import { RiskLevelBadgeServer, RiskActionBadgeServer } from "@/components/risk/risk-badges";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShieldAlert, TrendingUp, TrendingDown, AlertTriangle, Ban, PiggyBank, Activity, MapPin } from "lucide-react";
@@ -273,7 +273,7 @@ export default async function RiskPage({
                     {report.confirmationByLevel.map((row) => (
                       <PremiumTable.Row key={row.level}>
                         <PremiumTable.Cell>
-                          <RiskLevelBadge level={row.level} />
+                          <RiskLevelBadgeServer level={row.level} label={t(`risk.level.${row.level}`)} />
                         </PremiumTable.Cell>
                         <PremiumTable.Cell align="end" className="tabular-nums">{row.total}</PremiumTable.Cell>
                         <PremiumTable.Cell align="end" className="tabular-nums text-emerald-600 dark:text-emerald-400">{row.delivered}</PremiumTable.Cell>
@@ -364,7 +364,7 @@ export default async function RiskPage({
                       <PremiumTable.Row key={r.ruleId}>
                         <PremiumTable.Cell className="font-medium">{t(r.labelKey)}</PremiumTable.Cell>
                         <PremiumTable.Cell align="center">
-                          <RiskActionBadge action={r.enabled ? "auto_confirm" : "standard"} />
+                          <RiskActionBadgeServer action={r.enabled ? "auto_confirm" : "standard"} label={r.enabled ? t("risk.rules.enabled") : t("risk.rules.disabled")} />
                         </PremiumTable.Cell>
                         <PremiumTable.Cell align="end" className="tabular-nums">{r.triggerCount}</PremiumTable.Cell>
                       </PremiumTable.Row>

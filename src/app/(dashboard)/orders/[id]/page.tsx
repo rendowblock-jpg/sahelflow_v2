@@ -20,7 +20,7 @@ import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { OrderEditPanel } from "@/components/orders/order-edit-panel";
 import { OrderDeleteButton } from "@/components/orders/order-delete-button";
 import { CreateShipment } from "@/components/orders/create-shipment";
-import { RiskLevelBadge, RiskActionBadge } from "@/components/risk/risk-badges";
+import { RiskLevelBadgeServer, RiskActionBadgeServer } from "@/components/risk/risk-badges";
 import { getI18n } from "@/lib/i18n-server";
 import {
   ArrowRight,
@@ -251,11 +251,11 @@ export default async function OrderDetailPage({
                       <span className="text-3xl font-bold tabular-nums">{riskAssessment.score}</span>
                       <span className="text-sm text-muted-foreground">/ 100</span>
                     </div>
-                    <RiskLevelBadge level={riskAssessment.level} />
+                    <RiskLevelBadgeServer level={riskAssessment.level} label={t(`risk.level.${riskAssessment.level}`)} />
                   </div>
                   <div className="text-end space-y-1">
                     <p className="text-xs text-muted-foreground">{t("risk.assessment.action")}</p>
-                    <RiskActionBadge action={riskAssessment.action} />
+                    <RiskActionBadgeServer action={riskAssessment.action} label={t(`risk.action.${riskAssessment.action}`)} />
                   </div>
                 </div>
 
