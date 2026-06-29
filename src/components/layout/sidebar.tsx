@@ -47,7 +47,10 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
         return (
           <div key={group.id} className="flex flex-col gap-0.5">
             {!collapsed && (
-              <span className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              <span className={cn(
+                "px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50",
+                isRtl ? "text-end" : "text-start",
+              )}>
                 {t(group.labelKey)}
               </span>
             )}
@@ -59,24 +62,22 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                   href={item.href}
                   className={cn(
                     "group relative flex items-center gap-3 rounded-lg text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    // In RTL, reverse the flex so icon is on the right + text flows left
+                    isRtl && "flex-row-reverse",
                     collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2",
                     isActive
                       ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
                       : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  {/* Active indicator bar — always on the START edge (logical property).
-                      In LTR, start=left (next to the icon on the left).
-                      In RTL, start=right (next to the icon on the right).
-                      This is the correct behavior — the indicator marks the leading
-                      edge of the active nav item. The previous code used
-                      `isRtl ? "end-0" : "start-0"` which placed the bar on the
-                      WRONG side (trailing edge) in Arabic mode. */}
+                  {/* Active indicator bar — explicit physical positioning.
+                      LTR: left edge (next to the icon on the left).
+                      RTL: right edge (next to the icon on the right). */}
                   {isActive && (
                     <span
                       className={cn(
                         "absolute top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary",
-                        "start-0",
+                        isRtl ? "right-0" : "left-0",
                       )}
                     />
                   )}
@@ -113,7 +114,10 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-e border-sidebar-border bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "flex h-full flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        // Explicit physical border: LTR = border-right (sidebar on left),
+        // RTL = border-left (sidebar on right). Don't rely on border-e.
+        isRtl ? "border-l border-sidebar-border" : "border-r border-sidebar-border",
         collapsed ? "w-[68px]" : "w-64",
       )}
       aria-label="Sidebar navigation"
@@ -123,6 +127,8 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
       <div className={cn(
         "flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4",
         collapsed && "justify-center px-0",
+        // In RTL, reverse the logo layout (icon on right, text on left)
+        !collapsed && isRtl && "flex-row-reverse",
       )}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
           <span className="text-sm font-bold text-primary-foreground tracking-tight">SF</span>
@@ -154,12 +160,12 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
           onClick={toggleSidebar}
           className={cn(
             "w-full text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60",
-            collapsed ? "justify-center" : "justify-start",
+            collapsed ? "justify-center" : isRtl ? "justify-end" : "justify-start",
           )}
           aria-label={t("nav.collapse")}
         >
           <CollapseIcon className={cn("h-4 w-4", isRtl && "icon-rtl-flip")} />
-          {!collapsed && <span className="ms-2.5 text-[13px]">{t("nav.collapse")}</span>}
+          {!collapsed && <span className={cn("text-[13px]", isRtl ? "me-2.5" : "ms-2.5")}>{t("nav.collapse")}</span>}
         </Button>
       </div>
     </aside>

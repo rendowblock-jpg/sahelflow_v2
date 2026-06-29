@@ -6,6 +6,7 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 
 interface DashboardLayoutProps {
@@ -53,6 +54,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   // Live locale switching is handled by router.refresh() in the Topbar's
   // setLocale handler, which re-runs the server layout → new serverDir prop.
   const dir = serverDir;
+  const isRtl = dir === "rtl";
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,7 +70,13 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   return (
     <div
       dir={dir}
-      className="grid h-dvh grid-cols-[auto_1fr] overflow-hidden bg-muted/30 lg:bg-muted/40"
+      className={cn(
+        "flex h-dvh overflow-hidden bg-muted/30 lg:bg-muted/40",
+        // flex-row-reverse puts the sidebar on the RIGHT in RTL.
+        // We use explicit conditional classes instead of relying on CSS
+        // direction to flip grid/flex — this is 100% reliable across browsers.
+        isRtl && "flex-row-reverse",
+      )}
     >
       {/* Sidebar — hidden on mobile, shown on lg+ */}
       <div className="hidden lg:flex h-full">
@@ -76,7 +84,12 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       </div>
 
       {/* Main content column — floating panel on lg+ */}
-      <div className="flex flex-col overflow-hidden p-0 lg:p-2 lg:ps-0">
+      <div className={cn(
+        "flex flex-col flex-1 overflow-hidden p-0 lg:p-2",
+        // In LTR: no left padding (sidebar is on the left, no gap).
+        // In RTL: no right padding (sidebar is on the right, no gap).
+        isRtl ? "lg:pe-0" : "lg:ps-0",
+      )}>
         <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
           <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
           <main className="flex-1 overflow-y-auto overflow-x-hidden">
