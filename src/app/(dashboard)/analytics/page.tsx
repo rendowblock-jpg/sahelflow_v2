@@ -246,7 +246,7 @@ export default async function AnalyticsPage({
               height={220}
               centerLabel={t("dashboard.deliveryRate")}
             />
-            <div className="grid w-full grid-cols-4 gap-2 text-center">
+            <div className="grid w-full grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-lg border p-2">
                 <p className="text-[10px] text-muted-foreground">{t("analytics.delivered")}</p>
                 <p className="text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{dp.delivered}</p>
