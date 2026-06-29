@@ -1,13 +1,14 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { formatDZD } from "@/lib/utils";
+import { batchAssessOrders } from "@/lib/risk-engine";
 import type { OrderStatus } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download } from "lucide-react";
+import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download, ShieldAlert } from "lucide-react";
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { OrdersTableClient } from "@/components/orders/orders-table-client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -35,10 +36,12 @@ const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = 
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; risk?: string }>;
 }) {
   const { t, locale } = await getI18n();
-  const { status: statusFilter } = await searchParams;
+  const { status: statusFilter, risk: riskFilter } = await searchParams;
+
+  const isHighRiskFilter = riskFilter === "high";
 
   const where = statusFilter && statusFilter !== "all"
     ? { status: statusFilter as OrderStatus }
@@ -50,6 +53,28 @@ export default async function OrdersPage({
     db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
   ]);
+
+  // Batch-assess risk for ALL orders (used for the risk column + high-risk filter).
+  // This loads config+rules once, then builds inputs for each order in parallel.
+  const riskMap = await batchAssessOrders(allOrders.map((o) => o.id));
+  const highRiskCount = Array.from(riskMap.values()).filter(
+    (a) => a.level === "high" || a.level === "critical",
+  ).length;
+
+  // When risk=high filter is active, show only high+critical risk orders
+  // (regardless of status — the seller reviews all risky orders in one queue).
+  const displayOrders = isHighRiskFilter
+    ? allOrders.filter((o) => {
+        const a = riskMap.get(o.id);
+        return a && (a.level === "high" || a.level === "critical");
+      })
+    : filteredOrders;
+
+  // Serialize risk map for the client (orderId → {level, score})
+  const riskData: Record<string, { level: string; score: number }> = {};
+  for (const [orderId, assessment] of riskMap) {
+    riskData[orderId] = { level: assessment.level, score: assessment.score };
+  }
 
   const counts: Record<string, number> = { all: allOrders.length };
   for (const o of allOrders) {
@@ -122,7 +147,7 @@ export default async function OrdersPage({
       </div>
 
       {/* Status filter tabs */}
-      <Tabs defaultValue={statusFilter ?? "all"}>
+      <Tabs defaultValue={isHighRiskFilter ? "high-risk" : (statusFilter ?? "all")}>
         <TabsList className="flex-wrap h-auto">
           {STATUS_FILTERS.map((filter) => (
             <TabsTrigger key={filter.value} value={filter.value} asChild>
@@ -139,28 +164,43 @@ export default async function OrdersPage({
               </Link>
             </TabsTrigger>
           ))}
+          {/* High-risk review queue tab */}
+          <TabsTrigger value="high-risk" asChild>
+            <Link
+              href="/orders?risk=high"
+              className="flex items-center gap-1.5"
+            >
+              <ShieldAlert className="h-3.5 w-3.5" />
+              {t("risk.level.high")}/{t("risk.level.critical")}
+              {highRiskCount > 0 && (
+                <Badge variant="destructive" className="me-1 text-xs px-1.5 py-0">
+                  {highRiskCount}
+                </Badge>
+              )}
+            </Link>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
       {/* Orders table with bulk selection */}
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
-          {filteredOrders.length === 0 ? (
+          {displayOrders.length === 0 ? (
             <EmptyState
-              icon={Package}
-              title={t("orders.empty.title")}
-              description={t("orders.empty.description")}
+              icon={isHighRiskFilter ? ShieldAlert : Package}
+              title={isHighRiskFilter ? t("risk.kpi.highRiskOrders") : t("orders.empty.title")}
+              description={isHighRiskFilter ? t("risk.blacklist.empty") : t("orders.empty.description")}
               actionLabel={t("orders.createOrder")}
               actionHref="/orders"
             />
           ) : (
             <div className="space-y-3 p-4">
-              <OrdersTableClient orders={filteredOrders as unknown as Array<{
+              <OrdersTableClient orders={displayOrders as unknown as Array<{
                 id: string; orderNumber: string; status: string; totalPrice: number;
                 wilaya: string; phone: string; createdAt: Date;
                 items: Array<{ id: string }>;
                 customer: { name: string | null; phone: string | null } | null;
-              }>} locale={locale} />
+              }>} locale={locale} riskData={riskData} />
             </div>
           )}
         </CardContent>

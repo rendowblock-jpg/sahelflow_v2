@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
+import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +22,20 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ orders });
 }
 
-/** POST /api/orders — create a new order (withErrorHandler pattern) */
+/** POST /api/orders — create a new order + auto-assess risk (withErrorHandler pattern) */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const order = await orderService.create({ prisma: db }, body);
-  return NextResponse.json({ order }, { status: 201 });
+
+  // Auto-assess risk on creation (fire-and-forget — don't block the response
+  // if the risk engine has an issue; the assessment is also available via
+  // GET /api/risk/assess/[orderId] on demand).
+  let risk: Awaited<ReturnType<typeof assessOrderRisk>> = null;
+  try {
+    risk = await assessOrderRisk(order.id);
+  } catch {
+    // Risk assessment is non-critical — the order was created successfully.
+  }
+
+  return NextResponse.json({ order, risk }, { status: 201 });
 }, "POST /api/orders");

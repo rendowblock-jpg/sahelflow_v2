@@ -203,6 +203,41 @@ export async function assessRiskFromInput(input: RiskAssessmentInput): Promise<R
   return assessRisk(input, config, rules);
 }
 
+/**
+ * Batch-assess multiple orders efficiently.
+ * Loads config + rules ONCE, then builds inputs + assesses each order.
+ * Returns a Map<orderId, RiskAssessment> for O(1) lookup by the UI.
+ *
+ * Used by the orders page to show risk badges on every row without
+ * N separate config/rules DB round-trips.
+ */
+export async function batchAssessOrders(orderIds: string[]): Promise<Map<string, RiskAssessment>> {
+  if (orderIds.length === 0) return new Map();
+
+  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+  const results = new Map<string, RiskAssessment>();
+
+  // Build all inputs first (parallel), then assess
+  const inputs = await Promise.all(
+    orderIds.map(async (id) => ({ id, input: await buildAssessmentInputFromOrder(id) })),
+  );
+
+  let allTriggered: string[] = [];
+  for (const { id, input } of inputs) {
+    if (!input) continue;
+    const assessment = assessRisk(input, config, rules);
+    results.set(id, assessment);
+    allTriggered = allTriggered.concat(assessment.triggeredRules);
+  }
+
+  // Persist rule trigger counts once (batched)
+  if (allTriggered.length > 0) {
+    void incrementRuleTriggers(allTriggered);
+  }
+
+  return results;
+}
+
 // ── Blacklist management ─────────────────────────────────────────────────────
 
 /** Add a customer to the blacklist (sets the [BLACKLISTED] tag in notes). */
