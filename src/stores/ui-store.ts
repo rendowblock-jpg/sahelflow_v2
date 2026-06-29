@@ -3,12 +3,15 @@
  * Persisted to localStorage via Zustand persist middleware.
  * Also syncs locale to a cookie for server components.
  *
- * ANTI-FLASH DESIGN:
- * The store's initial locale is read from the `sahelflow-locale` cookie on the
- * client side (not from localStorage). This ensures the FIRST client render
- * matches the server render (which also reads the cookie), eliminating the
- * French→Arabic flash. Zustand persist then rehydrates from localStorage —
- * if the value differs (rare edge case), the store updates silently.
+ * HYDRATION-SAFE DESIGN (the definitive fix):
+ * The locale is NEVER persisted to localStorage. The cookie is the SINGLE
+ * source of truth for locale — set by `setLocale()`, read by both the server
+ * (layout.tsx) and the client (`getCookieLocale()`). This eliminates the
+ * hydration mismatch that occurred when localStorage had a stale locale
+ * (e.g. "fr" from a previous session) that differed from the cookie ("ar").
+ *
+ * Only `sidebarCollapsed` is persisted to localStorage (it's UI-only, no
+ * server rendering depends on it, so no hydration risk).
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -49,10 +52,9 @@ function setLocaleCookie(locale: Locale): void {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      // On the client: read from cookie to match SSR (eliminates flash).
-      // On the server: falls back to "fr" (the server default).
-      // Zustand persist will override this with localStorage after hydration,
-      // but in normal usage cookie + localStorage always agree (setLocale sets both).
+      // Read from cookie to match SSR (the server reads the same cookie).
+      // This is the ONLY source of truth for locale — localStorage is NOT
+      // used for locale (see partialize below).
       locale: getCookieLocale() ?? "fr",
       sidebarCollapsed: false,
       activeShopId: null,
@@ -67,24 +69,24 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "sahelflow-ui",
+      // ONLY persist sidebarCollapsed to localStorage. Locale is NOT persisted —
+      // the cookie is the source of truth (set by setLocale, read by server +
+      // client). Persisting locale to localStorage caused hydration mismatches
+      // when the localStorage value differed from the cookie value.
       partialize: (state) => ({
-        locale: state.locale,
         sidebarCollapsed: state.sidebarCollapsed,
       }),
-      // Custom merge: prefer persisted state, but only if it's a valid locale.
-      // This handles the edge case where localStorage has a stale/invalid value.
+      // merge: always keep the cookie-based locale (currentState), never override
+      // it with anything from localStorage. This is the critical fix.
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<UIState> | null;
-        const persistedLocale = persisted?.locale;
-        const validPersistedLocale =
-          persistedLocale && VALID_LOCALES.includes(persistedLocale)
-            ? persistedLocale
-            : undefined;
         return {
           ...currentState,
           ...persisted,
-          // If persisted locale is invalid, keep the cookie-based initial value
-          locale: validPersistedLocale ?? currentState.locale,
+          // ALWAYS keep the cookie-based locale — never use the persisted one.
+          // This prevents the hydration mismatch where localStorage "fr" overrode
+          // the cookie "ar" on the first client render.
+          locale: currentState.locale,
         };
       },
     },
