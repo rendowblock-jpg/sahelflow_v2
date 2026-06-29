@@ -1,0 +1,25 @@
+import { NextRequest, NextResponse } from "next/server";
+import { assessOrderRisk } from "@/lib/risk-engine";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
+
+export const dynamic = "force-dynamic";
+
+/** GET /api/risk/assess/[orderId] — assess the risk of a specific order */
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
+  const { orderId } = await params;
+  const assessment = await assessOrderRisk(orderId);
+  if (!assessment) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+  return NextResponse.json({ assessment });
+}
+
+/** POST /api/risk/assess/[orderId] — re-assess (force refresh) */
+export const POST = withErrorHandler(async (_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) => {
+  const { orderId } = await params;
+  const assessment = await assessOrderRisk(orderId);
+  if (!assessment) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+  return NextResponse.json({ assessment });
+}, "POST /api/risk/assess/[orderId]");

@@ -1,7 +1,16 @@
-"use client";
-
 /**
  * PremiumTable — shared wrapper that gives any table the orders-table treatment.
+ *
+ * NOTE: This component is intentionally NOT a Client Component ("use client").
+ * It is purely presentational (no hooks, no event handlers, no client-only APIs).
+ * Keeping it as a shared/Server-compatible component is REQUIRED for the compound
+ * component pattern (PremiumTable.Header, .Body, .Row, .Head, .Cell, .EmptyRow)
+ * to work when imported by Server Components (customers/products/returns/etc pages).
+ *
+ * Static property assignments (PremiumTable.Header = Header) do NOT survive the
+ * React Server Component boundary — they become `undefined` on the client
+ * reference proxy. Removing "use client" makes this a universal component that
+ * works in both RSC and Client Component contexts.
  *
  * Pattern (from orders-table-client, rebuilt in PR #45):
  * - Rounded border wrapper (overflow-hidden rounded-lg border)

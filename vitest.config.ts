@@ -6,6 +6,11 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.test.ts"],
     exclude: ["node_modules", "src-tauri", "playwright-report"],
+    // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB
+    // and truncate tables in beforeEach — parallel file execution would cause
+    // race conditions (file A's cleanDb deletes file B's in-flight test data).
+    // Run all test files sequentially in a single fork to keep tests isolated.
+    fileParallelism: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

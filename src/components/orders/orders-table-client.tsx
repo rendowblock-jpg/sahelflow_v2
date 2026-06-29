@@ -29,6 +29,8 @@ import type { OrderStatus } from "@/types/domain";
 import { useI18n } from "@/hooks/use-i18n";
 import { OrderStatusBadge } from "./order-status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { RiskBadge } from "@/components/risk/risk-badge";
+import type { RiskLevel } from "@/lib/risk-engine";
 
 interface OrderRow {
   id: string;
@@ -45,9 +47,11 @@ interface OrderRow {
 interface OrdersTableClientProps {
   orders: OrderRow[];
   locale: "ar" | "fr" | "en";
+  /** Optional risk assessments: orderId → { level, score }. When present, a Risk column is shown. */
+  riskData?: Record<string, { level: string; score: number }>;
 }
 
-export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
+export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClientProps) {
   const resolvedOrders = orders;
   const { t } = useI18n();
   const router = useRouter();
@@ -152,6 +156,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                 <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
                 <th className="px-4 py-3 text-end">{t("orders.total")}</th>
                 <th className="px-4 py-3">{t("orders.status")}</th>
+                {riskData && <th className="px-4 py-3 hidden md:table-cell">{t("risk.assessment.score")}</th>}
                 <th className="px-4 py-3 hidden lg:table-cell">{t("orders.date")}</th>
                 <th className="px-4 py-3 text-end w-12">{t("orders.action")}</th>
               </tr>
@@ -159,7 +164,7 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
             <tbody className="divide-y">
               {resolvedOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="h-24 text-center text-muted-foreground">
+                  <td colSpan={riskData ? 10 : 9} className="h-24 text-center text-muted-foreground">
                     {t("orders.empty.title")}
                   </td>
                 </tr>
@@ -198,6 +203,19 @@ export function OrdersTableClient({ orders, locale }: OrdersTableClientProps) {
                           size="sm"
                         />
                       </td>
+                      {riskData && (
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          {riskData[order.id] ? (
+                            <RiskBadge
+                              level={riskData[order.id]!.level as RiskLevel}
+                              score={riskData[order.id]!.score}
+                              href={`/orders/${order.id}`}
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{formatDate(order.createdAt, locale)}</td>
                       <td className="px-4 py-3 text-end">
                         <DropdownMenu>
