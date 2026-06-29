@@ -69,6 +69,16 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
+      <head>
+        {/*
+          FOUC-prevention script — runs synchronously BEFORE first paint.
+          Sets the theme class on <html> from localStorage before hydration.
+          This is the App Router equivalent of next-themes' inline script,
+          but rendered as a raw <script> in the server HTML (not inside a
+          React component), which avoids the React 19 "script tag" error.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();` }} />
+      </head>
       <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <TooltipProvider delayDuration={300}>
