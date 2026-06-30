@@ -63,6 +63,77 @@ The founder reviewed the app on their desktop + reported 15 specific issues + 1 
 - GitHub Actions (broken — account billing issue)
 
 ---
+## Session 18 — 2026-06-29: Bug fixes + Risk engine + Test coverage + AAA audit (11 PRs)
+
+**Branches affected:** `main`, `agent-handoff`
+**Main HEAD:** `84fcf2d`
+**PRs:** #63–#73 (11 PRs merged)
+**Tests:** 134 → 391 (+257, +192%)
+**Version:** 3.1.0 (unchanged)
+
+### What was done
+
+**Session 18 was a bug-fix + audit + risk-engine + test-coverage sprint.** The founder reported persistent bugs (RTL sidebar, PremiumTable crashes) + requested a top-tier risk engine + 80%+ test coverage + a full AAA audit.
+
+**Bug fixes (PRs #63, #65, #66, #67, #68, #72):**
+- RTL sidebar (definitive fix): Root cause was `useI18n()` returning different locales on server vs client. Fixed via `ServerLocaleContext` + removed `flex-row-reverse` from DashboardLayout.
+- PremiumTable crash on 5 RSC pages: Removed `"use client"` from premium-table.tsx (compound pattern doesn't survive RSC boundary).
+- `server-only` import error: Client Components now import from `@/lib/risk-engine/types` (not the barrel).
+- next-themes script tag error: Replaced next-themes with custom ThemeProvider (useSyncExternalStore). FOUC script in layout.tsx `<head>`.
+- Hydration mismatch root cause: Removed `locale` from Zustand `partialize()` (cookie is the single source of truth).
+
+**Risk engine (PR #64):**
+- 4-layer architecture: types.ts, scoring.ts (7 factors + confidence + rule engine), service.ts (DB + blacklist), analytics.ts
+- 6 API routes + /risk dashboard page with 5 tabs (Overview, Analysis, Control, Blacklist, Rules)
+- Order integration: auto-assess on creation, risk badge in orders table, high-risk review queue, risk breakdown card on order detail
+- +108 i18n keys × 3 locales
+
+**Test coverage expansion (PR #64):**
+- 134 → 391 tests (+257, +192%)
+- Risk engine scoring: 50 tests
+- Service layer: 124 tests (customer/product/order/delivery + extensions + stats + service-base)
+- Auth + API + License: 41 tests
+- Adapters + Import/Export: 49 tests
+
+**AAA audit + fixes (PRs #69, #70, #71, #73):**
+- 2 CRITICAL security holes: `PUBLIC_API_ROUTES` storefront config prefix-match exposed mutations to public. Fixed: only `/api/storefront/config/` (trailing slash) is public. Also fixed `/api/qr-image` typo → `/api/whatsapp/qr-image`.
+- StatCard `parseNumeric` bug: regex rejected values with empty prefix. Fixed + memoized.
+- Navigation duplicate icon: Agents + Automations both used Bot. Automations now uses Zap.
+- `dhd` delivery provider missing from Zod enum. Fixed.
+- 99 i18n keys (33 × 3 locales): `{var}` → `{{var}}`. Updated 9 `.replace()` call sites.
+- CommandPalette: Rewrote to use cmdk sub-components — native ↑↓ arrow-key navigation.
+- ImportExportButtons: `alert()` → `toast()`, loading spinner, removed dead `importDialog` prop.
+- StorefrontBuilder: Removed dead Textarea shim.
+- Missing loading.tsx/error.tsx/not-found.tsx for /login, /setup, /storefront/[slug].
+- PageHeader added to returns, automations, imports pages.
+- Orders table upgrade: column sorting, row click to detail, customer phone fix, responsive bulk toolbar.
+- Analytics page responsive: grid-cols-4 → grid-cols-2 sm:grid-cols-4.
+- Risk page crash fixed: Split RiskLevelBadge/RiskActionBadge into Server-safe + Client wrapper versions.
+
+### Key decisions
+- **ServerLocaleContext:** Pass server-determined locale through React Context so useI18n() uses it for initial render (hydration-safe).
+- **No localStorage for locale:** Cookie is the single source of truth. Prevents hydration mismatches.
+- **No flex-row-reverse on container:** Parent `<html dir="rtl">` handles flexbox direction. Sidebar internal content uses its own flex-row-reverse on nav items.
+- **Risk engine Server-safe badges:** RiskLevelBadgeServer (no hooks, accept label prop) for Server Components. RiskLevelBadge (useI18n wrapper) for Client Components.
+- **Custom ThemeProvider:** Replaced next-themes (which renders script tags inside React components) with useSyncExternalStore-based provider. FOUC script in layout.tsx head.
+
+### What's NOT done (carry forward)
+- Test coverage still ~10% (391 tests for ~47K LOC)
+- Auth hardening (rate limiting, session revocation, audit logs)
+- WhatsApp inbox depth (search, media, templates)
+- Integration testing (YouCan/ZR/DHD against real APIs)
+- AI extraction accuracy metrics
+- Monitoring (Sentry + PostHog)
+- macOS builds (needs Apple Developer cert)
+- GitHub Actions (broken — account billing issue)
+- Responsive sweep (Topbar mobile, more pages)
+- Hardcoded strings in login/setup/profile
+- customers/[id] use PremiumTable, products/[id] dedup statusLabels
+- requireAuth() defense-in-depth on API routes
+
+---
+
+
 
 ## Session 16 — 2026-06-26: Foundation + Auth + Integrations + Design Transformation (5 PRs)
 

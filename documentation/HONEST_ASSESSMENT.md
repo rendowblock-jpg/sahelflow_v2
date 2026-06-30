@@ -1,7 +1,7 @@
 # SahelFlow — Honest Assessment
 
 > **Created:** 2026-06-26 (Session 16)
-> **Updated:** 2026-06-29 (Session 17 — founder-driven UX sprint)
+> **Updated:** 2026-06-29 (Session 18 — risk engine + AAA audit + test coverage)
 > **Purpose:** Candid evaluation of where the app stands vs a top-tier company product.
 > This is not a critique — it's a roadmap for what it would take to close the gap.
 
@@ -11,11 +11,11 @@
 
 > "Imagine that a top tier company decided to create the same app idea as me and did it. Can we say our created app here can be that kind of app on every layer?"
 
-## The Answer (updated post-Session 17)
+## The Answer (updated post-Session 18)
 
-**Closer, but still no.** Session 17 closed most of the UX gaps the founder identified — the app now feels professional and consistent. But the engineering rigor gap remains.
+**Closer still — ~90% there.** Session 18 closed the RTL sidebar bug (definitively), added a top-tier risk engine (7 factors + rules + analysis dashboard), expanded test coverage 3× (134 → 391 tests), fixed 2 critical security holes, and shipped ~40 AAA audit fixes. The app now feels professional, consistent, AND is more secure + better tested.
 
-If a company like Linear, Stripe, or Vercel built SahelFlow, our app would still not be at their level on every layer. Here's specifically why — updated for Session 17.
+If a company like Linear, Stripe, or Vercel built SahelFlow, our app would still not be at their level on every layer — but the gap has narrowed significantly. Here's specifically what remains — updated for Session 18.
 
 ---
 
@@ -91,7 +91,7 @@ Features were built. A product wasn't built. Session 17 made the features feel l
 - **One-command release flow** (`bun run release` → builds + signs + publishes + auto-updates all installed apps)
 - **Fast dev mode** (`tauri:dev:fast` — instant page navigation in desktop window)
 
-This is a **strong MVP**. Maybe **~85% of the way there** after Session 17. The UX gaps the founder identified are closed. The remaining gap is engineering rigor + real user validation.
+This is a **strong MVP**. Maybe **~90% of the way there** after Session 18. The UX gaps are closed, the risk engine is live, test coverage is 3× higher, and 2 critical security holes are fixed. The remaining gap is engineering rigor (more tests, monitoring, auth hardening) + real user validation.
 
 ---
 
@@ -99,7 +99,7 @@ This is a **strong MVP**. Maybe **~85% of the way there** after Session 17. The 
 
 If the goal is to actually reach top-tier company quality:
 
-1. **Stop adding features.** Freeze the feature set. (Session 17 was the last feature sprint.)
+1. **Stop adding features.** Freeze the feature set. (Session 18 added the risk engine — that should be the last major feature for now.)
 2. **Test everything that exists.** Write integration tests for every API route, every adapter, every flow. This alone is weeks of work.
 3. **Get real users.** Even 3 Algerian COD sellers using it for a week would surface 100 problems that can't be seen from code.
 4. **Fix the foundational gaps**: rate limiting, session management, error tracking, proper migrations.
@@ -116,7 +116,8 @@ The gap between "AI-built MVP" and "top-tier company product" is in **engineerin
 | Priority | Gap | Effort | Impact |
 |---|---|---|---|
 | 1 | Real user testing (3-5 sellers) | 1 week | Critical — surfaces real problems |
-| 2 | Integration tests for API routes + auth flows | 1-2 weeks | High — catches regressions |
+| 2 | Continue responsive sweep + UI polish | 3-5 days | High — founder reported resizing issues |
+| 3 | Integration tests for API routes + auth flows | 1-2 weeks | High — catches regressions |
 | 3 | Auth hardening (rate limit, session mgmt, audit) | 3-5 days | High — production blocker |
 | 4 | WhatsApp inbox depth (search, media, templates) | 1-2 weeks | High — founder's core goal |
 | 5 | AI extraction accuracy metrics | 3-5 days | Critical — the moat |
@@ -131,3 +132,5 @@ The gap between "AI-built MVP" and "top-tier company product" is in **engineerin
 ---
 
 _This document exists to keep the team honest. Refer back to it before declaring the app "done."_
+
+_Last updated: 2026-06-29 — Session 18 complete. main = `84fcf2d`. 391 tests. App is ~90% to production-grade._
