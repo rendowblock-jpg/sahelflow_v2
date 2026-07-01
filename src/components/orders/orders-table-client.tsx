@@ -200,23 +200,23 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                     aria-label={t("orders.selectAll")}
                   />
                 </th>
-                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("orderNumber")}>
+                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" role="button" tabIndex={0} aria-sort={sortKey === "orderNumber" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("orderNumber")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("orderNumber"); } }}>
                   {t("orders.orderNumber")}
                   <SortIcon column="orderNumber" sortKey={sortKey} sortDir={sortDir} />
                 </th>
-                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("customer")}>
+                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" role="button" tabIndex={0} aria-sort={sortKey === "customer" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("customer")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("customer"); } }}>
                   {t("orders.customer")}
                   <SortIcon column="customer" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th className="px-4 py-3 hidden md:table-cell">{t("orders.items")}</th>
                 <th className="px-4 py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
-                <th className="px-4 py-3 text-end cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("totalPrice")}>
+                <th className="px-4 py-3 text-end cursor-pointer hover:text-foreground select-none" role="button" tabIndex={0} aria-sort={sortKey === "totalPrice" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("totalPrice")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("totalPrice"); } }}>
                   {t("orders.total")}
                   <SortIcon column="totalPrice" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th className="px-4 py-3">{t("orders.status")}</th>
                 {riskData && <th className="px-4 py-3 hidden md:table-cell">{t("risk.assessment.score")}</th>}
-                <th className="px-4 py-3 hidden lg:table-cell cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("createdAt")}>
+                <th className="px-4 py-3 hidden lg:table-cell cursor-pointer hover:text-foreground select-none" role="button" tabIndex={0} aria-sort={sortKey === "createdAt" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("createdAt")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("createdAt"); } }}>
                   {t("orders.date")}
                   <SortIcon column="createdAt" sortKey={sortKey} sortDir={sortDir} />
                 </th>
