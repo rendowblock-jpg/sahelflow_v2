@@ -318,20 +318,29 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
  */
 export async function isLicenseValid(): Promise<boolean> {
   if (isDevMode()) return true;
-
-  // Check cache
   if (cachedResult && Date.now() - cachedAt < CACHE_TTL_MS) {
     return cachedResult.status === "valid";
   }
 
-  // In production without a stored license, we can't validate here (no access
-  // to localStorage from server). The client-side license check gates the UI.
-  // For API enforcement, we rely on the middleware-level check or the client
-  // sending the license status. For now, fail-open in production if no cache
-  // (the UI won't let users interact without a valid license).
-  if (!cachedResult) return true; // fail-open — UI gates prevent access
+  // Wave 2: read the synced validation result from the DB.
+  // The client validates (signature + machine ID + expiry) and syncs the
+  // result via POST /api/license/sync. The server trusts the client's
+  // validation (the signature is cryptographically verified client-side).
+  try {
+    const { db } = await import("@/lib/db");
+    const row = await db.setting.findUnique({ where: { key: "active_license_status" } });
+    if (row?.value) {
+      const result = JSON.parse(row.value) as LicenseValidationResult;
+      cachedResult = result;
+      cachedAt = Date.now();
+      return result.status === "valid";
+    }
+  } catch {
+    // DB not ready — fall through
+  }
 
-  return cachedResult.status === "valid";
+  // No license synced — fail-closed in production (Wave 2: was fail-open).
+  return false;
 }
 
 /**
