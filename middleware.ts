@@ -30,6 +30,22 @@ export async function middleware(request: NextRequest) {
     if (isPublicApiRoute(pathname)) {
       return NextResponse.next();
     }
+    // CSRF protection: state-changing methods must include a custom header
+    // that browsers don't send in cross-origin form submissions.
+    // sameSite=strict cookies already prevent most CSRF; this adds defense-in-depth.
+    const method = request.method.toUpperCase();
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      const customHeader = request.headers.get("x-requested-with");
+      const origin = request.headers.get("origin");
+      // Allow: custom header present, OR no Origin (Tauri webview requests)
+      if (!customHeader && origin) {
+        return NextResponse.json(
+          { error: "CSRF check failed" },
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Verify session token for protected API routes
     const token = request.cookies.get(AUTH_COOKIE)?.value;
     const valid = await verifySessionToken(token, secret);
