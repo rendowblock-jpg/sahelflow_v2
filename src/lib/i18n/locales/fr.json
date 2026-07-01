@@ -2165,5 +2165,6 @@
   "onboarding.product.stock": "Stock",
   "onboarding.product.created": "Produit créé",
   "onboarding.complete": "Configuration terminée ! Bienvenue sur SahelFlow.",
-  "onboarding.finish": "Terminer"
+  "onboarding.finish": "Terminer",
+  "inbox.searchPlaceholder": "Rechercher des conversations..."
 }

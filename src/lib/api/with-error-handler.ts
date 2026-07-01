@@ -20,6 +20,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { SahelFlowError } from "@/types/errors";
 import { logger } from "@/lib/logger";
+import { captureError } from "@/lib/monitoring/sentry";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
@@ -53,6 +54,8 @@ export function withErrorHandler<T extends RouteHandler>(
         `api.${path}.unexpected`,
         err instanceof Error ? err : undefined,
       );
+      // Wave 2: capture to Sentry (no-op if SENTRY_DSN not set)
+      void captureError(err, { path, method: req?.method });
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 },

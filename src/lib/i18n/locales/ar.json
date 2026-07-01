@@ -2165,5 +2165,6 @@
   "onboarding.product.stock": "المخزون",
   "onboarding.product.created": "تم إنشاء المنتج",
   "onboarding.complete": "اكتمل الإعداد! مرحباً بك في SahelFlow.",
-  "onboarding.finish": "إنهاء"
+  "onboarding.finish": "إنهاء",
+  "inbox.searchPlaceholder": "البحث في المحادثات..."
 }
