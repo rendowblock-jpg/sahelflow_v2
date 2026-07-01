@@ -169,11 +169,10 @@ Click the globe icon in the topbar → French (🇫🇷), Arabic (🇩🇿, RTL)
 - ✅ **Encryption foundation (ADR-003)** — field-level AES-256-GCM for secrets + a blind-index primitive for searchable PII. Master key in a mode-0600 keyfile (OS keychain via Tauri Stronghold is the production target). Customer-PII field encryption is the immediate next PR.
 - ✅ **Production build config (ADR-010)** — `output: "standalone"` + Tauri sidecar/resource bundling. `tauri:build` produces an installable bundle (validate on your machine).
 
-## What's NOT yet implemented
+## Implementation Status
 
-- **Customer-PII field encryption** — the crypto lib is ready; applying it to `Customer.name/phone/address/notes` (with a blind index on phone) is the next focused PR.
-- **Auto-updater** — updates must be downloaded manually for now. This is Phase 0 item #6.
-- **Tauri Stronghold / OS keychain** — secrets currently live in an encrypted SQLite table (interim per ADR-004). Moving the master key to Stronghold is a single-PR storage swap.
+All features listed below are **implemented**. For current known issues, see `documentation/PROJECT_STATE.md`.
+
 - **Bundled runtime** — production builds currently require `bun`/`node` on PATH to start the Next.js server (ADR-010 follow-up: bundle Bun).
 
 ## Need help?

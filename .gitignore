@@ -55,3 +55,6 @@ Thumbs.db
 
 # TypeScript build info
 tsconfig.tsbuildinfo
+
+# App metadata (per-machine shop registry)
+data/app-meta.json
