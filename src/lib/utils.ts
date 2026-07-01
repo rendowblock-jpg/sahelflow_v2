@@ -15,11 +15,13 @@ export function cn(...inputs: ClassValue[]): string {
  * @param amount  Amount in DZD (integer — DZD has no subunits in practice)
  * @returns       Formatted string like "1,000 DA"
  */
-export function formatDZD(amount: number): string {
-  return new Intl.NumberFormat("fr-DZ", {
-    style: "decimal",
-    maximumFractionDigits: 0,
-  }).format(amount) + " DA";
+export function formatDZD(amount: number, locale: string = "fr"): string {
+  // UX-007: locale-aware currency formatting
+  const localeMap: Record<string, string> = { ar: "ar-DZ", fr: "fr-DZ", en: "en-GB" };
+  const suffixMap: Record<string, string> = { ar: " دج", fr: " DA", en: " DZD" };
+  const intlLocale = localeMap[locale] ?? "fr-DZ";
+  const suffix = suffixMap[locale] ?? " DA";
+  return new Intl.NumberFormat(intlLocale, { style: "decimal", maximumFractionDigits: 0 }).format(amount) + suffix;
 }
 
 /**

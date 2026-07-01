@@ -176,7 +176,7 @@ export default async function DashboardPage() {
             <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link href="/orders">
                 {t("dashboard.viewAll")}
-                <ArrowRight className="me-1 h-3 w-3" />
+                <ArrowRight className="me-1 h-3 w-3 rtl:rotate-180" />
               </Link>
             </Button>
           </CardHeader>
@@ -276,7 +276,7 @@ export default async function DashboardPage() {
               <Button variant="outline" size="sm" asChild className="w-full">
                 <Link href="/deliveries">
                   {t("dashboard.viewAllDeliveries")}
-                  <ArrowRight className="me-1.5 h-3 w-3" />
+                  <ArrowRight className="me-1.5 h-3 w-3 rtl:rotate-180" />
                 </Link>
               </Button>
             </CardContent>
@@ -295,7 +295,7 @@ export default async function DashboardPage() {
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/orders?status=pending">
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                   </Link>
                 </Button>
               </div>

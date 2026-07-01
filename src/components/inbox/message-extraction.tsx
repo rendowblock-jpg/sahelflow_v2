@@ -269,7 +269,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
                 ) : (
                   <>
                     {t("inbox.createOrder")}
-                    <ArrowRight className="h-4 w-4 ms-1.5" />
+                    <ArrowRight className="h-4 w-4 ms-1.5 rtl:rotate-180" />
                   </>
                 )}
               </Button>

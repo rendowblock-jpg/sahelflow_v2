@@ -110,7 +110,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild>
         <Link href="/products">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           {t("products.title")}
         </Link>
       </Button>
