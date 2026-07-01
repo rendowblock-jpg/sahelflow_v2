@@ -51,7 +51,7 @@ export default function SetupPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Setup failed");
+        setError(data.error ?? t("error.setupFailed"));
         return;
       }
 

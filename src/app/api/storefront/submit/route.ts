@@ -81,7 +81,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const rl = checkRateLimit(ip);
   if (!rl.allowed) {
     return NextResponse.json(
-      { error: "Trop de commandes. Veuillez réessayer dans un instant." },
+      { error: "Too many orders. Please try again later." },
       {
         status: 429,
         headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
@@ -96,7 +96,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const { storefrontService } = await import("@/lib/storefront/service");
   const config = await storefrontService.getBySlug(input.slug);
   if (!config || !config.isActive) {
-    return NextResponse.json({ error: "Storefront introuvable ou inactif" }, { status: 404 });
+    return NextResponse.json({ error: "Storefront not found or inactive" }, { status: 404 });
   }
 
   // Fetch the products (validate they're in the storefront + get prices)
@@ -117,7 +117,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       );
     }
     if (!productMap.has(item.productId)) {
-      return NextResponse.json({ error: "Produit introuvable" }, { status: 400 });
+      return NextResponse.json({ error: "Product not found" }, { status: 400 });
     }
   }
 
@@ -184,6 +184,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     orderNumber: order.orderNumber,
     orderId: order.id,
     total: order.totalPrice,
-    message: "Commande passée avec succès ! Le vendeur vous contactera bientôt.",
+    message: "Order placed successfully! The seller will contact you soon.",
   }, { status: 201 });
 }, "POST /api/storefront/submit");

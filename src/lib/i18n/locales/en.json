@@ -2190,5 +2190,7 @@
   "license.premiumFeature": "Premium Feature",
   "license.premiumFeatureDescription": "This feature requires a paid license.",
   "auth.securityBadge": "Secured by AES-256-GCM encryption",
-  "nav.subtitle": "COD Management"
+  "nav.subtitle": "COD Management",
+  "products.viewDetails": "View {{name}} details",
+  "error.setupFailed": "Setup failed"
 }

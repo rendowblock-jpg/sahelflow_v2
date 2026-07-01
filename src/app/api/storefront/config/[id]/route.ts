@@ -36,7 +36,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
   const { storefrontService } = await import("@/lib/storefront/service");
   const config = await storefrontService.getById(id);
   if (!config) {
-    return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
   return NextResponse.json({ config });
 }, "GET /api/storefront/config/[id]");
@@ -56,7 +56,7 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
   // Verify the storefront exists before updating (gives a clean 404)
   const existing = await storefrontService.getById(id);
   if (!existing) {
-    return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
 
   const config = await storefrontService.update(id, input);
@@ -74,7 +74,7 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
 
   const existing = await storefrontService.getById(id);
   if (!existing) {
-    return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
 
   await storefrontService.delete(id);

@@ -33,12 +33,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   });
 
   if (!order) {
-    return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
   if (order.status !== "confirmed" && order.status !== "shipped") {
     return NextResponse.json(
-      { error: `La commande doit être confirmée avant l'expédition (statut actuel: ${order.status})` },
+      { error: `Order must be confirmed before shipping avant l'expédition (statut actuel: ${order.status})` },
       { status: 400 },
     );
   }

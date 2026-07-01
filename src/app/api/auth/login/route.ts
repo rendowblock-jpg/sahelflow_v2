@@ -19,9 +19,7 @@ const LoginSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  await new Promise((r) => setTimeout(r, 1000));
-
-  const ip = getClientIp(req.headers);
+    const ip = getClientIp(req.headers);
   const rl = checkLoginRateLimit(ip);
   if (!rl.allowed) {
     return NextResponse.json(

@@ -20,7 +20,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     const { storefrontService } = await import("@/lib/storefront/service");
     const config = await storefrontService.getBySlug(slug);
     if (!config || !config.isActive) {
-      return NextResponse.json({ error: "Storefront introuvable" }, { status: 404 });
+      return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
     }
 
     const products = config.productIds.length > 0

@@ -181,7 +181,7 @@ export default async function AutomationsPage() {
                       <Badge variant="outline">
                         {t(TRIGGER_I18N[recipe.trigger] ?? recipe.trigger)}
                       </Badge>
-                      <span className="text-muted-foreground">→</span>
+                      <span className="text-muted-foreground icon-rtl-flip">→</span>
                       <Badge variant="outline">
                         {t(ACTION_I18N[recipe.action] ?? recipe.action)}
                       </Badge>
