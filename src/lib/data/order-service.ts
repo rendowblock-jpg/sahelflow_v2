@@ -201,54 +201,55 @@ export const orderService = {
 
   async update(ctx: ServiceContext, id: string, input: unknown): Promise<Order> {
     return withServiceError(async () => {
-      // Validate input — notes, deliveryCost, address, wilaya, commune, phone,
-      // totalPrice, and items are updatable. Status has its own dedicated method.
       const data = updateOrderSchema.parse(input);
 
-      // If items are provided, sync them (delete removed, update existing, create new)
-      if (data.items) {
-        const existing = await ctx.prisma.orderItem.findMany({ where: { orderId: id } });
-        const incomingIds = data.items.filter(i => i.id).map(i => i.id);
-        const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
+      // SEC-016/CODE-003: wrap item sync + order update in a single $transaction
+      // so a failure on any item operation rolls back all changes.
+      return ctx.prisma.$transaction(async (tx) => {
+        if (data.items) {
+          const existing = await tx.orderItem.findMany({ where: { orderId: id } });
+          const incomingIds = data.items.filter(i => i.id).map(i => i.id);
+          const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
 
-        await Promise.all([
-          ...toDelete.map(itemId =>
-            ctx.prisma.orderItem.delete({ where: { id: itemId } })
-          ),
-          ...data.items.map((item) => {
-            const payload = {
-              productName: item.productName,
-              productVariantName: item.productVariantName ?? null,
-              productId: item.productId ?? null,
-              productVariantId: item.productVariantId ?? null,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: item.total,
-            };
-            if (item.id) {
-              return ctx.prisma.orderItem.update({ where: { id: item.id }, data: payload });
-            }
-            return ctx.prisma.orderItem.create({
-              data: { ...payload, orderId: id },
-            });
-          }),
-        ]);
-      }
+          await Promise.all([
+            ...toDelete.map(itemId =>
+              tx.orderItem.delete({ where: { id: itemId } })
+            ),
+            ...data.items.map((item) => {
+              const payload = {
+                productName: item.productName,
+                productVariantName: item.productVariantName ?? null,
+                productId: item.productId ?? null,
+                productVariantId: item.productVariantId ?? null,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+              };
+              if (item.id) {
+                return tx.orderItem.update({ where: { id: item.id }, data: payload });
+              }
+              return tx.orderItem.create({
+                data: { ...payload, orderId: id },
+              });
+            }),
+          ]);
+        }
 
-      const row = await ctx.prisma.order.update({
-        where: { id },
-        data: {
-          notes: data.notes,
-          deliveryCost: data.deliveryCost,
-          address: data.address,
-          wilaya: data.wilaya,
-          commune: data.commune,
-          phone: data.phone,
-          totalPrice: data.totalPrice,
-        },
-        include: { items: true },
+        const row = await tx.order.update({
+          where: { id },
+          data: {
+            notes: data.notes,
+            deliveryCost: data.deliveryCost,
+            address: data.address,
+            wilaya: data.wilaya,
+            commune: data.commune,
+            phone: data.phone,
+            totalPrice: data.totalPrice,
+          },
+          include: { items: true },
+        });
+        return toDomain(row as unknown as Record<string, unknown>);
       });
-      return toDomain(row as unknown as Record<string, unknown>);
     }, "Order");
   },
 
