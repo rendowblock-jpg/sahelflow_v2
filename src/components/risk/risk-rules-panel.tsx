@@ -37,11 +37,11 @@ export function RiskRulesPanel({ rules: initialRules }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rules: updated }),
       });
-      if (!res.ok) throw new Error("Failed to save");
+      if (!res.ok) throw new Error(t("error.saveFailed"));
       toast.success(t("risk.control.saved"));
       router.refresh();
     } catch {
-      toast.error("Failed to toggle rule");
+      toast.error(t("error.toggleFailed"));
       // Revert on failure
       setRules(initialRules);
     } finally {

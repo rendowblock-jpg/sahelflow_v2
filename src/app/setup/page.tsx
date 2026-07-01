@@ -58,7 +58,7 @@ export default function SetupPage() {
       router.replace("/");
       router.refresh();
     } catch {
-      setError("Network error — please try again");
+      setError(t("error.networkFailure"));
     } finally {
       setLoading(false);
     }

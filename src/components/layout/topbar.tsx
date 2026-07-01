@@ -124,7 +124,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
         <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Open menu">
+              <Button variant="ghost" size="icon-sm" aria-label={t("common.openMenu")}>
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>

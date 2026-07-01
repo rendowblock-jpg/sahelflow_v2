@@ -197,7 +197,7 @@ export function ExpenseFormDialog({
       router.refresh();
     } catch (err) {
       console.error("[ExpenseFormDialog] submit error:", err);
-      setServerError("Network error — please try again");
+      setServerError(t("error.networkFailure"));
     } finally {
       setSubmitting(false);
     }

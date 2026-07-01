@@ -2122,5 +2122,18 @@
   "storefront.view.cart": "سلة التسوق ({{count}})",
   "storefront.notFound.title": "المتجر غير موجود",
   "storefront.notFound.message": "هذا المتجر غير موجود أو تم حذفه.",
-  "storefront.notFound.goHome": "الذهاب إلى المتجر"
+  "storefront.notFound.goHome": "الذهاب إلى المتجر",
+  "error.networkFailure": "خطأ في الشبكة — يرجى المحاولة مرة أخرى",
+  "error.bulkFailed": "فشلت العملية المجمعة",
+  "error.saveFailed": "فشل الحفظ",
+  "error.removeFailed": "فشل الإزالة",
+  "error.resetFailed": "فشل إعادة التعيين",
+  "error.toggleFailed": "فشل التبديل",
+  "error.removeFromBlacklist": "فشل الإزالة من القائمة السوداء",
+  "error.saveConfigFailed": "فشل حفظ التكوين",
+  "error.loginFailed": "فشل تسجيل الدخول",
+  "error.saveFailedGeneric": "فشل الحفظ",
+  "nav.sidebarLabel": "تنقل الشريط الجانبي",
+  "orders.selectAll": "تحديد الكل",
+  "orders.selectOrder": "تحديد الطلب"
 }

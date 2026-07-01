@@ -57,11 +57,11 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (!res.ok) throw new Error("Failed to save");
+      if (!res.ok) throw new Error(t("error.saveFailed"));
       toast.success(t("risk.control.saved"));
       router.refresh();
     } catch {
-      toast.error("Failed to save configuration");
+      toast.error(t("error.saveConfigFailed"));
     } finally {
       setSaving(false);
     }
@@ -75,12 +75,12 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(DEFAULT_RISK_CONFIG),
       });
-      if (!res.ok) throw new Error("Failed to reset");
+      if (!res.ok) throw new Error(t("error.resetFailed"));
       setConfig(DEFAULT_RISK_CONFIG);
       toast.success(t("risk.control.saved"));
       router.refresh();
     } catch {
-      toast.error("Failed to reset");
+      toast.error(t("error.resetFailed"));
     } finally {
       setSaving(false);
       setResetOpen(false);

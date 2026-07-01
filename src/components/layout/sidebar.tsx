@@ -120,7 +120,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
         isRtl ? "border-l border-sidebar-border" : "border-r border-sidebar-border",
         collapsed ? "w-[68px]" : "w-64",
       )}
-      aria-label="Sidebar navigation"
+      aria-label={t("nav.sidebarLabel")}
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Logo / brand */}

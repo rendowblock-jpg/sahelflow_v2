@@ -232,7 +232,7 @@ export function ProductFormDialog({
       router.refresh();
     } catch (err) {
       console.error("[ProductFormDialog] submit error:", err);
-      setServerError("Network error — please try again");
+      setServerError(t("error.networkFailure"));
     } finally {
       setSubmitting(false);
     }

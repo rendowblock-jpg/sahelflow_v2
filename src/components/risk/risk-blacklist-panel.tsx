@@ -37,11 +37,11 @@ export function RiskBlacklistPanel({ customers }: Props) {
     setRemovingId(customerId);
     try {
       const res = await fetch(`/api/risk/blacklist/${customerId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove");
+      if (!res.ok) throw new Error(t("error.removeFailed"));
       toast.success(t("risk.blacklist.remove"));
       router.refresh();
     } catch {
-      toast.error("Failed to remove from blacklist");
+      toast.error(t("error.removeFromBlacklist"));
     } finally {
       setRemovingId(null);
       setConfirmId(null);
