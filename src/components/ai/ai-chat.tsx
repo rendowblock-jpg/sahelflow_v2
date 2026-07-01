@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Loader2, Plus, MessageSquare, Wrench } from "lucide-react";
+import { Bot, Send, Loader2, Plus, MessageSquare, Wrench, ArrowLeft } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface Message {
   id: string;
@@ -334,9 +335,10 @@ export function AiChat() {
     abortRef.current?.abort();
   }
 
+  const isMobile = useMobile();
   return (
     <div className="flex h-full">
-      <div className="w-72 border-e flex flex-col bg-muted/20">
+      <div className={`${isMobile && activeSessionId ? "hidden" : "flex"} w-full md:w-72 md:border-e flex flex-col bg-muted/20`}>
         <div className="p-3 border-b bg-background">
           <Button onClick={handleNewSession} className="w-full" size="sm">
             <Plus className="h-4 w-4 me-1.5" />
@@ -378,10 +380,18 @@ export function AiChat() {
         </ScrollArea>
       </div>
 
-      <div className="flex-1 flex flex-col">
+      <div className={`${isMobile && !activeSessionId ? "hidden" : "flex"} flex-1 flex flex-col`}>
         {activeSessionId ? (
           <>
             <div className="p-3 border-b bg-background flex items-center gap-2">
+              {isMobile && (
+                <button
+                  onClick={() => setActiveSessionId(null)}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+              )}
               <Bot className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-semibold tracking-tight">{t("ai.assistantTitle")}</h2>
               <Badge variant="outline" className="ms-auto text-xs">
