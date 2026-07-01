@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { createProductSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 
 /** POST /api/products — create a new product */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const data = createProductSchema.parse(body);
 

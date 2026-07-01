@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRiskConfig, saveRiskConfig } from "@/lib/risk-engine";
 import type { RiskEngineConfig } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export async function GET() {
 
 /** PUT /api/risk/config — update the risk engine configuration */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json() as Partial<RiskEngineConfig>;
   const current = await getRiskConfig();
   const merged: RiskEngineConfig = {

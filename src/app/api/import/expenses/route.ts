@@ -11,6 +11,7 @@ import {
 import { EXPENSE_FIELDS, parseNumber } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ const VALID_CATEGORIES = ["shipping", "advertising", "supplies", "salary", "rent
 
 /** POST /api/import/expenses */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

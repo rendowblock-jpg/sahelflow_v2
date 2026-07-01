@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAllSettings, setSetting } from "@/lib/settings";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ const updateSchema = z.object({
  * Values are coerced to strings (booleans → "true"/"false", numbers → "123").
  */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = updateSchema.parse(body);
 

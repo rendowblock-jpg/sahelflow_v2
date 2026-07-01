@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgentStream, type AgentMessage, type AgentStreamEvent, type AgentResult } from "@/lib/ai/chat/agent";
+import { isAuthenticated } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  // SEC-013: defense-in-depth auth check (middleware is the primary layer)
+  if (!(await isAuthenticated())) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   let input: z.infer<typeof sendSchema>;
   try {

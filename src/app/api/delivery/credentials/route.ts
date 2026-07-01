@@ -7,6 +7,7 @@ import {
 } from "@/lib/secrets";
 import { deliverySecretKey, deliverySecretKeys, DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ const saveSchema = z.object({
  * Body: { provider: "yalidine", credentials: { api_id: "...", api_token: "..." } }
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = saveSchema.parse(body);
 
@@ -64,6 +66,7 @@ const deleteSchema = z.object({
  * for a provider.
  */
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const provider = req.nextUrl.searchParams.get("provider");
   const input = deleteSchema.parse({ provider });
 

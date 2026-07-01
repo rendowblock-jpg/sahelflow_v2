@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteShop, getShop } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function GET(
 /** DELETE /api/shops/[id] — delete a shop + its SQLite file. */
 export const DELETE = withErrorHandler(
   async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await requireAuth();
     const { id } = await params;
     const shop = getShop(id);
     if (!shop) {

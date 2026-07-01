@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listBlacklistedCustomers, blacklistCustomer } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export async function GET() {
 
 /** POST /api/risk/blacklist — add a customer to the blacklist */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const { customerId, reason } = await req.json() as { customerId: string; reason?: string };
   await blacklistCustomer(customerId, reason);
   return NextResponse.json({ ok: true }, { status: 201 });

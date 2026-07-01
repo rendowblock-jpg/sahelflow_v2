@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { listShops, getActiveShopId, createShop } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ const createShopSchema = z.object({
  * Initializes the shop's SQLite file with the Prisma schema.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = createShopSchema.parse(body);
   const shop = createShop({ name: input.name, icon: input.icon ?? null });

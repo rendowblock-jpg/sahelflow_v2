@@ -4,6 +4,7 @@ import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/
 import { db } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ const syncSchema = z.object({
  * record. If the shipment is delivered, updates the order status too.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = syncSchema.parse(body);
 

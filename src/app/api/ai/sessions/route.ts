@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ const createSchema = z.object({
 
 /** POST /api/ai/sessions — create a new chat session. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json().catch(() => ({}));
   const input = createSchema.parse(body);
   const session = await db.aiChatSession.create({

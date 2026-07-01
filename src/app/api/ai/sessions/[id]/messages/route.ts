@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ const sendSchema = z.object({
 
 /** POST /api/ai/sessions/[id]/messages — send a message + get AI response. */
 export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const body = await req.json();
   const input = sendSchema.parse(body);
