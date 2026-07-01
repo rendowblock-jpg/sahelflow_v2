@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -55,7 +55,14 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   // Generate a unique filename
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  // SEC-011: strict extension allowlist + derive from MIME (not user filename)
+  const ALLOWED_MIME_TO_EXT: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+  };
+  const ext = ALLOWED_MIME_TO_EXT[file.type] ?? "jpg"; // default to jpg, ignore user filename
   const filename = `${randomUUID()}.${ext}`;
 
   // Ensure the public/uploads directory exists
@@ -65,7 +72,13 @@ export const POST = withErrorHandler(async (req: Request) => {
   // Write the file
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
-  await writeFile(join(uploadDir, filename), buffer);
+  // SEC-011: path traversal protection — verify resolved path is inside uploadDir
+  const resolvedPath = join(uploadDir, filename);
+  const resolvedUploadDir = resolve(uploadDir);
+  if (!resolve(resolvedPath).startsWith(resolvedUploadDir + sep) && resolve(resolvedPath) !== resolvedUploadDir) {
+    return NextResponse.json({ error: "Invalid file path" }, { status: 400 });
+  }
+  await writeFile(resolvedPath, buffer);
 
   // Return the public URL
   const url = `/uploads/${filename}`;

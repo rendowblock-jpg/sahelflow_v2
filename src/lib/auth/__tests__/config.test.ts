@@ -44,12 +44,14 @@ describe("isPublicApiRoute", () => {
     expect(isPublicApiRoute("/api/health")).toBe(true);
   });
 
-  it("returns true for /api/storefront/submit + /api/storefront/config/[slug] (public GET)", () => {
+  it("returns true for /api/storefront/submit (public COD checkout)", () => {
     expect(isPublicApiRoute("/api/storefront/submit")).toBe(true);
-    expect(isPublicApiRoute("/api/storefront/config/abc123")).toBe(true);
   });
 
-  it("returns false for /api/storefront/config (protected POST/PUT/DELETE)", () => {
+  it("returns false for /api/storefront/config/* (SEC-003: all config routes protected)", () => {
+    // SEC-003: /api/storefront/config/ was removed from PUBLIC_API_ROUTES.
+    // The public storefront page reads config via the service directly.
+    expect(isPublicApiRoute("/api/storefront/config/abc123")).toBe(false);
     expect(isPublicApiRoute("/api/storefront/config")).toBe(false);
   });
 
@@ -84,7 +86,8 @@ describe("PUBLIC_API_ROUTES + PUBLIC_PAGES arrays", () => {
     expect(PUBLIC_API_ROUTES).toContain("/api/auth");
     expect(PUBLIC_API_ROUTES).toContain("/api/health");
     expect(PUBLIC_API_ROUTES).toContain("/api/storefront/submit");
-    expect(PUBLIC_API_ROUTES).toContain("/api/storefront/config/");
+    // SEC-003: /api/storefront/config/ removed from PUBLIC_API_ROUTES
+    expect(PUBLIC_API_ROUTES).not.toContain("/api/storefront/config/");
     expect(PUBLIC_API_ROUTES).toContain("/api/whatsapp/qr-image");
   });
 

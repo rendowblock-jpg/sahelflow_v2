@@ -70,7 +70,12 @@ const submitSchema = z.object({
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   // Rate limit check
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+  // SEC-022: prefer CF-Connecting-IP (set by Cloudflare, not spoofable) over
+  // X-Forwarded-For (client-controlled). For Tauri local-first, the gateway
+  // sets x-forwarded-for from the actual socket — acceptable. For Cloudflare
+  // Pages, CF-Connecting-IP is the verified client IP.
+  const ip = req.headers.get("cf-connecting-ip")?.trim()
+    ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? req.headers.get("x-real-ip")?.trim()
     ?? "unknown";
   const rl = checkRateLimit(ip);

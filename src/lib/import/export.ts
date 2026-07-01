@@ -20,10 +20,15 @@ export interface ExportColumn<T> {
 
 /** Escape a CSV field value (quote if it contains commas/quotes/newlines). */
 function escapeField(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // SEC-010: CSV formula injection — prefix a single quote to any field
+  // starting with =, +, -, @, tab, or CR. Prevents Excel/LibreOffice from
+  // interpreting the cell as a formula (e.g. =cmd|'/c calc'!A1).
+  const sanitized = /^[=+@\t\r-]/.test(value) ? `'${value}` : value;
+  // Quote fields that contain special characters (RFC 4180)
+  if (/[",\n\r]/.test(sanitized)) {
+    return `"${sanitized.replace(/"/g, '""')}"`;
   }
-  return value;
+  return sanitized;
 }
 
 /** Convert rows to a CSV string. Column labels must already be translated. */
