@@ -6,9 +6,14 @@
  * the raw client directly (the PII encryption extension is tested separately).
  */
 import { PrismaClient } from "@prisma/client";
+import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
 
 // Set the master key for PII encryption (required by db.ts)
-process.env.SF_MASTER_KEY = "test-master-key-for-pii-encryption-32bytes!";
+process.env.SF_MASTER_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+function testKey(): Buffer {
+  return Buffer.from(process.env.SF_MASTER_KEY!, "hex");
+}
 
 export async function createTestPrisma(): Promise<PrismaClient> {
   const db = new PrismaClient();
@@ -63,10 +68,13 @@ export async function seedCustomer(
   db: PrismaClient,
   opts?: { name?: string; phone?: string },
 ) {
+  const name = opts?.name ?? "Ahmed Benali";
+  const phone = opts?.phone ?? "0555123456";
   return db.customer.create({
     data: {
-      name: opts?.name ?? "Ahmed Benali",
-      phone: opts?.phone ?? "0555123456",
+      name, // plaintext (tests use raw client, no PII extension)
+      phone, // plaintext (tests use raw client; production uses blind index via PII extension)
+      nameBlindIndex: deriveBlindIndex(name.toLowerCase().trim(), testKey()),
       wilaya: "Alger",
       commune: "Bab Ezzouar",
       address: "123 Rue Didouche",
