@@ -106,6 +106,9 @@ export async function POST(
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      // PERF-001: abort the agent loop when the client disconnects
+      const onAbort = () => { try { controller.close(); } catch { /* already closed */ } };
+      if (req.signal) { req.signal.addEventListener("abort", onAbort); }
       let assistantResponse = "";
       let assistantToolCalls: AgentResult["toolCalls"] = [];
 
@@ -154,6 +157,7 @@ export async function POST(
       controller.enqueue(encoder.encode("event: close\ndata: {}\n\n"));
       controller.close();
     },
+    cancel() { /* PERF-001: client disconnected — stop the stream */ },
   });
 
   return new Response(stream, {
