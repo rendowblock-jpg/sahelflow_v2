@@ -1,3 +1,4 @@
+import { FeatureGate } from "@/components/license/feature-gate";
 import { AiChat } from "@/components/ai/ai-chat";
 import type { Metadata } from "next";
 import { getI18n } from "@/lib/i18n-server";
@@ -14,5 +15,7 @@ export const dynamic = "force-dynamic";
  * can call tools to search products/customers, create orders, get stats, etc.
  */
 export default function AgentsPage() {
-  return <AiChat />;
+  return <FeatureGate feature="ai_chat">
+      <AiChat />
+    </FeatureGate>;
 }
