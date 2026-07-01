@@ -2118,5 +2118,9 @@
   "updater.unknownError": "Erreur inconnue",
   "updater.upToDate": "SahelFlow est à jour",
   "updater.upToDateDesc": "Aucune mise à jour disponible.",
-  "updater.webMode": "Mode web — mises à jour via git pull"
+  "updater.webMode": "Mode web — mises à jour via git pull",
+  "storefront.view.cart": "Panier ({{count}})",
+  "storefront.notFound.title": "Boutique introuvable",
+  "storefront.notFound.message": "Cette boutique n'existe pas ou a été supprimée.",
+  "storefront.notFound.goHome": "Aller à la boutique"
 }

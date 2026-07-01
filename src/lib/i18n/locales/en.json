@@ -2118,5 +2118,9 @@
   "updater.unknownError": "Unknown error",
   "updater.upToDate": "SahelFlow is up to date",
   "updater.upToDateDesc": "No update available.",
-  "updater.webMode": "Web mode — updates via git pull"
+  "updater.webMode": "Web mode — updates via git pull",
+  "storefront.view.cart": "Cart ({{count}})",
+  "storefront.notFound.title": "Storefront not found",
+  "storefront.notFound.message": "This storefront doesn't exist or has been removed.",
+  "storefront.notFound.goHome": "Go to store"
 }
