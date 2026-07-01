@@ -164,7 +164,7 @@ export function IntegrationsPanel({
       description: t("integrations.maystroDesc"),
       category: "delivery",
       icon: MaystroIcon,
-      iconBg: "bg-emerald-500/10 dark:bg-blue-500/15",
+      iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
       iconColor: "text-emerald-600 dark:text-blue-400",
       connected: false,
       connectLabel: t("integrations.connect"),

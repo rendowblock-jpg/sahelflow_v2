@@ -178,7 +178,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm">
                 <span>{t("import.totalLabel")} <strong>{preview.totalRows}</strong></span>
-                <Badge className="gap-1 bg-green-600 text-white hover:bg-green-600">
+                <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
                   <CheckCircle2 className="h-3 w-3" />
                   {preview.validCount} {t("import.valid")}
                 </Badge>
@@ -255,7 +255,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         {commitResult && (
           <div className="rounded-lg border p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               <span className="font-medium">
                 {t("import.insertedCount", { inserted: commitResult.inserted, total: commitResult.totalRows })}
               </span>

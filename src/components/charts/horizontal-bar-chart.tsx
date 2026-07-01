@@ -9,6 +9,7 @@
  * - Value labels on the right (LabelList)
  * - maxBarSize={22} for clean density
  */
+import { useI18n } from "@/hooks/use-i18n";
 import { Bar, BarChart, XAxis, YAxis, Cell, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
@@ -35,6 +36,8 @@ export function HorizontalBarChart({
   formatValue,
   emptyMessage,
 }: HorizontalBarChartProps) {
+  const { dir } = useI18n();
+  const isRtl = dir === "rtl";
   const fmt = resolveFormatter(formatValue);
   if (!data.length) {
     return (
@@ -51,7 +54,7 @@ export function HorizontalBarChart({
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ left: 4, right: 36, top: 4, bottom: 4 }}
+        margin={{ left: isRtl ? 36 : 4, right: isRtl ? 4 : 36, top: 4, bottom: 4 }}
         barCategoryGap={8}
       >
         <XAxis type="number" hide />
@@ -77,13 +80,13 @@ export function HorizontalBarChart({
             />
           }
         />
-        <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive animationDuration={600}>
+        <Bar dataKey="value" radius={isRtl ? [4, 0, 0, 4] : [0, 4, 4, 0]} maxBarSize={22} isAnimationActive animationDuration={600}>
           {data.map((d) => (
             <Cell key={d.key} fill={d.color ?? `var(--color-value, var(--color-chart-1))`} />
           ))}
           <LabelList
             dataKey="value"
-            position="right"
+            position={isRtl ? "left" : "right"}
             className="fill-muted-foreground text-[10px] font-medium tabular-nums"
             formatter={(v: number) => fmt(v)}
           />

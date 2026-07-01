@@ -62,8 +62,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                   href={item.href}
                   className={cn(
                     "group relative flex items-center gap-3 rounded-lg text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-                    // In RTL, reverse the flex so icon is on the right + text flows left
-                    isRtl && "flex-row-reverse",
+                    // In RTL, flex-row + dir="rtl" naturally puts icon on the right
                     collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2",
                     isActive
                       ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
@@ -128,8 +127,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
         "flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4",
         collapsed && "justify-center px-0",
         // In RTL, reverse the logo layout (icon on right, text on left)
-        !collapsed && isRtl && "flex-row-reverse",
-      )}>
+              )}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
           <span className="text-sm font-bold text-primary-foreground tracking-tight">SF</span>
         </div>

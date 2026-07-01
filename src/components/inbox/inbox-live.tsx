@@ -353,9 +353,9 @@ export function InboxLive() {
                 ? t("inbox.conversationsCountPlural", { count: filteredChats.length })
                 : t("inbox.conversationsCount", { count: filteredChats.length })}
               {mode === "seeded" && status !== "connected" && (
-                <span className="ms-1 text-amber-600">({t("inbox.demo")})</span>
+                <span className="ms-1 text-amber-600 dark:text-amber-400">({t("inbox.demo")})</span>
               )}
-              {mode === "live" && <span className="ms-1 text-green-600">({t("inbox.live")})</span>}
+              {mode === "live" && <span className="ms-1 text-emerald-600">({t("inbox.live")})</span>}
             </p>
           </div>
           <ScrollArea className="flex-1">
@@ -382,7 +382,7 @@ export function InboxLive() {
                       }`}
                     >
                       <Avatar className="h-10 w-10 mt-1">
-                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-green-700" : "bg-sky-100 text-blue-700"}>
+                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-emerald-700" : "bg-sky-100 text-sky-700"}>
                           {c.channel === "whatsapp" ? <MessageCircle className="h-5 w-5" /> : c.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -432,11 +432,11 @@ export function InboxLive() {
                       onClick={() => setActiveChatId(null)}
                       className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
                     >
-                      <ArrowLeft className="h-4 w-4" />
+                      <ArrowLeft className="h-4 w-4 icon-rtl-flip" />
                     </button>
                   )}
                   <Avatar className="size-9">
-                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-sky-100 text-blue-700 dark:bg-sky-900/30 dark:text-sky-400"}>
+                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"}>
                       {activeChat.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -465,8 +465,8 @@ export function InboxLive() {
                           <div
                             className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
                               msg.direction === "inbound"
-                                ? "bg-muted text-foreground rounded-bl-md"
-                                : "bg-primary text-primary-foreground rounded-br-md"
+                                ? "bg-muted text-foreground rounded-es-md"
+                                : "bg-primary text-primary-foreground rounded-ee-md"
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
@@ -508,7 +508,7 @@ export function InboxLive() {
                       disabled={sending}
                     />
                     <Button size="icon" aria-label={t("inbox.send")} onClick={handleSend} disabled={sending || !replyText.trim()}>
-                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 icon-rtl-flip" />}
                     </Button>
                   </div>
                 ) : (
@@ -524,7 +524,7 @@ export function InboxLive() {
                       className="flex-1"
                     />
                     <Button size="icon" disabled>
-                      <Send className="h-4 w-4" />
+                      <Send className="h-4 w-4 icon-rtl-flip" />
                     </Button>
                   </div>
                 )}
@@ -609,8 +609,8 @@ function StatusBar({
   }
   if (status === "connected") {
     return (
-      <div className="border-b bg-green-50 dark:bg-green-950/30 px-4 py-2 text-sm flex items-center justify-between">
-        <span className="flex items-center gap-2 text-green-700 dark:text-green-300">
+      <div className="border-b bg-emerald-50 dark:bg-emerald-950/30 px-4 py-2 text-sm flex items-center justify-between">
+        <span className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-4 w-4" />
           {t("inbox.whatsappConnected")}
           {user?.id && <span className="font-mono text-xs">· {user.id.split("@")[0]}</span>}
@@ -625,7 +625,7 @@ function StatusBar({
   }
   if (status === "qr") {
     return (
-      <div className="border-b bg-sky-50 dark:bg-blue-950/30 px-4 py-2 text-sm flex items-center gap-2 text-blue-700 dark:text-blue-300">
+      <div className="border-b bg-sky-50 dark:bg-sky-950/30 px-4 py-2 text-sm flex items-center gap-2 text-sky-700 dark:text-sky-300">
         <QrCode className="h-4 w-4" />
         {t("inbox.scanQrHint")}
       </div>
@@ -657,7 +657,7 @@ function StatusBar({
 function QrPairingCard({ qrKey, onRefresh }: { qrKey: number; onRefresh: () => void }) {
   const { t } = useI18n();
   return (
-    <div className="border-b bg-sky-50/50 dark:bg-blue-950/20 px-4 py-6 flex flex-col items-center gap-3">
+    <div className="border-b bg-sky-50/50 dark:bg-sky-950/20 px-4 py-6 flex flex-col items-center gap-3">
       <Card className="p-4">
         <CardContent className="p-0 flex flex-col items-center gap-3">
           {/* QR is a dynamic opaque PNG from an API route — <img> is correct here

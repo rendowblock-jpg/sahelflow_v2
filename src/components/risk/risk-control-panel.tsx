@@ -128,7 +128,7 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
           {/* Thresholds */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold">{t("risk.control.thresholds")}</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs">{t("risk.control.thresholds.low")}</Label>
                 <Input

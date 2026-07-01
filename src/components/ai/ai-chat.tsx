@@ -389,7 +389,7 @@ export function AiChat() {
                   onClick={() => setActiveSessionId(null)}
                   className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4 icon-rtl-flip" />
                 </button>
               )}
               <Bot className="h-4 w-4 text-primary" />
@@ -422,8 +422,8 @@ export function AiChat() {
                         <div
                           className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm ${
                             msg.role === "user"
-                              ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-muted text-foreground rounded-bl-md"
+                              ? "bg-primary text-primary-foreground rounded-ee-md"
+                              : "bg-muted text-foreground rounded-es-md"
                           }`}
                         >
                           <p className="text-sm whitespace-pre-wrap">
@@ -505,7 +505,7 @@ export function AiChat() {
                   </Button>
                 ) : (
                   <Button size="icon" onClick={handleSend} disabled={!input.trim()} aria-label={t("ai.send")}>
-                    <Send className="h-4 w-4" />
+                    <Send className="h-4 w-4 icon-rtl-flip" />
                   </Button>
                 )}
               </div>

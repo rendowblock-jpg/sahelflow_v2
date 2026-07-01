@@ -173,7 +173,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {result.order ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 )}

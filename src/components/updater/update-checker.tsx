@@ -255,7 +255,7 @@ export function UpdaterStatus() {
   }
 
   return (
-    <Badge variant="outline" className="gap-1.5 text-green-600">
+    <Badge variant="outline" className="gap-1.5 text-emerald-600">
       <CheckCircle2 className="h-3 w-3" />
       {t("updater.autoUpdateEnabled")}
     </Badge>
