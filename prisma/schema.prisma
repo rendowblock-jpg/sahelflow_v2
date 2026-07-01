@@ -242,6 +242,7 @@ model Return {
   type            String
   exchangeOrderId String?
   notes           String?
+  notes_rel       ReturnNote[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -252,6 +253,7 @@ model Return {
 model ReturnNote {
   id        String   @id @default(cuid())
   returnId  String
+  return    Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
   body      String
   createdAt DateTime @default(now())
 

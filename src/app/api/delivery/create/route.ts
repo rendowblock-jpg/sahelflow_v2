@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   orderId: z.string().min(1),
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
 });
 
 /**

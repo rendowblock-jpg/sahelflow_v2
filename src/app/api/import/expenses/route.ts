@@ -22,7 +22,10 @@ const expenseImportSchema = z.object({
   amount: z.number().int().positive(),
 });
 
-const VALID_CATEGORIES = ["shipping", "advertising", "supplies", "salary", "rent", "utilities", "other"];
+// SEC-020: use the shared expenseCategorySchema from validation (was: local
+// VALID_CATEGORIES list that didn't match the schema or UI).
+import { expenseCategorySchema } from "@/lib/validation";
+const VALID_CATEGORIES = expenseCategorySchema.options;
 
 /** POST /api/import/expenses */
 export const POST = withErrorHandler(async (req: NextRequest) => {
@@ -61,7 +64,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       rowIndex: m.rowIndex,
       data: {
         date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
-        category: VALID_CATEGORIES.includes(String(row.category ?? "").toLowerCase())
+        category: (VALID_CATEGORIES as readonly string[]).includes(String(row.category ?? "").toLowerCase())
           ? String(row.category).toLowerCase()
           : "other",
         description: row.description ?? "",
