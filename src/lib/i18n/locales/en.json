@@ -2122,5 +2122,18 @@
   "storefront.view.cart": "Cart ({{count}})",
   "storefront.notFound.title": "Storefront not found",
   "storefront.notFound.message": "This storefront doesn't exist or has been removed.",
-  "storefront.notFound.goHome": "Go to store"
+  "storefront.notFound.goHome": "Go to store",
+  "error.networkFailure": "Network error — please try again",
+  "error.bulkFailed": "Bulk operation failed",
+  "error.saveFailed": "Failed to save",
+  "error.removeFailed": "Failed to remove",
+  "error.resetFailed": "Failed to reset",
+  "error.toggleFailed": "Failed to toggle",
+  "error.removeFromBlacklist": "Failed to remove from blacklist",
+  "error.saveConfigFailed": "Failed to save configuration",
+  "error.loginFailed": "Login failed",
+  "error.saveFailedGeneric": "Save failed",
+  "nav.sidebarLabel": "Sidebar navigation",
+  "orders.selectAll": "Select all",
+  "orders.selectOrder": "Select order"
 }

@@ -140,7 +140,7 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
         });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error ?? "Bulk operation failed");
+        if (!res.ok) throw new Error(data.error ?? t("error.bulkFailed"));
 
         const succeeded = data.succeeded?.length ?? 0;
         const failed = data.failed?.length ?? 0;
@@ -156,7 +156,7 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
         setSelected(new Set());
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Bulk operation failed");
+        toast.error(err instanceof Error ? err.message : t("error.bulkFailed"));
       }
     });
   };
@@ -197,7 +197,7 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                   <Checkbox
                     checked={allSelected ? true : someSelected ? "indeterminate" : false}
                     onCheckedChange={toggleAll}
-                    aria-label="Select all"
+                    aria-label={t("orders.selectAll")}
                   />
                 </th>
                 <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort("orderNumber")}>

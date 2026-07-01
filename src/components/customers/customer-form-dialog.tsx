@@ -164,7 +164,7 @@ export function CustomerFormDialog({
       router.refresh();
     } catch (err) {
       console.error("[CustomerFormDialog] submit error:", err);
-      setServerError("Network error — please try again");
+      setServerError(t("error.networkFailure"));
     } finally {
       setSubmitting(false);
     }

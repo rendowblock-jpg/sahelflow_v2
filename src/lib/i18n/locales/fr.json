@@ -2122,5 +2122,18 @@
   "storefront.view.cart": "Panier ({{count}})",
   "storefront.notFound.title": "Boutique introuvable",
   "storefront.notFound.message": "Cette boutique n'existe pas ou a été supprimée.",
-  "storefront.notFound.goHome": "Aller à la boutique"
+  "storefront.notFound.goHome": "Aller à la boutique",
+  "error.networkFailure": "Erreur réseau — veuillez réessayer",
+  "error.bulkFailed": "L'opération groupée a échoué",
+  "error.saveFailed": "Échec de l'enregistrement",
+  "error.removeFailed": "Échec de la suppression",
+  "error.resetFailed": "Échec de la réinitialisation",
+  "error.toggleFailed": "Échec du basculement",
+  "error.removeFromBlacklist": "Échec de la suppression de la liste noire",
+  "error.saveConfigFailed": "Échec de l'enregistrement de la configuration",
+  "error.loginFailed": "Échec de la connexion",
+  "error.saveFailedGeneric": "Échec de l'enregistrement",
+  "nav.sidebarLabel": "Navigation de la barre latérale",
+  "orders.selectAll": "Tout sélectionner",
+  "orders.selectOrder": "Sélectionner la commande"
 }
