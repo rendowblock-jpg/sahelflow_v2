@@ -58,7 +58,7 @@ export function OnboardingWizard() {
           body: JSON.stringify({ settings: { business_wilaya: businessWilaya } }),
         });
       }
-    } catch { /* best-effort */ }
+    } catch { toast.error(t('error.networkFailure')); }
     setLoading(false);
   }
 
@@ -71,7 +71,7 @@ export function OnboardingWizard() {
         headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
         body: JSON.stringify({ provider: deliveryProvider, credentials: { apiToken: deliveryToken } }),
       });
-    } catch { /* best-effort */ }
+    } catch { toast.error(t('error.networkFailure')); }
     setLoading(false);
   }
 
@@ -85,7 +85,7 @@ export function OnboardingWizard() {
         body: JSON.stringify({ key: geminiKey }),
       });
       if (res.ok) toast.success(t("onboarding.ai.keySaved"));
-    } catch { /* best-effort */ }
+    } catch { toast.error(t('error.networkFailure')); }
     setLoading(false);
   }
 
@@ -103,17 +103,17 @@ export function OnboardingWizard() {
         }),
       });
       toast.success(t("onboarding.product.created"));
-    } catch { /* best-effort */ }
+    } catch { toast.error(t('error.networkFailure')); }
     setLoading(false);
   }
 
   async function nextStep() {
     setLoading(true);
     try {
-      if (step === 0) await saveBusinessProfile();
-      else if (step === 1) await saveDelivery();
-      else if (step === 2) await saveAiKey();
-      else if (step === 3) await saveProduct();
+      if (step === 0 && businessName.trim()) await saveBusinessProfile();
+      else if (step === 1 && deliveryProvider && deliveryToken) await saveDelivery();
+      else if (step === 2 && geminiKey.trim()) await saveAiKey();
+      else if (step === 3 && productName.trim() && productPrice) await saveProduct();
     } finally {
       setLoading(false);
     }

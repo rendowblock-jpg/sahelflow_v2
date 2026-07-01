@@ -1,5 +1,5 @@
-import { PageLoading } from "@/components/shared/page-loading";
+import { ChatLoading } from "@/components/shared/page-loading";
 
 export default function Loading() {
-  return <PageLoading />;
+  return <ChatLoading />;
 }
