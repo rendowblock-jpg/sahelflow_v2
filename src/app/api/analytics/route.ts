@@ -9,10 +9,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAnalyticsReport } from "@/lib/data/analytics-data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const daysParam = req.nextUrl.searchParams.get("days");
   const days = Number(daysParam);
   const validDays = [7, 14, 30, 90].includes(days) ? days : 30;

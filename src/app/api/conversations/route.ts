@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
  * conversations come from /api/whatsapp/chats.
  */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const conversations = await db.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     take: 100,

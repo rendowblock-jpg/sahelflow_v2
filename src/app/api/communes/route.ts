@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ function getCommunes() {
  * bundling the full 197KB communes.json into the client JS (T-019).
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const wilayaCode = req.nextUrl.searchParams.get("wilaya");
 
   const all = getCommunes();
