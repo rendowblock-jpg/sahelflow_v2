@@ -10,6 +10,14 @@ import { PrismaClient } from "@prisma/client";
 import { encryptCustomerData } from "@/lib/crypto/customer-encryption";
 import { encryptPiiFields, ORDER_PII_FIELDS } from "@/lib/crypto/pii-fields";
 
+// CRITICAL: Compute absolute DB path from cwd.
+// Prisma CLI resolves relative paths from prisma/ directory,
+// Prisma Client resolves from cwd (project root).
+// Using an absolute path ensures both use the SAME file.
+const path = require("node:path");
+const dbPath = path.resolve(process.cwd(), "data", "shops", "dev.db");
+process.env.DATABASE_URL = `file:${dbPath}`;
+
 const client = new PrismaClient({
   log: ["warn", "error"],
 });
