@@ -31,7 +31,7 @@ export async function GET() {
     {
       status: allOk ? "healthy" : "degraded",
       checks,
-      version: process.env.npm_package_version ?? "3.0.0",
+      version: process.env.npm_package_version ?? process.env.npm_package_version ?? "3.1.0",
       timestamp: new Date().toISOString(),
     },
     { status: allOk ? 200 : 503 },
