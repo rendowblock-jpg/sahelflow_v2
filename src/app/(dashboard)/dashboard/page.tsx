@@ -23,7 +23,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import Link from "next/link";
 
-export const revalidate = 30;
 
 export default async function DashboardPage() {
   const { t } = await getI18n();
