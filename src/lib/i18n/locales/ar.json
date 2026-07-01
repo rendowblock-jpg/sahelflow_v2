@@ -2136,5 +2136,7 @@
   "nav.sidebarLabel": "تنقل الشريط الجانبي",
   "orders.selectAll": "تحديد الكل",
   "orders.selectOrder": "تحديد الطلب",
-  "storefront.view.added": "تمت الإضافة"
+  "storefront.view.added": "تمت الإضافة",
+  "orders.empty.highRiskTitle": "لا توجد طلبات عالية المخاطر",
+  "orders.empty.highRiskDesc": "جميع طلباتك منخفضة المخاطر. عمل رائع!"
 }

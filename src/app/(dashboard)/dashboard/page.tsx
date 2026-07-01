@@ -1,3 +1,4 @@
+import { statusI18nKey } from "@/lib/shared/status-colors";
 import { getDashboardStats, getRecentOrders } from "@/lib/data/dashboard";
 import { getDashboardAnalytics } from "@/lib/data/analytics-data";
 import { formatDZD } from "@/lib/utils";
@@ -224,7 +225,7 @@ export default async function DashboardPage() {
                             {t(statusStyle.i18nKey)}
                           </span>
                         ) : (
-                          <Badge variant="outline">{order.status}</Badge>
+                          <Badge variant="outline">{t(statusI18nKey(order.status as never))}</Badge>
                         )}
                       </div>
                     </Link>

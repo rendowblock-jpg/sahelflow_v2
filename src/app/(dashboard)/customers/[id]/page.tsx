@@ -196,7 +196,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         {!customer.notes && (
           <Card className="lg:col-span-2 animate-fade-up">
             <CardHeader>
-              <CardTitle className="text-base">{t("customers.address") || "Address"}</CardTitle>
+              <CardTitle className="text-base">{t("customers.address")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm">{customer.address || "—"}</p>

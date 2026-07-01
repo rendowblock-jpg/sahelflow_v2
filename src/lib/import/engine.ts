@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Import engine — parse CSV/XLSX, map columns, validate, batch-insert.
  *

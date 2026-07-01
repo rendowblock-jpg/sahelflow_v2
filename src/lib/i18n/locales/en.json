@@ -2136,5 +2136,7 @@
   "nav.sidebarLabel": "Sidebar navigation",
   "orders.selectAll": "Select all",
   "orders.selectOrder": "Select order",
-  "storefront.view.added": "Added"
+  "storefront.view.added": "Added",
+  "orders.empty.highRiskTitle": "No high-risk orders",
+  "orders.empty.highRiskDesc": "All your orders are low-risk. Great job!"
 }
