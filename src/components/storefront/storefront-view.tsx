@@ -180,7 +180,18 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   <CardContent className="pt-4 space-y-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium">{product.name}</h3>
+                        {product.images && (
+                      <div className="aspect-square w-full rounded-lg bg-muted overflow-hidden mb-3">
+                        <img
+                          src={product.images.split(",")[0]}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      </div>
+                    )}
+                    <h3 className="font-medium">{product.name}</h3>
                         {product.sku && (
                           <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
                         )}
