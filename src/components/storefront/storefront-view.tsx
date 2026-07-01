@@ -238,11 +238,11 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, -1)} aria-label={t("storefront.view.decreaseQty")}>
+                        <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.product.id, -1)} aria-label={t("storefront.view.decreaseQty")}>
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="w-6 text-center text-xs">{item.quantity}</span>
-                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, 1)} aria-label={t("storefront.view.increaseQty")}>
+                        <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.product.id, 1)} aria-label={t("storefront.view.increaseQty")}>
                           <Plus className="h-3 w-3" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeFromCart(item.product.id)} aria-label={t("storefront.view.removeItem")}>

@@ -2118,5 +2118,9 @@
   "updater.unknownError": "خطأ غير معروف",
   "updater.upToDate": "SahelFlow محدث",
   "updater.upToDateDesc": "لا يتوفر تحديث.",
-  "updater.webMode": "وضع الويب — التحديثات عبر git pull"
+  "updater.webMode": "وضع الويب — التحديثات عبر git pull",
+  "storefront.view.cart": "سلة التسوق ({{count}})",
+  "storefront.notFound.title": "المتجر غير موجود",
+  "storefront.notFound.message": "هذا المتجر غير موجود أو تم حذفه.",
+  "storefront.notFound.goHome": "الذهاب إلى المتجر"
 }
