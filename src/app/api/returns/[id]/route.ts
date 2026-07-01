@@ -1,7 +1,9 @@
 /**
  * PATCH /api/returns/[id] — update return status (requested → approved → completed / rejected)
  *
- * Body: { status: "approved" | "rejected" | "completed" }
+ * SEC-016/CODE-013/CODE-029: return update + returnNote create + stock restoration +
+ * customer stats adjustment are all in a single $transaction. A failure on any
+ * step rolls back all changes.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -25,13 +27,11 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const body = await req.json();
   const { status, notes } = returnStatusSchema.parse(body);
 
-  // Verify the return exists
   const existing = await db.return.findUnique({ where: { id } });
   if (!existing) {
     throw new SahelFlowError("Return not found", "NOT_FOUND", 404);
   }
 
-  // Validate the transition
   const currentStatus = existing.status;
   const ALLOWED: Record<string, string[]> = {
     requested: ["approved", "rejected"],
@@ -48,21 +48,40 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
     );
   }
 
-  // Update the return
-  const updated = await db.return.update({
-    where: { id },
-    data: { status },
-  });
+  // SEC-016/CODE-013: transactional return update + note + stock restoration + customer stats
+  const updated = await db.$transaction(async (tx) => {
+    const ret = await tx.return.update({ where: { id }, data: { status } });
 
-  // If notes provided, create a return note
-  if (notes) {
-    await db.returnNote.create({
-      data: {
-        returnId: id,
-        body: notes,
-      },
-    });
-  }
+    if (notes) {
+      await tx.returnNote.create({ data: { returnId: id, body: notes } });
+    }
+
+    // CODE-013: when return is completed, restore stock + adjust customer stats
+    if (status === "completed") {
+      const order = await tx.order.findUnique({
+        where: { id: existing.orderId },
+        include: { items: true },
+      });
+      if (order) {
+        // Restore stock for each order item
+        for (const item of order.items) {
+          if (item.productId) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: item.quantity } },
+            });
+          }
+        }
+        // Adjust customer stats (decrement totalSpent by the order total)
+        await tx.customer.update({
+          where: { id: order.customerId },
+          data: { totalSpent: { decrement: order.totalPrice } },
+        });
+      }
+    }
+
+    return ret;
+  });
 
   return NextResponse.json({ return: updated });
 }, "PATCH /api/returns/[id]");
