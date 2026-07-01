@@ -723,3 +723,15 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   }
 }
+
+
+/* UX-012: Respect prefers-reduced-motion (WCAG 2.3.3) — disables all animations
+   for users with vestibular disorders, motion sensitivity, ADHD. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

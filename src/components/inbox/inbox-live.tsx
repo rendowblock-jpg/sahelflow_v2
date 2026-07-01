@@ -361,7 +361,7 @@ export function InboxLive() {
                       }`}
                     >
                       <Avatar className="h-10 w-10 mt-1">
-                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
+                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-green-700" : "bg-sky-100 text-blue-700"}>
                           {c.channel === "whatsapp" ? <MessageCircle className="h-5 w-5" /> : c.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -415,7 +415,7 @@ export function InboxLive() {
                     </button>
                   )}
                   <Avatar className="size-9">
-                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}>
+                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-sky-100 text-blue-700 dark:bg-sky-900/30 dark:text-sky-400"}>
                       {activeChat.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -604,7 +604,7 @@ function StatusBar({
   }
   if (status === "qr") {
     return (
-      <div className="border-b bg-blue-50 dark:bg-blue-950/30 px-4 py-2 text-sm flex items-center gap-2 text-blue-700 dark:text-blue-300">
+      <div className="border-b bg-sky-50 dark:bg-blue-950/30 px-4 py-2 text-sm flex items-center gap-2 text-blue-700 dark:text-blue-300">
         <QrCode className="h-4 w-4" />
         {t("inbox.scanQrHint")}
       </div>
@@ -636,7 +636,7 @@ function StatusBar({
 function QrPairingCard({ qrKey, onRefresh }: { qrKey: number; onRefresh: () => void }) {
   const { t } = useI18n();
   return (
-    <div className="border-b bg-blue-50/50 dark:bg-blue-950/20 px-4 py-6 flex flex-col items-center gap-3">
+    <div className="border-b bg-sky-50/50 dark:bg-blue-950/20 px-4 py-6 flex flex-col items-center gap-3">
       <Card className="p-4">
         <CardContent className="p-0 flex flex-col items-center gap-3">
           {/* QR is a dynamic opaque PNG from an API route — <img> is correct here
