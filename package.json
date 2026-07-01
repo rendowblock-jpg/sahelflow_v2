@@ -26,7 +26,8 @@
     "tauri:dev:fast": "bun run scripts/tauri-dev-fast.ts",
     "dev:clean": "rm -rf .next && bun run dev",
     "build:installer": "bun run scripts/build-installer-local.ts",
-    "release": "bun run scripts/release.ts"
+    "release": "bun run scripts/release.ts",
+    "seed:rich": "bun --conditions react-server scripts/seed-rich.ts"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
