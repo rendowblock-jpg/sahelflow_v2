@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-06-29 (Session 18 complete)
-**Main HEAD:** `84fcf2d`
+**Last updated:** 2026-07-01 (Session 19 complete)
+**Main HEAD:** `8228176`
 **Version:** `3.1.0`
 **Design system version:** v3.0 (premium patterns from shadcn v4, Dub, Cal.com, Trigger.dev)
 
@@ -14,29 +14,31 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Phase 0 complete + Sessions 16-18 (auth + integrations + UX + risk engine + AAA audit) |
-| LOC | ~47,700 (src/ + sidecars/) |
-| Pages | 25 (dashboard, inbox, orders, orders/[id], customers, customers/[id], products, products/[id], deliveries, returns, analytics, accounting, automations, agents, settings, imports, risk, storefronts list/new/edit, profile, + login, setup, public storefront) |
-| API routes | 83 (+6 risk routes: assess/[orderId], config, rules, analytics, blacklist, blacklist/[customerId]) |
-| Tests | 391 (risk engine 50 + services 124 + auth/API/license 41 + adapters/import 49 + order state machine 40 + regex extractor 20 + field-crypto 25 + customer-PII 18 + order-conversation-PII 19 + pii-nested 4 + analytics 20 + auth crypto 19 + DHD adapter 16) |
-| Prisma models | 25 (ProductVariant added Session 17) |
-| i18n keys | 2,120 × 3 locales (AR/FR/EN + RTL) |
+| Phase | Sessions 1-19 complete (47 PRs merged in Session 19) |
+| LOC | ~48,500 (src/ + sidecars/) |
+| Pages | 27 (added onboarding, analytics/extraction) |
+| API routes | 85 (+license/sync, +conversations/search, +analytics/extraction) |
+| Tests | 457 (up from 391 at Session 18 start) |
+| Prisma models | 29 (added AuthSecret, Session, AuditLog, ExtractionMetric) |
+| i18n keys | ~2,250 × 3 locales (AR/FR/EN + RTL) |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
 | Delivery adapters | 4 (Yalidine + Maystro + ZR Express + DHD) |
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
-| Other integrations | Google Sheets (Service Account), WhatsApp (Baileys sidecar), Gemini AI |
-| Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist, analysis dashboard |
+| Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (uses isBlacklisted column), analysis dashboard |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 391/391 tests green |
-| CI | ⚠️ GitHub Actions (broken — runner provisioning fails on free tier; use `bun run release` locally) |
-| Auth | ✅ Local-first PIN (Web Crypto API, middleware, httpOnly cookies) |
-| Encryption | ✅ AES-256-GCM PII (Customer + Order + OrderItem.variantName + Conversation + Message.body) |
-| Desktop app | ✅ Tauri + auto-updater (signed Ed25519, GitHub Releases) |
-| Release flow | ✅ One-command: `bun run release` (builds + signs + publishes + auto-updates all installed apps) |
+| Quality gate | ✅ tsc + eslint + 457/457 tests green |
+| Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF (sameSite=strict) |
+| Encryption | ✅ AES-256-GCM PII (Customer + Order + OrderItem + Conversation + Message) + blind indexes for search |
+| Desktop app | ✅ Tauri + auto-updater (updater:default capability) + migration runner in Rust setup hook |
+| Release flow | ✅ One-command: `bun run release` (builds + signs + publishes + auto-updates) |
+| License | ✅ Ed25519 + server-side enforcement (DB-synced validation) + FeatureGate component |
+| Onboarding | ✅ 4-step wizard (business → delivery → AI key → first product) |
+| E2E | ✅ Playwright config + 4 golden-path test files (unverified — needs browser install) |
+| Sentry | ✅ Env-gated, zero-overhead (code ready, needs @sentry/nextjs install + DSN) |
 
 ---
 
-## ✅ Done (sessions 1-18)
+## ✅ Done (sessions 1-19)
 
 ### Foundation (sessions 1-7)
 - ✅ Tauri + Next.js 16 + Prisma + shadcn/ui scaffold
@@ -55,7 +57,7 @@
 - ✅ Baileys WhatsApp sidecar (port 3001, loopback + bearer token)
 - ✅ Tauri production build config (ADR-010)
 - ✅ Customer PII field encryption (transparent Prisma extension)
-- ✅ Delivery integrations (Yalidine full + Maystro + ZR Express)
+- ✅ Delivery integrations (Yalidine full + Maystro + ZR Express + DHD)
 - ✅ CSV/XLSX import + CSV export
 - ✅ AI chat agent (30 tools, SSE streaming)
 - ✅ COD storefront (builder + public page + rate-limited submit)
@@ -69,102 +71,132 @@
 - ✅ Auto-updater (signed GitHub Releases)
 - ✅ Stronghold master key (Tauri plugin)
 
-### Session 13 — AAA audit (2026-06-24)
-- ✅ Systematic 6-dimension audit (~254 findings)
-- ✅ 12 P0 bugs fixed (data corruption, security holes, PII bypass, UI font system, hydration)
-- ✅ 20+ P1 issues fixed (server-only guards, order-number race, storefront rate limit, formatDZD consolidation, structured logger, health endpoint, fail-closed license, Baileys auth folder chmod, Tauri capabilities stripped)
+### Sessions 13-18 (prior sessions)
+- ✅ AAA audit (6-dimension, ~254 findings)
+- ✅ Premium chart library (7 components)
+- ✅ Risk engine (7 factors, rules, blacklist, analytics)
+- ✅ RTL sidebar definitive fix
+- ✅ Test expansion (134 → 391 tests)
 
-### Session 14 — UI/UX perfection + backend feature completeness (2026-06-24)
-- ✅ Premium chart library (7 components: area/line/composed/donut/h-bar/radial/sparkline, OKLCH tokens)
-- ✅ World-class dashboard + deep analytics suite
-- ✅ Customer 360 page
-- ✅ Orders bulk operations
-- ✅ Service extensions (search, stats, bulk ops)
-- ✅ withErrorHandler on 37 routes
-- ✅ Complete i18n (1,677 keys × 3 locales)
-- ✅ GitHub Actions CI
+### Session 19 — Market-Killer Engineering Sprint (47 PRs)
 
-### Session 15 — UI polish from screenshot review (2026-06-24)
-- ✅ Dark theme contrast fix, sidebar RTL fix, PII decryption fix
-- ✅ Full CRUD on customers/products/orders/returns/expenses/deliveries
-- ✅ Animated stat cards, tabbed settings UI, empty states
+**Session 19 was a comprehensive audit + fix + perfection sprint.** The founder requested a full professional audit, multi-phase master plan, and continuous engineering loop until the app is flawless.
 
-### Session 16 — Foundation + Auth + Integrations + Design Transformation (2026-06-26)
-- ✅ Design system foundation (spacing, typography, RTL utilities, AppShell helpers)
-- ✅ Local-first PIN auth system (#1 production blocker)
-- ✅ Google Sheets integration (Service Account)
-- ✅ DHD delivery adapter (EcoTrack platform)
-- ✅ Premium UI patterns (Cal.com shadows, Dub floating panel, Trigger.dev grid)
-- ✅ All charts upgraded, inbox rebuilt, AI chat rebuilt
-- ✅ Breadcrumbs, keyboard shortcuts, page transitions, per-page loading/error states
+#### Phase 0: Audit + Plan (1 PR)
+- ✅ 6-track professional audit (SEC/CODE/PERF/UX/TEST/PROD) → 192 findings
+- ✅ AUDIT_FINDINGS_v3.md (all 192 findings fully expanded)
+- ✅ MASTER_PLAN.md (6-phase roadmap with exit criteria)
 
-### Session 17 — Founder-driven UX + production-readiness sprint (2026-06-29)
-- ✅ 14 PRs merged (8 feature + 6 fix)
-- ✅ Product variants, inline status editing, order detail edit mode
-- ✅ Import/Export with XLSX on all 6 data pages + ECOMANAGER migration preset
-- ✅ Loading/error states on ALL 20 dashboard pages
-- ✅ One-command release flow (`bun run release`)
-- ✅ Installable desktop app with signed auto-updates
+#### Phase 1: Stop the Bleeding (10 PRs)
+- ✅ Login rate limiting + PBKDF2 600k + PIN min 8 + setSetting allowlist + change-pin route
+- ✅ requireAuth() defense-in-depth on all 45 mutating routes (was 7)
+- ✅ Session revocation (Session table) + AuditLog + AuthSecret table
+- ✅ Blind indexes for encrypted field search + isBlacklisted column
+- ✅ Transactional correctness (order update, returns with stock restoration, delete pre-check)
+- ✅ Schema drift fix (OrderSource enum, delivery $transaction, ReturnNote relation, Zod validation)
+- ✅ Migration SQL + migration runner script + version sync (Cargo.toml 3.1.0)
+- ✅ Mobile drill-down for inbox + AI chat
+- ✅ Storefront P0s (missing i18n key, localized 404, 44px touch targets)
+- ✅ v2 security regressions (CSV injection, upload traversal/XSS, XFF spoof, public route)
 
-### Session 18 — Bug fixes + Risk engine + Test coverage + AAA audit (2026-06-29)
+#### Phase 2: Foundation for Scale (5 PRs)
+- ✅ API integration test harness + 6 storefront submit tests
+- ✅ 13 license validation tests (trial invariants + Ed25519 signatures)
+- ✅ CI: sf-verify + coverage enforcement + bun audit
+- ✅ FeatureGate component + requireLicense fix
+- ✅ 5 backup round-trip tests
 
-**11 PRs merged (#63–#73). ~5,700 LOC added. 2 critical security holes fixed. 391 tests (3× expansion).**
+#### Phase 3: Frontend & UI/UX Perfection (6+ PRs)
+- ✅ Table overflow-x-auto + padding consistency
+- ✅ prefers-reduced-motion + skip-to-content + no-blue rule
+- ✅ RTL arrows flip + formatDZD locale + dialog logical positioning
+- ✅ 15+ hardcoded English strings → t() × 3 locales
+- ✅ a11y keyboard nav (sortable headers, clickable rows, settings tabs)
+- ✅ Optimistic update fix + add-to-cart feedback
+- ✅ Comprehensive RTL sweep (62 fixes: sidebar, charts, icons, shadcn logical props, switch, toggle, toaster)
+- ✅ Comprehensive UI sweep (dark mode, colors, loading states, onboarding validation)
 
-**Bug fixes:**
-- ✅ PR #63: RTL sidebar + PremiumTable crash on 5 RSC pages
-- ✅ PR #65: Hydration mismatch + next-themes script tag error
-- ✅ PR #66: Hydration root cause — useI18n() server/client locale mismatch (ServerLocaleContext)
-- ✅ PR #67: server-only import error in Client Components (risk-engine barrel)
-- ✅ PR #68: RTL sidebar — explicit conditional classes (not CSS dir)
-- ✅ PR #72: Sidebar position + risk page crash + orders table upgrade
+#### Phase 4: Performance & Reliability (5 PRs)
+- ✅ db Proxy 2s cache + invalidateMetaCache on shop switch
+- ✅ SSE abort on client disconnect
+- ✅ Orders page select+dedupe (50% fewer DB calls, 200 fewer PII decryptions)
+- ✅ Gemini API retry on 502/503/504
+- ✅ WhatsApp reconnect bounds + indexes + shop-switch disconnect
 
-**Risk engine:**
-- ✅ PR #64: Top-tier risk engine (4-layer architecture: types/scoring/service/analytics)
-- ✅ 6 API routes + /risk dashboard page with 5 tabs
-- ✅ Order integration: auto-assess on creation, risk badge in orders table, high-risk review queue, risk breakdown card on order detail
-- ✅ +108 i18n keys × 3 locales
+#### Phase 5: Feature Depth (2 PRs)
+- ✅ Delivery adapter tests (Yalidine + Maystro + ZR Express)
+- ✅ ExtractionMetric model + sync dedup tests + extraction analytics API + dashboard
 
-**Test coverage:**
-- ✅ PR #64: 134 → 391 tests (+257, +192%)
-- ✅ Risk engine scoring: 50 tests
-- ✅ Service layer: 124 tests
-- ✅ Auth + API + License: 41 tests
-- ✅ Adapters + Import/Export: 49 tests
+#### Phase 6: Market-Killer Ship (1+ PRs, skip macOS)
+- ✅ CHANGELOG.md + .npmrc + .gitignore + DHD_API_BASE + .env.example
+- ✅ False claims fixed in UPDATES.md + DESKTOP_BUILD.md
 
-**AAA audit + fixes:**
-- ✅ PR #69: 2 CRITICAL security holes (storefront config + qr-image typo), StatCard parseNumeric, navigation duplicate icon, dhd enum, 99 i18n keys, PageHeader consistency, missing loading/error states
-- ✅ PR #70: StatCard trend misuse (deliveries + returns)
-- ✅ PR #71: CommandPalette native arrow-key navigation (cmdk sub-components)
-- ✅ PR #73: Analytics page responsive grid
+#### Wave 2: Close Critical Gaps (9 PRs)
+- ✅ Tauri migration runner wired into Rust setup hook
+- ✅ Tauri updater:default capability added
+- ✅ CSRF protection (sameSite=strict, removed broken custom-header check)
+- ✅ Arabic CLDR plural support in t()
+- ✅ shadcn UI logical properties migration (8 components)
+- ✅ Storefront product images rendered
+- ✅ AI extraction analytics API + dashboard page
+- ✅ Server-side license enforcement (DB-synced validation, fail-closed)
+- ✅ Onboarding wizard (4-step: business → delivery → AI key → first product)
+- ✅ WhatsApp inbox search
+- ✅ Sentry integration (env-gated, zero-overhead)
+- ✅ Playwright e2e config + 4 golden-path test files
+
+#### Final Bug Fix Sprints (8+ PRs)
+- ✅ CSRF middleware fix (was blocking ALL mutations — app was non-functional)
+- ✅ Blacklist uses isBlacklisted column (was: searched encrypted notes → always empty)
+- ✅ Storefront images JSON.parse (was: split(",") → broken URL)
+- ✅ Orders phone column populated (was: blank)
+- ✅ Customer sort by createdAt (was: encrypted name → random order)
+- ✅ DHD credentials/estimate enum fix
+- ✅ metaCache invalidation on shop switch
+- ✅ Delivery PATCH uses orderService.updateStatus (was: bypassed state machine)
+- ✅ Import orders status validation
+- ✅ withErrorHandler: SyntaxError → 400 (was: 500)
+- ✅ requireAuth on 10 GET routes (defense-in-depth)
+- ✅ Loading state variants (ChatLoading, FormLoading — was: table skeleton everywhere)
+- ✅ generateMetadata for 3 pages
+- ✅ Delivery sync nested $transaction deadlock fix
+- ✅ Font consistency (font-bold → font-semibold across 5 pages)
+- ✅ 24 directional icons icon-rtl-flip
+- ✅ 12 shadcn primitives physical → logical properties
+- ✅ Switch RTL thumb transform
+- ✅ API error strings → English (was: mixed FR/EN)
+- ✅ Dark mode gaps fixed (10+ files)
+- ✅ Rich seed data (30 customers, 55 orders, 20 products with variants, 40 deliveries, 15 returns, 20 expenses, 10 conversations, AI chat sessions, extraction metrics, audit logs, wilaya risk profiles, storefront config, notifications, automations, WhatsApp templates)
+- ✅ Definitive DB path fix (absolute path in scripts/db.ts + src/lib/db.ts — Prisma CLI vs Client path resolution mismatch on Windows)
+- ✅ Window height fix (h-dvh → h-screen for WebView2 compatibility)
+- ✅ RTL root dir attribute (dir={dir} on root div — explicit, not inheritance)
 
 ---
 
 ## 🔴 Known Issues (carry forward)
 
 ### Production blockers
-1. **Test coverage ~10%** — 391 tests for ~47K LOC (up from 0.3%, but still need more integration tests)
-2. **Auth hardening** — no rate limiting on PIN, no session revocation, no audit logs, no password reset
-3. **Integration testing** — YouCan/ZR/DHD adapters untested against real APIs
-4. **No monitoring** — no Sentry, no PostHog, no uptime monitoring
-5. **No database migrations strategy** — using prisma db push (wrong for production)
-6. **GitHub Actions broken** — workflows fail to provision runners (account billing issue). Use `bun run release` locally.
-7. **requireAuth() defense-in-depth** — only middleware protects API routes; most routes don't call requireAuth()
+1. **Test coverage ~15%** — 457 tests for ~48K LOC. API routes, AI agent, adapters still need more integration tests
+2. **Sentry not installed** — code is ready (src/lib/monitoring/sentry.ts) but @sentry/nextjs not installed. Founder action: `bun add @sentry/nextjs` + set SENTRY_DSN
+3. **E2E unverified** — Playwright config + 4 test files exist but not verified (needs `bunx playwright install chromium` + run)
+4. **Tauri migration runner unverified** — Rust code is in lib.rs but not compiled/tested on a real Tauri build
+5. **macOS builds** — skipped per founder instruction (needs Apple Developer cert)
+6. **No professional pen test** — security is hardened but not externally audited
+7. **No real user testing** — needs 3-5 Algerian COD sellers for beta
 
 ### Polish items
-8. **WhatsApp inbox** — basic UI, needs: search, media, voice notes, templates, broadcast
-9. **AI extraction** — needs accuracy metrics, A/B testing, fallback chains
-10. **macOS builds** — release workflow only builds Windows + Linux (needs Apple Developer cert)
-11. **Onboarding flow** — no guided setup for new sellers
-12. **No accessibility audit** — keyboard nav, screen readers, color contrast untested
-13. **Hardcoded strings** — login/setup/profile pages still have some hardcoded English
-14. **`customers/[id]` page** — uses base `<Table>` not `<PremiumTable>`
-15. **`products/[id]` page** — has duplicated `statusLabels` (should use shared `lib/shared/status-colors`)
-16. **Responsive sweep** — more pages need responsive improvements (Topbar mobile, stat card grids, tables on small screens)
+8. **WhatsApp inbox** — has search, but no media sending, voice notes, templates UI, broadcast
+9. **AI extraction** — metrics recorded + dashboard exists, but no HITL review queue
+10. **Chart locale** — chart formatters use default "fr" locale (documented limitation)
+11. **Backup restore** — round-trip test exists but atomic restore (temp-file-then-rename) not implemented
+12. **GitHub Actions** — CI workflow updated but unverified (founder needs to check Actions run history)
 
 ### See also
 - `HONEST_ASSESSMENT.md` — candid evaluation of app vs top-tier company product
+- `HONEST_ASSESSMENT_WAVE2.md` — post-Wave 1 assessment + Wave 2 plan
+- `AUDIT_FINDINGS_v3.md` — all 192 audit findings (fully expanded)
+- `MASTER_PLAN.md` — 6-phase roadmap with exit criteria
 - `INTEGRATION_RESEARCH.md` — credentials needed for each integration
-- `RESEARCH_REPORT.md` (root) — premium UI patterns from 5 top-tier dashboards
 - `UPDATES.md` — how to publish signed auto-updates
 
 ---
@@ -173,6 +205,6 @@
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `84fcf2d` | v3.0 + Sessions 16-18. sf-verify green. 391 tests. Version 3.1.0. Risk engine + AAA audit fixes. |
+| `main` | `8228176` | v3.0 + Session 19 (47 PRs). sf-verify green. 457 tests. Version 3.1.0. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
-| `agent-handoff` | `adbeead` | Agent metadata: AGENT_HANDOFF.md v6.0 + bootstrap.sh + toolkit |
+| `agent-handoff` | `adbeead` | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (needs update) |
