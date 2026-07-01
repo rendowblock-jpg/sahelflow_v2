@@ -10,6 +10,7 @@
  * - cursor={false} on tooltip
  * - indicator="dot"
  */
+import { useI18n } from "@/hooks/use-i18n";
 import {
   Line,
   LineChart,
@@ -44,6 +45,8 @@ export function LineTrendChart({
   formatY,
   emptyMessage,
 }: LineTrendChartProps) {
+  const { dir } = useI18n();
+  const isRtl = dir === "rtl";
   const fmtY = resolveFormatter(formatY);
   if (!data.length) {
     return (
@@ -54,7 +57,7 @@ export function LineTrendChart({
   }
   return (
     <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
-      <LineChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+      <LineChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey={xKey}

@@ -213,7 +213,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
           </div>
         )}
         {result && (
-          <div className="flex items-start gap-2 rounded-md bg-green-50 dark:bg-green-950/30 p-3 text-sm text-green-700 dark:text-green-300">
+          <div className="flex items-start gap-2 rounded-md bg-emerald-50 dark:bg-emerald-950/30 p-3 text-sm text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{result}</span>
           </div>

@@ -143,7 +143,7 @@ export function AiKeyPanel() {
           {status === "loading" ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : status === "configured" || status === "editing" ? (
-            <Badge className="gap-1 bg-green-600 text-white hover:bg-green-600">
+            <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
               <CheckCircle2 className="h-3 w-3" />
               {t("aiKey.configured")}
             </Badge>
@@ -244,7 +244,7 @@ export function AiKeyPanel() {
             role={result.ok ? "status" : "alert"}
             className={`flex items-start gap-2 rounded-md p-3 text-sm ${
               result.ok
-                ? "bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300"
+                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
                 : "bg-destructive/10 text-destructive"
             }`}
           >

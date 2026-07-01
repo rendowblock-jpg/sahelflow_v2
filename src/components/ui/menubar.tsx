@@ -127,7 +127,7 @@ function MenubarCheckboxItem({
       checked={checked}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
         </MenubarPrimitive.ItemIndicator>
@@ -151,7 +151,7 @@ function MenubarRadioItem({
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
           <CircleIcon className="size-2 fill-current" />
         </MenubarPrimitive.ItemIndicator>
@@ -202,7 +202,7 @@ function MenubarShortcut({
     <span
       data-slot="menubar-shortcut"
       className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
+        "text-muted-foreground ms-auto text-xs tracking-widest",
         className
       )}
       {...props}
@@ -235,7 +235,7 @@ function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto h-4 w-4" />
+      <ChevronRightIcon className="ms-auto h-4 w-4" />
     </MenubarPrimitive.SubTrigger>
   )
 }

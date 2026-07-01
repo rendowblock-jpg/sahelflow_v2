@@ -157,7 +157,7 @@ export function ProductImageUpload({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {/* Existing image thumbnails */}
         {value.map((url, idx) => (
           <div

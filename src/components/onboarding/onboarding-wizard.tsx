@@ -140,7 +140,7 @@ export function OnboardingWizard() {
   const CurrentIcon = STEPS[step]!.icon;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="flex min-h-full items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-lg">
         {/* Progress indicator */}
         <div className="mb-8 flex items-center justify-center gap-2">
@@ -253,19 +253,19 @@ export function OnboardingWizard() {
             <div className="flex items-center justify-between pt-4">
               {step > 0 ? (
                 <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
-                  <ArrowLeft className="h-4 w-4 me-1" />
+                  <ArrowLeft className="h-4 w-4 icon-rtl-flip me-1" />
                   {t("common.back")}
                 </Button>
               ) : <div />}
 
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={skipStep}>
-                  <SkipForward className="h-4 w-4 me-1" />
+                  <SkipForward className="h-4 w-4 icon-rtl-flip me-1" />
                   {t("common.skip")}
                 </Button>
                 <Button onClick={nextStep} disabled={loading} size="sm">
                   {step === STEPS.length - 1 ? t("onboarding.finish") : t("common.next")}
-                  {step < STEPS.length - 1 && <ArrowRight className="h-4 w-4 ms-1" />}
+                  {step < STEPS.length - 1 && <ArrowRight className="h-4 w-4 icon-rtl-flip ms-1" />}
                 </Button>
               </div>
             </div>

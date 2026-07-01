@@ -9,6 +9,7 @@
  * - CartesianGrid: horizontal only, dashed, border color
  * - type="natural" curve (smoother than monotone)
  */
+import { useI18n } from "@/hooks/use-i18n";
 import {
   Area,
   AreaChart,
@@ -47,6 +48,8 @@ export function AreaTrendChart({
   curve = "natural",
   emptyMessage,
 }: AreaTrendChartProps) {
+  const { dir } = useI18n();
+  const isRtl = dir === "rtl";
   const fmtY = resolveFormatter(formatY);
   const gradientId = useGradientId("area");
 
@@ -60,7 +63,7 @@ export function AreaTrendChart({
 
   return (
     <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
-      <AreaChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+      <AreaChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
         <defs>
           {series.map((s) => (
             <linearGradient key={s.key} id={`${gradientId}-${s.key}`} x1="0" y1="0" x2="0" y2="1">

@@ -1,12 +1,1 @@
-{
-  "shops": [
-    {
-      "id": "default",
-      "name": "Ma Boutique",
-      "dbPath": "data/shops/dev.db",
-      "icon": "🏪",
-      "createdAt": "2026-06-22T01:47:59.729Z"
-    }
-  ],
-  "activeShopId": "default"
-}
+{"shops":[{"id":"default","name":"Test","dbPath":"/tmp/sahelflow_v2/prisma/test-backup.db","icon":"🏪","createdAt":"2026-07-01T20:39:50.924Z"}],"activeShopId":"default"}

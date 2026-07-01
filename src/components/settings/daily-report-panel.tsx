@@ -170,7 +170,7 @@ export function DailyReportPanel() {
             {t("common.save")}
           </Button>
           <Button onClick={handleTestReport} variant="outline" disabled={pending}>
-            <Send className="h-4 w-4 me-2" />
+            <Send className="h-4 w-4 icon-rtl-flip me-2" />
             {t("reports.testNow")}
           </Button>
         </div>

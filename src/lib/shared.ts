@@ -141,10 +141,10 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
   },
   cancelled: {
     i18nKey: 'orders.status.cancelled',
-    dot: 'bg-gray-400',
-    bg: 'bg-gray-50 dark:bg-gray-800/40',
-    text: 'text-gray-600 dark:text-gray-400',
-    border: 'border-gray-200 dark:border-gray-700/50',
+    dot: 'bg-muted-foreground',
+    bg: 'bg-muted',
+    text: 'text-muted-foreground',
+    border: 'border-border',
     icon: '✕',
     ring: 'ring-gray-400/20',
   },
@@ -167,7 +167,7 @@ export const deliveryProviderConfig: Record<string, { color: string; label: stri
 
 export const customerStatusConfig: Record<string, { i18nKey: string; color: string; bg: string }> = {
   active: { i18nKey: 'common.active', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
-  inactive: { i18nKey: 'common.inactive', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50' },
+  inactive: { i18nKey: 'common.inactive', color: 'text-muted-foreground', bg: 'bg-muted border-border' },
   blocked: { i18nKey: 'common.blocked', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50' },
 }
 

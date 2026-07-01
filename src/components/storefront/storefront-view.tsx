@@ -131,10 +131,10 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
 
   if (result?.ok) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4" style={{ backgroundColor: "#f9fafb" }}>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4" >
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
+            <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto" />
             <h1 className="text-2xl font-bold">{t("storefront.view.orderConfirmed")}</h1>
             <p className="text-muted-foreground">{result.message}</p>
             {result.orderNumber && (
@@ -153,7 +153,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f9fafb" }}>
+    <div className="min-h-screen" >
       {/* Header */}
       <header
         className="border-b"
