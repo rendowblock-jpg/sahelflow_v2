@@ -63,8 +63,15 @@ export function useWhatsAppSocket(
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
 
-    const scheduleReconnect = () => {
+    const MAX_RECONNECT_ATTEMPTS = 20; // PERF-016: stop after ~5 min of trying
+
+  const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
+      // PERF-016: stop auto-reconnecting after MAX_RECONNECT_ATTEMPTS
+      if (reconnectAttempt.current >= MAX_RECONNECT_ATTEMPTS) {
+        setStatus("disconnected");
+        return;
+      }
       const delay = Math.min(1000 * 2 ** reconnectAttempt.current, 15000);
       reconnectAttempt.current += 1;
       reconnectTimer = setTimeout(() => {
