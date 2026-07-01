@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   Smartphone,
   ArrowLeft,
+  Search,
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 
@@ -74,6 +75,7 @@ export function InboxLive() {
   const [mode, setMode] = useState<Mode>("loading");
   const [chats, setChats] = useState<NormalizedChat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [messages, setMessages] = useState<NormalizedMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -302,6 +304,15 @@ export function InboxLive() {
   const isMobile = useMobile();
   const activeChat = chats.find((c) => c.id === activeChatId) ?? null;
 
+  // Filter chats by search query (client-side on loaded chats)
+  const filteredChats = searchQuery.trim()
+    ? chats.filter((c) =>
+        c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.lastMessageText?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : chats;
+
   return (
     <>
     <div className="flex h-full flex-col">
@@ -327,10 +338,20 @@ export function InboxLive() {
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               {t("inbox.title")}
             </h1>
+            <div className="mt-2 relative">
+              <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("inbox.searchPlaceholder")}
+                className="w-full rounded-md border bg-background ps-8 pe-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {chats.length > 1
-                ? t("inbox.conversationsCountPlural", { count: chats.length })
-                : t("inbox.conversationsCount", { count: chats.length })}
+              {filteredChats.length > 1
+                ? t("inbox.conversationsCountPlural", { count: filteredChats.length })
+                : t("inbox.conversationsCount", { count: filteredChats.length })}
               {mode === "seeded" && status !== "connected" && (
                 <span className="ms-1 text-amber-600">({t("inbox.demo")})</span>
               )}
@@ -338,7 +359,7 @@ export function InboxLive() {
             </p>
           </div>
           <ScrollArea className="flex-1">
-            {chats.length === 0 ? (
+            {filteredChats.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 {t("inbox.noConversationsShort")}
                 <br />
@@ -348,7 +369,7 @@ export function InboxLive() {
               </div>
             ) : (
               <div className="space-y-1 p-2">
-                {chats.map((c) => {
+                {filteredChats.map((c) => {
                   const isActive = c.id === activeChatId;
                   return (
                     <button
