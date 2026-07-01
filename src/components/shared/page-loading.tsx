@@ -6,6 +6,7 @@
  *
  * Pattern: matches the premium layout (stagger-grid, rounded borders).
  */
+import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface PageLoadingProps {
@@ -58,6 +59,23 @@ export function PageLoading({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+export function ChatLoading() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+export function FormLoading() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
   );
 }
