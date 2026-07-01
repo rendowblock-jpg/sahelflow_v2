@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Shield, Bot, Truck, Bell, Store, DatabaseBackup } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
@@ -29,9 +29,10 @@ export function SettingsTabs({
 }) {
   const { t } = useI18n();
   const [active, setActive] = useState<Tab>("license");
+  const tabListRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row">
+    <div ref={tabListRef} role="tablist" className="flex flex-col gap-6 lg:flex-row">
       {/* Tab sidebar — premium tinted active state */}
       <nav className="flex lg:w-56 lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
         {TABS.map((tab) => {
@@ -41,6 +42,21 @@ export function SettingsTabs({
             <button
               key={tab.id}
               onClick={() => setActive(tab.id)}
+              role="tab"
+              aria-selected={active === tab.id}
+              tabIndex={active === tab.id ? 0 : -1}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  const tabs = tabListRef.current;
+                  if (!tabs) return;
+                  const buttons = Array.from(tabs.querySelectorAll('[role="tab"]'));
+                  const idx = buttons.indexOf(e.currentTarget);
+                  const next = e.key === "ArrowRight" ? (idx + 1) % buttons.length : (idx - 1 + buttons.length) % buttons.length;
+                  (buttons[next] as HTMLButtonElement)?.focus();
+                  (buttons[next] as HTMLButtonElement)?.click();
+                }
+              }}
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap",
                 isActive
