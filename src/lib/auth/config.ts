@@ -29,8 +29,12 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/auth",
   "/api/health",
   "/api/storefront/submit",
-  "/api/storefront/config/",  // NOTE: trailing slash — only matches GET-by-slug, NOT the POST/PUT/DELETE collection routes
-  "/api/whatsapp/qr-image",   // FIXED: was "/api/qr-image" (typo — the real route is /api/whatsapp/qr-image)
+  // SEC-003: /api/storefront/config/ removed from public routes. The startsWith
+  // match exposed GET/PUT/DELETE on /api/storefront/config/[id] to unauthenticated
+  // requests. The public storefront page reads config via storefrontService
+  // directly (Server Component), not via the API — so the config API doesn't
+  // need to be public. All config API routes are now auth-protected.
+  "/api/whatsapp/qr-image",
 ];
 
 /** Public pages — accessible without authentication. */
@@ -42,10 +46,9 @@ export const PUBLIC_PAGES: readonly string[] = [
 /**
  * Check if a pathname is a public API route (no auth required).
  *
- * SECURITY: Uses startsWith for prefix matching. The trailing slash on
- * `/api/storefront/config/` ensures it only matches the GET-by-slug route
- * (`/api/storefront/config/some-slug`), NOT the POST (create) or PUT/DELETE
- * (update/delete) routes which are at `/api/storefront/config` (no trailing slash).
+ * SECURITY: Uses startsWith for prefix matching. Each prefix must be as
+ * narrow as possible. Storefront config API routes are NOT public — the
+ * public storefront page reads config via the service directly (SEC-003).
  */
 export function isPublicApiRoute(pathname: string): boolean {
   return PUBLIC_API_ROUTES.some((route) => pathname.startsWith(route));
