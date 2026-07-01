@@ -27,7 +27,8 @@
     "dev:clean": "rm -rf .next && bun run dev",
     "build:installer": "bun run scripts/build-installer-local.ts",
     "release": "bun run scripts/release.ts",
-    "seed:rich": "bun --conditions react-server scripts/seed-rich.ts"
+    "seed:rich": "DATABASE_URL=\"file:./data/shops/dev.db\" bun --conditions react-server scripts/seed-rich.ts",
+    "dev:reset": "bunx prisma db push --force-reset && bun run seed:rich"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",

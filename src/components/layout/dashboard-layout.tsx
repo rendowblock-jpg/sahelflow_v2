@@ -73,7 +73,8 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
 
   return (
     <div
-      className="flex h-dvh overflow-hidden bg-muted/30 lg:bg-muted/40"
+      dir={dir}
+      className="flex h-screen overflow-hidden bg-muted/30 lg:bg-muted/40"
     >
       {/* Sidebar — hidden on mobile, shown on lg+.
           In RTL, the sidebar visually appears on the RIGHT because the
@@ -86,10 +87,10 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       </div>
 
       {/* Main content column — floating panel on lg+ */}
-      <div className="flex flex-col flex-1 overflow-hidden p-0 lg:p-2 lg:ps-0">
+      <div className="flex flex-col flex-1 overflow-hidden p-0 lg:p-2 lg:ps-0 rtl:lg:ps-2 rtl:lg:pe-0">
         <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
           <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
             {children}
           </main>
         </div>
@@ -100,7 +101,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
 
       {/* Toast Provider */}
       <Toaster
-        position="bottom-right"
+        position={dir === "rtl" ? "bottom-left" : "bottom-right"}
         richColors
         closeButton
         toastOptions={{ className: "shadow-popover" }}

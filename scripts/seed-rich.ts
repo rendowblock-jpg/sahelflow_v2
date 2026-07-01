@@ -140,6 +140,20 @@ function daysAgo(days: number, hourVariance = true): Date {
 async function main() {
   console.log("🌱 Seeding rich dev database...\n");
 
+  // CRITICAL: Ensure app-meta.json points to data/shops/dev.db
+  // This is the SAME file the app's db.ts Proxy reads.
+  // Without this, the seed writes to one DB file and the app reads another.
+  const { writeFileSync, mkdirSync, existsSync } = await import("node:fs");
+  const { resolve } = await import("node:path");
+  const shopsDir = resolve(process.cwd(), "data", "shops");
+  if (!existsSync(shopsDir)) mkdirSync(shopsDir, { recursive: true });
+  const metaPath = resolve(process.cwd(), "data", "app-meta.json");
+  writeFileSync(metaPath, JSON.stringify({
+    shops: [{ id: "default", name: "Ma Boutique", dbPath: "data/shops/dev.db", icon: "🏪", createdAt: new Date().toISOString() }],
+    activeShopId: "default"
+  }, null, 2));
+  console.log(`  ✅ app-meta.json → data/shops/dev.db`);
+
   // ─── Clean ALL existing data ──────────────────────────────────────────────
   console.log("  🗑️  Cleaning existing data...");
   await prisma.extractionMetric.deleteMany();
