@@ -8,10 +8,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { customerServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const q = req.nextUrl.searchParams.get("q") ?? "";
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10), 100);
   const offset = parseInt(req.nextUrl.searchParams.get("offset") ?? "0", 10);

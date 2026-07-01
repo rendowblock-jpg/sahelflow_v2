@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export const GET = withErrorHandler(async (
   _req: NextRequest,
   { params }: RouteContext,
 ) => {
+  await requireAuth();
   const { id } = await params;
   const conversation = await db.conversation.findUnique({
     where: { id },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 /**
  * GET /api/notifications — Compute real-time notifications from recent events.
@@ -13,6 +14,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
  * This is a hybrid approach — lightweight, zero schema migration, and always up-to-date.
  */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 

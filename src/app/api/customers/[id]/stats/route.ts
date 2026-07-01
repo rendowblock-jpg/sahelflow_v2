@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { customerServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export const GET = withErrorHandler(async (
   _req: NextRequest,
   { params }: RouteContext,
 ) => {
+  await requireAuth();
   const { id } = await params;
   const stats = await customerServiceExtensions.getStats({ prisma: db }, id);
   return NextResponse.json({ stats });
