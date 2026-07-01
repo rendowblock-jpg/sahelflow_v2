@@ -41,6 +41,13 @@ export function withErrorHandler<T extends RouteHandler>(
           { status: 400 },
         );
       }
+      // Malformed JSON body — return 400, not 500
+      if (err instanceof SyntaxError) {
+        return NextResponse.json(
+          { error: "Invalid JSON in request body" },
+          { status: 400 },
+        );
+      }
       if (err instanceof SahelFlowError) {
         if (err.statusCode >= 500) {
           logger.error(`api.${path}`, err, { code: err.code });

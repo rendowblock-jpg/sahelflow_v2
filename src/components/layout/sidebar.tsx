@@ -134,7 +134,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
         {!collapsed && (
           <div className="flex flex-col">
             <span className="font-semibold text-[15px] tracking-tight text-sidebar-foreground leading-none">SahelFlow</span>
-            <span className="text-[11px] text-muted-foreground/60 mt-0.5">COD Management</span>
+            <span className="text-[11px] text-muted-foreground/60 mt-0.5">{t('nav.subtitle')}</span>
           </div>
         )}
       </div>

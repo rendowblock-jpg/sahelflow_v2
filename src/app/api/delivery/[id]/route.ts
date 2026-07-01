@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
@@ -39,17 +40,18 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
     data: { status },
   });
 
-  // If delivered, also update the order status
-  if (status === "delivered" && existing.orderId) {
-    await db.order.update({
-      where: { id: existing.orderId },
-      data: { status: "delivered", deliveredAt: new Date() },
-    });
-  } else if ((status === "returned" || status === "refused") && existing.orderId) {
-    await db.order.update({
-      where: { id: existing.orderId },
-      data: { status: status === "returned" ? "returned" : "refused" },
-    });
+  // Use orderService.updateStatus for proper state machine + customer stats + stock
+  if (existing.orderId) {
+    const orderStatus = status === "delivered" ? "delivered" :
+                        status === "returned" ? "returned" :
+                        status === "refused" ? "refused" : null;
+    if (orderStatus) {
+      try {
+        await orderService.updateStatus({ prisma: db }, existing.orderId, orderStatus as never);
+      } catch {
+        // Transition may not be allowed — non-fatal
+      }
+    }
   }
 
   return NextResponse.json({ delivery: updated });

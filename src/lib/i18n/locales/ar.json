@@ -2188,5 +2188,7 @@
   "analytics.extraction.confidence": "الثقة",
   "analytics.extraction.complete": "مكتمل",
   "license.premiumFeature": "ميزة مدفوعة",
-  "license.premiumFeatureDescription": "تتطلب هذه الميزة ترخيصًا مدفوعًا."
+  "license.premiumFeatureDescription": "تتطلب هذه الميزة ترخيصًا مدفوعًا.",
+  "auth.securityBadge": "محمي بتشفير AES-256-GCM",
+  "nav.subtitle": "إدارة الدفع عند الاستلام"
 }
