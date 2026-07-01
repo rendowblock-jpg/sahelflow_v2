@@ -210,7 +210,8 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             {/* Preview table (first 10 valid rows) */}
             {preview.preview.length > 0 && (
               <div className="max-h-64 overflow-auto rounded border">
-                <Table>
+                <div className="overflow-x-auto">
+        <Table>
                   <TableHeader>
                     <TableRow>
                       {Object.keys(preview.preview[0]!).map((key) => (
@@ -230,6 +231,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
                     ))}
                   </TableBody>
                 </Table>
+        </div>
               </div>
             )}
 

@@ -195,7 +195,8 @@ export function BackupRestorePanel() {
               </div>
             ) : (
               <div className="rounded-lg border">
-                <Table>
+                <div className="overflow-x-auto">
+        <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("backup.columnFilename")}</TableHead>
@@ -260,6 +261,7 @@ export function BackupRestorePanel() {
                     })}
                   </TableBody>
                 </Table>
+        </div>
               </div>
             )}
 
