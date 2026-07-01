@@ -45,10 +45,32 @@ export default async function OrdersPage({
   const where = statusFilter && statusFilter !== "all"
     ? { status: statusFilter as OrderStatus }
     : undefined;
-  const include = { items: true, customer: { select: { id: true, name: true, phone: true, phoneEnc: true } } };
+  // PERF-007: use select (not include) to avoid fetching + decrypting PII
+  // fields (phone, address, notes) that the table doesn't display. Was: 200
+  // AES-256-GCM decryptions per page load. Now: zero (only name is fetched).
+  const orderSelect = {
+    id: true,
+    orderNumber: true,
+    status: true,
+    totalPrice: true,
+    deliveryCost: true,
+    wilaya: true,
+    commune: true,
+    source: true,
+    createdAt: true,
+    deliveredAt: true,
+    items: { select: { id: true, productName: true, quantity: true, unitPrice: true, total: true } },
+    customer: { select: { id: true, name: true } },
+  } as const;
+
+  // PERF-008: when no status filter is active, filteredOrders === allOrders.
+  // Skip the second query (was: two identical queries on the default landing).
+  const hasFilter = !!statusFilter;
   const [allOrders, filteredOrders, customers, products] = await Promise.all([
-    db.order.findMany({ include, orderBy: { createdAt: "desc" }, take: 200 }),
-    db.order.findMany({ where, include, orderBy: { createdAt: "desc" }, take: 200 }),
+    db.order.findMany({ select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 }),
+    hasFilter
+      ? db.order.findMany({ where, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
+      : Promise.resolve([]),
     db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
   ]);
