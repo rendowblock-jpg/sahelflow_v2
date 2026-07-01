@@ -153,6 +153,7 @@ model Order {
   @@index([source])
   @@index([createdAt])
   @@index([phoneBlindIndex])
+  @@index([customerId])
 }
 
 model OrderItem {
