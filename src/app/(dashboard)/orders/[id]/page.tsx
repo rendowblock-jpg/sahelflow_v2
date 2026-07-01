@@ -87,7 +87,7 @@ export default async function OrderDetailPage({
   ];
 
   return (
-    <div className="space-y-6 p-6 max-w-5xl mx-auto">
+    <div className="app-content page-sections">
       {/* Breadcrumb + header */}
       <div className="space-y-4">
         <Button variant="ghost" size="sm" asChild className="-ms-2">

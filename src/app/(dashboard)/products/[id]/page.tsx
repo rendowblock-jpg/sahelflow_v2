@@ -265,7 +265,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <p className="text-sm text-muted-foreground">{t("customers.noOrders")}</p>
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+        <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>#</TableHead>
@@ -311,6 +312,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 })}
               </TableBody>
             </Table>
+        </div>
           )}
         </CardContent>
       </Card>
