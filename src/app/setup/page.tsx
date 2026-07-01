@@ -125,7 +125,7 @@ export default function SetupPage() {
                 <>
                   <Check className="me-2 h-4 w-4" />
                   {t("auth.createPinButton")}
-                  <ArrowRight className="ms-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4 rtl:rotate-180" />
                 </>
               )}
             </Button>
