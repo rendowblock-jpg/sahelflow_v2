@@ -209,8 +209,8 @@ export default async function OrdersPage({
           {displayOrders.length === 0 ? (
             <EmptyState
               icon={isHighRiskFilter ? ShieldAlert : Package}
-              title={isHighRiskFilter ? t("risk.kpi.highRiskOrders") : t("orders.empty.title")}
-              description={isHighRiskFilter ? t("risk.blacklist.empty") : t("orders.empty.description")}
+              title={isHighRiskFilter ? t("orders.empty.highRiskTitle") : t("orders.empty.title")}
+              description={isHighRiskFilter ? t("orders.empty.highRiskDesc") : t("orders.empty.description")}
               actionLabel={t("orders.createOrder")}
               actionHref="/orders"
             />

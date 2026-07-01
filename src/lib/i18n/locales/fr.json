@@ -2136,5 +2136,7 @@
   "nav.sidebarLabel": "Navigation de la barre latérale",
   "orders.selectAll": "Tout sélectionner",
   "orders.selectOrder": "Sélectionner la commande",
-  "storefront.view.added": "Ajouté"
+  "storefront.view.added": "Ajouté",
+  "orders.empty.highRiskTitle": "Aucune commande à risque",
+  "orders.empty.highRiskDesc": "Toutes vos commandes sont à faible risque. Excellent !"
 }

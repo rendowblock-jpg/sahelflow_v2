@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * CSV + XLSX export helper — converts rows to a spreadsheet with proper escaping.
  *
