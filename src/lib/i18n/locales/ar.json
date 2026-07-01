@@ -2135,5 +2135,6 @@
   "error.saveFailedGeneric": "فشل الحفظ",
   "nav.sidebarLabel": "تنقل الشريط الجانبي",
   "orders.selectAll": "تحديد الكل",
-  "orders.selectOrder": "تحديد الطلب"
+  "orders.selectOrder": "تحديد الطلب",
+  "storefront.view.added": "تمت الإضافة"
 }

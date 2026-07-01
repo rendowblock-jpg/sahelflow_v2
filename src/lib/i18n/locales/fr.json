@@ -2135,5 +2135,6 @@
   "error.saveFailedGeneric": "Échec de l'enregistrement",
   "nav.sidebarLabel": "Navigation de la barre latérale",
   "orders.selectAll": "Tout sélectionner",
-  "orders.selectOrder": "Sélectionner la commande"
+  "orders.selectOrder": "Sélectionner la commande",
+  "storefront.view.added": "Ajouté"
 }

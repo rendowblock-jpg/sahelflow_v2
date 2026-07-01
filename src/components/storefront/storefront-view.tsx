@@ -14,6 +14,7 @@ import {
   Minus,
   Loader2,
   CheckCircle2,
+  Check,
   AlertCircle,
   Trash2,
 } from "lucide-react";
@@ -40,6 +41,7 @@ interface StorefrontViewProps {
 
 export function StorefrontView({ config, products }: StorefrontViewProps) {
   const { t } = useI18n();
+  const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; orderNumber?: string } | null>(null);
@@ -197,14 +199,22 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                       </p>
                     )}
                     <Button
-                      onClick={() => addToCart(product)}
+                      onClick={() => {
+                      addToCart(product);
+                      setAddedProductId(product.id);
+                      setTimeout(() => setAddedProductId(null), 1500);
+                    }}
                       disabled={config.theme.showStock && product.stock === 0}
                       size="sm"
                       className="w-full"
                       style={{ backgroundColor: config.theme.primaryColor }}
                     >
-                      <Plus className="h-4 w-4 me-1" />
-                      {t("storefront.view.addToCart")}
+                      {addedProductId === product.id ? (
+                        <Check className="h-4 w-4 me-1" />
+                      ) : (
+                        <Plus className="h-4 w-4 me-1" />
+                      )}
+                      {addedProductId === product.id ? t("storefront.view.added") : t("storefront.view.addToCart")}
                     </Button>
                   </CardContent>
                 </Card>
