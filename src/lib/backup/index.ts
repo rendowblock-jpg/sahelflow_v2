@@ -60,11 +60,20 @@ export function getActiveDbPath(): string {
         ? meta.shops?.find((s) => s.id === activeId)
         : undefined;
       if (shop?.dbPath) {
-        return resolve(process.cwd(), shop.dbPath);
+        const resolved = resolve(process.cwd(), shop.dbPath);
+        if (existsSync(resolved)) return resolved;
+        // Fall through to DATABASE_URL if the file doesn't exist
       }
     }
   } catch {
-    // ignore — fall through to default
+    // ignore — fall through to fallback
+  }
+  // Fallback: use DATABASE_URL (test/CI environment where app-meta.json
+  // may point to a non-existent path)
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl?.startsWith("file:")) {
+    const path = dbUrl.slice("file:".length);
+    if (existsSync(path)) return resolve(path);
   }
   return join(process.cwd(), "data", "shops", "dev.db");
 }
@@ -124,7 +133,7 @@ export async function createBackup(): Promise<{
   // Force WAL checkpoint so all committed data is in the main .db file.
   // Best-effort: proceed with the copy even if the checkpoint fails.
   try {
-    await db.$executeRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)");
+    await db.$queryRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)").catch(() => {}); // PRAGMA returns results — use queryRaw + tolerate error
   } catch {
     /* ignore — copy will still capture the main .db file */
   }
