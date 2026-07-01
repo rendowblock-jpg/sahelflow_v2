@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth/server";
 export const dynamic = "force-dynamic";
 
 const estimateSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
   wilaya: z.string().min(1),
   commune: z.string().optional(),
   weight: z.number().positive().max(50, "Weight must be ≤ 50kg"),

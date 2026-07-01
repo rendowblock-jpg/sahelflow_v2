@@ -148,7 +148,7 @@ export function AiKeyPanel() {
               {t("aiKey.configured")}
             </Badge>
           ) : (
-            <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
+            <Badge variant="outline" className="gap-1 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700">
               <XCircle className="h-3 w-3" />
               {t("aiKey.notConfigured")}
             </Badge>

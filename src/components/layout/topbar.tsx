@@ -183,7 +183,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
         {/* Live indicator — hidden on mobile */}
         <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5">
           <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
-          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Live</span>
+          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">{t("common.live")}</span>
         </div>
 
         <Separator orientation="vertical" className="mx-1 h-5 hidden md:block" />

@@ -60,7 +60,8 @@ export default async function OrdersPage({
     createdAt: true,
     deliveredAt: true,
     items: { select: { id: true, productName: true, quantity: true, unitPrice: true, total: true } },
-    customer: { select: { id: true, name: true } },
+    customer: { select: { id: true, name: true, phone: true, phoneEnc: true } },
+    phone: true,
   } as const;
 
   // PERF-008: when no status filter is active, filteredOrders === allOrders.
@@ -71,7 +72,7 @@ export default async function OrdersPage({
     hasFilter
       ? db.order.findMany({ where, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
       : Promise.resolve([]),
-    db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
+    db.customer.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
   ]);
 

@@ -2171,5 +2171,22 @@
   "orders.count_two": "{{count}} orders",
   "orders.count_few": "{{count}} orders",
   "orders.count_many": "{{count}} orders",
-  "orders.count_other": "{{count}} orders"
+  "orders.count_other": "{{count}} orders",
+  "dashboard.deliveredToday": "Delivered Today",
+  "common.skip": "Skip",
+  "storefront.view.address": "Address",
+  "analytics.extraction.empty": "No extraction data yet. AI-powered order extractions will appear here.",
+  "analytics.extraction.title": "AI Extraction Analytics",
+  "analytics.extraction.total": "Total Extractions",
+  "analytics.extraction.completionRate": "Completion Rate",
+  "analytics.extraction.methods": "Methods",
+  "analytics.extraction.byMethod": "By Method",
+  "analytics.extraction.trend": "Daily Trend (30 days)",
+  "analytics.extraction.extractions": "extractions",
+  "analytics.extraction.avgConfidence": "% avg confidence",
+  "analytics.extraction.avgLatency": "ms avg",
+  "analytics.extraction.confidence": "confidence",
+  "analytics.extraction.complete": "complete",
+  "license.premiumFeature": "Premium Feature",
+  "license.premiumFeatureDescription": "This feature requires a paid license."
 }

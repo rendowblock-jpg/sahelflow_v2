@@ -255,14 +255,14 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         {commitResult && (
           <div className="rounded-lg border p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span className="font-medium">
                 {t("import.insertedCount", { inserted: commitResult.inserted, total: commitResult.totalRows })}
               </span>
             </div>
             {commitResult.errors.length > 0 && (
               <div className="space-y-1 max-h-32 overflow-auto">
-                <p className="text-xs font-medium text-amber-600">
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
                   {t("import.errorCount", { count: commitResult.errors.length })}
                 </p>
                 {commitResult.errors.slice(0, 10).map((e, i) => (

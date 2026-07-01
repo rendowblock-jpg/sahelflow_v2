@@ -32,7 +32,7 @@ export const GET = withErrorHandler(async () => {
 }, "GET /api/delivery/credentials");
 
 const saveSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
   credentials: z.record(z.string(), z.string().min(1)),
 });
 
@@ -58,7 +58,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 }, "POST /api/delivery/credentials");
 
 const deleteSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
 });
 
 /**

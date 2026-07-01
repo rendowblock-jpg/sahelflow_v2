@@ -355,7 +355,7 @@ export function InboxLive() {
               {mode === "seeded" && status !== "connected" && (
                 <span className="ms-1 text-amber-600 dark:text-amber-400">({t("inbox.demo")})</span>
               )}
-              {mode === "live" && <span className="ms-1 text-emerald-600">({t("inbox.live")})</span>}
+              {mode === "live" && <span className="ms-1 text-emerald-600 dark:text-emerald-400">({t("inbox.live")})</span>}
             </p>
           </div>
           <ScrollArea className="flex-1">

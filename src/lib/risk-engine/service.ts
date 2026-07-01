@@ -129,12 +129,11 @@ export async function buildAssessmentInputFromOrder(orderId: string): Promise<Ri
   // Customer blacklist flag (stored in customer notes or a dedicated field)
   const customer = await db.customer.findUnique({
     where: { id: order.customerId },
-    select: { notes: true, createdAt: true },
+    select: { notes: true, createdAt: true, isBlacklisted: true },
   });
 
-  // Check blacklist — we use a simple convention: "[BLACKLISTED]" tag in notes
-  // (future: dedicated isBlacklisted boolean column on Customer)
-  const isBlacklisted = (customer?.notes ?? "").includes("[BLACKLISTED]");
+  // Check blacklist via the dedicated isBlacklisted column
+  const isBlacklisted = customer?.isBlacklisted ?? false;
 
   // Wilaya risk profile
   const wilayaRiskRow = await db.wilayaRiskProfile.findUnique({
