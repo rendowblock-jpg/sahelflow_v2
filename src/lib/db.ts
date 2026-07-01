@@ -223,7 +223,7 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
         async createMany({ args, query }) {
           if (Array.isArray(args.data)) {
             args.data = args.data.map((d) =>
-              encryptPiiFields(d as Record<string, unknown>, ORDER_PII_FIELDS),
+              encryptPiiFields(d as Record<string, unknown>, ORDER_PII_FIELDS, undefined, { sourceField: "phone", indexField: "phoneBlindIndex" }),
             ) as never;
           } else if (args.data && typeof args.data === "object") {
             args.data = encryptPiiFields(

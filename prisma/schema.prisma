@@ -94,23 +94,29 @@ model ProductVariant {
 }
 
 model Customer {
-  id         String    @id @default(cuid())
-  name       String
-  phone      String
-  phoneEnc   String?
-  phone2     String?
-  wilaya     String?
-  commune    String?
-  address    String?
-  orderCount Int       @default(0)
-  totalSpent Int       @default(0)
-  riskScore  Int       @default(0)
-  notes      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  orders     Order[]
+  id              String    @id @default(cuid())
+  name            String
+  phone           String
+  phoneEnc        String?
+  nameBlindIndex  String?   // SEC-009: HMAC blind index for exact-match name search
+  phone2          String?
+  wilaya          String?
+  commune         String?
+  address         String?
+  orderCount      Int       @default(0)
+  totalSpent      Int       @default(0)
+  riskScore       Int       @default(0)
+  isBlacklisted   Boolean   @default(false)  // CODE-025: dedicated column (was [BLACKLISTED] tag in notes)
+  blacklistReason String?
+  blacklistedAt   DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  orders          Order[]
 
   @@unique([phone])
+  @@index([nameBlindIndex])
+  @@index([isBlacklisted])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,33 +124,35 @@ model Customer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Order {
-  id             String      @id @default(cuid())
-  orderNumber    String
-  status         String      @default("draft")
-  customerId     String
-  customer       Customer    @relation(fields: [customerId], references: [id])
-  items          OrderItem[]
-  totalPrice     Int
-  deliveryCost   Int?
-  wilaya         String
-  commune        String
-  address        String
-  phone          String
-  source         String      @default("whatsapp")
-  sourceMetadata String?
-  notes          String?
-  confirmedAt    DateTime?
-  shippedAt      DateTime?
-  deliveredAt    DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  delivery       Delivery?
-  returns        Return[]
+  id              String      @id @default(cuid())
+  orderNumber     String
+  status          String      @default("draft")
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  items           OrderItem[]
+  totalPrice      Int
+  deliveryCost    Int?
+  wilaya          String
+  commune         String
+  address         String
+  phone           String
+  phoneBlindIndex String?     // SEC-009: HMAC blind index for exact-match phone search
+  source          String      @default("whatsapp")
+  sourceMetadata  String?
+  notes           String?
+  confirmedAt     DateTime?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  delivery        Delivery?
+  returns         Return[]
 
   @@unique([orderNumber])
   @@index([status])
   @@index([source])
   @@index([createdAt])
+  @@index([phoneBlindIndex])
 }
 
 model OrderItem {

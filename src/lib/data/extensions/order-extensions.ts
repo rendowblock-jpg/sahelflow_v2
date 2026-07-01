@@ -10,6 +10,8 @@ import type { ServiceContext } from "../service-base";
 import type { OrderStatus } from "@/types/domain";
 import { orderService } from "../order-service";
 import { logger } from "@/lib/logger";
+import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
+import { getMasterKey } from "@/lib/crypto/master-key";
 
 export interface BulkResult {
   succeeded: string[];
@@ -29,6 +31,13 @@ export const orderServiceExtensions = {
     const q = query.trim();
     if (!q) return [];
 
+    // SEC-009: phone is AES-256-GCM encrypted, customer.name is encrypted.
+    // Search by: orderNumber (plaintext, substring), phoneBlindIndex (exact),
+    // customer.nameBlindIndex (exact), wilaya (plaintext, substring).
+    const masterKey = getMasterKey();
+    const phoneBlindIndex = deriveBlindIndex(q, masterKey);
+    const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
+
     const rows = await ctx.prisma.order.findMany({
       where: {
         AND: [
@@ -36,8 +45,10 @@ export const orderServiceExtensions = {
           {
             OR: [
               { orderNumber: { contains: q } },
-              { customer: { name: { contains: q } } },
-              { phone: { contains: q } },
+              { phoneBlindIndex },
+              { customer: { nameBlindIndex } },
+              { phone: { contains: q } },        // fallback: plaintext (tests/dev)
+              { customer: { name: { contains: q } } },  // fallback: plaintext (tests/dev)
               { wilaya: { contains: q } },
             ],
           },
@@ -99,6 +110,10 @@ export const orderServiceExtensions = {
   ): Promise<number> {
     const q = query.trim();
     if (!q) return 0;
+    const masterKey = getMasterKey();
+    const phoneBlindIndex = deriveBlindIndex(q, masterKey);
+    const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
+
     return ctx.prisma.order.count({
       where: {
         AND: [
@@ -106,8 +121,10 @@ export const orderServiceExtensions = {
           {
             OR: [
               { orderNumber: { contains: q } },
-              { customer: { name: { contains: q } } },
+              { phoneBlindIndex },
+              { customer: { nameBlindIndex } },
               { phone: { contains: q } },
+              { customer: { name: { contains: q } } },
             ],
           },
         ],

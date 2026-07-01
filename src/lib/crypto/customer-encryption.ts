@@ -111,6 +111,10 @@ export function encryptCustomerData(
     }
     // If already encrypted (re-save scenario), leave as-is
     if (isEncryptedPayload(value)) continue;
+    // SEC-009: compute name blind index for exact-match name search
+    if (field === "name") {
+      out["nameBlindIndex"] = deriveBlindIndex(value.toLowerCase().trim(), masterKey);
+    }
     out[field] = payloadToJson(encryptString(value, masterKey));
   }
 

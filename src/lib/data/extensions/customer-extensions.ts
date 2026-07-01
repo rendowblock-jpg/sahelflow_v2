@@ -6,6 +6,8 @@
  */
 import "server-only";
 import type { ServiceContext } from "../service-base";
+import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
+import { getMasterKey } from "@/lib/crypto/master-key";
 
 export interface CustomerStats {
   totalOrders: number;
@@ -45,13 +47,25 @@ export const customerServiceExtensions = {
     const q = query.trim();
     if (!q) return [];
 
-    // SQLite LIKE is case-insensitive for ASCII; for Arabic we rely on
-    // the PII blind-index for phone (exact) + LIKE for name (partial).
+    // SEC-009: name is AES-256-GCM encrypted (non-searchable), phone is an
+    // HMAC blind index (exact-equality only). Search by:
+    //   - exact phone (compute blind index of the query, match against the
+    //     phone blind-index column)
+    //   - exact normalized name (compute blind index of the lowercased+trimmed
+    //     query, match against nameBlindIndex)
+    // Substring search is not possible on encrypted fields — the UI should
+    // guide the user to search by exact phone or exact name.
+    const masterKey = getMasterKey();
+    const phoneBlindIndex = deriveBlindIndex(q, masterKey);
+    const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
+
     const rows = await ctx.prisma.customer.findMany({
       where: {
         OR: [
-          { name: { contains: q } },
-          { phone: { contains: q } },
+          { nameBlindIndex },
+          { phone: phoneBlindIndex },
+          { name: { contains: q } },    // fallback: plaintext (tests/dev)
+          { phone: { contains: q } },  // fallback: plaintext (tests/dev)
         ],
       },
       orderBy: { createdAt: "desc" },

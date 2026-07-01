@@ -24,6 +24,7 @@ import {
   encryptString,
   decryptString,
   isEncryptedPayload,
+  deriveBlindIndex,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
 import { getMasterKey } from "@/lib/crypto/master-key";
@@ -69,10 +70,17 @@ function jsonToPayload(json: string): EncryptedPayload {
  * @param fields The PII field names to encrypt (e.g. ORDER_PII_FIELDS).
  * @param key    Optional master key (cached in-process if omitted).
  */
+export interface BlindIndexConfig {
+  sourceField: string;   // the PII field to index (e.g. "phone")
+  indexField: string;    // the column to store the blind index (e.g. "phoneBlindIndex")
+  normalize?: (v: string) => string;  // optional normalization (e.g. toLowerCase)
+}
+
 export function encryptPiiFields(
   data: Record<string, unknown>,
   fields: readonly string[],
   key?: Buffer,
+  blindIndex?: BlindIndexConfig,
 ): Record<string, unknown> {
   const masterKey = key ?? getMasterKey();
   const out: Record<string, unknown> = { ...data };
@@ -81,7 +89,6 @@ export function encryptPiiFields(
     if (!(field in out)) continue;
     const value = out[field];
     if (value === null || value === undefined) {
-      // nullable field set to null — keep null
       continue;
     }
     if (typeof value !== "string") {
@@ -89,8 +96,12 @@ export function encryptPiiFields(
         `Field "${field}" must be a string (got ${typeof value}). Encrypt path.`,
       );
     }
-    // If already encrypted (re-save scenario), leave as-is
     if (isEncryptedPayload(value)) continue;
+    // SEC-009: compute blind index for the source field (if configured)
+    if (blindIndex && field === blindIndex.sourceField) {
+      const normalized = blindIndex.normalize ? blindIndex.normalize(value) : value;
+      out[blindIndex.indexField] = deriveBlindIndex(normalized, masterKey);
+    }
     out[field] = payloadToJson(encryptString(value, masterKey));
   }
 
