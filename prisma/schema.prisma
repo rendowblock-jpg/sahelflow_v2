@@ -529,3 +529,26 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([createdAt])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI EXTRACTION METRICS — tracks extraction accuracy for the "moat" (Phase 5)
+// ─────────────────────────────────────────────────────────────────────────────
+// Each extraction attempt records: method (regex/gemini/none), confidence,
+// per-field accuracy, latency, model version. The /analytics/extraction
+// dashboard aggregates this to show accuracy over time + by method.
+
+model ExtractionMetric {
+  id             String   @id @default(cuid())
+  messageId      String?
+  method         String   // "regex" | "gemini" | "none"
+  confidence     Float    // 0.0 - 1.0
+  isComplete     Boolean
+  missingFields  String?  // JSON array of missing field names
+  fieldAccuracy  String?  // JSON: { phone: true, name: false, ... }
+  latencyMs      Int
+  modelVersion   String?
+  createdAt      DateTime @default(now())
+
+  @@index([method, createdAt])
+  @@index([createdAt])
+}
