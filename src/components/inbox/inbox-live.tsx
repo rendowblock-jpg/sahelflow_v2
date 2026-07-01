@@ -32,7 +32,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Smartphone,
+  ArrowLeft,
 } from "lucide-react";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface SeededConversation {
   id: string;
@@ -297,6 +299,7 @@ export function InboxLive() {
     }
   }
 
+  const isMobile = useMobile();
   const activeChat = chats.find((c) => c.id === activeChatId) ?? null;
 
   return (
@@ -318,7 +321,7 @@ export function InboxLive() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Conversation list */}
-        <div className="w-80 border-e flex flex-col bg-muted/20">
+        <div className={`${isMobile && activeChatId ? "hidden" : "flex"} w-full md:w-80 md:border-e flex flex-col bg-muted/20`}>
           <div className="p-4 border-b bg-background">
             <h1 className="text-base font-semibold flex items-center gap-2 tracking-tight">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -398,11 +401,19 @@ export function InboxLive() {
         </div>
 
         {/* Message thread */}
-        <div className="flex-1 flex flex-col">
+        <div className={`${isMobile && !activeChatId ? "hidden" : "flex"} flex-1 flex flex-col`}>
           {activeChat ? (
             <>
               <div className="p-3 border-b bg-background flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  {isMobile && (
+                    <button
+                      onClick={() => setActiveChatId(null)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                  )}
                   <Avatar className="size-9">
                     <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}>
                       {activeChat.name.charAt(0).toUpperCase()}
