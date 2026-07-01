@@ -119,7 +119,21 @@ pub fn run() {
             // `bun run dev` + `bun run sidecar` manually (hot reload).
             #[cfg(not(debug_assertions))]
             {
-                if let Err(e) = spawn_services(_app) {
+                if let Err(e) =     // Wave 2: Run Prisma migrations BEFORE spawning Next.js
+    // Ensures the user's SQLite schema is up-to-date on every app launch.
+    if cfg!(feature = "custom-protocol") {
+        let db_path = app.path().app_data_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join("shops/dev.db");
+        let _ = std::process::Command::new("bun")
+            .arg("scripts/run-migrations.ts")
+            .env("DATABASE_URL", format!("file:{}", db_path.display()))
+            .output()
+            .map_err(|e| eprintln!("[sahelflow] Migration runner error: {}", e));
+        eprintln!("[sahelflow] Migrations completed");
+    }
+
+spawn_services(_app) {
                     eprintln!("[sahelflow] service spawn error: {e}");
                 }
             }
