@@ -50,8 +50,8 @@ You no longer need to build locally. Just push a git tag + GitHub Actions builds
 
 4. **GitHub Actions builds all platforms automatically**:
    - Windows (.msi) → `windows-latest`
-   - macOS Intel (.dmg) → `macos-latest` with `x86_64-apple-darwin`
-   - macOS ARM (.dmg) → `macos-latest` with `aarch64-apple-darwin`
+   - macOS (pending — needs Apple Developer cert) (.dmg) → `macos-latest` with `x86_64-apple-darwin`
+   - macOS (pending) (.dmg) → `macos-latest` with `aarch64-apple-darwin`
    - Linux (.AppImage) → `ubuntu-22.04`
    - Build time: ~20-40 minutes (parallel across platforms)
    - All builds are signed with the private key from GitHub secrets
