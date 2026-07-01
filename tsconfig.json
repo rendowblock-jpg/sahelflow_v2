@@ -67,6 +67,8 @@
     "src-tauri",
     "playwright-report",
     "test-results",
-    "sidecars"
+    "sidecars",
+    "e2e",
+    "playwright.config.ts"
   ]
 }
