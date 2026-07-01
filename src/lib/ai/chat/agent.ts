@@ -21,6 +21,26 @@ import "./tools/core-tools"; // registers the 6 core tools
 import "./tools/extended-tools"; // registers 12 extended tools (18 total)
 import "./tools/advanced-tools"; // registers 12 advanced tools (30 total — spec target)
 
+
+// PERF-014: Retry Gemini API calls on 502/503/504 (transient server errors).
+// Up to 2 attempts with 1s backoff. Non-retryable errors (400, 401, 429) skip retry.
+async function fetchGeminiWithRetry(
+  url: string,
+  options: RequestInit,
+  maxAttempts = 2,
+): Promise<Response> {
+  let lastRes: Response | null = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    lastRes = await fetch(url, options);
+    if (![502, 503, 504].includes(lastRes.status)) return lastRes;
+    if (attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  return lastRes!;
+}
+
+
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 const MAX_ITERATIONS = 5;
@@ -106,7 +126,7 @@ export async function runAgent(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        const res = await fetch(url, {
+        const res = await fetchGeminiWithRetry(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -269,7 +289,7 @@ export async function* runAgentStream(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        const res = await fetch(url, {
+        const res = await fetchGeminiWithRetry(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
