@@ -23,7 +23,7 @@ import { SahelFlowError } from "@/types/errors";
  * `setSetting` (and therefore via `PUT /api/settings`). They hold
  * security-sensitive values managed by dedicated, authenticated code paths.
  */
-const RESERVED_SETTING_KEY_PREFIXES = ["auth_"] as const;
+const RESERVED_SETTING_KEY_PREFIXES = ["auth_", "active_license"] as const;
 
 function isReservedSettingKey(key: string): boolean {
   return RESERVED_SETTING_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));

@@ -67,6 +67,14 @@ export function useLicense() {
       if (cancelled) return;
 
       setValidation(result);
+      // Wave 2: sync the license to the server so requireLicense() works
+      if (result.status === "valid" || result.status === "expired") {
+        fetch("/api/license/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
+          body: JSON.stringify(result),
+        }).catch(() => { /* best-effort */ });
+      }
       setHasChecked(true);
       setIsLoading(false);
     }
