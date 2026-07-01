@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
  *   Seller-only: update a storefront config. Partial updates supported.
  */
 export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const body = await req.json();
   const input = updateConfigSchema.parse(body);
@@ -66,6 +68,7 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
  *   Seller-only: permanently delete a storefront config.
  */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const { storefrontService } = await import("@/lib/storefront/service");
 

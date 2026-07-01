@@ -11,6 +11,7 @@ import { ORDER_FIELDS, parseNumber, normalizePhone } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 import { nextOrderNumber } from "@/lib/data/service-base";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ const orderImportSchema = z.object({
 
 /** POST /api/import/orders */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

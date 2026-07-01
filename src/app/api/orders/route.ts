@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
 
 /** POST /api/orders — create a new order + auto-assess risk (withErrorHandler pattern) */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const order = await orderService.create({ prisma: db }, body);
 

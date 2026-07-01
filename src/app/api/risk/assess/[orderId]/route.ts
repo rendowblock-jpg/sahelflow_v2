@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
 
 /** POST /api/risk/assess/[orderId] — re-assess (force refresh) */
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) => {
+  await requireAuth();
   const { orderId } = await params;
   const assessment = await assessOrderRisk(orderId);
   if (!assessment) {

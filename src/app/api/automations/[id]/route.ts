@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /** PATCH — Toggle automation active/inactive or update config */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const body = await req.json();
 
@@ -23,6 +25,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 
 /** DELETE — Remove an automation */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   await db.automation.delete({ where: { id } });
   return NextResponse.json({ success: true });

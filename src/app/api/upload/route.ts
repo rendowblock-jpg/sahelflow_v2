@@ -3,6 +3,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { requireAuth } from "@/lib/auth/server";
 
 /**
  * File upload endpoint — accepts multipart/form-data, stores the file
@@ -28,6 +29,7 @@ const ALLOWED_TYPES = new Set([
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const POST = withErrorHandler(async (req: Request) => {
+  await requireAuth();
   const formData = await req.formData();
   const file = formData.get("file");
 

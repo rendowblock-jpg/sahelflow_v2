@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unblacklistCustomer } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 /** DELETE /api/risk/blacklist/[customerId] — remove a customer from the blacklist */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: { params: Promise<{ customerId: string }> }) => {
+  await requireAuth();
   const { customerId } = await params;
   await unblacklistCustomer(customerId);
   return NextResponse.json({ ok: true });

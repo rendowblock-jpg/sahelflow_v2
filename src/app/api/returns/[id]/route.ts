@@ -8,6 +8,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ const returnStatusSchema = z.object({
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const body = await req.json();
   const { status, notes } = returnStatusSchema.parse(body);

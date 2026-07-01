@@ -16,6 +16,7 @@ import {
   verifyPinDetailed,
   CURRENT_PBKDF2_ITERATIONS,
 } from "./crypto";
+import { SahelFlowError } from "@/types/errors";
 
 /**
  * Get the auth secret — from env var first (fast, no DB), then from DB.
@@ -203,9 +204,6 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function requireAuth(): Promise<void> {
   const ok = await isAuthenticated();
   if (!ok) {
-    throw new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
   }
 }

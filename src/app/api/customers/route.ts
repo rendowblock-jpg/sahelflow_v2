@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { createCustomerSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 
 /** POST /api/customers — create a new customer */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const data = createCustomerSchema.parse(body);
 

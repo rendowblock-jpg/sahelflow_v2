@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ const createSchema = z.object({
  * updates the Delivery record with the tracking number + cost.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = createSchema.parse(body);
 

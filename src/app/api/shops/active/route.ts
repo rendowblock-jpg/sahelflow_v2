@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { setActiveShopId } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ const setActiveSchema = z.object({
  * Body: { shopId: string }
  */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = setActiveSchema.parse(body);
   setActiveShopId(input.shopId);

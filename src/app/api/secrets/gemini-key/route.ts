@@ -7,6 +7,7 @@ import {
 } from "@/lib/secrets";
 import { verifyGeminiKey } from "@/lib/ai/extraction";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ const saveSchema = z.object({
  * Tests the key (optional) then saves it encrypted to the Secret store.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = saveSchema.parse(body);
 
@@ -66,6 +68,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
  * Removes the stored Gemini key.
  */
 export const DELETE = withErrorHandler(async () => {
+  await requireAuth();
   await deleteSecret("gemini_api_key");
   return NextResponse.json({ ok: true, message: "Clé supprimée." });
 }, "DELETE /api/secrets/gemini-key");

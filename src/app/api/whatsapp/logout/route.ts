@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 /** DELETE /api/whatsapp/logout — clear auth + disconnect (next connect → fresh QR). */
 export const DELETE = withErrorHandler(async () => {
+  await requireAuth();
   try {
     const result = await sidecar.logout();
     return NextResponse.json(result);

@@ -8,12 +8,14 @@ import { db } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
 
   const order = await db.order.findUnique({
@@ -45,6 +47,7 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
  * Status changes must go through PATCH /api/orders/[id]/status (state machine).
  */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const body = await req.json();
   const order = await orderService.update({ prisma: db }, id, body);

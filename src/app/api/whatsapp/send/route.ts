@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ const sendSchema = z.object({
 
 /** POST /api/whatsapp/send — send a text message via the sidecar. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = sendSchema.parse(body);
   try {

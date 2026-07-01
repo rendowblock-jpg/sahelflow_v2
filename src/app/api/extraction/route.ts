@@ -3,6 +3,7 @@ import { extractOrder } from "@/lib/ai/extraction";
 import { getSecret } from "@/lib/secrets";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ const extractionSchema = z.object({
  * The key never needs to be present on the client in normal use.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const body = await req.json();
   const input = extractionSchema.parse(body);
 

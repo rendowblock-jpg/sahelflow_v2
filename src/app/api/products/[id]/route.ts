@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { updateProductSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
 
 /** PATCH /api/products/[id] — update an existing product */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const body = await req.json();
   const data = updateProductSchema.parse(body);
@@ -28,6 +30,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 
 /** DELETE /api/products/[id] — delete a product (soft-deletes if order items exist) */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   await productService.delete({ prisma: db }, id);
   return NextResponse.json({ success: true });
