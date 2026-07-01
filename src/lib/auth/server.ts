@@ -3,8 +3,6 @@ import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import {
   AUTH_COOKIE,
-  AUTH_PIN_SETTING_KEY,
-  AUTH_SECRET_SETTING_KEY,
   AUTH_SECRET_ENV,
   SESSION_TTL_MS,
 } from "./config";
@@ -14,150 +12,117 @@ import {
   hashPin,
   verifyPin,
   verifyPinDetailed,
+  getSessionIdFromToken,
   CURRENT_PBKDF2_ITERATIONS,
 } from "./crypto";
 import { SahelFlowError } from "@/types/errors";
 
-/**
- * Get the auth secret — from env var first (fast, no DB), then from DB.
- * If neither exists, returns null (setup mode).
- */
+const LEGACY_AUTH_SECRET_KEY = "auth_secret";
+const LEGACY_AUTH_PIN_KEY = "auth_pin_hash";
+
+let migrationDone = false;
+async function migrateAuthSecretsIfNeeded(): Promise<void> {
+  if (migrationDone) return;
+  migrationDone = true;
+  try {
+    const existing = await db.authSecret.findUnique({ where: { id: "default" } });
+    if (existing) return;
+    const legacySecret = await db.setting.findUnique({ where: { key: LEGACY_AUTH_SECRET_KEY } });
+    const legacyPin = await db.setting.findUnique({ where: { key: LEGACY_AUTH_PIN_KEY } });
+    if (!legacySecret?.value || !legacyPin?.value) return;
+    await db.authSecret.create({
+      data: { id: "default", secret: legacySecret.value, pinHash: legacyPin.value },
+    });
+    await db.setting.deleteMany({ where: { key: { in: [LEGACY_AUTH_SECRET_KEY, LEGACY_AUTH_PIN_KEY] } } });
+  } catch {
+    // Non-fatal
+  }
+}
+
 export async function getAuthSecret(): Promise<string | null> {
-  // 1. Env var (set after first setup + restart)
   const envSecret = process.env[AUTH_SECRET_ENV];
   if (envSecret) return envSecret;
-
-  // 2. DB (Setting table)
+  await migrateAuthSecretsIfNeeded();
   try {
-    const setting = await db.setting.findUnique({
-      where: { key: AUTH_SECRET_SETTING_KEY },
-    });
+    const row = await db.authSecret.findUnique({ where: { id: "default" } });
+    if (row?.secret) return row.secret;
+  } catch { /* DB not ready */ }
+  try {
+    const setting = await db.setting.findUnique({ where: { key: LEGACY_AUTH_SECRET_KEY } });
     if (setting?.value) return setting.value;
-  } catch {
-    // DB might not be ready during first-run
-  }
-
+  } catch { /* ignore */ }
   return null;
 }
 
-/**
- * Initialize auth on first setup: generate secret + hash PIN + store both.
- * Returns the secret so the caller can write it to .env.local.
- *
- * Writes directly to the Setting table (bypassing `setSetting`'s reserved-key
- * guard) because this is a trusted internal setup path.
- */
 export async function setupAuth(pin: string): Promise<{ secret: string }> {
   const secret = generateSecret();
   const pinHash = await hashPin(pin);
-
-  await db.setting.upsert({
-    where: { key: AUTH_SECRET_SETTING_KEY },
-    create: { key: AUTH_SECRET_SETTING_KEY, value: secret },
-    update: { value: secret },
+  await db.authSecret.upsert({
+    where: { id: "default" },
+    create: { id: "default", secret, pinHash },
+    update: { secret, pinHash },
   });
-  await db.setting.upsert({
-    where: { key: AUTH_PIN_SETTING_KEY },
-    create: { key: AUTH_PIN_SETTING_KEY, value: pinHash },
-    update: { value: pinHash },
-  });
-
   return { secret };
 }
 
-/**
- * Verify a PIN against the stored hash.
- * Returns true if the PIN is correct (or if no PIN is set = setup mode).
- */
-export async function verifyAuthPin(pin: string): Promise<boolean> {
-  const setting = await db.setting.findUnique({
-    where: { key: AUTH_PIN_SETTING_KEY },
-  });
-  if (!setting?.value) return false; // No PIN set — must setup first
-  return verifyPin(pin, setting.value);
-}
-
-/**
- * Verify a PIN + transparently re-hash to CURRENT iterations if the stored
- * hash is legacy (100k) or otherwise below current. Used by the login route
- * so existing users upgrade to 600k on their next successful login without
- * any forced reset.
- *
- * Returns `{ valid, rehashed }`. On `valid && rehashed`, the caller may log
- * the upgrade (future audit log — SEC-004, Phase 1 PR 3).
- */
 export async function verifyAuthPinAndMaybeRehash(
   pin: string,
 ): Promise<{ valid: boolean; rehashed: boolean }> {
-  const setting = await db.setting.findUnique({
-    where: { key: AUTH_PIN_SETTING_KEY },
-  });
-  if (!setting?.value) return { valid: false, rehashed: false };
-
-  const result = await verifyPinDetailed(pin, setting.value);
+  await migrateAuthSecretsIfNeeded();
+  const row = await db.authSecret.findUnique({ where: { id: "default" } });
+  if (!row?.pinHash) return { valid: false, rehashed: false };
+  const result = await verifyPinDetailed(pin, row.pinHash);
   if (!result.valid) return { valid: false, rehashed: false };
-
   if (result.needsRehash) {
-    // Re-hash at CURRENT iterations + persist. Failures are non-fatal — the
-    // login still succeeds; the old hash remains for next time.
     try {
       const newHash = await hashPin(pin, CURRENT_PBKDF2_ITERATIONS);
-      await db.setting.update({
-        where: { key: AUTH_PIN_SETTING_KEY },
-        data: { value: newHash },
-      });
+      await db.authSecret.update({ where: { id: "default" }, data: { pinHash: newHash } });
       return { valid: true, rehashed: true };
     } catch {
       return { valid: true, rehashed: false };
     }
   }
-
   return { valid: true, rehashed: false };
 }
 
-/**
- * Change the PIN — requires the current PIN to be verified first (SEC-002).
- * Writes directly to the Setting table (bypassing `setSetting`'s reserved-key
- * guard) because this is a trusted, authenticated code path.
- */
+export async function verifyAuthPin(pin: string): Promise<boolean> {
+  await migrateAuthSecretsIfNeeded();
+  const row = await db.authSecret.findUnique({ where: { id: "default" } });
+  if (!row?.pinHash) return false;
+  return verifyPin(pin, row.pinHash);
+}
+
 export async function changeAuthPin(
   currentPin: string,
   newPin: string,
 ): Promise<{ changed: boolean; reason?: string }> {
   const valid = await verifyAuthPin(currentPin);
-  if (!valid) {
-    return { changed: false, reason: "current_pin_invalid" };
-  }
+  if (!valid) return { changed: false, reason: "current_pin_invalid" };
   const newHash = await hashPin(newPin);
-  await db.setting.update({
-    where: { key: AUTH_PIN_SETTING_KEY },
-    data: { value: newHash },
-  });
+  await db.authSecret.update({ where: { id: "default" }, data: { pinHash: newHash } });
   return { changed: true };
 }
 
-/**
- * Check if auth is set up (PIN exists).
- */
 export async function isAuthSetup(): Promise<boolean> {
+  await migrateAuthSecretsIfNeeded();
   try {
-    const setting = await db.setting.findUnique({
-      where: { key: AUTH_PIN_SETTING_KEY },
-    });
-    return !!setting?.value;
+    const row = await db.authSecret.findUnique({ where: { id: "default" } });
+    return !!row?.pinHash;
   } catch {
-    return false;
+    try {
+      const setting = await db.setting.findUnique({ where: { key: LEGACY_AUTH_PIN_KEY } });
+      return !!setting?.value;
+    } catch {
+      return false;
+    }
   }
 }
 
-/**
- * Create a session: generate token + set httpOnly cookie.
- * Call this from a Server Action or API route after verifying the PIN.
- */
-export async function createSession(): Promise<void> {
+export async function createSession(ip?: string): Promise<void> {
   const secret = await getAuthSecret();
   if (!secret) throw new Error("Auth not set up — run setup first");
-  const token = await createSessionToken(secret, SESSION_TTL_MS);
+  const session = await db.session.create({ data: { ip: ip ?? null } });
+  const token = await createSessionToken(secret, SESSION_TTL_MS, session.id);
   const store = await cookies();
   store.set(AUTH_COOKIE, token, {
     httpOnly: true,
@@ -166,44 +131,65 @@ export async function createSession(): Promise<void> {
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
   });
+  void db.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
 }
 
-/**
- * Destroy the session: clear the cookie.
- */
 export async function destroySession(): Promise<void> {
+  const token = await getSessionToken();
+  const sid = getSessionIdFromToken(token);
+  if (sid) {
+    try {
+      await db.session.update({ where: { id: sid }, data: { revokedAt: new Date() } });
+    } catch { /* non-fatal */ }
+  }
   const store = await cookies();
   store.delete(AUTH_COOKIE);
 }
 
-/**
- * Get the session token from the request cookies (for API routes).
- */
 export async function getSessionToken(): Promise<string | undefined> {
   const store = await cookies();
   return store.get(AUTH_COOKIE)?.value;
 }
 
-/**
- * Check if the current request is authenticated.
- * Used by API routes as a guard.
- */
 export async function isAuthenticated(): Promise<boolean> {
   const token = await getSessionToken();
   const secret = await getAuthSecret();
-  if (!secret) return true; // setup mode — allow
+  if (!secret) return true;
   if (!token) return false;
   const { verifySessionToken } = await import("./crypto");
-  return verifySessionToken(token, secret);
+  const hmacValid = await verifySessionToken(token, secret);
+  if (!hmacValid) return false;
+  const sid = getSessionIdFromToken(token);
+  if (!sid) return true; // legacy token — allow, will expire naturally
+  try {
+    const session = await db.session.findUnique({ where: { id: sid } });
+    if (!session) return false;
+    if (session.revokedAt) return false;
+    return true;
+  } catch {
+    return true; // DB error — fail-open (HMAC valid, session check is defense-in-depth)
+  }
 }
 
-/**
- * Require authentication — throws if not authenticated.
- * Use in API routes: `await requireAuth();`
- */
 export async function requireAuth(): Promise<void> {
   const ok = await isAuthenticated();
   if (!ok) {
     throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
   }
+}
+
+export async function auditLog(
+  action: string,
+  metadata?: Record<string, unknown>,
+  ip?: string,
+): Promise<void> {
+  try {
+    await db.auditLog.create({
+      data: {
+        action,
+        ip: ip ?? null,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      },
+    });
+  } catch { /* best-effort */ }
 }

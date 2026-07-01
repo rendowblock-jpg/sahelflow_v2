@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE } from "@/lib/auth/config";
+import { destroySession, auditLog } from "@/lib/auth/server";
 
-export async function POST() {
-  const res = NextResponse.json({ success: true });
-  res.cookies.set(AUTH_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-    maxAge: 0,
-  });
-  return res;
+export async function POST(req: Request) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  await destroySession();
+  void auditLog("auth.logout", {}, ip);
+  return NextResponse.json({ success: true });
 }
