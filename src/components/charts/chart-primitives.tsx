@@ -17,6 +17,7 @@ import { cn, formatDZD, formatDZDShort } from "@/lib/utils";
  */
 export type ChartFormatter = "currency" | "currencyShort" | "number" | "percent" | "identity";
 
+// TODO: chart formatters use default "fr" locale — pass locale from page for ar-DZ formatting
 export const chartFormatters: Record<ChartFormatter, (v: number) => string> = {
   currency: (v) => formatDZD(v),
   currencyShort: (v) => formatDZDShort(v),

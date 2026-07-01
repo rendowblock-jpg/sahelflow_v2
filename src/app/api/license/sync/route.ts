@@ -28,7 +28,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   await db.setting.upsert({
     where: { key: "active_license_status" },
     create: { key: "active_license_status", value: JSON.stringify(input) },
-    update: { key: "active_license_status", value: JSON.stringify(input) },
+    update: { value: JSON.stringify(input) },
   });
 
   // Update the in-memory cache
