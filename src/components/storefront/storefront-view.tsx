@@ -183,7 +183,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                         {product.images && (
                       <div className="aspect-square w-full rounded-lg bg-muted overflow-hidden mb-3">
                         <img
-                          src={product.images.split(",")[0]}
+                          src={(() => { try { return JSON.parse(product.images)[0]; } catch { return product.images.split(",")[0]; } })()}
                           alt={product.name}
                           className="h-full w-full object-cover"
                           loading="lazy"

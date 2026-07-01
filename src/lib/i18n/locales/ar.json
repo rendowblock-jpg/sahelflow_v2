@@ -2171,5 +2171,22 @@
   "orders.count_two": "طلبان",
   "orders.count_few": "{{count}} طلبات",
   "orders.count_many": "{{count}} طلبًا",
-  "orders.count_other": "{{count}} طلب"
+  "orders.count_other": "{{count}} طلب",
+  "dashboard.deliveredToday": "تم التسليم اليوم",
+  "common.skip": "تخطي",
+  "storefront.view.address": "العنوان",
+  "analytics.extraction.empty": "لا توجد بيانات استخراج بعد. ستظهر عمليات الاستخراج بالذكاء الاصطناعي هنا.",
+  "analytics.extraction.title": "تحليلات الاستخراج بالذكاء الاصطناعي",
+  "analytics.extraction.total": "إجمالي الاستخراجات",
+  "analytics.extraction.completionRate": "معدل الاكتمال",
+  "analytics.extraction.methods": "الطرق",
+  "analytics.extraction.byMethod": "حسب الطريقة",
+  "analytics.extraction.trend": "الاتجاه اليومي (30 يومًا)",
+  "analytics.extraction.extractions": "استخراجات",
+  "analytics.extraction.avgConfidence": "% متوسط الثقة",
+  "analytics.extraction.avgLatency": "مللي ثانية متوسط",
+  "analytics.extraction.confidence": "الثقة",
+  "analytics.extraction.complete": "مكتمل",
+  "license.premiumFeature": "ميزة مدفوعة",
+  "license.premiumFeatureDescription": "تتطلب هذه الميزة ترخيصًا مدفوعًا."
 }

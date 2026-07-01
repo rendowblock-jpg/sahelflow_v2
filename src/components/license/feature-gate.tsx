@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
 import { Card, CardContent } from "@/components/ui/card";
 import { Lock } from "lucide-react";
@@ -25,6 +26,7 @@ interface FeatureGateProps {
  */
 export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
   const { license, isLoading } = useLicense();
+  const { t } = useI18n();
 
   if (isLoading) return <>{children}</>;
 
@@ -41,9 +43,9 @@ export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
                 <Lock className="h-6 w-6 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium">Premium Feature</p>
+                <p className="text-sm font-medium">{t('license.premiumFeature')}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  This feature requires a paid license.
+                  {t('license.premiumFeatureDescription')}
                 </p>
               </div>
             </CardContent>

@@ -518,6 +518,11 @@ interface ParsedMeta {
   activeShopId?: string | null;
 }
 
+/** Invalidate the app-meta.json cache — call after shop switch/restore. */
+export function invalidateMetaCache(): void {
+  metaCache = null;
+}
+
 function getActiveShopClient(): DbClient {
   // In test mode, always use the fallback client (tests set DATABASE_URL)
   if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {

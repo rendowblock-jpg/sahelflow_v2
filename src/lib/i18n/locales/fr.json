@@ -2171,5 +2171,22 @@
   "orders.count_two": "{{count}} commandes",
   "orders.count_few": "{{count}} commandes",
   "orders.count_many": "{{count}} commandes",
-  "orders.count_other": "{{count}} commandes"
+  "orders.count_other": "{{count}} commandes",
+  "dashboard.deliveredToday": "Livrées Aujourd'hui",
+  "common.skip": "Passer",
+  "storefront.view.address": "Adresse",
+  "analytics.extraction.empty": "Aucune donnée d'extraction. Les extractions IA apparaîtront ici.",
+  "analytics.extraction.title": "Analyse d'Extraction IA",
+  "analytics.extraction.total": "Extractions Totales",
+  "analytics.extraction.completionRate": "Taux de Complétion",
+  "analytics.extraction.methods": "Méthodes",
+  "analytics.extraction.byMethod": "Par Méthode",
+  "analytics.extraction.trend": "Tendance Quotidienne (30 jours)",
+  "analytics.extraction.extractions": "extractions",
+  "analytics.extraction.avgConfidence": "% confiance moy.",
+  "analytics.extraction.avgLatency": "ms moy.",
+  "analytics.extraction.confidence": "confiance",
+  "analytics.extraction.complete": "complet",
+  "license.premiumFeature": "Fonctionnalité Premium",
+  "license.premiumFeatureDescription": "Cette fonctionnalité nécessite une licence payante."
 }
