@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useI18n } from "@/hooks/use-i18n";
+import { formatDZD } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -301,7 +302,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                       </div>
                     </div>
                     <div className="text-sm font-semibold whitespace-nowrap">
-                      {product.price.toLocaleString("fr-DZ")} DZD
+                      {formatDZD(product.price)}
                     </div>
                   </label>
                 );

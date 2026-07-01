@@ -90,7 +90,7 @@ export function StatCard({
       const eased = 1 - Math.pow(1 - t, 3);
       const current = Math.round(eased * parsed.num);
       setDisplayValue(
-        `${parsed.prefix}${current.toLocaleString("fr-FR")}${parsed.suffix}`,
+        `${parsed.prefix}${current.toLocaleString("en-US")}${parsed.suffix}`,
       );
       if (t < 1) rafRef.current = requestAnimationFrame(tick);
     };

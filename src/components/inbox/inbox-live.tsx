@@ -382,7 +382,7 @@ export function InboxLive() {
                       }`}
                     >
                       <Avatar className="h-10 w-10 mt-1">
-                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-emerald-700" : "bg-sky-100 text-sky-700"}>
+                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-emerald-700" : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"}>
                           {c.channel === "whatsapp" ? <MessageCircle className="h-5 w-5" /> : c.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -436,7 +436,7 @@ export function InboxLive() {
                     </button>
                   )}
                   <Avatar className="size-9">
-                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"}>
+                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 dark:bg-sky-900/30 dark:text-sky-400"}>
                       {activeChat.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

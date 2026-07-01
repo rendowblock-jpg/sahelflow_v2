@@ -407,7 +407,7 @@ export function AiChat() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border bg-muted w-fit">
+                    <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border bg-muted">
                       <Bot className="size-6 text-muted-foreground" />
                     </div>
                     <h3 className="text-base font-semibold mb-2">{t("ai.howCanIHelp")}</h3>

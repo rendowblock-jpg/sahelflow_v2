@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { orderStatusSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
 import {
   parseFile,
@@ -118,7 +119,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await db.order.create({
         data: {
           orderNumber,
-          status: (data.status as string) || "pending",
+          status: orderStatusSchema.safeParse(data.status).success ? data.status : "pending",
           customerId: customer.id,
           wilaya: data.wilaya,
           commune: data.commune ?? "",

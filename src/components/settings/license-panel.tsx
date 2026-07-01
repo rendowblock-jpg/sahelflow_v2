@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 export function LicensePanel() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { license, validation, machineId, isLoading } = useLicense();
   const setLicense = useLicenseStore((s) => s.setLicense);
   const setHasChecked = useLicenseStore((s) => s.setHasChecked);
@@ -118,7 +118,7 @@ export function LicensePanel() {
               {t("license.expiresOn")}
             </span>
             <span className="text-sm font-medium">
-              {new Date(license.payload.expiresAt).toLocaleDateString("fr-FR")}
+              {new Date(license.payload.expiresAt).toLocaleDateString(locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR")}
             </span>
           </div>
         )}

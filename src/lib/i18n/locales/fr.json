@@ -2188,5 +2188,7 @@
   "analytics.extraction.confidence": "confiance",
   "analytics.extraction.complete": "complet",
   "license.premiumFeature": "Fonctionnalité Premium",
-  "license.premiumFeatureDescription": "Cette fonctionnalité nécessite une licence payante."
+  "license.premiumFeatureDescription": "Cette fonctionnalité nécessite une licence payante.",
+  "auth.securityBadge": "Sécurisé par chiffrement AES-256-GCM",
+  "nav.subtitle": "Gestion COD"
 }

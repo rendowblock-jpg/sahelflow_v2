@@ -122,7 +122,7 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">
               <ShieldCheck className="size-3" />
-              <span>Secured by AES-256-GCM encryption</span>
+              <span>{t('auth.securityBadge')}</span>
             </div>
           </form>
         </CardContent>

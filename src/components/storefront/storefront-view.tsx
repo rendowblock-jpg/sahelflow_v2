@@ -1,4 +1,5 @@
 "use client";
+import { formatDZD } from "@/lib/utils";
 
 import { useState } from "react";
 import { useI18n } from "@/hooks/use-i18n";
@@ -206,7 +207,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                     </div>
                     {config.theme.showPrices && (
                       <p className="text-lg font-bold" style={{ color: config.theme.primaryColor }}>
-                        {product.price.toLocaleString("fr-DZ")} DA
+                        {formatDZD(product.price)}
                       </p>
                     )}
                     <Button
@@ -255,7 +256,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{item.product.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.product.price.toLocaleString("fr-DZ")} DA
+                          {formatDZD(item.product.price)}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
@@ -274,7 +275,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   ))}
                   <div className="border-t pt-2 flex justify-between font-bold">
                     <span>{t("storefront.view.total")}</span>
-                    <span>{cartTotal.toLocaleString("fr-DZ")} DA</span>
+                    <span>{formatDZD(cartTotal)}</span>
                   </div>
                 </>
               )}
@@ -339,9 +340,9 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             <Card>
               <CardContent className="pt-4 text-sm space-y-1">
                 <p className="font-medium">{t("storefront.view.contact")}</p>
-                {config.contact.phone && <p className="text-muted-foreground">📞 {config.contact.phone}</p>}
-                {config.contact.whatsapp && <p className="text-muted-foreground">💬 {config.contact.whatsapp}</p>}
-                {config.contact.email && <p className="text-muted-foreground">✉️ {config.contact.email}</p>}
+                {config.contact.phone && <p className="text-muted-foreground"><span aria-hidden="true">📞</span> {config.contact.phone}</p>}
+                {config.contact.whatsapp && <p className="text-muted-foreground"><span aria-hidden="true">💬</span> {config.contact.whatsapp}</p>}
+                {config.contact.email && <p className="text-muted-foreground"><span aria-hidden="true">✉️</span> {config.contact.email}</p>}
               </CardContent>
             </Card>
           )}
