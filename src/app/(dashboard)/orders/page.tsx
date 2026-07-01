@@ -21,7 +21,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
   return { title: t("metadata.title.orders") };
 }
-export const revalidate = 30;
 
 const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = [
   { value: "all", labelKey: "common.all" },

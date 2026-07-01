@@ -66,8 +66,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "lucide-react",
       "recharts",
-      "react-syntax-highlighter",
-    ],
+          ],
   },
   async headers() {
     return [

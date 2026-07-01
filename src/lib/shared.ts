@@ -57,9 +57,6 @@ export function formatTime(iso: string | Date, locale: Locale = 'fr'): string {
 }
 
 /** Locale-aware number formatting. */
-export function formatNumber(n: number, locale: Locale = 'fr'): string {
-  return new Intl.NumberFormat(LOCALE_TAG[locale]).format(n)
-}
 
 // ── Status Configuration ─────────────────────────────────────────────────────
 //
