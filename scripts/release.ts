@@ -108,13 +108,19 @@ const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf-8"));
 tauriConf.version = version;
 writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + "\n");
 
+// PROD-005: also update Cargo.toml (was missing — stuck at 3.0.0)
+const cargoTomlPath = resolve(ROOT, "src-tauri", "Cargo.toml");
+const cargoToml = readFileSync(cargoTomlPath, "utf-8");
+const updatedCargo = cargoToml.replace(/^version = "[^"]*"/m, `version = "${version}"`);
+writeFileSync(cargoTomlPath, updatedCargo);
+
 // Update package.json
 const pkgPath = resolve(ROOT, "package.json");
 const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 pkg.version = version;
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 
-ok(`Bumped version to ${version} in tauri.conf.json + package.json`);
+ok(`Bumped version to ${version} in tauri.conf.json + package.json + Cargo.toml`);
 
 // Commit
 try {
