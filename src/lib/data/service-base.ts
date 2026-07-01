@@ -6,6 +6,7 @@
  * enforce business rules, and throw typed errors (from @/types/errors).
  */
 import "server-only";
+import { logger } from "@/lib/logger";
 
 import type { DbClient } from "@/lib/db";
 import { SahelFlowError, NotFoundError, ValidationError } from "@/types/errors";
@@ -34,7 +35,7 @@ export async function withServiceError<T>(
       throw new NotFoundError(resource, "(unknown id)");
     }
     // Re-throw unknown with context
-    console.error(`[${resource}] Unexpected error:`, err);
+    try { logger.error(`service.${resource}.unexpected`, err instanceof Error ? err : undefined); } catch { /* logger must not break the service flow */ }
     throw new SahelFlowError(
       `Unexpected error in ${resource}: ${err instanceof Error ? err.message : String(err)}`,
       "INTERNAL_ERROR",
