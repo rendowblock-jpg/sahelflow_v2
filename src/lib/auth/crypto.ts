@@ -52,8 +52,9 @@ async function importHmacKey(secret: string): Promise<CryptoKey> {
 
 /** Session token payload. */
 export interface SessionPayload {
-  exp: number; // expiry timestamp (ms)
-  iat: number; // issued-at timestamp (ms)
+  exp: number;
+  iat: number;
+  sid?: string; // session ID for revocation (SEC-004)
 }
 
 /**
@@ -62,11 +63,13 @@ export interface SessionPayload {
  */
 export async function createSessionToken(
   secret: string,
-  ttlMs: number = 7 * 24 * 60 * 60 * 1000, // 7 days
+  ttlMs: number = 7 * 24 * 60 * 60 * 1000,
+  sessionId?: string,
 ): Promise<string> {
   const payload: SessionPayload = {
     iat: Date.now(),
     exp: Date.now() + ttlMs,
+    ...(sessionId ? { sid: sessionId } : {}),
   };
   const payloadStr = JSON.stringify(payload);
   const payloadB64 = base64urlEncode(encoder.encode(payloadStr));
@@ -124,6 +127,24 @@ export async function verifySessionToken(
     return Date.now() < payload.exp;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Extract the session ID from a token (without verifying the signature —
+ * caller must have already called verifySessionToken). Returns null for
+ * legacy tokens without `sid` or for malformed tokens.
+ */
+export function getSessionIdFromToken(token: string | undefined | null): string | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  try {
+    const payloadJson = decoder.decode(base64urlDecode(parts[0]!));
+    const payload = JSON.parse(payloadJson) as SessionPayload;
+    return payload.sid ?? null;
+  } catch {
+    return null;
   }
 }
 

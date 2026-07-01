@@ -14,6 +14,8 @@ export async function createTestPrisma(): Promise<PrismaClient> {
   const db = new PrismaClient();
   // Clean all tables (order matters for FK constraints)
   await db.$transaction([
+    db.auditLog.deleteMany(),
+    db.session.deleteMany(),
     db.orderItem.deleteMany(),
     db.delivery.deleteMany(),
     db.returnNote.deleteMany(),
@@ -26,6 +28,7 @@ export async function createTestPrisma(): Promise<PrismaClient> {
     db.expense.deleteMany(),
     db.counter.deleteMany(),
     db.setting.deleteMany(),
+    db.authSecret.deleteMany(),
   ]);
   return db;
 }
@@ -134,6 +137,8 @@ export async function seedOrder(
 /** Clean all tables in the test DB (alias for createTestPrisma's cleanup). */
 export async function cleanDb(db: PrismaClient): Promise<void> {
   await db.$transaction([
+    db.auditLog.deleteMany(),
+    db.session.deleteMany(),
     db.orderItem.deleteMany(),
     db.delivery.deleteMany(),
     db.returnNote.deleteMany(),
@@ -146,6 +151,7 @@ export async function cleanDb(db: PrismaClient): Promise<void> {
     db.expense.deleteMany(),
     db.counter.deleteMany(),
     db.setting.deleteMany(),
+    db.authSecret.deleteMany(),
   ]);
 }
 

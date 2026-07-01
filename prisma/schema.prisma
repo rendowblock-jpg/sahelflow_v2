@@ -476,3 +476,45 @@ model Counter {
   value     Int      @default(1)
   updatedAt DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH — dedicated tables for auth secrets, sessions, and audit logs (SEC-002/004)
+// ─────────────────────────────────────────────────────────────────────────────
+// AuthSecret replaces the old pattern of storing auth_pin_hash + auth_secret in
+// the generic Setting table (SEC-002: setSetting now rejects auth_* keys).
+//
+// Session enables revocation (SEC-004): tokens include a sessionId (JTI) that's
+// checked against this table on every requireAuth(). Revoked sessions are
+// rejected even if the HMAC signature is still valid.
+//
+// AuditLog records security-relevant events for forensic visibility.
+
+model AuthSecret {
+  id        String   @id @default("default") // singleton row
+  pinHash   String   // PBKDF2-SHA256 hash (format: pbkdf2_sha256$iter$salt$hash)
+  secret    String   // HMAC signing secret for session tokens
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  issuedAt   DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime? // non-null = revoked
+  ip         String?
+  createdAt  DateTime  @default(now())
+
+  @@index([revokedAt])
+  @@index([issuedAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "auth.login.success", "auth.login.failed", "auth.logout", "auth.pin.change"
+  ip        String?
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([createdAt])
+}

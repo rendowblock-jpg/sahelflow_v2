@@ -6,6 +6,7 @@ import {
   verifyPin,
   verifyPinDetailed,
   pinHashNeedsRehash,
+  getSessionIdFromToken,
   generateSecret,
   CURRENT_PBKDF2_ITERATIONS,
   LEGACY_PBKDF2_ITERATIONS,
@@ -65,6 +66,37 @@ describe("auth crypto", () => {
       const tamperedToken = `${tamperedPayload}.${sig}`;
       const valid = await verifySessionToken(tamperedToken, TEST_SECRET);
       expect(valid).toBe(false);
+    });
+  });
+
+  describe("session token — sessionId (SEC-004)", () => {
+    it("embeds sessionId in the token payload when provided", async () => {
+      const token = await createSessionToken(TEST_SECRET, 60_000, "session-123");
+      const sid = getSessionIdFromToken(token);
+      expect(sid).toBe("session-123");
+    });
+
+    it("returns null for tokens without sessionId (legacy)", async () => {
+      const token = await createSessionToken(TEST_SECRET, 60_000);
+      const sid = getSessionIdFromToken(token);
+      expect(sid).toBeNull();
+    });
+
+    it("returns null for undefined token", () => {
+      expect(getSessionIdFromToken(undefined)).toBeNull();
+      expect(getSessionIdFromToken(null)).toBeNull();
+    });
+
+    it("returns null for malformed token", () => {
+      expect(getSessionIdFromToken("not-a-token")).toBeNull();
+      expect(getSessionIdFromToken("a.b.c")).toBeNull();
+      expect(getSessionIdFromToken("")).toBeNull();
+    });
+
+    it("token with sessionId still verifies normally", async () => {
+      const token = await createSessionToken(TEST_SECRET, 60_000, "sid-test");
+      const valid = await verifySessionToken(token, TEST_SECRET);
+      expect(valid).toBe(true);
     });
   });
 
