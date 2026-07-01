@@ -70,6 +70,11 @@ export function useI18n() {
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
       let value = translations[key] ?? key;
+      // UX-008: CLDR plural support
+      if (params && "count" in params) {
+        const pluralRule = new Intl.PluralRules(locale).select(Number(params.count));
+        if (translations[`${key}_${pluralRule}`]) value = translations[`${key}_${pluralRule}`]!;
+      }
       if (params) {
         for (const [param, val] of Object.entries(params)) {
           value = value.replace(new RegExp(`\\{\\{${param}\\}\\}`, "g"), String(val));
@@ -77,7 +82,7 @@ export function useI18n() {
       }
       return value;
     },
-    [translations],
+    [translations, locale],
   );
 
   const setLocale = useCallback(
