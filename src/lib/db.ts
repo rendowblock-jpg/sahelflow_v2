@@ -50,6 +50,15 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** The raw, unextended Prisma client. Use for migration scripts only. */
+// CRITICAL: Ensure DATABASE_URL is an absolute path.
+// Prisma CLI resolves relative paths from prisma/ dir, Prisma Client from cwd.
+// The .env file uses file:../data/shops/dev.db (correct for Prisma CLI).
+// Here we convert it to an absolute path for Prisma Client.
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes("..")) {
+  const dbPath = resolve(process.cwd(), "data", "shops", "dev.db");
+  process.env.DATABASE_URL = `file:${dbPath}`;
+}
+
 export const dbRaw =
   globalForPrisma.prismaRaw ??
   new PrismaClient({
