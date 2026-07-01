@@ -39,6 +39,7 @@ export async function cleanDb(): Promise<void> {
     rawDb.automation.deleteMany(),
     rawDb.aiChatMessage.deleteMany(),
     rawDb.aiChatSession.deleteMany(),
+    rawDb.extractionMetric.deleteMany(),
     rawDb.wilayaRiskProfile.deleteMany(),
   ]);
 }

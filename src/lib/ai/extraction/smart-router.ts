@@ -11,6 +11,7 @@
  * are handled by regex and never hit Gemini.
  */
 
+import { db } from "@/lib/db";
 import { extractWithRegex } from "./regex-extractor";
 import { extractWithGemini } from "./gemini-extractor";
 import type { ExtractionInput, ExtractionResult } from "./types";
@@ -59,4 +60,37 @@ export async function extractOrder(
   // Step 3: Fall back to regex result (even if incomplete)
   const regexFallback = extractWithRegex(input);
   return regexFallback;
+}
+
+
+/**
+ * Record an extraction metric for accuracy tracking (Phase 5 moat).
+ * Fire-and-forget — never blocks the extraction flow.
+ */
+export async function recordExtractionMetric(params: {
+  messageId?: string;
+  method: string;
+  confidence: number;
+  isComplete: boolean;
+  missingFields?: string[];
+  fieldAccuracy?: Record<string, boolean>;
+  latencyMs: number;
+  modelVersion?: string;
+}): Promise<void> {
+  try {
+    await db.extractionMetric.create({
+      data: {
+        messageId: params.messageId ?? null,
+        method: params.method,
+        confidence: params.confidence,
+        isComplete: params.isComplete,
+        missingFields: params.missingFields ? JSON.stringify(params.missingFields) : null,
+        fieldAccuracy: params.fieldAccuracy ? JSON.stringify(params.fieldAccuracy) : null,
+        latencyMs: params.latencyMs,
+        modelVersion: params.modelVersion ?? null,
+      },
+    });
+  } catch {
+    // best-effort — never block extraction
+  }
 }
