@@ -2166,5 +2166,10 @@
   "onboarding.product.created": "Produit créé",
   "onboarding.complete": "Configuration terminée ! Bienvenue sur SahelFlow.",
   "onboarding.finish": "Terminer",
-  "inbox.searchPlaceholder": "Rechercher des conversations..."
+  "inbox.searchPlaceholder": "Rechercher des conversations...",
+  "orders.count_one": "{{count}} commande",
+  "orders.count_two": "{{count}} commandes",
+  "orders.count_few": "{{count}} commandes",
+  "orders.count_many": "{{count}} commandes",
+  "orders.count_other": "{{count}} commandes"
 }
