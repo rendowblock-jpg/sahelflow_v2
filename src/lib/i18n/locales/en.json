@@ -2135,5 +2135,6 @@
   "error.saveFailedGeneric": "Save failed",
   "nav.sidebarLabel": "Sidebar navigation",
   "orders.selectAll": "Select all",
-  "orders.selectOrder": "Select order"
+  "orders.selectOrder": "Select order",
+  "storefront.view.added": "Added"
 }

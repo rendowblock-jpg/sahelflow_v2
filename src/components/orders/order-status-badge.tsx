@@ -99,20 +99,26 @@ export function OrderStatusBadge({
       }
 
       // If orderId provided, make the API call
+      // UX-005: fetch OUTSIDE startTransition so errors are caught by the
+      // try/catch. startTransition is fire-and-forget — errors inside it
+      // are NOT caught by the outer try/catch, so failed updates left the
+      // badge showing the wrong status with no revert + no error toast.
       if (orderId) {
-        startTransition(async () => {
-          const res = await fetch(`/api/orders/${orderId}/status`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: newStatus }),
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.error ?? t("orders.statusActions.updateFailed"));
-          }
-          toast.success(t("orders.statusActions.updated"));
-          router.refresh();
+        startTransition(() => {
+          // Just mark as pending for the UI
         });
+
+        const res = await fetch(`/api/orders/${orderId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? t("orders.statusActions.updateFailed"));
+        }
+        toast.success(t("orders.statusActions.updated"));
+        router.refresh();
       }
     } catch (err) {
       // Revert on error
