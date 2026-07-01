@@ -508,6 +508,16 @@ if (process.env.NODE_ENV !== "production") {
  * circular dependency: shops/index.ts → getShopClient → db.ts → shops/index.ts.
  * The JSON shape is stable ({shops:[{id,dbPath,...}], activeShopId}).
  */
+// PERF-002: cache the parsed app-meta.json for 2s to avoid sync readFileSync
+// on every Prisma call (was: ~800 reads for a 200-order page load).
+let metaCache: { data: ParsedMeta; cachedAt: number } | null = null;
+const META_CACHE_TTL_MS = 2000;
+
+interface ParsedMeta {
+  shops?: Array<{ id: string; dbPath: string }>;
+  activeShopId?: string | null;
+}
+
 function getActiveShopClient(): DbClient {
   // In test mode, always use the fallback client (tests set DATABASE_URL)
   if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
@@ -518,10 +528,21 @@ function getActiveShopClient(): DbClient {
     const metaPath = resolve(process.cwd(), "data", "app-meta.json");
     if (!existsSync(metaPath)) return fallbackClient;
 
-    const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as {
-      shops?: Array<{ id: string; dbPath: string }>;
-      activeShopId?: string | null;
-    };
+    // PERF-002: use cached meta if fresh (< 2s old) + file hasn't changed
+    const now = Date.now();
+    if (metaCache && now - metaCache.cachedAt < META_CACHE_TTL_MS) {
+      const meta = metaCache.data;
+      const activeId = meta.activeShopId;
+      if (!activeId) return fallbackClient;
+      const shop = meta.shops?.find((s) => s.id === activeId);
+      if (!shop) return fallbackClient;
+      const dbPath = resolve(process.cwd(), shop.dbPath);
+      return getShopClient(dbPath);
+    }
+
+    const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as ParsedMeta;
+    metaCache = { data: meta, cachedAt: now };
+
     const activeId = meta.activeShopId;
     if (!activeId) return fallbackClient;
 
