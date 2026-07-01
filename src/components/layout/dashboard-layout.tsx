@@ -7,6 +7,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
 import type { Locale } from "@/lib/i18n";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,7 +23,7 @@ interface DashboardLayoutProps {
  * Premium patterns (Dub + Trigger.dev):
  * - Grid layout: grid-cols-[auto_1fr] with overflow-hidden root
  * - Floating content panel: rounded-xl bg-background on neutral gutter
- * - Only <main> scrolls — no double scrollbars, no page bounce
+ * - Only <main id="main-content"> scrolls — no double scrollbars, no page bounce
  * - Responsive: sidebar hidden on mobile (Sheet handles it)
  *
  * RTL (the definitive fix):
@@ -48,6 +49,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   // Cmd+K (line 40 of the hook), so we handle that here — there's only ONE
   // Cmd+K listener, not two.
   useKeyboardShortcuts();
+  const { t } = useI18n();
 
   // Use the server-rendered dir ONLY. This comes from the Server Component
   // layout which reads the cookie via next/headers — it's always correct and
@@ -78,7 +80,8 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
           parent <html dir="rtl"> makes flexbox lay out children right-to-left.
           We do NOT use flex-row-reverse here (that would double-reverse the
           sidebar's internal content which already handles its own RTL layout). */}
-      <div className="hidden lg:flex h-full shrink-0">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:shadow-md">{t("common.skipToContent")}</a>
+        <div className="hidden lg:flex h-full shrink-0">
         <Sidebar serverLocale={locale} serverDir={dir} />
       </div>
 
