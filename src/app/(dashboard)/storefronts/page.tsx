@@ -23,7 +23,7 @@ export default async function StorefrontsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             <Store className="h-6 w-6" />
             {t("nav.storefronts")}
           </h1>

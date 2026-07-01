@@ -2192,5 +2192,13 @@
   "auth.securityBadge": "محمي بتشفير AES-256-GCM",
   "nav.subtitle": "إدارة الدفع عند الاستلام",
   "products.viewDetails": "عرض تفاصيل {{name}}",
-  "error.setupFailed": "فشل الإعداد"
+  "error.setupFailed": "فشل الإعداد",
+  "metadata.title.dashboard": "لوحة التحكم",
+  "metadata.title.onboarding": "الإعداد",
+  "metadata.title.products": "المنتجات",
+  "metadata.title.productDetail": "تفاصيل المنتج",
+  "metadata.title.customers": "العملاء",
+  "metadata.title.customerDetail": "تفاصيل العميل",
+  "metadata.title.profile": "الملف الشخصي",
+  "metadata.title.extractionAnalytics": "تحليلات الاستخراج"
 }

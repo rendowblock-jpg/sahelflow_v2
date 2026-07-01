@@ -99,7 +99,7 @@ export default async function OrderDetailPage({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight font-mono">
+              <h1 className="text-2xl font-semibold tracking-tight font-mono">
                 {order.orderNumber}
               </h1>
               <OrderStatusBadge

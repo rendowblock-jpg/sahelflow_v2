@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { PhotoUpload } from "@/components/shared/photo-upload";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "sonner";
+import { getI18n } from "@/lib/i18n-server";
 
 interface Profile {
   name?: string;
@@ -19,6 +20,13 @@ interface Profile {
   photo?: string;
   bio?: string;
 }
+
+
+export async function generateMetadata() {
+  const { t } = await getI18n();
+  return { title: t("metadata.title.profile") };
+}
+
 
 export default function ProfilePage() {
   const { t } = useI18n();
