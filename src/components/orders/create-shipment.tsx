@@ -126,10 +126,10 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yalidine">📦 Yalidine</SelectItem>
-                      <SelectItem value="maystro">🚚 Maystro Delivery</SelectItem>
-                      <SelectItem value="zrexpress">📦 ZR Express</SelectItem>
-                      <SelectItem value="dhd">📦 DHD Delivery</SelectItem>
+                      <SelectItem value="yalidine">Yalidine</SelectItem>
+                      <SelectItem value="maystro">Maystro Delivery</SelectItem>
+                      <SelectItem value="zrexpress">ZR Express</SelectItem>
+                      <SelectItem value="dhd">DHD Delivery</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -168,7 +168,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             <div className="rounded-lg border p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
-                <span className="font-medium capitalize">{delivery.provider}</span>
+                <span className="font-medium">{delivery.provider}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.tracking")}</span>
@@ -176,7 +176,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("common.status")}</span>
-                <span className="capitalize">{delivery.status.replace(/_/g, " ")}</span>
+                <span>{delivery.status.replace(/_/g, " ")}</span>
               </div>
             </div>
             <div className="flex gap-2">

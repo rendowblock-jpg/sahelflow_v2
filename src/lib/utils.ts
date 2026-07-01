@@ -28,8 +28,9 @@ export function formatDZD(amount: number, locale: string = "fr"): string {
  * Format an amount as a bare number (no suffix). For templates that add
  * their own currency suffix (e.g. WhatsApp reports: `${formatDZDBare(rev)} DZD`).
  */
-export function formatDZDBare(amount: number): string {
-  return new Intl.NumberFormat("fr-DZ", {
+export function formatDZDBare(amount: number, locale: string = "fr"): string {
+  const intlLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  return new Intl.NumberFormat(intlLocale, {
     style: "decimal",
     maximumFractionDigits: 0,
   }).format(amount);

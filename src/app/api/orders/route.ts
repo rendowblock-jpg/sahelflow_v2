@@ -4,13 +4,15 @@ import { orderService } from "@/lib/data/order-service";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { orderStatusSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/orders — list orders (optional ?status= filter) */
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
-  const status = searchParams.get("status");
+  const rawStatus = searchParams.get("status");
+  const status = rawStatus && orderStatusSchema.safeParse(rawStatus).success ? rawStatus : undefined;
   const limit = parseInt(searchParams.get("limit") ?? "50", 10);
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 

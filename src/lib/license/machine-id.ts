@@ -31,14 +31,14 @@ export async function getMachineId(): Promise<string> {
   }
 
   // Browser/dev mode: use localStorage
-  if (typeof localStorage !== "undefined") {
-    let id = localStorage.getItem(MACHINE_ID_KEY);
+  if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+    let id = window.localStorage.getItem(MACHINE_ID_KEY);
     if (!id) {
       // Generate a random ID (crypto.randomUUID if available, else fallback)
       id = typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem(MACHINE_ID_KEY, id);
+      window.localStorage.setItem(MACHINE_ID_KEY, id);
     }
     return id;
   }
