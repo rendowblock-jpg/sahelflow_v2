@@ -4,6 +4,112 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 19 — 2026-07-01: Market-Killer Engineering Sprint (47 PRs)
+
+**Branches affected:** `main` (47 PRs merged directly — no feature branches persisted)
+**Main HEAD:** `8228176`
+**Tests:** 391 → 457 (+66)
+
+### What happened
+
+The founder requested a full professional audit, multi-phase master plan, and continuous engineering loop until the app is "flawless on every layer."
+
+#### Phase 0: Audit + Plan (1 PR)
+- 6-track parallel audit (SEC/CODE/PERF/UX/TEST/PROD) → 192 findings (9 P0, 49 P1)
+- AUDIT_FINDINGS_v3.md (all 192 fully expanded with file:line + fix + effort)
+- MASTER_PLAN.md (6-phase roadmap, ~7.5 weeks, ~37-49 PRs)
+
+#### Phase 1: Stop the Bleeding (10 PRs)
+- SEC-001/002: Login rate limiting + PBKDF2 600k + PIN min 8 + setSetting allowlist + change-pin route
+- SEC-013: requireAuth() on all 45 mutating routes (was 7) + SahelFlowError throw fix
+- SEC-004/002: Session revocation + AuditLog + AuthSecret table (3 new Prisma models)
+- SEC-009/CODE-025: Blind indexes for encrypted search + isBlacklisted column
+- SEC-016/CODE-003/013/018: Transactional correctness (order update, returns, delete pre-check)
+- CODE-006/SEC-014/019/020/021: Schema drift + delivery $transaction + ReturnNote relation + Zod validation
+- PROD-001/004/005: Migration SQL + migration runner script + version sync (Cargo.toml)
+- UX-003/004: Mobile drill-down for inbox + AI chat
+- UX-001/002/016: Storefront P0s (missing i18n key, localized 404, 44px touch targets)
+- SEC-010/011/022/003: v2 security regressions (CSV injection, upload traversal, XFF spoof, public route)
+
+#### Phase 2: Foundation for Scale (5 PRs)
+- TEST-002: API integration test harness + 6 storefront submit tests
+- TEST-004: 13 license validation tests (trial invariants + Ed25519 signatures)
+- TEST-001/PROD-026: CI: sf-verify + coverage enforcement + bun audit
+- PROD-003: FeatureGate component + requireLicense fix
+- PROD-006/TEST-010: 5 backup round-trip tests + getActiveDbPath fallback
+
+#### Phase 3: Frontend & UI/UX Perfection (6+ PRs)
+- UX-013/025/CODE-022: Table overflow + padding consistency
+- UX-012/017/020: prefers-reduced-motion + skip-to-content + no-blue rule
+- UX-006/007/033: RTL arrows flip + formatDZD locale + dialog logical positioning
+- UX-018/019: 15+ hardcoded English strings → t() × 3 locales
+- UX-010/011/014: a11y keyboard nav (sortable headers, clickable rows, settings tabs)
+- UX-005/036: Optimistic update fix + add-to-cart feedback
+- 62 RTL fixes: sidebar flex-row-reverse removed, chat bubble corners, 24 directional icons, 12 shadcn logical props, switch thumb, toggle group, toaster position
+- 18+ UI fixes: dark mode, color palette, loading state variants, onboarding validation
+
+#### Phase 4: Performance & Reliability (5 PRs)
+- PERF-001/002: db Proxy 2s cache + SSE abort on client disconnect
+- PERF-007/008: Orders page select+dedupe (50% fewer DB calls)
+- PERF-014: Gemini API retry on 502/503/504
+- PERF-016: WhatsApp reconnect bounds
+- PERF-004/006/CODE-032: Indexes + shop-switch disconnect + logger fix
+
+#### Phase 5: Feature Depth (2 PRs)
+- TEST-007: Delivery adapter tests (Yalidine + Maystro + ZR Express)
+- TEST-009/handoff#5: ExtractionMetric model + sync dedup tests + extraction analytics API + dashboard
+
+#### Phase 6: Market-Killer Ship (1+ PRs, skip macOS)
+- PROD-002/013/016/019/020/022: CHANGELOG + .npmrc + .gitignore + DHD_API_BASE + .env.example + false claims fixed
+
+#### Wave 2: Close Critical Gaps (9 PRs)
+- Tauri migration runner wired into Rust setup hook
+- Tauri updater:default capability added
+- CSRF protection (sameSite=strict, removed broken custom-header check)
+- Arabic CLDR plural support in t()
+- shadcn UI logical properties migration (8 components)
+- Storefront product images rendered
+- AI extraction analytics API + dashboard page
+- Server-side license enforcement (DB-synced validation, fail-closed)
+- Onboarding wizard (4-step: business → delivery → AI key → first product)
+- WhatsApp inbox search
+- Sentry integration (env-gated, zero-overhead)
+- Playwright e2e config + 4 golden-path test files
+
+#### Final Bug Fix Sprints (8+ PRs)
+- P0: CSRF middleware fix (was blocking ALL mutations)
+- P1: Blacklist uses isBlacklisted column (was: searched encrypted notes → always empty)
+- P1: Storefront images JSON.parse (was: split(",") → broken URL)
+- P1: Orders phone column populated (was: blank)
+- P1: Customer sort by createdAt (was: encrypted name → random order)
+- P1: DHD credentials/estimate enum fix
+- P1: metaCache invalidation on shop switch
+- P1: Delivery PATCH uses orderService.updateStatus (was: bypassed state machine)
+- P1: Import orders status validation
+- P1: withErrorHandler: SyntaxError → 400 (was: 500)
+- P1: Delivery sync nested $transaction deadlock fix
+- P1: requireAuth on 10 GET routes (defense-in-depth)
+- UX: Loading state variants (ChatLoading, FormLoading)
+- UX: generateMetadata for 3 pages
+- UX: Font consistency (font-bold → font-semibold)
+- i18n: 30+ new keys × 3 locales
+- a11y: aria-labels on icon buttons
+- API: error strings → English (was: mixed FR/EN)
+- Data: Rich seed script (30 customers, 55 orders, 20 products, 40 deliveries, 15 returns, 20 expenses, 10 conversations, AI sessions, extraction metrics, audit logs)
+- CRITICAL: Definitive DB path fix (absolute path — Prisma CLI vs Client path resolution mismatch on Windows)
+- CRITICAL: Window height fix (h-dvh → h-screen for WebView2)
+- CRITICAL: RTL root dir attribute (dir={dir} on root div)
+
+### Key decisions
+- CSRF: removed custom-header approach (was breaking all mutations) → rely on sameSite=strict cookies
+- License: client validates (Ed25519 + invariants), syncs result to server DB, server enforces fail-closed
+- Blacklist: uses dedicated isBlacklisted column (not [BLACKLISTED] tag in encrypted notes)
+- DB path: absolute path via process.cwd() in both scripts/db.ts and src/lib/db.ts
+- Rich seed: bun run dev:reset (prisma db push --force-reset + seed:rich in one command)
+
+---
+
+
 
 ## Session 17 — 2026-06-29: Founder-driven UX + production-readiness sprint (14 PRs + 4 fixes)
 
