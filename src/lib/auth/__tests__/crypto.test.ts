@@ -4,7 +4,11 @@ import {
   verifySessionToken,
   hashPin,
   verifyPin,
+  verifyPinDetailed,
+  pinHashNeedsRehash,
   generateSecret,
+  CURRENT_PBKDF2_ITERATIONS,
+  LEGACY_PBKDF2_ITERATIONS,
 } from "../crypto";
 
 describe("auth crypto", () => {
@@ -64,14 +68,25 @@ describe("auth crypto", () => {
     });
   });
 
-  describe("PIN hashing", () => {
-    it("hashes a PIN to a salt:hash string", async () => {
+  describe("PIN hashing — NEW format (pbkdf2_sha256$iter$salt$hash)", () => {
+    it("hashes a PIN to the NEW format with 4 $-delimited parts", async () => {
+      const hash = await hashPin("mySecretPin");
+      // Format: pbkdf2_sha256$<iterations>$<salt>$<hash>
+      expect(hash).toMatch(/^pbkdf2_sha256\$\d+\$[^$]+\$[^$]+$/);
+      const parts = hash.split("$");
+      expect(parts).toHaveLength(4);
+      expect(parts[0]).toBe("pbkdf2_sha256");
+      expect(parts[1]).toBe(String(CURRENT_PBKDF2_ITERATIONS));
+      expect(parts[2]).toBeTruthy();
+      expect(parts[3]).toBeTruthy();
+      expect(parts[2]).not.toBe(parts[3]);
+    });
+
+    it("uses CURRENT_PBKDF2_ITERATIONS (600000) by default", async () => {
       const hash = await hashPin("1234");
-      expect(hash).toContain(":");
-      const [salt, hashPart] = hash.split(":");
-      expect(salt).toBeTruthy();
-      expect(hashPart).toBeTruthy();
-      expect(salt).not.toBe(hashPart);
+      const iterStr = hash.split("$")[1];
+      expect(iterStr).toBe("600000");
+      expect(CURRENT_PBKDF2_ITERATIONS).toBe(600_000);
     });
 
     it("produces different hashes for the same PIN (random salt)", async () => {
@@ -80,22 +95,104 @@ describe("auth crypto", () => {
       expect(hash1).not.toBe(hash2); // different salts
     });
 
-    it("verifies a correct PIN", async () => {
+    it("verifies a correct PIN (NEW format)", async () => {
       const hash = await hashPin("mySecretPin");
       const valid = await verifyPin("mySecretPin", hash);
       expect(valid).toBe(true);
     });
 
-    it("rejects an incorrect PIN", async () => {
+    it("rejects an incorrect PIN (NEW format)", async () => {
       const hash = await hashPin("correctPin");
       const valid = await verifyPin("wrongPin", hash);
       expect(valid).toBe(false);
     });
 
-    it("rejects a malformed stored hash", async () => {
+    it("honours a custom iteration count when hashing", async () => {
+      // Use a low iteration count for a fast test
+      const hash = await hashPin("testpin", 1000);
+      const parts = hash.split("$");
+      expect(parts[1]).toBe("1000");
+      // Still verifiable
+      expect(await verifyPin("testpin", hash)).toBe(true);
+      // And flagged as needing rehash (1000 < 600000)
+      expect(await verifyPinDetailed("testpin", hash)).toMatchObject({
+        valid: true,
+        needsRehash: true,
+        iterations: 1000,
+      });
+    });
+  });
+
+  describe("PIN hashing — LEGACY format compat (salt:hash at 100k)", () => {
+    /**
+     * Construct a legacy-format hash (salt:hash at 100k) by hashing at 100k
+     * then stripping the new-format prefix. This simulates an existing user's
+     * hash from before the SEC-001 upgrade.
+     */
+    async function makeLegacyHash(pin: string): Promise<string> {
+      const newHash = await hashPin(pin, LEGACY_PBKDF2_ITERATIONS);
+      // newHash = pbkdf2_sha256$100000$salt$hash  →  legacy = salt:hash
+      const parts = newHash.split("$");
+      return `${parts[2]}:${parts[3]}`;
+    }
+
+    it("verifies a correct PIN against a legacy-format hash", async () => {
+      const legacy = await makeLegacyHash("legacyPin123");
+      expect(await verifyPin("legacyPin123", legacy)).toBe(true);
+    });
+
+    it("rejects an incorrect PIN against a legacy-format hash", async () => {
+      const legacy = await makeLegacyHash("legacyPin123");
+      expect(await verifyPin("wrongPin", legacy)).toBe(false);
+    });
+
+    it("verifyPinDetailed flags legacy hash as needsRehash", async () => {
+      const legacy = await makeLegacyHash("legacyPin123");
+      const result = await verifyPinDetailed("legacyPin123", legacy);
+      expect(result).toMatchObject({
+        valid: true,
+        needsRehash: true,
+        iterations: LEGACY_PBKDF2_ITERATIONS,
+      });
+    });
+
+    it("verifyPinDetailed does NOT flag current-format hash as needsRehash", async () => {
+      const hash = await hashPin("modernPin123");
+      const result = await verifyPinDetailed("modernPin123", hash);
+      expect(result).toMatchObject({
+        valid: true,
+        needsRehash: false,
+        iterations: CURRENT_PBKDF2_ITERATIONS,
+      });
+    });
+
+    it("pinHashNeedsRehash returns true for legacy, false for current", async () => {
+      const legacy = await makeLegacyHash("p");
+      const modern = await hashPin("p");
+      expect(pinHashNeedsRehash(legacy)).toBe(true);
+      expect(pinHashNeedsRehash(modern)).toBe(false);
+    });
+  });
+
+  describe("PIN hashing — malformed hashes", () => {
+    it("verifyPin returns false for malformed hashes", async () => {
       expect(await verifyPin("1234", "not-a-hash")).toBe(false);
       expect(await verifyPin("1234", "")).toBe(false);
       expect(await verifyPin("1234", "onlyonepart")).toBe(false);
+    });
+
+    it("verifyPin returns false for a new-format hash with non-numeric iterations", async () => {
+      expect(await verifyPin("1234", "pbkdf2_sha256$notanumber$salt$hash")).toBe(false);
+    });
+
+    it("verifyPin returns false for a new-format hash with missing parts", async () => {
+      expect(await verifyPin("1234", "pbkdf2_sha256$600000$salt")).toBe(false);
+      expect(await verifyPin("1234", "pbkdf2_sha256$600000$salt$hash$extra")).toBe(false);
+    });
+
+    it("verifyPinDetailed returns valid:false for malformed hashes", async () => {
+      const result = await verifyPinDetailed("1234", "garbage");
+      expect(result).toMatchObject({ valid: false, needsRehash: false, iterations: 0 });
     });
   });
 

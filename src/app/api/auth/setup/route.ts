@@ -3,8 +3,14 @@ import { z } from "zod";
 import { isAuthSetup, setupAuth, createSession } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
+/**
+ * SEC-001: PIN minimum raised from 4 to 8 characters.
+ * Existing users with shorter PINs can still log in (the login schema accepts
+ * min 1) but new setups + PIN changes require ≥ 8. This closes the
+ * "4-digit numeric PIN brute-forceable in 8 min" hole for all new installs.
+ */
 const SetupSchema = z.object({
-  pin: z.string().min(4, "PIN must be at least 4 characters").max(32, "PIN too long"),
+  pin: z.string().min(8, "PIN must be at least 8 characters").max(32, "PIN too long"),
 });
 
 export const POST = withErrorHandler(async (req: Request) => {
@@ -52,7 +58,10 @@ export const POST = withErrorHandler(async (req: Request) => {
     await mkdir(dataDir, { recursive: true });
     await writeFile(join(dataDir, "auth-secret"), secret, { mode: 0o600, encoding: "utf-8" });
   } catch {
-    // Non-critical — the secret is in the DB + process.env for this session
+    // Non-critical — the secret is in the DB + process.env for this session.
+    // NOTE (SEC-026, Phase 1 PR 10): this silent swallow will be replaced with
+    // a loud error in a follow-up; for now the setup still succeeds because
+    // the DB + process.env hold the secret for the current session.
   }
 
   // Create a session immediately (user is now logged in)

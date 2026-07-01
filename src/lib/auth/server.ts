@@ -8,7 +8,14 @@ import {
   AUTH_SECRET_ENV,
   SESSION_TTL_MS,
 } from "./config";
-import { createSessionToken, generateSecret, hashPin, verifyPin } from "./crypto";
+import {
+  createSessionToken,
+  generateSecret,
+  hashPin,
+  verifyPin,
+  verifyPinDetailed,
+  CURRENT_PBKDF2_ITERATIONS,
+} from "./crypto";
 
 /**
  * Get the auth secret — from env var first (fast, no DB), then from DB.
@@ -35,6 +42,9 @@ export async function getAuthSecret(): Promise<string | null> {
 /**
  * Initialize auth on first setup: generate secret + hash PIN + store both.
  * Returns the secret so the caller can write it to .env.local.
+ *
+ * Writes directly to the Setting table (bypassing `setSetting`'s reserved-key
+ * guard) because this is a trusted internal setup path.
  */
 export async function setupAuth(pin: string): Promise<{ secret: string }> {
   const secret = generateSecret();
@@ -64,6 +74,65 @@ export async function verifyAuthPin(pin: string): Promise<boolean> {
   });
   if (!setting?.value) return false; // No PIN set — must setup first
   return verifyPin(pin, setting.value);
+}
+
+/**
+ * Verify a PIN + transparently re-hash to CURRENT iterations if the stored
+ * hash is legacy (100k) or otherwise below current. Used by the login route
+ * so existing users upgrade to 600k on their next successful login without
+ * any forced reset.
+ *
+ * Returns `{ valid, rehashed }`. On `valid && rehashed`, the caller may log
+ * the upgrade (future audit log — SEC-004, Phase 1 PR 3).
+ */
+export async function verifyAuthPinAndMaybeRehash(
+  pin: string,
+): Promise<{ valid: boolean; rehashed: boolean }> {
+  const setting = await db.setting.findUnique({
+    where: { key: AUTH_PIN_SETTING_KEY },
+  });
+  if (!setting?.value) return { valid: false, rehashed: false };
+
+  const result = await verifyPinDetailed(pin, setting.value);
+  if (!result.valid) return { valid: false, rehashed: false };
+
+  if (result.needsRehash) {
+    // Re-hash at CURRENT iterations + persist. Failures are non-fatal — the
+    // login still succeeds; the old hash remains for next time.
+    try {
+      const newHash = await hashPin(pin, CURRENT_PBKDF2_ITERATIONS);
+      await db.setting.update({
+        where: { key: AUTH_PIN_SETTING_KEY },
+        data: { value: newHash },
+      });
+      return { valid: true, rehashed: true };
+    } catch {
+      return { valid: true, rehashed: false };
+    }
+  }
+
+  return { valid: true, rehashed: false };
+}
+
+/**
+ * Change the PIN — requires the current PIN to be verified first (SEC-002).
+ * Writes directly to the Setting table (bypassing `setSetting`'s reserved-key
+ * guard) because this is a trusted, authenticated code path.
+ */
+export async function changeAuthPin(
+  currentPin: string,
+  newPin: string,
+): Promise<{ changed: boolean; reason?: string }> {
+  const valid = await verifyAuthPin(currentPin);
+  if (!valid) {
+    return { changed: false, reason: "current_pin_invalid" };
+  }
+  const newHash = await hashPin(newPin);
+  await db.setting.update({
+    where: { key: AUTH_PIN_SETTING_KEY },
+    data: { value: newHash },
+  });
+  return { changed: true };
 }
 
 /**

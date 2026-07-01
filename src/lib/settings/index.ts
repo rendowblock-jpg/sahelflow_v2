@@ -6,11 +6,28 @@
  *
  * Values are stored as strings; callers parse them (boolean, number, JSON) as
  * needed. Helpers `getBool`, `getInt`, `getJson` are provided for convenience.
+ *
+ * SECURITY (SEC-002): `setSetting` rejects reserved keys (`auth_*`). This
+ * prevents `PUT /api/settings` from overwriting `auth_pin_hash` / `auth_secret`
+ * (which would be an auth-takeover vector). Internal callers that legitimately
+ * need to write auth values (setupAuth, change-pin) bypass `setSetting` and
+ * call `db.setting.upsert` directly — they are trusted server-side code paths.
  */
 import "server-only";
 
-
 import { db } from "@/lib/db";
+import { SahelFlowError } from "@/types/errors";
+
+/**
+ * Reserved setting-key prefixes. Keys matching these cannot be written via
+ * `setSetting` (and therefore via `PUT /api/settings`). They hold
+ * security-sensitive values managed by dedicated, authenticated code paths.
+ */
+const RESERVED_SETTING_KEY_PREFIXES = ["auth_"] as const;
+
+function isReservedSettingKey(key: string): boolean {
+  return RESERVED_SETTING_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
 
 /** Get a single setting value by key, or `null` if not set. */
 export async function getSetting(key: string): Promise<string | null> {
@@ -44,8 +61,22 @@ export async function getJson<T>(key: string, defaultValue: T): Promise<T> {
   }
 }
 
-/** Set a setting value (upsert). Value is coerced to string. */
+/**
+ * Set a setting value (upsert). Value is coerced to string.
+ *
+ * SECURITY (SEC-002): Throws `SahelFlowError` (403) if the key is reserved
+ * (`auth_*`). This is the guard that prevents `PUT /api/settings` from
+ * overwriting auth secrets. Trusted internal callers (setupAuth, change-pin)
+ * write auth values via `db.setting.upsert` directly, bypassing this check.
+ */
 export async function setSetting(key: string, value: string | number | boolean): Promise<void> {
+  if (isReservedSettingKey(key)) {
+    throw new SahelFlowError(
+      `Cannot set reserved setting key '${key}' via the settings API`,
+      "SETTING_RESERVED_KEY",
+      403,
+    );
+  }
   const strValue = typeof value === "string" ? value : String(value);
   await db.setting.upsert({
     where: { key },
