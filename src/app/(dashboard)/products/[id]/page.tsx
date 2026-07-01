@@ -118,7 +118,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       {/* Product header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {product.sku && (
               <span className="font-mono">

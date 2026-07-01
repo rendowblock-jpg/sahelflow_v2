@@ -2192,5 +2192,13 @@
   "auth.securityBadge": "Secured by AES-256-GCM encryption",
   "nav.subtitle": "COD Management",
   "products.viewDetails": "View {{name}} details",
-  "error.setupFailed": "Setup failed"
+  "error.setupFailed": "Setup failed",
+  "metadata.title.dashboard": "Dashboard",
+  "metadata.title.onboarding": "Setup",
+  "metadata.title.products": "Products",
+  "metadata.title.productDetail": "Product Details",
+  "metadata.title.customers": "Customers",
+  "metadata.title.customerDetail": "Customer Details",
+  "metadata.title.profile": "Profile",
+  "metadata.title.extractionAnalytics": "Extraction Analytics"
 }

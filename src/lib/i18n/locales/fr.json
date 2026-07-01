@@ -2192,5 +2192,13 @@
   "auth.securityBadge": "Sécurisé par chiffrement AES-256-GCM",
   "nav.subtitle": "Gestion COD",
   "products.viewDetails": "Voir les détails de {{name}}",
-  "error.setupFailed": "Échec de configuration"
+  "error.setupFailed": "Échec de configuration",
+  "metadata.title.dashboard": "Tableau de bord",
+  "metadata.title.onboarding": "Configuration",
+  "metadata.title.products": "Produits",
+  "metadata.title.productDetail": "Détails du produit",
+  "metadata.title.customers": "Clients",
+  "metadata.title.customerDetail": "Détails du client",
+  "metadata.title.profile": "Profil",
+  "metadata.title.extractionAnalytics": "Analyse d'extraction"
 }
