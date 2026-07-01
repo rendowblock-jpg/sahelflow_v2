@@ -42,6 +42,7 @@
 import { env } from "@/lib/env";
 import type { LicensePayload, LicenseStatus, LicenseValidationResult, SignedLicense } from "./types";
 import { verifyLicenseSignature, isExpired, daysRemaining, meetsVersionRequirement } from "./crypto";
+import { SahelFlowError } from "@/types/errors";
 
 // Read NODE_ENV at call time (not module load) so tests can mutate it.
 function isDevMode(): boolean {
@@ -340,10 +341,7 @@ export async function isLicenseValid(): Promise<boolean> {
 export async function requireLicense(): Promise<void> {
   const valid = await isLicenseValid();
   if (!valid) {
-    throw new Response(JSON.stringify({ error: "License required", code: "LICENSE_REQUIRED" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
+    throw new SahelFlowError("License required", "LICENSE_REQUIRED", 403);
   }
 }
 
