@@ -20,7 +20,7 @@ export type OrderStatus =
   | "refused"
   | "cancelled";
 
-export type OrderSource = "whatsapp" | "tiktok" | "manual" | "webstore" | "shopify" | "woocommerce" | "youcan";
+export type OrderSource = "whatsapp" | "tiktok" | "manual" | "storefront" | "ai_chat" | "shopify" | "woocommerce" | "youcan";
 
 export interface OrderItem {
   id: string;
