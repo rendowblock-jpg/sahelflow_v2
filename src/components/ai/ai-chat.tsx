@@ -444,7 +444,7 @@ export function AiChat() {
                             <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Wrench className="h-3 w-3" />
                               <span className="font-mono">{tc.name}</span>
-                              <span>→</span>
+                              <span className="icon-rtl-flip">→</span>
                               <span className="truncate max-w-xs">
                                 {typeof tc.result === "object"
                                   ? JSON.stringify(tc.result).slice(0, 80)
@@ -465,7 +465,7 @@ export function AiChat() {
                                 <span className="italic">{t("ai.executing")}</span>
                               ) : (
                                 <>
-                                  <span>→</span>
+                                  <span className="icon-rtl-flip">→</span>
                                   <span className="truncate max-w-xs">
                                     {typeof tc.result === "object"
                                       ? JSON.stringify(tc.result).slice(0, 80)
@@ -500,7 +500,7 @@ export function AiChat() {
                   disabled={sending}
                 />
                 {sending ? (
-                  <Button size="icon" variant="destructive" onClick={handleCancel} title={t("ai.stop")}>
+                  <Button size="icon" variant="destructive" onClick={handleCancel} title={t("ai.stop")} aria-label={t("ai.stop")}>
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </Button>
                 ) : (

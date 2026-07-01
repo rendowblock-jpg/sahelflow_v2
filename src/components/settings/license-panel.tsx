@@ -139,7 +139,7 @@ export function LicensePanel() {
               size="icon"
               onClick={copyMachineId}
               disabled={!machineId}
-              title={t("settings.copy")}
+              title={t("settings.copy")} aria-label={t("settings.copy")}
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>

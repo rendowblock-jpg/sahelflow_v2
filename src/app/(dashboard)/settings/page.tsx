@@ -24,7 +24,7 @@ export default async function SettingsPage() {
     <div className="app-content page-sections">
       <PageHeader
         title={t("nav.settings")}
-        description={t("settings.subtitle") || "Configure your store, AI, delivery, and integrations"}
+        description={t("settings.subtitle") }
       />
 
       <SettingsTabs integrations={integrations.map((i) => ({ platform: i.platform, status: i.isActive ? "active" : "inactive" }))} />

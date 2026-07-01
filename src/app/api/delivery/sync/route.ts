@@ -32,7 +32,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     : await db.delivery.findUnique({ where: { orderId: input.orderId! } });
 
   if (!delivery) {
-    return NextResponse.json({ error: "Expédition introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
   }
   if (!delivery.trackingNumber) {
     return NextResponse.json(
@@ -98,7 +98,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 
   const delivery = await db.delivery.findUnique({ where: { id: deliveryId } });
   if (!delivery) {
-    return NextResponse.json({ error: "Expédition introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
   }
   if (!delivery.trackingNumber) {
     return NextResponse.json(

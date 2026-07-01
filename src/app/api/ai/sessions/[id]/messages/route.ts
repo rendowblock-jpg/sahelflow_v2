@@ -17,7 +17,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
     include: { messages: { orderBy: { createdAt: "asc" } } },
   });
   if (!session) {
-    return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
   return NextResponse.json({ session });
 }, "GET /api/ai/sessions/[id]/messages");
@@ -38,7 +38,7 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
     include: { messages: { orderBy: { createdAt: "asc" } } },
   });
   if (!session) {
-    return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
   // Save the user message

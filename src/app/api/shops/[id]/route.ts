@@ -13,7 +13,7 @@ export async function GET(
   const { id } = await params;
   const shop = getShop(id);
   if (!shop) {
-    return NextResponse.json({ error: "Shop introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Shop not found" }, { status: 404 });
   }
   return NextResponse.json({ shop });
 }
@@ -25,7 +25,7 @@ export const DELETE = withErrorHandler(
     const { id } = await params;
     const shop = getShop(id);
     if (!shop) {
-      return NextResponse.json({ error: "Shop introuvable" }, { status: 404 });
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
     deleteShop(id);
     return NextResponse.json({ ok: true });

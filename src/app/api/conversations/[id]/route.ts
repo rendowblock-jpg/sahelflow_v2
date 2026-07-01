@@ -22,7 +22,7 @@ export const GET = withErrorHandler(async (
     include: { messages: { orderBy: { timestamp: "asc" } } },
   });
   if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
   // Mark as read
   if (conversation.unreadCount > 0) {

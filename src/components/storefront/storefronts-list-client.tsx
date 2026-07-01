@@ -117,7 +117,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                     {t("storefront.list.edit")}
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="ghost" title={t("storefront.list.publicPreview")}>
+                <Button asChild size="sm" variant="ghost" title={t("storefront.list.publicPreview")} aria-label={t("storefront.list.publicPreview")}>
                   <a
                     href={`/storefront/${config.slug}`}
                     target="_blank"
@@ -141,7 +141,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  title={t("storefront.list.delete")}
+                  title={t("storefront.list.delete")} aria-label={t("storefront.list.delete")}
                   className="text-destructive hover:text-destructive"
                   onClick={() => setDeleteTarget(config)}
                 >

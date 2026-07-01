@@ -11,7 +11,7 @@ import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import { IntegrationsPanel } from "@/components/settings/integrations-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
 
-type Tab = "general" | "ai" | "delivery" | "reports" | "integrations" | "license" | "backup";
+type Tab = "ai" | "delivery" | "reports" | "integrations" | "license" | "backup";
 
 const TABS: Array<{ id: Tab; icon: typeof Shield }> = [
   { id: "license", icon: Shield },
@@ -75,7 +75,7 @@ export function SettingsTabs({
       </nav>
 
       {/* Tab content */}
-      <div className="flex-1 min-w-0">
+      <div role="tabpanel" className="flex-1 min-w-0" id="settings-panel" aria-labelledby="settings-tablist">
         {active === "license" && <LicensePanel />}
         {active === "ai" && <AiKeyPanel />}
         {active === "delivery" && <DeliveryCredentialsPanel />}

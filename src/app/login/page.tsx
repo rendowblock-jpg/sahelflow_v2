@@ -44,7 +44,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Login failed");
+        setError(data.error ?? t("error.loginFailed"));
         if (data.needsSetup) setNeedsSetup(true);
         return;
       }

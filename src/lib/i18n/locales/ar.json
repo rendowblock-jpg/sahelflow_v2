@@ -2190,5 +2190,7 @@
   "license.premiumFeature": "ميزة مدفوعة",
   "license.premiumFeatureDescription": "تتطلب هذه الميزة ترخيصًا مدفوعًا.",
   "auth.securityBadge": "محمي بتشفير AES-256-GCM",
-  "nav.subtitle": "إدارة الدفع عند الاستلام"
+  "nav.subtitle": "إدارة الدفع عند الاستلام",
+  "products.viewDetails": "عرض تفاصيل {{name}}",
+  "error.setupFailed": "فشل الإعداد"
 }

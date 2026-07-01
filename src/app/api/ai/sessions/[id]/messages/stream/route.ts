@@ -131,7 +131,7 @@ export async function POST(
           }
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Erreur interne";
+        const message = err instanceof Error ? err.message : "Internal error";
         send({ type: "error", message });
         assistantResponse = message;
       }

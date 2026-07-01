@@ -78,7 +78,7 @@ export default async function ProductsPage() {
       {/* Stat strip — upgraded with accent icons */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label={t("products.product")}
+          label={t("products.total")}
           value={totalProducts}
           icon={<Package />}
           accentBg="bg-sky-500/10 dark:bg-sky-500/15"
@@ -188,7 +188,7 @@ export default async function ProductsPage() {
                           <Button variant="ghost" size="icon-sm" asChild>
                             <Link href={`/products/${product.id}`}>
                               <Eye className="h-4 w-4" />
-                              <span className="sr-only">{t("products.product")}</span>
+                              <span className="sr-only">{t("products.viewDetails", { name: product.name })}</span>
                             </Link>
                           </Button>
                           <ProductRowActions product={product} categories={categories} />

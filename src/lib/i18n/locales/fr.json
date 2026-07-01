@@ -2190,5 +2190,7 @@
   "license.premiumFeature": "Fonctionnalité Premium",
   "license.premiumFeatureDescription": "Cette fonctionnalité nécessite une licence payante.",
   "auth.securityBadge": "Sécurisé par chiffrement AES-256-GCM",
-  "nav.subtitle": "Gestion COD"
+  "nav.subtitle": "Gestion COD",
+  "products.viewDetails": "Voir les détails de {{name}}",
+  "error.setupFailed": "Échec de configuration"
 }
