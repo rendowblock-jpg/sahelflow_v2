@@ -29,43 +29,37 @@ if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
 const absoluteDbUrl = `file:${dbPath}`;
 process.env.DATABASE_URL = absoluteDbUrl;
 
+const isWindows = process.platform === "win32";
+
 console.log("═══════════════════════════════════════════════════");
 console.log("  dev:reset — wipe + reseed dev database");
 console.log("═══════════════════════════════════════════════════");
 console.log(`  DB: ${dbPath}`);
 console.log("");
 
-// Step 1: prisma db push --force-reset (wipes + recreates schema)
-console.log("── Step 1/2: prisma db push --force-reset ──");
-const push = spawnSync(
-  process.platform === "win32" ? "bunx.cmd" : "bunx",
-  ["prisma", "db", "push", "--force-reset", "--skip-generate"],
-  {
+// Helper: run a command with the absolute DATABASE_URL injected.
+// Uses "bun x" (not "bunx") so it only depends on `bun` being on PATH —
+// bunx.cmd doesn't exist on Windows, bunx.exe does, but "bun x" always works.
+function run(cmd: string, args: string[], label: string): void {
+  console.log(`\n── ${label} ──`);
+  const result = spawnSync(cmd, args, {
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: absoluteDbUrl },
-    shell: process.platform === "win32",
-  },
-);
-if (push.status !== 0) {
-  console.error(`\n❌ prisma db push failed (exit ${push.status})`);
-  process.exit(push.status ?? 1);
+    // shell: true on Windows so cmd.exe resolves PATH (finds bun.exe)
+    shell: isWindows,
+  });
+  if (result.status !== 0) {
+    console.error(`\n❌ ${label} failed (exit ${result.status})`);
+    process.exit(result.status ?? 1);
+  }
 }
 
+// Step 1: prisma db push --force-reset (wipes + recreates schema)
+// "bun x prisma" = "bunx prisma" but more portable
+run("bun", ["x", "prisma", "db", "push", "--force-reset", "--skip-generate"], "Step 1/2: prisma db push --force-reset");
+
 // Step 2: seed:rich (writes the actual data)
-console.log("\n── Step 2/2: seed:rich ──");
-const seed = spawnSync(
-  process.platform === "win32" ? "bun.cmd" : "bun",
-  ["run", "seed:rich"],
-  {
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: absoluteDbUrl },
-    shell: process.platform === "win32",
-  },
-);
-if (seed.status !== 0) {
-  console.error(`\n❌ seed:rich failed (exit ${seed.status})`);
-  process.exit(seed.status ?? 1);
-}
+run("bun", ["run", "seed:rich"], "Step 2/2: seed:rich");
 
 console.log("\n═══════════════════════════════════════════════════");
 console.log("  ✅ Dev database reset + seeded");
