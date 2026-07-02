@@ -143,7 +143,7 @@ Act as a coding agent for the **SahelFlow v3.0** repository — build a local-fi
 | Legacy branch | `v2-legacy` (old v2 code, reference only) |
 | Agent metadata branch | `agent-handoff` (orphan — this doc + bootstrap + toolkit) |
 | Local clone path | `/tmp/sahelflow_v2` (rebuilt each chat by bootstrap) |
-| Main HEAD | `abfb493` |
+| Main HEAD | `10f7db2` |
 | Version | `3.2.0` (in `tauri.conf.json` + `package.json` + `Cargo.toml`) |
 
 ---
@@ -368,4 +368,4 @@ Based on the honest assessment, the highest-impact work for the next session:
 
 ---
 
-_Last updated: 2026-07-02 — Session 20 complete. main = `abfb493`. 1189 tests. 88.8% coverage. App is browser-verified working. Method change: "done" = browser-verified, not "tests pass." 3 new tools: sf-browser, sf-seed, sf-audit._
+_Last updated: 2026-07-02 — Session 20 complete. main = `10f7db2`. 1189 tests. 88.8% coverage. App is browser-verified working. Method change: "done" = browser-verified, not "tests pass." 3 new tools: sf-browser, sf-seed, sf-audit._
