@@ -4,6 +4,54 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 20 — 2026-07-02: The "Actually Open It" Sprint (29 commits)
+
+**Main HEAD:** `abfb493` (was `44bca98` at Session 19 end)
+**Tests:** 457 → 1189 (+732)
+**Coverage:** 34.5% → 88.8% (+54.3 points, target was 80%)
+
+### What happened
+
+The founder opened the app for the first time since Session 19 and found it wasn't ready. Session 19's docs said "~95% to production-grade, 457 tests green" — but that was self-awarded against the wrong definition of done. The app was never actually opened in a browser. Session 20 changed the method: **"done" = browser-verified with real data, not "tests pass."**
+
+### Phase 1: P0 fixes (stop the bleeding)
+- **Auth was completely broken.** `middleware.ts` at repo root was ignored (app uses `src/`). Moved to `src/middleware.ts` (later `src/proxy.ts`). Verified: protected API → 401, protected page → 307→/login.
+- **PII ciphertext leak.** Delivery/return tables showed `{"iv":...,"ciphertext":...}` instead of customer names. Added delivery + return read-interceptors to the PII extension.
+
+### Phase 2: P1 fixes (make it actually work)
+- `/orders` empty table (displayOrders used empty filteredOrders). → Falls back to allOrders.
+- `/analytics/extraction` crash (client didn't guard malformed API). → Checks r.ok + Array.isArray.
+- `/profile` blank (generateMetadata in client component). → Removed export.
+- `/inbox` 0 conversations (stale app-meta.json). → Fixed in resume setup.
+- `/accounting` all zeros (current calendar month empty). → Rolling 30-day window.
+- `/agents` AI chat locked (FeatureGate checked payload but dev-bypass sets license:null). → Unlocks when validation valid.
+- Dashboard "Livré 0" vs deliveries "21" (different scopes). → Dashboard queries Delivery model directly.
+- Stray "1%" badges (StatCard rendered {abs(trend)}% for ±1 direction flags). → ±1 shows arrow-only.
+- Pre-broken backup test (getActiveDbPath read app-meta while test used DATABASE_URL). → Test isolates app-meta.json.
+
+### Phase 3: Test coverage 34.5% → 88.8%
+- 5 parallel subagents wrote 28 test files (~700 tests): AI tools, agent+extraction, delivery+ecommerce adapters, core services, auth/license/secrets/whatsapp.
+- Fixed cross-file mock pollution (restoreMocks/clearMocks/unstubGlobals).
+- Coverage floor raised 30 → 80.
+- 6 tests activated (removed restoreMocks); 5 remain skipped (mock-wiring, <0.5%).
+
+### Phase 4: Visual polish
+- **Emerald rebrand:** banned blue primary (hue 250) → emerald (hue 150) across 37 refs.
+- **Blue→teal:** 109 sky-/blue- utility refs → teal across 16 files.
+- **Deep responsive:** mobile 16px font, 40px touch targets, custom scrollbars, 1-col→2-col→4-col stat cards, 100dvh.
+- **Arabic RTL complete:** 0 physical CSS properties outside ui/, all 43 arrows flip, tables reverse columns, charts reverse X-axis, settings tabs swap, direction inheritance fix.
+
+### Phase 5: Engineering fixes
+- `@sentry/nextjs` installed (was "code ready" for 19 sessions).
+- `middleware.ts` → `proxy.ts` (Next 16 convention).
+- Master key persistence (seed → keyfile sync, fixes ciphertext-in-tables).
+- `data/app-meta.json` untracked (fixes pull conflicts).
+- 3 new agent tools: sf-browser (browser-verify), sf-seed (one-command setup), sf-audit (drift detector).
+
+### Method change (the real deliverable)
+"Done" now means browser-verified with real data. The sf-browser tool automates this.
+
+---
 ## Session 19 — 2026-07-01: Market-Killer Engineering Sprint (47 PRs)
 
 **Branches affected:** `main` (47 PRs merged directly — no feature branches persisted)
