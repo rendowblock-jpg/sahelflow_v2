@@ -136,8 +136,8 @@ export default async function RiskPage({
           label={t("risk.kpi.avgScore")}
           value={k.avgRiskScore}
           icon={<ShieldAlert />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           subtitle="/ 100"
           style={{ animationDelay: "60ms" }}
         />

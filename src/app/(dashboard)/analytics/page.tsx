@@ -169,8 +169,8 @@ export default async function AnalyticsPage({
           label={t("nav.orders")}
           value={s.totalOrders}
           icon={<ShoppingCart />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           trend={s.ordersDelta}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "120ms" }}
@@ -219,7 +219,7 @@ export default async function AnalyticsPage({
         <ChartCard
           title={t("analytics.ordersByStatus")}
           icon={<PieChart />}
-          accent="bg-sky-500/10 dark:bg-sky-500/15"
+          accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={donutConfig}
           height={300}
         >
@@ -273,7 +273,7 @@ export default async function AnalyticsPage({
         <ChartCard
           title={t("analytics.topProductsByRevenue")}
           icon={<BarChart3 />}
-          accent="bg-sky-500/10 dark:bg-sky-500/15"
+          accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={topProductsConfig}
           height={300}
         >
@@ -360,7 +360,7 @@ export default async function AnalyticsPage({
           title={t("analytics.customerGrowth")}
           description={t("analytics.customerGrowthDesc")}
           icon={<Users />}
-          accent="bg-sky-500/10 dark:bg-sky-500/15"
+          accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={growthConfig}
           height={280}
         >

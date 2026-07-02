@@ -30,7 +30,7 @@ const LEVEL_STYLES: Record<RiskLevel, string> = {
 
 const ACTION_STYLES: Record<RiskAction, string> = {
   auto_confirm: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  standard: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+  standard: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
   call_first: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   review: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
   hold: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
