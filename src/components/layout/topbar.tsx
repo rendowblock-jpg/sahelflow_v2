@@ -117,7 +117,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
   const isRtl = serverDir === "rtl";
 
   return (
-    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 lg:h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-3">
       {/* Start: Mobile sidebar toggle + shop selector */}
       <div className="flex items-center gap-2">
         {/* Mobile sidebar (hidden on desktop) */}
@@ -128,7 +128,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side={isRtl ? "right" : "left"} className="w-64 p-0">
+            <SheetContent side={isRtl ? "right" : "left"} className="w-72 p-0">
               <Sidebar serverLocale={serverLocale} serverDir={serverDir} />
             </SheetContent>
           </Sheet>

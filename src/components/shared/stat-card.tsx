@@ -112,7 +112,7 @@ export function StatCard({
       )}
       style={style}
     >
-      <CardHeader className="relative">
+      <CardHeader className="relative pb-2 sm:pb-3">
         {/* Accent icon — top end */}
         <div className={cn(
           "absolute end-4 top-4 flex size-9 items-center justify-center rounded-xl",
@@ -127,7 +127,7 @@ export function StatCard({
           {label}
         </CardDescription>
 
-        <CardTitle className="text-2xl font-semibold tabular-nums tracking-tight @[250px]/card:text-3xl">
+        <CardTitle className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl @[250px]/card:text-3xl">
           {displayValue}
         </CardTitle>
 

@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       />
 
       {/* KPI stat cards with sparklines — the at-a-glance snapshot */}
-      <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stagger-grid grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label={t("dashboard.todaysOrders")}
           value={stats.ordersToday}
@@ -110,14 +110,12 @@ export default async function DashboardPage() {
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
           subtitle={t("dashboard.pendingDeliveries", { count: stats.pendingDeliveries })}
-          trend={stats.lowStockProducts > 0 ? -1 : 0}
-          trendLabel={stats.lowStockProducts > 0 ? t("dashboard.lowStockWarning", { count: stats.lowStockProducts }) : t("dashboard.stockOk")}
           style={{ animationDelay: "240ms" }}
         />
       </div>
 
       {/* Quick action bar — the 4 most common actions */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <Button variant="outline" asChild className="h-auto justify-start gap-3 py-3">
           <Link href="/inbox">
             <span className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 dark:bg-amber-500/15">
@@ -242,8 +240,8 @@ export default async function DashboardPage() {
           <Card className="animate-fade-up">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 dark:bg-violet-500/15">
-                  <Truck className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+                <div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 dark:bg-violet-500/15">
+                  <Truck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                 </div>
                 {t("nav.delivery")}
               </CardTitle>
