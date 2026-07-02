@@ -27,8 +27,32 @@
 import { db as prisma } from "./db";
 import { hashPin } from "@/lib/auth/crypto";
 
-// Ensure master key is set for encryption
-process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+// Ensure master key is set for encryption.
+// CRITICAL: write the key to data/master.key so the dev server (which reads
+// the keyfile when SF_MASTER_KEY env isn't set) uses the SAME key as the seed.
+// Without this, the dev server generates/uses a different key → PII decryption
+// fails → customer names show as ciphertext blobs in tables.
+import { existsSync, writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+
+const SEED_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.SF_MASTER_KEY = SEED_KEY;
+
+// Persist the key to data/master.key (the keyfile the dev server reads)
+const dataDir = join(process.cwd(), "data");
+const keyFilePath = join(dataDir, "master.key");
+if (!existsSync(keyFilePath)) {
+  mkdirSync(dataDir, { recursive: true });
+  writeFileSync(keyFilePath, SEED_KEY, { mode: 0o600 });
+  console.log("  ✅ Master key persisted to data/master.key");
+} else {
+  // Keyfile exists — use ITS key (not the hardcoded one) so we don't break
+  // existing encrypted data from a prior run.
+  const existingKey = require("fs").readFileSync(keyFilePath, "utf8").trim();
+  if (existingKey.length === 64) {
+    process.env.SF_MASTER_KEY = existingKey;
+  }
+}
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
