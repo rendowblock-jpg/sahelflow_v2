@@ -3,7 +3,7 @@ import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { verifySessionToken } from "@/lib/auth/crypto";
 
 /**
- * Auth middleware — protects all /api/* (except public) and all pages
+ * Auth proxy — protects all /api/* (except public) and all pages
  * (except /login, /setup).
  *
  * Session verification uses HMAC-SHA256 via Web Crypto API (Edge-compatible).
@@ -16,7 +16,7 @@ import { verifySessionToken } from "@/lib/auth/crypto";
  * The actual API-route-level auth check (requireAuth) provides defense-in-depth:
  * even if middleware is bypassed, API routes verify the token against the DB secret.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const secret = process.env.AUTH_SECRET;
 

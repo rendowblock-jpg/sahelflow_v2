@@ -20,17 +20,16 @@ async function ensureSentry() {
   if (!SENTRY_DSN || sentryReady) return;
   sentryReady = true;
   try {
-    // Dynamic import — @sentry/nextjs is only loaded if DSN is set
-    // (the package must be installed: bun add @sentry/nextjs)
-    // If not installed, this silently fails (best-effort).
-    const moduleName = "@sentry/next";
-    const Sentry = await import(/* @vite-ignore */ moduleName).catch(() => null);
+    // Dynamic import — @sentry/nextjs is only loaded if DSN is set.
+    // The package is installed (bun add @sentry/nextjs) but stays zero-overhead
+    // until SENTRY_DSN is configured — this import only runs when DSN is set.
+    const Sentry = await import("@sentry/nextjs").catch(() => null);
     if (Sentry) {
       Sentry.init({
         dsn: SENTRY_DSN,
         environment: process.env.NODE_ENV,
         tracesSampleRate: 0.1,
-        beforeSend(event: unknown) {
+        beforeSend(event) {
           // Scrub PII from request bodies
           const e = event as { request?: { data?: string } };
           if (e.request?.data) {

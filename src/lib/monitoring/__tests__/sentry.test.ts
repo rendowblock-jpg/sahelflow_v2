@@ -14,14 +14,14 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// ── Mock @sentry/next (the dynamically-imported module name) ─────────────────
+// ── Mock @sentry/nextjs (the dynamically-imported module name) ─────────────────
 const sentryMock = vi.hoisted(() => ({
   init: vi.fn(),
   captureException: vi.fn(),
   setUser: vi.fn(),
 }));
 
-vi.mock("@sentry/next", () => ({
+vi.mock("@sentry/nextjs", () => ({
   init: sentryMock.init,
   captureException: sentryMock.captureException,
   setUser: sentryMock.setUser,
