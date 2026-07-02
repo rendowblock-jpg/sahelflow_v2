@@ -779,7 +779,7 @@
   .table-scroll-container::after {
     content: "";
     position: sticky;
-    right: 0;
+    inset-inline-end: 0;
     top: 0;
     bottom: 0;
     width: 24px;
@@ -815,3 +815,73 @@ html { scroll-behavior: smooth; }
 h1 { @apply text-xl font-semibold tracking-tight sm:text-2xl; }
 h2 { @apply text-lg font-semibold tracking-tight; }
 h3 { @apply text-base font-semibold; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Table RTL + consistency — ensure tables fully respect direction
+   ═══════════════════════════════════════════════════════════════════════ */
+table { text-align: start; }  /* UA default is center for th — force logical start */
+th { text-align: inherit; }   /* inherit from table/tr, don't default to center */
+td { text-align: inherit; }
+
+/* Ensure dir="rtl" propagates to ALL descendants (flex/grid children can lose
+   direction inheritance, causing icons/text to stay LTR inside an RTL container).
+   Elements with explicit dir="ltr" or .force-ltr override this. */
+[dir="rtl"] :where(nav, div, section, main, header, footer, ul, ol, li, a, button, span) {
+  direction: rtl;
+}
+[dir="rtl"] .force-ltr,
+[dir="ltr"] {
+  direction: ltr;
+}
+
+/* RTL: reverse table column order so the first <th>/<td> appears on the RIGHT.
+   Browsers reverse columns when dir="rtl" is on <table>, but inheritance from
+   a distant ancestor is unreliable. This CSS rule uses direction: rtl on the
+   table element itself when the document is RTL, ensuring column reversal. */
+[dir="rtl"] table { direction: rtl; }
+[dir="rtl"] table th,
+[dir="rtl"] table td { text-align: start; }  /* keep logical start = right in RTL */
+
+/* In RTL, the first column should visually be on the right.
+   Browsers handle this via dir="rtl" on the table's container, but
+   explicit table-layout: fixed helps with column width consistency. */
+.table-scroll-container table { table-layout: auto; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   UI/UX consistency — unified component styling
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Consistent focus ring across all interactive elements */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Consistent card hover (subtle elevation) */
+.card-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.08);
+  transform: translateY(-1px);
+}
+
+/* Consistent badge sizing */
+.badge-sm { font-size: 11px; line-height: 16px; padding: 2px 8px; }
+.badge-md { font-size: 12px; line-height: 18px; padding: 3px 10px; }
+
+/* Consistent stat number formatting */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Smooth transitions for all interactive elements */
+button, a, [role="button"], input, select, textarea {
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+              color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+/* Disable transition on theme toggle (prevents flash) */
+.theme-transition * {
+  transition: none !important;
+}

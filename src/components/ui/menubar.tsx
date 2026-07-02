@@ -235,7 +235,7 @@ function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ms-auto h-4 w-4" />
+      <ChevronRightIcon className="ms-auto h-4 w-4 icon-rtl-flip" />
     </MenubarPrimitive.SubTrigger>
   )
 }

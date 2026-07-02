@@ -35,7 +35,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
                 className={cn(
                   "size-3.5 text-muted-foreground/50 shrink-0",
                   isRtl && "icon-rtl-flip",
-                )}
+                )} icon-rtl-flip
               />
             )}
             {isLast || !item.href ? (
