@@ -163,7 +163,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent orders + Delivery snapshot */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="card-grid-3">
         {/* Recent orders — takes 2/3 width */}
         <Card className="lg:col-span-2 animate-fade-up">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">

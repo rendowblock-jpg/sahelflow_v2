@@ -76,7 +76,7 @@ export default async function ProductsPage() {
       />
 
       {/* Stat strip — upgraded with accent icons */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("products.total")}
           value={totalProducts}
