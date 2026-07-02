@@ -72,8 +72,8 @@ export default async function DashboardPage() {
           label={t("dashboard.todaysOrders")}
           value={stats.ordersToday}
           icon={<ShoppingCart />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           trend={stats.ordersTrend}
           trendLabel={t("dashboard.vsYesterday")}
           spark={ordersSpark}
@@ -131,8 +131,8 @@ export default async function DashboardPage() {
         </Button>
         <Button variant="outline" asChild className="h-auto justify-start gap-3 py-3">
           <Link href="/orders">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-sky-500/10 dark:bg-sky-500/15">
-              <ShoppingCart className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            <span className="flex size-9 items-center justify-center rounded-lg bg-teal-500/10 dark:bg-teal-500/15">
+              <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </span>
             <span className="flex flex-col items-start">
               <span className="text-sm font-medium">{t("nav.orders")}</span>

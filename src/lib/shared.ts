@@ -96,12 +96,12 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
   },
   confirmed: {
     i18nKey: 'orders.status.confirmed',
-    dot: 'bg-sky-500',
-    bg: 'bg-sky-50 dark:bg-sky-950/40',
-    text: 'text-sky-700 dark:text-sky-400',
-    border: 'border-sky-200 dark:border-sky-800/50',
+    dot: 'bg-teal-500',
+    bg: 'bg-teal-50 dark:bg-teal-950/40',
+    text: 'text-teal-700 dark:text-teal-400',
+    border: 'border-teal-200 dark:border-teal-800/50',
     icon: '✓',
-    ring: 'ring-sky-500/20',
+    ring: 'ring-teal-500/20',
   },
   shipped: {
     i18nKey: 'orders.status.shipped',
@@ -157,7 +157,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
 
 export const deliveryProviderConfig: Record<string, { color: string; label: string }> = {
   yalidine: { color: 'bg-orange-500', label: 'Yalidine' },
-  maystro: { color: 'bg-sky-500', label: 'Maystro' },
+  maystro: { color: 'bg-teal-500', label: 'Maystro' },
   zrexpress: { color: 'bg-teal-500', label: 'ZR Express' },
   zr_express: { color: 'bg-teal-500', label: 'ZR Express' },
   dhd: { color: 'bg-rose-500', label: 'DHD' },

@@ -165,7 +165,7 @@ export function IntegrationsPanel({
       category: "delivery",
       icon: MaystroIcon,
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconColor: "text-emerald-600 dark:text-blue-400",
+      iconColor: "text-emerald-600 dark:text-teal-400",
       connected: false,
       connectLabel: t("integrations.connect"),
       fields: [
@@ -193,8 +193,8 @@ export function IntegrationsPanel({
       description: t("integrations.geminiDesc"),
       category: "ai",
       icon: GeminiIcon,
-      iconBg: "bg-sky-500/10 dark:bg-sky-500/15",
-      iconColor: "text-sky-600 dark:text-sky-400",
+      iconBg: "bg-teal-500/10 dark:bg-teal-500/15",
+      iconColor: "text-teal-600 dark:text-teal-400",
       connected: false, // checked via secrets API
       connectLabel: t("integrations.configure"),
       connectUrl: "/settings",

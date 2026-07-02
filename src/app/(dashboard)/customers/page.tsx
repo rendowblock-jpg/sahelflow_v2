@@ -57,8 +57,8 @@ export default async function CustomersPage() {
           label={t("customers.totalCustomers")}
           value={totalCustomers}
           icon={<Users />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           subtitle={t("customers.activePct", { pct: activePct })}
           style={{ animationDelay: "60ms" }}
         />

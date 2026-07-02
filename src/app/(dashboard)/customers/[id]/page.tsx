@@ -135,8 +135,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           label={t("customers.totalOrders")}
           value={stats.totalOrders}
           icon={<ShoppingBag />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           style={{ animationDelay: "120ms" }}
         />
         <StatCard

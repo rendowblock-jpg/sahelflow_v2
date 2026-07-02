@@ -61,8 +61,8 @@ export default async function ReturnsPage() {
           label={t("returns.totalReturns")}
           value={returns.length}
           icon={<RotateCcw />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           subtitle={t("returns.completedPct", { pct: completedPct })}
           style={{ animationDelay: "60ms" }}
         />

@@ -73,7 +73,7 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   order: "bg-primary",
   delivery: "bg-emerald-500",
   stock: "bg-amber-500",
-  info: "bg-sky-500",
+  info: "bg-teal-500",
 };
 
 export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: TopbarProps) {

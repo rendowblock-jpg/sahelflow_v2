@@ -98,8 +98,8 @@ export default async function DeliveriesPage({
           label={t("deliveries.activeDeliveries")}
           value={active.length}
           icon={<Truck />}
-          accentBg="bg-sky-500/10 dark:bg-sky-500/15"
-          accentIcon="text-sky-600 dark:text-sky-400"
+          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
+          accentIcon="text-teal-600 dark:text-teal-400"
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
