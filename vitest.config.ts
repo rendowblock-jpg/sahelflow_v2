@@ -4,6 +4,12 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
+    // Auto-restore mocks + globals after each test — prevents cross-file
+    // pollution (e.g. one file's `vi.stubGlobal("fetch", ...)` leaking into
+    // the next file's tests when running sequentially with fileParallelism:false).
+    restoreMocks: true,
+    unstubGlobals: true,
+    clearMocks: true,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.test.ts"],
     exclude: ["node_modules", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB
@@ -20,10 +26,10 @@ export default defineConfig({
         // Floor set to current actual coverage (prevents regression).
         // Will be raised as Phase 2 test expansion continues.
         // Target: 60% by end of Phase 2, 80% by end of Phase 5.
-        statements: 30,
+        statements: 80,
         branches: 60,
         functions: 60,
-        lines: 30,
+        lines: 80,
       },
     },
   },

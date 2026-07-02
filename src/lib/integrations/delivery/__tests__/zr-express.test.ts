@@ -8,7 +8,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
 describe("ZR Express delivery adapter", () => {
-  beforeEach(() => mockFetch.mockReset());
+  beforeEach(() => { mockFetch.mockReset(); vi.stubGlobal("fetch", mockFetch); });
 
 
   describe("metadata", () => {
