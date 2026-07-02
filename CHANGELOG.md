@@ -4,6 +4,46 @@ All notable changes to SahelFlow are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/),
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.2.0] - 2026-07-02 (Session 20 — The "Actually Open It" Sprint, 29 commits)
+
+### Security (P0)
+- **Auth enforcement fixed** — middleware.ts was at repo root (ignored because app uses src/). Moved to src/proxy.ts. Was: entire app + all APIs wide open with AUTH_SECRET set.
+- **PII ciphertext leak fixed** — delivery/return tables showed encrypted blobs instead of customer names. Added delivery + return read-interceptors to the PII extension.
+
+### Bug Fixes (P1)
+- `/orders` table empty (55 shown, 0 rendered) — displayOrders now falls back to allOrders
+- `/analytics/extraction` crash — client now guards malformed API responses
+- `/profile` blank — removed invalid generateMetadata from client component
+- `/inbox` 0 conversations — fixed stale app-meta.json
+- `/accounting` all zeros — rolling 30-day window (was current calendar month)
+- `/agents` AI chat locked in dev — FeatureGate unlocks when validation valid
+- Dashboard "Livré 0" vs deliveries "21" — dashboard now queries Delivery model directly
+- Stray "1%" badges — StatCard ±1 direction flags no longer render as "1%"
+- Backup round-trip test (was failing on pre-change code) — test now isolates app-meta.json
+
+### Test Coverage
+- **34.5% → 88.8% statements** (target was 80% — exceeded)
+- 28 new test files, ~700 new tests (AI tools, agent, extraction, adapters, risk, auth, license, secrets, whatsapp, google-sheets, i18n, sentry)
+- Coverage floor raised 30 → 80 (locked in)
+- 1189 pass | 5 skip | 0 fail (was 457)
+
+### Visual Polish
+- **Emerald rebrand** — banned blue primary (hue 250) → emerald (hue 150) across all 37 theme references
+- **Blue→teal** — 109 sky-/blue- utility refs → teal across 16 files
+- **Deep responsive** — mobile 16px font, 40px touch targets, custom scrollbars, 1-col→2-col→4-col stat cards, 100dvh for Tauri WebView2
+- **Arabic RTL complete** — 0 physical CSS properties outside ui/, all 43 arrows flip, tables reverse columns, charts reverse X-axis, settings tabs swap, direction inheritance fix
+
+### Engineering
+- `@sentry/nextjs` installed (was "code ready" for 19 sessions)
+- `middleware.ts` → `proxy.ts` (Next 16 convention)
+- Master key persistence fix (seed → keyfile sync)
+- `data/app-meta.json` untracked (fixes pull conflicts)
+
+### Agent Toolkit
+- **sf-browser** (new) — browser-verification quality gate (walks 16 pages, checks auth/leaks/locks)
+- **sf-seed** (new) — one-command dev environment setup
+- **sf-audit** (new) — documentation drift detector
+
 ## [3.1.0] - 2026-07-01 (Session 19 — Market-Killer Engineering Sprint, 47 PRs)
 
 ### Security

@@ -1,3 +1,6 @@
+> **⚠️ SUPERSEDED by HONEST_ASSESSMENT.md (Session 20, 2026-07-02).**
+> This document was the post-Wave-1 assessment. The current assessment is in HONEST_ASSESSMENT.md.
+
 # SahelFlow — Honest Assessment (Post-Wave 1, Pre-Wave 2)
 
 > **Date:** 2026-06-30 (Session 19, after 26 PRs)
