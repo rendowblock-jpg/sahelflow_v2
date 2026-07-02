@@ -7,7 +7,6 @@ export default defineConfig({
     // Auto-restore mocks + globals after each test — prevents cross-file
     // pollution (e.g. one file's `vi.stubGlobal("fetch", ...)` leaking into
     // the next file's tests when running sequentially with fileParallelism:false).
-    restoreMocks: true,
     unstubGlobals: true,
     clearMocks: true,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.test.ts"],

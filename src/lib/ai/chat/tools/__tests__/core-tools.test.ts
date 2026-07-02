@@ -413,7 +413,7 @@ describe("estimate_delivery_cost", () => {
     expect(result.error).toBeTruthy();
   });
 
-  it.skip("uses default values when optional params are omitted", async () => {
+  it("uses default values when optional params are omitted", async () => {
     mockAdapter.estimateCost.mockResolvedValueOnce({
       provider: "yalidine",
       cost: 600,

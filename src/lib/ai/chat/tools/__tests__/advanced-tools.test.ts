@@ -308,7 +308,7 @@ describe("get_customer_orders", () => {
 // ── assign_order_to_delivery ─────────────────────────────────────────────────
 
 describe("assign_order_to_delivery", () => {
-  it.skip("creates a delivery + ships a confirmed order", async () => {
+  it("creates a delivery + ships a confirmed order", async () => {
     const customer = await seedCustomer(db, { name: "Sami", phone: uniquePhone() });
     const order = await db.order.create({
       data: {
@@ -370,7 +370,7 @@ describe("assign_order_to_delivery", () => {
     expect(result.error).toContain("introuvable");
   });
 
-  it.skip("returns error when the adapter fails to create the shipment", async () => {
+  it("returns error when the adapter fails to create the shipment", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     await db.order.create({
       data: { orderNumber: "ORD-0001", status: "confirmed", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
@@ -388,7 +388,7 @@ describe("assign_order_to_delivery", () => {
 // ── get_delivery_cost_comparison ─────────────────────────────────────────────
 
 describe("get_delivery_cost_comparison", () => {
-  it.skip("compares costs across all three providers", async () => {
+  it("compares costs across all three providers", async () => {
     // Sequential calls to estimateCost for yalidine, maystro, zrexpress
     mockAdapter.estimateCost
       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
@@ -406,7 +406,7 @@ describe("get_delivery_cost_comparison", () => {
     expect(data[0]!.cost).toBe(500);
   });
 
-  it.skip("marks unavailable providers and sorts them last", async () => {
+  it("marks unavailable providers and sorts them last", async () => {
     mockAdapter.estimateCost
       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
       .mockResolvedValueOnce({ provider: "maystro", cost: 0, available: false, error: "Zone non couverte" })

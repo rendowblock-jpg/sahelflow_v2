@@ -203,6 +203,8 @@ describe("validateOnLaunch", () => {
   it.skip("issues + stores a trial when no stored license exists", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
+    storage.clear();
+    serviceMock.issueTrial.mockResolvedValue(mockState.issueTrialResult);
     // No localStorage entry → falls through to trial issuance
     const result = await validateOnLaunch();
     expect(result.status).toBe("valid");
@@ -219,6 +221,7 @@ describe("validateOnLaunch", () => {
   it.skip("validates the stored license when one exists", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
+    storage.clear();
     const storedLicense = mockState.issueTrialResult;
     storage.set("sahelflow-license", JSON.stringify(storedLicense));
     serviceMock.validateLicense.mockResolvedValue({
@@ -243,6 +246,7 @@ describe("validateOnLaunch", () => {
   it.skip("propagates the invalid status when the stored license is invalid (no auto-trial)", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
+    storage.clear();
     const storedLicense = mockState.issueTrialResult;
     storage.set("sahelflow-license", JSON.stringify(storedLicense));
     serviceMock.validateLicense.mockResolvedValue({
@@ -260,6 +264,7 @@ describe("validateOnLaunch", () => {
   it.skip("returns invalid when validateLicense throws (fail-closed)", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
+    storage.clear();
     storage.set("sahelflow-license", JSON.stringify(mockState.issueTrialResult));
     serviceMock.validateLicense.mockRejectedValue(new Error("crypto failure"));
 

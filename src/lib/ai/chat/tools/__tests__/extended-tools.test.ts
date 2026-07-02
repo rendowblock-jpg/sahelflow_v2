@@ -521,7 +521,7 @@ describe("cancel_order", () => {
 // ── get_wilaya_risk ──────────────────────────────────────────────────────────
 
 describe("get_wilaya_risk", () => {
-  it.skip("returns the risk profile + assessment for a seeded wilaya", async () => {
+  it("returns the risk profile + assessment for a seeded wilaya", async () => {
     await db.wilayaRiskProfile.create({
       data: { wilaya: "Alger", riskLevel: 2, confirmationRate: 0.78, returnRate: 0.12 },
     });
