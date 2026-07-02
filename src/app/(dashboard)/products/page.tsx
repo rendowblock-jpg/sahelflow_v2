@@ -76,7 +76,7 @@ export default async function ProductsPage() {
       />
 
       {/* Stat strip — upgraded with accent icons */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("products.total")}
           value={totalProducts}
@@ -125,7 +125,7 @@ export default async function ProductsPage() {
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
                 <Package className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("products.noProductsTitle")}</h3>
+              <h3 className="text-base font-semibold mb-1.5">{t("products.noProductsTitle")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
                 {t("products.noProductsDesc")}
               </p>

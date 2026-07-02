@@ -52,7 +52,7 @@ export default async function CustomersPage() {
       />
 
       {/* Stat cards — shared premium StatCard component */}
-      <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("customers.totalCustomers")}
           value={totalCustomers}
@@ -103,7 +103,7 @@ export default async function CustomersPage() {
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("customers.noCustomers")}</h3>
+              <h3 className="text-base font-semibold mb-1.5">{t("customers.noCustomers")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-4">
                 {t("customers.noCustomersDesc")}
               </p>

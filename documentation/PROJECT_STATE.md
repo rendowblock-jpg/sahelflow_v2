@@ -5,7 +5,7 @@
 
 **Last updated:** 2026-07-02 (Session 20 complete)
 **Main HEAD:** `62adc01` *(may be 1 commit behind after docs updates — run `sf-audit` to verify)*
-**Version:** `3.1.0`
+**Version:** `3.3.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive)
 
 ---
@@ -14,7 +14,7 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-20 complete (29 commits in Session 20) |
+| Phase | Sessions 1-21 complete (3 commits in Session 21) |
 | LOC | ~50,000 (src/ + sidecars/ + tests/) |
 | Pages | 16 dashboard pages (all browser-verified in FR + AR) |
 | API routes | 87 |

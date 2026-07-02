@@ -115,7 +115,7 @@ export function StatCard({
       <CardHeader className="relative pb-2 sm:pb-3">
         {/* Accent icon — top end */}
         <div className={cn(
-          "absolute end-4 top-4 flex size-9 items-center justify-center rounded-xl",
+          "absolute end-4 top-4 flex size-8 items-center justify-center rounded-lg",
           accentBg,
           accentIcon,
           "[&>svg]:h-4 [&>svg]:w-4",
@@ -123,7 +123,7 @@ export function StatCard({
           {icon}
         </div>
 
-        <CardDescription className="text-[13px] font-medium text-muted-foreground">
+        <CardDescription className="text-sm font-medium text-muted-foreground">
           {label}
         </CardDescription>
 
@@ -134,7 +134,7 @@ export function StatCard({
       </CardHeader>
 
       {(spark || trendLabel || subtitle || showTrend) && (
-        <CardFooter className="flex-col items-start gap-2 border-t bg-muted/20 px-6 py-3">
+        <CardFooter className="flex-col items-start gap-2 border-t bg-muted/20 px-6 py-4">
           {spark && spark.length > 1 && (
             <div className="w-full -mx-1">
               <Sparkline data={spark} color={sparkColor} height={32} />

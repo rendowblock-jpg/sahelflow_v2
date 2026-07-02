@@ -83,10 +83,6 @@ function extractHeadFromProjectState(content: string): string | null {
   return m ? m[1].slice(0, 7) : null;
 }
 
-function extractVersionFromProjectState(content: string): string | null {
-  const m = content.match(/\*\*Version:\*\*\s*`?(\d+\.\d+\.\d+)`?/i);
-  return m ? m[1] : null;
-}
 
 function extractTestCountFromProjectState(content: string): number | null {
   // Try the table row first: | Tests | 457 |

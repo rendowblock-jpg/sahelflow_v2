@@ -40,15 +40,15 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
   const navContent = (
-    <nav className="flex flex-col gap-5">
+    <nav className="flex flex-col gap-6">
       {navGroups.map((group) => {
         const groupItems = navItems.filter((item) => item.group === group.id);
         if (groupItems.length === 0) return null;
         return (
-          <div key={group.id} className="flex flex-col gap-0.5">
+          <div key={group.id} className="flex flex-col gap-1">
             {!collapsed && (
               <span className={cn(
-                "px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50",
+                "px-3 pb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground/60",
                 isRtl ? "text-end" : "text-start",
               )}>
                 {t(group.labelKey)}
@@ -63,7 +63,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                   className={cn(
                     "group relative flex items-center gap-3 rounded-lg text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
                     // In RTL, flex-row + dir="rtl" naturally puts icon on the right
-                    collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2",
+                    collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
                     isActive
                       ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
                       : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
@@ -81,7 +81,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                     />
                   )}
                   <Icon className={cn(
-                    "h-[18px] w-[18px] shrink-0 transition-transform duration-200",
+                    "h-5 w-5 shrink-0 transition-transform duration-200",
                     isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
                   )} />
                   {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
@@ -128,13 +128,13 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
         collapsed && "justify-center px-0",
         // In RTL, reverse the logo layout (icon on right, text on left)
               )}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
           <span className="text-sm font-bold text-primary-foreground tracking-tight">SF</span>
         </div>
         {!collapsed && (
           <div className="flex flex-col">
-            <span className="font-semibold text-[15px] tracking-tight text-sidebar-foreground leading-none">SahelFlow</span>
-            <span className="text-[11px] text-muted-foreground/60 mt-0.5">{t('nav.subtitle')}</span>
+            <span className="font-semibold text-base tracking-tight text-sidebar-foreground leading-none">SahelFlow</span>
+            <span className="text-xs text-muted-foreground/60 mt-1">{t('nav.subtitle')}</span>
           </div>
         )}
       </div>
@@ -163,7 +163,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
           aria-label={t("nav.collapse")}
         >
           <CollapseIcon className={cn("h-4 w-4", isRtl && "icon-rtl-flip")} />
-          {!collapsed && <span className={cn("text-[13px]", isRtl ? "me-2.5" : "ms-2.5")}>{t("nav.collapse")}</span>}
+          {!collapsed && <span className={cn("text-sm", isRtl ? "me-3" : "ms-3")}>{t("nav.collapse")}</span>}
         </Button>
       </div>
     </aside>

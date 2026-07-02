@@ -42,6 +42,14 @@ const eslintConfig = [
       "data/**",
       "scripts/**",
       "sidecars/**",
+      // Agent tooling (standalone bun scripts, not app code)
+      "sf-audit/**",
+      "sf-browser/**",
+      "sf-seed/**",
+      "sf-db/**",
+      "sf-license/**",
+      "sf-port/**",
+      "sb-db/**",
     ],
   },
 ];

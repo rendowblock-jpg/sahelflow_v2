@@ -38,7 +38,7 @@ const REPO_DIR = process.env.SF_REPO_DIR || "/tmp/sahelflow_v2";
 const PIN = "12345678";
 
 // ANSI colors
-const GREEN = "\x1b[32m", RED = "\x1b[31m", YELLOW = "\x1b[33m",
+const GREEN = "\x1b[32m", RED = "\x1b[31m",
       BOLD = "\x1b[1m", DIM = "\x1b[2m", NC = "\x1b[0m";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -49,15 +49,27 @@ function fail(msg: string): never {
   process.exit(1);
 }
 
-function run(cmd: string, args: string[], opts: { cwd: string; timeoutMs: number }): { ok: boolean; output: string } {
+function run(cmd: string, args: string[], opts: { cwd: string; timeoutMs: number; env?: Record<string, string> }): { ok: boolean; output: string } {
   const r = spawnSync(cmd, args, {
     cwd: opts.cwd,
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: opts.timeoutMs,
+    env: opts.env ? { ...process.env, ...opts.env } : undefined,
   });
   const output = (r.stdout || "") + (r.stderr || "");
   return { ok: r.status === 0, output };
+}
+
+// CRITICAL: Prisma CLI resolves relative DATABASE_URL from the prisma/ directory
+// (where schema.prisma lives), but Prisma Client resolves from cwd (project root).
+// A relative "file:./data/shops/dev.db" creates the DB at prisma/data/shops/dev.db
+// while the app reads data/shops/dev.db — a 0-byte mismatch that causes seed
+// deleteMany() to throw P2021 ("table does not exist"). Fix: ALWAYS use an
+// absolute path for DATABASE_URL when invoking prisma CLI commands.
+function absoluteDbUrl(): string {
+  const dbPath = resolve(REPO_DIR, "data", "shops", "dev.db");
+  return `file:${dbPath}`;
 }
 
 // ── Steps ──────────────────────────────────────────────────────────────────
@@ -93,7 +105,13 @@ function writeAppMeta(): void {
 function runReset(): void {
   console.log(`\n${BOLD}── Running 'bun run dev:reset' ──${NC}`);
   console.log(`${DIM}  (prisma db push --force-reset + seed:rich — wipes all data)${NC}`);
-  const r = run("bun", ["run", "dev:reset"], { cwd: REPO_DIR, timeoutMs: 240_000 });
+  // Pass an ABSOLUTE DATABASE_URL so prisma CLI + Prisma Client agree on the
+  // same file (avoids the relative-path prisma/ vs cwd mismatch — see absoluteDbUrl).
+  const r = run("bun", ["run", "dev:reset"], {
+    cwd: REPO_DIR,
+    timeoutMs: 240_000,
+    env: { DATABASE_URL: absoluteDbUrl() },
+  });
   if (!r.ok) {
     console.log(`  ${RED}❌ dev:reset exited non-zero${NC}`);
     const lines = r.output.trim().split("\n").slice(-25);

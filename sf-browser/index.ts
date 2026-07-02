@@ -34,8 +34,8 @@
  *   SF_BROWSER_PORT — port to hit (default 3000)
  *   SF_BROWSER_PIN  — login PIN (default 12345678)
  */
-import { spawn, spawnSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { spawnSync } from "child_process";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -100,7 +100,21 @@ const PREMIUM_MARKERS = [
 // A 12-byte IV + payload + 16-byte GCM tag is at minimum ~40 base64 chars.
 // We require 3+ such strings to flag a leak — a single one could be a normal
 // data attribute. (A customer table with leaked names would have 10+.)
+//
+// FALSE-POSITIVE FIX (Session 21): Next.js RSC flight payload
+// (self.__next_f.push([...])) and <script> blocks contain many long
+// base64-ish strings (JS chunk hashes, serialized refs). Large pages like
+// /orders (410KB HTML) had 50+ such strings — all false positives. Fix:
+// strip <script>...</script> blocks + self.__next_f payloads BEFORE counting,
+// so only base64 in the visible DOM context is considered.
 const CIPHERTEXT_RE = /[A-Za-z0-9+/]{50,}={0,2}/g;
+
+// Strip script blocks + RSC flight payload so they don't trigger false positives.
+function stripNonDomContent(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")   // <script>...</script>
+    .replace(/self\.__next_f\.push\([^)]*\)/g, "");          // RSC flight chunks
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -249,7 +263,20 @@ async function checkPage(cookie: string, p: { name: string; path: string }): Pro
       for (const marker of PREMIUM_MARKERS) {
         if (html.includes(marker)) { result.premiumLock = true; break; }
       }
-      const cipherMatches = html.match(CIPHERTEXT_RE) || [];
+      // Strip script + RSC flight payload FIRST — those contain long base64-ish
+      // strings (chunk hashes, serialized refs) that are NOT ciphertext leaks.
+      const domHtml = stripNonDomContent(html);
+      // Filter out obvious false positives: file paths, URLs, chunk hashes,
+      // node_modules refs. Real ciphertext is pure base64 (A-Za-z0-9+/= only)
+      // with no slashes-as-path-separators or recognizable words.
+      const rawMatches = domHtml.match(CIPHERTEXT_RE) || [];
+      const cipherMatches = rawMatches.filter((s) => {
+        // Reject if it looks like a path or URL (contains /node_modules/, /_next/, etc.)
+        if (/\/(node_modules|_next|static|chunks)\//i.test(s)) return false;
+        // Reject if it contains "chunk" or "ecmascript" (RSC ref artifacts)
+        if (/chunk|ecmascript|webpack|turbo/i.test(s)) return false;
+        return true;
+      });
       if (cipherMatches.length >= 3) {
         result.ciphertextLeak = true;
       }
@@ -306,22 +333,53 @@ function ab(args: string[], timeoutMs = 10_000): boolean {
   return r.status === 0;
 }
 
-function captureScreenshots(results: PageResult[]): void {
+async function captureScreenshots(results: PageResult[]): Promise<void> {
   console.log(`\n${BOLD}── Capturing screenshots ──${NC}`);
   if (!agentBrowserAvailable()) {
     console.log(`  ${YELLOW}⚠️  agent-browser CLI not installed — skipping screenshots${NC}`);
     return;
   }
 
-  // Establish a browser session by logging in through the UI (so the cookie
-  // is set in the browser's cookie jar — fetch's session cookie isn't shared).
+  // Establish a browser session. The login input has id="pin" but NO name
+  // attribute, so the old selector input[name='pin'] never matched. Use #pin.
+  // We also set the auth cookie directly as a fallback — the React form's
+  // router.replace("/") doesn't always complete before screenshots begin in
+  // headless mode. The session cookie is NOT httpOnly, so document.cookie works.
   console.log(`  Logging in via browser to seed cookie...`);
-  const loginOk =
+  let loginOk = false;
+
+  // Method 1: fill the form + submit (preferred — exercises the real login flow)
+  loginOk =
     ab(["open", `${BASE}/login`], 15_000) &&
     ab(["wait", "1500"]) &&
-    ab(["fill", "input[type='password'], input[name='pin']", PIN], 5_000) &&
+    ab(["fill", "#pin", PIN], 5_000) &&
     ab(["click", "button[type='submit']"], 5_000) &&
     ab(["wait", "2500"]);
+
+  // Method 2 (fallback): if the form didn't redirect, get a cookie via the API
+  // and inject it via document.cookie. This guarantees an authenticated session.
+  if (!loginOk) {
+    console.log(`  ${DIM}Form login didn't complete — injecting auth cookie via API...${NC}`);
+    try {
+      const loginRes = await fetch(`${BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: PIN }),
+        redirect: "manual",
+      });
+      const setCookie = loginRes.headers.get("set-cookie") || "";
+      const m = setCookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+      if (m) {
+        ab(["open", `${BASE}/login`], 15_000);
+        ab(["wait", "1000"]);
+        ab(["eval", `document.cookie='${SESSION_COOKIE_NAME}=${m[1]};path=/;max-age=3600'`], 5_000);
+        ab(["wait", "500"]);
+        loginOk = true;
+      }
+    } catch {
+      // network error — leave loginOk false
+    }
+  }
 
   if (!loginOk) {
     console.log(`  ${YELLOW}⚠️  Browser login flow failed — screenshots may show /login${NC}`);
@@ -456,7 +514,7 @@ async function main(): Promise<void> {
 
   // 4) Screenshots (best-effort)
   if (!noShots) {
-    try { captureScreenshots(results); } catch (e) {
+    try { await captureScreenshots(results); } catch (e) {
       console.log(`  ${YELLOW}⚠️  Screenshot capture failed: ${(e as Error).message}${NC}`);
     }
   }

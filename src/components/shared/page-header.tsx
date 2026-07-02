@@ -25,9 +25,9 @@ export function PageHeader({ title, description, actions, className }: PageHeade
       className,
     )}>
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
         {description && (
-          <p className="text-sm text-muted-foreground text-pretty">{description}</p>
+          <p className="text-sm text-muted-foreground/80 text-pretty">{description}</p>
         )}
       </div>
       {actions && (

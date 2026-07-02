@@ -54,8 +54,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="app-content flex items-center justify-center py-20">
+      <div className="app-content flex flex-col items-center justify-center gap-3 py-20">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       </div>
     );
   }
@@ -72,7 +73,7 @@ export default function ProfilePage() {
       {/* Photo + basic info */}
       <Card className="animate-fade-up">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-base">
             <User className="h-5 w-5 text-muted-foreground" />
             {t("profile.basicInfo")}
           </CardTitle>
