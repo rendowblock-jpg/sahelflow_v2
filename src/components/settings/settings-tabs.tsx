@@ -61,12 +61,15 @@ export function SettingsTabs({
                 }
               }}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap",
+                "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap",
                 isActive
-                  ? "bg-accent font-medium text-accent-foreground"
+                  ? "bg-accent font-medium text-accent-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground",
               )}
             >
+              {isActive && (
+                <span className="absolute start-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-primary" />
+              )}
               <Icon className={cn(
                 "h-4 w-4 shrink-0 transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground",

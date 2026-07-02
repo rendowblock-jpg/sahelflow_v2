@@ -184,7 +184,7 @@ export default async function DashboardPage() {
                 <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
                   <ShoppingCart className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-1">{t("dashboard.noOrders")}</h3>
+                <h3 className="text-base font-semibold mb-1.5">{t("dashboard.noOrders")}</h3>
                 <p className="text-sm text-muted-foreground max-w-md mb-4">
                   {t("dashboard.ordersWillAppear")}
                 </p>
