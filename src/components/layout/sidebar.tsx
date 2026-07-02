@@ -116,7 +116,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
         "flex h-full flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
         // Explicit physical border: LTR = border-right (sidebar on left),
         // RTL = border-left (sidebar on right). Don't rely on border-e.
-        isRtl ? "border-l border-sidebar-border" : "border-r border-sidebar-border",
+        "border-e border-sidebar-border",
         collapsed ? "w-[68px]" : "w-64",
       )}
       aria-label={t("nav.sidebarLabel")}

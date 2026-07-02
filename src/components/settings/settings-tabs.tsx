@@ -52,7 +52,10 @@ export function SettingsTabs({
                   if (!tabs) return;
                   const buttons = Array.from(tabs.querySelectorAll('[role="tab"]'));
                   const idx = buttons.indexOf(e.currentTarget);
-                  const next = e.key === "ArrowRight" ? (idx + 1) % buttons.length : (idx - 1 + buttons.length) % buttons.length;
+                  // In RTL, ArrowRight goes to the PREVIOUS tab (tabs are laid out right-to-left)
+                  const isRtl = document.documentElement.dir === "rtl";
+                  const goNext = isRtl ? e.key === "ArrowLeft" : e.key === "ArrowRight";
+                  const next = goNext ? (idx + 1) % buttons.length : (idx - 1 + buttons.length) % buttons.length;
                   (buttons[next] as HTMLButtonElement)?.focus();
                   (buttons[next] as HTMLButtonElement)?.click();
                 }

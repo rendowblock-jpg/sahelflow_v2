@@ -65,8 +65,10 @@ export function LineTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={32}
+          reversed={isRtl}
           className="text-xs fill-muted-foreground"
-        />
+        
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}/>
         <YAxis
           width={56}
           tickLine={false}
