@@ -20,8 +20,8 @@ export function ExtractionAnalytics() {
 
   useEffect(() => {
     fetch("/api/analytics/extraction", { headers: { "x-requested-with": "sahelflow" } })
-      .then((r) => r.json())
-      .then(setData)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setData(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -34,7 +34,7 @@ export function ExtractionAnalytics() {
     );
   }
 
-  if (!data || data.total === 0) {
+  if (!data || !Array.isArray(data.byMethod) || !Array.isArray(data.trend) || data.total === 0) {
     return (
       <div className="app-content page-sections">
         <Card>
