@@ -4,6 +4,27 @@ All notable changes to SahelFlow are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/),
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.3.0] - 2026-07-02 (Session 21 — Tooling Fixes + Design System Polish)
+
+### Tooling (Phase 1)
+- **sf-seed**: fixed relative-path DB bug — `prisma db push --force-reset` now uses absolute `DATABASE_URL` (was creating DB at `prisma/data/shops/` instead of `data/shops/`, causing seed P2021 crash)
+- **sf-browser**: fixed false-positive ciphertext leak heuristic — now strips RSC flight payload + `<script>` blocks before counting base64 strings (was flagging /orders + /customers as "leaks" when they were just large pages)
+- **sf-browser**: fixed screenshot login — uses `#pin` selector (was `input[name='pin']` which doesn't exist) + cookie-injection fallback
+- **sf-verify --fast**: now fully green (excluded sf-*/sb-db tool dirs from tsc + eslint; removed unused vars)
+
+### Design System (Phase 2)
+- **Sidebar**: 9 spacing values moved to the token scale (gap, padding, font sizes, icon sizes — all arbitrary `text-[Npx]`/`py-N.5` values replaced)
+- **Heading hierarchy**: stronger contrast — h1 `text-2xl sm:text-3xl`, h2 `text-xl`, h3 `text-base`, all with `text-foreground` for max contrast on dark bg
+- **PageHeader**: mobile h1 now `text-xl` (was `text-2xl` on all viewports)
+- **StatCard**: `text-[13px]`→`text-sm`, `size-9`→`size-8`, `py-3`→`py-4` (on-scale, less cramped)
+- **Card grids**: 13 raw `grid grid-cols-*` → `.card-grid-4/3/2` (CSS minmax, auto-responsive); `stagger-grid` animation now consistent across all stat-card grids
+
+### Per-Page Polish (Phase 3)
+- Inline empty states (dashboard, customers, products): `text-lg` → `text-base` (matches shared `EmptyState`)
+- Profile loading state: bare spinner → spinner + "Chargement..." label
+- Settings tab active state: added left indicator bar + shadow-sm (matches sidebar pattern)
+- Profile CardTitle: `text-lg` → `text-base` (matches other pages)
+
 ## [3.2.0] - 2026-07-02 (Session 20 — The "Actually Open It" Sprint, 29 commits)
 
 ### Security (P0)

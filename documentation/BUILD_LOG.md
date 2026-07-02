@@ -4,6 +4,30 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 21 — 2026-07-02: Tooling Fixes + Design System Polish (3 commits)
+
+**Branch:** `agent/session21-tooling-and-polish`
+**Phase 1 (Tooling):** Fixed 3 bugs found during browser verification:
+- **sf-seed absolute DB path** — `prisma db push --force-reset` resolved relative DATABASE_URL from `prisma/` dir while app reads from `data/` → 0-byte DB mismatch → seed P2021 crash. Fix: pass absolute `DATABASE_URL` in sf-seed's `runReset()`.
+- **sf-browser false-positive leak heuristic** — RSC flight payload (`self.__next_f`) + `<script>` blocks contain 50+ char base64 strings (chunk hashes) that triggered the "ciphertext leak" detector on large pages (/orders, /customers). Fix: `stripNonDomContent()` removes script + RSC chunks before counting; additional filter rejects path/chunk/ecmascript artifacts.
+- **sf-browser screenshot login** — selector `input[name='pin']` never matched (input has `id="pin"`, no name attr). Fix: use `#pin` + cookie-injection fallback (session cookie is not httpOnly).
+- **Tool lint debt** — excluded sf-*/sb-db dirs from tsc + eslint (standalone bun scripts using `Bun.spawn`, not app code). Removed unused vars (extractVersionFromProjectState, spawn, writeFileSync, YELLOW).
+
+**Phase 2 (Design System — systemic fixes):**
+- **Sidebar spacing** — 9 arbitrary values replaced with token-scale values (gap-5→gap-6, text-[11px]→text-xs, h-[18px]→h-5, h-9→h-10, text-[15px]→text-base, py-2.5→py-2, etc.)
+- **Heading hierarchy** — globals.css: h1 text-xl/2xl → text-2xl/3xl + text-foreground; h2 text-lg → text-xl; h3 stays text-base. PageHeader h1: text-2xl → text-xl sm:text-2xl (mobile reduction). Clearer contrast: 24/30px → 20px → 16px.
+- **StatCard** — text-[13px]→text-sm, size-9→size-8, py-3→py-4 (all on scale, less cramped footer)
+- **Card grids** — 13 raw `grid grid-cols-1 gap-4 sm:grid-cols-*` → `.card-grid-4/3/2` (CSS minmax, better responsive). Added `stagger-grid` consistently to all stat-card grids (was 5/10, now 10/10).
+
+**Phase 3 (Per-page polish):**
+- Inline empty states (dashboard, customers, products): h3 text-lg → text-base (matches shared EmptyState)
+- Profile loading state: bare spinner → spinner + context label
+- Settings tab active state: added left indicator bar + shadow-sm (matches sidebar pattern)
+- Profile CardTitle: text-lg → text-base (matches other pages)
+
+**Result:** sf-verify --fast green (tsc + eslint pass). sf-seed works clean. sf-browser no longer false-positives. VLM scores 7/10 (unchanged numerically, but systemic issues replaced by minor/specific ones).
+
+---
 ## Session 20 — 2026-07-02: The "Actually Open It" Sprint (29 commits)
 
 **Main HEAD:** `abfb493` (was `44bca98` at Session 19 end)
