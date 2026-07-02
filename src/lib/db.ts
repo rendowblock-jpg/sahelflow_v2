@@ -100,6 +100,14 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
     decryptNestedPii(decryptCustomerRow(row));
   const decryptMessageResult = (row: Record<string, unknown>) =>
     decryptNestedPii(decryptPiiRow(row, MESSAGE_PII_FIELDS));
+  // Delivery / Return have NO own PII, but they commonly
+  // `include: { order: { include: { customer } } }`. Prisma extensions don't
+  // fire for nested includes, and delivery/return aren't otherwise intercepted,
+  // so without this the deliveries + returns pages render customer names as
+  // raw ciphertext (verified P0 leak — nested order.customer.name was shown as
+  // {"iv":...,"ciphertext":...}).
+  const decryptNestedOnly = (row: Record<string, unknown>) =>
+    decryptNestedPii(row) as Record<string, unknown>;
 
   return client.$extends({
     query: {
@@ -479,6 +487,68 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
         },
         async deleteMany({ args, query }) {
           return query(args);
+        },
+      },
+
+      // ─────────────────────────────────────────────────────────────────────
+      // Delivery / Return: NO own PII, but they include order→customer.
+      // Without these interceptors the deliveries + returns pages (and the
+      // /api/returns + export routes) render customer names as raw
+      // ciphertext, because Prisma's per-model $extends callbacks do NOT
+      // fire for nested includes and delivery/return are never the top-level
+      // PII model. ensureNestedCustomerPhoneEnc adds phoneEnc to nested
+      // customer selects that request phone; decryptNestedOnly walks the
+      // result tree and decrypts nested order + customer PII in place.
+      // (decryptPiiRow/decryptCustomerRow are idempotent — safe if a future
+      // caller also decrypts.)
+      // ─────────────────────────────────────────────────────────────────────
+      delivery: {
+        async findMany({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
+          const result = (await query(args)) as unknown;
+          if (Array.isArray(result)) {
+            return result.map((r) =>
+              decryptNestedOnly(r as Record<string, unknown>),
+            ) as never;
+          }
+          return result as never;
+        },
+        async findUnique({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptNestedOnly(result as Record<string, unknown>) as never;
+        },
+        async findFirst({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptNestedOnly(result as Record<string, unknown>) as never;
+        },
+      },
+
+      return: {
+        async findMany({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
+          const result = (await query(args)) as unknown;
+          if (Array.isArray(result)) {
+            return result.map((r) =>
+              decryptNestedOnly(r as Record<string, unknown>),
+            ) as never;
+          }
+          return result as never;
+        },
+        async findUnique({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptNestedOnly(result as Record<string, unknown>) as never;
+        },
+        async findFirst({ args, query }) {
+          ensureNestedCustomerPhoneEnc(args);
+          const result = await query(args);
+          if (result === null) return null as never;
+          return decryptNestedOnly(result as Record<string, unknown>) as never;
         },
       },
     },
