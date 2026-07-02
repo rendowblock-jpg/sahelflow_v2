@@ -12,6 +12,7 @@ import {
   Cell,
 } from "recharts";
 import { formatDZD } from "@/lib/utils";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface DualBarChartProps {
   data: Array<{ month: string; revenue: number; expenses: number }>;
@@ -34,6 +35,8 @@ export function DualBarChart({
   revenueLabel = "Revenue",
   expensesLabel = "Expenses",
 }: DualBarChartProps) {
+  const { dir } = useI18n();
+  const isRtl = dir === "rtl";
   const maxValue = Math.max(...data.map((d) => Math.max(d.revenue, d.expenses)), 1);
   const yMax = Math.ceil(maxValue * 1.15 / 1000) * 1000;
 
@@ -56,8 +59,9 @@ export function DualBarChart({
           className="text-xs fill-muted-foreground"
           tickLine={false}
           axisLine={false}
-          dy={4}
-        />
+          dy={4} reversed={isRtl}
+        
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}/>
         <YAxis
           tickFormatter={formatAxis}
           className="text-xs fill-muted-foreground"

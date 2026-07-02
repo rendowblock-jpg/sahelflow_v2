@@ -81,8 +81,10 @@ export function ComposedTrendChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={24}
+          reversed={isRtl}
           className="text-xs fill-muted-foreground"
-        />
+        
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}/>
         <YAxis
           yAxisId="left"
           width={48}
