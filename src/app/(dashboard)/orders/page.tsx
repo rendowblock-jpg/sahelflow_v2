@@ -90,7 +90,9 @@ export default async function OrdersPage({
         const a = riskMap.get(o.id);
         return a && (a.level === "high" || a.level === "critical");
       })
-    : filteredOrders;
+    : hasFilter
+      ? filteredOrders
+      : allOrders;
 
   // Serialize risk map for the client (orderId → {level, score})
   const riskData: Record<string, { level: string; score: number }> = {};
