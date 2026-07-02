@@ -69,6 +69,13 @@
     "test-results",
     "sidecars",
     "e2e",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "sf-audit",
+    "sf-browser",
+    "sf-seed",
+    "sf-db",
+    "sf-license",
+    "sf-port",
+    "sb-db"
   ]
 }
