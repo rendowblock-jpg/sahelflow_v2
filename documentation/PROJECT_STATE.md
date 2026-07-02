@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
 **Last updated:** 2026-07-02 (Session 20 complete)
-**Main HEAD:** `d014f96`
+**Main HEAD:** `62adc01` *(may be 1 commit behind after docs updates — run `sf-audit` to verify)*
 **Version:** `3.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive)
 
