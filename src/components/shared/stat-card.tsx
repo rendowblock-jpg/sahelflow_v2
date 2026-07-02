@@ -159,7 +159,11 @@ export function StatCard({
               >
                 {isPositive && <ArrowUpRight className="size-2.5" />}
                 {isNegative && <ArrowDownRight className="size-2.5" />}
-                {Math.abs(trend!)}%
+                {/* `trend` is overloaded: ±1 = direction flag (arrow only, no number —
+                    was rendering a stray "1%"); any other number = a real percentage delta
+                    (show "{n}%"). When trendLabel is present the label itself conveys
+                    meaning, so never show the number alongside it. */}
+                {!trendLabel && Math.abs(trend!) !== 1 && `${Math.abs(trend!)}%`}
               </Badge>
             )}
           </div>
