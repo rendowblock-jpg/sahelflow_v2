@@ -2,7 +2,7 @@
   "name": "sahelflow",
   "version": "3.2.0",
   "private": true,
-  "description": "SahelFlow — AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
+  "description": "SahelFlow \u2014 AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
@@ -28,7 +28,7 @@
     "build:installer": "bun run scripts/build-installer-local.ts",
     "release": "bun run scripts/release.ts",
     "seed:rich": "bun --conditions react-server scripts/seed-rich.ts",
-    "dev:reset": "bunx prisma db push --force-reset && bun run seed:rich"
+    "dev:reset": "bun run scripts/dev-reset.ts"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
