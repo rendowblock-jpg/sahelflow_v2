@@ -25,15 +25,21 @@ interface FeatureGateProps {
  *   </FeatureGate>
  */
 export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
-  const { license, isLoading } = useLicense();
+  const { license, validation, isLoading } = useLicense();
   const { t } = useI18n();
 
   if (isLoading) return <>{children}</>;
 
   const features = license?.payload?.features ?? [];
   const hasFeature = features.includes("all") || features.includes(feature);
+  // In dev mode (and any case where the license is validated as "valid" without a
+  // payload — e.g. dev bypass returns license: null), all features are unlocked.
+  // Without this, the AI chat (and other FeatureGate'd pages) stay locked in dev
+  // even though the server-side hasFeature() returns true — a direct contradiction
+  // of the "Development mode — license validation bypassed" message on /settings.
+  const isValidNoPayload = validation?.status === "valid" && !license;
 
-  if (!hasFeature) {
+  if (!hasFeature && !isValidNoPayload) {
     return (
       <>
         {fallback ?? (

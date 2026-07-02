@@ -30,17 +30,20 @@ export default async function AccountingPage() {
   const { t, locale } = await getI18n();
   const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
 
-  // Fetch orders + expenses for the current month
+  // Fetch orders + expenses for the last 30 days (rolling window).
+  // Was: current calendar month — but on the 1st of a month this is empty even
+  // when the seller had a full prior month of activity, making the page look
+  // broken. A rolling 30-day window always reflects recent performance.
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [orders, expenses] = await Promise.all([
     db.order.findMany({
-      where: { createdAt: { gte: startOfMonth } },
+      where: { createdAt: { gte: periodStart } },
       include: { items: { include: { product: { select: { cost: true } } } }, delivery: true },
     }),
     db.expense.findMany({
-      where: { date: { gte: startOfMonth } },
+      where: { date: { gte: periodStart } },
       orderBy: { date: "desc" },
     }),
   ]);
@@ -90,7 +93,7 @@ export default async function AccountingPage() {
     <div className="app-content page-sections">
       <PageHeader
         title={t("nav.accounting")}
-        description={`${t("accounting.subtitle")} — ${now.toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}`}
+        description={`${t("accounting.subtitle")} — ${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })}`}
         actions={<div className="flex items-center gap-2"><ImportExportButtons exportRoute="/api/export/expenses" importRoute={undefined} /><ExpenseFormDialog /></div>}
       />
 
