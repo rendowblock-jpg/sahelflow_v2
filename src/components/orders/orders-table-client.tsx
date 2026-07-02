@@ -193,30 +193,30 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
           <table className="w-full">
             <thead className="sticky top-0 z-10 border-b bg-muted/50">
               <tr className="text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                <th className="px-4 py-3 w-10">
+                <th className="px-4 py-3 w-10 text-start">
                   <Checkbox
                     checked={allSelected ? true : someSelected ? "indeterminate" : false}
                     onCheckedChange={toggleAll}
                     aria-label={t("orders.selectAll")}
                   />
                 </th>
-                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" role="button" tabIndex={0} aria-sort={sortKey === "orderNumber" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("orderNumber")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("orderNumber"); } }}>
+                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset text-start" role="button" tabIndex={0} aria-sort={sortKey === "orderNumber" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("orderNumber")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("orderNumber"); } }}>
                   {t("orders.orderNumber")}
                   <SortIcon column="orderNumber" sortKey={sortKey} sortDir={sortDir} />
                 </th>
-                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" role="button" tabIndex={0} aria-sort={sortKey === "customer" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("customer")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("customer"); } }}>
+                <th className="px-4 py-3 cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset text-start" role="button" tabIndex={0} aria-sort={sortKey === "customer" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("customer")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("customer"); } }}>
                   {t("orders.customer")}
                   <SortIcon column="customer" sortKey={sortKey} sortDir={sortDir} />
                 </th>
-                <th className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell">{t("orders.items")}</th>
-                <th className="px-2 py-2 sm:px-4 sm:py-3 hidden sm:table-cell">{t("orders.wilaya")}</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell text-start">{t("orders.items")}</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 hidden sm:table-cell text-start">{t("orders.wilaya")}</th>
                 <th className="px-4 py-3 text-end cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" role="button" tabIndex={0} aria-sort={sortKey === "totalPrice" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("totalPrice")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("totalPrice"); } }}>
                   {t("orders.total")}
                   <SortIcon column="totalPrice" sortKey={sortKey} sortDir={sortDir} />
                 </th>
-                <th className="px-4 py-3">{t("orders.status")}</th>
-                {riskData && <th className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell">{t("risk.assessment.score")}</th>}
-                <th className="px-2 py-2 sm:px-4 sm:py-3 hidden lg:table-cell cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" role="button" tabIndex={0} aria-sort={sortKey === "createdAt" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("createdAt")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("createdAt"); } }}>
+                <th className="px-4 py-3 text-start">{t("orders.status")}</th>
+                {riskData && <th className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell text-start">{t("risk.assessment.score")}</th>}
+                <th className="px-2 py-2 sm:px-4 sm:py-3 hidden lg:table-cell cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset text-start" role="button" tabIndex={0} aria-sort={sortKey === "createdAt" ? (sortDir === "asc" ? "ascending" : "descending") : "none"} onClick={() => toggleSort("createdAt")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("createdAt"); } }}>
                   {t("orders.date")}
                   <SortIcon column="createdAt" sortKey={sortKey} sortDir={sortDir} />
                 </th>
@@ -252,22 +252,22 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                         router.push(`/orders/${order.id}`);
                       }}
                     >
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3 text-start" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggleOne(order.id)}
                           aria-label={`Select ${order.orderNumber}`}
                         />
                       </td>
-                      <td className="px-4 py-3 font-mono text-sm font-medium">{order.orderNumber}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 font-mono text-sm font-medium text-start">{order.orderNumber}</td>
+                      <td className="px-4 py-3 text-start">
                         <div className="text-sm font-medium truncate max-w-[150px]">{order.customer?.name ?? "—"}</div>
                         <div className="text-xs text-muted-foreground font-mono">{order.customer?.phone ?? order.phone}</div>
                       </td>
-                      <td className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell text-sm text-muted-foreground">{itemLabel}</td>
-                      <td className="px-2 py-2 sm:px-4 sm:py-3 hidden sm:table-cell text-sm">{order.wilaya}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell text-sm text-muted-foreground text-start">{itemLabel}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 hidden sm:table-cell text-sm text-start">{order.wilaya}</td>
                       <td className="px-4 py-3 text-end font-medium text-sm tabular-nums">{formatDZD(order.totalPrice)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-start">
                         <OrderStatusBadge
                           orderId={order.id}
                           status={status}
@@ -275,7 +275,7 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                         />
                       </td>
                       {riskData && (
-                        <td className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell">
+                        <td className="px-2 py-2 sm:px-4 sm:py-3 hidden md:table-cell text-start">
                           {riskData[order.id] ? (
                             <RiskBadge
                               level={riskData[order.id]!.level as RiskLevel}
@@ -287,7 +287,7 @@ export function OrdersTableClient({ orders, locale, riskData }: OrdersTableClien
                           )}
                         </td>
                       )}
-                      <td className="px-2 py-2 sm:px-4 sm:py-3 hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">{formatDate(order.createdAt, locale)}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap text-start">{formatDate(order.createdAt, locale)}</td>
                       <td className="px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
