@@ -5,10 +5,10 @@
  * backup → verify data matches. Was: zero tests for backup/restore (219 LOC
  * at 0% coverage).
  */
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { createBackup, restoreBackup, listBackups, deleteBackup, validateBackupFilename } from "../index";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, rmSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -57,6 +57,31 @@ async function seedTestData() {
   });
 }
 
+// Isolate the active-shop DB path so backup/restore operates on the SAME file
+// the test's PrismaClient uses. getActiveDbPath() reads data/app-meta.json; if it
+// points at the real dev.db (which exists), backup/restore touches dev.db while the
+// test queries DATABASE_URL — a mismatch that left restored data invisible.
+const META_PATH = join(process.cwd(), "data", "app-meta.json");
+let savedMeta: string | null = null;
+
+beforeAll(async () => {
+  // Save original app-meta.json (if present) so we can restore it after the suite.
+  try {
+    if (existsSync(META_PATH)) savedMeta = readFileSync(META_PATH, "utf8");
+  } catch { /* ignore */ }
+  // Derive the test DB path from DATABASE_URL (set by the test runner / CI).
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  const testDbPath = dbUrl.startsWith("file:") ? dbUrl.slice("file:".length) : join(process.cwd(), "data", "shops", "dev.db");
+  mkdirSync(join(process.cwd(), "data"), { recursive: true });
+  writeFileSync(
+    META_PATH,
+    JSON.stringify({
+      shops: [{ id: "default", name: "Test", dbPath: testDbPath, icon: "🏪", createdAt: new Date().toISOString() }],
+      activeShopId: "default",
+    }),
+  );
+});
+
 describe("backup round-trip (PROD-006)", () => {
   beforeEach(async () => { await cleanDb(); });
 
@@ -65,6 +90,10 @@ describe("backup round-trip (PROD-006)", () => {
     await db.$disconnect();
     const backupDir = join(process.cwd(), "data", "backups");
     if (existsSync(backupDir)) rmSync(backupDir, { recursive: true, force: true });
+    // Restore the original app-meta.json so the test doesn't pollute the real shop registry.
+    try {
+      if (savedMeta !== null) writeFileSync(META_PATH, savedMeta);
+    } catch { /* ignore */ }
   });
 
   it("createBackup produces a backup file", async () => {
