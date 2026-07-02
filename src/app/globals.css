@@ -237,6 +237,20 @@
     font-feature-settings: "cv01", "ss03", "calt", "kern";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent iOS auto-zoom on input focus (requires >=16px) */
+    font-size: 16px;
+    /* Smaller on desktop for information density */
+  }
+  @media (min-width: 1024px) {
+    body { font-size: 15px; }
+  }
+
+  /* Touch target safety — ensure interactive elements are >=44px on touch */
+  @media (pointer: coarse) {
+    button:not([data-size]),
+    [role="button"]:not([data-size]) {
+      min-height: 40px;
+    }
   }
 
   /* Tabular numerals for stats & prices (Stripe pattern) */
@@ -694,7 +708,7 @@
 @layer utilities {
   /* The main content scroll container — consistent padding + max-width */
   .app-content {
-    @apply mx-auto w-full max-w-[var(--content-2xl)] p-4 sm:p-6 lg:p-8;
+    @apply mx-auto w-full max-w-[var(--content-2xl)] p-3 sm:p-6 lg:p-8;
   }
 
   /* Tighter content for form-heavy pages */
@@ -735,3 +749,69 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Responsive polish — top-tier mobile experience
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Custom scrollbar — thin, themed, subtle (WebKit + Firefox) */
+@media (min-width: 1024px) {
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(from var(--muted-foreground) l c h / 0.25);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(from var(--muted-foreground) l c h / 0.4);
+  }
+  * { scrollbar-width: thin; scrollbar-color: oklch(from var(--muted-foreground) l c h / 0.25) transparent; }
+}
+
+/* Mobile table scroll — add a subtle gradient shadow when horizontally scrollable */
+@media (max-width: 767px) {
+  .table-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Fade indicator on the trailing edge */
+  .table-scroll-container::after {
+    content: "";
+    position: sticky;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to var(--scroll-fade-dir, right), transparent, var(--background));
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+}
+
+/* Prevent layout shift: ensure images don't overflow their containers */
+img { max-width: 100%; height: auto; }
+
+/* Mobile: prevent text selection on UI chrome (buttons, nav) for app-like feel */
+@media (pointer: coarse) {
+  button, nav, [role="navigation"], [role="menu"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Smooth scrolling for in-page navigation */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Heading hierarchy — consistent across all pages */
+h1 { @apply text-xl font-semibold tracking-tight sm:text-2xl; }
+h2 { @apply text-lg font-semibold tracking-tight; }
+h3 { @apply text-base font-semibold; }
