@@ -1272,6 +1272,7 @@
   "orders.statusActions.changeStatus": "Change status",
   "orders.statusActions.finalStatus": "Final status",
   "orders.statusActions.markDelivered": "Mark delivered",
+  "orders.statusActions.markPending": "Mark as pending",
   "orders.statusActions.noActions": "No actions available for this order.",
   "orders.statusActions.returnButton": "Return",
   "orders.statusActions.selectStatus": "Select status",

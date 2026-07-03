@@ -1272,6 +1272,7 @@
   "orders.statusActions.changeStatus": "Changer le statut",
   "orders.statusActions.finalStatus": "Statut final",
   "orders.statusActions.markDelivered": "Marquer livrée",
+  "orders.statusActions.markPending": "Marquer en attente",
   "orders.statusActions.noActions": "Aucune action possible sur cette commande.",
   "orders.statusActions.returnButton": "Retour",
   "orders.statusActions.selectStatus": "Sélectionner le statut",

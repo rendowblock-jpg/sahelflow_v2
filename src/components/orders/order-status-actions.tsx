@@ -14,6 +14,7 @@ import {
   XCircle,
   Ban,
   Loader2,
+  Clock,
 } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 
@@ -28,10 +29,9 @@ const ACTION_CONFIG: Record<
   returned: { labelKey: "orders.statusActions.returnButton", icon: RotateCcw, variant: "destructive" },
   refused: { labelKey: "orders.status.refused", icon: XCircle, variant: "destructive" },
   cancelled: { labelKey: "common.cancel", icon: Ban, variant: "destructive" },
-  draft: { labelKey: "", icon: CheckCircle2, variant: "outline" },
-  pending: { labelKey: "", icon: CheckCircle2, variant: "outline" },
+  draft: { labelKey: "orders.status.draft", icon: CheckCircle2, variant: "outline" },
+  pending: { labelKey: "orders.statusActions.markPending", icon: Clock, variant: "default" },
 };
-
 interface OrderStatusActionsProps {
   orderId: string;
   currentStatus: OrderStatus;

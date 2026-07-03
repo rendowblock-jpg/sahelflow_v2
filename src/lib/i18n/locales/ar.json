@@ -1272,6 +1272,7 @@
   "orders.statusActions.changeStatus": "تغيير الحالة",
   "orders.statusActions.finalStatus": "الحالة النهائية",
   "orders.statusActions.markDelivered": "وضع علامة تم التسليم",
+  "orders.statusActions.markPending": "وضع علامة قيد الانتظار",
   "orders.statusActions.noActions": "لا توجد إجراءات متاحة لهذا الطلب.",
   "orders.statusActions.returnButton": "إرجاع",
   "orders.statusActions.selectStatus": "اختر الحالة",
