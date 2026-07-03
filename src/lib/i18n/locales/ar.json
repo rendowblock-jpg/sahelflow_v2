@@ -2207,5 +2207,10 @@
   "metadata.title.customers": "العملاء",
   "metadata.title.customerDetail": "تفاصيل العميل",
   "metadata.title.profile": "الملف الشخصي",
-  "metadata.title.extractionAnalytics": "تحليلات الاستخراج"
+  "metadata.title.extractionAnalytics": "تحليلات الاستخراج",
+  "error.reload": "إعادة تحميل الصفحة",
+  "error.goHome": "الذهاب إلى لوحة التحكم",
+  "error.unexpectedTitle": "حدث خطأ ما",
+  "error.unexpectedMessage": "حدث خطأ غير متوقع. أعد تحميل الصفحة — إذا استمرت المشكلة، اتصل بالدعم.",
+  "error.reported": "تم الإبلاغ عن هذا الخطأ تلقائياً."
 }

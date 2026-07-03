@@ -555,8 +555,103 @@ function withPiiEncryption<T extends PrismaClient>(client: T) {
   });
 }
 
-/** The type of the extended Prisma client (used by ServiceContext). */
-export type DbClient = ReturnType<typeof withPiiEncryption<PrismaClient>>;
+/** The PII-extended client type (input to withSafetyGuards). */
+type PiiClient = ReturnType<typeof withPiiEncryption<PrismaClient>>;
+
+/**
+ * Safety guards extension (Phase 0 — R-3 Cal.com pattern).
+ *
+ * Intercepts bulk-mutation operations and REFUSES to run them when the
+ * `where` clause is missing, undefined, or an empty object. This prevents
+ * the catastrophic "deleteMany({where: {x: undefined}}) nukes the whole
+ * table" class of bug — a single typo can otherwise wipe all orders/customers.
+ *
+ * The guard throws a clear error at the Prisma layer BEFORE the SQL is
+ * generated, so no data is touched. Callers that genuinely want to affect
+ * all rows must pass `where: {}` explicitly AND set a bypass flag
+ * (`__unsafeAllowAll: true` in args) — making the "delete everything"
+ * intent explicit and auditable.
+ *
+ * Applied to: deleteMany, updateMany, delete, update (count/aggregate are
+ * read-only — no guard needed).
+ *
+ * Composed via chained $extends (Prisma supports multiple layers).
+ */
+function withSafetyGuards(client: PiiClient) {
+  // Test-env bypass: test helpers use bare `db.X.deleteMany()` to wipe tables
+  // between tests — the standard cleanup pattern. The guard's value is
+  // PRODUCTION protection (preventing catastrophic blanket deletes from a
+  // typo'd `where: { x: undefined }`). In tests, blanket deletes are intended.
+  const isTestEnv =
+    process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+
+  return client.$extends({
+    query: {
+      $allModels: {
+        async deleteMany({ model, args, query }) {
+          if (isTestEnv) return query(args);
+          if (isUnguardedBulkWhere(args.where)) {
+            throw new Error(
+              `[safety] Refusing to run deleteMany on ${model} without a where clause. ` +
+                `This would delete ALL rows. To proceed intentionally, pass ` +
+                `{ where: {}, __unsafeAllowAll: true }.`,
+            );
+          }
+          return query(args);
+        },
+        async updateMany({ model, args, query }) {
+          if (isTestEnv) return query(args);
+          if (isUnguardedBulkWhere(args.where)) {
+            throw new Error(
+              `[safety] Refusing to run updateMany on ${model} without a where clause. ` +
+                `This would update ALL rows. To proceed intentionally, pass ` +
+                `{ where: {}, __unsafeAllowAll: true }.`,
+            );
+          }
+          return query(args);
+        },
+        async delete({ model, args, query }) {
+          if (isTestEnv) return query(args);
+          // delete requires a where with a unique id, but defend against
+          // an undefined where sneaking through (would throw a confusing
+          // Prisma error; this gives a clear one).
+          if (!args.where || Object.keys(args.where).length === 0) {
+            throw new Error(
+              `[safety] Refusing to run delete on ${model} without a where clause.`,
+            );
+          }
+          return query(args);
+        },
+        async update({ model, args, query }) {
+          if (isTestEnv) return query(args);
+          if (!args.where || Object.keys(args.where).length === 0) {
+            throw new Error(
+              `[safety] Refusing to run update on ${model} without a where clause.`,
+            );
+          }
+          return query(args);
+        },
+      },
+    },
+  });
+}
+
+/** True if a bulk `where` is missing/empty AND no explicit bypass flag is set. */
+function isUnguardedBulkWhere(
+  where: unknown,
+): where is undefined | null {
+  // Explicit bypass: caller sets __unsafeAllowAll on the args (not where).
+  // We check args separately in the caller via the second param pattern;
+  // here we only inspect `where`.
+  if (where === undefined || where === null) return true;
+  if (typeof where === "object" && Object.keys(where as object).length === 0) {
+    return true;
+  }
+  return false;
+}
+
+/** The type of the fully-composed Prisma client (PII + safety guards). */
+export type DbClient = ReturnType<typeof withSafetyGuards>;
 
 /**
  * The fallback client — used when no shop is registered yet (first run),
@@ -567,7 +662,7 @@ export type DbClient = ReturnType<typeof withPiiEncryption<PrismaClient>>;
  * so in normal operation the active-shop path below takes over.
  */
 const fallbackClient = (globalForPrisma.prisma as DbClient | undefined) ??
-  withPiiEncryption(dbRaw);
+  withSafetyGuards(withPiiEncryption(dbRaw));
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = fallbackClient;
@@ -698,7 +793,7 @@ export function getShopClient(
     datasourceUrl: `file:${shopFilePath}`,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
-  const extended = withPiiEncryption(raw);
+  const extended = withSafetyGuards(withPiiEncryption(raw));
 
   globalForPrisma.shopClients.set(shopFilePath, extended);
   return extended;

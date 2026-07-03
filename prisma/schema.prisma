@@ -538,13 +538,23 @@ model Session {
 
 model AuditLog {
   id        String   @id @default(cuid())
-  action    String   // e.g. "auth.login.success", "auth.login.failed", "auth.logout", "auth.pin.change"
+  // e.g. "auth.login.success", "order.created", "order.status.changed",
+  // "customer.blacklisted", "automation.fired", "settings.updated"
+  action    String
+  // Entity tracking (Phase 0 + Phase 4 order timeline). Optional so legacy
+  // auth-only audit calls keep working without an entity context.
+  entity    String?  // "order" | "customer" | "product" | "delivery" | ...
+  entityId  String?  // the entity's id (e.g. order id)
+  actor     String?  // who performed it ("system" | "user" | automation id) - null for legacy auth logs
+  before    String?  // JSON snapshot of entity before mutation (for diff)
+  after     String?  // JSON snapshot of entity after mutation
   ip        String?
-  metadata  String?  // JSON string
+  metadata  String?  // JSON string (extra context, e.g. { reason, from, to })
   createdAt DateTime @default(now())
 
   @@index([action, createdAt])
   @@index([createdAt])
+  @@index([entity, entityId, createdAt])  // order/customer timeline queries
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

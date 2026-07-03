@@ -2207,5 +2207,10 @@
   "metadata.title.customers": "Customers",
   "metadata.title.customerDetail": "Customer Details",
   "metadata.title.profile": "Profile",
-  "metadata.title.extractionAnalytics": "Extraction Analytics"
+  "metadata.title.extractionAnalytics": "Extraction Analytics",
+  "error.reload": "Reload page",
+  "error.goHome": "Go to dashboard",
+  "error.unexpectedTitle": "Something went wrong",
+  "error.unexpectedMessage": "An unexpected error occurred. Try reloading the page — if the problem persists, contact support.",
+  "error.reported": "This error has been automatically reported."
 }

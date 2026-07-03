@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import {
@@ -39,7 +40,7 @@ async function migrateAuthSecretsIfNeeded(): Promise<void> {
   }
 }
 
-export async function getAuthSecret(): Promise<string | null> {
+export const getAuthSecret = cache(async (): Promise<string | null> => {
   const envSecret = process.env[AUTH_SECRET_ENV];
   if (envSecret) return envSecret;
   await migrateAuthSecretsIfNeeded();
@@ -52,7 +53,7 @@ export async function getAuthSecret(): Promise<string | null> {
     if (setting?.value) return setting.value;
   } catch { /* ignore */ }
   return null;
-}
+});
 
 export async function setupAuth(pin: string): Promise<{ secret: string }> {
   const secret = generateSecret();
@@ -151,7 +152,7 @@ export async function getSessionToken(): Promise<string | undefined> {
   return store.get(AUTH_COOKIE)?.value;
 }
 
-export async function isAuthenticated(): Promise<boolean> {
+export const isAuthenticated = cache(async (): Promise<boolean> => {
   const token = await getSessionToken();
   const secret = await getAuthSecret();
   if (!secret) return true;
@@ -169,7 +170,7 @@ export async function isAuthenticated(): Promise<boolean> {
   } catch {
     return true; // DB error — fail-open (HMAC valid, session check is defense-in-depth)
   }
-}
+});
 
 export async function requireAuth(): Promise<void> {
   const ok = await isAuthenticated();
