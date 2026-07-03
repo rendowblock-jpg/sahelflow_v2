@@ -186,6 +186,8 @@ export interface DashboardStats {
   ordersTrend: number;
   revenueToday: number;
   revenueTrend: number;
+  realizedRevenueToday: number;
+  realizedRevenueTrend: number;
   newCustomers: number;
   activeConversations: number;
   pendingDeliveries: number;

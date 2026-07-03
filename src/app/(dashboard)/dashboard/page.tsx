@@ -81,13 +81,15 @@ export default async function DashboardPage() {
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
-          label={t("dashboard.todaysRevenue")}
+          label={t("dashboard.grossRevenue")}
           value={formatDZD(stats.revenueToday)}
           icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-emerald-600 dark:text-emerald-400"
           trend={stats.revenueTrend}
           trendLabel={t("dashboard.vsYesterday")}
+          subtitle={`${t("dashboard.realizedRevenue")}: ${formatDZD(stats.realizedRevenueToday)}`}
+          tooltip={t("dashboard.grossRevenueTooltip")}
           spark={revenueSpark}
           sparkColor="var(--color-chart-2)"
           style={{ animationDelay: "120ms" }}

@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Sparkline } from "@/components/charts/sparkline";
 
@@ -20,6 +21,7 @@ interface StatCardProps {
   sparkColor?: string;
   className?: string;
   style?: React.CSSProperties;
+  tooltip?: string;
 }
 
 /**
@@ -63,6 +65,7 @@ export function StatCard({
   sparkColor,
   className,
   style,
+  tooltip,
 }: StatCardProps) {
   const isPositive = (trend ?? 0) > 0;
   const isNegative = (trend ?? 0) < 0;
@@ -123,8 +126,18 @@ export function StatCard({
           {icon}
         </div>
 
-        <CardDescription className="text-sm font-medium text-muted-foreground">
+        <CardDescription className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
           {label}
+          {tooltip && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="size-3.5 cursor-help text-muted-foreground/60 hover:text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="text-xs">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </CardDescription>
 
         <CardTitle className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl @[250px]/card:text-3xl">
