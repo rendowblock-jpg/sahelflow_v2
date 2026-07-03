@@ -347,12 +347,19 @@ model DailyAnalyticsReport {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Automation {
-  id        String   @id @default(cuid())
-  name      String
-  trigger   String
-  action    String
-  config    String?  // JSON: action parameters (message template, status to set, etc.)
-  isActive  Boolean  @default(true)
+  id          String   @id @default(cuid())
+  name        String
+  trigger     String
+  action      String
+  config      String?  // JSON: action parameters (message template, status to set, etc.)
+  // Phase 6: conditions engine (JSON-logic). null = always match.
+  // Format: { "all": [{ "field": "wilaya", "op": "equal", "value": "Alger" }] }
+  // or { "any": [{ "field": "totalPrice", "op": "greater_than", "value": 5000 }] }
+  conditions  String?
+  // Phase 6: multi-step actions (JSON array of action steps).
+  // null = single action (the `action` field). If set, runs each step in order.
+  steps       String?
+  isActive    Boolean  @default(true)
   runCount  Int      @default(0)
   lastRunAt DateTime?
   createdAt DateTime @default(now())

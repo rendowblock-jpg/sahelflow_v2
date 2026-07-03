@@ -19,6 +19,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { evaluateConditions, type ConditionGroup } from "./conditions";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,6 +98,8 @@ async function executeAutomation(
     name: string;
     action: string;
     config: string | null;
+    conditions?: string | null;
+    steps?: string | null;
   },
   event: string,
   payload: TriggerPayload,
@@ -109,9 +112,41 @@ async function executeAutomation(
       ? JSON.parse(automation.config)
       : {};
 
-    const result = await executeAction(automation.action, config, payload);
-    status = result.status;
-    message = result.message;
+    // Phase 6: evaluate conditions (JSON-logic) — skip if conditions don't match
+    const conditions: ConditionGroup | null = automation.conditions
+      ? JSON.parse(automation.conditions)
+      : null;
+    if (conditions && !evaluateConditions(conditions, payload)) {
+      // Conditions not met — log as skipped
+      await db.automationLog.create({
+        data: {
+          automationId: automation.id,
+          trigger: event,
+          status: "skipped",
+          message: "Conditions not met",
+          payload: JSON.stringify(payload).slice(0, 2000),
+        },
+      });
+      return;
+    }
+
+    // Phase 6: multi-step actions — if steps are defined, run each in order
+    const steps = automation.steps ? JSON.parse(automation.steps) as string[] : null;
+    if (steps && Array.isArray(steps) && steps.length > 0) {
+      for (const step of steps) {
+        const stepResult = await executeActionWithRetry(step, config, payload);
+        if (stepResult.status === "failed") {
+          // If a step fails, log + continue (don't block subsequent steps)
+          logger.warn("automation.step.failed", { automationId: automation.id, step, error: stepResult.message });
+        }
+      }
+      status = "success";
+      message = `Executed ${steps.length} steps`;
+    } else {
+      const result = await executeActionWithRetry(automation.action, config, payload);
+      status = result.status;
+      message = result.message;
+    }
   } catch (err) {
     status = "failed";
     message = err instanceof Error ? err.message : String(err);
@@ -143,6 +178,30 @@ async function executeAutomation(
       error: String(err),
     });
   }
+}
+
+// ── Action executor with retry (Phase 6) ─────────────────────────────────────
+
+async function executeActionWithRetry(
+  action: string,
+  config: AutomationConfig,
+  payload: TriggerPayload,
+  maxRetries = 2,
+): Promise<{ status: ExecutionStatus; message: string }> {
+  let lastError: string | null = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await executeAction(action, config, payload);
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      if (attempt < maxRetries) {
+        // Exponential backoff: 500ms, 1000ms
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+        logger.warn("automation.retry", { action, attempt: attempt + 1, error: lastError });
+      }
+    }
+  }
+  return { status: "failed", message: lastError ?? "Action failed after retries" };
 }
 
 // ── Action executors ─────────────────────────────────────────────────────────
