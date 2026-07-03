@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { SpeculationRules } from "@/components/shared/speculation-rules";
 import { getDirection, type Locale } from "@/lib/i18n";
 
 const VALID_LOCALES: readonly string[] = ["ar", "fr", "en"];
@@ -32,6 +33,7 @@ export default async function DashboardRouteLayout({
 
   return (
     <DashboardLayout locale={locale} dir={dir}>
+      <SpeculationRules />
       {children}
     </DashboardLayout>
   );
