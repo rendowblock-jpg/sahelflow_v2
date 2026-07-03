@@ -235,12 +235,24 @@ model Conversation {
   sourceId      String?
   lastMessageAt DateTime?
   unreadCount   Int       @default(0)
+  // Phase 5: Chatwoot-style conversation workflow
+  status        String    @default("open")   // "open" | "pending" | "resolved" | "snoozed"
+  assigneeId    String?                          // agent assignment (future: link to User)
+  priority      String?                          // "urgent" | "high" | "medium" | "low"
+  teamId        String?                          // team routing (future)
+  waitingSince  DateTime?                        // SLA: how long since last customer message
+  firstReplyAt  DateTime?                        // first response time metric
+  snoozedUntil  DateTime?                        // auto-reopen date for snoozed convos
+  labels        String?                          // JSON array of label strings
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   messages      Message[]
 
   @@index([channel])
   @@index([lastMessageAt])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([priority])
 }
 
 model Message {
@@ -252,9 +264,19 @@ model Message {
   timestamp          DateTime
   extractedOrderJson String?
   extractionMethod   String?
+  // Phase 5: delivery receipts (Chatwoot pattern)
+  // "sending" | "sent" | "delivered" | "read" | "failed"
+  deliveryStatus     String?      @default("sent")
+  // "text" | "image" | "document" | "activity" | "template"
+  messageType        String       @default("text")
+  // Activity message payload (for system events: "X assigned", "Resolved", etc.)
+  activityType       String?
+  // Attachments (JSON array of {url, type, name, size})
+  attachments        String?
   createdAt          DateTime     @default(now())
 
   @@index([conversationId, timestamp])
+  @@index([deliveryStatus])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -677,4 +699,19 @@ model ReservationItem {
   @@index([productId])
   @@index([orderId])
   @@index([releasedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 5: INBOX — Canned responses (saved replies)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CannedResponse {
+  id          String   @id @default(cuid())
+  shortCode   String   @unique  // e.g. "welcome", "hours", "address"
+  content     String              // the message text (with optional {{variables}})
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shortCode])
 }
