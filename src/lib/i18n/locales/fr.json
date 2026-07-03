@@ -2207,5 +2207,10 @@
   "metadata.title.customers": "Clients",
   "metadata.title.customerDetail": "Détails du client",
   "metadata.title.profile": "Profil",
-  "metadata.title.extractionAnalytics": "Analyse d'extraction"
+  "metadata.title.extractionAnalytics": "Analyse d'extraction",
+  "error.reload": "Recharger la page",
+  "error.goHome": "Aller au tableau de bord",
+  "error.unexpectedTitle": "Une erreur est survenue",
+  "error.unexpectedMessage": "Une erreur inattendue s'est produite. Rechargez la page — si le problème persiste, contactez le support.",
+  "error.reported": "Cette erreur a été signalée automatiquement."
 }
