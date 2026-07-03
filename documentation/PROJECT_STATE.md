@@ -3,9 +3,9 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-03 (Session 22 complete)
-**Main HEAD:** `2fc70bc`
-**Version:** `3.4.0`
+**Last updated:** 2026-07-03 (Session 22 complete — all 8 masterplan phases)
+**Main HEAD:** `f50b762`
+**Version:** `3.5.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive)
 
 ---
@@ -14,13 +14,14 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-22 complete. Masterplan Phases 1-5 done, 6-8 remaining. |
-| LOC | ~51,000 (src/ + sidecars/ + tests/) |
+| Phase | Sessions 1-22 complete. ALL 8 masterplan phases done. |
+| LOC | ~52,000 (src/ + sidecars/ + tests/) |
 | Pages | 18 dashboard pages (added delivery + return detail) |
 | API routes | 87 |
-| Tests | **1192 pass | 5 skip | 0 fail** (was 1189 at Session 21 — +3 blacklist tests) |
-| Test coverage | **88.8% statements** (was 34.5% — +54.3 points). Floor locked at 80%. |
-| Prisma models | 29 |
+| Tests | **1192 pass | 5 skip | 0 fail** |
+| Test coverage | **88.8% statements** (floor locked at 80%) |
+| Prisma models | 30 (added AutomationLog) |
+| Automations | ✅ Full engine: trigger dispatcher + 5 actions + execution log |
 | i18n keys | ~2,250 × 3 locales (AR/FR/EN + RTL complete) |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
 | Delivery adapters | 4 (Yalidine + Maystro + ZR Express + DHD) |

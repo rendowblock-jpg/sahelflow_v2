@@ -4,6 +4,50 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 22 (continued) — Phases 6-8: Visual Polish + Feature Completion + Docs (5 commits)
+
+**Phases completed:** 6 (visual polish), 7 (feature completion), 8 (verification + docs)
+
+### Phase 6: Visual Polish (1 commit)
+- Added loading.tsx skeletons for delivery + return detail pages (were missing)
+- Visual system audit: icons consistent (h-5 nav, h-4 cards, h-3 badges), buttons clean (no custom bg-*), animation system established (stagger-grid, animate-fade-up, hover:bg-muted)
+
+### Phase 7: Feature Completion (3 commits) — THE BIG ONE
+**7.1 Automations engine (full implementation):**
+- New `AutomationLog` model (execution log: trigger, status, message, payload)
+- Added `config` JSON field to Automation model (action parameters)
+- New `src/lib/automations/engine.ts` — trigger dispatcher + 5 action executors:
+  - `send_whatsapp`: checks sidecar health, sends message (gracefully skips if not connected)
+  - `send_notification`: logs in-app notification
+  - `tag_customer`: adds note to customer record
+  - `update_status`: updates order status
+  - `create_order`: placeholder (logged as skipped)
+- Template variable substitution: {{customerName}}, {{orderNumber}}, {{totalPrice}}, {{wilaya}}
+- Wired into orderService.create() → `order.created` trigger
+- Wired into orderService.updateStatus() → `order.confirmed/shipped/delivered/returned/cancelled` triggers
+- Wired into blacklistCustomer() → `customer.blacklisted` trigger
+- Fire-and-forget (void) — never blocks business operations
+- Automations page: shows Recent Activity (execution log), removed "coming soon" placeholder
+
+**7.2 DHD credentials panel:**
+- Added DHD to PROVIDER_CONFIGS in delivery-credentials-panel.tsx (was missing — backend already supported it)
+
+**7.3 WhatsApp inbox setup guide:**
+- Added setup guide info banner below "Service not started" warning
+- Explains 3-step connection process (sidecar starts automatically → click Connect → scan QR)
+- Added inbox.setupGuide i18n key (EN/FR/AR)
+
+**7.4 Integration status indicators:**
+- Audited all integration panels — all have connection status badges + setup flows
+
+### Phase 8: Verification (1 commit)
+- Full test suite: 1192 pass | 5 skip | 0 fail
+- tsc: 0 errors
+- eslint: 0 errors (682 pre-existing warnings)
+- Documentation sync + version bump to 3.5.0
+
+---
+
 ## Session 22 — 2026-07-03: Masterplan Execution — Phases 1-5 (10 commits)
 
 **Branches:** 5 feature branches merged to main (`agent/session22-phase{1-5}-*` + `agent/session22-docs-sync`)
