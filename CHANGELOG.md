@@ -4,6 +4,20 @@ All notable changes to SahelFlow are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/),
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.5.1] - 2026-07-03 (Session 22 redo — Phase 3+4+6 deep audit)
+
+### Phase 3 REDO: RTL charts + typography
+- **Charts:** 5 chart components got `YAxis orientation={isRtl ? "right" : "left"}` (Recharts defaults to left — YAxis was on wrong side in Arabic mode). Fixed: area, line, dual-bar, horizontal-bar, composed-trend.
+- **DualBarChart:** Also fixed margin swap (was missing) + Legend `direction: rtl`.
+- **Amiri font:** Was loaded via `next/font` but NEVER APPLIED. Arabic text was rendering in Inter's system fallback. Now `[dir="rtl"] { font-family: var(--font-arabic) }`.
+- **Arabic line-height:** `[dir="rtl"] { line-height: 1.65 }` (was 1.5 — diacritics clipped). Headings 1.4.
+
+### Phase 4 REDO: Responsive
+- **Dashboard stat-card grid:** Was raw `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` (fixed breakpoints). Now `.card-grid-4` (auto-fit `minmax` — adapts to any width).
+
+### Phase 6 REDO: Visual polish
+- **3 "configured" badges:** Fixed from `bg-emerald-600 text-white` to consistent `/10` opacity pattern with dark mode variants (`border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400`). Files: delivery-credentials-panel, import-panel, ai-key-panel.
+
 ## [3.5.0] - 2026-07-03 (Session 22 — Masterplan Phases 6-8)
 
 ### Phase 6: Visual Polish
