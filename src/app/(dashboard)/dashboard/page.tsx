@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       />
 
       {/* KPI stat cards with sparklines — the at-a-glance snapshot */}
-      <div className="stagger-grid grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+      <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("dashboard.todaysOrders")}
           value={stats.ordersToday}
