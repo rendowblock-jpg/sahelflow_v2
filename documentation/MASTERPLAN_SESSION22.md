@@ -127,18 +127,75 @@ This masterplan is organized into **7 phases**, prioritized by impact: critical 
 
 ---
 
-## PHASE 3: Desktop Window Responsiveness (founder request #1)
+## PHASE 3: RTL / Arabic Mode Fixes (founder finding #6 + #7)
+
+**Goal:** Arabic mode looks as polished as French/English mode. No overlapping chart elements, correct text alignment everywhere.
+
+### 3.1 Fix PageHeader RTL alignment (CRITICAL — most visible)
+**Problem:** `page-header.tsx` has ZERO RTL handling. The `<h1>` page title and description are always left-aligned, even in Arabic mode. The sidebar group labels are correctly right-aligned (`text-end`), but the page titles aren't — creating visual inconsistency.
+
+**Files:**
+- `src/components/shared/page-header.tsx` — add `dir` prop (or read from useI18n); use `text-start` (logical property) instead of implicit left-alignment; ensure the flex layout (`sm:flex-row sm:items-center sm:justify-between`) respects RTL (actions should appear on the LEFT in RTL, not right)
+- Verify the `actions` slot positioning in RTL — in RTL, actions should be on the left side of the header
+
+**Acceptance:** In Arabic mode, page titles are right-aligned, actions appear on the left. Consistent with the sidebar.
+
+### 3.2 RTL chart audit + fixes
+**Problem:** Charts in Arabic mode have overlapping elements, missing UI, clipped labels.
+
+**Root cause investigation:**
+- Chart components DO have `isRtl` handling (`reversed={isRtl}`, margin swaps) — but it's incomplete
+- Likely issues: Legend position, tooltip clipping, axis label truncation, grid line direction
+
+**Files (audit + fix each):**
+- `src/components/charts/area-trend-chart.tsx` — verify legend, tooltip, axis labels in RTL
+- `src/components/charts/line-trend-chart.tsx` — same
+- `src/components/charts/composed-trend-chart.tsx` — same
+- `src/components/charts/dual-bar-chart.tsx` — same
+- `src/components/charts/donut-chart.tsx` — legend position in RTL
+- `src/components/charts/horizontal-bar-chart.tsx` — bar direction + label position
+- `src/components/charts/radial-gauge.tsx` — label position
+- `src/components/charts/sparkline.tsx` — direction
+
+**Method:**
+1. Switch app to Arabic mode (cookie `locale=ar`)
+2. Screenshot every chart on: dashboard, analytics, accounting, risk, customers/[id]
+3. VLM-analyze each for overlap/clipping/missing elements
+4. Fix per-chart: legend `verticalAlign`/`align`, tooltip `wrapperStyle` RTL-aware margins, axis `tick` formatting, grid `reversed`
+5. Re-screenshot + verify
+
+**Acceptance:** Every chart in Arabic mode has: no overlapping elements, all labels visible, tooltips positioned correctly, legend on the correct side. VLM rates Arabic charts 8+/10.
+
+### 3.3 RTL typography audit
+**Tasks:**
+- Verify Arabic font (Amiri) loads correctly + renders all text
+- Check letter-spacing: Arabic doesn't use letter-spacing (tracking-tight should be removed in RTL)
+- Check line-height: Arabic often needs slightly more line-height than Latin
+- Verify all `tracking-tight` / `tracking-wide` classes don't apply in RTL (use a RTL-specific override)
+
+### 3.4 RTL layout audit (beyond charts + sidebar)
+**Tasks:**
+- Audit every page for: table column order, form label alignment, button icon direction, badge positioning
+- Verify the `dir="rtl"` propagation rule in globals.css (line 830) covers all elements
+- Test the command palette (Cmd+K) in RTL — results should align right, shortcut hints on left
+- Test all dialogs/modals in RTL — close button should be top-left, not top-right
+
+**Acceptance:** Arabic mode is indistinguishable in quality from French/English mode.
+
+---
+
+## PHASE 4: Desktop Window Responsiveness (founder request #1)
 
 **Goal:** The app looks and works flawlessly at every window size from 1024×600 (Tauri min) to 4K maximized.
 
-### 3.1 Fix Tauri window config
+### 4.1 Fix Tauri window config
 **Problem:** minWidth=1024 but sidebar is `lg:flex` (1024px). At exactly 1024px, sidebar shows but content is cramped. No mobile fallback in the Tauri window.
 
 **Files:**
 - `src-tauri/tauri.conf.json` — set `minWidth: 800`, `minHeight: 500` (allow smaller windows for testing)
 - Consider `maximized: true` on first launch (most desktop apps open maximized)
 
-### 3.2 Add mobile sidebar (Sheet) — currently MISSING
+### 4.2 Add mobile sidebar (Sheet) — currently MISSING
 **Problem:** `dashboard-layout.tsx` comment says "sidebar hidden on mobile, Sheet handles it" but there's NO Sheet component. Below `lg` (1024px), the sidebar vanishes with no replacement.
 
 **Files:**
@@ -149,7 +206,7 @@ This masterplan is organized into **7 phases**, prioritized by impact: critical 
 
 **Acceptance:** Resize window below 1024px → hamburger menu appears → click → sidebar slides in. Full navigation accessible.
 
-### 3.3 Responsive table audit (all table pages)
+### 4.3 Responsive table audit (all table pages)
 **Problem:** Only 2/16 pages use `overflow-x-auto` or `table-scroll`. Other tables may clip or overflow.
 
 **Files:** All pages with tables:
@@ -159,19 +216,19 @@ This masterplan is organized into **7 phases**, prioritized by impact: critical 
 
 **Acceptance:** All tables scroll horizontally on narrow windows without breaking layout. Fade indicator shows when scrollable.
 
-### 3.4 Responsive card grid audit
+### 4.4 Responsive card grid audit
 **Problem:** Card grids use `.card-grid-*` (fixed in Session 21) but some pages may still have raw grids or fixed column counts.
 
 **Files:** Re-audit all pages after Phase 2 changes. Ensure every stat-card grid uses `.card-grid-4` + `stagger-grid`.
 
-### 3.5 Fix double-scrollbar + content overflow
+### 4.5 Fix double-scrollbar + content overflow
 **Problem:** `<main>` has `overflow-y-auto` but some pages also have their own scroll containers, causing double scrollbars.
 
 **Files:**
 - `src/components/layout/dashboard-layout.tsx` — ensure only `<main>` scrolls
 - Per-page: remove inner `overflow-y-auto` / `max-h-*` on page-level containers (keep them only for inner panels like chat)
 
-### 3.6 Test matrix for window sizes
+### 4.6 Test matrix for window sizes
 Create a test checklist (run via `sf-browser` at each size):
 - 800×500 (Tauri min)
 - 1024×600 (old min)
@@ -185,11 +242,11 @@ Create a test checklist (run via `sf-browser` at each size):
 
 ---
 
-## PHASE 4: Navigation & CRUD Depth (founder request #2)
+## PHASE 5: Navigation & CRUD Depth (founder request #2)
 
 **Goal:** Every page has full CRUD, micro-interactions, and engaging navigation. No dead-ends.
 
-### 4.1 Complete CRUD for every entity
+### 5.1 Complete CRUD for every entity
 **Audit current state:**
 
 | Entity | List | Create | Read (detail) | Update | Delete | Bulk actions |
@@ -211,7 +268,7 @@ Create a test checklist (run via `sf-browser` at each size):
 - Add **bulk actions** to every list page: select-all + bulk delete/archive/export
 - Verify every entity has: create button, detail view, edit, delete (with confirm dialog)
 
-### 4.2 Micro-interactions & feedback
+### 5.2 Micro-interactions & feedback
 **Goal:** Every action gives immediate, delightful feedback.
 
 **Tasks:**
@@ -224,7 +281,7 @@ Create a test checklist (run via `sf-browser` at each size):
 - **Confirmation dialogs** on destructive actions (delete, cancel order) — audit all
 - **Undo** on delete (optional but top-tier — 5-second undo toast)
 
-### 4.3 Navigation depth & breadcrumbs
+### 5.3 Navigation depth & breadcrumbs
 **Goal:** Never get lost. Always know where you are and how to go back.
 
 **Tasks:**
@@ -234,7 +291,7 @@ Create a test checklist (run via `sf-browser` at each size):
 - **Quick-add menu** in topbar — dropdown with "New Order", "New Customer", "New Product" (accessible from any page)
 - **Recent items** in command palette — last 5 viewed orders/customers
 
-### 4.4 Search & filter on every list
+### 5.4 Search & filter on every list
 **Goal:** Find anything fast.
 
 **Tasks:**
@@ -243,7 +300,7 @@ Create a test checklist (run via `sf-browser` at each size):
 - **Saved filters** — let sellers save their common filter combos (localStorage)
 - **Sort** on every column (some exist, audit all)
 
-### 4.5 Inline editing
+### 5.5 Inline editing
 **Goal:** Edit without leaving the page.
 
 **Tasks:**
@@ -253,11 +310,11 @@ Create a test checklist (run via `sf-browser` at each size):
 
 ---
 
-## PHASE 5: Visual Consistency & Polish
+## PHASE 6: Visual Consistency & Polish
 
 **Goal:** 10/10 from VLM. Every pixel intentional.
 
-### 5.1 Icon system consistency
+### 6.1 Icon system consistency
 **Problem:** VLM flagged "inconsistent icon styling" across metric cards.
 
 **Tasks:**
@@ -265,25 +322,25 @@ Create a test checklist (run via `sf-browser` at each size):
 - Same color treatment: `text-muted-foreground` default, `text-primary` on active/emphasis
 - No mixing of outlined/filled icons (pick one style — Lucide is outlined)
 
-### 5.2 Button system consistency
+### 6.2 Button system consistency
 **Tasks:**
 - Audit every `<Button>` — no custom `bg-*` overrides (already clean per audit)
 - Ensure consistent sizing: `size="sm"` for inline actions, default for primary, `size="lg"` for forms
 - Primary action per page should be obvious (one `variant="default"` button, rest outline/ghost)
 
-### 5.3 Color & contrast audit
+### 6.3 Color & contrast audit
 **Tasks:**
 - Every text on dark background meets WCAG AA (4.5:1)
 - Fix the "En direct" badge contrast (VLM flagged it blends into dark bg)
 - Ensure status colors (delivered=green, returned=orange, refused=red) are consistent
 
-### 5.4 Typography final pass
+### 6.4 Typography final pass
 **Tasks:**
 - Verify the heading hierarchy (fixed in Session 21) renders correctly on all pages
 - Check line-height consistency in cards (some have 1.5, some 1.25)
 - Arabic font (Amiri) rendering — verify RTL pages look right
 
-### 5.5 Animation & motion
+### 6.5 Animation & motion
 **Tasks:**
 - Page transitions (Framer Motion route transitions)
 - Stagger animations on card grids (fixed in Session 21 — verify all)
@@ -292,11 +349,11 @@ Create a test checklist (run via `sf-browser` at each size):
 
 ---
 
-## PHASE 6: Feature Completion
+## PHASE 7: Feature Completion
 
 **Goal:** No half-built features. Everything either works or is clearly "coming soon."
 
-### 6.1 Automations engine
+### 7.1 Automations engine
 **Problem:** Page exists but says "execution will be available once WhatsApp and AI integrations are connected." It's a UI shell.
 
 **Decision needed:** Implement the execution engine, or hide the page until it's ready?
@@ -309,89 +366,96 @@ Create a test checklist (run via `sf-browser` at each size):
 
 **If hide:** Move to a "Coming Soon" section, remove from primary nav.
 
-### 6.2 DHD delivery provider
+### 7.2 DHD delivery provider
 **Problem:** Offered in create-shipment dialog but missing from credentials settings panel.
 
 **Files:**
 - `src/components/settings/delivery-credentials-panel.tsx` — add DHD section
 - `src/lib/integrations/delivery/dhd.ts` — verify adapter exists and works
 
-### 6.3 WhatsApp integration
+### 7.3 WhatsApp integration
 **Problem:** Sidecar exists but needs QR scan. Inbox may be empty without it.
 
 **Tasks:**
 - Verify the inbox shows a "Connect WhatsApp" CTA when sidecar is down
 - Add a setup guide in onboarding for WhatsApp
 
-### 6.4 Google Sheets / YouCan / Shopify integrations
+### 7.4 Google Sheets / YouCan / Shopify integrations
 **Tasks:**
 - Verify each has a proper setup flow in settings
 - Add "connection status" indicators
 
 ---
 
-## PHASE 7: Verification & Release Prep
+## PHASE 8: Verification & Release Prep
 
-### 7.1 Full test suite
+### 8.1 Full test suite
 - Run `sf-verify` (full, with tests) — fix all failures
 - Fix the 5 skipped tests (license + yalidine mock-wiring)
 - Expand coverage to pages/components/API routes (currently only src/lib/)
 
-### 7.2 Playwright e2e
+### 8.2 Playwright e2e
 - `bunx playwright install chromium`
 - `bun run test:e2e` — fix all failures
 - Add e2e tests for the critical flows: setup → create order → deliver → see in dashboard
 
-### 7.3 Tauri build verification
+### 8.3 Tauri build verification
 - `bun run tauri:build` on founder's machine
 - Verify the installer works on a clean Windows install
 - Verify auto-update works (if a previous version is installed)
 
-### 7.4 Real Darija validation
+### 8.4 Real Darija validation
 - Get 50+ real WhatsApp messages
 - Run through Gemini extraction
 - Measure accuracy + tune prompts
 
-### 7.5 Final VLM pass
+### 8.5 Final VLM pass
 - Run VLM on all 16 pages
 - Target: 8.5+/10 average (was 7/10)
 - Fix any remaining per-page issues
 
-### 7.6 Documentation sync
+### 8.6 Documentation sync
 - Update PROJECT_STATE, BUILD_LOG, CHANGELOG
 - Update AGENT_HANDOFF for next session
 - Run `sf-audit` to verify no drift
 
 ---
 
-## Execution Priority
+## Execution Flow (Final — updated with founder findings)
 
-| Phase | Sessions | Can parallelize? | Blocks real users? |
-|---|---|---|---|
-| 1 (Critical bugs) | 1 session | No | YES — must fix first |
-| 2 (Calculations) | 1-2 sessions | Partially (2.1-2.5 are independent) | YES — trust-breaking |
-| 3 (Responsive) | 1-2 sessions | Yes (after 3.1) | No, but high annoyance |
-| 4 (CRUD depth) | 2-3 sessions | Yes (per-entity) | No, but limits usefulness |
-| 5 (Visual polish) | 1 session | Yes (per-page) | No |
-| 6 (Feature completion) | 1-2 sessions | Partially | No, but incomplete feel |
-| 7 (Verification) | 1 session | No | Final gate |
+| Phase | What | Sessions | Parallelize? | Blocks real users? |
+|---|---|---|---|---|
+| **1** | Critical bugs (blacklist, workflow, PIN) | 1 | No | ✅ YES |
+| **2** | Calculation consistency (revenue, stats, COGS, dates, wilaya) | 1-2 | Partially | ✅ YES (trust) |
+| **3** | RTL/Arabic fixes (PageHeader alignment, charts, typography) | 1-2 | Yes (after 3.1) | ⚠️ High (founder uses Arabic) |
+| **4** | Desktop responsiveness (Tauri config, mobile Sheet, tables) | 1-2 | Yes | ⚠️ High annoyance |
+| **5** | Navigation & CRUD depth (detail pages, bulk, micro-interactions) | 2-3 | Yes (per-entity) | Limits usefulness |
+| **6** | Visual polish (icons, buttons, contrast, motion) | 1 | Yes (per-page) | No |
+| **7** | Feature completion (automations engine, DHD, WhatsApp, integrations) | 1-2 | Partially | Incomplete feel |
+| **8** | Verification (tests, Playwright, Tauri build, Darija, VLM 8.5+) | 1 | No | Final gate |
 
-**Recommended order:** 1 → 2 → 3 → 4 → 5 → 6 → 7
+**Recommended order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
-**Fast path to "real user ready":** 1 + 2 + 3 (3 sessions) gets the app trustworthy + usable. 4 + 5 make it delightful. 6 + 7 make it shippable.
+**Fast path to "real user ready":** 1 + 2 + 3 + 4 (4-5 sessions) = trustworthy + Arabic-perfect + responsive.
+**Delightful:** + 5 + 6 (3-4 more sessions) = full CRUD + top-tier UI.
+**Shippable:** + 7 + 8 (2-3 more sessions) = all features + verified.
+
+**Why RTL (Phase 3) before Responsive (Phase 4):** The founder tests primarily in Arabic. RTL chart/title fixes are quick, high-visibility wins. Responsive work benefits from a correct RTL foundation.
+
 
 ---
 
-## Founder Decisions Needed
+## Founder Decisions (RESOLVED 2026-07-02)
 
-Before I start, I need your call on these:
+1. **Revenue definition** → ✅ Show BOTH Gross Revenue (orders) + Realized Revenue (delivered), clearly labeled
+2. **Automations** → ✅ Implement the execution engine now (Phase 7)
+3. **Categories** → ✅ Section within Products page (tabbed) — avoids nav bloat, categories are product-adjacent
+4. **Undo on delete** → ✅ Yes — 5-second undo toast with soft-delete + restore pattern (Gmail/Linear-style)
+5. **Priority/flow** → ✅ See "Execution Flow (Final)" below — incorporates founder's additional RTL findings
 
-1. **Revenue definition** (Phase 2.1): Show both Gross + Realized, or pick one?
-2. **Automations** (Phase 6.1): Implement the engine now, or hide the page?
-3. **Categories page** (Phase 4.1): New page, or section in products/settings?
-4. **Undo on delete** (Phase 4.2): Worth the complexity, or skip for now?
-5. **Priority**: Should I start with Phase 1+2 (bugs + calculations) this session, or do you want responsive (Phase 3) first since you flagged it?
-
+### Additional founder findings (added post-initial plan):
+6. **Charts in Arabic (RTL) mode are poor** — elements overlap, missing UI/elements. → New Phase 3 dedicated to RTL fixes.
+7. **Sidebar in Arabic mode** — sidebar is correctly on the right side, icons correctly on the right, BUT **page section titles (PageHeader h1/description) are still left-aligned** in RTL. `page-header.tsx` has zero RTL handling. → Fixed in Phase 3.1.
 ---
 
 _This is a living document. Update after each phase._
