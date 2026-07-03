@@ -9,6 +9,7 @@ import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,25 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
     );
   }
 
-  // Delete the order (cascade will remove items, delivery)
-  await db.order.delete({ where: { id } });
+  // Phase 2: soft-delete (set deletedAt) instead of hard-delete.
+  // The useUndoableDelete hook shows an undo toast; the restore route
+  // un-sets deletedAt. This disproves the false "undo on delete: yes" handoff claim.
+  const updated = await db.order.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+    select: { id: true, orderNumber: true, deletedAt: true },
+  });
 
-  return NextResponse.json({ success: true });
+  // Audit log
+  void logAudit({
+    action: "order.deleted",
+    entity: "order",
+    entityId: id,
+    actor: "user",
+    after: { deletedAt: updated.deletedAt?.toISOString() ?? new Date().toISOString() },
+  });
+
+  return NextResponse.json({ success: true, record: updated });
 }, "DELETE /api/orders/[id]");
 
 /**

@@ -68,9 +68,9 @@ export default async function OrdersPage({
   // Skip the second query (was: two identical queries on the default landing).
   const hasFilter = !!statusFilter;
   const [allOrders, filteredOrders, customers, products] = await Promise.all([
-    db.order.findMany({ select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 }),
+    db.order.findMany({ where: { deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 }),
     hasFilter
-      ? db.order.findMany({ where, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
+      ? db.order.findMany({ where: { ...where, deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
       : Promise.resolve([]),
     db.customer.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),

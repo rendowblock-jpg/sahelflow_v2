@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { InfoHint } from "@/components/shared/info-hint";
 import { cn } from "@/lib/utils";
 import { Sparkline } from "@/components/charts/sparkline";
 
@@ -22,6 +23,8 @@ interface StatCardProps {
   className?: string;
   style?: React.CSSProperties;
   tooltip?: string;
+  /** Inline education hint (info icon + popover). Phase 2. */
+  hint?: React.ReactNode;
 }
 
 /**
@@ -66,6 +69,7 @@ export function StatCard({
   className,
   style,
   tooltip,
+  hint,
 }: StatCardProps) {
   const isPositive = (trend ?? 0) > 0;
   const isNegative = (trend ?? 0) < 0;
@@ -138,6 +142,7 @@ export function StatCard({
               </TooltipContent>
             </Tooltip>
           )}
+          {hint && <InfoHint content={hint} size="sm" />}
         </CardDescription>
 
         <CardTitle className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl @[250px]/card:text-3xl">

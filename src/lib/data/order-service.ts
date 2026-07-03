@@ -31,7 +31,7 @@ export const orderService = {
     status?: OrderStatus;
   }): Promise<Order[]> {
     const rows = await ctx.prisma.order.findMany({
-      where: opts?.status ? { status: opts.status } : undefined,
+      where: { deletedAt: null, ...(opts?.status ? { status: opts.status } : {}) },
       include: { items: true },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 50,
