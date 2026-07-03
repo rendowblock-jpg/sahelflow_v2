@@ -837,6 +837,14 @@ td { text-align: inherit; }
   direction: ltr;
 }
 
+/* Arabic doesn't use letter-spacing — it breaks connected letters (Arabic is
+   a cursive script where letters connect). Override ALL tracking-* utilities
+   in RTL mode. This is a global safety net; individual components can also
+   use rtl:tracking-normal for explicitness. */
+[dir="rtl"] {
+  letter-spacing: normal !important;
+}
+
 /* RTL: reverse table column order so the first <th>/<td> appears on the RIGHT.
    Browsers reverse columns when dir="rtl" is on <table>, but inheritance from
    a distant ancestor is unreliable. This CSS rule uses direction: rtl on the
