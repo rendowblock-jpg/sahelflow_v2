@@ -441,6 +441,7 @@
   "customers.activePct": "{{pct}}% نشط",
   "customers.address": "العنوان",
   "customers.atRisk": "معرض للخطر",
+  "customers.blacklisted": "في القائمة السوداء",
   "customers.atRiskPct": "{{pct}}% من القاعدة",
   "customers.avgOrder": "متوسط الطلبية",
   "customers.avgOrderValue": "متوسط قيمة الطلب",

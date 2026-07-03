@@ -9,6 +9,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { RowActions } from "@/components/shared/row-actions";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import type { CustomerFormDialogCustomer } from "@/components/customers/customer-form-dialog";
+import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +67,11 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
 
   return (
     <>
+      <BlacklistToggle
+        customerId={customer.id}
+        isBlacklisted={customer.isBlacklisted ?? false}
+        variant="icon"
+      />
       <RowActions
         onEdit={() => setEditOpen(true)}
         onDelete={() => setDeleteOpen(true)}

@@ -75,6 +75,9 @@ export interface Customer {
   orderCount: number;
   totalSpent: number;
   riskScore: number;
+  isBlacklisted: boolean;
+  blacklistReason: string | null;
+  blacklistedAt: Date | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;

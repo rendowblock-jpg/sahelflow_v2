@@ -6,13 +6,14 @@ import { getRiskConfig } from "@/lib/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PremiumTable } from "@/components/shared/premium-table";
-import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download } from "lucide-react";
+import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download, Ban } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomerRowActions } from "@/components/customers/customer-row-actions";
+import { Badge } from "@/components/ui/badge";
 import type { Customer } from "@/types/domain";
 
 // Always fetch fresh data (local-first app, no ISR)
@@ -127,7 +128,17 @@ export default async function CustomersPage() {
                   const riskConfig = getRiskConfig(customer.riskScore * 10);
                   return (
                     <PremiumTable.Row key={customer.id}>
-                      <PremiumTable.Cell className="font-medium">{customer.name}</PremiumTable.Cell>
+                      <PremiumTable.Cell className="font-medium">
+                        <span className="flex items-center gap-1.5">
+                          {customer.name}
+                          {customer.isBlacklisted && (
+                            <Badge variant="destructive" className="gap-1 text-[10px] px-1.5 py-0">
+                              <Ban className="h-3 w-3" />
+                              {t("customers.blacklisted")}
+                            </Badge>
+                          )}
+                        </span>
+                      </PremiumTable.Cell>
                       <PremiumTable.Cell className="font-mono">{customer.phone}</PremiumTable.Cell>
                       <PremiumTable.Cell hideOn="md" className="text-muted-foreground">
                         {customer.wilaya ?? "—"}

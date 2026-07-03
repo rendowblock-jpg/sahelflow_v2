@@ -441,6 +441,7 @@
   "customers.activePct": "{{pct}}% actifs",
   "customers.address": "Adresse",
   "customers.atRisk": "À risque",
+  "customers.blacklisted": "Sur liste noire",
   "customers.atRiskPct": "{{pct}}% de la base",
   "customers.avgOrder": "Commande moy.",
   "customers.avgOrderValue": "Panier moyen",
