@@ -178,7 +178,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm">
                 <span>{t("import.totalLabel")} <strong>{preview.totalRows}</strong></span>
-                <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
+                <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                   <CheckCircle2 className="h-3 w-3" />
                   {preview.validCount} {t("import.valid")}
                 </Badge>
