@@ -205,7 +205,7 @@
   "auth.passwordMismatch": "Les mots de passe ne correspondent pas.",
   "auth.passwordPlaceholder": "••••••••",
   "auth.pin": "Code PIN",
-  "auth.pinMinLength": "Le PIN doit contenir au moins 4 caractères",
+  "auth.pinMinLength": "Le PIN doit contenir au moins 8 caractères",
   "auth.pinMismatch": "Les PIN ne correspondent pas",
   "auth.pinSecurityNote": "Ce PIN chiffre les données de votre boutique localement. Conservez-le en sécurité — il ne peut pas être récupéré.",
   "auth.resetEmailSent": "E-mail de réinitialisation envoyé — vérifiez votre boîte de réception.",
