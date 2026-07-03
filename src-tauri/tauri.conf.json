@@ -15,10 +15,11 @@
         "title": "SahelFlow",
         "width": 1280,
         "height": 800,
-        "minWidth": 1024,
-        "minHeight": 600,
+        "minWidth": 800,
+        "minHeight": 500,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "maximized": false
       }
     ],
     "security": {
