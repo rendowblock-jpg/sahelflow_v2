@@ -58,6 +58,12 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
       { key: "api_key", label: "API Key" },
     ],
   },
+  {
+    id: "dhd",
+    name: "DHD",
+    logo: "📦",
+    fields: [{ key: "api_token", label: "API Token" }],
+  },
 ];
 
 export function DeliveryCredentialsPanel() {
