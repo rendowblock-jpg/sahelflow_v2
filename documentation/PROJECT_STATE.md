@@ -3,9 +3,9 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-03 (Session 22 complete — all 8 masterplan phases)
-**Main HEAD:** `f50b762`
-**Version:** `3.5.0`
+**Last updated:** 2026-07-03 (Session 22 complete — all 8 phases + redo audit)
+**Main HEAD:** `d1ac82b`
+**Version:** `3.5.1`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive)
 
 ---

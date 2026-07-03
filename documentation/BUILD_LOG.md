@@ -4,6 +4,54 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 22 (redo) — Phases 3+4+6 Deep Audit (3 commits)
+
+**Branch:** `agent/session22-redo-phase3-4-6` → merged to main (`d1ac82b`)
+**Trigger:** Founder feedback — original Phase 3/4/6 were superficial code-only audits. "I don't think u did phase 3 and 4 and 6 professionally and fully." The founder was right.
+
+### Phase 3 REDO — RTL chart + typography (real fixes)
+**Charts (5 files):** Every trend/bar chart was missing `YAxis orientation` for RTL. Recharts defaults YAxis to the **left** — in Arabic mode it should be on the **right**. Only `composed-trend-chart` had it on the *secondary* axis; the primary was missing.
+- `area-trend-chart.tsx` — added `orientation={isRtl ? "right" : "left"}`
+- `line-trend-chart.tsx` — same
+- `dual-bar-chart.tsx` — same + margin swap (was missing) + Legend `direction: rtl`
+- `horizontal-bar-chart.tsx` — same (category labels were on wrong side)
+- `composed-trend-chart.tsx` — primary YAxis fixed
+
+**Typography (globals.css):** The **Amiri font was loaded via `next/font` but NEVER APPLIED**. Arabic text was rendering in Inter's system fallback. Added:
+- `[dir="rtl"] { font-family: var(--font-arabic) }` — actually uses the font
+- `[dir="rtl"] { line-height: 1.65 }` — Arabic needs more line-height than Latin (diacritics clip at 1.5)
+- `[dir="rtl"] h1-h4 { line-height: 1.4 }` — headings need slightly less
+
+### Phase 4 REDO — Responsive (real fix)
+**Dashboard stat-card grid:** Was a raw `grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4` (only adapts at 640px and 1024px breakpoints). Changed to `.card-grid-4` (auto-fit `minmax(min(100%, 240px), 1fr)` — adapts to **any** width, better at 800px, 1440px, 4K).
+
+**Audit results (documented, not declared):**
+- Tables: 2 raw `<Table>` usages (customers/[id], products/[id]) — both already have `overflow-x-auto` wrappers ✅
+- Card grids: dashboard was the only raw grid (fixed) ✅
+- Double-scrollbar: none found (only intentional inner panel) ✅
+
+### Phase 6 REDO — Visual polish (real fixes)
+**3 "configured" badges** used `bg-emerald-600 text-white hover:bg-emerald-600` — inconsistent with the rest of the app (which uses `/10` opacity backgrounds + semantic text + dark mode variants). Also `hover:` on a non-interactive Badge is odd. Fixed in:
+- `delivery-credentials-panel.tsx`
+- `import-panel.tsx`
+- `ai-key-panel.tsx`
+
+All now use: `border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400`
+
+**Audit results (documented):**
+- Icon sizes: h-8 only in empty states/loaders (correct). Nav=h-5, cards=h-4, badges=h-3 ✅
+- Buttons: no custom `bg-*` overrides ✅
+- Hover states: StatCard, PremiumTable rows, accounting cards all have hover ✅
+- Page transitions: `template.tsx` wraps every page in `animate-fade-in` ✅
+
+### Result
+- 1192 tests pass | 5 skip | 0 fail
+- tsc + eslint clean
+- main HEAD: `d1ac82b`
+- Version: 3.5.1
+
+---
+
 ## Session 22 (continued) — Phases 6-8: Visual Polish + Feature Completion + Docs (5 commits)
 
 **Phases completed:** 6 (visual polish), 7 (feature completion), 8 (verification + docs)
