@@ -8,21 +8,34 @@ import { orderStatusSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/orders — list orders (optional ?status= filter) */
+/** GET /api/orders — list orders with pagination (optional ?status= filter)
+ *
+ * Phase 1: added `total` + `hasNextPage` for the DataTable v2 pagination UI.
+ * Supports both offset (`limit`/`offset`) and page-based (`page`/`pageSize`)
+ * query params. The DataTable uses page-based.
+ */
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const rawStatus = searchParams.get("status");
   const status = rawStatus && orderStatusSchema.safeParse(rawStatus).success ? rawStatus : undefined;
-  const limit = parseInt(searchParams.get("limit") ?? "50", 10);
-  const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 
-  const orders = await orderService.list({ prisma: db }, {
-    status: (status as "draft" | "pending" | "confirmed" | "shipped" | "delivered" | "returned" | "refused" | "cancelled") ?? undefined,
-    limit: Math.min(limit, 100),
-    offset,
-  });
+  // Page-based pagination (1-based page, pageSize). Falls back to limit/offset.
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") ?? "50", 10);
+  const limit = Math.min(pageSize, 100);
+  const offset = (page - 1) * limit;
 
-  return NextResponse.json({ orders });
+  const statusFilter = (status as "draft" | "pending" | "confirmed" | "shipped" | "delivered" | "returned" | "refused" | "cancelled") ?? undefined;
+
+  // Fetch page + total count in parallel (single round-trip feel)
+  const [orders, total] = await Promise.all([
+    orderService.list({ prisma: db }, { status: statusFilter, limit, offset }),
+    db.order.count({ where: statusFilter ? { status: statusFilter } : undefined }),
+  ]);
+
+  const hasNextPage = offset + orders.length < total;
+
+  return NextResponse.json({ orders, total, hasNextPage, page, pageSize: limit });
 }
 
 /** POST /api/orders — create a new order + auto-assess risk (withErrorHandler pattern) */

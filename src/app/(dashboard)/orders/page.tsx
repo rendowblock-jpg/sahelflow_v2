@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download, ShieldAlert } from "lucide-react";
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
-import { OrdersTableClient } from "@/components/orders/orders-table-client";
+import { OrdersDataTable } from "@/components/orders/orders-data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -206,7 +206,7 @@ export default async function OrdersPage({
         </TabsList>
       </Tabs>
 
-      {/* Orders table with bulk selection */}
+      {/* Orders table with bulk selection + pagination (Phase 1: SWR + DataTable v2) */}
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {displayOrders.length === 0 ? (
@@ -219,12 +219,26 @@ export default async function OrdersPage({
             />
           ) : (
             <div className="space-y-3 p-4">
-              <OrdersTableClient orders={displayOrders as unknown as Array<{
-                id: string; orderNumber: string; status: string; totalPrice: number;
-                wilaya: string; phone: string; createdAt: Date;
-                items: Array<{ id: string }>;
-                customer: { name: string | null; phone: string | null } | null;
-              }>} locale={locale} riskData={riskData} />
+              <OrdersDataTable
+                fallback={{
+                  orders: (isHighRiskFilter
+                    ? displayOrders
+                    : displayOrders.slice(0, 25)
+                  ) as unknown as Array<{
+                    id: string; orderNumber: string; status: string; totalPrice: number;
+                    wilaya: string; phone: string; createdAt: Date;
+                    items: Array<{ id: string }>;
+                    customer: { name: string | null; phone: string | null } | null;
+                  }>,
+                  total: displayOrders.length,
+                  hasNextPage: isHighRiskFilter ? false : displayOrders.length > 25,
+                  page: 1,
+                  pageSize: isHighRiskFilter ? displayOrders.length : 25,
+                }}
+                locale={locale}
+                statusFilter={isHighRiskFilter ? "all" : (statusFilter as OrderStatus | "all") ?? "all"}
+                riskData={riskData}
+              />
             </div>
           )}
         </CardContent>
