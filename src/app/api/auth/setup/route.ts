@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthSetup, setupAuth, createSession, auditLog } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { seedWilayaRiskProfiles } from "@/lib/wilaya-risk/engine";
 
 const SetupSchema = z.object({
   pin: z.string().min(8, "PIN must be at least 8 characters").max(32, "PIN too long"),
@@ -45,6 +46,17 @@ export const POST = withErrorHandler(async (req: Request) => {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   await createSession(ip);
   void auditLog("auth.setup", {}, ip);
+
+  // Auto-seed WilayaRiskProfile so the risk engine's wilaya factor works
+  // immediately on a fresh install (was: silently disabled until manual
+  // ?seed=true was called from the risk page).
+  try {
+    const result = await seedWilayaRiskProfiles();
+    void auditLog("risk.wilaya.seeded", { seeded: result.seeded, skipped: result.skipped }, ip);
+  } catch {
+    // Non-critical — the risk engine works without wilaya profiles (just
+    // skips the wilaya factor). The seller can seed manually later.
+  }
 
   return NextResponse.json({ success: true });
 });

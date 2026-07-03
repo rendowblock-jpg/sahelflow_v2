@@ -17,6 +17,8 @@ export const statsService = {
       ordersYesterday,
       revenueToday,
       revenueYesterday,
+      realizedRevenueTodayAgg,
+      realizedRevenueYesterdayAgg,
       newCustomersToday,
       activeConversations,
       pendingDeliveries,
@@ -26,6 +28,7 @@ export const statsService = {
       ctx.prisma.order.count({
         where: { createdAt: { gte: startOfYesterday, lt: startOfDay } },
       }),
+      // Gross Revenue = all non-cancelled orders (what was ordered)
       ctx.prisma.order.aggregate({
         where: { createdAt: { gte: startOfDay }, status: { not: "cancelled" } },
         _sum: { totalPrice: true },
@@ -34,6 +37,18 @@ export const statsService = {
         where: {
           createdAt: { gte: startOfYesterday, lt: startOfDay },
           status: { not: "cancelled" },
+        },
+        _sum: { totalPrice: true },
+      }),
+      // Realized Revenue = delivered orders only (what was actually collected)
+      ctx.prisma.order.aggregate({
+        where: { createdAt: { gte: startOfDay }, status: "delivered" },
+        _sum: { totalPrice: true },
+      }),
+      ctx.prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfYesterday, lt: startOfDay },
+          status: "delivered",
         },
         _sum: { totalPrice: true },
       }),
@@ -49,6 +64,8 @@ export const statsService = {
 
     const todayRev = revenueToday._sum.totalPrice ?? 0;
     const yesterdayRev = revenueYesterday._sum.totalPrice ?? 0;
+    const todayRealized = realizedRevenueTodayAgg._sum.totalPrice ?? 0;
+    const yesterdayRealized = realizedRevenueYesterdayAgg._sum.totalPrice ?? 0;
 
     // Calculate trends (avoid division by zero)
     const ordersTrend =
@@ -57,11 +74,16 @@ export const statsService = {
     const revenueTrend =
       yesterdayRev === 0 ? 0 : Math.round(((todayRev - yesterdayRev) / yesterdayRev) * 100);
 
+    const realizedRevenueTrend =
+      yesterdayRealized === 0 ? 0 : Math.round(((todayRealized - yesterdayRealized) / yesterdayRealized) * 100);
+
     return {
       ordersToday,
       ordersTrend,
       revenueToday: todayRev,
       revenueTrend,
+      realizedRevenueToday: todayRealized,
+      realizedRevenueTrend,
       newCustomers: newCustomersToday,
       activeConversations,
       pendingDeliveries,

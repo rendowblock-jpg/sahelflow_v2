@@ -89,6 +89,18 @@ export interface AnalyticsReport {
 
 const EXCLUDED_FROM_REVENUE: OrderStatus[] = ["cancelled", "draft"];
 
+/**
+ * Returns a yyyy-mm-dd date string in the server's LOCAL timezone (not UTC).
+ *
+ * `toISOString().slice(0, 10)` uses UTC, which causes a 23:30 local-time
+ * order to appear in tomorrow's analytics bucket. This helper adjusts for
+ * the timezone offset so dates are bucketed correctly in local time.
+ */
+function localDateString(d: Date): string {
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 10);
+}
+
 function startOfDay(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -197,13 +209,13 @@ export const analyticsService = {
     );
     for (let i = 0; i < dayCount; i++) {
       const d = addDays(start, i);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = localDateString(d);
       buckets.push({ date: iso, label: iso, revenue: 0, orders: 0, aov: 0 });
     }
     const idx = new Map(buckets.map((b, i) => [b.date, i]));
 
     for (const o of orders) {
-      const iso = o.createdAt.toISOString().slice(0, 10);
+      const iso = localDateString(o.createdAt);
       const i = idx.get(iso);
       if (i === undefined) continue;
       const b = buckets[i]!;
