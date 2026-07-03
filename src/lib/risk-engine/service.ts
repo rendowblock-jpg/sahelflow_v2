@@ -11,6 +11,7 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import {
   DEFAULT_RISK_CONFIG,
   DEFAULT_RISK_RULES,
@@ -253,7 +254,7 @@ export async function batchAssessOrders(orderIds: string[]): Promise<Map<string,
 export async function blacklistCustomer(customerId: string, reason?: string): Promise<void> {
   const customer = await db.customer.findUnique({
     where: { id: customerId },
-    select: { notes: true, isBlacklisted: true },
+    select: { notes: true, isBlacklisted: true, name: true, phone: true },
   });
   if (!customer) return;
 
@@ -280,6 +281,13 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
       blacklistedAt: new Date(),
       notes: newNotes,
     },
+  });
+
+  // Fire automation trigger (fire-and-forget)
+  void dispatchTrigger("customer.blacklisted" as TriggerEvent, {
+    customerId,
+    customerName: customer.name,
+    customerPhone: customer.phone,
   });
 }
 

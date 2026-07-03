@@ -19,7 +19,7 @@ import {
 } from "@/lib/order-transitions";
 import type { ServiceContext } from "./service-base";
 import { withServiceError, nextOrderNumber } from "./service-base";
-
+import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
 }
@@ -115,6 +115,17 @@ export const orderService = {
         return order;
       });
 
+      // Fire automation trigger (fire-and-forget — never blocks order creation)
+      void dispatchTrigger("order.created" as TriggerEvent, {
+        orderId: row.id,
+        orderNumber: row.orderNumber,
+        customerId: row.customerId,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        totalPrice: row.totalPrice,
+        wilaya: row.wilaya,
+      });
+
       return toDomain(row as unknown as Record<string, unknown>);
     }, "Order");
   },
@@ -193,6 +204,16 @@ export const orderService = {
           data,
           include: { items: true },
         });
+      });
+
+      // Fire automation trigger (fire-and-forget — never blocks status update)
+      void dispatchTrigger(`order.${to}` as TriggerEvent, {
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        customerId: updated.customerId,
+        totalPrice: updated.totalPrice,
+        wilaya: updated.wilaya,
+        phone: updated.phone,
       });
 
       return toDomain(updated as unknown as Record<string, unknown>);

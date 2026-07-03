@@ -299,14 +299,31 @@ model Automation {
   name      String
   trigger   String
   action    String
+  config    String?  // JSON: action parameters (message template, status to set, etc.)
   isActive  Boolean  @default(true)
   runCount  Int      @default(0)
   lastRunAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  logs      AutomationLog[]
 
   @@index([isActive])
   @@index([trigger])
+}
+
+model AutomationLog {
+  id            String   @id @default(cuid())
+  automationId  String
+  automation    Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  trigger       String   // the event that fired (e.g. "order.delivered")
+  status        String   // "success" | "failed" | "skipped"
+  message       String?  // error message or skip reason
+  payload       String?  // JSON: event payload snapshot (order id, customer id, etc.)
+  createdAt     DateTime @default(now())
+
+  @@index([automationId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

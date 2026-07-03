@@ -35,6 +35,8 @@ export async function createTestPrisma(): Promise<PrismaClient> {
     db.setting.deleteMany(),
     db.authSecret.deleteMany(),
     db.extractionMetric.deleteMany(),
+    db.automationLog.deleteMany(),
+    db.automation.deleteMany(),
   ]);
   return db;
 }
@@ -162,6 +164,8 @@ export async function cleanDb(db: PrismaClient): Promise<void> {
     db.setting.deleteMany(),
     db.authSecret.deleteMany(),
     db.extractionMetric.deleteMany(),
+    db.automationLog.deleteMany(),
+    db.automation.deleteMany(),
   ]);
 }
 

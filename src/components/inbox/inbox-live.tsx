@@ -595,15 +595,20 @@ function StatusBar({
   }
   if (!sidecarReachable) {
     return (
-      <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2 text-sm flex items-center justify-between">
-        <span className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-          <AlertCircle className="h-4 w-4" />
-          {t("inbox.serviceNotStarted")}
-        </span>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          <RefreshCw className="h-3 w-3 me-1" />
-          {t("inbox.retry")}
-        </Button>
+      <div className="space-y-0">
+        <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2 text-sm flex items-center justify-between">
+          <span className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+            <AlertCircle className="h-4 w-4" />
+            {t("inbox.serviceNotStarted")}
+          </span>
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            <RefreshCw className="h-3 w-3 me-1" />
+            {t("inbox.retry")}
+          </Button>
+        </div>
+        <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+          {t("inbox.setupGuide") || "To connect WhatsApp: 1) The sidecar service must be running (it starts automatically with the desktop app). 2) Click Connect below. 3) Scan the QR code with your phone's WhatsApp settings."}
+        </div>
       </div>
     );
   }
