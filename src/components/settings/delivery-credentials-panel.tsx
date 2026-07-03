@@ -177,7 +177,7 @@ export function DeliveryCredentialsPanel() {
                     <span className="font-medium">{provider.name}</span>
                   </div>
                   {configured ? (
-                    <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
+                    <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                       <CheckCircle2 className="h-3 w-3" />
                       {t("delivery.configured")}
                     </Badge>

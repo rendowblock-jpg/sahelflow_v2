@@ -65,6 +65,7 @@ export function HorizontalBarChart({
           axisLine={false}
           width={Math.min(maxLabelLen * 7 + 8, 120)}
           className="text-[11px] fill-muted-foreground"
+          orientation={isRtl ? "right" : "left"}
         />
         <ChartTooltip
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}

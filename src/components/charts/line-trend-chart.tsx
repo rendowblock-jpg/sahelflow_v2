@@ -76,6 +76,7 @@ export function LineTrendChart({
           tickMargin={4}
           tickFormatter={(v: number) => fmtY(v)}
           className="text-xs fill-muted-foreground"
+          orientation={isRtl ? "right" : "left"}
         />
         <ChartTooltip
           cursor={false}

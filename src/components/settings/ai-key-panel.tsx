@@ -143,7 +143,7 @@ export function AiKeyPanel() {
           {status === "loading" ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : status === "configured" || status === "editing" ? (
-            <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
+            <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="h-3 w-3" />
               {t("aiKey.configured")}
             </Badge>
