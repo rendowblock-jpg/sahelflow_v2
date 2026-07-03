@@ -891,6 +891,7 @@
   "inbox.send": "Envoyer",
   "inbox.sendFailed": "Échec de l'envoi du message",
   "inbox.serviceNotStarted": "Service WhatsApp non démarré. Affichage des conversations démo.",
+  "inbox.setupGuide": "Pour connecter WhatsApp : 1) Le service sidecar démarre automatiquement avec l'application desktop. 2) Cliquez sur Connecter ci-dessous. 3) Scannez le code QR avec votre téléphone (Paramètres WhatsApp → Appareils liés → Scanner QR).",
   "inbox.showArchived": "Afficher les archivés",
   "inbox.suggestedReplies": "Suggestions :",
   "inbox.thankYouMessage": "merci pour votre message. Comment puis-je vous aider ?",

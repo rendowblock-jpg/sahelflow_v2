@@ -891,6 +891,7 @@
   "inbox.send": "إرسال",
   "inbox.sendFailed": "فشل إرسال الرسالة",
   "inbox.serviceNotStarted": "خدمة WhatsApp غير مُشغّلة. عرض المحادثات التجريبية.",
+  "inbox.setupGuide": "لربط WhatsApp: 1) تعمل خدمة sidecar تلقائياً مع تطبيق سطح المكتب. 2) انقر على اتصال أدناه. 3) امسح رمز QR بهاتفك (إعدادات WhatsApp → الأجهزة المرتبطة → مسح QR).",
   "inbox.showArchived": "إظهار المؤرشفة",
   "inbox.suggestedReplies": "مقترحات:",
   "inbox.thankYouMessage": "شكراً لرسالتك. كيف يمكنني مساعدتك؟",
