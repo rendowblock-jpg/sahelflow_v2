@@ -14,11 +14,11 @@
  * as props. The component seeds SWR's fallback cache with that data, so the
  * first render is instant. When the user paginates, SWR fetches the next page.
  */
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, Package } from "lucide-react";
 import { DataTable, type BulkAction } from "@/components/data-table/data-table";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useOrders, type OrdersResponse } from "@/hooks/swr/use-orders";
 import { useOrdersColumns } from "./orders-columns";
@@ -47,7 +47,18 @@ export function OrdersDataTable({
 }: OrdersDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // Phase 2: soft-delete with undo toast (replaces the hard-delete confirm dialog)
+  const deleteOrder = useUndoableDelete({
+    deleteUrl: (id) => `/api/orders/${id}`,
+    restoreUrl: (id) => `/api/orders/${id}/restore`,
+    entityLabel: "Order",
+    contextualLabel: (record) => {
+      const r = record as { orderNumber?: string };
+      return r.orderNumber ? `Order ${r.orderNumber}` : "Order";
+    },
+    onAfter: () => mutatePrefix("/api/orders"),
+  });
 
   const { data, isLoading, mutate, pagination } = useOrders({
     status: statusFilter,
@@ -57,7 +68,7 @@ export function OrdersDataTable({
   const columns = useOrdersColumns({
     locale,
     riskData,
-    onDelete: (id) => setDeleteTarget(id),
+    onDelete: (id) => deleteOrder(id),
   });
 
   // ── Optimistic bulk status update ──
@@ -152,19 +163,6 @@ export function OrdersDataTable({
         }
       />
 
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title={t("orders.confirmDelete")}
-        description={t("orders.confirmDeleteDesc")}
-        destructive
-        onConfirm={async () => {
-          if (!deleteTarget) return;
-          await fetch(`/api/orders/${deleteTarget}`, { method: "DELETE" });
-          setDeleteTarget(null);
-          await mutatePrefix("/api/orders");
-        }}
-      />
     </>
   );
 }

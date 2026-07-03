@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
+import { CheatsheetModal } from "@/components/shared/cheatsheet-modal";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { Toaster } from "@/components/ui/sonner";
 import type { Locale } from "@/lib/i18n";
@@ -48,7 +49,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   // useKeyboardShortcuts handles g+letter navigation. It explicitly SKIPS
   // Cmd+K (line 40 of the hook), so we handle that here — there's only ONE
   // Cmd+K listener, not two.
-  useKeyboardShortcuts();
+  const { cheatsheetOpen, setCheatsheetOpen } = useKeyboardShortcuts();
   const { t } = useI18n();
 
   // Use the server-rendered dir ONLY. This comes from the Server Component
@@ -98,6 +99,9 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
 
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+
+      {/* Keyboard Shortcuts Cheatsheet (? to open) */}
+      <CheatsheetModal open={cheatsheetOpen} onOpenChange={setCheatsheetOpen} />
 
       {/* Toast Provider */}
       <Toaster

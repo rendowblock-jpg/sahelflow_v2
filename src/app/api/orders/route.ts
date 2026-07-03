@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   // Fetch page + total count in parallel (single round-trip feel)
   const [orders, total] = await Promise.all([
     orderService.list({ prisma: db }, { status: statusFilter, limit, offset }),
-    db.order.count({ where: statusFilter ? { status: statusFilter } : undefined }),
+    db.order.count({ where: { deletedAt: null, ...(statusFilter ? { status: statusFilter } : {}) } }),
   ]);
 
   const hasNextPage = offset + orders.length < total;

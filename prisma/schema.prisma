@@ -63,6 +63,9 @@ model Product {
   orderItems       OrderItem[]
 
   @@unique([sku])
+  deletedAt DateTime?  // soft-delete (Phase 2) — null = active
+  @@index([deletedAt])
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -117,6 +120,9 @@ model Customer {
   @@unique([phone])
   @@index([nameBlindIndex])
   @@index([isBlacklisted])
+  deletedAt DateTime?  // soft-delete (Phase 2) — null = active
+  @@index([deletedAt])
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,6 +160,9 @@ model Order {
   @@index([createdAt])
   @@index([phoneBlindIndex])
   @@index([customerId])
+  deletedAt DateTime?  // soft-delete (Phase 2) — null = active
+  @@index([deletedAt])
+
 }
 
 model OrderItem {
@@ -194,6 +203,9 @@ model Delivery {
 
   @@index([status])
   @@index([provider])
+  deletedAt DateTime?  // soft-delete (Phase 2) — null = active
+  @@index([deletedAt])
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -249,6 +261,9 @@ model Return {
 
   @@index([orderId])
   @@index([status])
+  deletedAt DateTime?  // soft-delete (Phase 2) — null = active
+  @@index([deletedAt])
+
 }
 
 model ReturnNote {
@@ -309,6 +324,9 @@ model Automation {
 
   @@index([isActive])
   @@index([trigger])
+  deletedAt DateTime?  // soft-delete (Phase 2) — null = active
+  @@index([deletedAt])
+
 }
 
 model AutomationLog {
