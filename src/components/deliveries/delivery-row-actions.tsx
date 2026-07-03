@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ExternalLink } from "lucide-react";
+import { RefreshCw, ExternalLink, Eye } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -96,6 +96,11 @@ export function DeliveryRowActions({
           </Link>
         </Button>
       ) : null}
+      <Button variant="ghost" size="icon-sm" asChild title={t("common.view") || "View"} aria-label={t("common.view") || "View"}>
+        <Link href={`/deliveries/${deliveryId}`}>
+          <Eye className="h-4 w-4" />
+        </Link>
+      </Button>
     </div>
   );
 }
