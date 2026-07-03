@@ -4,6 +4,31 @@ All notable changes to SahelFlow are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/),
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.4.0] - 2026-07-03 (Session 22 — Masterplan Phases 1-5)
+
+### Phase 1: Critical Bug Fixes
+- **Blacklist (CRITICAL):** `blacklistCustomer()` now sets `isBlacklisted` column (was only tagging encrypted notes → risk engine never fired). New `BlacklistToggle` component + badge + warning banner.
+- **Order workflow (CRITICAL):** Draft orders show "Mark as Pending" button (was hidden — empty labelKey). Bulk confirm auto-advances draft→pending→confirmed.
+- **PIN min-length:** Client enforces 8 chars (was 4, server required 8). Fixed i18n messages.
+
+### Phase 2: Calculation Consistency
+- Dashboard shows Gross + Realized Revenue with tooltip (StatCard `tooltip` prop)
+- Customer list computes real stats (was using stale cached columns)
+- Removed silent 60% COGS estimate + warning banner for missing costs
+- Fixed UTC date bucketing in analytics (local-time helper)
+- Auto-seed WilayaRiskProfile on setup
+
+### Phase 3: RTL
+- PageHeader `text-start` + `rtl:tracking-normal`
+- Global `[dir="rtl"] { letter-spacing: normal }` (Arabic cursive script)
+
+### Phase 4: Responsive
+- Tauri `minWidth` 1024→800
+
+### Phase 5: CRUD Depth
+- Delivery detail page (`/deliveries/[id]`) with status timeline
+- Return detail page (`/returns/[id]`) with activity timeline
+
 ## [3.3.0] - 2026-07-02 (Session 21 — Tooling Fixes + Design System Polish + Masterplan)
 
 ### Post-merge fixes

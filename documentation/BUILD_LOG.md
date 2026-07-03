@@ -4,6 +4,44 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 22 — 2026-07-03: Masterplan Execution — Phases 1-5 (10 commits)
+
+**Branches:** 5 feature branches merged to main (`agent/session22-phase{1-5}-*` + `agent/session22-docs-sync`)
+**Phases completed:** 1 (critical bugs), 2 (calculation consistency), 3 (RTL), 4 (responsive), 5 (CRUD depth)
+**Tests:** 1189 → **1192 pass** | 5 skip | 0 fail (+3 new blacklist tests)
+**sf-verify:** ✅ GREEN (tsc + eslint + vitest)
+**Main HEAD:** `2fc70bc`
+
+### Phase 1: Critical Bug Fixes (3 commits)
+- **1.1 Blacklist fix (CRITICAL):** `blacklistCustomer()` now sets `isBlacklisted` column (was only writing `[BLACKLISTED]` tag to encrypted notes → risk engine was blind to blacklisted customers). New `BlacklistToggle` component, blacklist badge on customer list, warning banner on customer detail. Fixed 2 cheating tests, added end-to-end test (blacklist → assessOrderRisk → action=blacklisted).
+- **1.2 Order workflow (CRITICAL):** Draft orders now show "Mark as Pending" button (was hidden — empty `labelKey` in ACTION_CONFIG). Bulk "Confirm Selected" auto-advances draft→pending→confirmed.
+- **1.3 PIN min-length:** Setup page enforces 8 chars client-side (was 4, server required 8). Added `minLength={8}`, fixed i18n messages in all 3 locales.
+
+### Phase 2: Calculation Consistency (2 commits)
+- **2.1 Revenue:** Dashboard shows BOTH Gross Revenue (all non-cancelled) + Realized Revenue (delivered only) with tooltip. StatCard gained `tooltip` prop.
+- **2.2 Customer stats:** List page computes real stats via batch `groupBy` query (was using stale cached `orderCount`/`totalSpent` columns that only updated on delivery).
+- **2.3 COGS:** Removed silent 60% margin estimate (`item.unitPrice * 0.6`). Now: missing costs = 0 COGS + warning banner.
+- **2.4 UTC bucketing:** Fixed analytics date bucketing — `localDateString()` helper replaces `toISOString().slice(0,10)` (UTC). 23:30 local orders now appear in today's bucket.
+- **2.5 Wilaya seed:** `seedWilayaRiskProfiles()` called on setup — risk engine's wilaya factor works immediately on fresh install (was silently disabled).
+
+### Phase 3: RTL Fixes (1 commit)
+- PageHeader: `text-start` (logical property) + `rtl:tracking-normal` on h1
+- Global CSS: `[dir="rtl"] { letter-spacing: normal !important }` — Arabic is cursive, letter-spacing breaks letter connections
+- Chart audit: donut/sparkline/radial-gauge don't need RTL (circular/symmetric); trend/bar charts already have `isRtl` handling
+
+### Phase 4: Responsive (1 commit)
+- Tauri `minWidth` 1024→800, `minHeight` 600→500 (allows testing mobile layout in desktop window)
+- Mobile sidebar Sheet: already implemented in Topbar (was added post-masterplan)
+- All tables use `PremiumTable` (responsive) — no scroll container fixes needed
+- No double-scrollbar issues found (no inner `overflow-y-auto` containers)
+
+### Phase 5: CRUD Depth (1 commit)
+- **Delivery detail page** (`/deliveries/[id]`): breadcrumbs, 4 stat cards, order/customer info cards (linked), status timeline
+- **Return detail page** (`/returns/[id]`): breadcrumbs, 3 stat cards, reason, customer/order info (linked), activity timeline (return notes)
+- View link (Eye icon) added to delivery row actions
+
+---
+
 ## Session 21 — 2026-07-02: Tooling Fixes + Design System Polish (3 commits)
 
 **Branch:** `agent/session21-tooling-and-polish`
