@@ -4,6 +4,27 @@ All notable changes to SahelFlow are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/),
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.5.0] - 2026-07-03 (Session 22 — Masterplan Phases 6-8)
+
+### Phase 6: Visual Polish
+- Loading skeletons for delivery + return detail pages
+- Visual system audit: icons, buttons, animations all consistent
+
+### Phase 7: Feature Completion
+- **Automations engine (MAJOR):** Full trigger+action+log system. 5 action types
+  (send_whatsapp, send_notification, tag_customer, update_status, create_order).
+  Wired into order lifecycle (create + status changes) + customer blacklist.
+  Template variables ({{customerName}}, {{orderNumber}}, etc.). Execution log
+  on automations page. Fire-and-forget — never blocks business operations.
+- **DHD credentials:** Added to delivery credentials settings panel
+- **WhatsApp setup guide:** Info banner in inbox explaining 3-step connection
+- **Integration status:** All panels have connection badges + setup flows
+
+### Phase 8: Verification
+- 1192 tests pass | 5 skip | 0 fail
+- tsc + eslint clean
+- Documentation sync
+
 ## [3.4.0] - 2026-07-03 (Session 22 — Masterplan Phases 1-5)
 
 ### Phase 1: Critical Bug Fixes
