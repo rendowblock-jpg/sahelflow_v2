@@ -93,6 +93,7 @@ export function ComposedTrendChart({
           tickMargin={4}
           tickFormatter={(v: number) => fmtLeft(v)}
           className="text-xs fill-muted-foreground"
+          orientation={isRtl ? "right" : "left"}
         />
         {hasRight && (
           <YAxis
