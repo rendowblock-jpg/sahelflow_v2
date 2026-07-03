@@ -21,13 +21,14 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
     <div className={cn(
-      "flex flex-col gap-3 border-b border-border/50 pb-5 sm:flex-row sm:items-center sm:justify-between",
+      "flex flex-col gap-3 border-b border-border/50 pb-5 text-start sm:flex-row sm:items-center sm:justify-between",
       className,
     )}>
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
+      <div className="space-y-1 text-start">
+        {/* tracking-tight breaks Arabic connected letters — use rtl:tracking-normal */}
+        <h1 className="text-start text-xl font-semibold tracking-tight text-balance rtl:tracking-normal sm:text-2xl">{title}</h1>
         {description && (
-          <p className="text-sm text-muted-foreground/80 text-pretty">{description}</p>
+          <p className="text-start text-sm text-muted-foreground/80 text-pretty">{description}</p>
         )}
       </div>
       {actions && (
