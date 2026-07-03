@@ -9,6 +9,7 @@
   "accounting.category.salary": "الراتب",
   "accounting.category.supplies": "اللوازم",
   "accounting.cogs": "تكلفة البضائع",
+  "accounting.missingCostsWarning": "بعض المنتجات المسلمة ليس لها سعر تكلفة محدد — تكلفة البضائع غير دقيقة. قم بتعيين أسعار التكلفة في صفحة المنتجات لحسابات أرباح دقيقة.",
   "accounting.confirmDeleteExpense": "حذف هذه المصاريف؟",
   "accounting.deleteExpenseWarning": "لا يمكن التراجع عن هذا الإجراء.",
   "accounting.delivery": "التوصيل",

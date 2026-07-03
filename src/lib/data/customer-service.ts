@@ -18,6 +18,34 @@ export const customerService = {
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
     });
+
+    // Compute real order stats via a batch query — don't rely on the cached
+    // orderCount/totalSpent columns (which only update on delivery, causing
+    // a mismatch with the detail page that computes from all orders).
+    const customerIds = rows.map((r) => r.id);
+    if (customerIds.length > 0) {
+      const [allCounts, revenueSums] = await Promise.all([
+        ctx.prisma.order.groupBy({
+          by: ["customerId"],
+          where: { customerId: { in: customerIds } },
+          _count: true,
+        }),
+        ctx.prisma.order.groupBy({
+          by: ["customerId"],
+          where: { customerId: { in: customerIds }, status: { not: "cancelled" } },
+          _sum: { totalPrice: true },
+        }),
+      ]);
+      const countMap = new Map(allCounts.map((r) => [r.customerId, r._count]));
+      const sumMap = new Map(revenueSums.map((r) => [r.customerId, r._sum.totalPrice ?? 0]));
+      for (const row of rows) {
+        // Override cached columns with real values (matching the detail page's
+        // getStats() definition: totalOrders = all, totalSpent = non-cancelled).
+        (row as { orderCount: number }).orderCount = countMap.get(row.id) ?? 0;
+        (row as { totalSpent: number }).totalSpent = sumMap.get(row.id) ?? 0;
+      }
+    }
+
     return rows.map((r) => toDomain(r as unknown as Record<string, unknown>));
   },
 

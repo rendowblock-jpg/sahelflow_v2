@@ -17,6 +17,7 @@ import {
   Package,
   PiggyBank,
   CreditCard,
+  AlertTriangle,
 } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -48,15 +49,25 @@ export default async function AccountingPage() {
     }),
   ]);
 
-  // Calculate P&L — use actual product costPrice when available, fall back to 60% margin estimate
+  // Calculate P&L — use actual product cost when available.
+  // REMOVED: the silent 60% margin estimate (item.unitPrice * 0.6) that
+  // fabricated a COGS value when no cost was set. Now: if cost is missing,
+  // it contributes 0 to COGS and a warning banner is shown.
   const deliveredOrders = orders.filter((o) => o.status === "delivered");
   const revenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
   const cogs = deliveredOrders.reduce((sum, o) => {
     return sum + o.items.reduce((s, item) => {
-      const cost = (item as { product?: { cost?: number } }).product?.cost ?? item.unitPrice * 0.6;
-      return s + (cost * item.quantity);
+      const productCost = (item as { product?: { cost?: number } }).product?.cost;
+      if (productCost === undefined || productCost === null) return s;
+      return s + (productCost * item.quantity);
     }, 0);
   }, 0);
+  const hasMissingCosts = deliveredOrders.some((o) =>
+    o.items.some((item) => {
+      const productCost = (item as { product?: { cost?: number } }).product?.cost;
+      return productCost === undefined || productCost === null;
+    }),
+  );
   const deliveryCosts = deliveredOrders.reduce((sum, o) => sum + (o.delivery?.cost ?? 0), 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = revenue - cogs - deliveryCosts - totalExpenses;
@@ -96,6 +107,16 @@ export default async function AccountingPage() {
         description={`${t("accounting.subtitle")} — ${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })}`}
         actions={<div className="flex items-center gap-2"><ImportExportButtons exportRoute="/api/export/expenses" importRoute={undefined} /><ExpenseFormDialog /></div>}
       />
+
+      {/* COGS warning — some products have no cost price set */}
+      {hasMissingCosts && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/50">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            {t("accounting.missingCostsWarning")}
+          </p>
+        </div>
+      )}
 
       {/* P&L Summary — upgraded with accent icons */}
       <div className="card-grid-4 stagger-grid">

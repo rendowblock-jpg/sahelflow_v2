@@ -9,6 +9,7 @@
   "accounting.category.salary": "Salaire",
   "accounting.category.supplies": "Fournitures",
   "accounting.cogs": "Coût des marchandises",
+  "accounting.missingCostsWarning": "Certains produits livrés n'ont pas de prix de coût défini — le COGS est sous-estimé. Définissez les prix de coût sur la page Produits pour des calculs de profit précis.",
   "accounting.confirmDeleteExpense": "Supprimer cette dépense ?",
   "accounting.deleteExpenseWarning": "Cette action est irréversible.",
   "accounting.delivery": "Livr.",
