@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Bot, Zap, Clock, CheckCircle2 } from "lucide-react";
 import { AutomationActions } from "./automation-actions";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -40,9 +39,16 @@ const ACTION_I18N: Record<string, string> = {
 export default async function AutomationsPage() {
   const { t, locale } = await getI18n();
 
-  const automations = await db.automation.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const [automations, recentLogs] = await Promise.all([
+    db.automation.findMany({
+      orderBy: { createdAt: "desc" },
+    }),
+    db.automationLog.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+      include: { automation: { select: { name: true } } },
+    }),
+  ]);
 
   const activeCount = automations.filter((a) => a.isActive).length;
   const totalRuns = automations.reduce((sum, a) => sum + a.runCount, 0);
@@ -200,14 +206,38 @@ export default async function AutomationsPage() {
         </CardContent>
       </Card>
 
-      <Separator />
-
-      <div className="rounded-lg border border-dashed p-6 text-center">
-        <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">
-          {t("automations.engineNotice")}
-        </p>
-      </div>
+      {/* Recent activity (execution log) */}
+      {recentLogs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("automations.recentActivity") || "Recent Activity"}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y max-h-96 overflow-y-auto">
+              {recentLogs.map((log) => (
+                <div key={log.id} className="flex items-start justify-between gap-3 p-3 text-sm">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`size-1.5 rounded-full shrink-0 ${
+                        log.status === "success" ? "bg-emerald-500" :
+                        log.status === "failed" ? "bg-red-500" :
+                        "bg-amber-500"
+                      }`} />
+                      <span className="font-medium truncate">{log.automation.name}</span>
+                    </div>
+                    {log.message && (
+                      <p className="text-xs text-muted-foreground ps-3.5 truncate">{log.message}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                    {formatDate(log.createdAt, locale)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
