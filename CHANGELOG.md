@@ -4,7 +4,12 @@ All notable changes to SahelFlow are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/),
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [3.3.0] - 2026-07-02 (Session 21 — Tooling Fixes + Design System Polish)
+## [3.3.0] - 2026-07-02 (Session 21 — Tooling Fixes + Design System Polish + Masterplan)
+
+### Post-merge fixes
+- `dev:reset` rewritten as `scripts/dev-reset.ts` (absolute DATABASE_URL — fixes P2021 on clean wipe)
+- Windows compat: uses `bun x` instead of `bunx` (bunx.cmd doesn't exist on Windows)
+- Masterplan created: `documentation/MASTERPLAN_SESSION22.md` (8-phase path to flawless)
 
 ### Tooling (Phase 1)
 - **sf-seed**: fixed relative-path DB bug — `prisma db push --force-reset` now uses absolute `DATABASE_URL` (was creating DB at `prisma/data/shops/` instead of `data/shops/`, causing seed P2021 crash)

@@ -28,6 +28,40 @@
 **Result:** sf-verify --fast green (tsc + eslint pass). sf-seed works clean. sf-browser no longer false-positives. VLM scores 7/10 (unchanged numerically, but systemic issues replaced by minor/specific ones).
 
 ---
+## Session 21 — 2026-07-02: Tooling Fixes + Design System Polish (merged via PR #78)
+
+**Main HEAD after merge:** `cd0cf9a` → `44a7f28` (dev:reset Windows fix) → `a75cb10` (masterplan)
+**Branch:** `agent/session21-tooling-and-polish` (squash-merged)
+
+### Phase 1 (Tooling):
+- sf-seed: absolute DATABASE_URL (prisma/ vs cwd path mismatch → P2021 crash fixed)
+- sf-browser: false-positive leak heuristic fixed (strips RSC flight payload)
+- sf-browser: screenshot login fixed (#pin selector + cookie fallback)
+- sf-verify --fast: fully green (tool dirs excluded from tsc + eslint)
+- dev:reset: rewritten as scripts/dev-reset.ts (absolute path + 'bun x' for Windows)
+
+### Phase 2 (Design System):
+- Sidebar: 9 arbitrary values → token-scale
+- Heading hierarchy: h1 text-2xl/3xl + text-foreground, h2 text-xl, h3 text-base
+- StatCard: text-[13px]→text-sm, size-9→size-8, py-3→py-4
+- Card grids: 13 raw grids → .card-grid-4/3/2 + stagger-grid consistent
+
+### Phase 3 (Per-page polish):
+- Inline empty states: text-lg → text-base (dashboard, customers, products)
+- Profile loading: bare spinner → spinner + context label
+- Settings tab: added left indicator bar + shadow-sm
+- Profile CardTitle: text-lg → text-base
+
+### Post-merge fixes:
+- dev:reset Windows compat: 'bunx' → 'bun x' (bunx.cmd doesn't exist on Windows)
+- Real-user audit found: 2 critical bugs (blacklist, order workflow), 5 calculation inconsistencies, 3 incomplete features
+
+### Session 22 prep:
+- Full masterplan created: documentation/MASTERPLAN_SESSION22.md (8 phases)
+- Founder decisions resolved (revenue=both, automations=implement, categories=products tab, undo=yes)
+- Founder added 2 findings: RTL charts poor, RTL page titles misaligned → new Phase 3
+
+---
 ## Session 20 — 2026-07-02: The "Actually Open It" Sprint (29 commits)
 
 **Main HEAD:** `abfb493` (was `44bca98` at Session 19 end)
