@@ -243,12 +243,10 @@ describe("buildAssessmentInputFromOrder", () => {
     expect(input!.wilayaRisk).toBeNull();
   });
 
-  it("reflects customer.isBlacklisted in the history", async () => {
+  it("reflects customer.isBlacklisted in the history (via blacklistCustomer)", async () => {
     const customer = await seedTestCustomer(db);
-    await db.customer.update({
-      where: { id: customer.id },
-      data: { isBlacklisted: true, blacklistReason: "fraud" },
-    });
+    // Use the real blacklist function — the bug was that it never set the column.
+    await blacklistCustomer(customer.id, "fraud");
     const order = await seedOrderForCustomer(customer.id);
     const input = await buildAssessmentInputFromOrder(order.id);
     expect(input!.customerHistory!.isBlacklisted).toBe(true);
@@ -284,12 +282,11 @@ describe("assessOrderRisk", () => {
     expect(typeof assessment!.assessedAt).toBe("string");
   });
 
-  it("forces action=blacklisted + level=critical when customer.isBlacklisted is true", async () => {
+  it("forces action=blacklisted + level=critical when customer is blacklisted via blacklistCustomer()", async () => {
     const customer = await seedTestCustomer(db);
-    await db.customer.update({
-      where: { id: customer.id },
-      data: { isBlacklisted: true },
-    });
+    // Use the real blacklist function — the bug was that it never set the column,
+    // so the risk engine never fired the blacklist penalty.
+    await blacklistCustomer(customer.id, "fraud");
     const order = await seedOrderForCustomer(customer.id);
     const assessment = await assessOrderRisk(order.id);
     expect(assessment!.action).toBe("blacklisted");
@@ -366,7 +363,40 @@ describe("batchAssessOrders", () => {
 // ── Blacklist management ────────────────────────────────────────────────────
 
 describe("blacklistCustomer / unblacklistCustomer / listBlacklistedCustomers", () => {
-  it("blacklistCustomer adds a [BLACKLISTED] tag to notes", async () => {
+  // ── isBlacklisted column (the CODE-025 fix) ──────────────────────────────
+  // The bug: blacklistCustomer() used to only write a [BLACKLISTED] tag to the
+  // encrypted notes field — never setting the isBlacklisted column. The risk
+  // engine reads the column, so it was blind to blacklisted customers. These
+  // tests verify the column is set via the real function.
+
+  it("blacklistCustomer sets isBlacklisted=true on the customer column", async () => {
+    const customer = await seedTestCustomer(db);
+    await blacklistCustomer(customer.id, "fraud");
+    const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
+    expect(reloaded!.isBlacklisted).toBe(true);
+    expect(reloaded!.blacklistReason).toBe("fraud");
+    expect(reloaded!.blacklistedAt).toBeInstanceOf(Date);
+  });
+
+  it("blacklistCustomer sets isBlacklisted=true even without a reason", async () => {
+    const customer = await seedTestCustomer(db);
+    await blacklistCustomer(customer.id);
+    const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
+    expect(reloaded!.isBlacklisted).toBe(true);
+    expect(reloaded!.blacklistReason).toBeNull();
+  });
+
+  it("blacklistCustomer is idempotent on the column (calling twice keeps isBlacklisted=true)", async () => {
+    const customer = await seedTestCustomer(db);
+    await blacklistCustomer(customer.id);
+    await blacklistCustomer(customer.id, "second reason");
+    const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
+    expect(reloaded!.isBlacklisted).toBe(true);
+    // Second call with a reason updates the reason
+    expect(reloaded!.blacklistReason).toBe("second reason");
+  });
+
+  it("blacklistCustomer still adds a [BLACKLISTED] tag to notes (audit trail)", async () => {
     const customer = await seedTestCustomer(db);
     await blacklistCustomer(customer.id, "fraud");
     const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
@@ -374,23 +404,7 @@ describe("blacklistCustomer / unblacklistCustomer / listBlacklistedCustomers", (
     expect(reloaded!.notes).toContain("fraud");
   });
 
-  it("blacklistCustomer adds a plain tag when no reason is given", async () => {
-    const customer = await seedTestCustomer(db);
-    await blacklistCustomer(customer.id);
-    const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
-    expect(reloaded!.notes).toBe("[BLACKLISTED]");
-  });
-
-  it("blacklistCustomer is idempotent (no double tag)", async () => {
-    const customer = await seedTestCustomer(db);
-    await blacklistCustomer(customer.id);
-    await blacklistCustomer(customer.id);
-    const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
-    const matches = reloaded!.notes!.match(/\[BLACKLISTED/g) ?? [];
-    expect(matches).toHaveLength(1);
-  });
-
-  it("blacklistCustomer appends to existing notes", async () => {
+  it("blacklistCustomer appends the tag to existing notes", async () => {
     const customer = await seedTestCustomer(db);
     await db.customer.update({
       where: { id: customer.id },
@@ -400,13 +414,24 @@ describe("blacklistCustomer / unblacklistCustomer / listBlacklistedCustomers", (
     const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
     expect(reloaded!.notes).toContain("VIP customer");
     expect(reloaded!.notes).toContain("[BLACKLISTED: no-show]");
+    expect(reloaded!.isBlacklisted).toBe(true);
   });
 
   it("blacklistCustomer is a no-op for a non-existent customer", async () => {
     await expect(blacklistCustomer("nonexistent123456789")).resolves.toBeUndefined();
   });
 
-  it("unblacklistCustomer removes the [BLACKLISTED] tag", async () => {
+  it("unblacklistCustomer sets isBlacklisted=false and clears reason/timestamp", async () => {
+    const customer = await seedTestCustomer(db);
+    await blacklistCustomer(customer.id, "fraud");
+    await unblacklistCustomer(customer.id);
+    const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
+    expect(reloaded!.isBlacklisted).toBe(false);
+    expect(reloaded!.blacklistReason).toBeNull();
+    expect(reloaded!.blacklistedAt).toBeNull();
+  });
+
+  it("unblacklistCustomer removes the [BLACKLISTED] tag from notes", async () => {
     const customer = await seedTestCustomer(db);
     await blacklistCustomer(customer.id, "fraud");
     await unblacklistCustomer(customer.id);
@@ -423,36 +448,45 @@ describe("blacklistCustomer / unblacklistCustomer / listBlacklistedCustomers", (
     await unblacklistCustomer(customer.id);
     const reloaded = await piiDb.customer.findUnique({ where: { id: customer.id } });
     expect(reloaded!.notes).toBe("VIP customer");
+    expect(reloaded!.isBlacklisted).toBe(false);
   });
 
   it("unblacklistCustomer is a no-op for a non-existent customer", async () => {
     await expect(unblacklistCustomer("nonexistent123456789")).resolves.toBeUndefined();
   });
 
-  it("listBlacklistedCustomers returns only customers with the [BLACKLISTED] tag", async () => {
-    // The service's listBlacklistedCustomers queries `notes contains "[BLACKLISTED"`
-    // directly against the on-disk column. Because Customer.notes is encrypted
-    // at rest by the PII extension, blacklistCustomer()'s tag is never visible
-    // to that contains-filter (it sees ciphertext). To exercise the function's
-    // intended query logic, seed a customer with PLAINTEXT blacklist notes via
-    // the raw client (bypassing the PII extension).
+  it("listBlacklistedCustomers returns only customers blacklisted via blacklistCustomer()", async () => {
+    // Now that listBlacklistedCustomers queries the isBlacklisted column (not
+    // the encrypted notes field), we can use the real blacklistCustomer()
+    // function instead of the plaintext-notes workaround.
     const c1 = await seedTestCustomer(db, { name: "Bad", phone: uniquePhone() });
     const c2 = await seedTestCustomer(db, { name: "Good", phone: uniquePhone() });
-    await db.customer.update({
-      where: { id: c1.id },
-      data: { notes: "[BLACKLISTED: fraud]" },
-    });
+    await blacklistCustomer(c1.id, "fraud");
     // c2 is NOT blacklisted
     void c2;
     const list = await listBlacklistedCustomers();
     expect(list).toHaveLength(1);
     expect(list[0]!.id).toBe(c1.id);
     expect(list[0]!.name).toBe("Bad");
+    expect(list[0]!.blacklistReason).toBe("fraud");
+    expect(list[0]!.blacklistedAt).toBeInstanceOf(Date);
   });
 
   it("listBlacklistedCustomers returns empty when none are blacklisted", async () => {
     await seedTestCustomer(db);
     const list = await listBlacklistedCustomers();
     expect(list).toEqual([]);
+  });
+
+  // ── End-to-end: blacklist → risk engine fires ─────────────────────────────
+  it("blacklistCustomer causes assessOrderRisk to return action=blacklisted", async () => {
+    const customer = await seedTestCustomer(db);
+    await seedWilayaRisk();
+    await blacklistCustomer(customer.id, "repeat fraud");
+    const order = await seedOrderForCustomer(customer.id);
+    const assessment = await assessOrderRisk(order.id);
+    expect(assessment!.action).toBe("blacklisted");
+    expect(assessment!.level).toBe("critical");
+    expect(assessment!.triggeredRules).toContain("blacklist_hold");
   });
 });

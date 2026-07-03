@@ -31,6 +31,8 @@ import type { OrderStatus } from "@/types/domain";
 import { PageHeader } from "@/components/shared/page-header";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { StatCard } from "@/components/shared/stat-card";
+import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { Ban } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -112,12 +114,39 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           </span>
         }
         actions={
-          <Badge variant={riskBadge[riskLevel].variant}>
-            <AlertTriangle className="h-3.5 w-3.5" />
-            {riskBadge[riskLevel].label} · {customer.riskScore}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={riskBadge[riskLevel].variant}>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {riskBadge[riskLevel].label} · {customer.riskScore}
+            </Badge>
+            <BlacklistToggle
+              customerId={customer.id}
+              isBlacklisted={customer.isBlacklisted}
+              variant="button"
+            />
+          </div>
         }
       />
+
+      {/* Blacklist warning banner */}
+      {customer.isBlacklisted && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/50">
+          <Ban className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+              {t("customers.blacklisted")}
+            </p>
+            {customer.blacklistReason && (
+              <p className="mt-0.5 text-sm text-red-700 dark:text-red-300">
+                {t("risk.blacklist.reason")}: {customer.blacklistReason}
+              </p>
+            )}
+            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+              {t("risk.blacklist.subtitle")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Customer 360 stat cards */}
       <div className="card-grid-4 stagger-grid">

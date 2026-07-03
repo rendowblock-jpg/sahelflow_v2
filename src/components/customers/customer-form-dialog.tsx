@@ -65,6 +65,7 @@ export interface CustomerFormDialogCustomer {
   commune?: string | null;
   address?: string | null;
   notes?: string | null;
+  isBlacklisted?: boolean;
 }
 
 interface CustomerFormDialogProps {

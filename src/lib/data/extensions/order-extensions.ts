@@ -81,6 +81,19 @@ export const orderServiceExtensions = {
 
     for (const id of ids) {
       try {
+        // Auto-advance: if the target is "confirmed" and the order is still a
+        // draft, first transition draft → pending, then pending → confirmed.
+        // This lets sellers bulk-confirm a mix of drafts + pending orders
+        // without manually advancing each draft first.
+        if (to === "confirmed") {
+          const order = await ctx.prisma.order.findUnique({
+            where: { id },
+            select: { status: true },
+          });
+          if (order?.status === "draft") {
+            await orderService.updateStatus(ctx, id, "pending");
+          }
+        }
         await orderService.updateStatus(ctx, id, to);
         succeeded.push(id);
       } catch (err) {

@@ -238,25 +238,48 @@ export async function batchAssessOrders(orderIds: string[]): Promise<Map<string,
 }
 
 // ── Blacklist management ─────────────────────────────────────────────────────
+//
+// Blacklist state is persisted on the Customer row itself via the dedicated
+// `isBlacklisted` / `blacklistReason` / `blacklistedAt` columns (CODE-025).
+// The risk-engine scoring reads `isBlacklisted` — so this is the column that
+// makes the risk penalty actually fire.
+//
+// We ALSO keep a human-readable `[BLACKLISTED: reason]` tag in the encrypted
+// `notes` field as an audit trail for sellers reading the customer detail
+// page. The notes tag is NEVER used for querying (notes is encrypted at rest,
+// so a `contains` filter would search ciphertext and find nothing).
 
-/** Add a customer to the blacklist (sets the [BLACKLISTED] tag in notes). */
+/** Add a customer to the blacklist. */
 export async function blacklistCustomer(customerId: string, reason?: string): Promise<void> {
   const customer = await db.customer.findUnique({
     where: { id: customerId },
-    select: { notes: true },
+    select: { notes: true, isBlacklisted: true },
   });
   if (!customer) return;
 
-  const existingNotes = customer.notes ?? "";
-  if (existingNotes.includes("[BLACKLISTED]")) return;
+  // Idempotent: already blacklisted — just update the reason if a new one is given.
+  if (customer.isBlacklisted) {
+    if (reason) {
+      await db.customer.update({
+        where: { id: customerId },
+        data: { blacklistReason: reason },
+      });
+    }
+    return;
+  }
 
-  const tag = reason
-    ? `[BLACKLISTED: ${reason}]`
-    : "[BLACKLISTED]";
+  const existingNotes = customer.notes ?? "";
+  const tag = reason ? `[BLACKLISTED: ${reason}]` : "[BLACKLISTED]";
+  const newNotes = existingNotes ? `${existingNotes}\n${tag}` : tag;
 
   await db.customer.update({
     where: { id: customerId },
-    data: { notes: existingNotes ? `${existingNotes}\n${tag}` : tag },
+    data: {
+      isBlacklisted: true,
+      blacklistReason: reason ?? null,
+      blacklistedAt: new Date(),
+      notes: newNotes,
+    },
   });
 }
 
@@ -264,38 +287,54 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
 export async function unblacklistCustomer(customerId: string): Promise<void> {
   const customer = await db.customer.findUnique({
     where: { id: customerId },
-    select: { notes: true },
+    select: { notes: true, isBlacklisted: true },
   });
   if (!customer) return;
 
+  // Idempotent: not blacklisted AND no stale tag in notes — nothing to do.
+  // (A stale tag can exist from the pre-CODE-025 bug where blacklistCustomer
+  // only wrote to notes. We clean those up here too.)
+  const hasStaleTag = (customer.notes ?? "").includes("[BLACKLISTED");
+  if (!customer.isBlacklisted && !hasStaleTag) return;
+
   const cleaned = (customer.notes ?? "")
     .replace(/\[BLACKLISTED[^\]]*\]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
   await db.customer.update({
     where: { id: customerId },
-    data: { notes: cleaned || null },
+    data: {
+      isBlacklisted: false,
+      blacklistReason: null,
+      blacklistedAt: null,
+      notes: cleaned || null,
+    },
   });
 }
 
-/** List all blacklisted customers. */
+/** List all blacklisted customers (queries the dedicated isBlacklisted column). */
 export async function listBlacklistedCustomers(): Promise<Array<{
   id: string;
   name: string;
   phone: string;
   notes: string | null;
   orderCount: number;
+  blacklistReason: string | null;
+  blacklistedAt: Date | null;
 }>> {
   const customers = await db.customer.findMany({
-    where: { notes: { contains: "[BLACKLISTED" } },
+    where: { isBlacklisted: true },
     select: {
       id: true,
       name: true,
       phone: true,
       notes: true,
       orderCount: true,
+      blacklistReason: true,
+      blacklistedAt: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { blacklistedAt: "desc" },
   });
   return customers;
 }

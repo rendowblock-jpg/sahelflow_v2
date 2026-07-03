@@ -32,7 +32,7 @@ export default function SetupPage() {
     e.preventDefault();
     setError("");
 
-    if (pin.length < 4) {
+    if (pin.length < 8) {
       setError(t("auth.pinMinLength"));
       return;
     }
@@ -88,12 +88,14 @@ export default function SetupPage() {
                 type="password"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="••••••"
+                placeholder="••••••••"
                 autoFocus
                 autoComplete="new-password"
                 disabled={loading}
                 className="h-11 text-center text-lg tracking-[0.3em]"
                 inputMode="numeric"
+                minLength={8}
+                required
               />
             </div>
 
@@ -104,11 +106,13 @@ export default function SetupPage() {
                 type="password"
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value)}
-                placeholder="••••••"
+                placeholder="••••••••"
                 autoComplete="new-password"
                 disabled={loading}
                 className="h-11 text-center text-lg tracking-[0.3em]"
                 inputMode="numeric"
+                minLength={8}
+                required
               />
             </div>
 
@@ -118,7 +122,7 @@ export default function SetupPage() {
               </p>
             )}
 
-            <Button type="submit" className="w-full h-10" disabled={loading || pin.length < 4 || confirmPin.length < 4}>
+            <Button type="submit" className="w-full h-10" disabled={loading || pin.length < 8 || confirmPin.length < 8}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

@@ -83,12 +83,13 @@ export default function LoginPage() {
                 type="password"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="••••••"
+                placeholder="••••••••"
                 autoFocus
                 autoComplete="current-password"
                 disabled={loading}
                 className="h-11 text-center text-lg tracking-[0.3em]"
                 inputMode="numeric"
+                minLength={8}
               />
             </div>
 
