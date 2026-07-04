@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   Package,
   AlertTriangle,
   Boxes,
   TrendingUp,
   ShoppingBag,
-  Tag,
 } from "lucide-react";
 
 import { getI18n } from "@/lib/i18n-server";
@@ -16,7 +14,6 @@ import { productService } from "@/lib/data";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -27,6 +24,10 @@ import {
 } from "@/components/ui/table";
 import { SahelFlowError } from "@/types/errors";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { DollarSign } from "lucide-react";
 import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
@@ -107,111 +108,71 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="app-content page-sections">
-      {/* Back link */}
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/products">
-          <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
-          {t("products.title")}
-        </Link>
-      </Button>
+      <Breadcrumbs
+        items={[
+          { label: t("products.title"), href: "/products" },
+          { label: product.name },
+        ]}
+      />
 
-      {/* Product header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            {product.sku && (
-              <span className="font-mono">
-                {t("products.sku")}: {product.sku}
-              </span>
-            )}
-            {category && (
-              <span className="inline-flex items-center gap-1">
-                <Tag className="h-3.5 w-3.5" />
-                {category.name}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1">
-              {t("common.date")}: {formatDate(product.createdAt, locale)}
-            </span>
-          </div>
-        </div>
-        {isLowStock && (
-          <Badge variant="destructive" className="self-start">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            {t("products.lowStock")}
-          </Badge>
-        )}
-      </div>
+      <PageHeader
+        title={product.name}
+        description={
+          [product.sku && `${t("products.sku")}: ${product.sku}`,
+           category?.name,
+           formatDate(product.createdAt, locale)]
+          .filter(Boolean).join(" · ")
+        }
+        actions={
+          isLowStock ? (
+            <Badge variant="destructive">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {t("products.lowStock")}
+            </Badge>
+          ) : undefined
+        }
+      />
 
-      {/* Stats strip */}
+      {/* Stats strip — using StatCard for visual consistency */}
       <div className="card-grid-4 stagger-grid">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("products.sellPrice")}
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatDZD(product.price)}</div>
-            {product.cost !== null && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("products.cost")}: {formatDZD(product.cost)}
-                {margin !== null && (
-                  <>
-                    {" · "}
-                    {t("products.value")}: {formatDZD(margin)}
-                    {marginPct !== null && ` (${marginPct}%)`}
-                  </>
-                )}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("products.stock")}
-            </CardTitle>
-            <Boxes className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${isLowStock ? "text-destructive" : ""}`}
-            >
-              {product.stock}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("products.lowStock")}: {product.lowStockThreshold}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("products.inventoryValue")}
-            </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatDZD(inventoryValue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("common.status")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {product.isActive ? (
-              <Badge variant="default">{t("common.active")}</Badge>
-            ) : (
-              <Badge variant="secondary">{t("common.inactive")}</Badge>
-            )}
-          </CardContent>
-        </Card>
+        <StatCard
+          label={t("products.sellPrice")}
+          value={formatDZD(product.price)}
+          icon={<TrendingUp />}
+          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+          accentIcon="text-emerald-600 dark:text-emerald-400"
+          subtitle={
+            product.cost !== null
+              ? `${t("products.cost")}: ${formatDZD(product.cost)}${margin !== null ? ` · ${t("products.value")}: ${formatDZD(margin)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
+              : undefined
+          }
+          style={{ animationDelay: "60ms" }}
+        />
+        <StatCard
+          label={t("products.stock")}
+          value={product.stock}
+          icon={<Boxes />}
+          accentBg={isLowStock ? "bg-amber-500/10 dark:bg-amber-500/15" : "bg-teal-500/10 dark:bg-teal-500/15"}
+          accentIcon={isLowStock ? "text-amber-600 dark:text-amber-400" : "text-teal-600 dark:text-teal-400"}
+          subtitle={`${t("products.lowStock")}: ${product.lowStockThreshold}`}
+          style={{ animationDelay: "120ms" }}
+        />
+        <StatCard
+          label={t("products.inventoryValue")}
+          value={formatDZD(inventoryValue)}
+          icon={<Package />}
+          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
+          accentIcon="text-violet-600 dark:text-violet-400"
+          style={{ animationDelay: "180ms" }}
+        />
+        <StatCard
+          label={t("common.status")}
+          value={product.isActive ? t("common.active") : t("common.inactive")}
+          icon={<DollarSign />}
+          accentBg={product.isActive ? "bg-emerald-500/10 dark:bg-emerald-500/15" : "bg-muted"}
+          accentIcon={product.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}
+          style={{ animationDelay: "240ms" }}
+        />
       </div>
 
       {/* Variants section — per-variant stock + price */}

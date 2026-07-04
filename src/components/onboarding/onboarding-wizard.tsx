@@ -45,18 +45,20 @@ export function OnboardingWizard() {
     if (!businessName.trim()) return;
     setLoading(true);
     try {
-      await fetch("/api/profile", {
+      const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
         body: JSON.stringify({ name: businessName, phone: businessPhone }),
       });
+      if (!res.ok) throw new Error(`Profile save failed (${res.status})`);
       // Also save wilaya as a setting
       if (businessWilaya) {
-        await fetch("/api/settings", {
+        const settingRes = await fetch("/api/settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
           body: JSON.stringify({ settings: { business_wilaya: businessWilaya } }),
         });
+        if (!settingRes.ok) throw new Error(`Settings save failed (${settingRes.status})`);
       }
     } catch { toast.error(t('error.networkFailure')); }
     setLoading(false);
@@ -66,12 +68,16 @@ export function OnboardingWizard() {
     if (!deliveryProvider || !deliveryToken) return;
     setLoading(true);
     try {
-      await fetch("/api/delivery/credentials", {
+      const res = await fetch("/api/delivery/credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
         body: JSON.stringify({ provider: deliveryProvider, credentials: { apiToken: deliveryToken } }),
       });
-    } catch { toast.error(t('error.networkFailure')); }
+      if (!res.ok) throw new Error(`Delivery credentials save failed (${res.status})`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('error.networkFailure'));
+      throw err; // re-throw so nextStep doesn't advance
+    }
     setLoading(false);
   }
 
@@ -93,7 +99,7 @@ export function OnboardingWizard() {
     if (!productName.trim() || !productPrice) return;
     setLoading(true);
     try {
-      await fetch("/api/products", {
+      const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
         body: JSON.stringify({
@@ -102,8 +108,12 @@ export function OnboardingWizard() {
           stock: parseInt(productStock || "0", 10),
         }),
       });
+      if (!res.ok) throw new Error(`Product save failed (${res.status})`);
       toast.success(t("onboarding.product.created"));
-    } catch { toast.error(t('error.networkFailure')); }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('error.networkFailure'));
+      throw err; // re-throw so nextStep doesn't advance
+    }
     setLoading(false);
   }
 
@@ -114,6 +124,11 @@ export function OnboardingWizard() {
       else if (step === 1 && deliveryProvider && deliveryToken) await saveDelivery();
       else if (step === 2 && geminiKey.trim()) await saveAiKey();
       else if (step === 3 && productName.trim() && productPrice) await saveProduct();
+    } catch {
+      // Save failed — don't advance to the next step. The save function
+      // already showed the error toast.
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }

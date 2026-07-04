@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
 import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
@@ -41,9 +42,7 @@ export default async function EditStorefrontPage({
   return (
     <div className="app-content page-sections">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("storefronts.editTitle")}
-        </h1>
+        <PageHeader title={t("storefronts.editTitle")} />
         <p className="text-sm text-muted-foreground mt-1">
           {t("storefronts.editDesc")}
         </p>
