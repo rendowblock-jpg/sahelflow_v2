@@ -4,6 +4,75 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 24 — 2026-07-04: Follow-up Wiring + DataTable v2 Completion + Test Fixup
+
+Session 24 had two waves. The first (commits `9f142a1`–`6fa11d8`, prior to this
+chat) wired the built-but-not-rendered UIs from Session 23: inbox 3-pane, COD
+reconciliation page, order timeline, refund dialog, return-rate charts,
+confirmation-queue page, condition-builder, Customers DataTable v2, plus a
+hydration-mismatch fix. The second wave (this chat, 3 commits on
+`session-24-followup`) closed the remaining follow-up items A–E.
+
+### D — Fix 5 skipped tests (commit `29b92db`)
+
+**1197 pass | 0 skip | 0 fail** (was 1192 pass | 5 skip).
+
+- **License tests (4):** `vitest.config.ts` sets `unstubGlobals: true`, which
+  restores globals before each test. The `localStorage` stub was only applied
+  at module top-level, so by the time any test ran the stub was gone — the
+  stored-license path never read from mock storage. Fix: re-stub in `beforeEach`.
+- **Yalidine test (1):** the `defaultRouter` history mock returned oldest-first,
+  but real Yalidine returns newest-first and the adapter calls `.reverse()` to
+  produce chronological order. Reordered the mock to newest-first so the
+  adapter's reverse yields events[0]=created … events[last]=delivered.
+
+### B — DataTable v2 migration: Products, Deliveries, Returns (commit `93de761`)
+
+Closes the last three `take:200` silent-truncation pages. All 5 major list
+pages (Orders, Customers, Products, Deliveries, Returns) now use the Phase 1
+DataTable v2 pattern: TanStack Table, URL-synced pagination via nuqs, SWR with
+server-rendered fallback, skeleton loading rows, density toggle, responsive
+column hiding, row-click navigation.
+
+- **Products:** `/api/products` GET gains `?page=&pageSize=` (backward-compat
+  with `?limit=&offset=`). New `useProducts` SWR hook + `ProductsDataTable`.
+  Stat cards now compute from ALL products (count queries + single select for
+  inventory value + low-stock), not just page 1.
+- **Deliveries:** New `GET /api/delivery` list endpoint (paginated + optional
+  `?status=` filter). New `useDeliveries` SWR hook + `DeliveriesDataTable`.
+  Stat cards + tab counts from `groupBy` queries.
+- **Returns:** `/api/returns` GET gains `?page=&pageSize=`. New `useReturns`
+  SWR hook + `ReturnsDataTable`. Stat cards from `groupBy` queries.
+
+### C — Empty-state catalog + full-page skeletons (commit `ed20f7b`)
+
+- **Empty-state catalog:** 5 DataTable components (orders, customers, products,
+  deliveries, returns) now use the crafted catalog components from
+  `empty-states.tsx` instead of inline `<EmptyState>` calls.
+- **Full-page skeletons:** `analytics/extraction` loading → `FullPageSkeleton`;
+  `login`/`setup` loading → `FormLoading` (was `PageLoading` — dashboard chrome
+  on auth pages). New `loading.tsx` for `cod-reconciliation` +
+  `confirmation-queue` pages (were missing).
+
+### E — Verification
+
+- `sf-verify` GREEN: prisma + tsc + eslint + vitest (1197 tests, 0 skip, 0 fail).
+- Data-layer verified: all pagination queries (count, groupBy, offset page 2)
+  run correctly against the seeded dev DB. Shapes match the API contracts.
+- Browser verification (`sf-browser`/curl): could not complete — the SahelFlow
+  dev server OOMs during on-demand compilation in this ~4GB sandbox (both
+  Turbopack and Webpack modes). This is the documented sandbox limitation.
+  The `sf-verify` GREEN + direct Prisma query verification serve as the
+  verification standard for this session.
+
+### What changed (hard numbers)
+- **103 API routes** (was 102 — +1 new `GET /api/delivery` list)
+- **1197 tests pass | 0 skip | 0 fail** (was 1192 + 5 skip)
+- **5/5 list pages on DataTable v2** (was 2/5 — Orders + Customers)
+- **5 DataTable empty states adopted** from the catalog
+- **15 dashboard loading.tsx** on FullPageSkeleton (was 13) + 2 auth on FormLoading
+
+---
 ## Session 23 — 2026-07-03: The Prototype→Product Wave (10 phases merged to main)
 
 **The biggest session ever.** A deep research wave (5 parallel streams: Algerian COD market, gold-standard UX, open-source architecture, Medusa/Chatwoot domain depth, self-audit) identified exactly why the app "felt like an AI prototype" despite 22 sessions of work. Then ALL 10 phases of the masterplan were executed, each browser-verified + merged to main.

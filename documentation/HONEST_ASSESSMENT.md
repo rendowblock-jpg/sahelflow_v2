@@ -1,7 +1,7 @@
 # SahelFlow — Honest Assessment
 
 > **Created:** 2026-06-26 (Session 16)
-> **Updated:** 2026-07-04 (Session 23 — the Prototype→Product Wave)
+> **Updated:** 2026-07-04 (Session 24 — follow-up wiring + DataTable v2 completion + test fixup)
 > **Purpose:** Candid evaluation of where the app stands vs a top-tier company product.
 
 ---
@@ -34,11 +34,11 @@
 - ✅ 88.8% test coverage (floor locked at 80%)
 
 **What's still open (honestly):**
-1. **Backend built, UI not wired** — Phases 4-8 built services + APIs + components, but several UIs aren't rendered yet (see Known Issues #5-12 in PROJECT_STATE.md). The infrastructure is there; the wiring is incremental follow-up work.
-2. **DataTable v2 only on Orders** — Phase 1 migrated Orders. Customers/Products/Deliveries/Returns still use the old HTML table. The pattern is established; each is a ~1-day follow-up.
-3. **Tauri desktop build unverified** — Rust setup hook never compiled/tested
-4. **Playwright e2e unverified** — config + tests exist, never run
-5. **5 skipped tests** — mock-wiring issues, <0.5% of suite
+1. ✅ ~~Backend built, UI not wired~~ — RESOLVED (Session 24): all built-but-not-rendered UIs are now wired (inbox 3-pane, COD reconciliation, order timeline, refund dialog, return-rate charts, confirmation queue, condition-builder).
+2. ✅ ~~DataTable v2 only on Orders~~ — RESOLVED (Session 24): all 5 list pages (Orders, Customers, Products, Deliveries, Returns) now use DataTable v2 with pagination, skeleton loading, density toggle.
+3. ✅ ~~5 skipped tests~~ — RESOLVED (Session 24): all 5 fixed, 1197 pass | 0 skip | 0 fail.
+4. **Tauri desktop build unverified** — Rust setup hook never compiled/tested (sandbox has no Rust toolchain)
+5. **Playwright e2e unverified** — config + tests exist, never run
 6. **No real Darija validation** — AI extraction accuracy untested with real messages
 7. **No professional pen test** — before mass launch
 8. **No real beta users** — 3-5 Algerian COD sellers
@@ -99,14 +99,15 @@ The research wave found the app had a **beautiful shell but one layer of depth e
 
 ## The honest path forward
 
-1. **Wire the UIs** — render the built-but-not-wired components (inbox 3-pane, COD reconciliation page, order timeline, refund dialog, return-rate charts, confirmation-queue page, condition-builder). This is the highest-impact follow-up.
-2. **Migrate remaining list pages to DataTable v2** — Customers, Products, Deliveries, Returns (each ~1 day)
-3. **Adopt empty state catalog + full-page skeletons** — replace old `EmptyState`/`PageLoading` calls
-4. **Verify Tauri build** — `bun run tauri:dev` on founder's machine
-5. **Get real users** — 3-5 Algerian COD sellers for 1 week
-6. **Validate Darija extraction** — 50 real WhatsApp messages through Gemini
-7. **Professional pen test** — before mass launch
-8. **Final visual polish** — founder eyes on each page, iterate
+1. ✅ ~~Wire the UIs~~ — done (Session 24)
+2. ✅ ~~Migrate remaining list pages to DataTable v2~~ — done (Session 24)
+3. ✅ ~~Adopt empty state catalog + full-page skeletons~~ — done (Session 24)
+4. **Verify Tauri build** — `bun run tauri:dev` on founder's machine (can't verify in sandbox — no Rust toolchain)
+5. **Run Playwright e2e** — `bunx playwright install chromium` + run (config + 4 test files exist)
+6. **Get real users** — 3-5 Algerian COD sellers for 1 week
+7. **Validate Darija extraction** — 50 real WhatsApp messages through Gemini
+8. **Professional pen test** — before mass launch
+9. **Final visual polish** — founder eyes on each page, iterate
 
 ---
 
@@ -118,4 +119,4 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-04 — Session 23 complete. main = `d90fb13`. v4.0.0. 1192 tests. 88.8% coverage. The app is no longer an AI prototype — it has the depth of a real product, with follow-up wiring work remaining._
+_Last updated: 2026-07-04 — Session 24 complete. main = `ed20f7b`. v4.0.0. 1197 tests, 0 skip. 88.8% coverage. All built-but-not-rendered UIs wired. All 5 list pages on DataTable v2. 5 skipped tests fixed. Remaining: Tauri build verification, Playwright e2e, real users, Darija validation, pen test, final polish._
