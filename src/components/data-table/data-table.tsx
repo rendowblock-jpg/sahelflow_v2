@@ -47,6 +47,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
 // ── Density ────────────────────────────────────────────────────────────
 type Density = "compact" | "comfortable";
@@ -159,6 +160,7 @@ export function DataTable<TData>({
   skeletonRows = 8,
   className,
 }: DataTableProps<TData>) {
+  const { t } = useI18n();
   const [density, setDensity] = useDensity();
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
@@ -216,7 +218,7 @@ export function DataTable<TData>({
           data-testid="data-table-bulk-bar"
         >
           <span className="text-sm font-medium">
-            {selectedIds.length} selected
+            {t("dataTable.selected", { count: selectedIds.length })}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             {bulkActions.map((action) => (
@@ -236,7 +238,7 @@ export function DataTable<TData>({
               variant="ghost"
               onClick={() => setRowSelection({})}
             >
-              Clear
+              {t("dataTable.clear")}
             </Button>
           </div>
         </div>
@@ -309,7 +311,7 @@ export function DataTable<TData>({
                 <tr>
                   <td colSpan={columns.length} className="h-32 text-center">
                     {emptyState ?? (
-                      <span className="text-sm text-muted-foreground">No data</span>
+                      <span className="text-sm text-muted-foreground">{t("dataTable.noData")}</span>
                     )}
                   </td>
                 </tr>
@@ -382,7 +384,7 @@ export function DataTable<TData>({
                 )}
                 aria-pressed={density === d}
               >
-                {d === "comfortable" ? "Normal" : "Compact"}
+                {d === "comfortable" ? t("dataTable.normal") : t("dataTable.compact")}
               </button>
             ))}
           </div>
@@ -393,7 +395,7 @@ export function DataTable<TData>({
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
               {pagination.total != null
-                ? `Page ${currentPage} of ${totalPages} (${pagination.total} items)`
+                ? t("dataTable.pageOf", { current: currentPage, total: totalPages ?? 0, count: pagination.total })
                 : `Page ${currentPage}`}
             </span>
             <div className="flex items-center gap-1">
@@ -402,7 +404,7 @@ export function DataTable<TData>({
                 variant="outline"
                 disabled={!hasPrev || pagination.isLoading}
                 onClick={() => pagination.onPageChange(1)}
-                aria-label="First page"
+                aria-label={t("dataTable.firstPage")}
               >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
@@ -411,7 +413,7 @@ export function DataTable<TData>({
                 variant="outline"
                 disabled={!hasPrev || pagination.isLoading}
                 onClick={() => pagination.onPageChange(currentPage - 1)}
-                aria-label="Previous page"
+                aria-label={t("dataTable.prevPage")}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -420,7 +422,7 @@ export function DataTable<TData>({
                 variant="outline"
                 disabled={!hasNext || pagination.isLoading}
                 onClick={() => pagination.onPageChange(currentPage + 1)}
-                aria-label="Next page"
+                aria-label={t("dataTable.nextPage")}
               >
                 {pagination.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
               </Button>
@@ -429,7 +431,7 @@ export function DataTable<TData>({
                 variant="outline"
                 disabled={!hasNext || pagination.isLoading}
                 onClick={() => pagination.onPageChange(totalPages ?? currentPage + 1)}
-                aria-label="Last page"
+                aria-label={t("dataTable.lastPage")}
               >
                 <ChevronsRight className="h-4 w-4" />
               </Button>

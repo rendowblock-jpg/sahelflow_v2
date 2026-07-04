@@ -9,7 +9,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { formatDZD } from "@/lib/utils";
-import { Clock, AlertTriangle, Phone, CheckCircle2 } from "lucide-react";
+import { Clock, AlertTriangle, Phone, CheckCircle2, Banknote } from "lucide-react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,12 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Confirmation Queue — SahelFlow" };
+  const { t } = await getI18n();
+  return { title: t("confirmationQueue.title") + " — SahelFlow" };
 }
 
 export default async function ConfirmationQueuePage() {
-  await getI18n();
+  const { t } = await getI18n();
   const queue = await getConfirmationQueue();
   const staleCount = queue.filter((o) => o.isStale).length;
   const freshCount = queue.length - staleCount;
@@ -31,14 +32,14 @@ export default async function ConfirmationQueuePage() {
   return (
     <div className="app-content page-sections">
       <PageHeader
-        title="Confirmation Queue"
-        description="Orders pending confirmation. Call within 2 hours to cut refusal rate by 25-35%."
+        title={t("confirmationQueue.title")}
+        description={t("confirmationQueue.description")}
       />
 
       {/* Stats */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
-          label="Pending"
+          label={t("confirmationQueue.pending")}
           value={queue.length}
           icon={<Clock />}
           accentBg="bg-blue-500/10 dark:bg-blue-500/15"
@@ -46,7 +47,7 @@ export default async function ConfirmationQueuePage() {
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
-          label="Fresh (< 2h)"
+          label={t("confirmationQueue.fresh")}
           value={freshCount}
           icon={<CheckCircle2 />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
@@ -54,18 +55,18 @@ export default async function ConfirmationQueuePage() {
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
-          label="Stale (> 2h)"
+          label={t("confirmationQueue.stale")}
           value={staleCount}
           icon={<AlertTriangle />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
-          hint="Orders older than 2 hours have a higher refusal rate. Prioritize these calls."
+          hint={t("confirmationQueue.staleHint")}
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
-          label="Total Value"
+          label={t("confirmationQueue.totalValue")}
           value={formatDZD(queue.reduce((sum, o) => sum + o.totalPrice, 0))}
-          icon={<Clock />}
+          icon={<Banknote />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
           accentIcon="text-teal-600 dark:text-teal-400"
           style={{ animationDelay: "240ms" }}
@@ -78,22 +79,22 @@ export default async function ConfirmationQueuePage() {
           {queue.length === 0 ? (
             <div className="p-8 text-center">
               <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
-              <p className="mt-2 text-sm font-medium">All caught up!</p>
-              <p className="text-xs text-muted-foreground">No orders pending confirmation.</p>
+              <p className="mt-2 text-sm font-medium">{t("confirmationQueue.allCaughtUp")}</p>
+              <p className="text-xs text-muted-foreground">{t("confirmationQueue.noPending")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-3 text-start">Order</th>
-                    <th className="px-4 py-3 text-start">Customer</th>
-                    <th className="px-4 py-3 text-start">Phone</th>
-                    <th className="px-4 py-3 text-start">Wilaya</th>
-                    <th className="px-4 py-3 text-end">Total</th>
-                    <th className="px-4 py-3 text-start">Age</th>
-                    <th className="px-4 py-3 text-start">Status</th>
-                    <th className="px-4 py-3 text-end">Action</th>
+                    <th className="px-4 py-3 text-start">{t("confirmationQueue.col.order")}</th>
+                    <th className="px-4 py-3 text-start">{t("confirmationQueue.col.customer")}</th>
+                    <th className="px-4 py-3 text-start">{t("confirmationQueue.col.phone")}</th>
+                    <th className="px-4 py-3 text-start">{t("confirmationQueue.col.wilaya")}</th>
+                    <th className="px-4 py-3 text-end">{t("confirmationQueue.col.total")}</th>
+                    <th className="px-4 py-3 text-start">{t("confirmationQueue.col.age")}</th>
+                    <th className="px-4 py-3 text-start">{t("confirmationQueue.col.status")}</th>
+                    <th className="px-4 py-3 text-end">{t("confirmationQueue.col.action")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -127,7 +128,7 @@ export default async function ConfirmationQueuePage() {
                       </td>
                       <td className="px-4 py-3 text-end">
                         <Button size="sm" variant="outline" asChild>
-                          <Link href={`/orders/${o.id}`}>Confirm</Link>
+                          <Link href={`/orders/${o.id}`}>{t("confirmationQueue.confirm")}</Link>
                         </Button>
                       </td>
                     </tr>

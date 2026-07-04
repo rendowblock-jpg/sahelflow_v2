@@ -11,6 +11,7 @@ import { formatDZD, formatDate } from "@/lib/utils";
 import { useApiMutation } from "@/hooks/use-api-mutation";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useI18n } from "@/hooks/use-i18n";
 import { CheckCircle } from "lucide-react";
 
 interface PendingOrder {
@@ -31,11 +32,12 @@ interface CodReconciliationClientProps {
 export function CodReconciliationClient({
   pendingOrders, totalPending, totalCollected, totalRemitted,
 }: CodReconciliationClientProps) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [remittanceRef, setRemittanceRef] = useState("");
 
   const bulkMutation = useApiMutation({
-    successMessage: "Orders marked as remitted",
+    successMessage: t("codReconciliation.success"),
     onSuccess: async () => {
       await mutatePrefix("/api/orders");
       setSelected(new Set());
@@ -91,8 +93,8 @@ export function CodReconciliationClient({
         {pendingOrders.length === 0 ? (
           <EmptyState
             icon={CheckCircle}
-            title="All reconciled"
-            description="No pending remittances. All collected COD has been remitted."
+            title={t("codReconciliation.allReconciled")}
+            description={t("codReconciliation.allReconciledDesc")}
           />
         ) : (
           <>
@@ -133,7 +135,7 @@ export function CodReconciliationClient({
                       <Checkbox
                         checked={selected.size === pendingOrders.length && pendingOrders.length > 0}
                         onCheckedChange={toggleAll}
-                        aria-label="Select all"
+                        aria-label={t("dataTable.selectAll")}
                       />
                     </th>
                     <th className="px-4 py-3 text-start">Order</th>

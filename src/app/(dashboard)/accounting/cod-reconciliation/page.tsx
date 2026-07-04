@@ -21,20 +21,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CodReconciliationPage() {
-  await getI18n();
+  const { t } = await getI18n();
   const summary = await getCodReconciliationSummary();
 
   return (
     <div className="app-content page-sections">
       <PageHeader
         title="COD Reconciliation"
-        description="Track cash collected by couriers and match remittances against orders."
+        description={t("codReconciliation.description")}
       />
 
       {/* Summary stat cards */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
-          label="Delivered"
+          label={t("codReconciliation.delivered")}
           value={summary.counts.delivered}
           icon={<CheckCircle2 />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
@@ -42,7 +42,7 @@ export default async function CodReconciliationPage() {
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
-          label="Collected"
+          label={t("codReconciliation.collected")}
           value={summary.counts.collected}
           icon={<DollarSign />}
           accentBg="bg-blue-500/10 dark:bg-blue-500/15"
@@ -50,7 +50,7 @@ export default async function CodReconciliationPage() {
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
-          label="Remitted"
+          label={t("codReconciliation.remitted")}
           value={summary.counts.remitted}
           icon={<CheckCircle2 />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
@@ -58,12 +58,12 @@ export default async function CodReconciliationPage() {
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
-          label="Pending Remittance"
+          label={t("codReconciliation.pendingRemittance")}
           value={formatDZD(summary.pendingAmount)}
           icon={<Clock />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-amber-600 dark:text-amber-400"
-          hint="Cash collected by the courier but not yet remitted to you. Match these against courier remittance statements."
+          hint={t("codReconciliation.hint")}
           style={{ animationDelay: "240ms" }}
         />
       </div>

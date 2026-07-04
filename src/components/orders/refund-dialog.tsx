@@ -32,7 +32,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
   const [reason, setReason] = useState("");
 
   const mutation = useApiMutation({
-    successMessage: t("orders.refund.created") || "Refund created",
+    successMessage: t("refund.success"),
     onSuccess: async () => {
       await mutatePrefix("/api/orders");
       setOpen(false);
@@ -50,14 +50,14 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <DollarSign className="h-4 w-4 me-1.5" />
-          {t("orders.refund.create") || "Refund"}
+          {t("refund.title")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            {t("orders.refund.title") || "Create Refund"} — {orderNumber}
+            {t("refund.title")} — {orderNumber}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -79,7 +79,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t("orders.refund.amount") || "Amount (DZD)"}</Label>
+            <Label>{t("refund.amount")}</Label>
             <Input
               type="number"
               min="1"
@@ -93,24 +93,24 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t("orders.refund.method") || "Method"}</Label>
+            <Label>{t("refund.method")}</Label>
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
-                <SelectItem value="bank">Bank transfer</SelectItem>
-                <SelectItem value="courier_deduction">Courier deduction</SelectItem>
+                <SelectItem value="cash">{t("refund.method.cash")}</SelectItem>
+                <SelectItem value="credit">{t("refund.method.credit")}</SelectItem>
+                <SelectItem value="bank">{t("refund.method.bank")}</SelectItem>
+                <SelectItem value="courier_deduction">{t("refund.method.courier")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t("orders.refund.reason") || "Reason (optional)"}</Label>
+            <Label>{t("refund.reason")}</Label>
             <Input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Customer return, damaged item, etc."
+              placeholder={t("refund.reason")}
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
             {mutation.isSubmitting ? (
               <><Loader2 className="h-4 w-4 me-1.5 animate-spin" />Processing...</>
             ) : (
-              t("orders.refund.confirm") || "Process refund"
+              t("refund.title")
             )}
           </Button>
         </DialogFooter>
