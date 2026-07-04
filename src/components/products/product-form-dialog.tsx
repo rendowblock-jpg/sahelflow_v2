@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { useForm } from "react-hook-form";
+import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Loader2 } from "lucide-react";
@@ -130,7 +131,6 @@ export function ProductFormDialog({
   onOpenChange,
 }: ProductFormDialogProps) {
   const { t } = useI18n();
-  const router = useRouter();
   const isEdit = !!product;
   const isControlled = openProp !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -165,6 +165,7 @@ export function ProductFormDialog({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaults(product),
   });
+  useDirtyGuard(form);
 
   // Keep the form in sync if the `product` prop changes after a server
   // refresh (e.g. another agent edited the row, or we just saved).
@@ -229,7 +230,7 @@ export function ProductFormDialog({
       // Success: close + reset + refresh server-component data
       form.reset();
       setOpen(false);
-      router.refresh();
+      mutatePrefix("/api/products");
     } catch (err) {
       console.error("[ProductFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

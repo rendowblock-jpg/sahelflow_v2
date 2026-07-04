@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { useForm } from "react-hook-form";
+import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus } from "lucide-react";
@@ -78,7 +79,6 @@ export function ReturnFormDialog({
   onOpenChange,
 }: ReturnFormDialogProps) {
   const { t } = useI18n();
-  const router = useRouter();
   const isControlled = openProp !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
   const open = openProp ?? internalOpen;
@@ -92,6 +92,7 @@ export function ReturnFormDialog({
     resolver: zodResolver(formSchema),
     defaultValues: { orderId: "", reason: "", itemCount: "1" },
   });
+  useDirtyGuard(form);
 
   // Fetch delivered orders when the dialog opens (so the dropdown is fresh).
   useEffect(() => {
@@ -140,7 +141,7 @@ export function ReturnFormDialog({
       toast.success(t("returns.returnCreated"));
       form.reset({ orderId: "", reason: "", itemCount: "1" });
       setOpen(false);
-      router.refresh();
+      mutatePrefix("/api/returns");
     } catch {
       toast.error(t("common.error"));
     } finally {

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { useForm, useWatch } from "react-hook-form";
+import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Loader2 } from "lucide-react";
@@ -86,7 +87,6 @@ export function CustomerFormDialog({
   onOpenChange,
 }: CustomerFormDialogProps) {
   const { t } = useI18n();
-  const router = useRouter();
   const isEdit = !!customer;
   const isControlled = openProp !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -110,6 +110,7 @@ export function CustomerFormDialog({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaults(customer),
   });
+  useDirtyGuard(form);
 
   // Subscribe to wilaya/commune changes without re-rendering the whole form on every keystroke.
   const watchedWilaya = useWatch({ control: form.control, name: "wilaya" });
@@ -162,7 +163,7 @@ export function CustomerFormDialog({
       // Success: close + reset + refresh server-component data
       form.reset();
       setOpen(false);
-      router.refresh();
+      mutatePrefix("/api/customers");
     } catch (err) {
       console.error("[CustomerFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

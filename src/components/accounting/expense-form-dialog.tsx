@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { useForm } from "react-hook-form";
+import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -109,7 +110,6 @@ export function ExpenseFormDialog({
   onOpenChange,
 }: ExpenseFormDialogProps) {
   const { t } = useI18n();
-  const router = useRouter();
   const isEdit = !!expense;
   const isControlled = openProp !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -130,6 +130,7 @@ export function ExpenseFormDialog({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaults(expense),
   });
+  useDirtyGuard(form);
 
   // Keep the form in sync if the `expense` prop changes after a server
   // refresh (e.g. another agent edited the row, or we just saved).
@@ -194,7 +195,7 @@ export function ExpenseFormDialog({
       toast.success(
         t(expense ? "accounting.expenseUpdated" : "accounting.expenseCreated"),
       );
-      router.refresh();
+      mutatePrefix("/api/expenses");
     } catch (err) {
       console.error("[ExpenseFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

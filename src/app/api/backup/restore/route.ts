@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { restoreBackup } from "@/lib/backup";
 
@@ -21,6 +22,7 @@ const restoreSchema = z.object({
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
+  void logAudit({ action: "backup.restore", entity: "system", entityId: "backup", actor: "user" });
   const body = await req.json();
   const input = restoreSchema.parse(body);
   const result = await restoreBackup(input.filename);
