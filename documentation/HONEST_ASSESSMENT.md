@@ -119,4 +119,4 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-04 — Session 24 complete. main = `ed20f7b`. v4.0.0. 1197 tests, 0 skip. 88.8% coverage. All built-but-not-rendered UIs wired. All 5 list pages on DataTable v2. 5 skipped tests fixed. Remaining: Tauri build verification, Playwright e2e, real users, Darija validation, pen test, final polish._
+_Last updated: 2026-07-04 — Session 24 complete. main = `779e1c9`. v4.0.0. 1197 tests, 0 skip. 88.8% coverage. All built-but-not-rendered UIs wired. All 5 list pages on DataTable v2. 5 skipped tests fixed. Remaining: Tauri build verification, Playwright e2e, real users, Darija validation, pen test, final polish._

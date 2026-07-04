@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
 **Last updated:** 2026-07-04 (Session 24 complete — follow-up wiring + DataTable v2 completion + test fixup)
-**Main HEAD:** `ed20f7b` (Session 24 followup branch tip)
+**Main HEAD:** `779e1c9`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
