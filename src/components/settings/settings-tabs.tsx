@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Shield, Bot, Truck, Bell, Store, DatabaseBackup } from "lucide-react";
+import {
+  Shield, Bot, Truck, Bell, Store, DatabaseBackup,
+  UserCircle, Palette, AlertTriangle, Phone,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { LicensePanel } from "@/components/settings/license-panel";
@@ -10,16 +13,23 @@ import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credent
 import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import { IntegrationsPanel } from "@/components/settings/integrations-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
+import { AppearancePanel } from "@/components/settings/appearance-panel";
+import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
+import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 
-type Tab = "ai" | "delivery" | "reports" | "integrations" | "license" | "backup";
+type Tab = "profile" | "appearance" | "license" | "ai" | "delivery" | "reports" | "integrations" | "phone" | "backup" | "danger";
 
-const TABS: Array<{ id: Tab; icon: typeof Shield }> = [
-  { id: "license", icon: Shield },
-  { id: "ai", icon: Bot },
-  { id: "delivery", icon: Truck },
-  { id: "reports", icon: Bell },
-  { id: "integrations", icon: Store },
-  { id: "backup", icon: DatabaseBackup },
+const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
+  { id: "profile", icon: UserCircle, labelKey: "settings.tabs.profile" },
+  { id: "appearance", icon: Palette, labelKey: "settings.tabs.appearance" },
+  { id: "license", icon: Shield, labelKey: "settings.tabs.license" },
+  { id: "ai", icon: Bot, labelKey: "settings.tabs.ai" },
+  { id: "delivery", icon: Truck, labelKey: "settings.tabs.delivery" },
+  { id: "reports", icon: Bell, labelKey: "settings.tabs.reports" },
+  { id: "integrations", icon: Store, labelKey: "settings.tabs.integrations" },
+  { id: "phone", icon: Phone, labelKey: "settings.tabs.phoneReputation" },
+  { id: "backup", icon: DatabaseBackup, labelKey: "settings.tabs.backup" },
+  { id: "danger", icon: AlertTriangle, labelKey: "settings.tabs.dangerZone" },
 ];
 
 export function SettingsTabs({
@@ -33,7 +43,7 @@ export function SettingsTabs({
 
   return (
     <div ref={tabListRef} role="tablist" className="flex flex-col gap-6 lg:flex-row">
-      {/* Tab sidebar — premium tinted active state */}
+      {/* Tab sidebar — left-rail tree with search */}
       <nav className="flex lg:w-56 lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -43,53 +53,55 @@ export function SettingsTabs({
               key={tab.id}
               onClick={() => setActive(tab.id)}
               role="tab"
-              aria-selected={active === tab.id}
-              tabIndex={active === tab.id ? 0 : -1}
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
               onKeyDown={(e) => {
                 if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
                   e.preventDefault();
-                  const tabs = tabListRef.current;
-                  if (!tabs) return;
-                  const buttons = Array.from(tabs.querySelectorAll('[role="tab"]'));
-                  const idx = buttons.indexOf(e.currentTarget);
-                  // In RTL, ArrowRight goes to the PREVIOUS tab (tabs are laid out right-to-left)
-                  const isRtl = document.documentElement.dir === "rtl";
-                  const goNext = isRtl ? e.key === "ArrowLeft" : e.key === "ArrowRight";
-                  const next = goNext ? (idx + 1) % buttons.length : (idx - 1 + buttons.length) % buttons.length;
-                  (buttons[next] as HTMLButtonElement)?.focus();
-                  (buttons[next] as HTMLButtonElement)?.click();
+                  const idx = TABS.findIndex((x) => x.id === active);
+                  const dir = e.key === "ArrowRight" ? 1 : -1;
+                  const next = TABS[(idx + dir + TABS.length) % TABS.length];
+                  if (next) setActive(next.id);
                 }
               }}
               className={cn(
-                "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap",
+                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap relative",
                 isActive
-                  ? "bg-accent font-medium text-accent-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground",
+                  ? "bg-primary/5 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                tab.id === "danger" && !isActive && "text-destructive/70 hover:text-destructive",
               )}
             >
+              {/* Active indicator bar */}
               {isActive && (
-                <span className="absolute start-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-primary" />
+                <span className="absolute start-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
               )}
-              <Icon className={cn(
-                "h-4 w-4 shrink-0 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground",
-              )} />
-              {t(`settings.tab.${tab.id}`)}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{t(tab.labelKey) || tab.id}</span>
             </button>
           );
         })}
       </nav>
 
       {/* Tab content */}
-      <div role="tabpanel" className="flex-1 min-w-0" id="settings-panel" aria-labelledby="settings-tablist">
+      <div className="flex-1 min-w-0">
         {active === "license" && <LicensePanel />}
         {active === "ai" && <AiKeyPanel />}
         {active === "delivery" && <DeliveryCredentialsPanel />}
         {active === "reports" && <DailyReportPanel />}
-        {active === "integrations" && (
-          <IntegrationsPanel integrations={integrations} />
-        )}
+        {active === "integrations" && <IntegrationsPanel integrations={integrations} />}
         {active === "backup" && <BackupRestorePanel />}
+        {active === "appearance" && <AppearancePanel />}
+        {active === "phone" && <PhoneReputationPanel />}
+        {active === "danger" && <DangerZonePanel />}
+        {active === "profile" && (
+          <div className="rounded-lg border p-6">
+            <h3 className="text-base font-semibold">Profile</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Profile settings are managed via the <a href="/profile" className="text-primary underline">Profile page</a>.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
