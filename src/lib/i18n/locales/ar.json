@@ -2236,5 +2236,9 @@
   "shortcuts.cheatsheet": "إظهار هذا الدليل",
   "command.group.records": "السجلات",
   "command.records.searching": "البحث في السجلات…",
-  "command.records.noResults": "لا توجد سجلات مطابقة"
+  "command.records.noResults": "لا توجد سجلات مطابقة",
+  "settings.tabs.profile": "الملف الشخصي",
+  "settings.tabs.appearance": "المظهر",
+  "settings.tabs.phoneReputation": "سمعة الهاتف",
+  "settings.tabs.dangerZone": "منطقة الخطر"
 }

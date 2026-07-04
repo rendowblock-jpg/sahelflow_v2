@@ -2236,5 +2236,9 @@
   "shortcuts.cheatsheet": "Afficher ce guide",
   "command.group.records": "Enregistrements",
   "command.records.searching": "Recherche d'enregistrements…",
-  "command.records.noResults": "Aucun enregistrement"
+  "command.records.noResults": "Aucun enregistrement",
+  "settings.tabs.profile": "Profil",
+  "settings.tabs.appearance": "Apparence",
+  "settings.tabs.phoneReputation": "Réputation téléphone",
+  "settings.tabs.dangerZone": "Zone de danger"
 }
