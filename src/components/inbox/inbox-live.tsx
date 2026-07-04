@@ -260,29 +260,51 @@ export function InboxLive() {
   async function handleSend() {
     const active = chats.find((c) => c.id === activeChatId);
     if (!active || active.channel !== "whatsapp" || !replyText.trim()) return;
+    
+    // Optimistic update: show the message bubble instantly with "sending" status.
+    // WhatsApp/iMessage/Telegram all do this — the user sees their message
+    // immediately, not after the server responds.
+    const tempId = `local-${Date.now()}`;
+    const messageText = replyText.trim();
+    setReplyText(""); // clear input immediately
     setSending(true);
     setSendError(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        body: messageText,
+        direction: "outbound",
+        timestamp: Date.now(),
+        deliveryStatus: "sending", // shows clock icon via MessageStatus
+      },
+    ]);
+
     try {
       const res = await fetch("/api/whatsapp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: active.id, text: replyText.trim() }),
+        body: JSON.stringify({ to: active.id, text: messageText }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? t("inbox.sendFailed"));
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `local-${Date.now()}`,
-          body: replyText.trim(),
-          direction: "outbound",
-          timestamp: Date.now(),
-        },
-      ]);
-      setReplyText("");
+      // Update the optimistic message to "sent" status
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, deliveryStatus: "sent", id: `sent-${Date.now()}` }
+            : m
+        )
+      );
     } catch (err) {
+      // Mark the optimistic message as failed
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, deliveryStatus: "failed" } : m
+        )
+      );
       setSendError(err instanceof Error ? err.message : t("inbox.sendFailed"));
     } finally {
       setSending(false);

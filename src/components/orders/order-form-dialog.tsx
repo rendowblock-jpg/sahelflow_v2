@@ -234,6 +234,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   return (
     <FormProvider {...form}>
       <Dialog open={open} onOpenChange={(v) => {
+        if (!v && loading) return; // don't allow closing mid-submit
         setOpen(v);
         if (!v) {
           // Keep draft — user might re-open. Only clear on successful submit.

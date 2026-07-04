@@ -10,6 +10,7 @@ import { z } from "zod";
 import { Plus, Loader2 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { toast } from "@/lib/toast";
 import {
   createCustomerSchema,
   dzPhone,
@@ -164,6 +165,7 @@ export function CustomerFormDialog({
       form.reset();
       setOpen(false);
       mutatePrefix("/api/customers");
+      toast.success(t("customers.created") || "Customer created");
     } catch (err) {
       console.error("[CustomerFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

@@ -10,6 +10,7 @@ import { z } from "zod";
 import { Plus, Loader2 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { toast } from "@/lib/toast";
 import {
   createProductSchema,
   productVariantSchema,
@@ -231,6 +232,7 @@ export function ProductFormDialog({
       form.reset();
       setOpen(false);
       mutatePrefix("/api/products");
+      toast.success(t("products.created") || "Product created");
     } catch (err) {
       console.error("[ProductFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));
