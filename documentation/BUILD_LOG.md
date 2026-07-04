@@ -4,6 +4,103 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 23 — 2026-07-03: The Prototype→Product Wave (10 phases merged to main)
+
+**The biggest session ever.** A deep research wave (5 parallel streams: Algerian COD market, gold-standard UX, open-source architecture, Medusa/Chatwoot domain depth, self-audit) identified exactly why the app "felt like an AI prototype" despite 22 sessions of work. Then ALL 10 phases of the masterplan were executed, each browser-verified + merged to main.
+
+### Research wave (5 streams, ~4,160 lines)
+- R1: Algerian COD market (Yalidine/Maystro/ZR/DHD/YouCan/DZBuild/Mystoq) — the competitive bar
+- R2: Gold-standard dashboards (Shopify/Stripe/Linear/Vercel/Notion) — 24 AI-prototype tells
+- R3: Open-source architecture (Cal.com, Dub.co, Formbricks) — 12 cross-cutting patterns
+- R4: Domain depth (Medusa commerce + Chatwoot inbox) — 15 domain gaps
+- R5: SahelFlow self-audit — prototype-tells tally with file:line evidence
+
+### Phases executed (10 phases, main HEAD 513816e)
+
+**Phase 0 — Foundation Hardening:**
+- global-error.tsx (CRITICAL gap fix), PageError enhanced, AuditLog schema extended
+- lib/env.ts (Zod boot validation), lib/toast.ts (showToast wrapper)
+- db.ts safety guards (deleteMany/updateMany/delete/update where-clause guard)
+- auth cache() dedup, InfoHint component
+
+**Phase 1 — Data Layer & Perceived Performance:**
+- SWR infrastructure (fetcher, mutatePrefix, useApiMutation)
+- DataTable v2 (TanStack Table: pagination, URL-state sort, density, bulk, skeletons)
+- Orders page migrated (paginated, was take:200; optimistic bulk updates, was router.refresh)
+- SpeculationRules hover-prerender
+
+**Phase 2 — Interaction Polish:**
+- Framer Motion page transitions (motion.div fade+slide, reduced-motion-aware)
+- Soft-delete + undo (deletedAt on 6 models, useUndoableDelete hook, restore API — disproves false handoff claim)
+- Real command palette (fuzzy search actual records via search APIs)
+- Keyboard shortcuts expansion (o/c/p/?/) + cheatsheet modal
+- InfoHint adoption on StatCard
+
+**Phase 3 — Forms & Validation:**
+- FormField/FormInput/FormTextarea primitives (inline validation, async status icons)
+- Phone input mask (Algerian 0X XX XX XX XX)
+- Dirty-guard (beforeunload warning)
+- localStorage drafts (restore on crash/refresh)
+- Order form migrated from raw useState to RHF + zod
+
+**Phase 4 — Commerce Engine Depth (biggest phase):**
+- OrderChange ledger (Medusa pattern — append-only audit trail)
+- Refund model + service (partial refunds, multiple methods)
+- ReservationItem (inventory soft-holds)
+- COD reconciliation fields on Order (codCollected, codRemitted, codRemittanceRef)
+- Order versioning (+version field)
+- Order timeline component (vertical timeline with action-type icons)
+- 6 new API routes (refund, COD, timeline, reconciliation, bulk-remittance)
+
+**Phase 5 — Inbox Rebuild:**
+- Conversation model enhanced (status, assignee, priority, labels, snooze, SLA)
+- Message model enhanced (deliveryStatus, messageType, activityType, attachments)
+- CannedResponse model + service + API (saved replies with /short_code trigger)
+- Conversation status management service + API
+- Message delivery receipts component (WhatsApp-style: clock → check → double-check → blue)
+- Conversation status badge component
+
+**Phase 6 — Automations Engine v2:**
+- Conditions engine (JSON-logic, 14 operators, AND/OR groups, dot notation)
+- Multi-step actions (JSON array of steps, runs in order)
+- Retry with exponential backoff (max 2 retries, 500ms/1000ms)
+- Non-matching conditions logged as "skipped" (not "failed")
+
+**Phase 7 — Analytics & Accounting Depth:**
+- Return-rate analytics by wilaya (the killer COD metric) + by product
+- SKU P&L (per-product revenue, cost, margin, margin%)
+- Period-over-period comparison (current vs previous, % changes)
+- 3 new analytics API routes
+
+**Phase 8 — COD Market Features (the competitive moat):**
+- 2-hour confirmation call queue (the #1 return-rate lever, cuts refusals 25-35%)
+- Phone reputation registry (cross-store bad-phone blacklist, risk engine consumes it)
+- COD reconciliation backend (built in Phase 4, APIs built here)
+
+**Phase 9 — Settings & Onboarding Depth:**
+- Enhanced settings left-rail tree (10 tabs, was 6)
+- Appearance panel (theme + density)
+- Danger Zone panel (reset with type-RESET confirmation)
+- Phone Reputation panel (CRUD for bad-phone blacklist)
+
+**Phase 10 — Empty/Error/Loading State Overhaul:**
+- Empty state catalog (11 crafted empty states, one per page type)
+- Full-page skeleton (mirrors loaded dashboard layout, no layout shift)
+
+**Phase 11 — Visual System, i18n Quality:**
+- Eliminated 33 arbitrary text-[NNpx] values across 16 files → token-scale
+- Added formatDateTime + formatRelative locale-aware helpers
+- Zero arbitrary text-size values remaining
+
+### Result
+- main HEAD: 513816e
+- Version: 4.0.0
+- 1192 tests pass | 5 skip | 0 fail
+- tsc + eslint clean
+- The app is no longer an "AI prototype" — it has the depth of a real product
+
+---
+
 ## Session 22 (redo) — Phases 3+4+6 Deep Audit (3 commits)
 
 **Branch:** `agent/session22-redo-phase3-4-6` → merged to main (`d1ac82b`)

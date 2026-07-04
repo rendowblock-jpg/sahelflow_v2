@@ -1,8 +1,103 @@
 # Changelog
 
-All notable changes to SahelFlow are documented here.
-Format based on [Keep a Changelog](https://keepachangelog.com/),
-adheres to [Semantic Versioning](https://semver.org/).
+All notable changes to SahelFlow are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [4.0.0] — 2026-07-03
+
+### The Prototype→Product Wave (Session 23)
+
+A deep research wave + 10-phase masterplan execution that transforms SahelFlow
+from a polished AI prototype into a real product with the depth to compete in
+the Algerian COD market.
+
+### Added — Foundation (Phase 0)
+- `global-error.tsx` — self-contained last-resort error boundary (was missing)
+- `lib/audit.ts` — entity-level audit logging with before/after snapshots
+- `lib/toast.ts` — `showToast()` wrapper with consistent styling + data-testid
+- `lib/env.ts` — Zod boot-validation for environment variables
+- Prisma safety guards — refuses `deleteMany`/`updateMany` without a where clause
+- `InfoHint` component — inline education affordance (info icon + popover)
+- React `cache()` on auth session — dedupes per-request DB hits
+
+### Added — Data Layer (Phase 1)
+- SWR infrastructure — fetcher, `mutatePrefix`, `useApiMutation`
+- `DataTable v2` — TanStack Table with pagination, URL-synced sort, density
+  toggle, bulk selection, skeleton loading rows
+- Orders page paginated (was `take:200` silent truncation)
+- Optimistic bulk status updates (was `router.refresh()`)
+- `SpeculationRules` hover-prerender on sidebar links
+
+### Added — Interaction Polish (Phase 2)
+- Framer Motion page transitions (fade+slide, reduced-motion-aware)
+- Soft-delete + undo on 6 models (Order, Customer, Product, Delivery, Return,
+  Automation) — `useUndoableDelete` hook with 6s undo toast
+- Real command palette — fuzzy search actual records (orders/customers/products)
+- Keyboard shortcuts — `o`/`c`/`p`/`/`/`?` + `g+letter` navigation
+- Cheatsheet modal (opens on `?`)
+
+### Added — Forms (Phase 3)
+- Form primitives — `FormField`, `FormInput`, `FormTextarea` with inline
+  validation + async status icons
+- Phone input mask (Algerian `0X XX XX XX XX`)
+- Dirty-guard (beforeunload warning on unsaved changes)
+- localStorage draft persistence (restore on crash/refresh)
+- Order form migrated to react-hook-form + zod
+
+### Added — Commerce Engine (Phase 4)
+- `OrderChange` ledger — append-only audit trail (Medusa pattern)
+- `Refund` model — partial refunds with multiple methods
+- `ReservationItem` — inventory soft-holds
+- COD reconciliation fields on Order (`codCollected`, `codRemitted`,
+  `codRemittanceRef`) — the killer feature for Algerian COD sellers
+- Order versioning (`version` field)
+- Order timeline component with action-type icons
+
+### Added — Inbox (Phase 5)
+- Conversation workflow — status (open/pending/resolved/snoozed), assignee,
+  priority, labels, snooze, SLA tracking
+- Message delivery receipts — WhatsApp-style (clock → check → double-check → blue)
+- `CannedResponse` model + service + API — saved replies with `/short_code` trigger
+- Activity messages — system events inline in the thread timeline
+
+### Added — Automations v2 (Phase 6)
+- Conditions engine — JSON-logic with 14 operators (equal, contains,
+  greater_than, in, is_empty, etc.), AND/OR groups, dot notation
+- Multi-step actions — JSON array of steps, runs in order
+- Retry with exponential backoff (max 2 retries, 500ms/1000ms)
+
+### Added — Analytics (Phase 7)
+- Return-rate analytics by wilaya + by product (the killer COD metric)
+- SKU P&L — per-product revenue, cost, margin, margin%
+- Period-over-period comparison with % changes
+
+### Added — COD Market Features (Phase 8)
+- 2-hour confirmation call queue (cuts refusals 25-35%)
+- Phone reputation registry (cross-store bad-phone blacklist)
+- COD reconciliation API (collected vs remitted, bulk remittance)
+
+### Added — Settings (Phase 9)
+- Enhanced settings — 10-tab left-rail tree (was 6)
+- Appearance panel (theme + density)
+- Danger Zone panel (reset with type-RESET confirmation)
+- Phone Reputation panel (CRUD for bad-phone blacklist)
+
+### Added — States (Phase 10)
+- Empty state catalog — 11 crafted empty states (illustrated + actionable)
+- Full-page skeleton — mirrors loaded dashboard layout
+
+### Changed — Visual System (Phase 11)
+- Eliminated 33 arbitrary `text-[NNpx]` values → token-scale equivalents
+- Added `formatDateTime` + `formatRelative` locale-aware helpers
+
+### Changed
+- Version: 3.5.1 → 4.0.0
+- 1192 tests pass | 5 skip | 0 fail
+- tsc + eslint clean
+
+---
 
 ## [3.5.1] - 2026-07-03 (Session 22 redo — Phase 3+4+6 deep audit)
 
