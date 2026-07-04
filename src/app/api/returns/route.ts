@@ -16,15 +16,31 @@ const createReturnSchema = z.object({
 });
 
 /**
- * GET /api/returns — list returns (most recent first).
+ * GET /api/returns — list returns with pagination (?page=&pageSize=).
+ *
+ * Returns { returns, total, hasNextPage, page, pageSize }. Each return
+ * includes its order + customer name for the table.
  */
-export async function GET() {
-  const returns = await db.return.findMany({
-    include: { order: { include: { customer: { select: { name: true } } } } },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
-  return NextResponse.json({ returns });
+export async function GET(req: NextRequest) {
+  const sp = req.nextUrl.searchParams;
+  const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(parseInt(sp.get("pageSize") ?? "25", 10) || 25, 100);
+  const offset = (page - 1) * pageSize;
+
+  const where = { deletedAt: null };
+  const [returns, total] = await Promise.all([
+    db.return.findMany({
+      where,
+      include: { order: { include: { customer: { select: { name: true } } } } },
+      orderBy: { createdAt: "desc" },
+      take: pageSize,
+      skip: offset,
+    }),
+    db.return.count({ where }),
+  ]);
+
+  const hasNextPage = offset + returns.length < total;
+  return NextResponse.json({ returns, total, hasNextPage, page, pageSize });
 }
 
 /**

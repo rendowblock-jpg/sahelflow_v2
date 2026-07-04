@@ -1,18 +1,14 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 
-import { formatDZD, formatDate } from "@/lib/utils";
+import { formatDZD } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState } from "@/components/shared/empty-state";
-import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
-import { PremiumTable } from "@/components/shared/premium-table";
-import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { StatCard } from "@/components/shared/stat-card";
-import { getBrandIcon } from "@/components/brand/brand-icons";
+import { DeliveriesDataTable } from "@/components/deliveries/deliveries-data-table";
 import Link from "next/link";
 import {
   Truck,
@@ -20,7 +16,6 @@ import {
   AlertCircle,
   Banknote,
 } from "lucide-react";
-import { deliveryProviderConfig } from "@/lib/shared";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,7 +23,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metadata.title.deliveries") };
 }
 export const dynamic = "force-dynamic";
-
 
 const FILTER_I18N: Record<string, string> = {
   all: "deliveries.filter.all",
@@ -38,6 +32,9 @@ const FILTER_I18N: Record<string, string> = {
   returned: "deliveries.filter.returned",
 };
 
+const ACTIVE_STATUSES = ["pending", "created", "picked_up", "in_transit", "at_hub", "out_for_delivery"];
+const RETURN_STATUSES = ["returned", "refused", "failed"];
+
 export default async function DeliveriesPage({
   searchParams,
 }: {
@@ -45,38 +42,43 @@ export default async function DeliveriesPage({
 }) {
   const { t, locale } = await getI18n();
   const { status: statusFilter } = await searchParams;
+  const status = statusFilter ?? "all";
 
-  // Fetch deliveries with order + customer info
-  const where = statusFilter && statusFilter !== "all"
-    ? { status: statusFilter }
-    : undefined;
+  const PAGE_SIZE = 25;
+  const where = status !== "all" ? { status, deletedAt: null } : { deletedAt: null };
+  const offset = 0;
 
-  const [allDeliveries, filteredDeliveries] = await Promise.all([
-    db.delivery.findMany({
-      include: { order: { include: { customer: { select: { name: true, phone: true } } } } },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    }),
+  // Page-1 fallback + total (for the active filter) + stat-card aggregates
+  // (across ALL deliveries, not just page 1) + per-status counts for the tabs.
+  const [deliveries, total, allDeliveries, statusCounts] = await Promise.all([
     db.delivery.findMany({
       where,
       include: { order: { include: { customer: { select: { name: true, phone: true } } } } },
       orderBy: { createdAt: "desc" },
-      take: 200,
+      take: PAGE_SIZE,
+      skip: offset,
+    }),
+    db.delivery.count({ where }),
+    db.delivery.findMany({
+      where: { deletedAt: null },
+      select: { status: true, cost: true },
+    }),
+    db.delivery.groupBy({
+      by: ["status"],
+      where: { deletedAt: null },
+      _count: true,
     }),
   ]);
 
-  // Counts by status
+  // Tab counts: "all" = total; each status = its count
   const counts: Record<string, number> = { all: allDeliveries.length };
-  for (const d of allDeliveries) {
-    counts[d.status] = (counts[d.status] ?? 0) + 1;
+  for (const g of statusCounts) {
+    counts[g.status] = g._count;
   }
 
-  // Stat cards — using the premium StatCard component
-  const active = allDeliveries.filter((d) =>
-    ["pending", "created", "picked_up", "in_transit", "at_hub", "out_for_delivery"].includes(d.status),
-  );
-  const delivered = allDeliveries.filter((d) => d.status === "delivered");
-  const returned = allDeliveries.filter((d) => ["returned", "refused", "failed"].includes(d.status));
+  const activeCount = allDeliveries.filter((d) => ACTIVE_STATUSES.includes(d.status)).length;
+  const deliveredCount = allDeliveries.filter((d) => d.status === "delivered").length;
+  const returnedCount = allDeliveries.filter((d) => RETURN_STATUSES.includes(d.status)).length;
   const totalCost = allDeliveries.reduce((sum, d) => sum + (d.cost ?? 0), 0);
 
   const STATUS_FILTERS = Object.entries(FILTER_I18N).map(([value, key]) => ({
@@ -92,11 +94,11 @@ export default async function DeliveriesPage({
         actions={<ImportExportButtons exportRoute="/api/export/deliveries" />}
       />
 
-      {/* Stat cards — premium StatCard with proper icons */}
+      {/* Stat cards */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("deliveries.activeDeliveries")}
-          value={active.length}
+          value={activeCount}
           icon={<Truck />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
           accentIcon="text-teal-600 dark:text-teal-400"
@@ -104,7 +106,7 @@ export default async function DeliveriesPage({
         />
         <StatCard
           label={t("deliveries.delivered")}
-          value={delivered.length}
+          value={deliveredCount}
           icon={<PackageCheck />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-emerald-600 dark:text-emerald-400"
@@ -113,7 +115,7 @@ export default async function DeliveriesPage({
         />
         <StatCard
           label={t("deliveries.returnsFailed")}
-          value={returned.length}
+          value={returnedCount}
           icon={<AlertCircle />}
           accentBg="bg-red-500/10 dark:bg-red-500/15"
           accentIcon="text-red-600 dark:text-red-400"
@@ -130,7 +132,7 @@ export default async function DeliveriesPage({
       </div>
 
       {/* Status filter */}
-      <Tabs defaultValue={statusFilter ?? "all"}>
+      <Tabs defaultValue={status}>
         <TabsList className="flex-wrap h-auto">
           {STATUS_FILTERS.map((filter) => (
             <TabsTrigger key={filter.value} value={filter.value} asChild>
@@ -150,97 +152,39 @@ export default async function DeliveriesPage({
         </TabsList>
       </Tabs>
 
-      {/* Deliveries table */}
+      {/* Deliveries table (DataTable v2) */}
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <CardContent className="p-0">
-          {filteredDeliveries.length === 0 ? (
-            <EmptyState
-              icon={Truck}
-              title={t("deliveries.empty.title")}
-              description={t("deliveries.empty.description")}
-              actionLabel={t("deliveries.empty.action")}
-              actionHref="/orders"
-            />
-          ) : (
-            <PremiumTable>
-              <PremiumTable.Header>
-                <PremiumTable.Row>
-                  <PremiumTable.Head>{t("deliveries.table.tracking")}</PremiumTable.Head>
-                  <PremiumTable.Head>{t("deliveries.table.order")}</PremiumTable.Head>
-                  <PremiumTable.Head>{t("deliveries.table.customer")}</PremiumTable.Head>
-                  <PremiumTable.Head hideOn="sm">{t("deliveries.table.carrier")}</PremiumTable.Head>
-                  <PremiumTable.Head align="end" hideOn="md">{t("deliveries.table.cost")}</PremiumTable.Head>
-                  <PremiumTable.Head align="center">{t("deliveries.table.status")}</PremiumTable.Head>
-                  <PremiumTable.Head hideOn="lg">{t("deliveries.table.date")}</PremiumTable.Head>
-                  <PremiumTable.Head align="end" width="w-20">{t("deliveries.table.action")}</PremiumTable.Head>
-                </PremiumTable.Row>
-              </PremiumTable.Header>
-              <PremiumTable.Body>
-                {filteredDeliveries.map((delivery) => {
-                  const order = delivery.order;
-                  const customer = order?.customer;
-                  const providerConfig = deliveryProviderConfig[delivery.provider];
-                  const BrandIcon = getBrandIcon(delivery.provider);
-                  return (
-                    <PremiumTable.Row key={delivery.id}>
-                      <PremiumTable.Cell className="font-mono text-xs">
-                        {delivery.trackingNumber ?? "—"}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell>
-                        {order ? (
-                          <Link
-                            href={`/orders/${order.id}`}
-                            className="font-mono text-sm font-medium text-primary hover:underline"
-                          >
-                            {order.orderNumber}
-                          </Link>
-                        ) : "—"}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell>
-                        <div className="text-sm font-medium">{customer?.name ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">{order?.wilaya ?? "—"}</div>
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell hideOn="sm">
-                        {providerConfig ? (
-                          <span className="inline-flex items-center gap-1.5 text-sm">
-                            {BrandIcon ? (
-                              <BrandIcon className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <span className={`size-2 rounded-full ${providerConfig.color}`} />
-                            )}
-                            {providerConfig.label}
-                          </span>
-                        ) : (
-                          <span className="text-sm">{delivery.provider}</span>
-                        )}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="end" hideOn="md" className="tabular-nums">
-                        {delivery.cost ? formatDZD(delivery.cost) : "—"}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="center">
-                        <DeliveryStatusBadge
-                          deliveryId={delivery.id}
-                          status={delivery.status}
-                          size="sm"
-                        />
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell hideOn="lg" className="text-muted-foreground">
-                        {formatDate(delivery.createdAt, locale)}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="end">
-                        <DeliveryRowActions
-                          deliveryId={delivery.id}
-                          provider={delivery.provider}
-                          trackingNumber={delivery.trackingNumber}
-                          orderId={order?.id ?? null}
-                        />
-                      </PremiumTable.Cell>
-                    </PremiumTable.Row>
-                  );
-                })}
-              </PremiumTable.Body>
-            </PremiumTable>
-          )}
+        <CardContent className="pt-6">
+          <DeliveriesDataTable
+            fallback={{
+              deliveries: deliveries.map((d) => ({
+                id: d.id,
+                orderId: d.orderId,
+                provider: d.provider,
+                trackingNumber: d.trackingNumber,
+                cost: d.cost,
+                status: d.status,
+                estimatedDelivery: d.estimatedDelivery?.toISOString() ?? null,
+                createdAt: d.createdAt.toISOString(),
+                order: d.order
+                  ? {
+                      id: d.order.id,
+                      orderNumber: d.order.orderNumber,
+                      wilaya: d.order.wilaya,
+                      customer: d.order.customer
+                        ? { name: d.order.customer.name, phone: d.order.customer.phone }
+                        : null,
+                    }
+                  : null,
+              })),
+              total,
+              hasNextPage: total > PAGE_SIZE,
+              page: 1,
+              pageSize: PAGE_SIZE,
+            }}
+            status={status}
+            locale={locale}
+          />
         </CardContent>
       </Card>
     </div>
