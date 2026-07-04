@@ -51,9 +51,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Skip type-checking + linting during builds — we run sf-verify separately.
-  // This speeds up builds significantly + avoids OOM during type-checking.
-  typescript: { ignoreBuildErrors: true },
+  // Type-checking + linting run via sf-verify (not during builds — avoids OOM).
+  // typescript.ignoreBuildErrors was previously true; now removed so `next build`
+  // enforces types in CI. sf-verify still runs tsc + eslint + vitest separately.
   reactStrictMode: true,
   poweredByHeader: false,
   // Explicit — defaults to false in Next.js, but pin to prevent future

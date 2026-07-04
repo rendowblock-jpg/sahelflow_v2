@@ -64,4 +64,4 @@ jobs:
       # PROD-001: Verify migrations are in sync with schema
       - name: Migration status
         run: bunx prisma migrate status
-        continue-on-error: true # non-blocking until migrations are fully wired
+        # Migrations are now fully wired (phase4_drift_capture)

@@ -199,14 +199,22 @@ async function main() {
   console.log("   3 categories, 15 products, 5 customers, 8 orders, 2 deliveries");
 }
 
-main()
-  .catch((e) => {
+// Run main seed first, then conversations, then disconnect.
+// (Was racy: main() was not awaited, so $disconnect fired before
+// seedConversations finished — conversations silently not seeded.)
+async function runAll() {
+  try {
+    await main();
+    await seedConversations();
+  } catch (e) {
     console.error("❌ Seed failed:", e);
     process.exit(1);
-  })
-  .finally(async () => {
+  } finally {
     await prisma.$disconnect();
-  });
+  }
+}
+
+void runAll();
 
 // ─── Conversations + Messages (for the inbox) ─────────────────────────────────
 async function seedConversations() {
@@ -291,4 +299,4 @@ async function seedConversations() {
   }
 }
 
-await seedConversations();
+// (seedConversations now called inside runAll above)

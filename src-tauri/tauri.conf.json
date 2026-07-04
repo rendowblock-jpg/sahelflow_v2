@@ -36,8 +36,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [],
-    "resources": []
+    "externalBin": [
+      "binaries/sahelflow-whatsapp"
+    ],
+    "resources": [
+      "resources/standalone/**/*"
+    ]
   },
   "plugins": {
     "updater": {
