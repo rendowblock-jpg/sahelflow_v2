@@ -4,6 +4,44 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 26 — 2026-07-04: UI/UX Deep Polish (4-stream audit, 6 batches)
+
+4-stream parallel UI/UX audit (visual system, page-by-page, interactions,
+a11y/responsive/RTL) identified 142 findings. 6 batches executed + merged.
+
+### Batch 1-2: Design system (commit 7703bbf)
+- Light-mode muted-foreground: oklch(0.52→0.42) — WCAG AA 4.5:1 (was 3.5:1)
+- Chart palette rotated: blue/amber/magenta/green/cyan (was 3 at emerald hue)
+- --info moved to blue (was emerald collision)
+- success/warning/info-foreground tokens added
+- border-whisper visible in light mode (was white-on-white)
+- focus-visible no longer forces border-radius
+- skeleton bg-accent→bg-muted (was green in dark mode)
+- themeColor teal→emerald
+- 10 primitives migrated to design-system shadows
+
+### Batch 3: i18n sweep (commit b81a1a3)
+- 70+ keys added to all 3 locales
+- confirmation-queue, COD reconciliation, analytics, refund dialog,
+  condition builder, DataTable primitives fully i18n'd
+- Dead t()||"" pattern removed from refund dialog
+
+### Batch 4: Accessibility (commit 412bc56)
+- 6 chart components: role=img + aria-label
+- inbox + AI chat: role=log + aria-live=polite
+- topbar avatar: aria-label
+
+### Batch 5: Interaction polish (commit 35b92d7)
+- customer + product forms: toast.success (were silent)
+- order-form-dialog: mid-submit close guarded
+- inbox send: optimistic (instant bubble + status)
+
+### Batch 6: Layout consistency (commit 42f01de)
+- 6 missing error.tsx created
+- Duplicate export buttons removed (3 pages)
+- Double-wrapping Cards removed (2 pages)
+
+---
 ## Session 25 — 2026-07-04: Deep Audit Fixup (5 phases)
 
 6-stream parallel audit (API, data, frontend, security, integrations,

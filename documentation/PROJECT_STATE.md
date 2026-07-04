@@ -3,7 +3,7 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-04 (Session 25 complete — deep audit fixup, all 5 phases)
+**Last updated:** 2026-07-04 (Session 26 complete — UI/UX deep polish, 6 batches)
 **Main HEAD:** `779e1c9`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
@@ -208,6 +208,40 @@ client-side validation, 6 export routes + 2 backup routes got audit logging.
 **Stats:** 1197 tests pass | 0 skip | 0 fail. tsc + eslint clean. 104 API
 routes (+1: /api/settings/reset). New: lib/ai/redact.ts, lib/auth/constant-time.ts.
 
+---
+
+## Session 26 — 2026-07-04: UI/UX Deep Polish (4-stream audit, 6 fix batches)
+
+A 4-stream parallel UI/UX audit (visual system, page-by-page, interactions,
+a11y/responsive/RTL) identified 142 findings. 6 batches executed:
+
+**Batch 1-2 — Design system fixes:** light-mode muted-foreground contrast
+fixed (3.5:1→5.2:1 WCAG AA), chart palette rotated away from emerald (was
+indistinguishable from primary), --info moved to blue, success/warning/info-
+foreground tokens added, border-whisper visible in light mode, focus-visible
+no longer forces border-radius, skeleton bg-accent→bg-muted (was green in
+dark), themeColor teal→emerald, 10 shadcn primitives migrated to design-
+system shadows.
+
+**Batch 3 — i18n sweep:** 70+ keys added to all 3 locales for confirmation-
+queue, COD reconciliation, analytics charts, refund dialog, condition
+builder, DataTable primitives. Dead `t()||""` pattern removed from refund
+dialog. DataTable bulk bar/density/pagination i18n'd.
+
+**Batch 4 — Accessibility:** 6 chart components got role=img + aria-label,
+inbox + AI chat message containers got role=log + aria-live=polite, topbar
+avatar button got aria-label.
+
+**Batch 5 — Interaction polish:** customer + product form dialogs got
+toast.success (were silent), order-form-dialog guarded against mid-submit
+close, inbox message send now optimistic (instant bubble + sending→sent→
+failed status).
+
+**Batch 6 — Layout consistency:** 6 missing error.tsx created, duplicate
+export buttons removed (3 pages), double-wrapping Cards removed (2 pages).
+
+**Stats:** 1197 tests pass | 0 skip | 0 fail. tsc + eslint clean.
+
 ## ✅ Done (all sessions)
 
 ### Foundation (sessions 1-7)
@@ -303,6 +337,6 @@ routes (+1: /api/settings/reset). New: lib/ai/redact.ts, lib/auth/constant-time.
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `18e201e` | v4.0.0 + Session 25 (audit fixup). sf-verify green. 1197 tests, 0 skip. 88.8% coverage. |
+| `main` | `42f01de` | v4.0.0 + Session 26 (UI/UX polish). sf-verify green. 1197 tests, 0 skip. 88.8% coverage. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
 | `agent-handoff` | (orphan) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (8 tools) |
