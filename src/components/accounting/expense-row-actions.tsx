@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
+import { mutatePrefix } from "@/lib/swr/mutate";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { RowActions } from "@/components/shared/row-actions";
@@ -37,27 +38,23 @@ interface ExpenseRowActionsProps {
  */
 export function ExpenseRowActions({ expense }: ExpenseRowActionsProps) {
   const { t } = useI18n();
-  const router = useRouter();
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const deleteExpense = useUndoableDelete({
+    deleteUrl: (id) => `/api/expenses/${id}`,
+    restoreUrl: (id) => `/api/expenses/${id}/restore`,
+    entityLabel: t("accounting.expense") || "Expense",
+    onAfter: () => mutatePrefix("/api/expenses"),
+  });
+
   async function confirmDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/expenses/${expense.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(data?.error ?? `Request failed (${res.status})`);
-      }
-      toast.success(t("accounting.expenseDeleted"));
       setDeleteOpen(false);
-      router.refresh();
+      await deleteExpense(expense.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {

@@ -38,7 +38,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const range = parseMonthFilter(monthParam);
 
   const expenses = await db.expense.findMany({
-    where: range ? { date: { gte: range.gte, lt: range.lt } } : undefined,
+    where: {
+      deletedAt: null,
+      ...(range ? { date: { gte: range.gte, lt: range.lt } } : {}),
+    },
     orderBy: { date: "desc" },
     take: 100,
   });

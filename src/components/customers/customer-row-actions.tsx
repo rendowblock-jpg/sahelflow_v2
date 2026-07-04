@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
+import { mutatePrefix } from "@/lib/swr/mutate";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { RowActions } from "@/components/shared/row-actions";
@@ -37,27 +38,23 @@ interface CustomerRowActionsProps {
  */
 export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
   const { t } = useI18n();
-  const router = useRouter();
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const deleteCustomer = useUndoableDelete({
+    deleteUrl: (id) => `/api/customers/${id}`,
+    restoreUrl: (id) => `/api/customers/${id}/restore`,
+    entityLabel: t("customers.customer") || "Customer",
+    onAfter: () => mutatePrefix("/api/customers"),
+  });
+
   async function confirmDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/customers/${customer.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(data?.error ?? `Request failed (${res.status})`);
-      }
-      toast.success(t("customers.customerDeleted"));
       setDeleteOpen(false);
-      router.refresh();
+      await deleteCustomer(customer.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {

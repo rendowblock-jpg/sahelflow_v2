@@ -329,9 +329,11 @@ model Expense {
   date      DateTime
   notes     String?
   createdAt DateTime @default(now())
+  deletedAt DateTime?  // soft-delete (for undo support)
 
   @@index([date])
   @@index([category])
+  @@index([deletedAt])
 }
 
 model DailyAnalyticsReport {

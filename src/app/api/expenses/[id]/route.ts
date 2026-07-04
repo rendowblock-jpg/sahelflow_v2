@@ -55,6 +55,7 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   });
   if (!existing) throw new NotFoundError("Expense", id);
 
-  await db.expense.delete({ where: { id } });
+  // Soft-delete (enables undo via /api/expenses/[id]/restore)
+  await db.expense.update({ where: { id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ success: true });
 }, "DELETE /api/expenses/[id]");
