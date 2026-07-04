@@ -64,7 +64,7 @@ export function HorizontalBarChart({
           tickLine={false}
           axisLine={false}
           width={Math.min(maxLabelLen * 7 + 8, 120)}
-          className="text-[11px] fill-muted-foreground"
+          className="text-xs fill-muted-foreground"
           orientation={isRtl ? "right" : "left"}
         />
         <ChartTooltip
@@ -88,7 +88,7 @@ export function HorizontalBarChart({
           <LabelList
             dataKey="value"
             position={isRtl ? "left" : "right"}
-            className="fill-muted-foreground text-[10px] font-medium tabular-nums"
+            className="fill-muted-foreground text-xs font-medium tabular-nums"
             formatter={(v: number) => fmt(v)}
           />
         </Bar>

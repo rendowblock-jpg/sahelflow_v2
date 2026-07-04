@@ -189,7 +189,7 @@ export function OrderEditPanel({
               </div>
               <div className="flex items-center gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">{t("orders.detail.qty")}</Label>
+                  <Label className="text-xs text-muted-foreground">{t("orders.detail.qty")}</Label>
                   <Input
                     type="number"
                     min="1"
@@ -199,7 +199,7 @@ export function OrderEditPanel({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">{t("orders.detail.price")}</Label>
+                  <Label className="text-xs text-muted-foreground">{t("orders.detail.price")}</Label>
                   <Input
                     type="number"
                     min="0"

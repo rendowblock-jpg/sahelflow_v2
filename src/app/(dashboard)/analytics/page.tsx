@@ -248,19 +248,19 @@ export default async function AnalyticsPage({
             />
             <div className="grid w-full grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-lg border p-2">
-                <p className="text-[10px] text-muted-foreground">{t("analytics.delivered")}</p>
+                <p className="text-xs text-muted-foreground">{t("analytics.delivered")}</p>
                 <p className="text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{dp.delivered}</p>
               </div>
               <div className="rounded-lg border p-2">
-                <p className="text-[10px] text-muted-foreground">{t("analytics.inTransit")}</p>
+                <p className="text-xs text-muted-foreground">{t("analytics.inTransit")}</p>
                 <p className="text-base font-bold tabular-nums">{dp.inTransit}</p>
               </div>
               <div className="rounded-lg border p-2">
-                <p className="text-[10px] text-muted-foreground">{t("dashboard.pending")}</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.pending")}</p>
                 <p className="text-base font-bold tabular-nums">{dp.pending}</p>
               </div>
               <div className="rounded-lg border p-2">
-                <p className="text-[10px] text-muted-foreground">{t("analytics.returned")}</p>
+                <p className="text-xs text-muted-foreground">{t("analytics.returned")}</p>
                 <p className="text-base font-bold tabular-nums text-red-600 dark:text-red-400">{dp.returned}</p>
               </div>
             </div>

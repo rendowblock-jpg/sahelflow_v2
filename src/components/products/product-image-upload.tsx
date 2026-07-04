@@ -172,7 +172,7 @@ export function ProductImageUpload({
               loading="lazy"
             />
             {idx === 0 && (
-              <span className="absolute start-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+              <span className="absolute start-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-xs font-medium text-primary-foreground">
                 {t("products.imagePrimary")}
               </span>
             )}
@@ -204,7 +204,7 @@ export function ProductImageUpload({
             ) : (
               <>
                 <Plus className="h-4 w-4" />
-                <span className="text-center text-[10px] font-medium leading-tight">
+                <span className="text-center text-xs font-medium leading-tight">
                   {t("products.addImage")}
                 </span>
               </>
