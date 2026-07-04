@@ -678,15 +678,26 @@ registerTool({
           error: `Impossible d'annuler une commande avec le statut "${order.status}". Seules les commandes en brouillon ou confirmées peuvent être annulées.`,
         };
       }
+      // Route through orderService.updateStatus to enforce the state machine
+      // and restore stock (D-002). Raw db.order.update bypasses all invariants.
+      const { orderService } = await import("@/lib/data/order-service");
+      await orderService.updateStatus({ prisma: db }, order.id, "cancelled");
+
+      // Append the cancellation reason as a note (separate from status update
+      // so the state machine isn't bypassed by a second raw write).
       const cancellationNote = input.reason
         ? `[Annulée: ${input.reason}]`
         : "[Annulée]";
       const newNotes = order.notes
         ? `${order.notes}\n${cancellationNote}`
         : cancellationNote;
-      const updated = await db.order.update({
+      await db.order.update({
         where: { id: order.id },
-        data: { status: "cancelled", notes: newNotes },
+        data: { notes: newNotes },
+        select: { id: true },
+      });
+      const updated = await db.order.findUnique({
+        where: { id: order.id },
         select: { id: true, orderNumber: true, status: true },
       });
       return { success: true, data: updated };

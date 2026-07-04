@@ -50,7 +50,7 @@ const STRINGS: Record<Locale, { title: string; message: string; retry: string; r
 
 function detectLocale(): Locale {
   if (typeof document !== "undefined") {
-    const match = document.cookie.match(/sf_locale=(en|fr|ar)\b/);
+    const match = document.cookie.match(/sahelflow-locale=(en|fr|ar)\b/);
     if (match) return match[1] as Locale;
     const nav = navigator.language.toLowerCase();
     if (nav.startsWith("ar")) return "ar";

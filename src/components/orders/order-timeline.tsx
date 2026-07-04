@@ -46,34 +46,38 @@ const ACTION_CONFIG: Record<string, { icon: React.ComponentType<{ className?: st
 
 const DEFAULT_CONFIG = { icon: Hash, color: "text-muted-foreground" };
 
-function formatActionLabel(actionType: string, payload: string | null): string {
+function formatActionLabel(
+  actionType: string,
+  payload: string | null,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
   try {
     const p = payload ? JSON.parse(payload) : {};
     switch (actionType) {
       case "status_change":
-        return `Status changed from ${p.from ?? "?"} to ${p.to ?? "?"}`;
+        return t("orders.timeline.status_change", { from: p.from ?? "?", to: p.to ?? "?" });
       case "item_add":
-        return `Item added: ${p.productName ?? "unknown"}`;
+        return t("orders.timeline.item_add", { productName: p.productName ?? "unknown" });
       case "item_remove":
-        return `Item removed: ${p.productName ?? "unknown"}`;
+        return t("orders.timeline.item_remove", { productName: p.productName ?? "unknown" });
       case "fulfill":
-        return "Fulfillment created";
+        return t("orders.timeline.fulfill");
       case "ship":
-        return "Order shipped";
+        return t("orders.timeline.ship");
       case "deliver":
-        return "Order delivered";
+        return t("orders.timeline.deliver");
       case "return":
-        return "Return requested";
+        return t("orders.timeline.return");
       case "refund":
-        return `Refund: ${p.amount ?? 0} DZD (${p.method ?? "cash"})`;
+        return t("orders.timeline.refund", { amount: p.amount ?? 0, method: p.method ?? "cash" });
       case "cod_collected":
-        return `COD collected: ${p.amount ?? 0} DZD`;
+        return t("orders.timeline.cod_collected", { amount: p.amount ?? 0 });
       case "cod_remitted":
-        return `COD remitted (ref: ${p.remittanceRef ?? "—"})`;
+        return t("orders.timeline.cod_remitted", { remittanceRef: p.remittanceRef ?? "—" });
       case "edit":
-        return "Order edited";
+        return t("orders.timeline.edit");
       case "cancel":
-        return "Order cancelled";
+        return t("orders.timeline.cancel");
       default:
         return actionType.replace(/_/g, " ");
     }
@@ -83,7 +87,7 @@ function formatActionLabel(actionType: string, payload: string | null): string {
 }
 
 export function OrderTimeline({ entries }: OrderTimelineProps) {
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
 
   if (entries.length === 0) {
     return (
@@ -113,7 +117,7 @@ export function OrderTimeline({ entries }: OrderTimelineProps) {
 
             {/* Content */}
             <div className={cn("flex-1 pb-4", isLast && "pb-0")}>
-              <p className="text-sm font-medium">{formatActionLabel(entry.actionType, entry.payload)}</p>
+              <p className="text-sm font-medium">{formatActionLabel(entry.actionType, entry.payload, t)}</p>
               <p className="text-xs text-muted-foreground">
                 {entry.actor} · {formatDate(entry.createdAt, locale)}
               </p>

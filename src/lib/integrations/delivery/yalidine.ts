@@ -49,7 +49,11 @@ function headers(creds: DeliveryCredentials): Record<string, string> {
 /** Map Yalidine's status strings to our normalized DeliveryStatus. */
 function mapStatus(raw: string): DeliveryStatus {
   const s = raw.toLowerCase().trim();
-  if (s.includes("livré") || s === "delivered") return "delivered";
+  // CRITICAL: "Livré" (delivered) vs "Non livré" (not delivered) — must
+  // check "non livré" BEFORE "livré" to avoid false-positive delivered.
+  if (s.includes("non livré") || s.includes("non livre")) return "failed";
+  if (s === "livré" || s === "delivered" || s.includes("livré (")) return "delivered";
+  // "Retour définitif" / "Retour" → returned
   if (s.includes("retour") || s === "returned") return "returned";
   if (s.includes("refus") || s === "refused") return "refused";
   if (s.includes("échec") || s.includes("echec") || s === "failed") return "failed";

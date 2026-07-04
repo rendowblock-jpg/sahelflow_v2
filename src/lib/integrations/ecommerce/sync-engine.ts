@@ -145,19 +145,19 @@ class AlreadySyncedError extends Error {
  * Dedup: if an Order with the same sourceOrderId (in sourceMetadata) exists, skip.
  */
 async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
-  // Dedup check: look for an order with this sourceOrderId in sourceMetadata.
-  // Since sourceMetadata is a JSON string, we search by contains (the sourceOrderId
-  // is a unique enough substring). This is a pragmatic approach for SQLite.
+  // Dedup: use the dedicated sourceOrderId column (backed by a unique
+  // constraint on [source, sourceOrderId]). The unique constraint makes this
+  // race-safe — concurrent syncs that pass the findUnique check will fail at
+  // create() with P2002, which we catch below.
   const sourceOrderId = normalized.sourceOrderId;
-  const existing = await db.order.findFirst({
-    where: {
-      source: normalized.source,
-      sourceMetadata: { contains: sourceOrderId },
-    },
-    select: { id: true },
-  });
-  if (existing) {
-    throw new AlreadySyncedError();
+  if (sourceOrderId) {
+    const existing = await db.order.findUnique({
+      where: { source_sourceOrderId: { source: normalized.source, sourceOrderId } },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new AlreadySyncedError();
+    }
   }
 
   // Find-or-create the customer by phone (blind index lookup via the extension).
@@ -207,6 +207,7 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
     // a blind index, would produce a double-HMAC.)
     phone: customerPhone,
     source: normalized.source,
+    sourceOrderId: sourceOrderId ?? null,
     sourceMetadata: JSON.stringify(normalized.sourceMetadata),
     notes: null,
     items: {

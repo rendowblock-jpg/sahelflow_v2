@@ -270,7 +270,7 @@ async function executeSendWhatsapp(
     // Check if the WhatsApp sidecar is running
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch("http://127.0.0.1:3001/health", {
+    const res = await fetch("http://127.0.0.1:3001/status", {
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));
 
@@ -278,8 +278,10 @@ async function executeSendWhatsapp(
       return { status: "skipped", message: "WhatsApp sidecar not healthy" };
     }
 
-    const health = (await res.json()) as { connected?: boolean };
-    if (!health.connected) {
+    const health = (await res.json()) as { status?: string; connected?: boolean };
+    // /status returns { status: "connected"|"connecting"|"disconnected", ... }
+    const isConnected = health.connected ?? health.status === "connected";
+    if (!isConnected) {
       return { status: "skipped", message: "WhatsApp not connected (scan QR code)" };
     }
 
@@ -346,25 +348,25 @@ async function executeUpdateStatus(
   if (!targetStatus) {
     return { status: "skipped", message: "No targetStatus in config" };
   }
-
-  // Use raw update to avoid circular dependency with orderService
-  const order = await db.order.findUnique({
-    where: { id: payload.orderId },
-    select: { status: true },
-  });
-
-  if (!order) {
-    return { status: "skipped", message: "Order not found" };
+  // Validate the target status is a real OrderStatus (config is JSON from DB)
+  const VALID_STATUSES = ["draft", "pending", "confirmed", "shipped", "delivered", "returned", "refused", "cancelled", "failed"] as const;
+  if (!VALID_STATUSES.includes(targetStatus as typeof VALID_STATUSES[number])) {
+    return { status: "skipped", message: `Invalid target status: ${targetStatus}` };
   }
 
-  if (order.status === targetStatus) {
-    return { status: "skipped", message: "Already at target status" };
+  // Route through orderService.updateStatus to enforce the state machine,
+  // adjust stock, update customer stats, set timestamps, and fire triggers.
+  // Dynamic import avoids a circular module-eval dependency (engine ← order-service ← engine).
+  const { orderService } = await import("@/lib/data/order-service");
+  try {
+    await orderService.updateStatus({ prisma: db }, payload.orderId, targetStatus as import("@/types/domain").OrderStatus);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("transition") || msg.includes("Not Found")) {
+      return { status: "skipped", message: `Cannot transition to ${targetStatus}: ${msg}` };
+    }
+    return { status: "failed", message: `Status update failed: ${msg}` };
   }
-
-  await db.order.update({
-    where: { id: payload.orderId },
-    data: { status: targetStatus },
-  });
 
   return { status: "success", message: `Order ${payload.orderNumber} → ${targetStatus}` };
 }

@@ -104,6 +104,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     where: {
       id: { in: input.items.map((i) => i.productId) },
       isActive: true,
+      deletedAt: null,
     },
   });
   const productMap = new Map(products.map((p) => [p.id, p]));

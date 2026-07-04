@@ -146,6 +146,7 @@ model Order {
   phone           String
   phoneBlindIndex String?     // SEC-009: HMAC blind index for exact-match phone search
   source          String      @default("whatsapp")
+  sourceOrderId   String?     // External ID (Shopify order #, YouCan ref, etc.) for dedup
   sourceMetadata  String?
   notes           String?
   confirmedAt     DateTime?
@@ -160,6 +161,7 @@ model Order {
   reservations    ReservationItem[]
 
   @@unique([orderNumber])
+  @@unique([source, sourceOrderId])
   @@index([status])
   @@index([source])
   @@index([createdAt])
@@ -218,6 +220,8 @@ model Delivery {
 
   @@index([status])
   @@index([provider])
+  @@index([trackingNumber])
+  @@index([createdAt])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
 
@@ -298,6 +302,7 @@ model Return {
 
   @@index([orderId])
   @@index([status])
+  @@index([createdAt])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
 

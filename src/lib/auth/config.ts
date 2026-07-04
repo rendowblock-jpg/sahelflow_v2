@@ -41,6 +41,7 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
 export const PUBLIC_PAGES: readonly string[] = [
   "/login",
   "/setup",
+  "/storefront",
 ];
 
 /**
