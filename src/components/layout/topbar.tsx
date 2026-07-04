@@ -172,7 +172,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
         >
           <Search className="size-3.5 shrink-0" />
           <span className="flex-1 text-start truncate">{t("topbar.searchPlaceholder")}</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-xs font-medium text-muted-foreground">
             <Command className="size-2.5" />K
           </kbd>
         </button>
@@ -183,7 +183,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
         {/* Live indicator — hidden on mobile */}
         <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5">
           <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
-          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">{t("common.live")}</span>
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t("common.live")}</span>
         </div>
 
         <Separator orientation="vertical" className="mx-1 h-5 hidden md:block" />
@@ -236,7 +236,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
             <DropdownMenuLabel className="flex items-center justify-between">
               <span>{t("common.notifications")}</span>
               {unreadCount > 0 && (
-                <Badge variant="secondary" className="text-[10px] px-1.5">
+                <Badge variant="secondary" className="text-xs px-1.5">
                   {t("topbar.newNotifications", { n: String(unreadCount) })}
                 </Badge>
               )}
@@ -296,7 +296,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="rounded-full ms-0.5">
               <Avatar className="size-7 ring-1 ring-border">
-                <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                   {activeShop?.name.charAt(0).toUpperCase() ?? "S"}
                 </AvatarFallback>
               </Avatar>

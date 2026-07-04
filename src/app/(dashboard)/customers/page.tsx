@@ -132,7 +132,7 @@ export default async function CustomersPage() {
                         <span className="flex items-center gap-1.5">
                           {customer.name}
                           {customer.isBlacklisted && (
-                            <Badge variant="destructive" className="gap-1 text-[10px] px-1.5 py-0">
+                            <Badge variant="destructive" className="gap-1 text-xs px-1.5 py-0">
                               <Ban className="h-3 w-3" />
                               {t("customers.blacklisted")}
                             </Badge>

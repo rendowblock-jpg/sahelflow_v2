@@ -158,7 +158,7 @@ export function StatCard({
               <Sparkline data={spark} color={sparkColor} height={32} />
             </div>
           )}
-          <div className="flex w-full items-center justify-between gap-2 text-[13px]">
+          <div className="flex w-full items-center justify-between gap-2 text-sm">
             {trendLabel && (
               <span className="line-clamp-1 font-medium text-foreground/80">{trendLabel}</span>
             )}
@@ -169,7 +169,7 @@ export function StatCard({
               <Badge
                 variant="outline"
                 className={cn(
-                  "gap-0.5 rounded-full px-1.5 py-0 text-[11px] font-medium shrink-0",
+                  "gap-0.5 rounded-full px-1.5 py-0 text-xs font-medium shrink-0",
                   isPositive
                     ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
                     : "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400",

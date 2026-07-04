@@ -195,17 +195,17 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg border p-3">
-                <p className="text-[11px] text-muted-foreground">{t("customers.delivered")}</p>
+                <p className="text-xs text-muted-foreground">{t("customers.delivered")}</p>
                 <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{stats.deliveredCount}</p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-[11px] text-muted-foreground">{t("customers.returned")}</p>
+                <p className="text-xs text-muted-foreground">{t("customers.returned")}</p>
                 <p className="text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{stats.returnedCount}</p>
               </div>
             </div>
             {stats.firstOrderDate && (
               <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-[11px] text-muted-foreground">{t("customers.firstOrder")}</p>
+                <p className="text-xs text-muted-foreground">{t("customers.firstOrder")}</p>
                 <p className="text-sm font-medium">{formatDate(stats.firstOrderDate, locale)}</p>
               </div>
             )}

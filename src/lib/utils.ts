@@ -57,6 +57,50 @@ export function formatDate(date: Date | string, locale: "ar" | "fr" | "en" = "fr
   }).format(d);
 }
 
+/** Format a date with time — locale-aware. */
+export function formatDateTime(date: Date | string, locale: "ar" | "fr" | "en" = "fr"): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const localeMap = { ar: "ar-DZ", fr: "fr-DZ", en: "en-GB" } as const;
+  return new Intl.DateTimeFormat(localeMap[locale], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+/** Format a relative time ("2h ago", "3d ago") — locale-aware. */
+export function formatRelative(date: Date | string, locale: "ar" | "fr" | "en" = "fr"): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const diff = Date.now() - d.getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (locale === "ar") {
+    if (seconds < 60) return "الآن";
+    if (minutes < 60) return `منذ ${minutes} دقيقة`;
+    if (hours < 24) return `منذ ${hours} ساعة`;
+    if (days < 30) return `منذ ${days} يوم`;
+    return formatDate(d, locale);
+  }
+  if (locale === "fr") {
+    if (seconds < 60) return "à l'instant";
+    if (minutes < 60) return `il y a ${minutes} min`;
+    if (hours < 24) return `il y a ${hours} h`;
+    if (days < 30) return `il y a ${days} j`;
+    return formatDate(d, locale);
+  }
+  // en
+  if (seconds < 60) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 30) return `${days}d ago`;
+  return formatDate(d, locale);
+}
+
 /** Generate human-readable order number: ORD-0001, ORD-0002, ... */
 export function generateOrderNumber(sequence: number): string {
   return `ORD-${String(sequence).padStart(4, "0")}`;

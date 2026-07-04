@@ -470,7 +470,7 @@ export function InboxLive() {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
-                            <p className={`text-[10px] mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
+                            <p className={`text-xs mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
                               {new Date(msg.timestamp).toLocaleTimeString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>

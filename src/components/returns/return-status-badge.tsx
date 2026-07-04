@@ -102,7 +102,7 @@ export function ReturnStatusBadge({
             style.bg,
             style.text,
             style.border,
-            size === "sm" && "text-[11px] px-1.5 py-0",
+            size === "sm" && "text-xs px-1.5 py-0",
             (disabled || isPending || !hasTransitions) && "opacity-70 cursor-not-allowed",
             !disabled && hasTransitions && "hover:bg-muted/50 cursor-pointer",
           )}

@@ -294,7 +294,7 @@ export function IntegrationsPanel({
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-sm">{integration.name}</p>
                             {integration.connected && (
-                              <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] px-1.5">
+                              <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs px-1.5">
                                 <CheckCircle2 className="me-1 h-3 w-3" />
                                 {t("integrations.connected")}
                               </Badge>

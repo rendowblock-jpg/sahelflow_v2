@@ -137,7 +137,7 @@ export function OrderStatusBadge({
             disabled={disabled || isPending}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border border-dashed px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors",
-              size === "sm" && "text-[11px] px-1.5 py-0",
+              size === "sm" && "text-xs px-1.5 py-0",
               disabled && "opacity-50 cursor-not-allowed",
             )}
           >
@@ -178,7 +178,7 @@ export function OrderStatusBadge({
             style?.bg,
             style?.text,
             style?.border,
-            size === "sm" && "text-[11px] px-1.5 py-0",
+            size === "sm" && "text-xs px-1.5 py-0",
             disabled && "opacity-50 cursor-not-allowed",
             !disabled && "cursor-pointer",
           )}

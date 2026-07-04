@@ -226,7 +226,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                       <Icon className="me-3 h-4 w-4 text-muted-foreground" />
                       <span>{item.label}</span>
                       {item.shortcut && (
-                        <kbd className="ms-auto rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        <kbd className="ms-auto rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
                           {item.shortcut}
                         </kbd>
                       )}
@@ -236,7 +236,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
               </CommandGroup>
             ))}
           </CommandList>
-          <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-[10px] text-muted-foreground">
+          <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
             <span>{t("command.navigate")}</span>
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ms-2">↵</kbd>

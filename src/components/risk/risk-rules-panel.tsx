@@ -68,7 +68,7 @@ export function RiskRulesPanel({ rules: initialRules }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium truncate">{t(rule.labelKey)}</span>
-                    <Badge variant={rule.enabled ? "default" : "secondary"} className="text-[10px]">
+                    <Badge variant={rule.enabled ? "default" : "secondary"} className="text-xs">
                       {rule.enabled ? t("risk.rules.enabled") : t("risk.rules.disabled")}
                     </Badge>
                   </div>

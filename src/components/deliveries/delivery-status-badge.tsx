@@ -95,7 +95,7 @@ export function DeliveryStatusBadge({
             style.bg,
             style.text,
             style.border,
-            size === "sm" && "text-[11px] px-1.5 py-0",
+            size === "sm" && "text-xs px-1.5 py-0",
             (disabled || isPending) && "opacity-70 cursor-not-allowed",
             !disabled && "hover:bg-muted/50 cursor-pointer",
           )}
