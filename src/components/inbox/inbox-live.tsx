@@ -464,7 +464,7 @@ export function InboxLive() {
               </div>
 
               <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4 max-w-3xl mx-auto">
+                <div className="space-y-4 max-w-3xl mx-auto" role="log" aria-live="polite" aria-label={t("inbox.messages") || "Messages"}>
                   {loadingMessages ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

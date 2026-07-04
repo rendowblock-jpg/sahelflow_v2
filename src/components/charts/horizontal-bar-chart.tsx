@@ -50,7 +50,7 @@ export function HorizontalBarChart({
   const maxLabelLen = Math.max(...data.map((d) => d.label.length), 4);
 
   return (
-    <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
+    <ChartContainer role="img" aria-label="Horizontal bar chart" config={config} style={{ height }} className="aspect-auto w-full">
       <BarChart
         data={data}
         layout="vertical"

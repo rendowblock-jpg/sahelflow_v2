@@ -399,7 +399,7 @@ export function AiChat() {
               </Badge>
             </div>
 
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4" aria-label="AI chat messages" role="log" aria-live="polite">
               <div className="space-y-4 max-w-3xl mx-auto">
                 {loadingMessages ? (
                   <div className="flex items-center justify-center py-8">

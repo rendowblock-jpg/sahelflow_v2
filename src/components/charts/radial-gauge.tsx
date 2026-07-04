@@ -34,7 +34,7 @@ export function RadialGauge({
 
   return (
     <div className="relative" style={{ height }}>
-      <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
+      <ChartContainer role="img" aria-label="Radial gauge" config={config} style={{ height }} className="aspect-auto w-full">
         <RadialBarChart
           data={data}
           startAngle={90}

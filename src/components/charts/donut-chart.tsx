@@ -47,7 +47,7 @@ export function DonutChart({
 
   return (
     <div className="relative" style={{ height }}>
-      <ChartContainer config={config} style={{ height }} className="w-full">
+      <ChartContainer role="img" aria-label="Donut chart" config={config} style={{ height }} className="w-full">
         <PieChart>
           <ChartTooltip
             content={

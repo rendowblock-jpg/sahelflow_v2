@@ -294,7 +294,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="rounded-full ms-0.5">
+            <Button variant="ghost" size="icon-sm" className="rounded-full ms-0.5" aria-label={t("common.openMenu") || "Open menu"}>
               <Avatar className="size-7 ring-1 ring-border">
                 <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                   {activeShop?.name.charAt(0).toUpperCase() ?? "S"}

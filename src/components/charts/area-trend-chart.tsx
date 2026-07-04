@@ -62,7 +62,7 @@ export function AreaTrendChart({
   }
 
   return (
-    <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
+    <ChartContainer role="img" aria-label="Area trend chart" config={config} style={{ height }} className="aspect-auto w-full">
       <AreaChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
         <defs>
           {series.map((s) => (

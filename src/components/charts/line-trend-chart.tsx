@@ -56,7 +56,7 @@ export function LineTrendChart({
     );
   }
   return (
-    <ChartContainer config={config} style={{ height }} className="aspect-auto w-full">
+    <ChartContainer role="img" aria-label="Line trend chart" config={config} style={{ height }} className="aspect-auto w-full">
       <LineChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
