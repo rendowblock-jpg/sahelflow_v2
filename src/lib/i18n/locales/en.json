@@ -2240,5 +2240,7 @@
   "settings.tabs.profile": "Profile",
   "settings.tabs.appearance": "Appearance",
   "settings.tabs.phoneReputation": "Phone Reputation",
-  "settings.tabs.dangerZone": "Danger Zone"
+  "settings.tabs.dangerZone": "Danger Zone",
+  "nav.confirmationQueue": "Confirmation Queue",
+  "nav.codReconciliation": "COD Reconciliation"
 }

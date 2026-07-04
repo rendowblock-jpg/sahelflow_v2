@@ -8,6 +8,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
+import { MessageStatus } from "@/components/inbox/message-status";
+import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { BellOff, ChevronDown } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
@@ -445,9 +455,12 @@ export function InboxLive() {
                     <p className="text-xs text-muted-foreground font-mono">{activeChat.phone}</p>
                   </div>
                 </div>
-                <Badge variant="outline">
-                  {activeChat.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {activeChat.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
+                  </Badge>
+                  <ConversationStatusDropdown chatId={activeChat.id} />
+                </div>
               </div>
 
               <ScrollArea className="flex-1 p-4">
@@ -470,9 +483,12 @@ export function InboxLive() {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
-                            <p className={`text-xs mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
-                              {new Date(msg.timestamp).toLocaleTimeString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                            </p>
+                            <div className={`flex items-center gap-1 mt-1 ${msg.direction === "inbound" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>
+                              <p className="text-xs">
+                                {new Date(msg.timestamp).toLocaleTimeString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                              {msg.direction === "outbound" && <MessageStatus status="sent" />}
+                            </div>
                           </div>
                         </div>
                         {msg.direction === "inbound" && msg.body.length > 10 && (
@@ -563,6 +579,66 @@ export function InboxLive() {
         onConfirm={performLogout}
       />
     </>
+  );
+}
+
+/**
+ * ConversationStatusDropdown — resolve/snooze/reopen a conversation (Phase 5).
+ * Calls PATCH /api/conversations/[id]/status.
+ */
+function ConversationStatusDropdown({ chatId }: { chatId: string }) {
+  const [status, setStatus] = useState<"open" | "pending" | "resolved" | "snoozed">("open");
+
+  // Fetch the conversation status on mount (best-effort — if the chat isn't
+  // in the DB yet, it defaults to "open")
+  useEffect(() => {
+    fetch(`/api/conversations/${chatId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.conversation?.status) setStatus(d.conversation.status); })
+      .catch(() => {});
+  }, [chatId]);
+
+  const updateStatus = async (newStatus: "open" | "pending" | "resolved" | "snoozed") => {
+    setStatus(newStatus);
+    try {
+      await fetch(`/api/conversations/${chatId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch {
+      // best-effort
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors">
+          <ConversationStatusBadge status={status} />
+          <ChevronDown className="h-3 w-3 opacity-50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => updateStatus("open")}>
+          <CheckCircle2 className="me-2 h-4 w-4 text-blue-500" />
+          Open
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => updateStatus("pending")}>
+          <Clock className="me-2 h-4 w-4 text-amber-500" />
+          Pending
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => updateStatus("resolved")}>
+          <CheckCircle2 className="me-2 h-4 w-4 text-emerald-500" />
+          Resolve
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => updateStatus("snoozed")}>
+          <BellOff className="me-2 h-4 w-4 text-muted-foreground" />
+          Snooze
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

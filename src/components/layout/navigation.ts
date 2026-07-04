@@ -20,6 +20,8 @@ import {
   UserCircle,
   ShieldAlert,
   Zap,
+  Clock,
+  DollarSign,
 } from "lucide-react";
 
 export interface NavItem {
@@ -38,6 +40,7 @@ export const navItems: NavItem[] = [
   { labelKey: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard, group: "operations" },
   { labelKey: "nav.inbox", href: "/inbox", icon: MessageSquare, group: "operations" },
   { labelKey: "nav.orders", href: "/orders", icon: ShoppingCart, group: "operations" },
+  { labelKey: "nav.confirmationQueue", href: "/orders/confirmation-queue", icon: Clock, group: "operations" },
   { labelKey: "nav.customers", href: "/customers", icon: Users, group: "operations" },
   { labelKey: "nav.products", href: "/products", icon: Package, group: "operations" },
   { labelKey: "nav.delivery", href: "/deliveries", icon: Truck, group: "operations" },
@@ -47,6 +50,7 @@ export const navItems: NavItem[] = [
   { labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, group: "insights" },
   { labelKey: "nav.risk", href: "/risk", icon: ShieldAlert, group: "insights" },
   { labelKey: "nav.accounting", href: "/accounting", icon: Calculator, group: "insights" },
+  { labelKey: "nav.codReconciliation", href: "/accounting/cod-reconciliation", icon: DollarSign, group: "insights" },
 
   // Administration
   { labelKey: "nav.agents", href: "/agents", icon: Bot, group: "administration" },

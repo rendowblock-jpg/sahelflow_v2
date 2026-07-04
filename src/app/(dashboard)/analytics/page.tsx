@@ -1,4 +1,8 @@
 import { getAnalyticsReport } from "@/lib/data/analytics-data";
+import { getReturnRateByWilaya, getSkuPnl, getPeriodComparison, getLastNDays, getPreviousPeriod } from "@/lib/data/analytics-v2";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUp, ArrowDown, Minus, RotateCcw, DollarSign, TrendingDown } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import { getI18n } from "@/lib/i18n-server";
 import { STATUS_CHART_COLORS, statusI18nKey } from "@/lib/shared/status-colors";
@@ -42,6 +46,26 @@ export default async function AnalyticsPage({
   const validDays = [7, 14, 30, 90].includes(days) ? days : 30;
 
   const report = await getAnalyticsReport(validDays);
+
+  // Phase 7: advanced analytics (return-rate, SKU P&L, period comparison)
+  const range = getLastNDays(validDays);
+  const prevRange = getPreviousPeriod(range);
+  const [returnRateByWilaya, skuPnl, comparison] = await Promise.all([
+    getReturnRateByWilaya(range),
+    getSkuPnl(range),
+    getPeriodComparison(range, prevRange),
+  ]);
+
+  // Format return-rate data for the horizontal bar chart
+  const returnRateData: HBarDatum[] = returnRateByWilaya.slice(0, 10).map((w) => ({
+    key: w.wilaya,
+    label: w.wilaya.length > 15 ? w.wilaya.slice(0, 14) + "…" : w.wilaya,
+    value: Math.round(w.returnRate * 10) / 10,
+    color: w.returnRate > 30 ? "var(--color-chart-4)" : w.returnRate > 15 ? "var(--color-chart-3)" : "var(--color-chart-2)",
+  }));
+  const returnRateConfig: ChartConfig = {
+    value: { label: "Return rate %", color: "var(--color-chart-4)" },
+  };
   const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
   const fmtShortDate = (iso: string) =>
     new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
@@ -374,6 +398,117 @@ export default async function AnalyticsPage({
           />
         </ChartCard>
       </div>
+
+      {/* ── Phase 7: Return rate by wilaya (the killer COD metric) ── */}
+      <ChartCard
+        title="Return Rate by Wilaya"
+        description="The #1 COD metric. Industry avg 25-40%, top performers 8-15%."
+        icon={<RotateCcw />}
+        accent="bg-red-500/10 dark:bg-red-500/15"
+        config={returnRateConfig}
+        height={300}
+      >
+        {returnRateData.length > 0 ? (
+          <HorizontalBarChart
+            data={returnRateData}
+            config={returnRateConfig}
+            height={300}
+            formatValue="number"
+          />
+        ) : (
+          <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+            No return data for this period
+          </div>
+        )}
+      </ChartCard>
+
+      {/* ── Phase 7: Period comparison ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <TrendingDown className="h-4 w-4" />
+            Period Comparison (vs previous {validDays} days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: "Orders", current: comparison.current.orders, change: comparison.changes.orders },
+              { label: "Revenue", current: comparison.current.revenue, change: comparison.changes.revenue, format: true },
+              { label: "Delivered", current: comparison.current.delivered, change: comparison.changes.delivered },
+              { label: "Return Rate", current: comparison.current.returnRate, change: comparison.changes.returnRate, suffix: "%" },
+            ].map((stat) => {
+              const isPositive = stat.label === "Return Rate" ? stat.change < 0 : stat.change > 0;
+              const Icon = stat.change > 0 ? ArrowUp : stat.change < 0 ? ArrowDown : Minus;
+              return (
+                <div key={stat.label} className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  <p className="text-xl font-bold tabular-nums">
+                    {stat.format ? formatDZD(stat.current) : `${stat.current}${stat.suffix ?? ""}`}
+                  </p>
+                  <Badge variant="outline" className={cn(
+                    "gap-1",
+                    isPositive ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "border-red-500/20 text-red-600 dark:text-red-400",
+                    stat.change === 0 && "text-muted-foreground",
+                  )}>
+                    <Icon className="h-3 w-3" />
+                    {Math.abs(stat.change).toFixed(1)}%
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Phase 7: SKU P&L ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <DollarSign className="h-4 w-4" />
+            SKU P&L (Top 10)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {skuPnl.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3 text-start">Product</th>
+                    <th className="px-4 py-3 text-end">Revenue</th>
+                    <th className="px-4 py-3 text-end">Cost</th>
+                    <th className="px-4 py-3 text-end">Margin</th>
+                    <th className="px-4 py-3 text-end">Margin %</th>
+                    <th className="px-4 py-3 text-end">Qty</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {skuPnl.slice(0, 10).map((item) => (
+                    <tr key={item.sku} className="hover:bg-muted/50">
+                      <td className="px-4 py-3 text-sm font-medium">{item.sku}</td>
+                      <td className="px-4 py-3 text-end text-sm tabular-nums">{formatDZD(item.revenue)}</td>
+                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">{formatDZD(item.cost)}</td>
+                      <td className="px-4 py-3 text-end text-sm font-medium tabular-nums">{formatDZD(item.margin)}</td>
+                      <td className="px-4 py-3 text-end">
+                        <Badge variant="outline" className={cn(
+                          item.marginPct > 40 ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "",
+                          item.marginPct < 20 ? "border-red-500/20 text-red-600 dark:text-red-400" : "",
+                        )}>
+                          {item.marginPct.toFixed(1)}%
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">{item.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="p-8 text-center text-sm text-muted-foreground">No product data for this period</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
