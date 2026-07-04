@@ -52,8 +52,11 @@
 
   /* Custom SahelFlow semantic tokens */
   --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-surface-0: var(--surface-0);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -97,14 +100,17 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.52 0 0);
+  --muted-foreground: oklch(0.42 0 0);  /* Was 0.52 — fixed for WCAG AA 4.5:1 */
   --accent: oklch(0.97 0.01 150);
   --accent-foreground: oklch(0.205 0 0);
 
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.65 0.2 145);
+  --success-foreground: oklch(0.985 0 0);
   --warning: oklch(0.75 0.18 80);
-  --info: oklch(0.60 0.18 150);
+  --warning-foreground: oklch(0.18 0 0);  /* warning is light — needs dark text */
+  --info: oklch(0.55 0.18 240);
+  --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue for distinction */
 
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -132,12 +138,13 @@
     0px 4px 16px 0px oklch(0 0 0 / 0.08),
     0px 8px 32px 0px oklch(0 0 0 / 0.04);
 
-  /* Charts */
-  --chart-1: oklch(0.55 0.18 150);
-  --chart-2: oklch(0.65 0.2 145);
-  --chart-3: oklch(0.75 0.18 80);
-  --chart-4: oklch(0.60 0.22 310);
-  --chart-5: oklch(0.70 0.15 60);
+  /* Charts — rotated away from emerald to avoid hue collision with primary.
+     chart-1 = blue, chart-2 = amber, chart-3 = magenta, chart-4 = green, chart-5 = cyan */
+  --chart-1: oklch(0.55 0.20 250);
+  --chart-2: oklch(0.70 0.18 60);
+  --chart-3: oklch(0.60 0.22 310);
+  --chart-4: oklch(0.65 0.18 145);
+  --chart-5: oklch(0.60 0.15 200);
 
   /* Sidebar */
   --sidebar: oklch(0.985 0 0);
@@ -178,8 +185,11 @@
 
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.72 0.19 145);
+  --success-foreground: oklch(0.985 0 0);
   --warning: oklch(0.78 0.16 80);
-  --info: oklch(0.68 0.19 150);
+  --warning-foreground: oklch(0.18 0 0);
+  --info: oklch(0.68 0.19 240);
+  --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue */
 
   /* Borders — slightly more visible for structure */
   --border: oklch(1 0 0 / 10%);
@@ -208,12 +218,12 @@
     0px 4px 16px 0px oklch(0 0 0 / 0.40),
     0px 8px 32px 0px oklch(0 0 0 / 0.20);
 
-  /* Charts */
-  --chart-1: oklch(0.68 0.19 150);
-  --chart-2: oklch(0.72 0.19 145);
-  --chart-3: oklch(0.78 0.16 80);
-  --chart-4: oklch(0.70 0.22 310);
-  --chart-5: oklch(0.75 0.15 60);
+  /* Charts — rotated away from emerald (matches light-mode palette) */
+  --chart-1: oklch(0.68 0.19 250);
+  --chart-2: oklch(0.75 0.16 60);
+  --chart-3: oklch(0.70 0.22 310);
+  --chart-4: oklch(0.72 0.19 145);
+  --chart-5: oklch(0.68 0.15 200);
 
   /* Sidebar — distinct from background for clear separation */
   --sidebar: oklch(0.18 0 0);
@@ -288,7 +298,7 @@
 @layer utilities {
   /* Whisper border — Linear signature */
   .border-whisper {
-    border-color: oklch(1 0 0 / 8%);
+    border-color: oklch(0 0 0 / 8%);  /* Was white-on-white = invisible in light mode */
   }
   .dark .border-whisper {
     border-color: oklch(1 0 0 / 6%);
@@ -890,7 +900,7 @@ td { text-align: inherit; }
 *:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: var(--radius);
+  /* border-radius intentionally NOT set here — let each component keep its own radius */
 }
 
 /* Consistent card hover (subtle elevation) */

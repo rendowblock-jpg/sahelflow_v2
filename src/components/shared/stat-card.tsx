@@ -112,7 +112,7 @@ export function StatCard({
     <Card
       className={cn(
         "@container/card overflow-hidden border shadow-xs transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "hover:shadow-md hover:-translate-y-0.5",
+        "hover:shadow-elevated hover:-translate-y-0.5",
         // Gradient tint — shadcn v4 pattern
         "bg-gradient-to-t from-primary/5 to-card dark:from-primary/10 dark:to-card",
         className,
