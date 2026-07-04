@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/whatsapp/chats?limit=50 — recent chats from the sidecar store. */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const limit = req.nextUrl.searchParams.get("limit") ?? "50";
   try {
     const result = await sidecar.chats(Number(limit));

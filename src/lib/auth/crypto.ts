@@ -85,13 +85,16 @@ export async function createSessionToken(
 
 /**
  * Verify a signed session token. Returns true if valid + not expired.
- * Returns false if the secret is not set (setup mode — allow all).
+ * Returns true if the secret is not set AND the caller has confirmed auth
+ * is not set up (setup mode — allow all). Callers MUST check isAuthSetup()
+ * before relying on this return value — this function alone cannot distinguish
+ * "setup mode" from "secret corrupted/missing".
  */
 export async function verifySessionToken(
   token: string | undefined | null,
   secret: string | undefined,
 ): Promise<boolean> {
-  if (!secret) return true; // setup mode — no secret yet, allow
+  if (!secret) return true; // setup mode — caller must verify via isAuthSetup()
   if (!token) return false;
   const parts = token.split(".");
   if (parts.length !== 2) return false;

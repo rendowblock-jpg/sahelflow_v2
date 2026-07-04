@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toCsv, toXlsx } from "@/lib/import/export";
+import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/export/orders?format=csv|xlsx — download all orders. */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const { t, locale } = await getI18n();
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const orders = await db.order.findMany({

@@ -155,7 +155,12 @@ export async function getSessionToken(): Promise<string | undefined> {
 export const isAuthenticated = cache(async (): Promise<boolean> => {
   const token = await getSessionToken();
   const secret = await getAuthSecret();
-  if (!secret) return true;
+  // Fail-OPEN only when auth is genuinely not set up (no AuthSecret row).
+  // If auth IS set up but the secret is missing/corrupted, fail CLOSED.
+  if (!secret) {
+    const setup = await isAuthSetup();
+    return !setup; // not setup → allow (setup mode); setup but no secret → deny
+  }
   if (!token) return false;
   const { verifySessionToken } = await import("./crypto");
   const hmacValid = await verifySessionToken(token, secret);
@@ -168,7 +173,11 @@ export const isAuthenticated = cache(async (): Promise<boolean> => {
     if (session.revokedAt) return false;
     return true;
   } catch {
-    return true; // DB error — fail-open (HMAC valid, session check is defense-in-depth)
+    // DB error during session revocation check — HMAC is valid, so the token
+    // itself is legitimate. Fail-open here is defense-in-depth (the HMAC is
+    // the primary gate), but revoked sessions may briefly work until the DB
+    // recovers. Acceptable for a local-first single-user app.
+    return true;
   }
 });
 

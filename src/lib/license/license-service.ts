@@ -322,15 +322,33 @@ export async function isLicenseValid(): Promise<boolean> {
     return cachedResult.status === "valid";
   }
 
-  // Wave 2: read the synced validation result from the DB.
-  // The client validates (signature + machine ID + expiry) and syncs the
-  // result via POST /api/license/sync. The server trusts the client's
-  // validation (the signature is cryptographically verified client-side).
+  // Read the synced license BLOB + status from the DB.
+  // SECURITY: we re-verify the license signature server-side (don't trust
+  // the stored status blob — a direct DB write could forge it). The sync
+  // route already re-verifies on sync, but this catches post-sync tampering.
   try {
     const { db } = await import("@/lib/db");
-    const row = await db.setting.findUnique({ where: { key: "active_license_status" } });
-    if (row?.value) {
-      const result = JSON.parse(row.value) as LicenseValidationResult;
+    const [statusRow, payloadRow] = await Promise.all([
+      db.setting.findUnique({ where: { key: "active_license_status" } }),
+      db.setting.findUnique({ where: { key: "active_license_payload" } }),
+    ]);
+
+    if (statusRow?.value && payloadRow?.value) {
+      // Re-verify the license blob against the public key
+      const license = JSON.parse(payloadRow.value) as SignedLicense;
+      const { getMachineId } = await import("./machine-id");
+      const { env } = await import("@/lib/env");
+      const machineId = await getMachineId();
+      const result = await validateLicense(license, machineId, env.appVersion);
+      cachedResult = result;
+      cachedAt = Date.now();
+      return result.status === "valid";
+    }
+
+    // Legacy: only status row exists (pre-fix sync). Trust it once, then
+    // the next sync will migrate to the verified-blob flow.
+    if (statusRow?.value) {
+      const result = JSON.parse(statusRow.value) as LicenseValidationResult;
       cachedResult = result;
       cachedAt = Date.now();
       return result.status === "valid";
@@ -339,7 +357,7 @@ export async function isLicenseValid(): Promise<boolean> {
     // DB not ready — fall through
   }
 
-  // No license synced — fail-closed in production (Wave 2: was fail-open).
+  // No license synced — fail-closed in production.
   return false;
 }
 

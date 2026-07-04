@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listWilayaRisks, seedWilayaRiskProfiles, assessOrderRisk } from "@/lib/wilaya-risk/engine";
+import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/wilaya-risk — list all risk profiles (or assess a single wilaya). */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const wilaya = req.nextUrl.searchParams.get("wilaya");
   const seed = req.nextUrl.searchParams.get("seed");
 

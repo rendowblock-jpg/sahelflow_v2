@@ -12,6 +12,7 @@
  * to Settings → IA.
  */
 import "server-only";
+import { redactToolResult } from "@/lib/ai/redact";
 
 
 import { db } from "@/lib/db";
@@ -193,9 +194,11 @@ export async function runAgent(
         role: "model",
         parts: [{ functionCall: fc }],
       });
+      // Redact PII from tool results before feeding to Gemini (phones, addresses)
+      const redactedResult = redactToolResult(result);
       contents.push({
         role: "user",
-        parts: [{ functionResponse: { name: fc.name, response: { result } } }],
+        parts: [{ functionResponse: { name: fc.name, response: { result: redactedResult } } }],
       });
       continue;
     }
@@ -406,9 +409,11 @@ export async function* runAgentStream(
 
       // Feed the function result back to Gemini for the next iteration
       contents.push({ role: "model", parts: [{ functionCall: fc }] });
+      // Redact PII from tool results before feeding to Gemini (phones, addresses)
+      const redactedResult = redactToolResult(result);
       contents.push({
         role: "user",
-        parts: [{ functionResponse: { name: fc.name, response: { result } } }],
+        parts: [{ functionResponse: { name: fc.name, response: { result: redactedResult } } }],
       });
       continue;
     }

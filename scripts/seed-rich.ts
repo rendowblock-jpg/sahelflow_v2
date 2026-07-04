@@ -35,8 +35,19 @@ import { hashPin } from "@/lib/auth/crypto";
 import { existsSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
-const SEED_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+// Generate a random dev master key if not provided (NEVER hardcode a key
+// in source — a leaked repo would let anyone decrypt every dev DB's PII).
+// In CI, set SF_MASTER_KEY as a repo secret. Locally, dev:reset generates
+// a fresh random key each run (dev DB PII is ephemeral anyway).
+const SEED_KEY = process.env.SF_MASTER_KEY ?? randomHexKey();
 process.env.SF_MASTER_KEY = SEED_KEY;
+
+function randomHexKey(): string {
+  // 32 bytes = 64 hex chars = AES-256 key
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 // Persist the key to data/master.key (the keyfile the dev server reads)
 const dataDir = join(process.cwd(), "data");

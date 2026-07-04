@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { syncPlatform, syncAllPlatforms } from "@/lib/integrations/ecommerce/sync-engine";
 import type { EcommercePlatform } from "@/lib/integrations/ecommerce/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,10 @@ const syncSchema = z.object({
  */
 export const POST = withErrorHandler(async (req: NextRequest): Promise<NextResponse> => {
   await requireAuth();
-  // Verify cron secret
+  // Verify cron secret (constant-time compare — prevents timing attacks)
   const headerSecret = req.headers.get("x-cron-secret");
   const envSecret = env.cronSecret;
-  if (!headerSecret || !envSecret || headerSecret !== envSecret) {
+  if (!headerSecret || !envSecret || !constantTimeEqual(headerSecret, envSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
+import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export const dynamic = "force-dynamic";
  * unreadable), returns 503 so the client can show a "sidecar not ready" state.
  */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const token = sidecar.wsToken();
   if (!token) {
     return NextResponse.json(

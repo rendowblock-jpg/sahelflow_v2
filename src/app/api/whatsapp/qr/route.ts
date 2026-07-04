@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
  * sidecar down). The client uses status() to decide whether to poll.
  */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   try {
     const { qr } = await sidecar.qr();
     return NextResponse.json({ qr, qrPngUrl: qr ? "/api/whatsapp/qr-image" : null });

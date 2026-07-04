@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
+import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ type RouteContext = { params: Promise<{ jid: string }> };
 
 /** GET /api/whatsapp/chats/[jid]/messages?limit=100 — messages for a chat. */
 export const GET = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { jid: rawJid } = await params;
   const jid = decodeURIComponent(rawJid);
   const limit = req.nextUrl.searchParams.get("limit") ?? "100";

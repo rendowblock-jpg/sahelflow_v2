@@ -19,6 +19,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const mockState = vi.hoisted(() => ({
   licensePublicKey: "" as string,
   dbSetting: null as null | { value: string },
+  dbPayload: null as null | { value: string },
 }));
 
 // ── Mock @/lib/env with a controllable licensePublicKey getter ──────────────
@@ -37,9 +38,18 @@ vi.mock("@/lib/env", async (importOriginal) => {
 vi.mock("@/lib/db", () => ({
   db: {
     setting: {
-      findUnique: vi.fn(async () => mockState.dbSetting),
+      findUnique: vi.fn(async (args: { where: { key: string } }) => {
+        const key = args?.where?.key;
+        if (key === "active_license_payload") return mockState.dbPayload ?? null;
+        return mockState.dbSetting ?? null;
+      }),
     },
   },
+}));
+
+// ── Mock ./machine-id (isLicenseValid calls getMachineId for payload re-verify) ──
+vi.mock("../machine-id", () => ({
+  getMachineId: vi.fn(async () => MACHINE_ID),
 }));
 
 // ── Mock @/lib/license/crypto so we can simulate verify-throws ──────────────
@@ -94,6 +104,7 @@ beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test"); // not dev mode by default
   mockState.licensePublicKey = "";
   mockState.dbSetting = null;
+    mockState.dbPayload = null;
   cryptoMock.verifyLicenseSignature.mockReset();
   cryptoMock.verifyLicenseSignature.mockResolvedValue(true);
   cryptoMock.isExpired.mockReturnValue(false);
@@ -253,6 +264,7 @@ describe("isLicenseValid", () => {
   it("returns false (fail-closed) when no cache + no DB setting", async () => {
     vi.stubEnv("NODE_ENV", "production");
     mockState.dbSetting = null;
+    mockState.dbPayload = null;
     expect(await isLicenseValid()).toBe(false);
   });
 });
@@ -266,7 +278,8 @@ describe("requireLicense", () => {
 
   it("throws SahelFlowError(403) when license is invalid (fail-closed)", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    mockState.dbSetting = null; // no license synced
+    mockState.dbSetting = null;
+    mockState.dbPayload = null; // no license synced
     await expect(requireLicense()).rejects.toMatchObject({
       code: "LICENSE_REQUIRED",
       statusCode: 403,
@@ -274,9 +287,10 @@ describe("requireLicense", () => {
     await expect(requireLicense()).rejects.toBeInstanceOf(SahelFlowError);
   });
 
-  it("does not throw when DB has a valid license status", async () => {
+  it("does not throw when DB has a valid license status (legacy fallback)", async () => {
     vi.stubEnv("NODE_ENV", "production");
     mockState.dbSetting = { value: JSON.stringify({ status: "valid", message: "ok" }) };
+    mockState.dbPayload = null; // legacy path — no payload to re-verify
     await expect(requireLicense()).resolves.toBeUndefined();
   });
 });
