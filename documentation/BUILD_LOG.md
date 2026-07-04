@@ -4,6 +4,50 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 25 — 2026-07-04: Deep Audit Fixup (5 phases)
+
+6-stream parallel audit (API, data, frontend, security, integrations,
+schema/infra) identified ~220 findings. All 5 phases executed + merged.
+
+### Phase 1 — Ship-blockers (commit 2841c30)
+- WhatsApp automations: /health → /status (sidecar has no /health)
+- Storefront public page: added /storefront to PUBLIC_PAGES
+- Yalidine: check "non livré" BEFORE "livré" (was marking failed as delivered)
+- Order state machine: automations executeUpdateStatus + AI cancel_order →
+  orderService.updateStatus (was raw db.order.update bypass)
+- E-commerce sync: sourceOrderId column + @@unique([source, sourceOrderId])
+- /api/settings/reset: implemented (was 404)
+- i18n: sf_locale→sahelflow-locale cookie, 10 missing keys, order timeline
+
+### Phase 2 — Data integrity (commit 8da4ad1)
+- Soft-delete sweep: 15+ service methods now filter deletedAt:null
+- updateStatus TOCTOU: read+check moved inside $transaction
+- Nested message decryption: Message.body now decrypted in nested includes
+- Return-rate formula: reconciled to returned/(delivered+returned+refused)
+- Phone-reputation: stores blind index (HMAC-SHA256), not plaintext
+- refund-service: wrapped in $transaction
+
+### Phase 3 — Security hardening (commit 6136aa4)
+- Auth fail-closed: only setup-mode allows no-secret
+- 14 GET routes got requireAuth() (exports, whatsapp, delivery, etc.)
+- License re-verify: server-side validateLicense on isLicenseValid
+- PII redaction: lib/ai/redact.ts redacts tool results before Gemini
+- Constant-time compare: lib/auth/constant-time.ts (sync route was vulnerable)
+- Hardcoded dev master key: removed (random per-run in seed-rich)
+
+### Phase 4 — Build/infra (commit db2fe6d)
+- Migration drift: 267-line SQL migration captures 6 tables + 15 columns
+- Tauri bundle: externalBin + resources + updater:default permission
+- seed.ts race: main() + seedConversations() now sequential
+- CI: removed continue-on-error + ignoreBuildErrors
+
+### Phase 5 — Polish (commit 18e201e)
+- 4 form dialogs: router.refresh() → mutatePrefix (SWR)
+- 4 form dialogs: useDirtyGuard added
+- Storefront checkout: client-side validation (phone, name, address)
+- 6 export + 2 backup routes: audit logging added
+
+---
 ## Session 24 — 2026-07-04: Follow-up Wiring + DataTable v2 Completion + Test Fixup
 
 Session 24 had two waves. The first (commits `9f142a1`–`6fa11d8`, prior to this

@@ -1,7 +1,7 @@
 # SahelFlow — Honest Assessment
 
 > **Created:** 2026-06-26 (Session 16)
-> **Updated:** 2026-07-04 (Session 24 — follow-up wiring + DataTable v2 completion + test fixup)
+> **Updated:** 2026-07-04 (Session 25 — deep audit fixup, all 5 phases)
 > **Purpose:** Candid evaluation of where the app stands vs a top-tier company product.
 
 ---
@@ -119,4 +119,4 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-04 — Session 24 complete. main = `779e1c9`. v4.0.0. 1197 tests, 0 skip. 88.8% coverage. All built-but-not-rendered UIs wired. All 5 list pages on DataTable v2. 5 skipped tests fixed. Remaining: Tauri build verification, Playwright e2e, real users, Darija validation, pen test, final polish._
+_Last updated: 2026-07-04 — Session 25 complete. main = `18e201e`. v4.0.0. 1197 tests, 0 skip. 88.8% coverage. Deep audit (6 streams, ~220 findings) fixed across 5 phases: ship-blockers, data integrity, security hardening, build/infra, polish. Remaining: 26 router.refresh() call sites (incremental SWR migration), Tauri build verification (needs Rust), Playwright e2e, real users, Darija validation, pen test._

@@ -3,7 +3,7 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-04 (Session 24 complete — follow-up wiring + DataTable v2 completion + test fixup)
+**Last updated:** 2026-07-04 (Session 25 complete — deep audit fixup, all 5 phases)
 **Main HEAD:** `779e1c9`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
@@ -18,7 +18,7 @@
 | LOC | ~67,000 (src/ + sidecars/ + tests/) |
 | Pages | 25 dashboard pages |
 | API routes | 103 (+1: GET /api/delivery list) |
-| Tests | **1197 pass | 0 skip | 0 fail** |
+| Tests | **1197 pass | 0 skip | 0 fail** (Phase 1-5 audit fixup) |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
 | Prisma models | 34 (added OrderChange, Refund, ReservationItem, CannedResponse) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
@@ -172,6 +172,42 @@ wave (this chat, 3 commits) closed items A–E:
 
 See `BUILD_LOG.md` Session 24 entry for full detail.
 
+---
+
+## Session 25 — 2026-07-04: Deep Audit Fixup (5 phases, all merged to main)
+
+A 6-stream parallel deep audit identified ~220 findings across API, data,
+frontend, security, integrations, and schema/infra. All 5 phases executed:
+
+**Phase 1 — Ship-blockers:** WhatsApp automations /health→/status, storefront
+public page, Yalidine status mapping (non-livré before livré), order state
+machine routing (automations + AI cancel_order → orderService.updateStatus),
+e-commerce sync dedup (sourceOrderId + unique constraint), /api/settings/reset
+implemented, i18n fixes (cookie name, 10 missing keys, order timeline).
+
+**Phase 2 — Data integrity:** soft-delete sweep across all services (15+
+methods were leaking soft-deleted records), updateStatus TOCTOU fixed (read+
+check moved inside $transaction), nested message decryption fixed, return-rate
+formula reconciled, phone-reputation now stores blind index (was plaintext),
+refund-service wrapped in $transaction.
+
+**Phase 3 — Security hardening:** auth fail-closed (was fail-open when
+AUTH_SECRET missing), 14 GET routes got requireAuth(), license re-verify
+server-side (was trusting forgeable DB blob), PII redaction before Gemini,
+constant-time cron secret compare, hardcoded dev master key removed.
+
+**Phase 4 — Build/infra:** migration drift captured (267-line SQL migration
+for 6 tables + 15 columns + 10 indexes), Tauri bundle fixed (externalBin +
+resources + updater permission), seed.ts race condition fixed, CI
+continue-on-error workarounds removed, next.config ignoreBuildErrors removed.
+
+**Phase 5 — Polish:** 4 form dialogs migrated to SWR mutate (was
+router.refresh), 4 form dialogs got dirty guards, storefront checkout got
+client-side validation, 6 export routes + 2 backup routes got audit logging.
+
+**Stats:** 1197 tests pass | 0 skip | 0 fail. tsc + eslint clean. 104 API
+routes (+1: /api/settings/reset). New: lib/ai/redact.ts, lib/auth/constant-time.ts.
+
 ## ✅ Done (all sessions)
 
 ### Foundation (sessions 1-7)
@@ -267,6 +303,6 @@ See `BUILD_LOG.md` Session 24 entry for full detail.
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `ed20f7b` | v4.0.0 + Session 24. sf-verify green. 1197 tests, 0 skip. 88.8% coverage. All 5 list pages on DataTable v2. |
+| `main` | `18e201e` | v4.0.0 + Session 25 (audit fixup). sf-verify green. 1197 tests, 0 skip. 88.8% coverage. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
 | `agent-handoff` | (orphan) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (8 tools) |
