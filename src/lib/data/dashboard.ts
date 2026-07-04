@@ -15,6 +15,7 @@ export async function getDashboardStats() {
 
 export async function getRecentOrders(limit = 5) {
   const orders = await db.order.findMany({
+    where: { deletedAt: null },
     take: limit,
     orderBy: { createdAt: "desc" },
     include: {

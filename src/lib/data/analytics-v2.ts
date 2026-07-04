@@ -161,22 +161,22 @@ export async function getPeriodComparison(current: DateRange, previous: DateRang
       revenue: currentRevenue,
       delivered: currentDelivered,
       returned: currentReturned,
-      returnRate: currentOrders.length > 0 ? (currentReturned / currentOrders.length) * 100 : 0,
+      returnRate: (currentDelivered + currentReturned) > 0 ? (currentReturned / (currentDelivered + currentReturned)) * 100 : 0,
     },
     previous: {
       orders: previousOrders.length,
       revenue: previousRevenue,
       delivered: previousDelivered,
       returned: previousReturned,
-      returnRate: previousOrders.length > 0 ? (previousReturned / previousOrders.length) * 100 : 0,
+      returnRate: (previousDelivered + previousReturned) > 0 ? (previousReturned / (previousDelivered + previousReturned)) * 100 : 0,
     },
     changes: {
       orders: pctChange(currentOrders.length, previousOrders.length),
       revenue: pctChange(currentRevenue, previousRevenue),
       delivered: pctChange(currentDelivered, previousDelivered),
       returnRate: pctChange(
-        currentOrders.length > 0 ? (currentReturned / currentOrders.length) * 100 : 0,
-        previousOrders.length > 0 ? (previousReturned / previousOrders.length) * 100 : 0,
+        (currentDelivered + currentReturned) > 0 ? (currentReturned / (currentDelivered + currentReturned)) * 100 : 0,
+        (previousDelivered + previousReturned) > 0 ? (previousReturned / (previousDelivered + previousReturned)) * 100 : 0,
       ),
     },
   };

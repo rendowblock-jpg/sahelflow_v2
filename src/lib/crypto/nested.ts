@@ -32,6 +32,7 @@ import {
   decryptPiiRow,
   ORDER_PII_FIELDS,
   CONVERSATION_PII_FIELDS,
+  MESSAGE_PII_FIELDS,
 } from "./pii-fields";
 
 /**
@@ -77,11 +78,14 @@ export function decryptNestedPii(result: unknown): unknown {
       return decrypted;
     });
   }
-  // Message.body is NOT currently encrypted (S-010 from security audit — TODO
-  // when MESSAGE_PII_FIELDS is added). Recurse anyway in case messages have
-  // their own nested relations.
+  // Message.body IS encrypted (MESSAGE_PII_FIELDS). Decrypt each message,
+  // then recurse in case messages have their own nested relations.
   if ("messages" in row && Array.isArray(row.messages)) {
-    row.messages = row.messages.map((m: unknown) => decryptNestedPii(m));
+    row.messages = row.messages.map((m: unknown) => {
+      const decrypted = decryptPiiRow(m as RecordString, MESSAGE_PII_FIELDS);
+      decryptNestedPii(decrypted);
+      return decrypted;
+    });
   }
 
   return row;

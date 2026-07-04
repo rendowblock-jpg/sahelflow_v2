@@ -39,7 +39,7 @@ export const orderServiceExtensions = {
     const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
 
     const rows = await ctx.prisma.order.findMany({
-      where: {
+      where: { deletedAt: null,
         AND: [
           opts?.status ? { status: opts.status } : {},
           {
@@ -129,6 +129,7 @@ export const orderServiceExtensions = {
 
     return ctx.prisma.order.count({
       where: {
+        deletedAt: null,
         AND: [
           opts?.status ? { status: opts.status } : {},
           {

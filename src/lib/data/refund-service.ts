@@ -22,21 +22,27 @@ export interface CreateRefundInput {
 }
 
 export async function createRefund(input: CreateRefundInput) {
-  const refund = await db.refund.create({
-    data: {
-      orderId: input.orderId,
-      amount: input.amount,
-      method: input.method,
-      reason: input.reason ?? null,
-      returnId: input.returnId ?? null,
-      createdBy: input.actor ?? "user",
-    },
+  // Transactional: refund create + order-change ledger must succeed together
+  // (a partial failure would leave a refund with no timeline entry, or vice versa).
+  const refund = await db.$transaction(async (tx) => {
+    const r = await tx.refund.create({
+      data: {
+        orderId: input.orderId,
+        amount: input.amount,
+        method: input.method,
+        reason: input.reason ?? null,
+        returnId: input.returnId ?? null,
+        createdBy: input.actor ?? "user",
+      },
+    });
+
+    // Record in the order change ledger (for the timeline) — same tx
+    await recordRefund(input.orderId, r.id, input.amount, input.method, input.actor);
+
+    return r;
   });
 
-  // Record in the order change ledger (for the timeline)
-  await recordRefund(input.orderId, refund.id, input.amount, input.method, input.actor);
-
-  // Audit log
+  // Audit log (outside tx — fire-and-forget, never blocks the refund)
   void logAudit({
     action: "order.refunded",
     entity: "order",

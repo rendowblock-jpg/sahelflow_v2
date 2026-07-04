@@ -125,11 +125,16 @@ describe("customerService.update", () => {
 });
 
 describe("customerService.delete", () => {
-  it("deletes a customer with no orders", async () => {
+  it("soft-deletes a customer with no orders", async () => {
     const created = await seedCustomer(db);
     await customerService.delete({ prisma: db as never }, created.id);
+    // Soft-delete: row still exists but has deletedAt set
     const found = await db.customer.findUnique({ where: { id: created.id } });
-    expect(found).toBeNull();
+    expect(found).not.toBeNull();
+    expect(found?.deletedAt).not.toBeNull();
+    // And is excluded from normal list queries
+    const inList = await customerService.list({ prisma: db as never });
+    expect(inList.find((c) => c.id === created.id)).toBeUndefined();
   });
 
   it("prevents deleting a customer with orders", async () => {

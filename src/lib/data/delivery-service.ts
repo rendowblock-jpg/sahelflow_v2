@@ -24,7 +24,7 @@ export const deliveryService = {
     status?: DeliveryStatus;
   }): Promise<Delivery[]> {
     const rows = await ctx.prisma.delivery.findMany({
-      where: opts?.status ? { status: opts.status } : undefined,
+      where: opts?.status ? { status: opts.status, deletedAt: null } : { deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
@@ -34,14 +34,14 @@ export const deliveryService = {
 
   async getById(ctx: ServiceContext, id: string): Promise<Delivery> {
     return withServiceError(async () => {
-      const row = await ctx.prisma.delivery.findUnique({ where: { id } });
+      const row = await ctx.prisma.delivery.findFirst({ where: { id, deletedAt: null } });
       if (!row) throw new NotFoundError("Delivery", id);
       return toDomain(row as unknown as Record<string, unknown>);
     }, "Delivery");
   },
 
   async getByOrderId(ctx: ServiceContext, orderId: string): Promise<Delivery | null> {
-    const row = await ctx.prisma.delivery.findUnique({ where: { orderId } });
+    const row = await ctx.prisma.delivery.findFirst({ where: { orderId, deletedAt: null } });
     return row ? toDomain(row as unknown as Record<string, unknown>) : null;
   },
 
@@ -54,11 +54,11 @@ export const deliveryService = {
       const data = createDeliverySchema.parse(input);
 
       // Verify order exists
-      const order = await ctx.prisma.order.findUnique({ where: { id: data.orderId } });
+      const order = await ctx.prisma.order.findFirst({ where: { id: data.orderId, deletedAt: null } });
       if (!order) throw new NotFoundError("Order", data.orderId);
 
       // Check no existing delivery for this order
-      const existing = await ctx.prisma.delivery.findUnique({ where: { orderId: data.orderId } });
+      const existing = await ctx.prisma.delivery.findFirst({ where: { orderId: data.orderId, deletedAt: null } });
       if (existing) {
         return toDomain(existing as unknown as Record<string, unknown>);
       }
@@ -97,6 +97,7 @@ export const deliveryService = {
     const rows = await ctx.prisma.delivery.findMany({
       where: {
         status: { in: ["pending", "created", "picked_up", "in_transit", "at_hub", "out_for_delivery"] },
+        deletedAt: null,
       },
       orderBy: { createdAt: "desc" },
     });

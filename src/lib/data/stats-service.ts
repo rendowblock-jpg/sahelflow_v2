@@ -24,41 +24,43 @@ export const statsService = {
       pendingDeliveries,
       lowStockProducts,
     ] = await Promise.all([
-      ctx.prisma.order.count({ where: { createdAt: { gte: startOfDay } } }),
+      ctx.prisma.order.count({ where: { createdAt: { gte: startOfDay }, deletedAt: null } }),
       ctx.prisma.order.count({
-        where: { createdAt: { gte: startOfYesterday, lt: startOfDay } },
+        where: { createdAt: { gte: startOfYesterday, lt: startOfDay }, deletedAt: null },
       }),
       // Gross Revenue = all non-cancelled orders (what was ordered)
       ctx.prisma.order.aggregate({
-        where: { createdAt: { gte: startOfDay }, status: { not: "cancelled" } },
+        where: { createdAt: { gte: startOfDay }, status: { not: "cancelled" }, deletedAt: null },
         _sum: { totalPrice: true },
       }),
       ctx.prisma.order.aggregate({
         where: {
           createdAt: { gte: startOfYesterday, lt: startOfDay },
           status: { not: "cancelled" },
+          deletedAt: null,
         },
         _sum: { totalPrice: true },
       }),
       // Realized Revenue = delivered orders only (what was actually collected)
       ctx.prisma.order.aggregate({
-        where: { createdAt: { gte: startOfDay }, status: "delivered" },
+        where: { createdAt: { gte: startOfDay }, status: "delivered", deletedAt: null },
         _sum: { totalPrice: true },
       }),
       ctx.prisma.order.aggregate({
         where: {
           createdAt: { gte: startOfYesterday, lt: startOfDay },
           status: "delivered",
+          deletedAt: null,
         },
         _sum: { totalPrice: true },
       }),
-      ctx.prisma.customer.count({ where: { createdAt: { gte: startOfDay } } }),
+      ctx.prisma.customer.count({ where: { createdAt: { gte: startOfDay }, deletedAt: null } }),
       ctx.prisma.conversation.count({ where: { unreadCount: { gt: 0 } } }),
       ctx.prisma.delivery.count({
-        where: { status: { in: ["pending", "created"] } },
+        where: { status: { in: ["pending", "created"] }, deletedAt: null },
       }),
       ctx.prisma.product.count({
-        where: { isActive: true, stock: { lte: ctx.prisma.product.fields.lowStockThreshold } },
+        where: { isActive: true, stock: { lte: ctx.prisma.product.fields.lowStockThreshold }, deletedAt: null },
       }),
     ]);
 

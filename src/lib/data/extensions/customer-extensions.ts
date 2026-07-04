@@ -60,7 +60,7 @@ export const customerServiceExtensions = {
     const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
 
     const rows = await ctx.prisma.customer.findMany({
-      where: {
+      where: { deletedAt: null,
         OR: [
           { nameBlindIndex },
           { phone: phoneBlindIndex },

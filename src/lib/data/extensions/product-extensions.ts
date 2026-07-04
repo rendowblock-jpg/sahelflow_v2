@@ -68,7 +68,7 @@ export const productServiceExtensions = {
    */
   async getStats(ctx: ServiceContext, productId: string): Promise<ProductStats> {
     const items = await ctx.prisma.orderItem.findMany({
-      where: { productId },
+      where: { productId, order: { deletedAt: null } },
       select: { quantity: true, total: true, orderId: true },
     });
 
@@ -76,8 +76,8 @@ export const productServiceExtensions = {
     const revenue = items.reduce((sum, i) => sum + i.total, 0);
     const orderCount = new Set(items.map((i) => i.orderId)).size;
 
-    const product = await ctx.prisma.product.findUnique({
-      where: { id: productId },
+    const product = await ctx.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
       select: { stock: true, lowStockThreshold: true, isActive: true },
     });
 

@@ -27,7 +27,7 @@ function toDomainCategory(row: Record<string, unknown>): Category {
 export const productService = {
   async list(ctx: ServiceContext, opts?: { limit?: number; offset?: number; activeOnly?: boolean }): Promise<Product[]> {
     const rows = await ctx.prisma.product.findMany({
-      where: opts?.activeOnly ? { isActive: true } : undefined,
+      where: opts?.activeOnly ? { isActive: true, deletedAt: null } : { deletedAt: null },
       orderBy: { createdAt: "desc" },
       include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       take: opts?.limit ?? 50,
@@ -38,8 +38,8 @@ export const productService = {
 
   async getById(ctx: ServiceContext, id: string): Promise<Product> {
     return withServiceError(async () => {
-      const row = await ctx.prisma.product.findUnique({
-        where: { id },
+      const row = await ctx.prisma.product.findFirst({
+        where: { id, deletedAt: null },
         include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       });
       if (!row) throw new NotFoundError("Product", id);
@@ -54,7 +54,7 @@ export const productService = {
 
       // Check SKU uniqueness if provided
       if (data.sku) {
-        const existing = await ctx.prisma.product.findUnique({ where: { sku: data.sku } });
+        const existing = await ctx.prisma.product.findFirst({ where: { sku: data.sku, deletedAt: null } });
         if (existing) {
           throw new ConflictError(`Product with SKU ${data.sku} already exists`);
         }
@@ -99,7 +99,7 @@ export const productService = {
       const { variants: legacyVariants, ...productData } = data;
 
       if (data.sku) {
-        const conflict = await ctx.prisma.product.findUnique({ where: { sku: data.sku } });
+        const conflict = await ctx.prisma.product.findFirst({ where: { sku: data.sku, deletedAt: null, id: { not: id } } });
         if (conflict && conflict.id !== id) {
           throw new ConflictError(`SKU ${data.sku} already used by another product`);
         }

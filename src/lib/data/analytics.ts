@@ -130,7 +130,7 @@ export const analyticsService = {
     //  select them, so no decryption overhead on the analytics path.)
     const [periodOrders, prevOrders, customers] = await Promise.all([
       ctx.prisma.order.findMany({
-        where: { createdAt: { gte: periodStart } },
+        where: { createdAt: { gte: periodStart }, deletedAt: null },
         select: {
           id: true,
           status: true,
@@ -145,11 +145,11 @@ export const analyticsService = {
         orderBy: { createdAt: "asc" },
       }),
       ctx.prisma.order.findMany({
-        where: { createdAt: { gte: prevPeriodStart, lt: periodStart } },
+        where: { createdAt: { gte: prevPeriodStart, lt: periodStart }, deletedAt: null },
         select: { totalPrice: true, status: true, createdAt: true, deliveredAt: true },
       }),
       ctx.prisma.customer.findMany({
-        where: { createdAt: { gte: periodStart } },
+        where: { createdAt: { gte: periodStart }, deletedAt: null },
         select: { createdAt: true },
         orderBy: { createdAt: "asc" },
       }),

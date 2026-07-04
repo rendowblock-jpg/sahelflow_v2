@@ -42,8 +42,8 @@ export const orderService = {
 
   async getById(ctx: ServiceContext, id: string): Promise<Order> {
     return withServiceError(async () => {
-      const row = await ctx.prisma.order.findUnique({
-        where: { id },
+      const row = await ctx.prisma.order.findFirst({
+        where: { id, deletedAt: null },
         include: { items: true },
       });
       if (!row) throw new NotFoundError("Order", id);
@@ -52,8 +52,8 @@ export const orderService = {
   },
 
   async getByOrderNumber(ctx: ServiceContext, orderNumber: string): Promise<Order | null> {
-    const row = await ctx.prisma.order.findUnique({
-      where: { orderNumber },
+    const row = await ctx.prisma.order.findFirst({
+      where: { orderNumber, deletedAt: null },
       include: { items: true },
     });
     return row ? toDomain(row as unknown as Record<string, unknown>) : null;
@@ -69,7 +69,7 @@ export const orderService = {
       const data = createOrderSchema.parse(input);
 
       // Verify customer exists
-      const customer = await ctx.prisma.customer.findUnique({ where: { id: data.customerId } });
+      const customer = await ctx.prisma.customer.findFirst({ where: { id: data.customerId, deletedAt: null } });
       if (!customer) throw new NotFoundError("Customer", data.customerId);
 
       // Calculate total
@@ -140,24 +140,27 @@ export const orderService = {
     to: OrderStatus,
   ): Promise<Order> {
     return withServiceError(async () => {
-      const order = await ctx.prisma.order.findUnique({
-        where: { id },
-        include: { items: true },
-      });
-      if (!order) throw new NotFoundError("Order", id);
-
-      const from = order.status as OrderStatus;
-
-      // Enforce state machine
-      assertCanTransition(from, to);
-
-      // No-op for same-status
-      if (from === to) {
-        return toDomain(order as unknown as Record<string, unknown>);
-      }
-
-      // Execute transition + side effects in a transaction
+      // TOCTOU FIX: re-read the order + assert the transition INSIDE the
+      // transaction. Two concurrent updateStatus calls (e.g. automation +
+      // manual click) previously both passed assertCanTransition outside the
+      // tx → double stock deduction. Now the tx serializes the read+check+write.
       const updated = await ctx.prisma.$transaction(async (tx) => {
+        const order = await tx.order.findFirst({
+          where: { id, deletedAt: null },
+          include: { items: true },
+        });
+        if (!order) throw new NotFoundError("Order", id);
+
+        const from = order.status as OrderStatus;
+
+        // Enforce state machine (inside tx — race-safe)
+        assertCanTransition(from, to);
+
+        // No-op for same-status
+        if (from === to) {
+          return order;
+        }
+
         // Stock deduction (confirmed from non-confirmed)
         if (triggersStockDeduction(from, to)) {
           for (const item of order.items) {
@@ -292,7 +295,7 @@ export const orderService = {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const rows = await ctx.prisma.order.findMany({
-      where: { createdAt: { gte: startOfDay } },
+      where: { createdAt: { gte: startOfDay }, deletedAt: null },
       include: { items: true },
       orderBy: { createdAt: "desc" },
     });

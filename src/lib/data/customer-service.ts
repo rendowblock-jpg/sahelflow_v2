@@ -14,6 +14,7 @@ function toDomain(row: Record<string, unknown>): Customer {
 export const customerService = {
   async list(ctx: ServiceContext, opts?: { limit?: number; offset?: number }): Promise<Customer[]> {
     const rows = await ctx.prisma.customer.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
@@ -27,12 +28,12 @@ export const customerService = {
       const [allCounts, revenueSums] = await Promise.all([
         ctx.prisma.order.groupBy({
           by: ["customerId"],
-          where: { customerId: { in: customerIds } },
+          where: { customerId: { in: customerIds }, deletedAt: null },
           _count: true,
         }),
         ctx.prisma.order.groupBy({
           by: ["customerId"],
-          where: { customerId: { in: customerIds }, status: { not: "cancelled" } },
+          where: { customerId: { in: customerIds }, status: { not: "cancelled" }, deletedAt: null },
           _sum: { totalPrice: true },
         }),
       ]);
@@ -51,14 +52,14 @@ export const customerService = {
 
   async getById(ctx: ServiceContext, id: string): Promise<Customer> {
     return withServiceError(async () => {
-      const row = await ctx.prisma.customer.findUnique({ where: { id } });
+      const row = await ctx.prisma.customer.findFirst({ where: { id, deletedAt: null } });
       if (!row) throw new NotFoundError("Customer", id);
       return toDomain(row as unknown as Record<string, unknown>);
     }, "Customer");
   },
 
   async getByPhone(ctx: ServiceContext, phone: string): Promise<Customer | null> {
-    const row = await ctx.prisma.customer.findUnique({ where: { phone } });
+    const row = await ctx.prisma.customer.findFirst({ where: { phone, deletedAt: null } });
     return row ? toDomain(row as unknown as Record<string, unknown>) : null;
   },
 
@@ -67,7 +68,7 @@ export const customerService = {
       const data = createCustomerSchema.parse(input);
 
       // Check for existing customer with same phone
-      const existing = await ctx.prisma.customer.findUnique({ where: { phone: data.phone } });
+      const existing = await ctx.prisma.customer.findFirst({ where: { phone: data.phone, deletedAt: null } });
       if (existing) {
         throw new ConflictError(`Customer with phone ${data.phone} already exists`);
       }
@@ -83,8 +84,8 @@ export const customerService = {
 
       // If phone is being updated, check for conflict
       if (data.phone) {
-        const conflict = await ctx.prisma.customer.findUnique({ where: { phone: data.phone } });
-        if (conflict && conflict.id !== id) {
+        const conflict = await ctx.prisma.customer.findFirst({ where: { phone: data.phone, deletedAt: null, id: { not: id } } });
+        if (conflict) {
           throw new ConflictError(`Phone ${data.phone} already used by another customer`);
         }
       }
@@ -97,11 +98,12 @@ export const customerService = {
   async delete(ctx: ServiceContext, id: string): Promise<void> {
     return withServiceError(async () => {
       // Check for existing orders (don't delete customers with order history)
-      const orderCount = await ctx.prisma.order.count({ where: { customerId: id } });
+      const orderCount = await ctx.prisma.order.count({ where: { customerId: id, deletedAt: null } });
       if (orderCount > 0) {
         throw new ConflictError(`Cannot delete customer with ${orderCount} orders`);
       }
-      await ctx.prisma.customer.delete({ where: { id } });
+      // Soft-delete (don't hard-delete — preserves referential integrity for historical orders)
+      await ctx.prisma.customer.update({ where: { id }, data: { deletedAt: new Date() } });
     }, "Customer");
   },
 
