@@ -2,9 +2,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, AlertTriangle, UserCheck, Download } from "lucide-react";
-import Link from "next/link";
+import { Users, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
@@ -40,12 +38,6 @@ export default async function CustomersPage() {
         actions={
           <div className="flex items-center gap-2">
             <ImportExportButtons exportRoute="/api/export/customers" importRoute="/api/import/customers" />
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/api/export/customers">
-                <Download className="me-1.5 h-4 w-4" />
-                {t("customers.export")}
-              </Link>
-            </Button>
             <CustomerFormDialog />
           </div>
         }

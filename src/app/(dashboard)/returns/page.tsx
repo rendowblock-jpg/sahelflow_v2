@@ -1,6 +1,5 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
@@ -97,12 +96,9 @@ export default async function ReturnsPage() {
         />
       </div>
 
-      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <CardHeader>
-          <CardTitle className="text-base">{t("returns.history")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ReturnsDataTable
+      <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
+        <h2 className="text-base font-semibold mb-3">{t("returns.history")}</h2>
+        <ReturnsDataTable
             fallback={{
               returns: returns.map((r) => ({
                 id: r.id,
@@ -127,8 +123,7 @@ export default async function ReturnsPage() {
             }}
             locale={locale}
           />
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -4,11 +4,10 @@ import { formatDZD } from "@/lib/utils";
 import { batchAssessOrders } from "@/lib/risk-engine";
 import type { OrderStatus } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, Download, ShieldAlert } from "lucide-react";
+import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, ShieldAlert } from "lucide-react";
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { OrdersDataTable } from "@/components/orders/orders-data-table";
 import { PageHeader } from "@/components/shared/page-header";
@@ -123,12 +122,6 @@ export default async function OrdersPage({
         actions={
           <div className="flex items-center gap-2">
             <ImportExportButtons exportRoute="/api/export/orders" importRoute="/api/import/orders" />
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/api/export/orders">
-                <Download className="me-1.5 h-4 w-4" />
-                {t("orders.exportCSV")}
-              </Link>
-            </Button>
             <OrderFormDialog customers={customers} products={products} />
           </div>
         }

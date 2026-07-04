@@ -2,9 +2,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Package, AlertTriangle, Boxes, DollarSign, Download } from "lucide-react";
-import Link from "next/link";
+import { Package, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
@@ -68,12 +66,6 @@ export default async function ProductsPage() {
         actions={
           <div className="flex items-center gap-2">
             <ImportExportButtons exportRoute="/api/export/products" importRoute="/api/import/products" />
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/api/export/products">
-                <Download className="me-1.5 h-4 w-4" />
-                {t("products.export")}
-              </Link>
-            </Button>
             <ProductFormDialog categories={categories} />
           </div>
         }

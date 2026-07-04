@@ -2,7 +2,6 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 
 import { formatDZD } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
@@ -153,9 +152,8 @@ export default async function DeliveriesPage({
       </Tabs>
 
       {/* Deliveries table (DataTable v2) */}
-      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <CardContent className="pt-6">
-          <DeliveriesDataTable
+      <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
+        <DeliveriesDataTable
             fallback={{
               deliveries: deliveries.map((d) => ({
                 id: d.id,
@@ -185,8 +183,7 @@ export default async function DeliveriesPage({
             status={status}
             locale={locale}
           />
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
