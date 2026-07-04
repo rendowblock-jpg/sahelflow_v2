@@ -79,13 +79,17 @@ function defaultRouter(url: string, opts?: RequestInit) {
     };
   }
   // GET /histories/?tracking=...
+  // Real Yalidine API returns history newest-first. The adapter calls
+  // .reverse() to produce chronological order (oldest-first, newest-last).
+  // So the mock must return newest-first for the adapter's reverse to yield
+  // events[0]=created ... events[last]=delivered.
   if (url.includes("/histories/")) {
     return {
       ok: true,
       json: async () => [
-        { status: "Créé", date: "2026-01-01T00:00:00Z", place: "Counter", remark: "Order created" },
-        { status: "Ramassé", date: "2026-01-02T00:00:00Z", place: "Hub", remark: "Picked up" },
         { status: "Livré", date: "2026-01-05T00:00:00Z", place: "Bab Ezzouar", remark: "Delivered" },
+        { status: "Ramassé", date: "2026-01-02T00:00:00Z", place: "Hub", remark: "Picked up" },
+        { status: "Créé", date: "2026-01-01T00:00:00Z", place: "Counter", remark: "Order created" },
       ],
     };
   }
@@ -364,7 +368,7 @@ describe("Yalidine delivery adapter (deep)", () => {
       ).rejects.toThrow("Identifiants Yalidine manquants");
     });
 
-    it.skip("returns tracking info with events on success", async () => {
+    it("returns tracking info with events on success", async () => {
       const result = await yalidineAdapter.syncTracking("YAL-001", validCreds);
       expect(result.trackingId).toBe("YAL-001");
       expect(result.status).toBe("delivered"); // Livré

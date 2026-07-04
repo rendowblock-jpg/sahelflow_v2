@@ -79,7 +79,10 @@ const localStorageMock = {
   key: vi.fn(() => null),
   length: 0,
 };
-vi.stubGlobal("localStorage", localStorageMock);
+// NOTE: vi.stubGlobal("localStorage", ...) is re-applied in beforeEach below.
+// vitest.config.ts sets `unstubGlobals: true`, which restores globals before
+// each test — so a module-top-level stub would be gone by the time any test
+// runs, and the stored-license path would never read from the mock storage.
 
 import {
   computeMachineId,
@@ -91,6 +94,8 @@ import {
 import type { MachineFingerprint, SignedLicense } from "../types";
 
 beforeEach(() => {
+  // Re-stub localStorage for every test (unstubGlobals clears it between tests).
+  vi.stubGlobal("localStorage", localStorageMock);
   storage.clear();
   mockState.isDev = false;
   mockState.licensePublicKey = "test-public-key";
@@ -200,7 +205,7 @@ describe("validateOnLaunch", () => {
     expect(serviceMock.issueTrial).not.toHaveBeenCalled();
   });
 
-  it.skip("issues + stores a trial when no stored license exists", async () => {
+  it("issues + stores a trial when no stored license exists", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
     storage.clear();
@@ -218,7 +223,7 @@ describe("validateOnLaunch", () => {
     );
   });
 
-  it.skip("validates the stored license when one exists", async () => {
+  it("validates the stored license when one exists", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
     storage.clear();
@@ -243,7 +248,7 @@ describe("validateOnLaunch", () => {
     expect(serviceMock.issueTrial).not.toHaveBeenCalled();
   });
 
-  it.skip("propagates the invalid status when the stored license is invalid (no auto-trial)", async () => {
+  it("propagates the invalid status when the stored license is invalid (no auto-trial)", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
     storage.clear();
@@ -261,7 +266,7 @@ describe("validateOnLaunch", () => {
     expect(serviceMock.issueTrial).not.toHaveBeenCalled();
   });
 
-  it.skip("returns invalid when validateLicense throws (fail-closed)", async () => {
+  it("returns invalid when validateLicense throws (fail-closed)", async () => {
     mockState.isDev = false;
     mockState.licensePublicKey = "real-key";
     storage.clear();
