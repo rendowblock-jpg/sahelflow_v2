@@ -32,7 +32,14 @@ import {
   User,
   ArrowLeft,
   ShieldAlert,
+  Clock,
+  DollarSign,
 } from "lucide-react";
+import { getOrderTimeline } from "@/lib/data/order-change-service";
+import { getRefundsForOrder, getTotalRefunded } from "@/lib/data/refund-service";
+import { OrderTimeline } from "@/components/orders/order-timeline";
+import { RefundDialog } from "@/components/orders/refund-dialog";
+import { CodControls } from "@/components/orders/cod-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -57,11 +64,21 @@ export default async function OrderDetailPage({
     throw err;
   }
 
-  // Fetch customer + delivery + risk assessment
-  const [customer, delivery, riskAssessment] = await Promise.all([
+  // Fetch customer + delivery + risk assessment + timeline + refunds + COD fields
+  const [customer, delivery, riskAssessment, timelineEntries, refunds, totalRefunded, codData] = await Promise.all([
     db.customer.findUnique({ where: { id: order.customerId } }),
     deliveryService.getByOrderId({ prisma: db }, order.id),
     assessOrderRisk(order.id).catch(() => null),
+    getOrderTimeline(order.id),
+    getRefundsForOrder(order.id),
+    getTotalRefunded(order.id),
+    db.order.findUnique({
+      where: { id: order.id },
+      select: {
+        codCollected: true, codCollectedAt: true,
+        codRemitted: true, codRemittedAt: true, codRemittanceRef: true,
+      },
+    }),
   ]);
 
   const itemsTotal = order.items.reduce((sum, item) => sum + item.total, 0);
@@ -414,6 +431,90 @@ export default async function OrderDetailPage({
               </div>
             </CardContent>
           </Card>
+
+          {/* Order change ledger timeline (Phase 4 — Medusa pattern) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4" />
+                {t("orders.detail.activity") || "Activity Timeline"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OrderTimeline entries={timelineEntries.map((e) => ({
+                id: e.id,
+                actionType: e.actionType,
+                actor: e.actor ?? "system",
+                payload: e.payload,
+                status: e.status,
+                createdAt: e.createdAt.toISOString(),
+              }))} />
+            </CardContent>
+          </Card>
+
+          {/* COD reconciliation controls (Phase 4 — killer COD feature) */}
+          {order.status === "delivered" && codData && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <DollarSign className="h-4 w-4" />
+                  {t("orders.cod.title") || "COD Reconciliation"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CodControls
+                  orderId={order.id}
+                  orderNumber={order.orderNumber}
+                  amount={order.totalPrice}
+                  codCollected={codData.codCollected}
+                  codCollectedAt={codData.codCollectedAt?.toISOString() ?? null}
+                  codRemitted={codData.codRemitted}
+                  codRemittedAt={codData.codRemittedAt?.toISOString() ?? null}
+                  codRemittanceRef={codData.codRemittanceRef}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Refund section (Phase 4) */}
+          {["delivered", "returned", "refused"].includes(order.status) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <DollarSign className="h-4 w-4" />
+                  {t("orders.refund.title") || "Refunds"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {refunds.length > 0 && (
+                  <div className="space-y-1.5">
+                    {refunds.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between rounded-lg border p-2.5 text-sm">
+                        <div>
+                          <span className="font-medium">{formatDZD(r.amount)}</span>
+                          <span className="text-muted-foreground ms-2">· {r.method}</span>
+                          {r.reason && <span className="text-muted-foreground ms-2">· {r.reason}</span>}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{formatDate(r.createdAt, locale)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t pt-2 text-sm">
+                      <span className="font-medium">{t("orders.refund.total") || "Total refunded"}</span>
+                      <span className="font-bold text-red-600">{formatDZD(totalRefunded)}</span>
+                    </div>
+                  </div>
+                )}
+                {totalRefunded < order.totalPrice && (
+                  <RefundDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    maxAmount={order.totalPrice}
+                    alreadyRefunded={totalRefunded}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

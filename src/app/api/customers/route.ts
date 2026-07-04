@@ -7,21 +7,21 @@ import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/customers — list customers (optional ?limit= & ?offset=) */
+/** GET /api/customers — list customers with pagination (?page=&pageSize=) */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const searchParams = req.nextUrl.searchParams;
-  const limit = parseInt(searchParams.get("limit") ?? "50", 10);
-  const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") ?? "50", 10);
+  const limit = Math.min(pageSize, 100);
+  const offset = (page - 1) * limit;
 
-  const customers = await customerService.list(
-    { prisma: db },
-    {
-      limit: Math.min(limit, 100),
-      offset,
-    },
-  );
+  const [customers, total] = await Promise.all([
+    customerService.list({ prisma: db }, { limit, offset }),
+    db.customer.count({ where: { deletedAt: null } }),
+  ]);
 
-  return NextResponse.json({ customers });
+  const hasNextPage = offset + customers.length < total;
+  return NextResponse.json({ customers, total, hasNextPage, page, pageSize: limit });
 }, "GET /api/customers");
 
 /** POST /api/customers — create a new customer */

@@ -2240,5 +2240,7 @@
   "settings.tabs.profile": "الملف الشخصي",
   "settings.tabs.appearance": "المظهر",
   "settings.tabs.phoneReputation": "سمعة الهاتف",
-  "settings.tabs.dangerZone": "منطقة الخطر"
+  "settings.tabs.dangerZone": "منطقة الخطر",
+  "nav.confirmationQueue": "قائمة التأكيد",
+  "nav.codReconciliation": "تسوية COD"
 }

@@ -1,5 +1,5 @@
-import { PageLoading } from "@/components/shared/page-loading";
+import { FullPageSkeleton } from "@/components/shared/full-page-skeleton";
 
 export default function Loading() {
-  return <PageLoading />;
+  return <FullPageSkeleton />;
 }

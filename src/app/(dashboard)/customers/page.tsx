@@ -2,28 +2,27 @@ import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
-import { getRiskConfig } from "@/lib/shared";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PremiumTable } from "@/components/shared/premium-table";
-import { Users, Eye, TrendingUp, AlertTriangle, UserCheck, Download, Ban } from "lucide-react";
+import { Users, TrendingUp, AlertTriangle, UserCheck, Download } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
-import { CustomerRowActions } from "@/components/customers/customer-row-actions";
-import { Badge } from "@/components/ui/badge";
+import { CustomersDataTable } from "@/components/customers/customers-data-table";
+import type { Locale } from "@/lib/i18n";
 import type { Customer } from "@/types/domain";
 
 // Always fetch fresh data (local-first app, no ISR)
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
-  const { t } = await getI18n();
-  const customers = await customerService.list({ prisma: db });
+  const { t, locale } = await getI18n();
+  const [customers, totalCustomers] = await Promise.all([
+    customerService.list({ prisma: db }, { limit: 25, offset: 0 }),
+    db.customer.count({ where: { deletedAt: null } }),
+  ]);
 
-  const totalCustomers = customers.length;
   const totalSpent = customers.reduce((sum, c) => sum + c.totalSpent, 0);
   const activeCount = customers.filter((c) => c.orderCount > 0).length;
   const atRiskCount = customers.filter((c) => c.riskScore >= 6).length;
@@ -93,87 +92,30 @@ export default async function CustomersPage() {
         />
       </div>
 
-      {/* Customers table — upgraded with shared status/risk configs */}
-      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <CardHeader>
-          <CardTitle className="text-base">{t("customers.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {customers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-5 mb-5 ring-1 ring-primary/10">
-                <Users className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-base font-semibold mb-1.5">{t("customers.noCustomers")}</h3>
-              <p className="text-sm text-muted-foreground max-w-md mb-4">
-                {t("customers.noCustomersDesc")}
-              </p>
-              <CustomerFormDialog />
-            </div>
-          ) : (
-            <PremiumTable>
-              <PremiumTable.Header>
-                <PremiumTable.Row>
-                  <PremiumTable.Head>{t("customers.name")}</PremiumTable.Head>
-                  <PremiumTable.Head>{t("customers.phone")}</PremiumTable.Head>
-                  <PremiumTable.Head hideOn="md">{t("customers.location")}</PremiumTable.Head>
-                  <PremiumTable.Head align="end">{t("customers.ordersCount")}</PremiumTable.Head>
-                  <PremiumTable.Head align="end">{t("customers.spent")}</PremiumTable.Head>
-                  <PremiumTable.Head align="center">{t("customers.risk")}</PremiumTable.Head>
-                  <PremiumTable.Head align="end" width="w-20">{t("common.actions")}</PremiumTable.Head>
-                </PremiumTable.Row>
-              </PremiumTable.Header>
-              <PremiumTable.Body>
-                {customers.map((customer: Customer) => {
-                  const riskConfig = getRiskConfig(customer.riskScore * 10);
-                  return (
-                    <PremiumTable.Row key={customer.id}>
-                      <PremiumTable.Cell className="font-medium">
-                        <span className="flex items-center gap-1.5">
-                          {customer.name}
-                          {customer.isBlacklisted && (
-                            <Badge variant="destructive" className="gap-1 text-xs px-1.5 py-0">
-                              <Ban className="h-3 w-3" />
-                              {t("customers.blacklisted")}
-                            </Badge>
-                          )}
-                        </span>
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell className="font-mono">{customer.phone}</PremiumTable.Cell>
-                      <PremiumTable.Cell hideOn="md" className="text-muted-foreground">
-                        {customer.wilaya ?? "—"}
-                        {customer.commune ? ` · ${customer.commune}` : ""}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="end" className="tabular-nums">
-                        {customer.orderCount}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="end" className="tabular-nums">
-                        {formatDZD(customer.totalSpent)}
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="center">
-                        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${riskConfig.color} bg-muted/50 border-border`}>
-                          {t(riskConfig.i18nKey)} · {customer.riskScore}
-                        </span>
-                      </PremiumTable.Cell>
-                      <PremiumTable.Cell align="end">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon-sm" asChild>
-                            <Link href={`/customers/${customer.id}`}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">{t("customers.customerDetails")}</span>
-                            </Link>
-                          </Button>
-                          <CustomerRowActions customer={customer} />
-                        </div>
-                      </PremiumTable.Cell>
-                    </PremiumTable.Row>
-                  );
-                })}
-              </PremiumTable.Body>
-            </PremiumTable>
-          )}
-        </CardContent>
-      </Card>
+      {/* Customers table (Phase 1: DataTable v2 + SWR + pagination) */}
+      <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
+        <CustomersDataTable
+          fallback={{
+            customers: customers.map((c: Customer) => ({
+              id: c.id,
+              name: c.name,
+              phone: c.phone,
+              wilaya: c.wilaya,
+              commune: c.commune,
+              orderCount: c.orderCount,
+              totalSpent: c.totalSpent,
+              riskScore: c.riskScore,
+              isBlacklisted: c.isBlacklisted,
+              createdAt: c.createdAt.toISOString(),
+            })),
+            total: totalCustomers,
+            hasNextPage: totalCustomers > 25,
+            page: 1,
+            pageSize: 25,
+          }}
+          locale={locale as Locale}
+        />
+      </div>
     </div>
   );
 }
