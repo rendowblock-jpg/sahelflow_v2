@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
 **Last updated:** 2026-07-04 (Session 23 complete — the Prototype→Product Wave, 12 phases)
-**Main HEAD:** `4118488`
+**Main HEAD:** `440f1a6`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
