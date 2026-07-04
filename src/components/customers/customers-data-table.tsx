@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/data-table/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { selectColumn } from "@/components/data-table/data-table";
-import { EmptyState } from "@/components/shared/empty-state";
+import { CustomersEmptyState } from "@/components/shared/empty-states";
 import { useCustomers, type CustomerListItem, type CustomersResponse } from "@/hooks/swr/use-customers";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Users, Ban } from "lucide-react";
+import { Ban } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
 interface CustomersDataTableProps {
@@ -79,13 +79,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       pagination={pagination}
       onRowClick={(row) => router.push(`/customers/${row.id}`)}
       getRowId={(row) => row.id}
-      emptyState={
-        <EmptyState
-          icon={Users}
-          title={t("customers.empty.title") || "No customers yet"}
-          description={t("customers.empty.description") || "Add your first customer or import from CSV."}
-        />
-      }
+      emptyState={<CustomersEmptyState />}
     />
   );
 }

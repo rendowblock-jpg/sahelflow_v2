@@ -10,7 +10,7 @@
 import { useRouter } from "next/navigation";
 import { DataTable, selectColumn } from "@/components/data-table/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DeliveriesEmptyState } from "@/components/shared/empty-states";
 import { useDeliveries, type DeliveryListItem, type DeliveriesResponse } from "@/hooks/swr/use-deliveries";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
@@ -18,7 +18,7 @@ import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-bad
 import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import { deliveryProviderConfig } from "@/lib/shared";
-import { Truck } from "lucide-react";
+
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 
@@ -143,15 +143,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
       pagination={pagination}
       onRowClick={(row) => router.push(`/deliveries/${row.id}`)}
       getRowId={(row) => row.id}
-      emptyState={
-        <EmptyState
-          icon={Truck}
-          title={t("deliveries.empty.title") || "No deliveries yet"}
-          description={t("deliveries.empty.description") || "Create an order and generate a shipment to see it here."}
-          actionLabel={t("deliveries.empty.action") || "Go to orders"}
-          actionHref="/orders"
-        />
-      }
+      emptyState={<DeliveriesEmptyState />}
     />
   );
 }

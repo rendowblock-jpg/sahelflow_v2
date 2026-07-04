@@ -9,13 +9,13 @@
 import { useRouter } from "next/navigation";
 import { DataTable, selectColumn } from "@/components/data-table/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { EmptyState } from "@/components/shared/empty-state";
+import { ProductsEmptyState } from "@/components/shared/empty-states";
 import { useProducts, type ProductListItem, type ProductsResponse } from "@/hooks/swr/use-products";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, AlertTriangle, Eye } from "lucide-react";
+import { AlertTriangle, Eye } from "lucide-react";
 import Link from "next/link";
 import { ProductRowActions } from "@/components/products/product-row-actions";
 import type { Product } from "@/types/domain";
@@ -129,13 +129,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
       pagination={pagination}
       onRowClick={(row) => router.push(`/products/${row.id}`)}
       getRowId={(row) => row.id}
-      emptyState={
-        <EmptyState
-          icon={Package}
-          title={t("products.noProductsTitle") || "No products yet"}
-          description={t("products.noProductsDesc") || "Add your first product to start tracking inventory."}
-        />
-      }
+      emptyState={<ProductsEmptyState />}
     />
   );
 }

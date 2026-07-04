@@ -16,10 +16,10 @@
  */
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle, Package } from "lucide-react";
+import { CheckCircle2, XCircle, } from "lucide-react";
 import { DataTable, type BulkAction } from "@/components/data-table/data-table";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
-import { EmptyState } from "@/components/shared/empty-state";
+import { OrdersEmptyState } from "@/components/shared/empty-states";
 import { useOrders, type OrdersResponse } from "@/hooks/swr/use-orders";
 import { useOrdersColumns } from "./orders-columns";
 import { useI18n } from "@/hooks/use-i18n";
@@ -154,13 +154,7 @@ export function OrdersDataTable({
         onRowClick={(row) => router.push(`/orders/${row.id}`)}
         bulkActions={bulkActions}
         getRowId={(row) => row.id}
-        emptyState={
-          <EmptyState
-            icon={Package}
-            title={t("orders.empty.title")}
-            description={t("orders.empty.description")}
-          />
-        }
+        emptyState={<OrdersEmptyState />}
       />
 
     </>

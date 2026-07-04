@@ -6,14 +6,14 @@
 import { useRouter } from "next/navigation";
 import { DataTable, selectColumn } from "@/components/data-table/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { EmptyState } from "@/components/shared/empty-state";
+import { ReturnsEmptyState } from "@/components/shared/empty-states";
 import { useReturns, type ReturnListItem, type ReturnsResponse } from "@/hooks/swr/use-returns";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDate } from "@/lib/utils";
 import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 
@@ -114,15 +114,7 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
       pagination={pagination}
       onRowClick={(row) => router.push(`/orders/${row.orderId}`)}
       getRowId={(row) => row.id}
-      emptyState={
-        <EmptyState
-          icon={RotateCcw}
-          title={t("returns.empty.title") || "No returns yet"}
-          description={t("returns.empty.description") || "Returns and exchanges will appear here."}
-          actionLabel={t("returns.empty.action") || "Go to orders"}
-          actionHref="/orders"
-        />
-      }
+      emptyState={<ReturnsEmptyState />}
     />
   );
 }
