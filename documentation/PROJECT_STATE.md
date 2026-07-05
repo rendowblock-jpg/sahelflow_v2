@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-05 (Session 28 — tsc-green baseline + doc sync; deep wave A+B+C in progress)
-**Main HEAD:** `c2c4409`
+**Last updated:** 2026-07-05 (Session 28 complete — deep wave A+B+C merged to main)
+**Main HEAD:** `253cb46`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
@@ -14,7 +14,7 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-24 complete. Session 24: follow-up wiring + DataTable v2 on all list pages + 5 skipped tests fixed. |
+| Phase | Sessions 1-28 complete. Session 28: deep wave A+B+C (tsc-green, soft-delete guards, 8 ship-blockers, inbox workflow UI, automation editor, canned replies, Playwright running). |
 | LOC | ~67,000 (src/ + sidecars/ + tests/) |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-27 added 8 routes beyond the 103 counted at Session 24) |
@@ -244,6 +244,59 @@ export buttons removed (3 pages), double-wrapping Cards removed (2 pages).
 
 ---
 
+## Session 28 — 2026-07-05: Deep Wave A+B+C (merged to main at `253cb46`)
+
+A 3-phase deep wave executed against the Session 27 baseline. All 5 commits
+fast-forward-merged linearly to main (c2c4409 → 253cb46). sf-verify GREEN
+(1201 tests, 0 skip). sf-audit NO DRIFT.
+
+**Phase A — tsc-green + doc sync (commit 82df6dd):** The handoff claimed
+'tsc + eslint clean' but a fresh checkout had 16 tsc errors. 13 shadcn/ui
+components imported @radix-ui/react-* packages never in package.json; only
+checkbox (2 uses) + slider (1 use) were actually used. Installed those 2,
+deleted the 11 orphans (accordion, aspect-ratio, collapsible, context-menu,
+hover-card, menubar, navigation-menu, progress, radio-group, toggle-group,
+toggle — zero imports). 3 noImplicitAny errors auto-resolved. Doc sync:
+HEAD 779e1c9→c2c4409, API routes 103→111, tests 1197→1201.
+
+**B3 — AI tool soft-delete guards (commit e7c95d0):** 3 unguarded writes
+fixed (create_order customer pre-check, update_product_stock,
+update_product_price — were silently mutating soft-deleted records).
+create_customer P2002 interaction surfaced with clear restore-first error.
+6 service/page soft-delete filters (accounting P&L, customer 360,
+listLowStock, getDeliveryPerformance, countByStatus, deliveries/[id] page).
+Automation DELETE → soft-delete (preserves AutomationLog audit trail).
+
+**C — 4-stream runtime audit (commit 1465017):** 8 ship-blockers fixed:
+danger-zone Reset button (no body → 400), order-change ledger on
+create/update/status (timeline was empty), orders-page counts via groupBy
+(was take:200 → wrong counts >200 orders), 35 missing i18n keys (4 raw-key
+leaks: nav.deliveries, orders.orderCreated, dashboard.revenueTooltip,
+products.total), product-service $transaction, .env.example sync, health
+version 3.1.0→env.appVersion, cod-service take:200→500.
+
+**B1 — Inbox workflow UI + feature wiring (commit 36f56e8):** 5 new
+conversation controls (status+snooze dialog, priority, assignee, labels,
+activity-message renderer) in conversation-controls.tsx. Extended GET
+/api/conversations. Wired into inbox-live.tsx (replaced broken
+ConversationStatusDropdown). ConditionBuilder wired into new
+automation-editor.tsx (old 'New automation' button was a silent no-op —
+fixed; PATCH route extended). CannedResponse picker wired into inbox reply
+composer (model+API had zero consumers). 63 new i18n keys across en/fr/ar.
+
+**B2 — Playwright e2e (commit 253cb46):** chromium installed, config reads
+E2E_BASE_URL env, setup.spec.ts fixed (hydration wait, #pin locator,
+graceful skip when DB seeded). Playwright now RUNS (was 'never run').
+Full-suite green blocked by sandbox ~4GB/no-swap ceiling — founder machine
+with prod build should run clean.
+
+**Items CLOSED this session:** tsc-green on fresh checkout, conversation
+workflow UI controls, ConditionBuilder wiring, CannedResponse wiring,
+AI-tool soft-delete guards, order-change ledger on all mutations,
+orders-page count accuracy, 4 raw-key i18n leaks, Playwright running.
+
+---
+
 ## Session 27 — 2026-07-05: Connectivity Audit + Runtime Fixes
 
 The previous "all done" claim was wrong. A 4-stream connectivity audit
@@ -372,6 +425,6 @@ lib/ai/redact.ts, lib/auth/constant-time.ts, scripts/build-sidecar.ts.
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `c2c4409` | v4.0.0 + Session 27 (connectivity audit + runtime fixes). sf-verify green. 1201 tests, 0 skip. 88.8% coverage. |
+| `main` | `253cb46` | v4.0.0 + Session 28 (deep wave A+B+C merged linearly). sf-verify green. 1201 tests, 0 skip. 88.8% coverage. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
 | `agent-handoff` | (orphan) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (8 tools) |
