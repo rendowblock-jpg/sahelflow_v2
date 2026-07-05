@@ -147,7 +147,20 @@ export default async function AutomationsPage() {
                       )}
                     </div>
                   </div>
-                  <AutomationActions variant="toggle" automationId={auto.id} isActive={auto.isActive} />
+                  <div className="flex items-center gap-1">
+                    <AutomationActions
+                      variant="edit"
+                      automation={{
+                        id: auto.id,
+                        name: auto.name,
+                        trigger: auto.trigger,
+                        action: auto.action,
+                        isActive: auto.isActive,
+                        conditions: auto.conditions,
+                      }}
+                    />
+                    <AutomationActions variant="toggle" automationId={auto.id} isActive={auto.isActive} />
+                  </div>
                 </div>
               ))}
             </div>

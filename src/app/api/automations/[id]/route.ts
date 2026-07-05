@@ -1,22 +1,48 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** PATCH — Toggle automation active/inactive or update config */
+// Mirrors the POST create schema. Allows partial updates so the editor can
+// patch name/trigger/action/conditions/steps/config as well as toggle isActive.
+// Previously only isActive + name were accepted (C-audit S3-1).
+const updateSchema = z.object({
+  name: z.string().min(1).optional(),
+  trigger: z.string().min(1).optional(),
+  action: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+  conditions: z.any().nullable().optional(), // JSON-logic ConditionGroup
+  steps: z.array(z.any()).nullable().optional(),
+  config: z.record(z.string(), z.any()).nullable().optional(),
+});
+
+/** PATCH — Update automation fields (name/trigger/action/conditions/isActive/etc.) */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
   const body = await req.json();
+  const input = updateSchema.parse(body);
 
   const automation = await db.automation.update({
     where: { id },
     data: {
-      ...(body.isActive !== undefined && { isActive: body.isActive }),
-      ...(body.name && { name: body.name }),
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.trigger !== undefined && { trigger: input.trigger }),
+      ...(input.action !== undefined && { action: input.action }),
+      ...(input.isActive !== undefined && { isActive: input.isActive }),
+      ...(input.conditions !== undefined && {
+        conditions: input.conditions === null ? null : JSON.stringify(input.conditions),
+      }),
+      ...(input.steps !== undefined && {
+        steps: input.steps === null ? null : JSON.stringify(input.steps),
+      }),
+      ...(input.config !== undefined && {
+        config: input.config === null ? null : JSON.stringify(input.config),
+      }),
     },
   });
 

@@ -22,6 +22,13 @@ export const GET = withErrorHandler(async () => {
       contactPhone: true,
       lastMessageAt: true,
       unreadCount: true,
+      status: true,
+      assigneeId: true,
+      priority: true,
+      labels: true,
+      snoozedUntil: true,
+      waitingSince: true,
+      firstReplyAt: true,
     },
   });
   return NextResponse.json({ conversations, source: "seeded" });

@@ -9,15 +9,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { MessageStatus } from "@/components/inbox/message-status";
-import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { BellOff, ChevronDown } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
@@ -46,6 +37,9 @@ import {
   Search,
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
+import { ConversationControls, ActivityMessage } from "@/components/inbox/conversation-controls";
+import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
+import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
 
 interface SeededConversation {
   id: string;
@@ -54,12 +48,21 @@ interface SeededConversation {
   contactPhone: string | null;
   lastMessageAt: string | null;
   unreadCount: number;
+  status: string;
+  assigneeId: string | null;
+  priority: string | null;
+  labels: string | null;
+  snoozedUntil: string | null;
+  waitingSince: string | null;
+  firstReplyAt: string | null;
 }
 interface SeededMessage {
   id: string;
   body: string;
   direction: string;
   timestamp: string;
+  messageType?: string;
+  activityType?: string;
 }
 
 interface NormalizedChat {
@@ -70,12 +73,14 @@ interface NormalizedChat {
   lastMessageText?: string;
   lastMessageAt?: number;
   unread: number;
+  workflow?: Partial<ConversationWorkflowState>;
 }
 interface NormalizedMessage {
   id: string;
   body: string;
-  direction: "inbound" | "outbound";
+  direction: "inbound" | "outbound" | "system";
   timestamp: number;
+  messageType?: string;
 }
 
 type Mode = "loading" | "live" | "seeded";
@@ -137,6 +142,15 @@ export function InboxLive() {
           channel: "seeded" as const,
           lastMessageAt: c.lastMessageAt ? new Date(c.lastMessageAt).getTime() : undefined,
           unread: c.unreadCount,
+          workflow: {
+            status: c.status as ConversationWorkflowState["status"],
+            assigneeId: c.assigneeId,
+            priority: c.priority as ConversationWorkflowState["priority"],
+            labels: c.labels ? (() => { try { const p = JSON.parse(c.labels); return Array.isArray(p) ? p : null; } catch { return null; } })() : null,
+            snoozedUntil: c.snoozedUntil,
+            waitingSince: c.waitingSince,
+            firstReplyAt: c.firstReplyAt,
+          },
         })),
       );
       setMode("seeded");
@@ -175,8 +189,9 @@ export function InboxLive() {
               data.conversation.messages.map((m) => ({
                 id: m.id,
                 body: m.body,
-                direction: (m.direction === "inbound" ? "inbound" : "outbound") as "inbound" | "outbound",
+                direction: (m.direction === "inbound" ? "inbound" : m.direction === "system" ? "system" : "outbound") as "inbound" | "outbound" | "system",
                 timestamp: new Date(m.timestamp).getTime(),
+                messageType: m.messageType,
               })),
             );
             return;
@@ -481,8 +496,11 @@ export function InboxLive() {
                   <Badge variant="outline">
                     {activeChat.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
                   </Badge>
-                  <ConversationStatusDropdown chatId={activeChat.id} />
                 </div>
+                <ConversationControls
+                  conversationId={activeChat.id}
+                  initial={activeChat.workflow ?? {}}
+                />
               </div>
 
               <ScrollArea className="flex-1 p-4">
@@ -495,6 +513,9 @@ export function InboxLive() {
                     <p className="text-center text-sm text-muted-foreground py-8">{t("inbox.noMessages")}</p>
                   ) : (
                     messages.map((msg) => (
+                      msg.messageType === "activity" ? (
+                        <ActivityMessage key={msg.id} body={msg.body} timestamp={msg.timestamp} />
+                      ) : (
                       <div key={msg.id} className="space-y-2">
                         <div className={`flex ${msg.direction === "inbound" ? "justify-start" : "justify-end"}`}>
                           <div
@@ -523,6 +544,7 @@ export function InboxLive() {
                           </div>
                         )}
                       </div>
+                      )
                     ))
                   )}
                   <div ref={messagesEndRef} />
@@ -532,6 +554,17 @@ export function InboxLive() {
               <div className="p-3 border-t bg-background">
                 {activeChat.channel === "whatsapp" && status === "connected" ? (
                   <div className="flex items-center gap-2">
+                    <CannedResponsePicker
+                      disabled={sending}
+                      onSelect={(text) => {
+                        // Append the canned text to the current draft. If the
+                        // draft is empty, the canned text becomes the draft.
+                        const next = replyText.trim()
+                          ? `${replyText.trimEnd()}\n${text}`
+                          : text;
+                        setReplyText(next);
+                      }}
+                    />
                     <Input
                       type="text"
                       aria-label={t("inbox.replyPlaceholder")} placeholder={t("inbox.replyPlaceholder")}
@@ -551,6 +584,7 @@ export function InboxLive() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
+                    <CannedResponsePicker disabled onSelect={() => undefined} />
                     <Input
                       type="text"
                       placeholder={
@@ -601,66 +635,6 @@ export function InboxLive() {
         onConfirm={performLogout}
       />
     </>
-  );
-}
-
-/**
- * ConversationStatusDropdown — resolve/snooze/reopen a conversation (Phase 5).
- * Calls PATCH /api/conversations/[id]/status.
- */
-function ConversationStatusDropdown({ chatId }: { chatId: string }) {
-  const [status, setStatus] = useState<"open" | "pending" | "resolved" | "snoozed">("open");
-
-  // Fetch the conversation status on mount (best-effort — if the chat isn't
-  // in the DB yet, it defaults to "open")
-  useEffect(() => {
-    fetch(`/api/conversations/${chatId}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.conversation?.status) setStatus(d.conversation.status); })
-      .catch(() => {});
-  }, [chatId]);
-
-  const updateStatus = async (newStatus: "open" | "pending" | "resolved" | "snoozed") => {
-    setStatus(newStatus);
-    try {
-      await fetch(`/api/conversations/${chatId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-    } catch {
-      // best-effort
-    }
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors">
-          <ConversationStatusBadge status={status} />
-          <ChevronDown className="h-3 w-3 opacity-50" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => updateStatus("open")}>
-          <CheckCircle2 className="me-2 h-4 w-4 text-blue-500" />
-          Open
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => updateStatus("pending")}>
-          <Clock className="me-2 h-4 w-4 text-amber-500" />
-          Pending
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => updateStatus("resolved")}>
-          <CheckCircle2 className="me-2 h-4 w-4 text-emerald-500" />
-          Resolve
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => updateStatus("snoozed")}>
-          <BellOff className="me-2 h-4 w-4 text-muted-foreground" />
-          Snooze
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
