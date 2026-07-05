@@ -228,7 +228,6 @@
   "automation.sessionSummary": "{{confirmed}} مؤكدة، {{refused}} مرفوضة",
   "automation.subtitle": "تأكيد الطلبيات بالذكاء الاصطناعي",
   "automation.title": "التأكيد",
-  "automations.actions.createOrder": "إنشاء طلب",
   "automations.actions.sendNotification": "إرسال إشعار",
   "automations.actions.sendWhatsapp": "إرسال واتساب",
   "automations.actions.tagCustomer": "وسم العميل",

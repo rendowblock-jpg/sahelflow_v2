@@ -228,7 +228,6 @@
   "automation.sessionSummary": "{{confirmed}} confirmed, {{refused}} refused",
   "automation.subtitle": "AI-powered order confirmation",
   "automation.title": "Confirmation",
-  "automations.actions.createOrder": "Create order",
   "automations.actions.sendNotification": "Send notification",
   "automations.actions.sendWhatsapp": "Send WhatsApp",
   "automations.actions.tagCustomer": "Tag customer",

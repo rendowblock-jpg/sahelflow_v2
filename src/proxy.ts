@@ -51,11 +51,17 @@ export async function proxy(request: NextRequest) {
   }
 
   // Allow Next.js internals (_next, icons, manifest, etc.)
+  // Also allow /sw.js — the service worker must be fetchable by the browser
+  // directly (ServiceWorkerRegister calls navigator.serviceWorker.register("/sw.js")).
+  // If middleware intercepted it, unauthenticated users on /login or /setup
+  // would get an HTML redirect instead of JS, breaking SW registration and
+  // silently disabling PWA/offline support. (CONN-4-BUILD finding)
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/icons/") ||
     pathname === "/manifest.webmanifest" ||
-    pathname === "/favicon.ico"
+    pathname === "/favicon.ico" ||
+    pathname === "/sw.js"
   ) {
     return NextResponse.next();
   }
@@ -76,6 +82,7 @@ export const config = {
    * Match all paths except:
    * - _next/static, _next/image (Next.js internals)
    * - favicon.ico, icons/* (static assets)
+   * - sw.js (service worker — must be fetchable without auth)
    */
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

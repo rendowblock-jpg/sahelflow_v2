@@ -100,14 +100,28 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
   });
 }
 
-/** Verify the cron secret from header or env. */
+/** Verify the cron secret from header or env.
+ *
+ * Production: header must match env.cronSecret (CRON_SECRET).
+ * Dev: when CRON_SECRET is unset (the common dev case), fall back to the
+ * default public secret "dev" (env.publicCronSecret) so the in-app "Test
+ * Now" button works without forcing the developer to set CRON_SECRET.
+ * This is safe because dev mode is local-only; the public secret is not
+ * secret in dev by design. (CONN-4-BUILD finding)
+ */
 function verifyCronSecret(req: NextRequest): boolean {
   const headerSecret = req.headers.get("x-cron-secret");
   if (!headerSecret) return false;
   const envSecret = env.cronSecret;
-  if (!envSecret) return false;
-  // Constant-time comparison (shared util)
-  return constantTimeEqual(headerSecret, envSecret);
+  if (envSecret) {
+    // Constant-time comparison (shared util)
+    return constantTimeEqual(headerSecret, envSecret);
+  }
+  // No real secret configured — allow the default "dev" secret in non-prod.
+  if (process.env.NODE_ENV !== "production") {
+    return constantTimeEqual(headerSecret, env.publicCronSecret ?? "dev");
+  }
+  return false;
 }
 
 export const POST = withErrorHandler(async (req: NextRequest) => {

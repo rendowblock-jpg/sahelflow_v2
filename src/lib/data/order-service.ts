@@ -19,7 +19,7 @@ import {
 } from "@/lib/order-transitions";
 import type { ServiceContext } from "./service-base";
 import { withServiceError, nextOrderNumber } from "./service-base";
-import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
+import { dispatchTrigger, checkAndDispatchLowStock, type TriggerEvent } from "@/lib/automations/engine";
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
 }
@@ -169,6 +169,12 @@ export const orderService = {
                 where: { id: item.productId },
                 data: { stock: { decrement: item.quantity } },
               });
+              // Race-safe low-stock check: read the just-decremented stock
+              // INSIDE this tx (so we see the uncommitted change), then
+              // fire-and-forget the `stock.low` dispatch. The await is just
+              // for the read — the dispatch itself is `void`-ed inside the
+              // helper and never blocks the tx.
+              await checkAndDispatchLowStock(tx, item.productId);
             }
           }
         }
@@ -181,6 +187,10 @@ export const orderService = {
                 where: { id: item.productId },
                 data: { stock: { increment: item.quantity } },
               });
+              // If the product is still at or below threshold after
+              // restoration, surface the trigger so the merchant knows it's
+              // still low. Same race-safe pattern as above.
+              await checkAndDispatchLowStock(tx, item.productId);
             }
           }
         }

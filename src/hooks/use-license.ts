@@ -67,12 +67,21 @@ export function useLicense() {
       if (cancelled) return;
 
       setValidation(result);
-      // Wave 2: sync the license to the server so requireLicense() works
-      if (result.status === "valid" || result.status === "expired") {
+      // Wave 2: sync the SIGNED LICENSE BLOB to the server so requireLicense()
+      // can re-verify server-side. The server route expects
+      // {license: {payload, signature}, clientStatus} — NOT the full
+      // LicenseValidationResult. The server re-verifies the signature itself
+      // and ignores clientStatus (kept for informational purposes only).
+      // (CONN-4-BUILD finding: previously posted {status, daysRemaining, message}
+      // which the route's zod schema rejected with 400.)
+      if ((result.status === "valid" || result.status === "expired") && currentLicense) {
         fetch("/api/license/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
-          body: JSON.stringify(result),
+          body: JSON.stringify({
+            license: currentLicense,
+            clientStatus: result.status,
+          }),
         }).catch(() => { /* best-effort */ });
       }
       setHasChecked(true);

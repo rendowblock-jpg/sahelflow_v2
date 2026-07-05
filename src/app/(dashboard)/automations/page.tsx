@@ -30,7 +30,6 @@ const TRIGGER_I18N: Record<string, string> = {
 /** i18n keys for actions */
 const ACTION_I18N: Record<string, string> = {
   "send_whatsapp": "automations.actions.sendWhatsapp",
-  "create_order": "automations.actions.createOrder",
   "update_status": "automations.actions.updateStatus",
   "send_notification": "automations.actions.sendNotification",
   "tag_customer": "automations.actions.tagCustomer",

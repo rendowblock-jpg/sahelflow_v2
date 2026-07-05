@@ -16,26 +16,32 @@ export async function updateConversationStatus(
   status: ConversationStatus,
   snoozedUntil?: Date,
 ) {
-  const conv = await db.conversation.update({
-    where: { id: conversationId },
-    data: {
-      status,
-      snoozedUntil: status === "snoozed" ? (snoozedUntil ?? null) : null,
-      // Reopening a resolved/snoozed conversation resets waiting
-      waitingSince: status === "open" ? new Date() : null,
-    },
-  });
+  // TXN: conversation update + activity message must be atomic (audit finding
+  // D-conv: "conversation update + activity message not transactional").
+  const conv = await db.$transaction(async (tx) => {
+    const updated = await tx.conversation.update({
+      where: { id: conversationId },
+      data: {
+        status,
+        snoozedUntil: status === "snoozed" ? (snoozedUntil ?? null) : null,
+        // Reopening a resolved/snoozed conversation resets waiting
+        waitingSince: status === "open" ? new Date() : null,
+      },
+    });
 
-  // Write an activity message (inline timeline event)
-  await db.message.create({
-    data: {
-      conversationId,
-      body: `Conversation ${status}`,
-      direction: "system",
-      timestamp: new Date(),
-      messageType: "activity",
-      activityType: `status_${status}`,
-    },
+    // Write an activity message (inline timeline event) — same tx
+    await tx.message.create({
+      data: {
+        conversationId,
+        body: `Conversation ${status}`,
+        direction: "system",
+        timestamp: new Date(),
+        messageType: "activity",
+        activityType: `status_${status}`,
+      },
+    });
+
+    return updated;
   });
 
   void logAudit({
@@ -50,20 +56,25 @@ export async function updateConversationStatus(
 }
 
 export async function assignConversation(conversationId: string, assigneeId: string | null) {
-  const conv = await db.conversation.update({
-    where: { id: conversationId },
-    data: { assigneeId },
-  });
+  // TXN: conversation update + activity message must be atomic.
+  const conv = await db.$transaction(async (tx) => {
+    const updated = await tx.conversation.update({
+      where: { id: conversationId },
+      data: { assigneeId },
+    });
 
-  await db.message.create({
-    data: {
-      conversationId,
-      body: assigneeId ? `Assigned to ${assigneeId}` : "Assignment removed",
-      direction: "system",
-      timestamp: new Date(),
-      messageType: "activity",
-      activityType: assigneeId ? "assigned" : "unassigned",
-    },
+    await tx.message.create({
+      data: {
+        conversationId,
+        body: assigneeId ? `Assigned to ${assigneeId}` : "Assignment removed",
+        direction: "system",
+        timestamp: new Date(),
+        messageType: "activity",
+        activityType: assigneeId ? "assigned" : "unassigned",
+      },
+    });
+
+    return updated;
   });
 
   void logAudit({
@@ -81,20 +92,25 @@ export async function setConversationPriority(
   conversationId: string,
   priority: "urgent" | "high" | "medium" | "low" | null,
 ) {
-  const conv = await db.conversation.update({
-    where: { id: conversationId },
-    data: { priority },
-  });
+  // TXN: conversation update + activity message must be atomic.
+  const conv = await db.$transaction(async (tx) => {
+    const updated = await tx.conversation.update({
+      where: { id: conversationId },
+      data: { priority },
+    });
 
-  await db.message.create({
-    data: {
-      conversationId,
-      body: priority ? `Priority set to ${priority}` : "Priority cleared",
-      direction: "system",
-      timestamp: new Date(),
-      messageType: "activity",
-      activityType: "priority_set",
-    },
+    await tx.message.create({
+      data: {
+        conversationId,
+        body: priority ? `Priority set to ${priority}` : "Priority cleared",
+        direction: "system",
+        timestamp: new Date(),
+        messageType: "activity",
+        activityType: "priority_set",
+      },
+    });
+
+    return updated;
   });
 
   return conv;

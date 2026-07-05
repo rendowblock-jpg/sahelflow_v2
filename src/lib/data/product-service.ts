@@ -6,6 +6,7 @@ import { NotFoundError, ConflictError, ValidationError } from "@/types/errors";
 import { createProductSchema, updateProductSchema, createCategorySchema } from "@/lib/validation";
 import type { ServiceContext } from "./service-base";
 import { withServiceError } from "./service-base";
+import { checkAndDispatchLowStock } from "@/lib/automations/engine";
 
 function toDomainProduct(row: Record<string, unknown>): Product {
   const r = { ...row };
@@ -148,6 +149,16 @@ export const productService = {
         },
         include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       });
+
+      // If stock was changed, run a low-stock check — if the new stock level
+      // is at or below the threshold, fire-and-forget a `stock.low` dispatch
+      // so any matching automation (e.g. "notify on low stock") can fire.
+      // The await is just for the read; the dispatch itself is `void`-ed
+      // inside the helper and never blocks the caller.
+      if (data.stock !== undefined) {
+        await checkAndDispatchLowStock(ctx.prisma, id);
+      }
+
       return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
   },

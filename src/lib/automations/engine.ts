@@ -103,6 +103,86 @@ export async function dispatchTrigger(
   }
 }
 
+// ── Low-stock trigger helper ─────────────────────────────────────────────────
+
+/**
+ * Minimal structural type for a Prisma client (or transaction client) that
+ * supports `product.findUnique`. We accept the loose `{ findUnique(args: any) =>
+ * Promise<any> }` shape because the PII-extended `DbClient` and the standard
+ * `Prisma.TransactionClient` use different `InternalArgs` generic
+ * instantiations on `product.findUnique`, which makes them mutually
+ * unassignable — even though the runtime call signature is identical. The
+ * `any` lets both the full client (passed by `productService.update`) and the
+ * transaction client (passed by `orderService.updateStatus`) flow through.
+ */
+type LowStockQueryClient = {
+  product: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    findUnique: (args: any) => Promise<any>;
+  };
+};
+
+/** Shape returned by `LowStockQueryClient.product.findUnique` for our select. */
+interface LowStockProductRow {
+  id: string;
+  name: string;
+  sku: string | null;
+  stock: number;
+  lowStockThreshold: number;
+}
+
+/**
+ * After a stock change, check whether the product's stock has dropped to or
+ * below its `lowStockThreshold`. If so, dispatch the `stock.low` trigger so
+ * any matching automation (e.g. "send notification on low stock") can fire.
+ *
+ * Call this from inside a `$transaction` callback right after the stock
+ * decrement/increment — the supplied `tx` lets the read see the same row
+ * state as the caller's transaction (race-safe detection). Outside a tx,
+ * pass the regular `db` client (e.g. from `productService.update`).
+ *
+ * The caller should `await` this helper so the read completes inside the
+ * transaction (race-safe). The actual `dispatchTrigger` call inside is
+ * `void`-ed — fire-and-forget, never blocks the caller, never throws. This
+ * matches the pattern of the existing `order.*` dispatches in
+ * `order-service.ts` (the dispatch itself is fire-and-forget).
+ */
+export async function checkAndDispatchLowStock(
+  tx: LowStockQueryClient,
+  productId: string,
+): Promise<void> {
+  try {
+    const product = (await tx.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        stock: true,
+        lowStockThreshold: true,
+      },
+    })) as LowStockProductRow | null;
+    if (!product) return;
+    // Only fire when stock is at or below the threshold — restoration that
+    // pushes stock back above the threshold will NOT re-fire (the product is
+    // no longer low).
+    if (product.stock > product.lowStockThreshold) return;
+
+    void dispatchTrigger("stock.low", {
+      productId: product.id,
+      productName: product.name,
+      stockLevel: product.stock,
+      lowStockThreshold: product.lowStockThreshold,
+    });
+  } catch (err) {
+    // Never let the low-stock check bubble up to the business operation.
+    logger.error("automation.lowStockCheck.failed", {
+      productId,
+      error: String(err),
+    });
+  }
+}
+
 // ── Single automation execution ──────────────────────────────────────────────
 
 async function executeAutomation(
@@ -240,15 +320,6 @@ async function executeAction(
 
     case "update_status":
       return executeUpdateStatus(config, payload);
-
-    case "create_order":
-      // Creating a follow-up order is a heavier operation — log as skipped
-      // unless we have enough payload context. This is a placeholder for
-      // a future implementation with a proper order-creation flow.
-      return {
-        status: "skipped",
-        message: "create_order action requires manual configuration",
-      };
 
     default:
       return { status: "skipped", message: `Unknown action: ${action}` };

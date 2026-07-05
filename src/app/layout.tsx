@@ -10,9 +10,13 @@ import { getDirection, type Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
 
+// CSS variable renamed from --font-geist-sans to --font-inter to match the
+// actual font being loaded (Inter, not Geist Sans). The `geist` package is
+// not installed, so the previous variable name was misleading.
+// (CONN-4-BUILD finding)
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-inter",
   display: "swap",
 });
 
