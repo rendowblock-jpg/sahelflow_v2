@@ -254,7 +254,7 @@ export async function getRiskAnalyticsReport(days = 30): Promise<RiskAnalyticsRe
   const potentialSavingsDzd = returnedHighRisk * 600;
 
   const blacklistedCustomerCount = (await db.customer.count({
-    where: { notes: { contains: "[BLACKLISTED" } },
+    where: { isBlacklisted: true, deletedAt: null },
   }));
 
   return {

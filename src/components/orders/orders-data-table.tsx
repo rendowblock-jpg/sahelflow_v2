@@ -89,7 +89,9 @@ export function OrdersDataTable({
       // Revalidate orders + dashboard stats
       await Promise.all([
         mutatePrefix("/api/orders"),
-        mutatePrefix("/api/dashboard"),
+        // The dashboard is a Server Component (no SWR key) — router.refresh()
+        // revalidates the RSC tree so dashboard stats update too.
+        router.refresh(),
       ]);
     },
   });

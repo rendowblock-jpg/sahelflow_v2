@@ -50,14 +50,36 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** The raw, unextended Prisma client. Use for migration scripts only. */
-// CRITICAL: Ensure DATABASE_URL is an absolute path.
-// Prisma CLI resolves relative paths from prisma/ dir, Prisma Client from cwd.
-// The .env file uses file:../data/shops/dev.db (correct for Prisma CLI).
-// Here we convert it to an absolute path for Prisma Client.
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes("..")) {
+// CRITICAL: Ensure DATABASE_URL is set to an ABSOLUTE path.
+// Prisma CLI resolves relative paths from the prisma/ directory, but
+// Prisma Client resolves from process.cwd() (project root). A relative
+// "file:./data/shops/dev.db" would create the DB at prisma/data/shops/dev.db
+// while the app reads data/shops/dev.db — a 0-byte mismatch (P2021).
+//
+// Also: on a fresh checkout, DATABASE_URL may be entirely unset. We default
+// to the absolute path of data/shops/dev.db so the app works out of the box
+// after `bun run dev:reset` (which seeds that file).
+function resolveDatabaseUrl(): string {
+  const raw = process.env.DATABASE_URL;
+  if (raw) {
+    // Already set — normalize to absolute path if it's a file: URL
+    const match = raw.match(/^file:(.+)$/);
+    if (match && match[1]) {
+      const p = match[1];
+      // If it's relative or contains .., resolve to absolute
+      if (!p.startsWith("/")) {
+        return `file:${resolve(process.cwd(), p)}`;
+      }
+      return raw;
+    }
+    return raw; // non-file URL (e.g. postgresql://) — pass through
+  }
+  // Not set — default to the dev SQLite path
   const dbPath = resolve(process.cwd(), "data", "shops", "dev.db");
-  process.env.DATABASE_URL = `file:${dbPath}`;
+  return `file:${dbPath}`;
 }
+
+process.env.DATABASE_URL = resolveDatabaseUrl();
 
 export const dbRaw =
   globalForPrisma.prismaRaw ??

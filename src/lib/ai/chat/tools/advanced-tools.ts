@@ -554,9 +554,9 @@ registerTool({
 
       const where = start ? { createdAt: { gte: start } } : {};
       const [returned, refused, total] = await Promise.all([
-        db.order.count({ where: { ...where, status: "returned" } }),
-        db.order.count({ where: { ...where, status: "cancelled" } }),
-        db.order.count({ where }),
+        db.order.count({ where: { ...where, status: "returned", deletedAt: null } }),
+        db.order.count({ where: { ...where, status: "refused", deletedAt: null } }),
+        db.order.count({ where: { ...where, deletedAt: null } }),
       ]);
 
       const returnedValue = await db.order.aggregate({

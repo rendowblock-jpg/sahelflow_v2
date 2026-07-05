@@ -25,7 +25,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 
     const products = config.productIds.length > 0
       ? await db.product.findMany({
-          where: { id: { in: config.productIds }, isActive: true },
+          where: { id: { in: config.productIds }, isActive: true, deletedAt: null },
           select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
         })
       : [];

@@ -41,6 +41,7 @@ export default async function AutomationsPage() {
 
   const [automations, recentLogs] = await Promise.all([
     db.automation.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
     }),
     db.automationLog.findMany({

@@ -255,12 +255,12 @@ describe("getRiskAnalyticsReport — seeded orders", () => {
     expect(report.kpis.highRiskOrderCount).toBeGreaterThanOrEqual(1);
   });
 
-  it("KPIs: blacklistedCustomerCount counts customers with [BLACKLISTED tag in notes", async () => {
+  it("KPIs: blacklistedCustomerCount counts customers with isBlacklisted flag", async () => {
     const c1 = await seedTestCustomer(db, { phone: uniquePhone() });
     await seedTestCustomer(db, { phone: uniquePhone() });
     await db.customer.update({
       where: { id: c1.id },
-      data: { notes: "[BLACKLISTED: fraud]" },
+      data: { isBlacklisted: true },
     });
     const report = await getRiskAnalyticsReport(30);
     expect(report.kpis.blacklistedCustomerCount).toBe(1);

@@ -242,9 +242,16 @@ export function IntegrationsPanel({
       const integration = integrationList.find((i) => i.id === connecting);
       if (!integration?.saveEndpoint) return;
 
-      const body: Record<string, string> = { provider: connecting };
-      for (const [k, v] of Object.entries(formData)) {
-        body[k] = v;
+      // The delivery credentials API expects { provider, credentials: {...} }
+      // The e-commerce connect API expects { provider, ...fields flat }
+      const isDelivery = integration.saveEndpoint === "/api/delivery/credentials";
+      const body: Record<string, unknown> = { provider: connecting };
+      if (isDelivery) {
+        body.credentials = { ...formData };
+      } else {
+        for (const [k, v] of Object.entries(formData)) {
+          body[k] = v;
+        }
       }
 
       const res = await fetch(integration.saveEndpoint, {

@@ -38,7 +38,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   const secretPromises: Promise<void>[] = [];
   for (const [key, value] of Object.entries(creds)) {
     if (value) {
-      const secretKey = `integration_${provider}_${key}`;
+      const secretKey = `ecommerce_${provider}_${key}`;  // was integration_ — mismatched loader
       secretPromises.push(setSecret(secretKey, value));
     }
   }

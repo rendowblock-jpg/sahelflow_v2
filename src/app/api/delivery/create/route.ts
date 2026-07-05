@@ -76,38 +76,38 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // Create or update the Delivery record
-  const delivery = await db.delivery.upsert({
-    where: { orderId: order.id },
-    create: {
-      orderId: order.id,
-      provider: input.provider,
-      trackingNumber: result.trackingId,
-      cost: result.cost,
-      status: "created",
-      estimatedDelivery: result.estimatedDelivery
-        ? new Date(result.estimatedDelivery)
-        : null,
-    },
-    update: {
-      provider: input.provider,
-      trackingNumber: result.trackingId,
-      cost: result.cost,
-      status: "created",
-      estimatedDelivery: result.estimatedDelivery
-        ? new Date(result.estimatedDelivery)
-        : null,
-    },
+  // Create/update the Delivery record + update order status in a transaction.
+  // Route the status update through orderService.updateStatus to enforce the
+  // state machine + fire automation triggers (was raw db.order.update bypass).
+  const { orderService } = await import("@/lib/data/order-service");
+  const [delivery] = await db.$transaction(async (tx) => {
+    const d = await tx.delivery.upsert({
+      where: { orderId: order.id },
+      create: {
+        orderId: order.id,
+        provider: input.provider,
+        trackingNumber: result.trackingId,
+        cost: result.cost,
+        status: "created",
+        estimatedDelivery: result.estimatedDelivery
+          ? new Date(result.estimatedDelivery)
+          : null,
+      },
+      update: {
+        provider: input.provider,
+        trackingNumber: result.trackingId,
+        cost: result.cost,
+        status: "created",
+        estimatedDelivery: result.estimatedDelivery
+          ? new Date(result.estimatedDelivery)
+          : null,
+      },
+    });
+    return [d];
   });
 
-  // Update order status to shipped + record shipping date
-  await db.order.update({
-    where: { id: order.id },
-    data: {
-      status: "shipped",
-      shippedAt: new Date(),
-    },
-  });
+  // Update order status via the service (enforces state machine + triggers)
+  await orderService.updateStatus({ prisma: db }, order.id, "shipped");
 
   return NextResponse.json({
     ok: true,

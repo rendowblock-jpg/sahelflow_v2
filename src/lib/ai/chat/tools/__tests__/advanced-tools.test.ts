@@ -434,13 +434,13 @@ describe("get_delivery_cost_comparison", () => {
 // ── get_returns_summary ──────────────────────────────────────────────────────
 
 describe("get_returns_summary", () => {
-  it("summarizes returned + cancelled orders for the 'all' period", async () => {
+  it("summarizes returned + refused orders for the 'all' period", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     await db.order.create({
       data: { orderNumber: "ORD-0001", status: "returned", customerId: customer.id, totalPrice: 3000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
     });
     await db.order.create({
-      data: { orderNumber: "ORD-0002", status: "cancelled", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
+      data: { orderNumber: "ORD-0002", status: "refused", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
     });
     await db.order.create({
       data: { orderNumber: "ORD-0003", status: "delivered", customerId: customer.id, totalPrice: 5000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },

@@ -21,6 +21,19 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { evaluateConditions, type ConditionGroup } from "./conditions";
 
+import { readFileSync, existsSync } from "fs";
+
+/** Read the sidecar bearer token from the token file (written by the sidecar on startup). */
+function readSidecarTokenFile(): string | undefined {
+  try {
+    const tokenFile = process.env.SIDECAR_TOKEN_FILE || "/tmp/sahelflow-sidecar-token";
+    if (existsSync(tokenFile)) {
+      return readFileSync(tokenFile, "utf-8").trim();
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type TriggerEvent =
@@ -270,8 +283,11 @@ async function executeSendWhatsapp(
     // Check if the WhatsApp sidecar is running
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
+    // Read the sidecar bearer token (written by the sidecar on startup)
+    const token = process.env.SIDECAR_TOKEN ?? readSidecarTokenFile();
     const res = await fetch("http://127.0.0.1:3001/status", {
       signal: controller.signal,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).finally(() => clearTimeout(timeout));
 
     if (!res.ok) {
@@ -286,10 +302,15 @@ async function executeSendWhatsapp(
     }
 
     // Send the message
+    // Sidecar expects { to, text } (not { phone, message }) + Bearer auth
+    const sendToken = process.env.SIDECAR_TOKEN ?? readSidecarTokenFile();
     const sendRes = await fetch("http://127.0.0.1:3001/send", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, message }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(sendToken ? { Authorization: `Bearer ${sendToken}` } : {}),
+      },
+      body: JSON.stringify({ to: phone, text: message }),
     });
 
     if (!sendRes.ok) {

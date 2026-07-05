@@ -34,7 +34,7 @@ export default async function StorefrontPage({
   // Fetch the selected products
   const products = config.productIds.length > 0
     ? await db.product.findMany({
-        where: { id: { in: config.productIds }, isActive: true },
+        where: { id: { in: config.productIds }, isActive: true, deletedAt: null },
         select: {
           id: true,
           name: true,

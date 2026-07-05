@@ -94,5 +94,8 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "workspaces": [
+    "sidecars/whatsapp"
+  ]
 }
