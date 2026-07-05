@@ -14,7 +14,7 @@ export default defineConfig({
   workers: 1, // single worker — shared SQLite DB
   reporter: process.env.CI ? "github" : "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
     trace: "on-first-retry",
     extraHTTPHeaders: {
       "x-requested-with": "sahelflow", // CSRF header
