@@ -90,7 +90,7 @@ export const env = {
   databaseUrl: required("DATABASE_URL", "file:./data/shops/dev.db"),
 
   /** App version (for license version-gating) */
-  appVersion: optional("APP_VERSION", "3.0.0") ?? "3.0.0",
+  appVersion: optional("APP_VERSION", "4.0.0") ?? "4.0.0",
 
   /** License public key (Ed25519, for verifying founder-signed licenses) */
   licensePublicKey: optional("LICENSE_PUBLIC_KEY", ""),

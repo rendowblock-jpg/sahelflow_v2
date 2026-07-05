@@ -18,6 +18,7 @@ import {
   triggersCustomerStatsUpdate,
 } from "@/lib/order-transitions";
 import type { ServiceContext } from "./service-base";
+import { recordOrderChange, recordStatusChange } from "@/lib/data/order-change-service";
 import { withServiceError, nextOrderNumber } from "./service-base";
 import { dispatchTrigger, checkAndDispatchLowStock, type TriggerEvent } from "@/lib/automations/engine";
 function toDomain(row: Record<string, unknown>): Order {
@@ -115,6 +116,13 @@ export const orderService = {
         return order;
       });
 
+      // Record the order-creation event in the OrderChange ledger (S2-2).
+      await recordOrderChange({
+        orderId: row.id,
+        actionType: "created",
+        payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
+      });
+
       // Fire automation trigger (fire-and-forget — never blocks order creation)
       void dispatchTrigger("order.created" as TriggerEvent, {
         orderId: row.id,
@@ -140,6 +148,9 @@ export const orderService = {
     to: OrderStatus,
   ): Promise<Order> {
     return withServiceError(async () => {
+      // Capture the from-status outside the tx so we can record it in the
+      // OrderChange ledger after the tx commits (S2-1).
+      let fromStatus: OrderStatus | undefined;
       // TOCTOU FIX: re-read the order + assert the transition INSIDE the
       // transaction. Two concurrent updateStatus calls (e.g. automation +
       // manual click) previously both passed assertCanTransition outside the
@@ -152,6 +163,7 @@ export const orderService = {
         if (!order) throw new NotFoundError("Order", id);
 
         const from = order.status as OrderStatus;
+        fromStatus = from;
 
         // Enforce state machine (inside tx — race-safe)
         assertCanTransition(from, to);
@@ -219,6 +231,11 @@ export const orderService = {
         });
       });
 
+      // Record the status transition in the OrderChange ledger (S2-1).
+      if (fromStatus !== undefined && fromStatus !== to) {
+        await recordStatusChange(id, fromStatus, to);
+      }
+
       // Fire automation trigger (fire-and-forget — never blocks status update)
       void dispatchTrigger(`order.${to}` as TriggerEvent, {
         orderId: updated.id,
@@ -239,7 +256,7 @@ export const orderService = {
 
       // SEC-016/CODE-003: wrap item sync + order update in a single $transaction
       // so a failure on any item operation rolls back all changes.
-      return ctx.prisma.$transaction(async (tx) => {
+      const updated = await ctx.prisma.$transaction(async (tx) => {
         if (data.items) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
           const incomingIds = data.items.filter(i => i.id).map(i => i.id);
@@ -284,6 +301,13 @@ export const orderService = {
         });
         return toDomain(row as unknown as Record<string, unknown>);
       });
+      // Record the edit in the OrderChange ledger (S2-2).
+      await recordOrderChange({
+        orderId: id,
+        actionType: "edit",
+        payload: { fields: Object.keys(data) },
+      });
+      return updated;
     }, "Order");
   },
 

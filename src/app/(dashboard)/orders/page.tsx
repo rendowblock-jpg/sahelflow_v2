@@ -66,13 +66,18 @@ export default async function OrdersPage({
   // PERF-008: when no status filter is active, filteredOrders === allOrders.
   // Skip the second query (was: two identical queries on the default landing).
   const hasFilter = !!statusFilter;
-  const [allOrders, filteredOrders, customers, products] = await Promise.all([
+  // Status-tab counts come from a separate groupBy (uncapped) so they are
+  // NOT capped by the display list's take:200 (S2-6). Full pagination of the
+  // display list itself is a follow-up.
+  const [allOrders, filteredOrders, customers, products, statusGroups, totalCount] = await Promise.all([
     db.order.findMany({ where: { deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 }),
     hasFilter
       ? db.order.findMany({ where: { ...where, deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
       : Promise.resolve([]),
     db.customer.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
     db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
+    db.order.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
+    db.order.count({ where: { deletedAt: null } }),
   ]);
 
   // Batch-assess risk for ALL orders (used for the risk column + high-risk filter).
@@ -99,9 +104,10 @@ export default async function OrdersPage({
     riskData[orderId] = { level: assessment.level, score: assessment.score };
   }
 
-  const counts: Record<string, number> = { all: allOrders.length };
-  for (const o of allOrders) {
-    counts[o.status] = (counts[o.status] ?? 0) + 1;
+  // Counts come from the groupBy (uncapped) — not the capped display list.
+  const counts: Record<string, number> = { all: totalCount };
+  for (const g of statusGroups) {
+    counts[g.status] = g._count._all;
   }
 
   const activeOrders = allOrders.filter((o) =>

@@ -110,56 +110,58 @@ export const productService = {
       // - variants with an id → update
       // - variants without an id → create
       // - existing rows not in the array → delete
-      if (Array.isArray(legacyVariants)) {
-        const existing = await ctx.prisma.productVariant.findMany({ where: { productId: id } });
-        const incomingIds = legacyVariants.filter(v => v.id).map(v => v.id);
-        const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
+      // Wrap variant sync + product update + low-stock check in a single
+      // $transaction (S2-7) so a failure mid-sync rolls back — matches the
+      // order-service.update pattern.
+      return ctx.prisma.$transaction(async (tx) => {
+        if (Array.isArray(legacyVariants)) {
+          const existing = await tx.productVariant.findMany({ where: { productId: id } });
+          const incomingIds = legacyVariants.filter(v => v.id).map(v => v.id);
+          const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
 
-        await Promise.all([
-          // Delete removed variants
-          ...toDelete.map(variantId =>
-            ctx.prisma.productVariant.delete({ where: { id: variantId } })
-          ),
-          // Upsert kept/new variants
-          ...legacyVariants.map((v, i) => {
-            const payload = {
-              name: v.name,
-              sku: v.sku ?? null,
-              price: v.price ?? null,
-              stock: v.stock ?? 0,
-              isActive: v.isActive ?? true,
-              sortOrder: v.sortOrder ?? i,
-            };
-            if (v.id) {
-              return ctx.prisma.productVariant.update({ where: { id: v.id }, data: payload });
-            }
-            return ctx.prisma.productVariant.create({
-              data: { ...payload, productId: id },
-            });
-          }),
-        ]);
-      }
+          await Promise.all([
+            // Delete removed variants
+            ...toDelete.map(variantId =>
+              tx.productVariant.delete({ where: { id: variantId } })
+            ),
+            // Upsert kept/new variants
+            ...legacyVariants.map((v, i) => {
+              const payload = {
+                name: v.name,
+                sku: v.sku ?? null,
+                price: v.price ?? null,
+                stock: v.stock ?? 0,
+                isActive: v.isActive ?? true,
+                sortOrder: v.sortOrder ?? i,
+              };
+              if (v.id) {
+                return tx.productVariant.update({ where: { id: v.id }, data: payload });
+              }
+              return tx.productVariant.create({
+                data: { ...payload, productId: id },
+              });
+            }),
+          ]);
+        }
 
-      const row = await ctx.prisma.product.update({
-        where: { id },
-        data: {
-          ...productData,
-          variants: legacyVariants !== undefined ? (legacyVariants ? JSON.stringify(legacyVariants) : null) : undefined,
-          images: data.images !== undefined ? (data.images ? JSON.stringify(data.images) : null) : undefined,
-        },
-        include: { productVariants: { orderBy: { sortOrder: "asc" } } },
+        const row = await tx.product.update({
+          where: { id },
+          data: {
+            ...productData,
+            variants: legacyVariants !== undefined ? (legacyVariants ? JSON.stringify(legacyVariants) : null) : undefined,
+            images: data.images !== undefined ? (data.images ? JSON.stringify(data.images) : null) : undefined,
+          },
+          include: { productVariants: { orderBy: { sortOrder: "asc" } } },
+        });
+
+        // If stock was changed, run a low-stock check inside the tx so it
+        // sees the uncommitted stock change.
+        if (data.stock !== undefined) {
+          await checkAndDispatchLowStock(tx, id);
+        }
+
+        return toDomainProduct(row as unknown as Record<string, unknown>);
       });
-
-      // If stock was changed, run a low-stock check — if the new stock level
-      // is at or below the threshold, fire-and-forget a `stock.low` dispatch
-      // so any matching automation (e.g. "notify on low stock") can fire.
-      // The await is just for the read; the dispatch itself is `void`-ed
-      // inside the helper and never blocks the caller.
-      if (data.stock !== undefined) {
-        await checkAndDispatchLowStock(ctx.prisma, id);
-      }
-
-      return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
   },
 

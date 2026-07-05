@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function GET() {
     {
       status: allOk ? "healthy" : "degraded",
       checks,
-      version: process.env.npm_package_version ?? "3.1.0",
+      version: env.appVersion,
       timestamp: new Date().toISOString(),
     },
     { status: allOk ? 200 : 503 },

@@ -111,7 +111,9 @@ export async function getCodReconciliationSummary() {
       where: { codCollected: true, codRemitted: false, deletedAt: null },
       select: { id: true, orderNumber: true, totalPrice: true, codCollectedAt: true, customer: { select: { name: true } } },
       orderBy: { codCollectedAt: "asc" },
-      take: 200,
+      // Raised from 200 to 500 (S2-5). Totals are separate aggregates (always
+      // correct); this list is display-only. Full pagination is a follow-up.
+      take: 500,
     }),
     db.order.aggregate({ where: { codCollected: true, deletedAt: null }, _sum: { totalPrice: true } }),
     db.order.aggregate({ where: { codRemitted: true, deletedAt: null }, _sum: { totalPrice: true } }),

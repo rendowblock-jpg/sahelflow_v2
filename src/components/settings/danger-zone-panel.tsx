@@ -19,7 +19,11 @@ export function DangerZonePanel() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/settings/reset", { method: "POST" });
+      const res = await fetch("/api/settings/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: confirmText }),
+      });
       if (!res.ok) throw new Error("Reset failed");
       toast.success("Database reset successfully");
       window.location.href = "/setup";
