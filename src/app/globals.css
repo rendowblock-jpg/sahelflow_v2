@@ -238,12 +238,17 @@
 
 /* ── Base Layer ─────────────────────────────────────────────────────────────── */
 @layer base {
+  html {
+    height: 100%;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
     @apply bg-background text-foreground;
+    height: 100%;
     font-feature-settings: "cv01", "ss03", "calt", "kern";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

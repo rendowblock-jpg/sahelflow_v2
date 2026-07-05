@@ -34,8 +34,7 @@ import {
   LogOut,
   ShoppingCart,
   Truck,
-  Package,
-} from "lucide-react";
+  Package, RotateCcw, AlertCircle} from "lucide-react";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 
@@ -55,11 +54,12 @@ interface TopbarProps {
 
 interface Notification {
   id: string;
-  type: "order" | "delivery" | "stock" | "info";
+  type: "order" | "delivery" | "stock" | "info" | "return" | "alert";
   title: string;
-  body: string;
+  body?: string;
   time: string;
   read: boolean;
+  link?: string;
 }
 
 const NOTIFICATION_ICONS: Record<string, typeof ShoppingCart> = {
@@ -67,6 +67,8 @@ const NOTIFICATION_ICONS: Record<string, typeof ShoppingCart> = {
   delivery: Truck,
   stock: Package,
   info: Bell,
+  return: RotateCcw,
+  alert: AlertCircle,
 };
 
 const NOTIFICATION_COLORS: Record<string, string> = {
@@ -74,6 +76,8 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   delivery: "bg-emerald-500",
   stock: "bg-amber-500",
   info: "bg-teal-500",
+  return: "bg-violet-500",
+  alert: "bg-red-500",
 };
 
 export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: TopbarProps) {
@@ -258,21 +262,49 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
                     <DropdownMenuItem
                       key={notif.id}
                       className="flex items-start gap-3 p-3 cursor-pointer"
+                      asChild={notif.link ? true : undefined}
                     >
-                      <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
-                        <IconComp className="h-3.5 w-3.5" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {!notif.read && (
-                            <span className={`size-1.5 rounded-full ${dotColor} shrink-0`} />
-                          )}
-                          <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
-                            {notif.title}
+                      {notif.link ? (
+                        <Link href={notif.link}>
+                          <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
+                            <IconComp className="h-3.5 w-3.5" />
                           </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">{notif.time}</span>
-                      </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {!notif.read && (
+                                <span className={`size-1.5 rounded-full ${dotColor} shrink-0`} />
+                              )}
+                              <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
+                                {notif.title}
+                              </span>
+                            </div>
+                            {notif.body && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{notif.body}</p>
+                            )}
+                            <span className="text-xs text-muted-foreground/70">{notif.time}</span>
+                          </div>
+                        </Link>
+                      ) : (
+                        <>
+                          <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
+                            <IconComp className="h-3.5 w-3.5" />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {!notif.read && (
+                                <span className={`size-1.5 rounded-full ${dotColor} shrink-0`} />
+                              )}
+                              <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
+                                {notif.title}
+                              </span>
+                            </div>
+                            {notif.body && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{notif.body}</p>
+                            )}
+                            <span className="text-xs text-muted-foreground/70">{notif.time}</span>
+                          </div>
+                        </>
+                      )}
                     </DropdownMenuItem>
                   );
                 })
