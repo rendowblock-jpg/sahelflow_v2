@@ -119,16 +119,20 @@ pub fn run() {
             // `bun run dev` + `bun run sidecar` manually (hot reload).
             #[cfg(not(debug_assertions))]
             {
-                // Wave 2: Run Prisma migrations BEFORE spawning Next.js.
+                // Run Prisma migrations BEFORE spawning Next.js.
                 // Ensures the user's SQLite schema is up-to-date on every
-                // app launch. Uses bun to run scripts/run-migrations.ts.
-                // Non-fatal — the app may still work if schema hasn't changed.
+                // app launch. Uses bun to run the migration script.
+                // The script + prisma/migrations are bundled as Tauri resources.
                 let db_path = _app.path().app_data_dir()
                     .unwrap_or_else(|_| std::path::PathBuf::from("."))
                     .join("shops/dev.db");
+                let resource_dir = _app.path().resource_dir()
+                    .unwrap_or_else(|_| std::path::PathBuf::from("."));
+                let migration_script = resource_dir.join("scripts/run-migrations.ts");
                 let migration_result = std::process::Command::new("bun")
-                    .arg("scripts/run-migrations.ts")
+                    .arg(&migration_script)
                     .env("DATABASE_URL", format!("file:{}", db_path.display()))
+                    .env("PRISMA_MIGRATIONS_DIR", resource_dir.join("prisma/migrations").to_str().unwrap_or(""))
                     .output();
                 match migration_result {
                     Ok(output) if output.status.success() => {

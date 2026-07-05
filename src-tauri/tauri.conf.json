@@ -40,7 +40,9 @@
       "binaries/sahelflow-whatsapp"
     ],
     "resources": [
-      "resources/standalone/**/*"
+      "../prisma/**/*",
+      "resources/standalone/**/*",
+      "../scripts/run-migrations.ts"
     ]
   },
   "plugins": {

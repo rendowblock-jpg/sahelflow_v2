@@ -99,8 +99,10 @@ try {
   );
   ok(`Sidecar compiled → ${sidecarName}`);
 } catch (err) {
-  console.log("⚠️  Sidecar compilation failed (non-fatal — app works without WhatsApp)");
-  console.log("   You can still build + install the app. WhatsApp features won't work.");
+  console.error("❌ Sidecar compilation failed — Tauri build cannot proceed.");
+  console.error("   The externalBin is required for the production bundle.");
+  console.error("   Fix the compilation error above and re-run.");
+  process.exit(1);
 }
 
 ok("Frontend build complete");

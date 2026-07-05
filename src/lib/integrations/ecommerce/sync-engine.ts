@@ -178,15 +178,37 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
     where: { phone: customerPhone, deletedAt: null },
   });
   if (!customer) {
-    customer = await db.customer.create({
-      data: {
-        name: normalized.customerName,
-        phone: customerPhone,
-        wilaya: normalized.wilaya,
-        commune: normalized.commune,
-        address: normalized.address,
-      },
+    // No active customer with this phone. Check if a soft-deleted one exists
+    // (the merchant deleted them, then a new sync order came in with the same
+    // phone). Instead of failing with P2002 (unique constraint on phone), we
+    // RESTORE the soft-deleted customer — un-set deletedAt + update their info.
+    // This is the "restore on resurrect" pattern: the customer is back, with
+    // their order history intact.
+    const softDeleted = await db.customer.findFirst({
+      where: { phone: customerPhone, deletedAt: { not: null } },
     });
+    if (softDeleted) {
+      customer = await db.customer.update({
+        where: { id: softDeleted.id },
+        data: {
+          deletedAt: null,
+          name: normalized.customerName ?? softDeleted.name,
+          wilaya: normalized.wilaya ?? softDeleted.wilaya,
+          commune: normalized.commune ?? softDeleted.commune,
+          address: normalized.address ?? softDeleted.address,
+        },
+      });
+    } else {
+      customer = await db.customer.create({
+        data: {
+          name: normalized.customerName,
+          phone: customerPhone,
+          wilaya: normalized.wilaya,
+          commune: normalized.commune,
+          address: normalized.address,
+        },
+      });
+    }
   }
 
   // Generate an internal order number atomically (D-005: was racy count()+1)
