@@ -53,6 +53,7 @@ registerTool({
               : {},
             input.category ? { category: { name: { contains: input.category } } } : {},
             { isActive: true },
+            { deletedAt: null },
           ],
         },
         include: { category: true },
@@ -120,9 +121,10 @@ registerTool({
       //      name would be needed (future improvement).
       const query = input.query.trim();
 
-      // Try exact phone match first
-      const byPhone = await db.customer.findUnique({
-        where: { phone: query },
+      // Try exact phone match first (findFirst so we can require
+      // deletedAt: null — findUnique cannot take extra where fields).
+      const byPhone = await db.customer.findFirst({
+        where: { phone: query, deletedAt: null },
       });
 
       if (byPhone) {
@@ -142,6 +144,7 @@ registerTool({
       // No phone match — fetch all customers and filter by name in memory.
       // The extension decrypts name/phone on read, so we see plaintext here.
       const all = await db.customer.findMany({
+        where: { deletedAt: null },
         take: 500, // cap to prevent memory issues on very large shops
         orderBy: { createdAt: "desc" },
       });
@@ -216,9 +219,10 @@ registerTool({
       const input = createOrderSchema.parse(params);
       const db = getDb(ctx);
 
-      // Fetch products to get current prices
+      // Fetch products to get current prices (exclude soft-deleted products —
+      // a deleted product cannot be ordered).
       const products = await db.product.findMany({
-        where: { id: { in: input.items.map((i) => i.productId) } },
+        where: { id: { in: input.items.map((i) => i.productId) }, deletedAt: null },
       });
       const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -285,13 +289,19 @@ registerTool({
       // Revenue = sum of totalPrice for orders that are confirmed/shipped/delivered.
       // Excludes drafts, cancellations, and returns — those are not realized revenue.
       const [totalOrders, revenueAgg, totalCustomers, lowStockCount] = await Promise.all([
-        db.order.count(),
+        db.order.count({ where: { deletedAt: null } }),
         db.order.aggregate({
           _sum: { totalPrice: true },
-          where: { status: { in: ["confirmed", "shipped", "delivered"] } },
+          where: { status: { in: ["confirmed", "shipped", "delivered"] }, deletedAt: null },
         }),
-        db.customer.count(),
-        db.product.count({ where: { stock: { lte: db.product.fields.lowStockThreshold }, isActive: true } }),
+        db.customer.count({ where: { deletedAt: null } }),
+        db.product.count({
+          where: {
+            stock: { lte: db.product.fields.lowStockThreshold },
+            isActive: true,
+            deletedAt: null,
+          },
+        }),
       ]);
       const totalRevenue = revenueAgg._sum.totalPrice ?? 0;
       return {

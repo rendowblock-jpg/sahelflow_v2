@@ -62,12 +62,12 @@ registerTool({
       const db = getDb(ctx);
       const order = await db.order.findFirst({
         where: input.orderNumber
-          ? { orderNumber: input.orderNumber }
-          : { id: input.orderId! },
+          ? { orderNumber: input.orderNumber, deletedAt: null }
+          : { id: input.orderId!, deletedAt: null },
         include: {
           items: true,
           customer: { select: { id: true, name: true, phone: true } },
-          delivery: true,
+          delivery: { where: { deletedAt: null } },
         },
       });
       if (!order) return { success: false, error: "Commande introuvable" };
@@ -142,8 +142,10 @@ registerTool({
       const input = listRecentOrdersSchema.parse(params);
       const db = getDb(ctx);
       const orders = await db.order.findMany({
-        where: input.status ? { status: input.status } : {},
-        include: { customer: { select: { name: true } } },
+        where: input.status ? { status: input.status, deletedAt: null } : { deletedAt: null },
+        include: {
+          customer: { select: { name: true } },
+        },
         orderBy: { createdAt: "desc" },
         take: input.limit,
       });
@@ -187,10 +189,11 @@ registerTool({
     try {
       const input = getCustomerDetailsSchema.parse(params);
       const db = getDb(ctx);
-      const customer = await db.customer.findUnique({
-        where: { id: input.customerId },
+      const customer = await db.customer.findFirst({
+        where: { id: input.customerId, deletedAt: null },
         include: {
           orders: {
+            where: { deletedAt: null },
             select: {
               orderNumber: true,
               status: true,
@@ -249,7 +252,7 @@ registerTool({
       const input = getLowStockSchema.parse(params);
       const db = getDb(ctx);
       const products = await db.product.findMany({
-        where: { isActive: true, stock: { lte: input.threshold } },
+        where: { isActive: true, stock: { lte: input.threshold }, deletedAt: null },
         select: { id: true, name: true, sku: true, stock: true, price: true },
         orderBy: { stock: "asc" },
       });
@@ -325,6 +328,7 @@ registerTool({
           where: {
             createdAt: { gte: start, lte: end },
             status: { not: "cancelled" },
+            deletedAt: null,
           },
           _sum: { totalPrice: true },
         }),
@@ -332,6 +336,7 @@ registerTool({
           where: {
             createdAt: { gte: start, lte: end },
             status: { not: "cancelled" },
+            deletedAt: null,
           },
         }),
       ]);
@@ -384,8 +389,10 @@ registerTool({
       }
       const db = getDb(ctx);
       const order = await db.order.findFirst({
-        where: input.orderNumber ? { orderNumber: input.orderNumber } : { id: input.orderId! },
-        include: { delivery: true },
+        where: input.orderNumber
+          ? { orderNumber: input.orderNumber, deletedAt: null }
+          : { id: input.orderId!, deletedAt: null },
+        include: { delivery: { where: { deletedAt: null } } },
       });
       if (!order) return { success: false, error: "Commande introuvable" };
       if (!order.delivery) {
@@ -489,10 +496,18 @@ registerTool({
       const deliveries = await db.delivery.findMany({
         where: {
           status: { in: ["pending", "created", "picked_up", "in_transit", "at_hub", "out_for_delivery"] },
+          deletedAt: null,
+          // Exclude deliveries whose order was soft-deleted — a delivery
+          // without an active order is meaningless to follow up on.
+          order: { deletedAt: null },
         },
         include: {
           order: {
-            select: { orderNumber: true, customer: { select: { name: true } }, wilaya: true },
+            select: {
+              orderNumber: true,
+              customer: { select: { name: true } },
+              wilaya: true,
+            },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -573,7 +588,9 @@ registerTool({
       }
 
       const items = await db.orderItem.findMany({
-        where: start ? { order: { createdAt: { gte: start } } } : {},
+        where: start
+          ? { order: { createdAt: { gte: start }, deletedAt: null } }
+          : { order: { deletedAt: null } },
         select: { productName: true, quantity: true, total: true },
       });
 
@@ -667,8 +684,8 @@ registerTool({
     try {
       const input = cancelOrderSchema.parse(params);
       const db = getDb(ctx);
-      const order = await db.order.findUnique({
-        where: { orderNumber: input.orderNumber },
+      const order = await db.order.findFirst({
+        where: { orderNumber: input.orderNumber, deletedAt: null },
         select: { id: true, status: true, notes: true },
       });
       if (!order) return { success: false, error: "Commande introuvable" };
@@ -696,8 +713,8 @@ registerTool({
         data: { notes: newNotes },
         select: { id: true },
       });
-      const updated = await db.order.findUnique({
-        where: { id: order.id },
+      const updated = await db.order.findFirst({
+        where: { id: order.id, deletedAt: null },
         select: { id: true, orderNumber: true, status: true },
       });
       return { success: true, data: updated };

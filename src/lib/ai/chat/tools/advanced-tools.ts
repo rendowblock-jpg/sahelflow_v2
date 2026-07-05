@@ -144,7 +144,9 @@ registerTool({
       }
       const db = getDb(ctx);
       const product = await db.product.findFirst({
-        where: input.productId ? { id: input.productId } : { sku: input.sku },
+        where: input.productId
+          ? { id: input.productId, deletedAt: null }
+          : { sku: input.sku, deletedAt: null },
         include: { category: true },
       });
       if (!product) return { success: false, error: "Produit introuvable" };
@@ -248,8 +250,8 @@ registerTool({
     try {
       const input = updateCustomerNotesSchema.parse(params);
       const db = getDb(ctx);
-      const existing = await db.customer.findUnique({
-        where: { id: input.customerId },
+      const existing = await db.customer.findFirst({
+        where: { id: input.customerId, deletedAt: null },
         select: { notes: true },
       });
       if (!existing) return { success: false, error: "Client introuvable" };
@@ -296,7 +298,7 @@ registerTool({
       const input = getCustomerOrdersSchema.parse(params);
       const db = getDb(ctx);
       const orders = await db.order.findMany({
-        where: { customerId: input.customerId },
+        where: { customerId: input.customerId, deletedAt: null },
         select: {
           orderNumber: true,
           status: true,
@@ -344,12 +346,12 @@ registerTool({
       const input = assignOrderToDeliverySchema.parse(params);
       const db = getDb(ctx);
 
-      const order = await db.order.findUnique({
-        where: { orderNumber: input.orderNumber },
+      const order = await db.order.findFirst({
+        where: { orderNumber: input.orderNumber, deletedAt: null },
         include: {
           customer: true,
           items: true,
-          delivery: true,
+          delivery: { where: { deletedAt: null } },
         },
       });
       if (!order) return { success: false, error: "Commande introuvable" };
@@ -560,7 +562,7 @@ registerTool({
       ]);
 
       const returnedValue = await db.order.aggregate({
-        where: { ...where, status: "returned" },
+        where: { ...where, status: "returned", deletedAt: null },
         _sum: { totalPrice: true },
       });
 
@@ -633,6 +635,7 @@ registerTool({
         where: {
           ...(start ? { createdAt: { gte: start } } : {}),
           status: { not: "cancelled" },
+          deletedAt: null,
         },
         select: { wilaya: true, totalPrice: true },
       });
@@ -747,6 +750,8 @@ registerTool({
       const orders = await db.order.findMany({
         where: {
           AND: [
+            { deletedAt: null },
+            { customer: { deletedAt: null } },
             input.status ? { status: input.status } : {},
             {
               OR: [

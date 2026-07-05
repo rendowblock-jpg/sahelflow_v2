@@ -278,11 +278,14 @@ describe("update_customer_notes", () => {
 describe("get_customer_orders", () => {
   it("returns the customer's order history", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
+    // Use explicit createdAt timestamps so the `orderBy: { createdAt: "desc" }`
+    // ordering is deterministic — without this, both inserts can land in the
+    // same millisecond on SQLite and the order becomes non-deterministic.
     await db.order.create({
-      data: { orderNumber: "ORD-0001", status: "delivered", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
+      data: { orderNumber: "ORD-0001", status: "delivered", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual", createdAt: new Date("2024-01-01T00:00:00Z") },
     });
     await db.order.create({
-      data: { orderNumber: "ORD-0002", status: "draft", customerId: customer.id, totalPrice: 2000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
+      data: { orderNumber: "ORD-0002", status: "draft", customerId: customer.id, totalPrice: 2000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual", createdAt: new Date("2024-01-02T00:00:00Z") },
     });
 
     const tool = getTool("get_customer_orders")!;
