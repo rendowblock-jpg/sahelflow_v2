@@ -35,6 +35,7 @@ export async function getDashboardAnalytics() {
 async function getDeliveryPerformance() {
   const groups = await db.delivery.groupBy({
     by: ["status"],
+    where: { deletedAt: null },
     _count: { _all: true },
   });
   const count = (status: string) =>

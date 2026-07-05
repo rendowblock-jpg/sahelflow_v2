@@ -643,6 +643,14 @@ registerTool({
     try {
       const input = updateProductStockSchema.parse(params);
       const db = getDb(ctx);
+      // Guard: refuse to update a soft-deleted product (B-softdelete).
+      const live = await db.product.findFirst({
+        where: { id: input.productId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!live) {
+        return { success: false, error: `Produit introuvable ou supprimé: ${input.productId}` };
+      }
       const product = await db.product.update({
         where: { id: input.productId },
         data: { stock: input.newStock },

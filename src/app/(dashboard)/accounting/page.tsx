@@ -40,7 +40,7 @@ export default async function AccountingPage() {
 
   const [orders, expenses] = await Promise.all([
     db.order.findMany({
-      where: { createdAt: { gte: periodStart } },
+      where: { createdAt: { gte: periodStart }, deletedAt: null },
       include: { items: { include: { product: { select: { cost: true } } } }, delivery: true },
     }),
     db.expense.findMany({
@@ -85,6 +85,7 @@ export default async function AccountingPage() {
         where: {
           createdAt: { gte: date, lt: nextMonth },
           status: "delivered",
+          deletedAt: null,
         },
       });
       const monthExpenses = await db.expense.aggregate({

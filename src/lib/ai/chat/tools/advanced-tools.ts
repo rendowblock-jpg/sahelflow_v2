@@ -105,6 +105,14 @@ registerTool({
     try {
       const input = updateProductPriceSchema.parse(params);
       const db = getDb(ctx);
+      // Guard: refuse to update a soft-deleted product (B-softdelete).
+      const live = await db.product.findFirst({
+        where: { id: input.productId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!live) {
+        return { success: false, error: `Produit introuvable ou supprimé: ${input.productId}` };
+      }
       const product = await db.product.update({
         where: { id: input.productId },
         data: { price: input.newPrice },
@@ -205,6 +213,16 @@ registerTool({
     try {
       const input = createCustomerSchema.parse(params);
       const db = getDb(ctx);
+      // Guard: phone is @unique. If a soft-deleted customer exists with the
+      // same phone, Prisma would throw P2002 (misleading "already exists"
+      // error). Surface a clear restore-first message instead (B-softdelete).
+      const tombstoned = await db.customer.findFirst({
+        where: { phone: input.phone, deletedAt: { not: null } },
+        select: { id: true },
+      });
+      if (tombstoned) {
+        return { success: false, error: "Un client supprimé existe déjà avec ce téléphone. Restaurez-le d'abord depuis la liste clients." };
+      }
       const customer = await db.customer.create({
         data: {
           name: input.name,

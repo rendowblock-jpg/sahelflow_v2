@@ -94,7 +94,7 @@ export const customerServiceExtensions = {
    */
   async getStats(ctx: ServiceContext, customerId: string): Promise<CustomerStats> {
     const orders = await ctx.prisma.order.findMany({
-      where: { customerId },
+      where: { customerId, deletedAt: null },
       select: {
         status: true,
         totalPrice: true,
@@ -137,7 +137,7 @@ export const customerServiceExtensions = {
     opts?: { limit?: number; offset?: number },
   ) {
     return ctx.prisma.order.findMany({
-      where: { customerId },
+      where: { customerId, deletedAt: null },
       include: { items: true },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 20,

@@ -38,8 +38,10 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
   const { id } = await params;
 
-  const delivery = await db.delivery.findUnique({
-    where: { id },
+  // Use findFirst (not findUnique) so we can filter out soft-deleted
+  // deliveries — a stale link to a deleted delivery should 404 (C-audit S2-10).
+  const delivery = await db.delivery.findFirst({
+    where: { id, deletedAt: null },
     include: {
       order: {
         include: {

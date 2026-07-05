@@ -291,6 +291,7 @@ export const orderService = {
   async countByStatus(ctx: ServiceContext): Promise<Record<OrderStatus, number>> {
     const groups = await ctx.prisma.order.groupBy({
       by: ["status"],
+      where: { deletedAt: null },
       _count: { _all: true },
     });
     const result = {} as Record<OrderStatus, number>;

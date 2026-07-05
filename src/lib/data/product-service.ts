@@ -197,7 +197,7 @@ export const productService = {
   /** List products at or below their low-stock threshold. */
   async listLowStock(ctx: ServiceContext): Promise<Product[]> {
     const rows = await ctx.prisma.product.findMany({
-      where: { isActive: true, stock: { lte: ctx.prisma.product.fields.lowStockThreshold } },
+      where: { isActive: true, deletedAt: null, stock: { lte: ctx.prisma.product.fields.lowStockThreshold } },
       orderBy: { stock: "asc" },
     });
     return rows.map((r) => toDomainProduct(r as unknown as Record<string, unknown>));

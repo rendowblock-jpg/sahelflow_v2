@@ -219,6 +219,15 @@ registerTool({
       const input = createOrderSchema.parse(params);
       const db = getDb(ctx);
 
+      // Guard: the customer must exist and not be soft-deleted (B-softdelete).
+      const customer = await db.customer.findFirst({
+        where: { id: input.customerId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!customer) {
+        return { success: false, error: `Client introuvable ou supprimé: ${input.customerId}` };
+      }
+
       // Fetch products to get current prices (exclude soft-deleted products —
       // a deleted product cannot be ordered).
       const products = await db.product.findMany({
