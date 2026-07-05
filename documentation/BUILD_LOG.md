@@ -4,6 +4,39 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 27 — 2026-07-05: Connectivity Audit + Runtime Fixes
+
+The previous "all done" claim was wrong. A 4-stream connectivity audit
+found ~68 runtime/contract/wiring bugs that sf-verify cannot catch.
+
+### Phase 1 — Ship-blockers (commit f445fe4)
+11 critical bugs fixed: db.ts DATABASE_URL crash, sidecar deps, delivery
+credentials schema, e-commerce key prefix, storefront soft-deleted products,
+WhatsApp automations body+auth, delivery state machine bypass, risk blacklist
+on encrypted notes, AI wrong count, dashboard refresh, automations API.
+
+### Phase 2 — Remaining findings (commits b8b2555..5d88bf5)
+- AI tools soft-delete sweep (30 queries)
+- Canned-response edit/delete API routes
+- Conversation-service: 4 new API routes + transactional writes
+- stock.low trigger dispatch wired
+- Config/env: /sw.js, / redirect, daily report, license sync, font
+- UI contracts: ?limit→?pageSize, storefront isActive, Google Sheets, status-badge SWR
+- Dead delivery-service wired through API routes
+- Sync restore-on-resurrect (no more P2002)
+- Tauri build: migration resources, resource_dir, fatal sidecar
+
+### Phase 3 — Runtime fixes (commits 8d715c0..b5c5397)
+- Sidecar binary compiled before tauri:dev (new build:sidecar script)
+- resources/standalone/.gitkeep (Tauri glob pattern)
+- SpeculationRules: next/script (was raw <script>)
+- Tauri window maximized + html/body height:100%
+- Notifications rewritten (rich + clickable)
+- @radix-ui/react-alert-dialog added as direct dep
+
+**Stats:** 1201 tests pass | 0 skip | 0 fail.
+
+---
 ## Session 26 — 2026-07-04: UI/UX Deep Polish (4-stream audit, 6 batches)
 
 4-stream parallel UI/UX audit (visual system, page-by-page, interactions,

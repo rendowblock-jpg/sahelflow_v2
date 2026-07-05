@@ -3,7 +3,7 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-04 (Session 26 complete — UI/UX deep polish, 6 batches)
+**Last updated:** 2026-07-05 (Session 27 complete — connectivity audit + runtime fixes)
 **Main HEAD:** `779e1c9`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
@@ -18,7 +18,7 @@
 | LOC | ~67,000 (src/ + sidecars/ + tests/) |
 | Pages | 25 dashboard pages |
 | API routes | 103 (+1: GET /api/delivery list) |
-| Tests | **1197 pass | 0 skip | 0 fail** (Phase 1-5 audit fixup) |
+| Tests | **1201 pass | 0 skip | 0 fail** |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
 | Prisma models | 34 (added OrderChange, Refund, ReservationItem, CannedResponse) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
@@ -242,6 +242,41 @@ export buttons removed (3 pages), double-wrapping Cards removed (2 pages).
 
 **Stats:** 1197 tests pass | 0 skip | 0 fail. tsc + eslint clean.
 
+---
+
+## Session 27 — 2026-07-05: Connectivity Audit + Runtime Fixes
+
+The previous "all done" claim was wrong. A 4-stream connectivity audit
+(UI→API, service→DB, feature completeness, build/config) found ~68 real
+runtime/contract/wiring bugs that sf-verify cannot catch. All fixed:
+
+**Phase 1 — Ship-blockers (commit f445fe4):** db.ts DATABASE_URL crash on
+fresh checkout, sidecar deps not installed, delivery credentials schema
+mismatch, e-commerce key prefix mismatch, storefront exposed soft-deleted
+products, WhatsApp automations wrong body+auth, delivery create bypassed
+state machine, risk blacklist count on encrypted notes, AI counted wrong
+status, dashboard didn't refresh after bulk update, automations API
+didn't accept conditions/config.
+
+**Phase 2 — Remaining findings (commits b8b2555..5d88bf5):** AI tools
+soft-delete sweep (30 queries), canned-response edit/delete API, conversation-
+service 4 new API routes + transactional writes, stock.low trigger dispatch,
+create_order placeholder removed, /sw.js unblocked, / redirect fixed, daily
+report dev secret, license sync shape, font CSS variable, UI contract bugs
+(?limit→?pageSize, storefront isActive, Google Sheets card removed, status-
+badge SWR, expense RSC refresh), dead delivery-service wired, sync restore-
+on-resurrect, Tauri build fixes.
+
+**Phase 3 — Runtime fixes (commits 8d715c0..b5c5397):** sidecar binary not
+compiled for tauri:dev, resources/standalone dir missing, SpeculationRules
+script tag error, Tauri window maximized, html/body height, notifications
+rewritten (rich + clickable), @radix-ui/react-alert-dialog added as dep.
+
+**Stats:** 1201 tests pass | 0 skip | 0 fail. tsc + eslint clean.
+104 API routes (+3: conversations assign/priority/labels, +1: canned-responses
+[id] PUT/DELETE, +1: settings/reset, +3: restore routes). New files:
+lib/ai/redact.ts, lib/auth/constant-time.ts, scripts/build-sidecar.ts.
+
 ## ✅ Done (all sessions)
 
 ### Foundation (sessions 1-7)
@@ -337,6 +372,6 @@ export buttons removed (3 pages), double-wrapping Cards removed (2 pages).
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `42f01de` | v4.0.0 + Session 26 (UI/UX polish). sf-verify green. 1197 tests, 0 skip. 88.8% coverage. |
+| `main` | `b5c5397` | v4.0.0 + Session 27 (connectivity audit + runtime fixes). sf-verify green. 1201 tests, 0 skip. 88.8% coverage. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
 | `agent-handoff` | (orphan) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (8 tools) |
