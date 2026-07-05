@@ -30,7 +30,7 @@
 - ✅ Real command palette (fuzzy searches actual records, not just nav labels)
 - ✅ Keyboard shortcuts + cheatsheet modal
 - ✅ Form validation (RHF+zod with inline errors, phone mask, drafts, dirty-guard)
-- ✅ 1192 tests pass (real green, not false)
+- ✅ 1201 tests pass (real green, not false)
 - ✅ 88.8% test coverage (floor locked at 80%)
 
 **What's still open (honestly):**
@@ -85,7 +85,7 @@ The research wave found the app had a **beautiful shell but one layer of depth e
 - **RTL complete** (tables, charts, sidebar, icons, settings tabs, Amiri font applied)
 - **Responsive** (mobile/tablet/desktop, touch targets, 100dvh)
 - **Emerald/teal palette** (banned blue removed app-wide, 0 arbitrary values)
-- **1192 tests** (real green, not false)
+- **1201 tests** (real green, not false)
 - **88.8% coverage** (floor locked at 80%)
 - **Sentry installed** (env-gated, zero-overhead, global-error only-fires-on-unexpected)
 - **8 agent tools** (sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit)
@@ -119,4 +119,4 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-04 — Session 25 complete. main = `18e201e`. v4.0.0. 1197 tests, 0 skip. 88.8% coverage. Deep audit (6 streams, ~220 findings) fixed across 5 phases: ship-blockers, data integrity, security hardening, build/infra, polish. Remaining: 26 router.refresh() call sites (incremental SWR migration), Tauri build verification (needs Rust), Playwright e2e, real users, Darija validation, pen test._
+_Last updated: 2026-07-05 — Session 28 (deep wave A+B+C). main = `c2c4409`. v4.0.0. 1201 tests, 0 skip. 88.8% coverage. Session 27 connectivity audit (~68 runtime fixes) + Session 28 tsc-green baseline + soft-delete guards + order-change ledger + conversation workflow UI + automation editor + canned-responses wiring + 4-stream runtime audit (~26 findings fixed). Remaining: Tauri build verification (needs Rust), Playwright e2e (config exists, sandbox OOM), real users, Darija validation, pen test._

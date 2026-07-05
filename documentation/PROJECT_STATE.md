@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-05 (Session 27 complete — connectivity audit + runtime fixes)
-**Main HEAD:** `779e1c9`
+**Last updated:** 2026-07-05 (Session 28 — tsc-green baseline + doc sync; deep wave A+B+C in progress)
+**Main HEAD:** `c2c4409`
 **Version:** `4.0.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
@@ -17,7 +17,7 @@
 | Phase | Sessions 1-24 complete. Session 24: follow-up wiring + DataTable v2 on all list pages + 5 skipped tests fixed. |
 | LOC | ~67,000 (src/ + sidecars/ + tests/) |
 | Pages | 25 dashboard pages |
-| API routes | 103 (+1: GET /api/delivery list) |
+| API routes | 111 (Sessions 25-27 added 8 routes beyond the 103 counted at Session 24) |
 | Tests | **1201 pass | 0 skip | 0 fail** |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
 | Prisma models | 34 (added OrderChange, Refund, ReservationItem, CannedResponse) |
@@ -28,7 +28,7 @@
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (isBlacklisted column) + phone reputation registry |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 1197 tests green (0 skip, 80% coverage floor) |
+| Quality gate | ✅ tsc + eslint + 1201 tests green (0 skip, 80% coverage floor) |
 | Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF + proxy.ts enforces on all routes + React cache() dedup |
 | Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message) + blind index + nested-read decryption + Prisma safety guards |
 | Theme | ✅ Emerald/teal palette, 0 arbitrary text-size values (eliminated in Phase 11) |
@@ -372,6 +372,6 @@ lib/ai/redact.ts, lib/auth/constant-time.ts, scripts/build-sidecar.ts.
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `b5c5397` | v4.0.0 + Session 27 (connectivity audit + runtime fixes). sf-verify green. 1201 tests, 0 skip. 88.8% coverage. |
+| `main` | `c2c4409` | v4.0.0 + Session 27 (connectivity audit + runtime fixes). sf-verify green. 1201 tests, 0 skip. 88.8% coverage. |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
 | `agent-handoff` | (orphan) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (8 tools) |
