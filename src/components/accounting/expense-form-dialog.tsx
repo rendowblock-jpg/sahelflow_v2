@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { useForm } from "react-hook-form";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
@@ -110,6 +111,7 @@ export function ExpenseFormDialog({
   onOpenChange,
 }: ExpenseFormDialogProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const isEdit = !!expense;
   const isControlled = openProp !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -195,7 +197,11 @@ export function ExpenseFormDialog({
       toast.success(
         t(expense ? "accounting.expenseUpdated" : "accounting.expenseCreated"),
       );
-      mutatePrefix("/api/expenses");
+      // The accounting page is a Server Component (no SWR cache for the list).
+      // mutatePrefix is a no-op here, but router.refresh() revalidates the
+      // RSC tree so the list + stat cards reflect the new expense.
+      void mutatePrefix("/api/expenses");
+      router.refresh();
     } catch (err) {
       console.error("[ExpenseFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

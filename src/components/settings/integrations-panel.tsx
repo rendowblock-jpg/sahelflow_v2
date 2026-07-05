@@ -200,19 +200,9 @@ export function IntegrationsPanel({
       connectUrl: "/settings",
       docsUrl: "https://aistudio.google.com/apikey",
     },
-    // Productivity
-    {
-      id: "google_sheets",
-      name: "Google Sheets",
-      description: t("integrations.googleSheetsDesc"),
-      category: "productivity",
-      icon: GoogleSheetsIcon,
-      iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconColor: "text-emerald-600 dark:text-emerald-400",
-      connected: false,
-      connectLabel: t("integrations.connect"),
-      docsUrl: "https://console.cloud.google.com",
-    },
+    // Productivity (Google Sheets is server-configured via env vars;
+    // there is no API to save credentials from the UI, so it's listed
+    // in the "coming soon" note below instead of as a connectable card.)
   ];
 
   const categories = [
@@ -338,6 +328,16 @@ export function IntegrationsPanel({
           </div>
         );
       })}
+
+      {/* Coming soon note for integrations that have no UI-wired connect flow */}
+      <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4">
+        <div className="flex items-center gap-2">
+          <GoogleSheetsIcon className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {t("common.comingSoon")}: Google Sheets
+          </p>
+        </div>
+      </div>
 
       {/* Connect dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setConnecting(null); } }}>

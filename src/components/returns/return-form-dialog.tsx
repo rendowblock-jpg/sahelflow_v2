@@ -100,7 +100,7 @@ export function ReturnFormDialog({
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate: set loading before async fetch
     setLoadingOrders(true);
-    fetch("/api/orders?status=delivered&limit=100")
+    fetch("/api/orders?status=delivered&pageSize=100")
       .then((r) => r.json())
       .then((data: { orders?: DeliveredOrder[] }) => {
         if (!cancelled) setOrders(data.orders ?? []);

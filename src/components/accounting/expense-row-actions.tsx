@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
@@ -38,6 +39,7 @@ interface ExpenseRowActionsProps {
  */
 export function ExpenseRowActions({ expense }: ExpenseRowActionsProps) {
   const { t } = useI18n();
+  const router = useRouter();
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -47,7 +49,13 @@ export function ExpenseRowActions({ expense }: ExpenseRowActionsProps) {
     deleteUrl: (id) => `/api/expenses/${id}`,
     restoreUrl: (id) => `/api/expenses/${id}/restore`,
     entityLabel: t("accounting.expense") || "Expense",
-    onAfter: () => mutatePrefix("/api/expenses"),
+    // The accounting page is a Server Component (no SWR). mutatePrefix is a
+    // no-op, but router.refresh() revalidates the RSC tree so the deleted
+    // row disappears and the stat cards update.
+    onAfter: () => {
+      void mutatePrefix("/api/expenses");
+      router.refresh();
+    },
   });
 
   async function confirmDelete() {

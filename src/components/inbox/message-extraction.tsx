@@ -96,7 +96,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
         customerId = customerData.customer.id;
       } else if (customerRes.status === 409) {
         // Customer already exists — find by phone
-        const listRes = await fetch(`/api/customers?limit=100`);
+        const listRes = await fetch(`/api/customers?pageSize=100`);
         if (listRes.ok) {
           const listData = await listRes.json();
           const existing = listData.customers?.find((c: { phone: string }) => c.phone === validPhone);

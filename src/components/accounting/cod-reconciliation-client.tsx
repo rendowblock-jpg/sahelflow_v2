@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,13 +34,18 @@ export function CodReconciliationClient({
   pendingOrders, totalPending, totalCollected, totalRemitted,
 }: CodReconciliationClientProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [remittanceRef, setRemittanceRef] = useState("");
 
   const bulkMutation = useApiMutation({
     successMessage: t("codReconciliation.success"),
     onSuccess: async () => {
-      await mutatePrefix("/api/orders");
+      // The COD reconciliation page is a Server Component (no SWR for the
+      // pending-orders list). mutatePrefix is a no-op here, but router.refresh()
+      // revalidates the RSC tree so the list + stat cards refresh.
+      void mutatePrefix("/api/orders");
+      router.refresh();
       setSelected(new Set());
       setRemittanceRef("");
     },

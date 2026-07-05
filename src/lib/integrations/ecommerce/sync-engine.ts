@@ -164,10 +164,18 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
   // If the source order has no customer phone, generate a deterministic synthetic
   // phone keyed on (source, sourceOrderId) so re-syncs find the same record
   // instead of colliding on a shared fake phone. See `syntheticPhone` docs.
+  //
+  // CONN-3-FEATURES: filter out soft-deleted customers. The Customer model has
+  // @@unique([phone]) WITHOUT deletedAt, so a soft-deleted customer still owns
+  // its phone in the unique index. The previous `findUnique({ where: { phone } })`
+  // would find the soft-deleted row and silently resurrect it (re-attach new
+  // orders to a customer the merchant thought they'd deleted). Switching to
+  // findFirst with `deletedAt: null` skips soft-deleted rows so a fresh
+  // Customer record is created for the new order.
   const customerPhone =
     normalized.customerPhone || syntheticPhone(normalized.source, sourceOrderId);
-  let customer = await db.customer.findUnique({
-    where: { phone: customerPhone },
+  let customer = await db.customer.findFirst({
+    where: { phone: customerPhone, deletedAt: null },
   });
   if (!customer) {
     customer = await db.customer.create({

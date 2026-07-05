@@ -7,6 +7,7 @@
  *
  * Adapter integration (createShipment API calls) comes later.
  */
+import type { Prisma } from "@prisma/client";
 import type { Delivery, DeliveryStatus } from "@/types/domain";
 import { NotFoundError } from "@/types/errors";
 import { createDeliverySchema } from "@/lib/validation";
@@ -22,12 +23,14 @@ export const deliveryService = {
     limit?: number;
     offset?: number;
     status?: DeliveryStatus;
+    include?: Prisma.DeliveryInclude;
   }): Promise<Delivery[]> {
     const rows = await ctx.prisma.delivery.findMany({
       where: opts?.status ? { status: opts.status, deletedAt: null } : { deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
+      ...(opts?.include ? { include: opts.include } : {}),
     });
     return rows.map((r) => toDomain(r as unknown as Record<string, unknown>));
   },

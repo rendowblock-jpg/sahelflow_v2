@@ -23,6 +23,7 @@ import { Check, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "sonner";
+import { mutatePrefix } from "@/lib/swr/mutate";
 
 const STATUS_STYLES: Record<string, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
   pending: { i18nKey: "deliveries.status.pending", dot: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800/50" },
@@ -77,6 +78,9 @@ export function DeliveryStatusBadge({
         }
         toast.success(t("deliveries.statusUpdated"));
         router.refresh();
+        // Invalidate SWR cache for /api/delivery* keys so the DeliveriesDataTable
+        // reflects the new status without waiting for the dedup window.
+        void mutatePrefix("/api/delivery");
       } catch (err) {
         setOptimisticStatus(currentStatus);
         toast.error(err instanceof Error ? err.message : t("deliveries.updateFailed"));

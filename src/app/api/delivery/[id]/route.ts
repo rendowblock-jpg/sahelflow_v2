@@ -7,9 +7,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { deliveryService } from "@/lib/data/delivery-service";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { SahelFlowError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +30,11 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const { id } = await params;
   const { status } = updateSchema.parse(await req.json());
 
-  const existing = await db.delivery.findUnique({ where: { id } });
-  if (!existing) {
-    throw new SahelFlowError("Delivery not found", "NOT_FOUND", 404);
-  }
+  // Route the lookup through the service so the soft-delete filter
+  // (deletedAt: null) is applied. The previous direct `findUnique` would
+  // happily operate on a soft-deleted delivery. NotFoundError → 404 via
+  // withErrorHandler.
+  const existing = await deliveryService.getById({ prisma: db }, id);
 
   const updated = await db.delivery.update({
     where: { id },

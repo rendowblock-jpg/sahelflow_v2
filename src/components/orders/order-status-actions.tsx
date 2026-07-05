@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
+import { mutatePrefix } from "@/lib/swr/mutate";
 
 // Action config holds the i18n key (resolved at render time via t()).
 const ACTION_CONFIG: Record<
@@ -59,6 +60,9 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
         throw new Error(data.error ?? t("orders.statusActions.updateFailed"));
       }
       router.refresh();
+      // Invalidate SWR cache for /api/orders* keys so list/table views
+      // reflect the new status without waiting for the dedup window.
+      void mutatePrefix("/api/orders");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.somethingWrong"));
     } finally {

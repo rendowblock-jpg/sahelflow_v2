@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { deliveryService } from "@/lib/data/delivery-service";
+import type { DeliveryStatus } from "@/types/domain";
 import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
@@ -14,6 +16,10 @@ export const dynamic = "force-dynamic";
  *
  * Returns { deliveries, total, hasNextPage, page, pageSize }.
  * Each delivery includes its order + customer (name, phone) for the table.
+ *
+ * Routed through `deliveryService.list` (with the optional `include` param) so
+ * the service's soft-delete filter + pagination logic is the single source of
+ * truth (was previously duplicated in this route as a direct `db.delivery.findMany`).
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
@@ -23,20 +29,27 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const status = sp.get("status");
   const offset = (page - 1) * pageSize;
 
-  const where = {
-    deletedAt: null,
-    ...(status && status !== "all" ? { status } : {}),
+  // Service.list applies the soft-delete filter (deletedAt: null) + status filter.
+  // We pass `include` so the joined order + customer rows come back in the same
+  // query (avoids an N+1 enrichment pass).
+  const include = {
+    order: { include: { customer: { select: { name: true, phone: true } } } },
   };
 
+  const statusFilter =
+    status && status !== "all" ? { status: status as DeliveryStatus } : {};
+
   const [deliveries, total] = await Promise.all([
-    db.delivery.findMany({
-      where,
-      include: { order: { include: { customer: { select: { name: true, phone: true } } } } },
-      orderBy: { createdAt: "desc" },
-      take: pageSize,
-      skip: offset,
-    }),
-    db.delivery.count({ where }),
+    deliveryService.list(
+      { prisma: db },
+      {
+        limit: pageSize,
+        offset,
+        ...(status && status !== "all" ? { status: status as DeliveryStatus } : {}),
+        include,
+      },
+    ),
+    db.delivery.count({ where: { deletedAt: null, ...statusFilter } }),
   ]);
 
   const hasNextPage = offset + deliveries.length < total;

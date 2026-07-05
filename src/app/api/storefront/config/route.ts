@@ -56,6 +56,7 @@ const createConfigSchema = z.object({
     email: z.string().optional(),
     address: z.string().optional(),
   }).optional(),
+  isActive: z.boolean().optional(),
 });
 
 /** POST /api/storefront/config — create a new storefront config (seller-only). */
@@ -72,6 +73,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     theme: input.theme,
     productIds: input.productIds,
     contact: input.contact,
+    isActive: input.isActive,
   });
   void DEFAULT_THEME;
   return NextResponse.json({ config }, { status: 201 });

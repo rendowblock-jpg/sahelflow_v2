@@ -33,6 +33,7 @@ import { orderStatusStyles } from "@/lib/shared";
 import { getAllowedTransitions } from "@/lib/order-transitions";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "sonner";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import type { OrderStatus } from "@/types/domain";
 
 interface OrderStatusBadgeProps {
@@ -119,6 +120,9 @@ export function OrderStatusBadge({
         }
         toast.success(t("orders.statusActions.updated"));
         router.refresh();
+        // Invalidate SWR cache for /api/orders* keys (pagination/filter views
+        // would otherwise show stale status until the 5s dedup window expires).
+        void mutatePrefix("/api/orders");
       }
     } catch (err) {
       // Revert on error

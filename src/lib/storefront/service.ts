@@ -94,6 +94,7 @@ export const storefrontService = {
     theme: StorefrontTheme;
     productIds: string[];
     contact?: StorefrontContact;
+    isActive?: boolean;
   }): Promise<StorefrontConfig> {
     const row = await db.storefrontConfig.create({
       data: {
@@ -103,6 +104,7 @@ export const storefrontService = {
         theme: JSON.stringify(input.theme),
         productIds: JSON.stringify(input.productIds),
         contact: input.contact ? JSON.stringify(input.contact) : null,
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       },
     });
     return parseConfig(row);

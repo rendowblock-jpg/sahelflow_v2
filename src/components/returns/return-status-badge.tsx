@@ -24,6 +24,7 @@ import { Check, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "sonner";
+import { mutatePrefix } from "@/lib/swr/mutate";
 
 type ReturnStatus = "requested" | "approved" | "rejected" | "completed";
 
@@ -82,6 +83,9 @@ export function ReturnStatusBadge({
         }
         toast.success(t("returns.statusUpdated"));
         router.refresh();
+        // Invalidate SWR cache for /api/returns* keys so the ReturnsDataTable
+        // reflects the new status without waiting for the dedup window.
+        void mutatePrefix("/api/returns");
       } catch (err) {
         setOptimisticStatus(currentStatus);
         toast.error(err instanceof Error ? err.message : t("returns.updateFailed"));
