@@ -11,6 +11,8 @@ next-env.d.ts
 src-tauri/target/
 src-tauri/gen/schemas/
 src-tauri/resources/
+# Allow the .gitkeep so the directory exists for Tauri dev mode
+!src-tauri/resources/standalone/.gitkeep
 src-tauri/binaries/
 
 # Prisma

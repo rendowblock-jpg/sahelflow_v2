@@ -1,0 +1,3 @@
+# This directory is populated by build-frontend.ts during 'tauri build'.
+# In dev mode, Tauri requires the directory to exist (the glob pattern
+# 'resources/standalone/**/*' must match at least one file).
