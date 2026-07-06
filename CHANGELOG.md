@@ -5,6 +5,95 @@ All notable changes to SahelFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] — 2026-07-06
+
+### Session 30 — 10-Phase Deep Wave
+
+A 7-stream parallel deep audit (Session 29) found 475 issues across 7 layers: 44 ship-blockers (S1), 147 high (S2), 183 medium (S3), 101 polish (S4). Session 30 executed a 10-phase deep wave to address them. Every fix cites `file:line` evidence; every phase has a separate commit; sf-verify green between phases.
+
+#### Added
+- **PhoneReputation** Prisma model — proper phone-blacklist storage with HMAC blind index (was JSON blob in Setting, O(N) scan, race-prone)
+- **Refund** model fields: `status`, `idempotencyKey` (@unique), `processedAt`, `reference` — enables idempotent refunds
+- **Automation** model fields: `maxRetries`, `retryCount`, `retryDelayMs`, `lastError`, `nextRunAt` — enables retry loop in executor
+- **`src/lib/redact-pii.ts`** — PII redaction helper for JSON snapshots (phones, addresses, names, notes) + 8 unit tests
+- **`src/lib/ai/rate-limit.ts`** — in-memory token bucket (20 msgs/session/hour, 100/user/day) for AI routes
+- **`ensureConversationForJid()`** helper — auto-creates Conversation row for live WhatsApp chats
+- **"Sync now" button** in integrations panel — calls /api/integrations/sync with auth cookie
+- **7 Darija few-shot examples** in the extraction prompt (Arabizi, Arabic script with Arabic-Indic digits, French+Darija mix, multiple items, wilaya numbers, exchange orders, number words)
+- **58-wilaya enumeration + wilaya-number-to-name mapping** in extraction prompt
+- **Arabic-Indic digit normalization table** in extraction prompt
+- 16 i18n keys across en/fr/ar for danger-zone + appearance + sync panels
+- New indexes on Order (wilaya, deliveredAt, confirmedAt) + PhoneReputation + Automation.nextRunAt
+
+#### Changed
+- **License server-side re-verification** now uses client-supplied machineId (was calling getMachineId() which returns "ssr-placeholder" server-side — AI chat was unusable in prod)
+- **Refund service** now idempotent + status check + over-refund guard + delivered→returned transition + customer totalSpent reversal — all in $transaction
+- **Order state machine**: 'delivered' is no longer terminal — can transition to 'returned' for post-delivery COD returns
+- **productService.delete** always soft-deletes via deletedAt (was the ONLY hard-delete in the service layer)
+- **COD service** idempotent (no-op if already collected/remitted) + bulk ledger only fires for actually-affected orderIds
+- **Delivery create route** — order status update + ledger entry now inside same $transaction as delivery upsert
+- **AI message routes** now require license + enforce rate limit
+- **Gemini extraction response** now zod-validated (ExtractedOrderSchema) — hallucinated fields rejected
+- **Tool results** now redacted via redactPii() before being persisted to AiChatMessage.toolCalls
+- **WhatsApp sidecar** now emits REAL message-update payload with jid+id+fromMe+update (was hardcoded empty object)
+- **/api/integrations/sync** accepts either auth cookie OR x-cron-secret (was requiring both)
+- **/api/settings GET** now requires auth (was leaking license payload + PII)
+- **All credential save/load paths** aligned on camelCase keys (was broken by camelCase/snake_case mismatch — every delivery + e-commerce adapter was non-functional in prod)
+- **DHD adapter** checks "Non livré" before "Livré" (was marking failed deliveries as delivered)
+- **executeSendWhatsapp** throws on send failures (was swallowing — retry loop never fired)
+- **Extraction analytics dashboard** now actually receives data (recordExtractionMetric was dead code)
+- **/customers stat cards** use db.customer.aggregate across ALL customers (was from first 25 on page 1)
+- **/returns/[id]** filters deletedAt:null (was findUnique bypass)
+- **All 6 export routes** filter deletedAt:null
+- **/api/backup/restore** requires `confirm: "RESTORE"` body
+- **/api/shops/[id] DELETE** requires `confirm: "DELETE"` + refuses active shop
+
+#### Removed
+- 6 dead component files (759 LOC): `form-field.tsx`, `customer-row-actions.tsx`, `ui/modal.tsx`, `ui/breadcrumb.tsx`, `ui/pagination.tsx`, `ui/toast.tsx`
+- 123 occurrences of the `t(key) || "fallback"` anti-pattern across 21 files
+- Dead `save()` function in LabelsControl (was PATCHing a PUT-only route)
+
+#### Fixed
+- License enforcement broken in production (getMachineId "ssr-placeholder" — AI chat was unusable)
+- Every external integration broken in production (credential save/load key mismatch)
+- DHD failed deliveries silently marked as delivered
+- Refund double-charge on double-click
+- Delivery create orphaned records on partial failure
+- Inbox conversation-controls silently failing for live WhatsApp chats
+- WhatsApp-style delivery receipts non-functional (hardcoded "sent")
+- Extraction analytics dashboard permanently empty
+- Onboarding wizard advancing with no profile / no AI key
+- /customers stat cards lying (sample of 25, not aggregate)
+- /returns/[id] leaking soft-deleted records via stale URLs
+- AI search_orders returning nothing for phone queries (was searching AES-GCM ciphertext)
+- WhatsApp automation retry never firing
+- 123 instances of the t()||fallback anti-pattern masking real i18n bugs
+
+#### Security
+- `GET /api/settings` no longer leaks license payload + machine IDs + PII (added requireAuth)
+- `GET /api/storefront/config` routes no longer expose inactive storefronts
+- `POST /api/backup/restore` no longer single-click destructive
+- `DELETE /api/shops/[id]` no longer single-click destructive + refuses active shop
+- AI routes now license-gated
+- Tool results no longer leak PII to the DB
+- AuditLog + OrderChange JSON snapshots no longer contain plaintext PII
+
+#### Test Stats
+- **1209 tests pass | 0 skip | 0 fail** (up from 1201 — 8 new redact-pii tests)
+- tsc + eslint clean
+- sf-verify --fast: GREEN
+
+#### Migration notes for the founder
+1. `git pull origin main`
+2. `bun install` (no new deps, but prisma generate will run)
+3. `bunx prisma db push --accept-data-loss` (schema changed: +PhoneReputation, Refund +4 fields, Automation +5 fields, Order +3 indexes)
+4. **Delete the old `phone_reputation_blacklist` Setting row** if it exists (the new PhoneReputation model replaces it; data doesn't auto-migrate)
+5. `bun run dev:reset` (re-seed with the new schema)
+6. `bun run tauri:dev` (or `bun run dev` for browser mode)
+7. **Re-save your delivery + e-commerce credentials** in Settings → Integrations (the key naming changed to camelCase; old snake_case keys won't load)
+
+---
+
 ## [4.0.0] — 2026-07-03
 
 ### The Prototype→Product Wave (Session 23)

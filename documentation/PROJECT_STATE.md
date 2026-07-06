@@ -3,9 +3,9 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-05 (Session 28 complete — deep wave A+B+C merged to main)
-**Main HEAD:** `253cb46`
-**Version:** `4.0.0`
+**Last updated:** 2026-07-06 (Session 30 complete — 10-phase deep wave merged to main, v4.1.0)
+**Main HEAD:** `564ac9c`
+**Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
 ---
@@ -14,13 +14,13 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-28 complete. Session 28: deep wave A+B+C (tsc-green, soft-delete guards, 8 ship-blockers, inbox workflow UI, automation editor, canned replies, Playwright running). |
-| LOC | ~67,000 (src/ + sidecars/ + tests/) |
+| Phase | Sessions 1-30 complete. Session 30: 10-phase deep wave (schema migrations, service fixes, API idempotency, inbox rebuild, AI hardening, Darija upgrade, pages fixes, dead code cleanup, settings/WhatsApp/i18n, verification). |
+| LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
-| API routes | 111 (Sessions 25-27 added 8 routes beyond the 103 counted at Session 24) |
-| Tests | **1201 pass | 0 skip | 0 fail** |
+| API routes | 111 (Sessions 25-30) |
+| Tests | **1209 pass | 0 skip | 0 fail** (8 new redact-pii tests) |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
-| Prisma models | 34 (added OrderChange, Refund, ReservationItem, CannedResponse) |
+| Prisma models | 35 (Session 30: +PhoneReputation; Refund gained idempotencyKey/status/processedAt/reference; Automation gained retry fields) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
 | i18n keys | ~2,400 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
@@ -28,7 +28,7 @@
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (isBlacklisted column) + phone reputation registry |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 1201 tests green (0 skip, 80% coverage floor) |
+| Quality gate | ✅ tsc + eslint + 1209 tests green (0 skip, 80% coverage floor) |
 | Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF + proxy.ts enforces on all routes + React cache() dedup |
 | Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message) + blind index + nested-read decryption + Prisma safety guards |
 | Theme | ✅ Emerald/teal palette, 0 arbitrary text-size values (eliminated in Phase 11) |
@@ -38,6 +38,81 @@
 | License | ✅ Ed25519 + server-side enforcement + FeatureGate (dev-bypass unlocks correctly) |
 | Sentry | ✅ @sentry/nextjs installed + env-gated (zero-overhead until SENTRY_DSN set) + global-error.tsx only-fires-on-unexpected |
 | Agent toolkit | ✅ sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit |
+
+## Session 30 — 2026-07-06: 10-Phase Deep Wave (merged to main, HEAD `564ac9c`, v4.1.0)
+
+Founder instruction: "do the work of session 30 now — multi-phase deep wave to address all 475 audit findings professionally."
+
+10 phases (A-J) executed in order, each committed separately, with sf-verify between phases. Branch `fix/session29-wave1-unblock-prod` was fast-forward-merged to main (13 commits, +1301/-1048 LOC across 86 files).
+
+### Phase A — Schema migrations (AUDIT-4 D1-D6)
+- D1: +Order indexes on wilaya, deliveredAt, confirmedAt
+- D2: +PhoneReputation model (phoneHash @unique) — replaces JSON-blob-in-Setting
+- D3: Refund: +status, +idempotencyKey @unique, +processedAt, +reference
+- D5: Automation: +maxRetries, +retryCount, +retryDelayMs, +lastError, +nextRunAt
+- D6: New `src/lib/redact-pii.ts` helper + 8 unit tests. Applied to audit.ts + order-change-service.ts.
+
+### Phase B — Service layer fixes (AUDIT-3 S2-S6)
+- S2: recordOrderChange accepts optional tx parameter
+- S3: refund-service.ts — idempotency + status check + over-refund guard + delivered→returned transition + customer totalSpent reversal, all in $transaction
+- S4: 'delivered' no longer terminal; can transition to 'returned'
+- S5: productService.delete always soft-deletes via deletedAt
+- S6: executeSendWhatsapp throws on send failures (retry loop fires)
+
+### Phase C — API idempotency + auth sweep (AUDIT-2 A1-A11)
+- A1-A3: refund + COD + delivery create idempotency + transactional
+- A6-A8: storefront/backup/shops auth + confirm bodies
+- A10: 6 export routes filter deletedAt:null
+- A11: /api/integrations/sync accepts auth cookie
+
+### Phase D — Inbox rebuild (AUDIT-5 C1/C2/C5/C9)
+- C1: ensureConversationForJid() — auto-creates Conversation row for live WhatsApp chats
+- C2: MessageStatus binds msg.deliveryStatus (was hardcoded 'sent')
+- C5: message-extraction uses /api/customers/search
+- C9: dead 'save' function removed from LabelsControl
+
+### Phase E — AI layer hardening (AUDIT-7 AI2-AI7)
+- AI2: ExtractedOrderSchema zod validation
+- AI3: redactPii on tool results before DB persistence
+- AI4: rate-limit.ts (20/hr + 100/day)
+- AI5: requireLicense on AI message routes
+- AI6: search_orders no longer searches ciphertext
+- AI7: assign_order_to_delivery wraps in $transaction
+
+### Phase F — Darija extraction prompt upgrade
+7 few-shot examples + Arabic-Indic digit normalization + 58-wilaya enumeration + vocabulary + number words + phone normalization.
+
+### Phase G — Pages fixes (AUDIT-1 P1/P2/P3/P4/P5)
+- P1: /customers stat cards use aggregate
+- P2: /returns/[id] filters deletedAt
+- P3+P4: i18n on analytics + cod-reconciliation
+- P5: /profile error logging
+
+### Phase H — Dead code cleanup
+- 6 dead files deleted (759 LOC)
+- 123 `t()||fallback` patterns removed from 21 files
+
+### Phase I — Settings/WhatsApp/i18n (AUDIT-5 C8, AUDIT-6 I2/I4)
+- C8: danger-zone + appearance panels i18n
+- I4: WhatsApp sidecar emits real message-update payload
+- I2: Sync now button in integrations panel
+
+### Phase J — Verification
+- sf-verify --fast: GREEN
+- vitest: 1209/1209 pass
+- Branch fast-forward-merged to main
+
+### What's still open (Session 31 priorities)
+1. Founder browser-verification on their machine
+2. Playwright full-suite on founder machine
+3. Tauri build verification (needs Rust toolchain)
+4. Real Darija validation (50+ real WhatsApp messages)
+5. Professional pen test before mass launch
+6. Real beta users (3-5 Algerian COD sellers)
+7. macOS release build (Apple Developer Program $99/year)
+8. Wave 2/3/4 remaining: ~33 S2 + ~183 S3 + ~101 S4 findings
+
+
 
 ---
 

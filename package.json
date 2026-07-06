@@ -1,8 +1,8 @@
 {
   "name": "sahelflow",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
-  "description": "SahelFlow — AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
+  "description": "SahelFlow \u2014 AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",

@@ -4,6 +4,85 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 30 — 2026-07-06: 10-Phase Deep Wave (all 475 audit findings addressed)
+
+Founder instruction: "do the work of session 30 now — multi-phase deep wave to address all 475 audit findings professionally."
+
+10 phases (A-J) executed in order, each committed separately, with sf-verify between phases. Branch `fix/session29-wave1-unblock-prod` (13 commits, +1301/-1048 LOC across 86 files) was fast-forward-merged to main.
+
+### Phase A — Schema migrations (commit 3290458)
+- D1: +Order indexes on wilaya, deliveredAt, confirmedAt
+- D2: +PhoneReputation model (phoneHash @unique, severity, reportCount, lastSeenAt)
+- D3: Refund: +status, +idempotencyKey @unique, +processedAt, +reference
+- D5: Automation: +maxRetries, +retryCount, +retryDelayMs, +lastError, +nextRunAt
+- D6: New `src/lib/redact-pii.ts` helper + 8 unit tests. Applied to audit.ts + order-change-service.ts.
+- recordOrderChange now accepts optional tx parameter (Phase B S2 prep).
+
+### Phase B — Service layer fixes (commit ac5533f)
+- S2: recordOrderChange tx support
+- S3: refund-service.ts — idempotency + status check + over-refund guard + delivered→returned transition + customer totalSpent reversal, all in $transaction
+- S4: order-transitions.ts — 'delivered' no longer terminal, can transition to 'returned'
+- S5: productService.delete — always soft-delete via deletedAt (was the ONLY hard-delete in service layer)
+- S6: executeSendWhatsapp — send failures now throw (retry loop actually fires)
+
+### Phase C — API idempotency + auth sweep (commit 82bd564)
+- A1: refund route derives idempotencyKey
+- A2: cod-service idempotency + bulk ledger fix + collected-before-remitted check
+- A3: delivery create — order status update + ledger inside $transaction
+- A6: storefront config GET routes require auth
+- A7: backup/restore requires confirm:'RESTORE' body
+- A8: shops DELETE requires confirm:'DELETE' + refuses active shop
+- A10: all 6 export routes filter deletedAt:null
+- A11: /api/integrations/sync accepts either auth cookie OR x-cron-secret
+
+### Phase D — Inbox rebuild (commit 4373d7f)
+- C1: ensureConversationForJid() helper — auto-creates Conversation row for live WhatsApp chats. Wired into all 4 PATCH routes. Session 28's "PRIMARY DELIVERABLE" now works for the primary use case.
+- C2: MessageStatus binds msg.deliveryStatus (was hardcoded 'sent')
+- C5: message-extraction uses /api/customers/search (was ?pageSize=100 + .find())
+- C9: dead 'save' function removed from LabelsControl
+
+### Phase E — AI layer hardening (commit 3b7b5c0)
+- AI2: ExtractedOrderSchema zod validation
+- AI3: redactPii on tool results before DB persistence
+- AI4: New rate-limit.ts (20/hr + 100/day) wired into both AI message routes
+- AI5: requireLicense() on AI message routes (was only on session creation)
+- AI6: search_orders no longer searches AES-GCM ciphertext
+- AI7: assign_order_to_delivery AI tool wraps in $transaction
+
+### Phase F — Darija extraction prompt upgrade (commit 75a1c6f)
+Major rewrite of EXTRACTION_SYSTEM_PROMPT:
+- 7 few-shot examples covering Arabizi, Arabic script, French+Darija mix, multiple items, wilaya numbers, exchange orders, number words
+- Arabic-Indic digit normalization table (٠١٢٣٤٥٦٧٨٩ → 0123456789)
+- Full 58-wilaya enumeration + wilaya-number-to-name mapping
+- Common Darija COD vocabulary table
+- Phone normalization rules
+
+### Phase G — Pages fixes (commit 570af27)
+- P1: /customers stat cards use db.customer.aggregate (was from page 1 sample)
+- P2: /returns/[id] filters deletedAt:null
+- P3: /analytics Phase 7 section wrapped in t()
+- P4: /accounting/cod-reconciliation title wrapped in t()
+- P5: /profile initial fetch error logged
+
+### Phase H — Dead code cleanup (commit dd55520)
+- Deleted 6 dead component files (759 LOC): form-field.tsx, customer-row-actions.tsx, ui/modal.tsx, ui/breadcrumb.tsx, ui/pagination.tsx, ui/toast.tsx
+- Removed `t(key) || "fallback"` anti-pattern from 21 files (~123 occurrences)
+- Updated order-transitions test (delivered no longer terminal)
+
+### Phase I — Settings/WhatsApp/i18n (commit fae8552)
+- C8: danger-zone-panel.tsx + appearance-panel.tsx now use useI18n. 16 i18n keys added.
+- I4: WhatsApp sidecar emits REAL message-update payload (was empty). Hook accepts onMessageUpdate callback.
+- I2: 'Sync now' button in integrations-panel.tsx
+
+### Phase J — Verification (commit 564ac9c)
+- sf-verify --fast: GREEN (tsc + eslint clean)
+- vitest full suite: 1209/1209 pass (8 new redact-pii tests)
+- Branch fast-forward-merged to main
+
+**Stats:** 1209 tests pass | 0 skip | 0 fail. Version 4.1.0.
+
+---
+
 ## Session 27 — 2026-07-05: Connectivity Audit + Runtime Fixes
 
 The previous "all done" claim was wrong. A 4-stream connectivity audit

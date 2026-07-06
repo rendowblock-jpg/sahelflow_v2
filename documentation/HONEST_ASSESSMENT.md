@@ -34,14 +34,28 @@
 - ✅ 88.8% test coverage (floor locked at 80%)
 
 **What's still open (honestly):**
-1. ✅ ~~Backend built, UI not wired~~ — RESOLVED (Session 24): all built-but-not-rendered UIs are now wired (inbox 3-pane, COD reconciliation, order timeline, refund dialog, return-rate charts, confirmation queue, condition-builder).
-2. ✅ ~~DataTable v2 only on Orders~~ — RESOLVED (Session 24): all 5 list pages (Orders, Customers, Products, Deliveries, Returns) now use DataTable v2 with pagination, skeleton loading, density toggle.
-3. ✅ ~~5 skipped tests~~ — RESOLVED (Session 24): all 5 fixed, 1197 pass | 0 skip | 0 fail.
-4. **Tauri desktop build unverified** — Rust setup hook never compiled/tested (sandbox has no Rust toolchain)
-5. **Playwright e2e unverified** — config + tests exist, never run
-6. **No real Darija validation** — AI extraction accuracy untested with real messages
-7. **No professional pen test** — before mass launch
-8. **No real beta users** — 3-5 Algerian COD sellers
+
+✅ Session 30 (2026-07-06) closed the BIG gaps:
+- ✅ All 44 S1 ship-blockers from the Session 29 deep audit addressed
+- ✅ License enforcement now works in production (was 403'ing real licenses)
+- ✅ All external integrations now work in production (was broken by camelCase/snake_case mismatch)
+- ✅ Refund + COD + delivery create are now idempotent (was double-charge on double-click)
+- ✅ Inbox conversation-controls now work for live WhatsApp chats (Session 28's "primary deliverable" was silently broken)
+- ✅ Gemini extraction response now zod-validated (was accepting hallucinated fields)
+- ✅ Tool results redacted before DB persistence (was plaintext PII leak)
+- ✅ AI routes rate-limited + license-gated (was quota-exhaustible + bypassable)
+- ✅ Darija extraction prompt upgraded with 7 few-shot examples + Arabic-Indic digit normalization + 58-wilaya enumeration
+- ✅ 759 LOC of dead code removed + 123 `t()||fallback` anti-pattern occurrences cleaned up
+- ✅ WhatsApp sidecar now emits real message-update events (delivery/read receipts unblocked)
+
+Still open (founder-machine-only OR external):
+1. **Tauri desktop build unverified** — needs Rust toolchain (sandbox has none)
+2. **Playwright full-suite green** — needs prod build (sandbox OOM blocks it)
+3. **Real Darija validation** — 50+ real WhatsApp messages through the new prompt
+4. **Professional pen test** — before mass launch
+5. **Real beta users** — 3-5 Algerian COD sellers
+6. **macOS release build** — Apple Developer Program ($99/year)
+7. **Wave 2/3/4 remaining** — ~33 S2 high + ~183 S3 medium + ~101 S4 polish findings from the master audit (lower priority; not blocking launch)
 
 ---
 
@@ -119,4 +133,4 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-05 — Session 28 complete (deep wave A+B+C merged to main). main = `253cb46`. v4.0.0. 1201 tests, 0 skip. 88.8% coverage. All 5 Session-28 commits fast-forward-merged linearly to main: tsc-green baseline (16 errors→0), AI-tool soft-delete guards (3 unguarded writes + 6 service filters), 8 runtime ship-blockers (danger-zone reset, order-change ledger, orders-page counts, 35 i18n keys), inbox workflow UI (5 controls + snooze dialog + activity renderer), automation editor (ConditionBuilder wired), canned-response picker wired, Playwright e2e now RUNS (chromium installed, config fixed). Remaining: Tauri build verification (needs Rust), Playwright full-suite green (founder machine — sandbox OOM), real Darija validation, professional pen test, real beta users, macOS release build._
+_Last updated: 2026-07-06 — Session 30 complete (10-phase deep wave merged to main). main = `564ac9c`. v4.1.0. 1209 tests, 0 skip. All 5 Session-28 commits fast-forward-merged linearly to main: tsc-green baseline (16 errors→0), AI-tool soft-delete guards (3 unguarded writes + 6 service filters), 8 runtime ship-blockers (danger-zone reset, order-change ledger, orders-page counts, 35 i18n keys), inbox workflow UI (5 controls + snooze dialog + activity renderer), automation editor (ConditionBuilder wired), canned-response picker wired, Playwright e2e now RUNS (chromium installed, config fixed). Remaining: Tauri build verification (needs Rust), Playwright full-suite green (founder machine — sandbox OOM), real Darija validation, professional pen test, real beta users, macOS release build._
