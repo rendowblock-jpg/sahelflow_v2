@@ -302,12 +302,8 @@ export function LabelsControl({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
 
-  const save = async (next: string[]) => {
-    const ok = await patchJSON(`/api/conversations/${conversationId}/labels`, { labels: next });
-    // The labels route is PUT — patchJSON sends PATCH. Fix: use PUT.
-    void ok;
-  };
-
+  // Session 30 (AUDIT-5 C9): the old save() function was dead code — it
+  // PATCHed a PUT-only route and discarded the result (`void ok`). Removed.
   const putLabels = async (next: string[]) => {
     try {
       const res = await fetch(`/api/conversations/${conversationId}/labels`, {
@@ -326,8 +322,6 @@ export function LabelsControl({
     void putLabels([...labels, v]);
   };
   const removeLabel = (l: string) => void putLabels(labels.filter((x) => x !== l));
-
-  void save; // (kept for future PATCH-add-label route)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

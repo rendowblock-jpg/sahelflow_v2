@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureConversationForJid } from "@/lib/data/conversation-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { setConversationPriority } from "@/lib/data/conversation-service";
@@ -13,7 +14,10 @@ const schema = z.object({
 
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Ctx) => {
   await requireAuth();
-  const { id } = await params;
+  const { id: rawId } = await params;
+    // Session 30 (AUDIT-5 C1): if rawId is a JID (live WhatsApp chat), ensure
+    // a Conversation row exists and use its cuid. Otherwise rawId is already a cuid.
+    const id = await ensureConversationForJid(rawId);
   const body = await req.json();
   const parsed = schema.parse(body);
   const conv = await setConversationPriority(id, parsed.priority);

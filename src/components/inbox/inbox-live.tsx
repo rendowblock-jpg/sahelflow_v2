@@ -81,6 +81,10 @@ interface NormalizedMessage {
   direction: "inbound" | "outbound" | "system";
   timestamp: number;
   messageType?: string;
+  // Session 30 (AUDIT-5 C2): delivery status for outbound messages — drives
+  // the MessageStatus component (clock/check/double-check/blue). Was hardcoded
+  // to "sent" before, making the WhatsApp-style receipts feature non-functional.
+  deliveryStatus?: "sending" | "sent" | "delivered" | "read" | "failed";
 }
 
 type Mode = "loading" | "live" | "seeded";
@@ -530,7 +534,7 @@ export function InboxLive() {
                               <p className="text-xs">
                                 {new Date(msg.timestamp).toLocaleTimeString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
                               </p>
-                              {msg.direction === "outbound" && <MessageStatus status="sent" />}
+                              {msg.direction === "outbound" && <MessageStatus status={msg.deliveryStatus ?? "sent"} />}
                             </div>
                           </div>
                         </div>

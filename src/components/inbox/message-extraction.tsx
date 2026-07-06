@@ -95,11 +95,15 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
         const customerData = await customerRes.json();
         customerId = customerData.customer.id;
       } else if (customerRes.status === 409) {
-        // Customer already exists — find by phone
-        const listRes = await fetch(`/api/customers?pageSize=100`);
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          const existing = listData.customers?.find((c: { phone: string }) => c.phone === validPhone);
+        // Session 30 (AUDIT-5 C5): Customer already exists — find by phone
+        // via the dedicated /api/customers/search endpoint (was fetching
+        // ?pageSize=100 + client-side .find() — broken past 100 customers
+        // → created duplicates when the existing customer was past #100).
+        const searchRes = await fetch(`/api/customers/search?q=${encodeURIComponent(validPhone)}&limit=5`);
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const list: Array<{ id: string; phone?: string }> = searchData.customers ?? [];
+          const existing = list.find((c) => c.phone === validPhone);
           if (existing) {
             customerId = existing.id;
           } else {
