@@ -166,15 +166,18 @@ export const productService = {
   },
 
   async delete(ctx: ServiceContext, id: string): Promise<void> {
+    // Session 30 (AUDIT-3 S5): always soft-delete via deletedAt.
+    // Previously: hard-deleted if no order items referenced it (the ONLY
+    // hard-delete in the service layer). Hard-delete breaks the order
+    // timeline + audit trail for any historical order that ever referenced
+    // the product. The old "soft-delete via isActive=false" was also wrong —
+    // isActive is a flag, not a soft-delete column; deletedAt is the spec
+    // (Phase 2). Now both paths set deletedAt.
     return withServiceError(async () => {
-      // Check for order items referencing this product
-      const orderItemCount = await ctx.prisma.orderItem.count({ where: { productId: id } });
-      if (orderItemCount > 0) {
-        // Soft-delete instead of hard-delete
-        await ctx.prisma.product.update({ where: { id }, data: { isActive: false } });
-        return;
-      }
-      await ctx.prisma.product.delete({ where: { id } });
+      await ctx.prisma.product.update({
+        where: { id },
+        data: { deletedAt: new Date(), isActive: false },
+      });
     }, "Product");
   },
 

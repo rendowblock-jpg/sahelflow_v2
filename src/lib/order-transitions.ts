@@ -6,11 +6,12 @@
  *
  *   draft → pending → confirmed → shipped → delivered
  *                                     │         │
- *                                     │         └→ returned
+ *                                     │         └→ returned (Session 30: post-delivery returns)
  *                                     └→ refused / cancelled
  *
- * Terminal states (delivered, returned, refused, cancelled) cannot
- * transition OUT to a different status. Same-status transitions are
+ * Terminal states (returned, refused, cancelled) cannot
+ * transition OUT to a different status. "delivered" is no longer terminal
+ * — it can move to "returned" for post-delivery COD returns. Same-status transitions are
  * no-ops (allowed, but don't trigger side effects).
  *
  * Stock side effects (handled in the order service, NOT here):
@@ -36,7 +37,8 @@ export const ORDER_STATUSES = [
 
 /** Terminal statuses — once reached, the order cannot move to a different status. */
 export const TERMINAL_ORDER_STATUSES = [
-  "delivered",
+  // Session 30 (AUDIT-3 S4): "delivered" is no longer terminal — it can
+  // transition to "returned" for post-delivery COD returns.
   "returned",
   "refused",
   "cancelled",
@@ -61,7 +63,13 @@ export const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = 
   pending: ["confirmed", "cancelled"],
   confirmed: ["shipped", "returned", "refused", "cancelled"],
   shipped: ["delivered", "returned", "refused"],
-  delivered: [], // terminal
+  // Session 30 (AUDIT-3 S4): allow delivered → returned so post-delivery
+  // returns (the standard Algerian COD scenario: customer accepts the parcel,
+  // pays, then later refuses/refunds) have a legal transition path. The
+  // refund service uses this to move orders out of "delivered" before
+  // recording the refund, so COD reconciliation stops counting the order
+  // as collected+remitted.
+  delivered: ["returned"],
   returned: [], // terminal
   refused: [], // terminal
   cancelled: [], // terminal

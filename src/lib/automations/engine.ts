@@ -386,12 +386,24 @@ async function executeSendWhatsapp(
 
     if (!sendRes.ok) {
       const err = await sendRes.text();
-      return { status: "failed", message: `WhatsApp send failed: ${err}` };
+      // Session 30 (AUDIT-3 S6): throw on actual send failures so the
+      // retry loop in executeActionWithRetry fires. Previously this returned
+      // {status:"failed"} which the retry loop's catch block never saw.
+      throw new Error(`WhatsApp send failed: ${err}`);
     }
 
     return { status: "success", message: `WhatsApp sent to ${phone}` };
-  } catch {
-    return { status: "skipped", message: "WhatsApp sidecar not running (port 3001)" };
+  } catch (err) {
+    // Session 30 (AUDIT-3 S6): distinguish "sidecar not running" (skip,
+    // don't retry — the user needs to scan the QR code) from "send failed"
+    // (throw, retry with backoff).
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("aborted") || msg.includes("fetch failed") || msg.includes("ECONNREFUSED")) {
+      // Sidecar not running — skip, don't retry (user action needed)
+      return { status: "skipped", message: "WhatsApp sidecar not running (port 3001)" };
+    }
+    // Actual send error — re-throw so retry fires
+    throw err;
   }
 }
 

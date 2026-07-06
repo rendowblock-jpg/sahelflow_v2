@@ -189,14 +189,21 @@ describe("productService.update", () => {
 // ── delete ───────────────────────────────────────────────────────────────────
 
 describe("productService.delete", () => {
-  it("hard-deletes a product with no order items", async () => {
+  it("soft-deletes a product with no order items (Session 30 AUDIT-3 S5)", async () => {
+    // Session 30 fix: previously this test expected hard-delete (found=null).
+    // We changed productService.delete to always soft-delete via deletedAt
+    // because hard-delete breaks the audit trail for any historical order
+    // that ever referenced the product.
     const created = await seedProduct(db);
     await productService.delete({ prisma: db as never }, created.id);
     const found = await db.product.findUnique({ where: { id: created.id } });
-    expect(found).toBeNull();
+    expect(found).not.toBeNull();
+    expect(found!.deletedAt).not.toBeNull();
+    expect(found!.isActive).toBe(false);
   });
 
-  it("soft-deletes (isActive=false) a product with order items", async () => {
+  it("soft-deletes a product with order items (Session 30 AUDIT-3 S5)", async () => {
+    // Session 30 fix: also asserts deletedAt is set (not just isActive=false).
     const created = await seedProduct(db);
     // Create an order item referencing this product
     const customer = await db.customer.create({
@@ -219,6 +226,7 @@ describe("productService.delete", () => {
     await productService.delete({ prisma: db as never }, created.id);
     const found = await db.product.findUnique({ where: { id: created.id } });
     expect(found).not.toBeNull();
+    expect(found!.deletedAt).not.toBeNull();
     expect(found!.isActive).toBe(false);
   });
 });
