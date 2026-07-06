@@ -113,7 +113,8 @@ describe("DHD delivery adapter", () => {
     });
 
     it("returns error on network failure (fetch throws)", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+      // I-H1: DHD now uses retryFetch (3 retries). Mock must reject ALL retries.
+      mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
       const r = await dhdAdapter.estimateCost(
         { wilaya: "Alger", weight: 1, codAmount: 5000 },
         validCreds,
@@ -291,7 +292,8 @@ describe("DHD delivery adapter", () => {
     });
 
     it("returns error on network failure", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("network down"));
+      // I-H1: DHD now uses retryFetch (3 retries). Mock must reject ALL retries.
+      mockFetch.mockRejectedValue(new Error("network down"));
       const r = await dhdAdapter.createShipment(
         {
           orderId: "o", orderNumber: "O",
@@ -428,7 +430,8 @@ describe("DHD delivery adapter", () => {
     });
 
     it("returns error on network failure", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("ECONNRESET"));
+      // I-H1: DHD now uses retryFetch (3 retries). Mock must reject ALL retries.
+      mockFetch.mockRejectedValue(new Error("ECONNRESET"));
       const r = await dhdAdapter.cancelShipment!("DHD123", validCreds);
       expect(r.success).toBe(false);
       expect(r.error).toContain("ECONNRESET");
@@ -477,13 +480,17 @@ describe("DHD delivery adapter", () => {
       }
     });
 
-    it("defaults to in_transit for unknown statuses", async () => {
+    it("defaults to pending for unknown statuses (I-H2)", async () => {
+      // I-H2: DHD default status changed from "in_transit" to "pending" for
+      // consistency with Yalidine/Maystro/ZR Express. An unknown DHD status
+      // (likely given the undocumented API) should not mask stuck/failed
+      // deliveries or inflate active-delivery counts.
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ statut: "weird status", historique: [] }),
       });
       const r = await dhdAdapter.syncTracking("X", validCreds);
-      expect(r.status).toBe("in_transit");
+      expect(r.status).toBe("pending");
     });
   });
 });

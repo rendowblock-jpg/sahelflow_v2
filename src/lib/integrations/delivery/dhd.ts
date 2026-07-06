@@ -1,4 +1,5 @@
 import "server-only";
+import { retryFetch } from "./retry";
 import type {
   DeliveryAdapter,
   DeliveryCredentials,
@@ -45,7 +46,7 @@ function mapStatus(raw: string): DeliveryStatus {
   if (s.includes("ramass") || s.includes("picked") || s.includes("collected")) return "picked_up";
   if (s.includes("transit") || s.includes("hub") || s.includes("centre")) return "in_transit";
   if (s.includes("nouveau") || s.includes("new") || s.includes("created")) return "created";
-  return "in_transit"; // default to in-transit for unknown statuses
+  return "pending"; // I-H2: default to pending (consistency with Yalidine/Maystro/ZR Express)
 }
 
 export const dhdAdapter: DeliveryAdapter = {
@@ -69,7 +70,7 @@ export const dhdAdapter: DeliveryAdapter = {
     try {
       // EcoTrack pattern: POST /tarification or GET /pricing
       // Adjust endpoint after confirming with DHD's actual API
-      const res = await fetch(`${DHD_BASE_URL}/tarification`, {
+      const res = await retryFetch(`${DHD_BASE_URL}/tarification`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${credentials.apiToken}`,
@@ -82,7 +83,7 @@ export const dhdAdapter: DeliveryAdapter = {
           poids: params.weight, // weight in kg (French: "poids")
           montant: params.codAmount, // COD amount (French: "montant")
         }),
-      });
+      }, 15000); // I-H1: retryFetch (3 retries, 15s timeout)
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -129,7 +130,7 @@ export const dhdAdapter: DeliveryAdapter = {
     try {
       // EcoTrack pattern: POST /add_colis or POST /shipments
       // French field names common on EcoTrack platforms
-      const res = await fetch(`${DHD_BASE_URL}/add_colis`, {
+      const res = await retryFetch(`${DHD_BASE_URL}/add_colis`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${credentials.apiToken}`,
@@ -148,7 +149,7 @@ export const dhdAdapter: DeliveryAdapter = {
           produits: request.items.map((i) => `${i.name} x${i.quantity}`).join(", "),
           type: request.isExchange ? "echange" : "livraison",
         }),
-      });
+      }, 15000); // I-H1: retryFetch (3 retries, 15s timeout)
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -207,12 +208,12 @@ export const dhdAdapter: DeliveryAdapter = {
     }
 
     // EcoTrack pattern: GET /lire/{tracking} or GET /tracking/{tracking}
-    const res = await fetch(`${DHD_BASE_URL}/lire/${trackingId}`, {
+    const res = await retryFetch(`${DHD_BASE_URL}/lire/${trackingId}`, {
       headers: {
         "Authorization": `Bearer ${credentials.apiToken}`,
         "Accept": "application/json",
       },
-    });
+    }, 15000); // I-H1: retryFetch (3 retries, 15s timeout)
 
     if (!res.ok) {
       throw new Error(`DHD tracking API error: ${res.status}`);
@@ -264,13 +265,13 @@ export const dhdAdapter: DeliveryAdapter = {
 
     try {
       // EcoTrack pattern: PUT /cancel/{tracking} or PATCH /cancel
-      const res = await fetch(`${DHD_BASE_URL}/cancel/${trackingId}`, {
+      const res = await retryFetch(`${DHD_BASE_URL}/cancel/${trackingId}`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${credentials.apiToken}`,
           "Accept": "application/json",
         },
-      });
+      }, 15000); // I-H1: retryFetch (3 retries, 15s timeout)
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
