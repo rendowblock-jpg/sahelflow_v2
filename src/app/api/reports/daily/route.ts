@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
 import { generateDailyReport } from "@/lib/reports/daily-report";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
-import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { getI18n } from "@/lib/i18n-server";
@@ -131,9 +130,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   return handleReport("cron");
 }, "POST /api/reports/daily");
 
-/** GET variant for cron services that only support GET (less secure). */
+/** GET variant for cron services that only support GET (less secure).
+ *  A-H3: cron services don't have session cookies, so this route is
+ *  cron-secret-only (like POST). The previous `requireAuth()` made it
+ *  unusable by cron — 401 on every scheduled call. */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

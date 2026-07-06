@@ -38,7 +38,11 @@ export const GET = withErrorHandler(async (
  */
 export const PUT = withErrorHandler(async (req: NextRequest, { params }: Ctx) => {
   await requireAuth();
-  const { id } = await params;
+  // A-H2: resolve JID → cuid (live WhatsApp chats are referenced by JID in
+  // the URL). Sibling GET + parallel /status, /priority, /assign routes all
+  // do this; PUT was missed → 404 for live chats.
+  const { id: rawId } = await params;
+  const id = await ensureConversationForJid(rawId);
   const body = await req.json();
   const parsed = putSchema.parse(body);
   const conv = await setConversationLabels(id, parsed.labels);

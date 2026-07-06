@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { orderStatusSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import {
   parseFile,
   mapRows,
@@ -94,49 +95,55 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   for (const validRow of validation.valid) {
     try {
-      const data = validRow.data as { customerName: string; phone: string; wilaya: string; commune?: string; address?: string; productName: string; quantity: number; unitPrice: number; deliveryCost?: number; status?: string; orderNumber?: string };
-      const phone = data.phone;
+      // A-H4: wrap each row's customer-find-or-create + order-create in a
+      // per-row $transaction. Previously a failed order.create (after
+      // nextOrderNumber already incremented the counter) left gaps in
+      // order numbering + a partial customer create. Now each row is atomic.
+      await db.$transaction(async (tx) => {
+        const data = validRow.data as { customerName: string; phone: string; wilaya: string; commune?: string; address?: string; productName: string; quantity: number; unitPrice: number; deliveryCost?: number; status?: string; orderNumber?: string };
+        const phone = data.phone;
 
-      // Find or create customer
-      let customer = await db.customer.findUnique({ where: { phone } });
-      if (!customer) {
-        customer = await db.customer.create({
+        // Find or create customer (inside tx)
+        let customer = await tx.customer.findUnique({ where: { phone } });
+        if (!customer) {
+          customer = await tx.customer.create({
+            data: {
+              name: data.customerName,
+              phone,
+              wilaya: data.wilaya,
+              commune: data.commune ?? null,
+              address: data.address ?? null,
+            },
+          });
+        }
+
+        const itemsTotal = data.unitPrice * data.quantity;
+        const deliveryCost = data.deliveryCost ?? 0;
+        const totalPrice = itemsTotal + deliveryCost;
+        const orderNumber = data.orderNumber ?? await nextOrderNumber(tx as DbClient);
+
+        await tx.order.create({
           data: {
-            name: data.customerName,
-            phone,
+            orderNumber,
+            status: orderStatusSchema.safeParse(data.status).success ? data.status : "pending",
+            customerId: customer.id,
             wilaya: data.wilaya,
-            commune: data.commune ?? null,
-            address: data.address ?? null,
+            commune: data.commune ?? "",
+            address: data.address ?? "",
+            phone,
+            totalPrice,
+            deliveryCost,
+            source: "manual",
+            items: {
+              create: [{
+                productName: data.productName,
+                quantity: data.quantity,
+                unitPrice: data.unitPrice,
+                total: itemsTotal,
+              }],
+            },
           },
         });
-      }
-
-      const itemsTotal = data.unitPrice * data.quantity;
-      const deliveryCost = data.deliveryCost ?? 0;
-      const totalPrice = itemsTotal + deliveryCost;
-      const orderNumber = data.orderNumber ?? await nextOrderNumber(db);
-
-      await db.order.create({
-        data: {
-          orderNumber,
-          status: orderStatusSchema.safeParse(data.status).success ? data.status : "pending",
-          customerId: customer.id,
-          wilaya: data.wilaya,
-          commune: data.commune ?? "",
-          address: data.address ?? "",
-          phone,
-          totalPrice,
-          deliveryCost,
-          source: "manual",
-          items: {
-            create: [{
-              productName: data.productName,
-              quantity: data.quantity,
-              unitPrice: data.unitPrice,
-              total: itemsTotal,
-            }],
-          },
-        },
       });
       inserted++;
     } catch (err) {

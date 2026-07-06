@@ -34,6 +34,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Seller path: list all storefronts (management view)
+  // A-H1: the seller-management branch (no ?slug=) must require auth — it
+  // lists ALL storefronts incl. inactive. The public ?slug= branch above
+  // stays public (correct — renders the public storefront page).
+  await requireAuth();
   const { storefrontService } = await import("@/lib/storefront/service");
   const configs = await storefrontService.list();
   return NextResponse.json({ configs });
