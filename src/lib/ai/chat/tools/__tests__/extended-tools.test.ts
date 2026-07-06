@@ -341,6 +341,45 @@ describe("search_conversations", () => {
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();
   });
+
+  // Session 31 (AUDIT-7 AI6): the fix replaces DB-level `contains` (which
+  // searched AES-GCM ciphertext and returned nothing in production) with an
+  // in-memory substring filter on the decrypted contactName. This test locks
+  // in case-insensitive + partial matching (an improvement over Prisma's
+  // default case-sensitive contains on SQLite).
+  it("matches case-insensitively + partially (in-memory filter, AUDIT AI6)", async () => {
+    await db.conversation.create({
+      data: { channel: "whatsapp", contactName: "Ahmed Benali", contactPhone: uniquePhone(), lastMessageAt: new Date() },
+    });
+    await db.conversation.create({
+      data: { channel: "whatsapp", contactName: "FATIMA ZOHRA", contactPhone: uniquePhone(), lastMessageAt: new Date() },
+    });
+    await db.conversation.create({
+      data: { channel: "whatsapp", contactName: "Karim", contactPhone: uniquePhone(), lastMessageAt: new Date() },
+    });
+
+    const tool = getTool("search_conversations")!;
+
+    // lowercase query matches mixed-case stored name
+    const r1 = await tool.execute({ query: "ahmed" }, ctx());
+    expect(r1.success).toBe(true);
+    expect((r1.data as Array<{ contactName: string }>).map((c) => c.contactName)).toEqual(["Ahmed Benali"]);
+
+    // lowercase query matches uppercase stored name
+    const r2 = await tool.execute({ query: "fatima" }, ctx());
+    expect(r2.success).toBe(true);
+    expect((r2.data as Array<{ contactName: string }>).map((c) => c.contactName)).toEqual(["FATIMA ZOHRA"]);
+
+    // partial match
+    const r3 = await tool.execute({ query: "ben" }, ctx());
+    expect(r3.success).toBe(true);
+    expect((r3.data as Array<{ contactName: string }>).map((c) => c.contactName)).toEqual(["Ahmed Benali"]);
+
+    // query matching none returns empty
+    const r4 = await tool.execute({ query: "nobody" }, ctx());
+    expect(r4.success).toBe(true);
+    expect(r4.data).toEqual([]);
+  });
 });
 
 // ── get_pending_deliveries ───────────────────────────────────────────────────

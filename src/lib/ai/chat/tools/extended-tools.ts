@@ -445,8 +445,15 @@ registerTool({
     try {
       const input = searchConversationsSchema.parse(params);
       const db = getDb(ctx);
-      const conversations = await db.conversation.findMany({
-        where: { contactName: { contains: input.query } },
+      const q = input.query.trim().toLowerCase();
+      // Session 31 (AUDIT-7 AI6): contactName is AES-256-GCM encrypted at rest
+      // (see CONVERSATION_PII_FIELDS). A DB-level `contains` filter searches
+      // ciphertext and returns nothing in production. Instead, fetch a bounded
+      // window of recent conversations (the PII extension transparently
+      // decrypts contactName/contactPhone on read) and filter by substring in
+      // memory. Conversations are bounded (hundreds, not millions) so this is
+      // safe; 500 is a generous window for a COD seller's WhatsApp history.
+      const candidates = await db.conversation.findMany({
         select: {
           id: true,
           channel: true,
@@ -455,12 +462,15 @@ registerTool({
           lastMessageAt: true,
           unreadCount: true,
         },
-        take: input.limit,
         orderBy: { lastMessageAt: "desc" },
+        take: 500,
       });
+      const matched = candidates
+        .filter((c) => (c.contactName ?? "").toLowerCase().includes(q))
+        .slice(0, input.limit);
       return {
         success: true,
-        data: conversations.map((c) => ({
+        data: matched.map((c) => ({
           id: c.id,
           channel: c.channel,
           contactName: c.contactName,
