@@ -96,8 +96,8 @@ export async function incrementRuleTriggers(ruleIds: string[]): Promise<void> {
  * Loads the order, the customer's history, and the wilaya risk profile.
  */
 export async function buildAssessmentInputFromOrder(orderId: string): Promise<RiskAssessmentInput | null> {
-  const order = await db.order.findUnique({
-    where: { id: orderId },
+  const order = await db.order.findFirst({
+    where: { id: orderId, deletedAt: null },
     select: {
       totalPrice: true,
       wilaya: true,
@@ -113,7 +113,7 @@ export async function buildAssessmentInputFromOrder(orderId: string): Promise<Ri
 
   // Customer history
   const customerOrders = await db.order.findMany({
-    where: { customerId: order.customerId },
+    where: { customerId: order.customerId, deletedAt: null },
     select: { status: true, totalPrice: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
@@ -128,8 +128,8 @@ export async function buildAssessmentInputFromOrder(orderId: string): Promise<Ri
     .reduce((sum, o) => sum + o.totalPrice, 0);
 
   // Customer blacklist flag (stored in customer notes or a dedicated field)
-  const customer = await db.customer.findUnique({
-    where: { id: order.customerId },
+  const customer = await db.customer.findFirst({
+    where: { id: order.customerId, deletedAt: null },
     select: { notes: true, createdAt: true, isBlacklisted: true },
   });
 
@@ -252,8 +252,8 @@ export async function batchAssessOrders(orderIds: string[]): Promise<Map<string,
 
 /** Add a customer to the blacklist. */
 export async function blacklistCustomer(customerId: string, reason?: string): Promise<void> {
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
+  const customer = await db.customer.findFirst({
+    where: { id: customerId, deletedAt: null },
     select: { notes: true, isBlacklisted: true, name: true, phone: true },
   });
   if (!customer) return;
@@ -293,8 +293,8 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
 
 /** Remove a customer from the blacklist. */
 export async function unblacklistCustomer(customerId: string): Promise<void> {
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
+  const customer = await db.customer.findFirst({
+    where: { id: customerId, deletedAt: null },
     select: { notes: true, isBlacklisted: true },
   });
   if (!customer) return;
@@ -332,7 +332,7 @@ export async function listBlacklistedCustomers(): Promise<Array<{
   blacklistedAt: Date | null;
 }>> {
   const customers = await db.customer.findMany({
-    where: { isBlacklisted: true },
+    where: { isBlacklisted: true, deletedAt: null },
     select: {
       id: true,
       name: true,

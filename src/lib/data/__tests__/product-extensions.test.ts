@@ -92,3 +92,16 @@ describe("productServiceExtensions.getStats", () => {
     expect(stats.orderCount).toBe(2); // 2 distinct orders
   });
 });
+
+// ── Soft-delete exclusion (AUDIT Pattern 5, Session 31) ─────────────────────
+describe("productServiceExtensions.search — excludes soft-deleted (AUDIT Pattern 5)", () => {
+  it("does not return soft-deleted products", async () => {
+    const cat = await seedCategory(db);
+    await seedProduct(db, { name: "Widget Pro", categoryId: cat.id });
+    const softDeleted = await seedProduct(db, { name: "Widget Lite", categoryId: cat.id });
+    await db.product.update({ where: { id: softDeleted.id }, data: { deletedAt: new Date() } });
+    const rows = await productServiceExtensions.search({ prisma: db as never }, "Widget");
+    expect(rows).toHaveLength(1); // soft-deleted "Widget Lite" excluded
+    expect(rows[0]!.name).toBe("Widget Pro");
+  });
+});

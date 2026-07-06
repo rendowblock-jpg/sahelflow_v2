@@ -43,6 +43,7 @@ export const productServiceExtensions = {
         AND: [
           opts?.activeOnly ? { isActive: true } : {},
           { name: { contains: q } },
+          { deletedAt: null },
         ],
       },
       orderBy: { name: "asc" },

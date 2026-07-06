@@ -230,3 +230,30 @@ describe("generateDailyReport — with orders", () => {
     expect(report!.revenue).toBe(5000);
   });
 });
+
+// ── Soft-delete exclusion (AUDIT Pattern 5, Session 31) ─────────────────────
+describe("generateDailyReport — excludes soft-deleted records (AUDIT Pattern 5)", () => {
+  it("excludes soft-deleted orders from count + revenue", async () => {
+    await seedOrderWithItems({ totalPrice: 5000 }); // active yesterday
+    const deleted = await seedOrderWithItems({ totalPrice: 3000 }); // also yesterday
+    await db.order.update({ where: { id: deleted.id }, data: { deletedAt: new Date() } });
+    const report = await generateDailyReport("fr");
+    expect(report).not.toBeNull();
+    expect(report!.ordersCount).toBe(1); // soft-deleted order excluded
+    expect(report!.revenue).toBe(5000); // 5000, not 8000
+  });
+
+  it("excludes soft-deleted deliveries from the delivery summary", async () => {
+    await seedOrderWithItems({ totalPrice: 1000, deliveryStatus: "delivered" });
+    const deletedOrder = await seedOrderWithItems({ totalPrice: 1000, deliveryStatus: "returned" });
+    // Soft-delete the delivery (not the order) — a soft-deleted delivery should not be counted.
+    await db.delivery.updateMany({
+      where: { orderId: deletedOrder.id },
+      data: { deletedAt: new Date() },
+    });
+    const report = await generateDailyReport("fr");
+    expect(report).not.toBeNull();
+    expect(report!.deliveredCount).toBe(1);
+    expect(report!.returnedCount).toBe(0); // soft-deleted delivery excluded
+  });
+});

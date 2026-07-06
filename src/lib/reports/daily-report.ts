@@ -91,25 +91,26 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     lowStockProducts,
   ] = await Promise.all([
     db.order.findMany({
-      where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday } },
+      where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null },
       select: { id: true, status: true, totalPrice: true },
     }),
     db.order.aggregate({
       where: {
         createdAt: { gte: startOfYesterday, lte: endOfYesterday },
         status: { not: "cancelled" },
+        deletedAt: null,
       },
       _sum: { totalPrice: true },
     }),
     db.customer.count({
-      where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday } },
+      where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null },
     }),
     db.orderItem.findMany({
-      where: { order: { createdAt: { gte: startOfYesterday, lte: endOfYesterday } } },
+      where: { order: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null } },
       select: { productName: true, quantity: true, total: true },
     }),
     db.product.findMany({
-      where: { isActive: true, stock: { lte: db.product.fields.lowStockThreshold } },
+      where: { isActive: true, stock: { lte: db.product.fields.lowStockThreshold }, deletedAt: null },
       select: { name: true, stock: true },
       orderBy: { stock: "asc" },
       take: 5,
@@ -127,7 +128,7 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
   let returnedCount = 0;
   if (orderIds.length > 0) {
     const deliveries = await db.delivery.findMany({
-      where: { orderId: { in: orderIds } },
+      where: { orderId: { in: orderIds }, deletedAt: null },
       select: { status: true },
     });
     for (const d of deliveries) {

@@ -490,3 +490,40 @@ describe("blacklistCustomer / unblacklistCustomer / listBlacklistedCustomers", (
     expect(assessment!.triggeredRules).toContain("blacklist_hold");
   });
 });
+
+// ── Soft-delete exclusion (AUDIT Pattern 5, Session 31) ─────────────────────
+describe("soft-delete exclusion (AUDIT Pattern 5)", () => {
+  it("buildAssessmentInputFromOrder returns null for a soft-deleted order", async () => {
+    const customer = await seedTestCustomer(db);
+    await seedWilayaRisk("Alger");
+    const order = await seedOrderForCustomer(customer.id, { status: "draft", totalPrice: 3000 });
+    await db.order.update({ where: { id: order.id }, data: { deletedAt: new Date() } });
+    const input = await buildAssessmentInputFromOrder(order.id);
+    expect(input).toBeNull();
+  });
+
+  it("customer history excludes soft-deleted orders", async () => {
+    const customer = await seedTestCustomer(db);
+    await seedWilayaRisk("Alger");
+    await seedOrderForCustomer(customer.id, { status: "delivered", totalPrice: 5000 });
+    const historyOrder = await seedOrderForCustomer(customer.id, { status: "returned", totalPrice: 2000 });
+    const order = await seedOrderForCustomer(customer.id, { status: "draft", totalPrice: 3000 });
+    // Soft-delete one history order — it must not be counted in totalOrders.
+    await db.order.update({ where: { id: historyOrder.id }, data: { deletedAt: new Date() } });
+    const input = await buildAssessmentInputFromOrder(order.id);
+    expect(input).not.toBeNull();
+    expect(input!.customerHistory!.totalOrders).toBe(2); // 3 created, 1 soft-deleted
+    expect(input!.customerHistory!.returnedCount).toBe(0); // the returned one was soft-deleted
+  });
+
+  it("listBlacklistedCustomers excludes soft-deleted customers", async () => {
+    const active = await seedTestCustomer(db, { name: "Active Bad", phone: uniquePhone() });
+    const softDeleted = await seedTestCustomer(db, { name: "Deleted Bad", phone: uniquePhone() });
+    await blacklistCustomer(active.id, "fraud");
+    await blacklistCustomer(softDeleted.id, "fraud");
+    await db.customer.update({ where: { id: softDeleted.id }, data: { deletedAt: new Date() } });
+    const list = await listBlacklistedCustomers();
+    expect(list).toHaveLength(1);
+    expect(list[0]!.id).toBe(active.id);
+  });
+});
