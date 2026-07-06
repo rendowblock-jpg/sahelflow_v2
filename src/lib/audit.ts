@@ -15,6 +15,7 @@
  */
 import "server-only";
 import { db } from "@/lib/db";
+import { redactPii } from "@/lib/redact-pii";
 
 export interface AuditEntry {
   /** Dotted action, e.g. "order.status.changed", "customer.blacklisted". */
@@ -58,10 +59,11 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
         entity: entry.entity ?? null,
         entityId: entry.entityId ?? null,
         actor: entry.actor ?? null,
-        before: entry.before ? JSON.stringify(entry.before) : null,
-        after: entry.after ? JSON.stringify(entry.after) : null,
+        // Session 30 (AUDIT-4 D6): redact PII before persisting JSON snapshots
+        before: entry.before ? JSON.stringify(redactPii(entry.before)) : null,
+        after: entry.after ? JSON.stringify(redactPii(entry.after)) : null,
         ip: entry.ip ?? null,
-        metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+        metadata: entry.metadata ? JSON.stringify(redactPii(entry.metadata)) : null,
       },
     });
   } catch {

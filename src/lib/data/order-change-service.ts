@@ -13,6 +13,12 @@
  */
 import "server-only";
 import { db } from "@/lib/db";
+import { redactPii } from "@/lib/redact-pii";
+
+// Session 30 (AUDIT-3 S2): callers may pass a transaction client so the
+// ledger entry participates in the same tx as the mutation. If omitted,
+// falls back to the outer db client (legacy behavior).
+type DbOrTx = typeof db | Parameters<Parameters<typeof db["$transaction"]>[0]>[0];
 
 export interface OrderChangeEntry {
   orderId: string;
@@ -20,18 +26,22 @@ export interface OrderChangeEntry {
   actor?: string;
   payload?: Record<string, unknown>;
   status?: string;
+  /** Optional transaction client — if provided, ledger entry is written in-tx. */
+  tx?: DbOrTx;
 }
 
 /** Record an order change (append-only). Best-effort — never throws. */
 export async function recordOrderChange(entry: OrderChangeEntry): Promise<void> {
   try {
-    await db.orderChange.create({
+    const client = entry.tx ?? db;
+    await client.orderChange.create({
       data: {
         orderId: entry.orderId,
         actionType: entry.actionType,
         actor: entry.actor ?? "user",
         status: entry.status ?? "confirmed",
-        payload: entry.payload ? JSON.stringify(entry.payload) : null,
+        // Session 30 (AUDIT-4 D6): redact PII before persisting
+        payload: entry.payload ? JSON.stringify(redactPii(entry.payload)) : null,
       },
     });
   } catch {

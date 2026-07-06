@@ -179,6 +179,10 @@ model Order {
   @@index([deletedAt])
   @@index([codRemitted])
   @@index([codCollected])
+  // Session 30: analytics + COD reconciliation hot paths
+  @@index([wilaya])
+  @@index([deliveredAt])
+  @@index([confirmedAt])
 
 }
 
@@ -373,8 +377,16 @@ model Automation {
   updatedAt DateTime @updatedAt
   logs      AutomationLog[]
 
+  // Session 30 (AUDIT-4 D5): retry support for the executor
+  maxRetries   Int       @default(2)
+  retryCount   Int       @default(0)
+  retryDelayMs Int       @default(500)
+  lastError    String?
+  nextRunAt    DateTime?
+
   @@index([isActive])
   @@index([trigger])
+  @@index([nextRunAt])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
 
@@ -693,8 +705,18 @@ model Refund {
   createdBy   String   @default("user")
   createdAt   DateTime @default(now())
 
+  // Session 30 (AUDIT-4 D3): idempotency + status tracking
+  // "pending" | "completed" | "failed" — defaults to "completed" for legacy rows
+  status          String   @default("completed")
+  // Client-supplied idempotency key — unique index prevents double-processing
+  idempotencyKey  String?  @unique
+  processedAt     DateTime?
+  // Optional: bank transfer ref, courier deduction ref, etc.
+  reference       String?
+
   @@index([orderId, createdAt])
   @@index([returnId])
+  @@index([status])
 }
 
 /// Inventory reservation — soft-holds stock between order creation and
@@ -713,6 +735,36 @@ model ReservationItem {
   @@index([productId])
   @@index([orderId])
   @@index([releasedAt])
+}
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 6 (Session 30 D2): PHONE REPUTATION REGISTRY
+// ─────────────────────────────────────────────────────────────────────────────
+// Replaces the JSON-blob-in-Setting approach (AUDIT-4 D2).
+// Each bad phone is one row with an HMAC blind index for O(1) lookup.
+// Cross-store: a phone reported bad by shop A is visible to shop B.
+
+model PhoneReputation {
+  id          String   @id @default(cuid())
+  // HMAC-SHA256 of the phone (key = master key). Never store plaintext.
+  phoneHash   String   @unique
+  // Last 4 digits for UI display ("•••• 1234") — not PII on its own.
+  last4       String?
+  // Number of times this phone has been reported (across all shops).
+  reportCount Int      @default(1)
+  // "bad" | "risky" | "confirmed_fraud"
+  severity    String   @default("bad")
+  // Optional: which shop reported it last.
+  reportedBy  String?
+  notes       String?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([severity])
+  @@index([lastSeenAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
