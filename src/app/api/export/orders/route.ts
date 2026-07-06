@@ -15,6 +15,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const { t, locale } = await getI18n();
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const orders = await db.order.findMany({
+    where: { deletedAt: null },
     include: { customer: true },
     orderBy: { createdAt: "desc" },
     take: 10000,

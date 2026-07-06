@@ -18,14 +18,34 @@ export async function GET(
   return NextResponse.json({ shop });
 }
 
-/** DELETE /api/shops/[id] — delete a shop + its SQLite file. */
+/** DELETE /api/shops/[id] — delete a shop + its SQLite file.
+ *
+ * Session 30 (AUDIT-2 A8): requires { confirm: "DELETE" } body. Also
+ * refuses to delete the active shop (the user must switch first).
+ */
 export const DELETE = withErrorHandler(
-  async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     await requireAuth();
     const { id } = await params;
     const shop = getShop(id);
     if (!shop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+    // Require explicit confirm body
+    const body = await req.json().catch(() => ({}));
+    if (body.confirm !== "DELETE") {
+      return NextResponse.json(
+        { error: "Confirm required: send { confirm: 'DELETE' } to acknowledge this destructive operation" },
+        { status: 400 },
+      );
+    }
+    // Refuse to delete the active shop
+    const { getActiveShopId } = require("@/lib/shops");
+    if (getActiveShopId() === id) {
+      return NextResponse.json(
+        { error: "Cannot delete the active shop — switch to another shop first" },
+        { status: 400 },
+      );
     }
     deleteShop(id);
     return NextResponse.json({ ok: true });

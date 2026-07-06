@@ -4,6 +4,9 @@ import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { assertCanTransition } from "@/lib/order-transitions";
+import { recordOrderChange } from "@/lib/data/order-change-service";
+import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
 
@@ -77,9 +80,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Create/update the Delivery record + update order status in a transaction.
-  // Route the status update through orderService.updateStatus to enforce the
-  // state machine + fire automation triggers (was raw db.order.update bypass).
-  const { orderService } = await import("@/lib/data/order-service");
+  // Session 30 (AUDIT-2 A3): the entire create-shipment flow is now atomic.
+  // Previously the order status update happened OUTSIDE the $transaction,
+  // so a failure there left a delivery record at the provider with no matching
+  // order state in our DB. Now: delivery upsert + order status update + ledger
+  // entry all happen inside the same tx. If any step fails, the whole thing
+  // rolls back.
   const [delivery] = await db.$transaction(async (tx) => {
     const d = await tx.delivery.upsert({
       where: { orderId: order.id },
@@ -103,11 +109,32 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           : null,
       },
     });
+
+    // Update order status inside the tx (enforce state machine manually
+    // since we can't call orderService.updateStatus which opens its own tx)
+    const fresh = await tx.order.findFirst({ where: { id: order.id, deletedAt: null }, select: { status: true } });
+    if (fresh) {
+      const from = fresh.status as OrderStatus;
+      const to: OrderStatus = "shipped";
+      if (from !== to) {
+        assertCanTransition(from, to);
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: to, shippedAt: new Date() },
+        });
+        // Record ledger entry — same tx (S2 fix)
+        await recordOrderChange({
+          orderId: order.id,
+          actionType: "status_change",
+          actor: "user",
+          payload: { from, to, reason: "delivery_create" },
+          tx,
+        });
+      }
+    }
+
     return [d];
   });
-
-  // Update order status via the service (enforces state machine + triggers)
-  await orderService.updateStatus({ prisma: db }, order.id, "shipped");
 
   return NextResponse.json({
     ok: true,

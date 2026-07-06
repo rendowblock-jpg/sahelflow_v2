@@ -18,6 +18,9 @@ export const dynamic = "force-dynamic";
 
 const restoreSchema = z.object({
   filename: z.string().min(1).max(255),
+  // Session 30 (AUDIT-2 A7): require explicit confirm — single-click
+  // destructive restore was too easy.
+  confirm: z.literal("RESTORE"),
 });
 
 export const POST = withErrorHandler(async (req: NextRequest) => {

@@ -16,6 +16,23 @@ import { logAudit } from "@/lib/audit";
 
 /** Mark an order's COD as collected (courier picked up the cash). */
 export async function markCodCollected(orderId: string, actor = "user") {
+  // Session 30 (AUDIT-2 A2): idempotency — if already collected, no-op.
+  const existing = await db.order.findUnique({
+    where: { id: orderId },
+    select: { codCollected: true, totalPrice: true, orderNumber: true, codCollectedAt: true },
+  });
+  if (!existing) throw new Error("Order not found");
+  if (existing.codCollected) {
+    // Already collected — return current state without writing a duplicate ledger entry
+    return {
+      id: orderId,
+      orderNumber: existing.orderNumber,
+      totalPrice: existing.totalPrice,
+      codCollected: true,
+      codCollectedAt: existing.codCollectedAt,
+    };
+  }
+
   const order = await db.order.update({
     where: { id: orderId },
     data: {
@@ -45,6 +62,27 @@ export async function markCodCollected(orderId: string, actor = "user") {
 
 /** Mark an order's COD as remitted (courier paid the seller). */
 export async function markCodRemitted(orderId: string, remittanceRef: string, actor = "user") {
+  // Session 30 (AUDIT-2 A2): idempotency + collected-before-remitted check.
+  const existing = await db.order.findUnique({
+    where: { id: orderId },
+    select: { codCollected: true, codRemitted: true, totalPrice: true, orderNumber: true, codRemittedAt: true, codRemittanceRef: true },
+  });
+  if (!existing) throw new Error("Order not found");
+  if (!existing.codCollected) {
+    throw new Error("Cannot mark COD as remitted before it is collected");
+  }
+  if (existing.codRemitted) {
+    // Already remitted — no-op (idempotent)
+    return {
+      id: orderId,
+      orderNumber: existing.orderNumber,
+      totalPrice: existing.totalPrice,
+      codRemitted: true,
+      codRemittedAt: existing.codRemittedAt,
+      codRemittanceRef: existing.codRemittanceRef,
+    };
+  }
+
   const order = await db.order.update({
     where: { id: orderId },
     data: {
@@ -75,8 +113,22 @@ export async function markCodRemitted(orderId: string, remittanceRef: string, ac
 
 /** Bulk-mark COD as remitted (for the reconciliation page). */
 export async function bulkMarkCodRemitted(orderIds: string[], remittanceRef: string, actor = "user") {
+  // Session 30 (AUDIT-2 A2): only update + ledger the orders that actually
+  // need it (collected=true, remitted=false). Previously the ledger loop
+  // fired for every input id, including ones skipped by the updateMany filter
+  // → phantom ledger entries.
+  const candidates = await db.order.findMany({
+    where: { id: { in: orderIds }, codCollected: true, codRemitted: false, deletedAt: null },
+    select: { id: true },
+  });
+  const affectedIds = candidates.map((o) => o.id);
+
+  if (affectedIds.length === 0) {
+    return { updated: 0, total: orderIds.length };
+  }
+
   const result = await db.order.updateMany({
-    where: { id: { in: orderIds }, codCollected: true, codRemitted: false },
+    where: { id: { in: affectedIds } },
     data: {
       codRemitted: true,
       codRemittedAt: new Date(),
@@ -84,8 +136,8 @@ export async function bulkMarkCodRemitted(orderIds: string[], remittanceRef: str
     },
   });
 
-  // Record ledger entries for each
-  for (const id of orderIds) {
+  // Record ledger entries only for actually-affected orders
+  for (const id of affectedIds) {
     void recordOrderChange({
       orderId: id,
       actionType: "cod_remitted",

@@ -33,12 +33,21 @@ const syncSchema = z.object({
  * called from the Settings UI (future). For now, cron-secret only.
  */
 export const POST = withErrorHandler(async (req: NextRequest): Promise<NextResponse> => {
-  await requireAuth();
-  // Verify cron secret (constant-time compare — prevents timing attacks)
+  // Session 30 (AUDIT-2 A11): accept EITHER auth OR x-cron-secret.
+  // Previously required BOTH, but no client code ever sent x-cron-secret
+  // → connected stores never synced. Now the "Sync now" button in the
+  // Settings UI works with just the auth cookie. Cron jobs still use
+  // x-cron-secret (no cookie).
   const headerSecret = req.headers.get("x-cron-secret");
   const envSecret = env.cronSecret;
-  if (!headerSecret || !envSecret || !constantTimeEqual(headerSecret, envSecret)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const cronOk = !!headerSecret && !!envSecret && constantTimeEqual(headerSecret, envSecret);
+  if (!cronOk) {
+    // Fall back to cookie auth
+    try {
+      await requireAuth();
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   const body = await req.json().catch(() => ({}));

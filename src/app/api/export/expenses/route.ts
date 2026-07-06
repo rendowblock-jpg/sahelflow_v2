@@ -16,6 +16,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
 
   const expenses = await db.expense.findMany({
+    where: { deletedAt: null },
     orderBy: { date: "desc" },
     take: 10000,
   });
