@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
 **Last updated:** 2026-07-06 (Session 30 complete — 10-phase deep wave merged to main, v4.1.0)
-**Main HEAD:** `564ac9c`
+**Main HEAD:** `91619d4`
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
@@ -39,7 +39,7 @@
 | Sentry | ✅ @sentry/nextjs installed + env-gated (zero-overhead until SENTRY_DSN set) + global-error.tsx only-fires-on-unexpected |
 | Agent toolkit | ✅ sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit |
 
-## Session 30 — 2026-07-06: 10-Phase Deep Wave (merged to main, HEAD `564ac9c`, v4.1.0)
+## Session 30 — 2026-07-06: 10-Phase Deep Wave (merged to main, HEAD `91619d4`, v4.1.0)
 
 Founder instruction: "do the work of session 30 now — multi-phase deep wave to address all 475 audit findings professionally."
 
