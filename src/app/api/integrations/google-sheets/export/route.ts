@@ -20,8 +20,9 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
-  // Fetch all orders with customer info
+  // Fetch all orders with customer info (AUDIT-2 A10, Session 31: exclude soft-deleted)
   const orders = await db.order.findMany({
+    where: { deletedAt: null },
     include: { customer: true },
     orderBy: { createdAt: "desc" },
     take: 1000,

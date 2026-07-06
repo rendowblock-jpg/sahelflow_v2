@@ -240,9 +240,53 @@ export function InboxLive() {
     [loadChats],
   );
 
+  // Session 31 (AUDIT-6 I4): map Baileys message-update status to our
+  // deliveryStatus enum. Baileys sends status as a string ("SENT","DELIVERY",
+  // "READ",...) or a proto number (0=PENDING,1=SENT,2=DELIVERY,3=READ,4=PLAYED).
+  function mapBaileysStatus(update: Record<string, unknown>): NormalizedMessage["deliveryStatus"] | null {
+    const status = update.status;
+    if (status === undefined || status === null) return null;
+    const s = typeof status === "number" ? status : String(status).toUpperCase();
+    if (s === 0 || s === "PENDING") return "sending";
+    if (s === 1 || s === "SENT") return "sent";
+    if (s === 2 || s === "DELIVERY" || s === "DELIVERED") return "delivered";
+    if (s === 3 || s === "READ") return "read";
+    return null;
+  }
+
+  // Session 31 (AUDIT-6 I4): handle delivery/read receipts from the sidecar.
+  // The hook supports onMessageUpdate (Session 30) but the component never wired
+  // it — so receipts never updated the UI. Now we update matching messages'
+  // deliveryStatus so the MessageStatus icon (clock/check/double-check/blue)
+  // reflects real WhatsApp delivery state.
+  const handleMessageUpdate = useCallback(
+    (updates: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>) => {
+      const activeId = activeChatIdRef.current;
+      if (!activeId) return;
+      // Only process updates for the active chat (receipts for other chats
+      // would update their unread/last-message, handled on next loadChats).
+      const relevant = updates.filter((u) => u.jid === activeId && u.fromMe);
+      if (relevant.length === 0) return;
+      setMessages((prev) => {
+        let changed = false;
+        const next = prev.map((m) => {
+          const upd = relevant.find((u) => u.id === m.id);
+          if (!upd) return m;
+          const newStatus = mapBaileysStatus(upd.update);
+          if (!newStatus) return m;
+          changed = true;
+          return { ...m, deliveryStatus: newStatus };
+        });
+        return changed ? next : prev;
+      });
+    },
+    [],
+  );
+
   const { status, user, wsOpen, reconnect } = useWhatsAppSocket({
     onStatusChange: handleStatusChange,
     onMessage: handleMessage,
+    onMessageUpdate: handleMessageUpdate,
   });
 
   const sidecarReachable = status !== null;
@@ -305,15 +349,17 @@ export function InboxLive() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to: active.id, text: messageText }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
+      const data = (await res.json()) as { ok: boolean; error?: string; id?: string };
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? t("inbox.sendFailed"));
       }
-      // Update the optimistic message to "sent" status
+      // Update the optimistic message to "sent" status. Adopt the real WhatsApp
+      // message ID (Session 31, AUDIT-6 I4) so subsequent delivery/read receipts
+      // arriving via onMessageUpdate match this message by id.
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
-            ? { ...m, deliveryStatus: "sent", id: `sent-${Date.now()}` }
+            ? { ...m, deliveryStatus: "sent", ...(data.id ? { id: data.id } : {}) }
             : m
         )
       );
