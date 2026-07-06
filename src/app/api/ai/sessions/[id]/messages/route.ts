@@ -3,6 +3,7 @@ import { requireLicense } from "@/lib/license/license-service";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
+import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { redactPii } from "@/lib/redact-pii";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
@@ -17,7 +18,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
   const { id } = await params;
   const session = await db.aiChatSession.findUnique({
     where: { id },
-    include: { messages: { orderBy: { createdAt: "asc" } } },
+    include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } }, // AI-H3: cap history
   });
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -35,12 +36,20 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
   // Session 30 (AUDIT-7 AI5): license gate on message send (not just session create)
   await requireLicense();
   const { id } = await params;
+
+  // AI-H1: rate limit (parity with the streaming route). Without this, users
+  // could bypass rate limiting by using the non-streaming endpoint —
+  // exhausting the Gemini free-tier quota (15 RPD) in seconds.
+  const rl = checkRateLimit(id);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: rl.reason ?? "Rate limited" }, { status: 429 });
+  }
   const body = await req.json();
   const input = sendSchema.parse(body);
 
   const session = await db.aiChatSession.findUnique({
     where: { id },
-    include: { messages: { orderBy: { createdAt: "asc" } } },
+    include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } }, // AI-H3: cap history
   });
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });

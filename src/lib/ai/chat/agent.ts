@@ -254,6 +254,10 @@ export type AgentStreamEvent =
 export async function* runAgentStream(
   conversationHistory: AgentMessage[],
   userMessage: string,
+  /** AI-H2: external abort signal (client disconnect). When aborted, the
+   *  generator stops + the in-flight Gemini fetch is aborted, freeing quota
+   *  that would otherwise be consumed on a response the user never sees. */
+  externalSignal?: AbortSignal,
 ): AsyncGenerator<AgentStreamEvent> {
   const apiKey = await getSecret("gemini_api_key");
   if (!apiKey) {
@@ -291,6 +295,9 @@ export async function* runAgentStream(
         const url = `${GEMINI_API_URL}/${model}:streamGenerateContent?alt=sse`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
+        // AI-H2: if the client disconnected, abort the fetch immediately.
+        if (externalSignal?.aborted) { controller.abort(); }
+        externalSignal?.addEventListener("abort", () => controller.abort(), { once: true });
 
         const res = await fetchGeminiWithRetry(url, {
           method: "POST",

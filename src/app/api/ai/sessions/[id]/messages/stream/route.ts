@@ -89,7 +89,7 @@ export async function POST(
 
   const session = await db.aiChatSession.findUnique({
     where: { id },
-    include: { messages: { orderBy: { createdAt: "asc" } } },
+    include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } }, // AI-H3: cap history
   });
 
   if (!session) {
@@ -128,8 +128,15 @@ export async function POST(
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      // PERF-001: abort the agent loop when the client disconnects
-      const onAbort = () => { try { controller.close(); } catch { /* already closed */ } };
+      // AI-H2: abort the agent loop (not just the stream) when the client
+      // disconnects. Previously onAbort only closed the controller — the
+      // agent continued running for up to 5 iterations × 30s = 150s,
+      // consuming Gemini quota on a response the user will never see.
+      const agentAbort = new AbortController();
+      const onAbort = () => {
+        agentAbort.abort();
+        try { controller.close(); } catch { /* already closed */ }
+      };
       if (req.signal) { req.signal.addEventListener("abort", onAbort); }
       let assistantResponse = "";
       let assistantToolCalls: AgentResult["toolCalls"] = [];
@@ -140,7 +147,7 @@ export async function POST(
       }
 
       try {
-        for await (const event of runAgentStream(history, input.message)) {
+        for await (const event of runAgentStream(history, input.message, agentAbort.signal)) {
           send(event);
 
           if (event.type === "text_delta") {
