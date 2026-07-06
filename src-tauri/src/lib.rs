@@ -157,38 +157,83 @@ pub fn run() {
         .expect("error while running SahelFlow application");
 }
 
+/// Shared env vars passed to EVERY spawned child (sidecar + Next.js server +
+/// migration runner). Without these, the children inherit the Tauri process's
+/// cwd-based defaults → DB/master-key/auth resolve to wrong paths (T-S2).
+#[cfg(not(debug_assertions))]
+fn child_env(app: &tauri::App) -> Vec<(String, String)> {
+    use tauri::Manager;
+    let app_data_dir = app.path().app_data_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let db_path = app_data_dir.join("shops/dev.db");
+    let token_file = app_data_dir.join("sidecar-token");
+
+    // Read the sidecar token (written by the sidecar on boot) if present so the
+    // Next.js server can authenticate to the sidecar. Fall back to the env var.
+    let sidecar_token = std::env::var("SIDECAR_TOKEN").unwrap_or_else(|_| {
+        std::fs::read_to_string(&token_file)
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default()
+    });
+
+    let resource_dir = app.path().resource_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+
+    vec![
+        ("DATABASE_URL".to_string(), format!("file:{}", db_path.display())),
+        ("SF_DATA_DIR".to_string(), app_data_dir.to_string_lossy().into_owned()),
+        ("SIDECAR_TOKEN".to_string(), sidecar_token),
+        ("SIDECAR_TOKEN_FILE".to_string(), token_file.to_string_lossy().into_owned()),
+        ("PRISMA_MIGRATIONS_DIR".to_string(),
+            resource_dir.join("prisma/migrations").to_string_lossy().into_owned()),
+        ("NODE_ENV".to_string(), "production".to_string()),
+    ]
+}
+
 /// In production: spawn the WhatsApp sidecar + the Next.js standalone server,
 /// then wait for the server port to open before the webview loads.
+///
+/// T-S2: every spawn now receives the shared `child_env` so DATABASE_URL,
+/// SF_DATA_DIR, SIDECAR_TOKEN, etc. resolve correctly inside the children.
 #[cfg(not(debug_assertions))]
 fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::Manager;
     use tauri_plugin_shell::ShellExt;
     use tauri_plugin_shell::process::CommandEvent;
 
+    let env = child_env(app);
+
     // 1. WhatsApp sidecar (compiled externalBin: sahelflow-whatsapp)
     match app.shell().sidecar("sahelflow-whatsapp") {
-        Ok(cmd) => match cmd.spawn() {
-            Ok((mut rx, _child)) => {
-                eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
-                tauri::async_runtime::spawn(async move {
-                    while let Some(event) = rx.recv().await {
-                        match event {
-                            CommandEvent::Stdout(line) => {
-                                eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
-                            }
-                            CommandEvent::Stderr(line) => {
-                                eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
-                            }
-                            CommandEvent::Terminated(payload) => {
-                                eprintln!("[whatsapp] terminated: {payload:?}");
-                            }
-                            _ => {}
-                        }
-                    }
-                });
+        Ok(cmd) => {
+            // Apply the shared env vars to the sidecar spawn (T-S2).
+            let mut cmd = cmd;
+            for (k, v) in &env {
+                cmd = cmd.env(k, v);
             }
-            Err(e) => eprintln!("[sahelflow] failed to spawn WhatsApp sidecar: {e}"),
-        },
+            match cmd.spawn() {
+                Ok((mut rx, _child)) => {
+                    eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
+                    tauri::async_runtime::spawn(async move {
+                        while let Some(event) = rx.recv().await {
+                            match event {
+                                CommandEvent::Stdout(line) => {
+                                    eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
+                                }
+                                CommandEvent::Stderr(line) => {
+                                    eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
+                                }
+                                CommandEvent::Terminated(payload) => {
+                                    eprintln!("[whatsapp] terminated: {payload:?}");
+                                }
+                                _ => {}
+                            }
+                        }
+                    });
+                }
+                Err(e) => eprintln!("[sahelflow] failed to spawn WhatsApp sidecar: {e}"),
+            }
+        }
         Err(e) => eprintln!(
             "[sahelflow] WhatsApp sidecar binary not found (inbox falls back to demo mode): {e}"
         ),
@@ -208,9 +253,17 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let server_path = server_js.to_string_lossy().into_owned();
     let spawn_result = if which_exists("bun") {
-        app.shell().command("bun", &[server_path]).spawn()
+        let mut cmd = app.shell().command("bun", &[server_path.clone()]);
+        for (k, v) in &env {
+            cmd = cmd.env(k, v);
+        }
+        cmd.spawn()
     } else if which_exists("node") {
-        app.shell().command("node", &[server_path]).spawn()
+        let mut cmd = app.shell().command("node", &[server_path.clone()]);
+        for (k, v) in &env {
+            cmd = cmd.env(k, v);
+        }
+        cmd.spawn()
     } else {
         eprintln!(
             "[sahelflow] Neither `bun` nor `node` found on PATH. Install Bun or Node.js 20+."

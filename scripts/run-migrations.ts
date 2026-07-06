@@ -11,7 +11,32 @@
  */
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * T-S3: path resolution must NOT use `process.cwd()`.
+ *
+ * In production, the Tauri process cwd is NOT the app's resource dir, so
+ * `join(process.cwd(), "prisma/schema.prisma")` resolves to a path that
+ * doesn't exist → `existsSync` fails → the script `process.exit(0)`s
+ * silently → lib.rs treats exit 0 as success → fresh installs ship with
+ * no schema and crash on the first DB query.
+ *
+ * Resolution order (robust in both dev + Tauri production):
+ *   1. `PRISMA_MIGRATIONS_DIR` env var (set by lib.rs to resource_dir/prisma/migrations)
+ *      → derive schema + migrations dir from it.
+ *   2. `import.meta.url` (portable ESM; works in Bun + Node) → resolve
+ *      relative to THIS script's location (scripts/.. → repo root → prisma/).
+ *   3. `process.cwd()` → dev fallback only.
+ */
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const envMigrationsDir = process.env.PRISMA_MIGRATIONS_DIR;
+const PRISMA_DIR = envMigrationsDir
+  ? join(envMigrationsDir, "..") // migrations/..  → prisma/
+  : join(SCRIPT_DIR, "..", "prisma");
+const schemaPath = join(PRISMA_DIR, "schema.prisma");
+const migrationsDir = envMigrationsDir ?? join(PRISMA_DIR, "migrations");
 
 const dbUrl = process.argv[2] ?? process.env.DATABASE_URL;
 if (!dbUrl) {
@@ -19,15 +44,14 @@ if (!dbUrl) {
   process.exit(0); // non-fatal — the app will create the DB on first request
 }
 
-const schemaPath = join(process.cwd(), "prisma/schema.prisma");
 if (!existsSync(schemaPath)) {
-  console.log("[migrations] No schema.prisma found — skipping");
+  console.log(`[migrations] No schema.prisma found at ${schemaPath} — skipping`);
   process.exit(0);
 }
 
 try {
   // Try migrate deploy first
-  console.log("[migrations] Running prisma migrate deploy...");
+  console.log(`[migrations] Running prisma migrate deploy (schema=${schemaPath})...`);
   execSync(`bunx prisma migrate deploy --schema=${schemaPath}`, {
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: dbUrl },
@@ -38,8 +62,6 @@ try {
   // Baseline: mark all existing migrations as applied, then retry
   console.log("[migrations] migrate deploy failed (likely P3005 — baselining...)");
   try {
-    // Get list of migration names
-    const migrationsDir = join(process.cwd(), "prisma/migrations");
     if (existsSync(migrationsDir)) {
       const { readdirSync } = require("node:fs");
       const migrations = readdirSync(migrationsDir).filter((d: string) =>

@@ -18,6 +18,21 @@
  */
 import { z } from "zod";
 
+/**
+ * Detect whether code is running inside the Tauri 2 desktop shell.
+ *
+ * Tauri 2 defaults `app.withGlobalTauri` to `false`, so the legacy
+ * `"__TAURI__" in window` check is ALWAYS false in production — which
+ * silently broke license enforcement and the auto-updater (T-S1).
+ * `__TAURI_INTERNALS__` is unconditionally injected by the Tauri 2
+ * webview regardless of the `withGlobalTauri` flag, making it the
+ * correct detection signal. Use this helper everywhere instead of
+ * hand-rolling `in window` checks.
+ */
+export function isTauriEnv(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
 function required(key: string, fallback?: string): string {
   const value = process.env[key] ?? fallback;
   if (!value) {
@@ -98,8 +113,11 @@ export const env = {
   /** Whether we're in development */
   isDev: process.env.NODE_ENV === "development",
 
-  /** Whether we're running inside Tauri (desktop app) vs browser (dev) */
-  isTauri: typeof window !== "undefined" && "__TAURI__" in window,
+  /**
+   * Whether we're running inside Tauri (desktop app) vs browser (dev).
+   * Delegates to `isTauriEnv()` (T-S1) — never inline `__TAURI__` checks.
+   */
+  isTauri: isTauriEnv(),
 
   // ── Crypto / PII ──────────────────────────────────────────────────────
   /** PII master key (64 hex chars = 32 bytes). If absent, falls back to keyfile. */

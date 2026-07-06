@@ -9,6 +9,8 @@
  * comes when the Tauri shell is compiled.
  */
 
+import { isTauriEnv } from "@/lib/env";
+
 const MACHINE_ID_KEY = "sahelflow-machine-id";
 
 /**
@@ -17,8 +19,8 @@ const MACHINE_ID_KEY = "sahelflow-machine-id";
  * - In browser: reads/creates a UUID stored in localStorage
  */
 export async function getMachineId(): Promise<string> {
-  // Check if running in Tauri
-  if (typeof window !== "undefined" && "__TAURI__" in window) {
+  // Check if running in Tauri (T-S1: use __TAURI_INTERNALS__, not __TAURI__)
+  if (isTauriEnv()) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const realId = await invoke<string>("get_machine_id");

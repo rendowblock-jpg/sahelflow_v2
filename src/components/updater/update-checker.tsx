@@ -14,6 +14,7 @@ import {
 import { toast } from "@/lib/toast";
 import { Download, RefreshCw, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
+import { isTauriEnv } from "@/lib/env";
 
 interface UpdateInfo {
   version: string;
@@ -45,8 +46,8 @@ export function UpdateChecker() {
   const [downloadProgress, setDownloadProgress] = useState(0);
 
   useEffect(() => {
-    // Detect Tauri environment
-    if (typeof window !== "undefined" && "__TAURI__" in window) {
+    // Detect Tauri environment (T-S1: __TAURI_INTERNALS__ not __TAURI__)
+    if (isTauriEnv()) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsTauri(true);
     }
@@ -240,7 +241,7 @@ export function UpdaterStatus() {
   const [isTauri, setIsTauri] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "__TAURI__" in window) {
+    if (isTauriEnv()) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsTauri(true);
     }
