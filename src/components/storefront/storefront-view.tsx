@@ -92,15 +92,15 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     // Client-side validation (defense-in-depth — the API also validates)
     const phoneClean = form.phone.replace(/\s/g, "");
     if (!form.name.trim()) {
-      setResult({ ok: false, message: t("storefront.view.error.nameRequired") || "Name is required" });
+      setResult({ ok: false, message: t("storefront.view.error.nameRequired") });
       return;
     }
     if (!/^0[5-7]\d{8}$/.test(phoneClean)) {
-      setResult({ ok: false, message: t("storefront.view.error.phoneInvalid") || "Phone must be 10 digits starting with 05/06/07" });
+      setResult({ ok: false, message: t("storefront.view.error.phoneInvalid") });
       return;
     }
     if (!form.wilaya || !form.commune || !form.address.trim()) {
-      setResult({ ok: false, message: t("storefront.view.error.addressRequired") || "Wilaya, commune, and address are required" });
+      setResult({ ok: false, message: t("storefront.view.error.addressRequired") });
       return;
     }
 

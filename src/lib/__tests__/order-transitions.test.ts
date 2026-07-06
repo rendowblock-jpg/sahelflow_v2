@@ -23,9 +23,11 @@ describe("ORDER_STATUSES", () => {
 });
 
 describe("TERMINAL_ORDER_STATUSES", () => {
-  it("has 4 terminal statuses", () => {
-    expect(TERMINAL_ORDER_STATUSES).toHaveLength(4);
-    expect(TERMINAL_ORDER_STATUSES).toEqual(["delivered", "returned", "refused", "cancelled"]);
+  it("has 3 terminal statuses (Session 30 AUDIT-3 S4: delivered no longer terminal)", () => {
+    // Session 30 fix: "delivered" was removed from terminal statuses so
+    // post-delivery returns (delivered → returned) have a legal path.
+    expect(TERMINAL_ORDER_STATUSES).toHaveLength(3);
+    expect(TERMINAL_ORDER_STATUSES).toEqual(["returned", "refused", "cancelled"]);
   });
 });
 

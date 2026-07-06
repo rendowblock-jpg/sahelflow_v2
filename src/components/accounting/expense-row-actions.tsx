@@ -48,7 +48,7 @@ export function ExpenseRowActions({ expense }: ExpenseRowActionsProps) {
   const deleteExpense = useUndoableDelete({
     deleteUrl: (id) => `/api/expenses/${id}`,
     restoreUrl: (id) => `/api/expenses/${id}/restore`,
-    entityLabel: t("accounting.expense") || "Expense",
+    entityLabel: t("accounting.expense"),
     // The accounting page is a Server Component (no SWR). mutatePrefix is a
     // no-op, but router.refresh() revalidates the RSC tree so the deleted
     // row disappears and the stat cards update.

@@ -37,7 +37,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     selectColumn<DeliveryListItem>(),
     {
       accessorKey: "trackingNumber",
-      header: () => t("deliveries.table.tracking") || "Tracking",
+      header: () => t("deliveries.table.tracking"),
       cell: ({ row }) => (
         <span className="font-mono text-xs">{row.original.trackingNumber ?? "—"}</span>
       ),
@@ -45,7 +45,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     {
       id: "order",
       accessorKey: "order.orderNumber",
-      header: () => t("deliveries.table.order") || "Order",
+      header: () => t("deliveries.table.order"),
       cell: ({ row }) =>
         row.original.order ? (
           <Link
@@ -60,7 +60,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
     {
       id: "customer",
-      header: () => t("deliveries.table.customer") || "Customer",
+      header: () => t("deliveries.table.customer"),
       cell: ({ row }) => (
         <div>
           <div className="text-sm font-medium">{row.original.order?.customer?.name ?? "—"}</div>
@@ -70,7 +70,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
     {
       accessorKey: "provider",
-      header: () => t("deliveries.table.carrier") || "Carrier",
+      header: () => t("deliveries.table.carrier"),
       cell: ({ row }) => {
         const config = deliveryProviderConfig[row.original.provider];
         const BrandIcon = getBrandIcon(row.original.provider);
@@ -91,7 +91,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
     {
       accessorKey: "cost",
-      header: () => t("deliveries.table.cost") || "Cost",
+      header: () => t("deliveries.table.cost"),
       cell: ({ row }) => (
         <span className="tabular-nums">
           {row.original.cost != null ? formatDZD(row.original.cost) : "—"}
@@ -101,7 +101,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
     {
       accessorKey: "status",
-      header: () => t("deliveries.table.status") || "Status",
+      header: () => t("deliveries.table.status"),
       cell: ({ row }) => (
         <DeliveryStatusBadge deliveryId={row.original.id} status={row.original.status} size="sm" />
       ),
@@ -109,7 +109,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
     {
       accessorKey: "createdAt",
-      header: () => t("deliveries.table.date") || "Date",
+      header: () => t("deliveries.table.date"),
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
           {formatDate(row.original.createdAt, locale)}
@@ -119,7 +119,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
     {
       id: "actions",
-      header: () => t("deliveries.table.action") || "Actions",
+      header: () => t("deliveries.table.action"),
       cell: ({ row }) => (
         <DeliveryRowActions
           deliveryId={row.original.id}

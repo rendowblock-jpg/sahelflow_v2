@@ -51,7 +51,7 @@ export function ProductRowActions({
   const deleteProduct = useUndoableDelete({
     deleteUrl: (id) => `/api/products/${id}`,
     restoreUrl: (id) => `/api/products/${id}/restore`,
-    entityLabel: t("products.product") || "Product",
+    entityLabel: t("products.product"),
     onAfter: () => mutatePrefix("/api/products"),
   });
 

@@ -103,7 +103,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
       {/* Stat cards */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
-          label={t("deliveries.status.deliveryRate") || "Status"}
+          label={t("deliveries.status.deliveryRate")}
           value={t(`deliveries.status.${delivery.status}` as string)}
           icon={<Package />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
@@ -111,7 +111,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
-          label={t("deliveries.table.cost") || "Delivery Cost"}
+          label={t("deliveries.table.cost")}
           value={delivery.cost ? formatDZD(delivery.cost) : "—"}
           icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
@@ -127,7 +127,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
-          label={t("deliveries.estimatedDelivery") || "Estimated Delivery"}
+          label={t("deliveries.estimatedDelivery")}
           value={delivery.estimatedDelivery ? formatDate(delivery.estimatedDelivery, locale) : "—"}
           icon={<Calendar />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
@@ -221,7 +221,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
       {/* Status timeline */}
       <Card className="animate-fade-up">
         <CardHeader>
-          <CardTitle className="text-base">{t("deliveries.timeline") || "Status Timeline"}</CardTitle>
+          <CardTitle className="text-base">{t("deliveries.timeline")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-2">

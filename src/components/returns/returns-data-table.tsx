@@ -37,7 +37,7 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
     {
       id: "order",
       accessorKey: "order.orderNumber",
-      header: () => t("returns.table.order") || "Order",
+      header: () => t("returns.table.order"),
       cell: ({ row }) => (
         <Link
           href={`/orders/${row.original.orderId}`}
@@ -49,19 +49,19 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
     },
     {
       id: "customer",
-      header: () => t("returns.table.customer") || "Customer",
+      header: () => t("returns.table.customer"),
       cell: ({ row }) => row.original.order?.customer?.name ?? "—",
     },
     {
       accessorKey: "type",
-      header: () => t("returns.table.type") || "Type",
+      header: () => t("returns.table.type"),
       cell: ({ row }) => (
         <Badge variant="outline">{t(TYPE_I18N[row.original.type] ?? row.original.type)}</Badge>
       ),
     },
     {
       accessorKey: "reason",
-      header: () => t("returns.table.reason") || "Reason",
+      header: () => t("returns.table.reason"),
       cell: ({ row }) => (
         <span className="text-muted-foreground max-w-xs truncate block">
           {row.original.reason}
@@ -71,7 +71,7 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
     },
     {
       accessorKey: "status",
-      header: () => t("returns.table.status") || "Status",
+      header: () => t("returns.table.status"),
       cell: ({ row }) => (
         <ReturnStatusBadge
           returnId={row.original.id}
@@ -83,7 +83,7 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
     },
     {
       accessorKey: "createdAt",
-      header: () => t("returns.table.date") || "Date",
+      header: () => t("returns.table.date"),
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
           {formatDate(row.original.createdAt, locale)}
@@ -93,10 +93,10 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
     },
     {
       id: "actions",
-      header: () => t("returns.table.action") || "Actions",
+      header: () => t("returns.table.action"),
       cell: ({ row }) => (
         <Button variant="ghost" size="sm" asChild>
-          <Link href={`/orders/${row.original.orderId}`}>{t("returns.view") || "View"}</Link>
+          <Link href={`/orders/${row.original.orderId}`}>{t("returns.view")}</Link>
         </Button>
       ),
       meta: { align: "end", width: "w-20" },

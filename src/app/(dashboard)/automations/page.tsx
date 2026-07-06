@@ -223,7 +223,7 @@ export default async function AutomationsPage() {
       {recentLogs.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("automations.recentActivity") || "Recent Activity"}</CardTitle>
+            <CardTitle className="text-base">{t("automations.recentActivity")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y max-h-96 overflow-y-auto">

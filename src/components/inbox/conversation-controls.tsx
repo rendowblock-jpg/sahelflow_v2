@@ -117,10 +117,10 @@ export function StatusControl({
   };
 
   const snoozePresets: { label: string; until: () => string }[] = [
-    { label: t("inbox.snooze.1hour") || "1 hour", until: () => new Date(Date.now() + 3600_000).toISOString() },
-    { label: t("inbox.snooze.tomorrow") || "Tomorrow 9am", until: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d.toISOString(); } },
-    { label: t("inbox.snooze.3days") || "3 days", until: () => new Date(Date.now() + 3 * 86400_000).toISOString() },
-    { label: t("inbox.snooze.1week") || "1 week", until: () => new Date(Date.now() + 7 * 86400_000).toISOString() },
+    { label: t("inbox.snooze.1hour"), until: () => new Date(Date.now() + 3600_000).toISOString() },
+    { label: t("inbox.snooze.tomorrow"), until: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d.toISOString(); } },
+    { label: t("inbox.snooze.3days"), until: () => new Date(Date.now() + 3 * 86400_000).toISOString() },
+    { label: t("inbox.snooze.1week"), until: () => new Date(Date.now() + 7 * 86400_000).toISOString() },
   ];
 
   return (
@@ -135,20 +135,20 @@ export function StatusControl({
         <DropdownMenuContent align="start">
           <DropdownMenuItem onClick={() => change("open")}>
             <Circle className="me-2 h-4 w-4 text-blue-500" />
-            {t("inbox.status.open") || "Open"}
+            {t("inbox.status.open")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => change("pending")}>
             <Clock className="me-2 h-4 w-4 text-amber-500" />
-            {t("inbox.status.pending") || "Pending"}
+            {t("inbox.status.pending")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => change("resolved")}>
             <CheckCircle2 className="me-2 h-4 w-4 text-emerald-500" />
-            {t("inbox.status.resolved") || "Resolve"}
+            {t("inbox.status.resolved")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setSnoozeOpen(true)}>
             <BellOff className="me-2 h-4 w-4 text-muted-foreground" />
-            {t("inbox.status.snooze") || "Snooze"}
+            {t("inbox.status.snooze")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -156,7 +156,7 @@ export function StatusControl({
       <Dialog open={snoozeOpen} onOpenChange={setSnoozeOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("inbox.snooze.title") || "Snooze conversation"}</DialogTitle>
+            <DialogTitle>{t("inbox.snooze.title")}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-2 py-2">
             {snoozePresets.map((p) => (
@@ -167,7 +167,7 @@ export function StatusControl({
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setSnoozeOpen(false)}>
-              {t("inbox.snooze.cancel") || "Cancel"}
+              {t("inbox.snooze.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -211,7 +211,7 @@ export function PriorityControl({
           ) : (
             <>
               <Flag className="h-3 w-3 opacity-50" />
-              {t("inbox.priority.set") || "Set priority"}
+              {t("inbox.priority.set")}
             </>
           )}
           <ChevronDown className="h-3 w-3 opacity-50" />
@@ -229,7 +229,7 @@ export function PriorityControl({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => change(null)}>
               <X className="me-2 h-4 w-4" />
-              {t("inbox.priority.clear") || "Clear priority"}
+              {t("inbox.priority.clear")}
             </DropdownMenuItem>
           </>
         )}
@@ -261,7 +261,7 @@ export function AssigneeControl({
       <PopoverTrigger asChild>
         <button className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors">
           <UserPlus className="h-3 w-3 opacity-50" />
-          {assignee ?? (t("inbox.assignee.unassigned") || "Unassigned")}
+          {assignee ?? (t("inbox.assignee.unassigned"))}
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>
       </PopoverTrigger>
@@ -270,7 +270,7 @@ export function AssigneeControl({
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={t("inbox.assignee.placeholder") || "Type a name…"}
+            placeholder={t("inbox.assignee.placeholder")}
             className="h-8 text-xs"
             onKeyDown={(e) => { if (e.key === "Enter" && draft.trim()) assign(draft.trim()); }}
           />
@@ -281,7 +281,7 @@ export function AssigneeControl({
         {assignee && (
           <Button size="sm" variant="ghost" className="mt-2 w-full justify-start text-xs" onClick={() => assign(null)}>
             <UserMinus className="me-2 h-3 w-3" />
-            {t("inbox.assignee.clear") || "Clear assignment"}
+            {t("inbox.assignee.clear")}
           </Button>
         )}
       </PopoverContent>
@@ -330,7 +330,7 @@ export function LabelsControl({
           <Tag className="h-3 w-3 opacity-50" />
           {labels.length > 0
             ? (t("inbox.labels.count", { count: labels.length }) || `${labels.length} labels`)
-            : (t("inbox.labels.add") || "Add label")}
+            : (t("inbox.labels.add"))}
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>
       </PopoverTrigger>
@@ -351,7 +351,7 @@ export function LabelsControl({
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={t("inbox.labels.placeholder") || "Label name…"}
+            placeholder={t("inbox.labels.placeholder")}
             className="h-8 text-xs"
             onKeyDown={(e) => { if (e.key === "Enter") addLabel(); }}
           />

@@ -24,7 +24,7 @@ import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
-  return { title: t("metadata.title.returns") || "Returns" };
+  return { title: t("metadata.title.returns") };
 }
 
 export const dynamic = "force-dynamic";
@@ -105,7 +105,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
       {/* Stat cards */}
       <div className="card-grid-3 stagger-grid">
         <StatCard
-          label={t("returns.type") || "Type"}
+          label={t("returns.type")}
           value={ret.type}
           icon={<Tag />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
@@ -121,7 +121,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
-          label={t("returns.status") || "Status"}
+          label={t("returns.status")}
           value={t(`returns.status.${ret.status}` as string) || ret.status}
           icon={<RotateCcw />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
@@ -136,14 +136,14 @@ export default async function ReturnDetailPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
-              {t("returns.reason") || "Reason"}
+              {t("returns.reason")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm whitespace-pre-wrap">{ret.reason}</p>
             {ret.notes && (
               <div className="mt-4 border-t pt-3">
-                <p className="text-xs text-muted-foreground mb-1">{t("publicForm.notes") || "Notes"}</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("publicForm.notes")}</p>
                 <p className="text-sm whitespace-pre-wrap">{ret.notes}</p>
               </div>
             )}
@@ -154,7 +154,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="h-4 w-4" />
-              {t("returns.customerAndOrder") || "Customer & Order"}
+              {t("returns.customerAndOrder")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -204,7 +204,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
       {ret.notes_rel.length > 0 && (
         <Card className="animate-fade-up">
           <CardHeader>
-            <CardTitle className="text-base">{t("returns.activityTimeline") || "Activity Timeline"}</CardTitle>
+            <CardTitle className="text-base">{t("returns.activityTimeline")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

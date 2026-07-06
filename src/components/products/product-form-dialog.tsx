@@ -232,7 +232,7 @@ export function ProductFormDialog({
       form.reset();
       setOpen(false);
       mutatePrefix("/api/products");
-      toast.success(t("products.created") || "Product created");
+      toast.success(t("products.created"));
     } catch (err) {
       console.error("[ProductFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

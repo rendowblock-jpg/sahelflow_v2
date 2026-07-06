@@ -96,7 +96,7 @@ export function DeliveryRowActions({
           </Link>
         </Button>
       ) : null}
-      <Button variant="ghost" size="icon-sm" asChild title={t("common.view") || "View"} aria-label={t("common.view") || "View"}>
+      <Button variant="ghost" size="icon-sm" asChild title={t("common.view")} aria-label={t("common.view")}>
         <Link href={`/deliveries/${deliveryId}`}>
           <Eye className="h-4 w-4" />
         </Link>

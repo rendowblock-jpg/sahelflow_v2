@@ -508,7 +508,7 @@ export function InboxLive() {
               </div>
 
               <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4 max-w-3xl mx-auto" role="log" aria-live="polite" aria-label={t("inbox.messages") || "Messages"}>
+                <div className="space-y-4 max-w-3xl mx-auto" role="log" aria-live="polite" aria-label={t("inbox.messages")}>
                   {loadingMessages ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -683,7 +683,7 @@ function StatusBar({
           </Button>
         </div>
         <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-          {t("inbox.setupGuide") || "To connect WhatsApp: 1) The sidecar service must be running (it starts automatically with the desktop app). 2) Click Connect below. 3) Scan the QR code with your phone's WhatsApp settings."}
+          {t("inbox.setupGuide")}
         </div>
       </div>
     );

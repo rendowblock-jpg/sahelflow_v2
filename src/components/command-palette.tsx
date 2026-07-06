@@ -157,7 +157,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   const actionItems = React.useMemo<CmdItem[]>(() => [
     { id: "action-new-order", label: t("command.action.newOrder"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new order"], action: () => { router.push("/orders"); onAction?.("new-order"); }, shortcut: "o" },
     { id: "action-new-product", label: t("command.action.newProduct"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new product"], action: () => { router.push("/products"); onAction?.("new-product"); }, shortcut: "p" },
-    { id: "action-new-customer", label: t("command.action.newCustomer") || "New customer", icon: Plus, group: t("command.group.quickActions"), keywords: ["new customer"], action: () => { router.push("/customers"); onAction?.("new-customer"); }, shortcut: "c" },
+    { id: "action-new-customer", label: t("command.action.newCustomer"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new customer"], action: () => { router.push("/customers"); onAction?.("new-customer"); }, shortcut: "c" },
     { id: "action-export", label: t("command.action.export"), icon: FileDown, group: t("command.group.quickActions"), keywords: ["export", "csv"], action: () => onAction?.("export") },
     { id: "action-ai", label: t("command.action.askAi"), icon: Sparkles, group: t("command.group.quickActions"), keywords: ["ai", "ask"], action: () => router.push("/agents") },
     { id: "action-backup", label: t("command.action.backup"), icon: DatabaseBackup, group: t("command.group.quickActions"), keywords: ["backup"], action: () => router.push("/settings") },

@@ -37,12 +37,12 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     selectColumn<ProductListItem>(),
     {
       accessorKey: "name",
-      header: () => t("products.productName") || "Product",
+      header: () => t("products.productName"),
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     },
     {
       accessorKey: "sku",
-      header: () => t("products.sku") || "SKU",
+      header: () => t("products.sku"),
       cell: ({ row }) => (
         <span className="font-mono text-sm text-muted-foreground">{row.original.sku ?? "—"}</span>
       ),
@@ -50,7 +50,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     },
     {
       accessorKey: "categoryId",
-      header: () => t("products.category") || "Category",
+      header: () => t("products.category"),
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
           {row.original.categoryId ? (categoryNames.get(row.original.categoryId) ?? "—") : "—"}
@@ -60,13 +60,13 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     },
     {
       accessorKey: "price",
-      header: () => t("orders.price") || "Price",
+      header: () => t("orders.price"),
       cell: ({ row }) => <span className="tabular-nums">{formatDZD(row.original.price)}</span>,
       meta: { align: "end" },
     },
     {
       accessorKey: "stock",
-      header: () => t("products.stock") || "Stock",
+      header: () => t("products.stock"),
       cell: ({ row }) => {
         const isLowStock = row.original.stock <= row.original.lowStockThreshold;
         return (
@@ -75,7 +75,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
             {isLowStock && (
               <Badge variant="destructive" className="gap-0.5 py-0">
                 <AlertTriangle className="h-3 w-3" />
-                {t("products.low") || "Low"}
+                {t("products.low")}
               </Badge>
             )}
           </span>
@@ -85,21 +85,21 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     },
     {
       accessorKey: "isActive",
-      header: () => t("common.status") || "Status",
+      header: () => t("common.status"),
       cell: ({ row }) =>
         row.original.isActive ? (
           <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">
             <span className="size-1.5 rounded-full bg-emerald-500" />
-            {t("common.active") || "Active"}
+            {t("common.active")}
           </span>
         ) : (
-          <Badge variant="secondary">{t("common.inactive") || "Inactive"}</Badge>
+          <Badge variant="secondary">{t("common.inactive")}</Badge>
         ),
       meta: { align: "center", hideOn: "sm" },
     },
     {
       id: "actions",
-      header: () => t("common.actions") || "Actions",
+      header: () => t("common.actions"),
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
           <Button variant="ghost" size="icon-sm" asChild>

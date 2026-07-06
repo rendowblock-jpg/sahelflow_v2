@@ -26,7 +26,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
     selectColumn<CustomerListItem>(),
     {
       accessorKey: "name",
-      header: () => t("customers.name") || "Name",
+      header: () => t("customers.name"),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <span className="font-medium">{row.original.name}</span>
@@ -40,30 +40,30 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
     },
     {
       accessorKey: "phone",
-      header: () => t("customers.phone") || "Phone",
+      header: () => t("customers.phone"),
       cell: ({ row }) => <span className="font-mono text-sm">{row.original.phone}</span>,
     },
     {
       accessorKey: "wilaya",
-      header: () => t("customers.wilaya") || "Wilaya",
+      header: () => t("customers.wilaya"),
       cell: ({ row }) => <span className="text-sm">{row.original.wilaya ?? "—"}</span>,
       meta: { hideOn: "sm" },
     },
     {
       accessorKey: "orderCount",
-      header: () => t("customers.orders") || "Orders",
+      header: () => t("customers.orders"),
       cell: ({ row }) => <span className="tabular-nums">{row.original.orderCount}</span>,
       meta: { align: "end" },
     },
     {
       accessorKey: "totalSpent",
-      header: () => t("customers.totalSpent") || "Total Spent",
+      header: () => t("customers.totalSpent"),
       cell: ({ row }) => <span className="tabular-nums font-medium">{formatDZD(row.original.totalSpent)}</span>,
       meta: { align: "end" },
     },
     {
       accessorKey: "createdAt",
-      header: () => t("customers.joined") || "Joined",
+      header: () => t("customers.joined"),
       cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt, locale)}</span>,
       meta: { hideOn: "lg" },
     },

@@ -47,9 +47,9 @@ export function CustomersEmptyState({ onCreate }: EmptyStateProps) {
   return (
     <EmptyState
       icon={Users}
-      title={t("customers.empty.title") || "No customers yet"}
-      description={t("customers.empty.description") || "Add your first customer or import from CSV to get started."}
-      actionLabel={t("customers.add") || "Add customer"}
+      title={t("customers.empty.title")}
+      description={t("customers.empty.description")}
+      actionLabel={t("customers.add")}
       onAction={onCreate}
     />
   );
@@ -60,9 +60,9 @@ export function ProductsEmptyState({ onCreate }: EmptyStateProps) {
   return (
     <EmptyState
       icon={Package}
-      title={t("products.empty.title") || "No products yet"}
-      description={t("products.empty.description") || "Add your first product to start creating orders."}
-      actionLabel={t("products.add") || "Add product"}
+      title={t("products.empty.title")}
+      description={t("products.empty.description")}
+      actionLabel={t("products.add")}
       onAction={onCreate}
     />
   );
@@ -73,8 +73,8 @@ export function DeliveriesEmptyState() {
   return (
     <EmptyState
       icon={Truck}
-      title={t("deliveries.empty.title") || "No deliveries yet"}
-      description={t("deliveries.empty.description") || "Deliveries appear here when you ship orders. Connect a delivery provider in Settings to enable automatic tracking."}
+      title={t("deliveries.empty.title")}
+      description={t("deliveries.empty.description")}
     />
   );
 }
@@ -84,8 +84,8 @@ export function ReturnsEmptyState() {
   return (
     <EmptyState
       icon={RotateCcw}
-      title={t("returns.empty.title") || "No returns yet"}
-      description={t("returns.empty.description") || "Returns appear here when customers request them. Track return reasons and refund status."}
+      title={t("returns.empty.title")}
+      description={t("returns.empty.description")}
     />
   );
 }
@@ -95,8 +95,8 @@ export function InboxEmptyState() {
   return (
     <EmptyState
       icon={MessageCircle}
-      title={t("inbox.empty.title") || "No conversations yet"}
-      description={t("inbox.empty.description") || "Connect your WhatsApp account in Settings to start receiving customer messages. AI-powered order extraction works automatically."}
+      title={t("inbox.empty.title")}
+      description={t("inbox.empty.description")}
     />
   );
 }
@@ -106,9 +106,9 @@ export function AutomationsEmptyState({ onCreate }: EmptyStateProps) {
   return (
     <EmptyState
       icon={Zap}
-      title={t("automations.empty.title") || "No automations yet"}
-      description={t("automations.empty.description") || "Automations fire on events like order created, delivered, or customer blacklisted. Create your first automation to save time on repetitive tasks."}
-      actionLabel={t("automations.create") || "Create automation"}
+      title={t("automations.empty.title")}
+      description={t("automations.empty.description")}
+      actionLabel={t("automations.create")}
       onAction={onCreate}
     />
   );
@@ -119,8 +119,8 @@ export function AnalyticsEmptyState() {
   return (
     <EmptyState
       icon={BarChart3}
-      title={t("analytics.empty.title") || "No data yet"}
-      description={t("analytics.empty.description") || "Analytics appear here once you have orders. Create your first order to see revenue trends, return rates, and wilaya performance."}
+      title={t("analytics.empty.title")}
+      description={t("analytics.empty.description")}
     />
   );
 }
@@ -130,8 +130,8 @@ export function RiskEmptyState() {
   return (
     <EmptyState
       icon={ShieldAlert}
-      title={t("risk.empty.title") || "No risk assessments yet"}
-      description={t("risk.empty.description") || "Risk assessments appear here when orders are created. The risk engine scores orders based on wilaya, phone reputation, and customer history."}
+      title={t("risk.empty.title")}
+      description={t("risk.empty.description")}
     />
   );
 }
@@ -141,9 +141,9 @@ export function StorefrontsEmptyState({ onCreate }: EmptyStateProps) {
   return (
     <EmptyState
       icon={Store}
-      title={t("storefronts.empty.title") || "No storefronts yet"}
-      description={t("storefronts.empty.description") || "Create a COD storefront to receive orders directly from customers via a public link."}
-      actionLabel={t("storefronts.create") || "Create storefront"}
+      title={t("storefronts.empty.title")}
+      description={t("storefronts.empty.description")}
+      actionLabel={t("storefronts.create")}
       onAction={onCreate}
     />
   );
@@ -154,8 +154,8 @@ export function ImportsEmptyState() {
   return (
     <EmptyState
       icon={Upload}
-      title={t("imports.empty.title") || "No imports yet"}
-      description={t("imports.empty.description") || "Import customers, products, or orders from CSV files. Download the template for the correct format."}
+      title={t("imports.empty.title")}
+      description={t("imports.empty.description")}
     />
   );
 }

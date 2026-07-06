@@ -437,7 +437,7 @@ export default async function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="h-4 w-4" />
-                {t("orders.detail.activity") || "Activity Timeline"}
+                {t("orders.detail.activity")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -458,7 +458,7 @@ export default async function OrderDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <DollarSign className="h-4 w-4" />
-                  {t("orders.cod.title") || "COD Reconciliation"}
+                  {t("orders.cod.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -482,7 +482,7 @@ export default async function OrderDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <DollarSign className="h-4 w-4" />
-                  {t("orders.refund.title") || "Refunds"}
+                  {t("orders.refund.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -499,7 +499,7 @@ export default async function OrderDetailPage({
                       </div>
                     ))}
                     <div className="flex justify-between border-t pt-2 text-sm">
-                      <span className="font-medium">{t("orders.refund.total") || "Total refunded"}</span>
+                      <span className="font-medium">{t("orders.refund.total")}</span>
                       <span className="font-bold text-red-600">{formatDZD(totalRefunded)}</span>
                     </div>
                   </div>

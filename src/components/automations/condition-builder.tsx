@@ -173,7 +173,7 @@ export function ConditionBuilder({ value, onChange }: ConditionBuilderProps) {
                     value={cond.value}
                     onChange={(e) => updateCondition(i, { value: e.target.value })}
                     placeholder={field?.type === "number" ? "e.g. 5000" : "e.g. Alger"}
-                    aria-label={t("conditionBuilder.value") || "Value"}
+                    aria-label={t("conditionBuilder.value")}
                   />
                 )}
                 <Button
@@ -182,7 +182,7 @@ export function ConditionBuilder({ value, onChange }: ConditionBuilderProps) {
                   size="icon"
                   onClick={() => removeCondition(i)}
                   className="text-destructive shrink-0"
-                  aria-label={t("common.delete") || "Remove condition"}
+                  aria-label={t("common.delete")}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
