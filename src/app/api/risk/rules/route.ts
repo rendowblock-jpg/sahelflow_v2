@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/rules — list all risk rules */
 export async function GET() {
+  await requireAuth();
   const rules = await getRiskRules();
   return NextResponse.json({ rules });
 }

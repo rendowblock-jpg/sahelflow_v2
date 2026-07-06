@@ -23,7 +23,7 @@ export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * - /api/health — health check (used by Tauri to verify the server is up)
  * - /api/storefront/submit — public COD checkout (customers place orders)
  * - /api/storefront/config/[slug] GET — public storefront config (renders the page)
- * - /api/whatsapp/qr-image — WhatsApp QR pairing (needs to work before login on first launch)
+ * - (none — /api/whatsapp/qr-image was removed in A-S1; it now requires auth)
  */
 export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/auth",
@@ -34,7 +34,11 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   // requests. The public storefront page reads config via storefrontService
   // directly (Server Component), not via the API — so the config API doesn't
   // need to be public. All config API routes are now auth-protected.
-  "/api/whatsapp/qr-image",
+  // A-S1: /api/whatsapp/qr-image removed from public routes. The QR is shown
+  // in the authenticated WhatsApp settings page — exposing it unauthenticated
+  // lets anyone scan it during the pairing window and hijack the WhatsApp
+  // account. The route now calls requireAuth() (defense-in-depth) and is
+  // enforced by proxy.ts middleware.
 ];
 
 /** Public pages — accessible without authentication. */

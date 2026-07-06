@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/categories — list categories */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const categories = await productService.listCategories({ prisma: db });
   return NextResponse.json({ categories });
 }, "GET /api/categories");

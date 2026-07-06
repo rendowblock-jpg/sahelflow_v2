@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/ai/sessions — list chat sessions. */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const sessions = await db.aiChatSession.findMany({
     orderBy: { updatedAt: "desc" },
     take: 50,

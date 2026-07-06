@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
  * DataTable v2 pagination contract.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const searchParams = req.nextUrl.searchParams;
   const activeOnly = searchParams.get("activeOnly") === "true";
 

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/config — load the risk engine configuration */
 export async function GET() {
+  await requireAuth();
   const config = await getRiskConfig();
   return NextResponse.json({ config });
 }

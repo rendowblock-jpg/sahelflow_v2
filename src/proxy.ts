@@ -3,8 +3,14 @@ import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { verifySessionToken } from "@/lib/auth/crypto";
 
 /**
- * Auth proxy — protects all /api/* (except public) and all pages
- * (except /login, /setup).
+ * Auth proxy (Next 16 middleware entry) — protects all /api/* (except the
+ * PUBLIC_API_ROUTES allowlist) and all pages (except /login, /setup, /storefront).
+ *
+ * A-S2: this IS the auth middleware. Next 16 renamed `middleware.ts` → `proxy.ts`;
+ * the previous audit's "no middleware.ts" finding was a false alarm caused by
+ * the rename. Per-route `requireAuth()` remains as defense-in-depth (in case a
+ * future route is accidentally omitted from the matcher or added to the public
+ * allowlist). Both layers are intentional.
  *
  * Session verification uses HMAC-SHA256 via Web Crypto API (Edge-compatible).
  * The secret is read from process.env.AUTH_SECRET (set after first setup + restart).

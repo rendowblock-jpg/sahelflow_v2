@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/blacklist — list blacklisted customers */
 export async function GET() {
+  await requireAuth();
   const customers = await listBlacklistedCustomers();
   return NextResponse.json({ customers });
 }

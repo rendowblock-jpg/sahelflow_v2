@@ -72,6 +72,7 @@ export const POST = withErrorHandler(async (req: NextRequest): Promise<NextRespo
  * GET /api/integrations/sync — returns the last sync status for each platform.
  */
 export async function GET(): Promise<NextResponse> {
+  await requireAuth();
   const integrations = await db.integration.findMany({
     where: {
       platform: { in: ["shopify", "woocommerce", "youcan"] },

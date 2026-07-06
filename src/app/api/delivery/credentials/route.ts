@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
  * Returns which providers are configured (never the values).
  */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const status: Record<string, Record<string, boolean>> = {};
   for (const provider of DELIVERY_PROVIDERS) {
     const keys = deliverySecretKeys(provider);

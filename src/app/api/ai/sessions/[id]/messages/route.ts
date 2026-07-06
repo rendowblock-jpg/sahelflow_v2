@@ -13,6 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** GET /api/ai/sessions/[id]/messages — list messages in a session. */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
+  await requireAuth();
   const { id } = await params;
   const session = await db.aiChatSession.findUnique({
     where: { id },

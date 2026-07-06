@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/customers — list customers with pagination (?page=&pageSize=) */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const searchParams = req.nextUrl.searchParams;
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") ?? "50", 10);

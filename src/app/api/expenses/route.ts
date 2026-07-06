@@ -34,6 +34,7 @@ function parseMonthFilter(
  * Always ordered by date desc, capped at 100 rows.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireAuth();
   const monthParam = req.nextUrl.searchParams.get("month");
   const range = parseMonthFilter(monthParam);
 

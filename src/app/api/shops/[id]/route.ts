@@ -10,6 +10,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  await requireAuth();
   const { id } = await params;
   const shop = getShop(id);
   if (!shop) {

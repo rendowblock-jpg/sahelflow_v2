@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/assess/[orderId] — assess the risk of a specific order */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
+  await requireAuth();
   const { orderId } = await params;
   const assessment = await assessOrderRisk(orderId);
   if (!assessment) {

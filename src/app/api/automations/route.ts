@@ -39,6 +39,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
 /** GET — List all automations (excludes soft-deleted) */
 export const GET = withErrorHandler(async () => {
+  await requireAuth();
   const automations = await db.automation.findMany({
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },

@@ -22,6 +22,7 @@ const createReturnSchema = z.object({
  * includes its order + customer name for the table.
  */
 export async function GET(req: NextRequest) {
+  await requireAuth();
   const sp = req.nextUrl.searchParams;
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
   const pageSize = Math.min(parseInt(sp.get("pageSize") ?? "25", 10) || 25, 100);

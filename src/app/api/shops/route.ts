@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
  * GET /api/shops — list all shops + the active shop ID.
  */
 export async function GET(): Promise<NextResponse> {
+  await requireAuth();
   const shops = listShops();
   const activeShopId = getActiveShopId();
   return NextResponse.json({ shops, activeShopId });

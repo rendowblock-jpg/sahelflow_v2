@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
  * query params. The DataTable uses page-based.
  */
 export async function GET(req: NextRequest) {
+  await requireAuth();
   const searchParams = req.nextUrl.searchParams;
   const rawStatus = searchParams.get("status");
   const status = rawStatus && orderStatusSchema.safeParse(rawStatus).success ? rawStatus : undefined;
