@@ -18,6 +18,7 @@ import { execSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { join, dirname } from "path";
 import { shopsDir, appMetaPath } from "./paths";
+import { invalidateShopClient } from "@/lib/db";
 
 export interface Shop {
   id: string;
@@ -202,6 +203,10 @@ export function deleteShop(shopId: string): void {
 
   // Delete the SQLite file
   const fullPath = join(process.cwd(), shop.dbPath);
+  // Session 31 (AUDIT-3 S7): invalidate the cached PrismaClient BEFORE deleting
+  // the file, so no stale connection lingers on a deleted file + the meta
+  // cache is cleared (activeShopId may change below).
+  invalidateShopClient(fullPath);
   if (existsSync(fullPath)) {
     try { unlinkSync(fullPath); } catch { /* ignore */ }
   }

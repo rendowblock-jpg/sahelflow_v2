@@ -47,6 +47,7 @@ import {
   getShop,
   appMetaPath,
 } from "../index";
+import { invalidateShopClient } from "@/lib/db";
 
 beforeAll(() => {
   vi.spyOn(process, "cwd").mockReturnValue(TMP_ROOT);
@@ -263,5 +264,59 @@ describe("app-meta.json on-disk format", () => {
     expect(Array.isArray(parsed.shops)).toBe(true);
     expect(parsed.shops.length).toBeGreaterThan(0);
     expect(typeof parsed.activeShopId).toBe("string");
+  });
+});
+
+// ── deleteShop cache invalidation (AUDIT-3 S7, Session 31) ──────────────────
+//
+// deleteShop unlinks the shop's SQLite file but, before Session 31, never
+// invalidated the in-process PrismaClient cached in globalForPrisma.shopClients
+// — leaving a stale connection to a deleted file. These tests verify the fix:
+// invalidateShopClient removes the cached entry + calls $disconnect, and
+// deleteShop invokes it for the deleted shop's dbPath.
+describe("deleteShop — cache invalidation (AUDIT-3 S7)", () => {
+  function getShopClientsMap(): Map<string, unknown> {
+    const g = globalThis as unknown as { shopClients?: Map<string, unknown> };
+    if (!g.shopClients) g.shopClients = new Map();
+    return g.shopClients;
+  }
+
+  it("invalidateShopClient removes the cached client + calls $disconnect", async () => {
+    const cache = getShopClientsMap();
+    const testPath = "/tmp/sf-test-invalidate-shop-client.db";
+    const mockDisconnect = vi.fn().mockResolvedValue(undefined);
+    cache.set(testPath, { $disconnect: mockDisconnect });
+    expect(cache.has(testPath)).toBe(true);
+
+    invalidateShopClient(testPath);
+
+    expect(cache.has(testPath)).toBe(false);
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("invalidateShopClient is a no-op for a path that was never cached", () => {
+    const cache = getShopClientsMap();
+    const before = cache.size;
+    invalidateShopClient("/tmp/sf-test-never-cached.db");
+    expect(cache.size).toBe(before); // unchanged
+  });
+
+  it("deleteShop invalidates the cached client for the deleted shop's dbPath", () => {
+    listShops();
+    const shop = createShop({ name: "Cache Test" });
+    const fullPath = join(TMP_ROOT, shop.dbPath);
+
+    // Populate the cache with a mock client for this shop's path (simulates
+    // the shop having been opened/queried before deletion).
+    const cache = getShopClientsMap();
+    const mockDisconnect = vi.fn().mockResolvedValue(undefined);
+    cache.set(fullPath, { $disconnect: mockDisconnect });
+    expect(cache.has(fullPath)).toBe(true);
+
+    deleteShop(shop.id);
+
+    // The cached client for the deleted shop's path must be invalidated.
+    expect(cache.has(fullPath)).toBe(false);
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
   });
 });

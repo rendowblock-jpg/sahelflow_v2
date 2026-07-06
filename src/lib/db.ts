@@ -719,6 +719,33 @@ export function invalidateMetaCache(): void {
   metaCache = null;
 }
 
+/**
+ * Invalidate + disconnect the cached PrismaClient for a specific shop file.
+ *
+ * Session 31 (AUDIT-3 S7): `deleteShop` unlinks the shop's SQLite file but the
+ * in-process PrismaClient for that path stays cached in `shopClients`, holding
+ * a connection to a deleted file. Subsequent `getShopClient(dbPath)` calls
+ * would return the stale client. This removes it from the cache + fire-and-
+ * -forgets a `$disconnect()` (the file may already be gone, so errors are
+ * swallowed) + clears the meta cache so the next `db` access re-reads
+ * app-meta.json (the deleted shop is gone + activeShopId may have changed).
+ *
+ * Safe to call with a path that was never cached (no-op).
+ */
+export function invalidateShopClient(shopFilePath: string): void {
+  if (globalForPrisma.shopClients) {
+    const cached = globalForPrisma.shopClients.get(shopFilePath);
+    if (cached) {
+      // Fire-and-forget disconnect — deleteShop is sync, can't await.
+      void (cached as DbClient).$disconnect().catch(() => {
+        /* file may already be unlinked — ignore */
+      });
+      globalForPrisma.shopClients.delete(shopFilePath);
+    }
+  }
+  metaCache = null;
+}
+
 function getActiveShopClient(): DbClient {
   // In test mode, always use the fallback client (tests set DATABASE_URL)
   if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
