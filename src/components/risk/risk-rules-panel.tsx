@@ -26,6 +26,11 @@ export function RiskRulesPanel({ rules: initialRules }: Props) {
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const toggleRule = async (ruleId: string) => {
+    // C-H5 fix: capture the pre-toggle state so a failed PATCH reverts ONLY
+    // the failed toggle — not every successful toggle since mount. The prior
+    // `setRules(initialRules)` reset rule A's visual state even though rule A
+    // was still enabled on the server (state divergence).
+    const previousRules = rules;
     const updated = rules.map((r) =>
       r.id === ruleId ? { ...r, enabled: !r.enabled } : r,
     );
@@ -42,8 +47,8 @@ export function RiskRulesPanel({ rules: initialRules }: Props) {
       router.refresh();
     } catch {
       toast.error(t("error.toggleFailed"));
-      // Revert on failure
-      setRules(initialRules);
+      // Revert ONLY the failed toggle (preserves other successful toggles).
+      setRules(previousRules);
     } finally {
       setSavingId(null);
     }

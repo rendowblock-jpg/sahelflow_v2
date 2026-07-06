@@ -16,8 +16,9 @@
  *
  * NOTE: live WhatsApp chats have no Conversation DB row (their id is a JID).
  * The GET /api/conversations/[id] 404s for them, so controls default to
- * "open"/null and PATCHes fail silently (best-effort, matching the prior
- * ConversationStatusDropdown behaviour). Lazy-hydration is a follow-up.
+ * "open"/null. PATCH/PUT failures surface a toast.error(t("common.error"))
+ * so the user knows the change did not persist (Session 34, C-H3 fix).
+ * Lazy-hydration is a follow-up.
  */
 import { useState, useCallback } from "react";
 import {
@@ -44,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
+import { toast } from "@/lib/toast";
 import { ConversationStatusBadge } from "./conversation-status-badge";
 import {
   ChevronDown,
@@ -73,16 +75,14 @@ export interface ConversationWorkflowState {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────
-async function patchJSON(url: string, body: unknown): Promise<boolean> {
-  try {
-    const res = await fetch(url, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    return res.ok;
-  } catch {
-    return false;
+async function patchJSON(url: string, body: unknown): Promise<void> {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`PATCH ${url} failed: ${res.status}`);
   }
 }
 
@@ -101,15 +101,17 @@ export function StatusControl({
   const [snoozeOpen, setSnoozeOpen] = useState(false);
 
   const change = useCallback(async (newStatus: ConversationStatus, snoozedUntil?: string) => {
-    const ok = await patchJSON(`/api/conversations/${conversationId}/status`, {
-      status: newStatus,
-      ...(snoozedUntil ? { snoozedUntil } : {}),
-    });
-    if (ok) {
+    try {
+      await patchJSON(`/api/conversations/${conversationId}/status`, {
+        status: newStatus,
+        ...(snoozedUntil ? { snoozedUntil } : {}),
+      });
       setStatus(newStatus);
       onUpdated?.(newStatus);
+    } catch {
+      toast.error(t("common.error"));
     }
-  }, [conversationId, onUpdated]);
+  }, [conversationId, onUpdated, t]);
 
   const snooze = async (until: string) => {
     setSnoozeOpen(false);
@@ -195,8 +197,12 @@ export function PriorityControl({
   const [priority, setPriority] = useState<ConversationPriority | null>(initialPriority);
 
   const change = async (p: ConversationPriority | null) => {
-    const ok = await patchJSON(`/api/conversations/${conversationId}/priority`, { priority: p });
-    if (ok) setPriority(p);
+    try {
+      await patchJSON(`/api/conversations/${conversationId}/priority`, { priority: p });
+      setPriority(p);
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
 
   return (
@@ -252,8 +258,14 @@ export function AssigneeControl({
   const [draft, setDraft] = useState("");
 
   const assign = async (name: string | null) => {
-    const ok = await patchJSON(`/api/conversations/${conversationId}/assign`, { assignee: name });
-    if (ok) { setAssignee(name); setOpen(false); setDraft(""); }
+    try {
+      await patchJSON(`/api/conversations/${conversationId}/assign`, { assignee: name });
+      setAssignee(name);
+      setOpen(false);
+      setDraft("");
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
 
   return (
@@ -304,6 +316,7 @@ export function LabelsControl({
 
   // Session 30 (AUDIT-5 C9): the old save() function was dead code — it
   // PATCHed a PUT-only route and discarded the result (`void ok`). Removed.
+  // Session 34 (C-H3): surface failures via toast instead of silent no-op.
   const putLabels = async (next: string[]) => {
     try {
       const res = await fetch(`/api/conversations/${conversationId}/labels`, {
@@ -311,8 +324,12 @@ export function LabelsControl({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ labels: next }),
       });
-      if (res.ok) { setLabels(next); setDraft(""); }
-    } catch { /* best-effort */ }
+      if (!res.ok) throw new Error(`PUT labels failed: ${res.status}`);
+      setLabels(next);
+      setDraft("");
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
 
   const addLabel = () => {

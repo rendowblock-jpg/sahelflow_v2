@@ -165,7 +165,7 @@ export function CustomerFormDialog({
       form.reset();
       setOpen(false);
       mutatePrefix("/api/customers");
-      toast.success(t("customers.created"));
+      toast.success(t(isEdit ? "customers.updated" : "customers.created"));
     } catch (err) {
       console.error("[CustomerFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));

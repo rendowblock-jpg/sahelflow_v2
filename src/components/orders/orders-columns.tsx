@@ -182,7 +182,7 @@ export function useOrdersColumns(opts: UseOrdersColumnsOptions): ColumnDef<Order
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/orders/${order.id}?edit=true`}>
+                <Link href={`/orders/${order.id}`}>
                   <Pencil className="me-2 h-4 w-4" />
                   {t("orders.edit")}
                 </Link>

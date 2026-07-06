@@ -59,6 +59,19 @@ export function ProductVariantPicker({
 }: ProductVariantPickerProps) {
   const { t } = useI18n();
   const [selectedId, setSelectedId] = useState<string | null>(value ?? null);
+  // C-H6 fix: keep internal state in sync with the `value` prop. Previously
+  // selectedId was set ONCE at mount — if the parent passed a new value (e.g.
+  // the user picked a different product, resetting the picker), the internal
+  // state stayed stale and the dropdown showed the old variant. We use the
+  // React-recommended "adjust state during render" pattern (see
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than useEffect, which would trigger cascading renders + the
+  // `react-hooks/set-state-in-effect` lint rule.
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setSelectedId(value ?? null);
+  }
 
   const activeVariants = variants.filter((v) => v.isActive);
   const selected = variants.find((v) => v.id === selectedId);

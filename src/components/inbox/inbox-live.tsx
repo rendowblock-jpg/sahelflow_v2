@@ -104,6 +104,12 @@ export function InboxLive() {
   const [qrKey, setQrKey] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesInnerRef = useRef<HTMLDivElement | null>(null);
+  // C-H4: track whether the user is near the bottom of the messages scroll
+  // viewport so we only auto-scroll on new messages when they're already
+  // caught up — matches iMessage/WhatsApp behaviour (don't yank the user back
+  // to the bottom if they've scrolled up to read history).
+  const isNearBottomRef = useRef(true);
 
   // Refs mirroring state for use inside event callbacks (avoid stale closures)
   const statusRef = useRef<WhatsAppStatus | null>(null);
@@ -307,9 +313,32 @@ export function InboxLive() {
     [loadMessages],
   );
 
-  // ── Auto-scroll to the latest message ─────────────────────────────────
+  // ── Auto-scroll to the latest message (only when user is near bottom) ─
+  // C-H4 fix: previously this fired on every messages change, yanking the
+  // user back to the bottom if they had scrolled up to read history. We now
+  // track scroll position and only auto-scroll when within ~150px of the
+  // bottom — matches iMessage/WhatsApp behaviour.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Reset on chat switch so we always start at the bottom of the new chat.
+    isNearBottomRef.current = true;
+    const inner = messagesInnerRef.current;
+    if (!inner) return;
+    const viewport = inner.closest(
+      '[data-slot="scroll-area-viewport"]',
+    ) as HTMLDivElement | null;
+    if (!viewport) return;
+    const handleScroll = () => {
+      const { scrollHeight, scrollTop, clientHeight } = viewport;
+      isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+    };
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, [activeChatId]);
+
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // ── QR auto-refresh (every 20s while in 'qr' state) ────────────────────
@@ -554,7 +583,7 @@ export function InboxLive() {
               </div>
 
               <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4 max-w-3xl mx-auto" role="log" aria-live="polite" aria-label={t("inbox.messages")}>
+                <div ref={messagesInnerRef} className="space-y-4 max-w-3xl mx-auto" role="log" aria-live="polite" aria-label={t("inbox.messages")}>
                   {loadingMessages ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
