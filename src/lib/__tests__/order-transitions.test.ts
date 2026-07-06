@@ -156,6 +156,16 @@ describe("triggersStockRestoration", () => {
     expect(triggersStockRestoration("shipped", "returned")).toBe(true);
   });
 
+  it("returns true for delivered → returned (F-H1: standard COD return flow)", () => {
+    // F-H1: customer accepts parcel (→ delivered), pays, then returns/refunds.
+    // Stock was deducted at confirmation; must be restored on the return.
+    expect(triggersStockRestoration("delivered", "returned")).toBe(true);
+  });
+
+  it("returns true for delivered → refused (F-H1)", () => {
+    expect(triggersStockRestoration("delivered", "refused")).toBe(true);
+  });
+
   it("returns false for draft → cancelled (was never confirmed)", () => {
     expect(triggersStockRestoration("draft", "cancelled")).toBe(false);
   });

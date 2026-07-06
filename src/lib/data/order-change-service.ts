@@ -69,12 +69,15 @@ export async function recordStatusChange(
   from: string,
   to: string,
   actor = "user",
+  /** F-H2: optional tx so the ledger entry participates in the caller's tx. */
+  tx?: DbOrTx,
 ): Promise<void> {
   await recordOrderChange({
     orderId,
     actionType: "status_change",
     actor,
     payload: { from, to },
+    tx,
   });
 }
 
@@ -85,11 +88,14 @@ export async function recordRefund(
   amount: number,
   method: string,
   actor = "user",
+  /** F-H2: optional tx so the ledger entry participates in the refund tx. */
+  tx?: DbOrTx,
 ): Promise<void> {
   await recordOrderChange({
     orderId,
     actionType: "refund",
     actor,
     payload: { refundId, amount, method },
+    tx,
   });
 }

@@ -50,6 +50,15 @@ let cachedKey: Buffer | null = null;
 /**
  * Get the master key, generating + persisting it on first run.
  * Cached in-memory for the process lifetime.
+ *
+ * F-H4: race-safe first-run generation. Previously two concurrent calls both
+ * saw cachedKey===null AND !existsSync(keyFile) → each generated a different
+ * key, each wrote its key (second write wins) → first caller's cachedKey was
+ * stale → data it encrypted was permanently unreadable after restart. Fix:
+ * use `writeFileSync` with `flag: "wx"` (O_EXCL) — if another caller wrote
+ * the file between our existsSync check and the write, this throws EEXIST
+ * and we re-read the winning key. No async/Promise needed (generation is
+ * synchronous), so no caller changes required.
  */
 export function getMasterKey(): Buffer {
   if (cachedKey) return cachedKey;
@@ -68,13 +77,25 @@ export function getMasterKey(): Buffer {
     return cachedKey;
   }
 
-  // 3. First run — generate + persist to keyfile
+  // 3. First run — generate + persist to keyfile (F-H4: O_EXCL, race-safe)
   const dataDir = getDataDir();
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
   }
   const newKey = randomBytes(KEY_LENGTH);
-  writeFileSync(keyFile, newKey.toString("hex"), { mode: 0o600 });
+  try {
+    // "wx" = O_EXCL — fails with EEXIST if the file was created by another
+    // concurrent caller between our existsSync check and this write.
+    writeFileSync(keyFile, newKey.toString("hex"), { mode: 0o600, flag: "wx" });
+  } catch (err: unknown) {
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "EEXIST") {
+      // Lost the race — re-read the winning key instead of overwriting it.
+      const hex = readFileSync(keyFile, "utf8").trim();
+      cachedKey = parseHexKey(hex, keyFile);
+      return cachedKey;
+    }
+    throw err;
+  }
   try {
     chmodSync(keyFile, 0o600);
   } catch {

@@ -130,7 +130,12 @@ export function triggersStockDeduction(from: OrderStatus, to: OrderStatus): bool
  */
 export function triggersStockRestoration(from: OrderStatus, to: OrderStatus): boolean {
   if (!["returned", "cancelled", "refused"].includes(to)) return false;
-  return ["confirmed", "shipped"].includes(from);
+  // F-H1: "delivered" must be in the allow-list. The standard Algerian COD
+  // scenario is: customer accepts the parcel (→ delivered), pays, then later
+  // returns/refunds (delivered → returned). Without "delivered" here, stock
+  // was deducted at confirmation but NEVER restored on the return → silent
+  // stock drift.
+  return ["confirmed", "shipped", "delivered"].includes(from);
 }
 
 /**

@@ -39,7 +39,18 @@ export async function createRefund(input: CreateRefundInput) {
 
   // Transactional: refund create + order-change ledger + (optional) status
   // transition must all succeed together.
-  const refund = await db.$transaction(async (tx) => {
+  //
+  // F-H3: BEGIN IMMEDIATE closes the TOCTOU window for concurrent partial
+  // refunds. Prisma's interactive $transaction uses DEFERRED by default —
+  // two concurrent createRefund calls (different idempotencyKeys, same order)
+  // both read priorRefunds=0, both pass the over-refund guard, both create a
+  // refund → total exceeds order.totalPrice. BEGIN IMMEDIATE acquires the
+  // write lock at tx start, serializing the two refunds so the second reads
+  // the first's uncommitted priorRefunds.
+  await db.$executeRaw`BEGIN IMMEDIATE`;
+  let refund;
+  try {
+  refund = await db.$transaction(async (tx) => {
     // 1. Re-read the order inside the tx (TOCTOU-safe)
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
@@ -72,6 +83,10 @@ export async function createRefund(input: CreateRefundInput) {
 
     // 4. If order is "delivered", transition to "returned" (AUDIT-3 S4)
     // so COD reconciliation stops counting it as collected+remitted.
+    // F-H1: also restore stock for each item (delivered→returned now triggers
+    // stock restoration per triggersStockRestoration). We duplicate the loop
+    // from orderService.updateStatus here because calling it would open a
+    // nested $transaction that can't see this tx's uncommitted writes.
     let statusChanged = false;
     if (order.status === "delivered") {
       await tx.order.update({
@@ -79,6 +94,20 @@ export async function createRefund(input: CreateRefundInput) {
         data: { status: "returned" },
       });
       statusChanged = true;
+
+      // F-H1: restore stock for each item with a productId.
+      const items = await tx.orderItem.findMany({
+        where: { orderId: input.orderId, productId: { not: null } },
+        select: { productId: true, quantity: true },
+      });
+      for (const item of items) {
+        if (item.productId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+      }
     }
 
     // 5. Create the refund row
@@ -97,8 +126,10 @@ export async function createRefund(input: CreateRefundInput) {
       },
     });
 
-    // 6. Record in the order change ledger — same tx (Session 30 S2 fix)
-    await recordRefund(input.orderId, r.id, input.amount, input.method, input.actor);
+    // 6. Record in the order change ledger — same tx (F-H2: pass tx so the
+    // ledger entry participates in this refund tx; if the tx rolls back, the
+    // ledger entry rolls back too — no orphan refund records.)
+    await recordRefund(input.orderId, r.id, input.amount, input.method, input.actor, tx);
 
     // 7. If status changed, also record the status_change ledger entry
     if (statusChanged) {
@@ -125,6 +156,11 @@ export async function createRefund(input: CreateRefundInput) {
 
     return r;
   });
+  await db.$executeRaw`COMMIT`;
+  } catch (err) {
+    await db.$executeRaw`ROLLBACK`;
+    throw err;
+  }
 
   // Audit log (outside tx — fire-and-forget, never blocks the refund)
   void logAudit({
