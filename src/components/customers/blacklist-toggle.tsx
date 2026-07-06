@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { Ban, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 
@@ -75,6 +76,8 @@ export function BlacklistToggle({
       setAddOpen(false);
       setReason("");
       router.refresh();
+      // Invalidate SWR cache for /api/customers* so list views reflect the blacklist change.
+      void mutatePrefix("/api/customers");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
@@ -95,6 +98,8 @@ export function BlacklistToggle({
       toast.success(t("risk.blacklist.remove"));
       setRemoveOpen(false);
       router.refresh();
+      // Invalidate SWR cache for /api/customers* so list views reflect the unblacklist.
+      void mutatePrefix("/api/customers");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {

@@ -14,6 +14,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,6 +136,8 @@ export function OrderEditPanel({
         toast.success(t("orders.detail.editSaved"));
         setIsEditing(false);
         router.refresh();
+        // Invalidate SWR cache for /api/orders* so list/table views reflect the edit.
+        void mutatePrefix("/api/orders");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("orders.detail.editFailed"));
       }

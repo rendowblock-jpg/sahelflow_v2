@@ -27,6 +27,7 @@ import {
 
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
 
 interface CreateShipmentProps {
@@ -70,6 +71,9 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       }
       setResult(t("orders.shipment.createdResult", { tracking: data.delivery?.trackingNumber ?? "" }));
       router.refresh();
+      // Invalidate SWR caches so list views reflect the new delivery + order status.
+      void mutatePrefix("/api/orders");
+      void mutatePrefix("/api/deliveries");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
     } finally {
@@ -93,6 +97,9 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       }
       setResult(t("orders.shipment.updatedResult", { status: data.status ?? "" }));
       router.refresh();
+      // Invalidate SWR caches so list views reflect the updated delivery status.
+      void mutatePrefix("/api/orders");
+      void mutatePrefix("/api/deliveries");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
     } finally {
