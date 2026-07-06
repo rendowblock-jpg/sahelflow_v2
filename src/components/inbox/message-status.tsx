@@ -12,6 +12,7 @@
  */
 import { Clock, Check, CheckCheck, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/hooks/use-i18n";
 
 type DeliveryStatus = "sending" | "sent" | "delivered" | "read" | "failed";
 
@@ -21,19 +22,20 @@ interface MessageStatusProps {
 }
 
 export function MessageStatus({ status, className }: MessageStatusProps) {
+  const { t } = useI18n();
   if (!status || status === "sent") {
-    return <Check className={cn("h-3.5 w-3.5 text-muted-foreground", className)} aria-label="Sent" />;
+    return <Check className={cn("h-3.5 w-3.5 text-muted-foreground", className)} aria-label={t("inbox.messageStatus.sent")} />;
   }
 
   switch (status as DeliveryStatus) {
     case "sending":
-      return <Clock className={cn("h-3.5 w-3.5 text-muted-foreground animate-spin", className)} aria-label="Sending" />;
+      return <Clock className={cn("h-3.5 w-3.5 text-muted-foreground animate-spin", className)} aria-label={t("inbox.messageStatus.sending")} />;
     case "delivered":
-      return <CheckCheck className={cn("h-3.5 w-3.5 text-muted-foreground", className)} aria-label="Delivered" />;
+      return <CheckCheck className={cn("h-3.5 w-3.5 text-muted-foreground", className)} aria-label={t("inbox.messageStatus.delivered")} />;
     case "read":
-      return <CheckCheck className={cn("h-3.5 w-3.5 text-blue-500", className)} aria-label="Read" />;
+      return <CheckCheck className={cn("h-3.5 w-3.5 text-blue-500", className)} aria-label={t("inbox.messageStatus.read")} />;
     case "failed":
-      return <AlertCircle className={cn("h-3.5 w-3.5 text-destructive", className)} aria-label="Failed" />;
+      return <AlertCircle className={cn("h-3.5 w-3.5 text-destructive", className)} aria-label={t("inbox.messageStatus.failed")} />;
     default:
       return null;
   }

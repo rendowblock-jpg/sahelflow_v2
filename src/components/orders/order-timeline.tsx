@@ -93,7 +93,7 @@ export function OrderTimeline({ entries }: OrderTimelineProps) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <Clock className="mx-auto h-8 w-8 text-muted-foreground/40" />
-        <p className="mt-2 text-sm text-muted-foreground">No activity yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("orders.timeline.noActivity")}</p>
       </div>
     );
   }

@@ -73,9 +73,27 @@ export function ChatLoading() {
 }
 
 export function FormLoading() {
+  // Wave 4 (AUDIT item 43): skeleton that mirrors a form/detail layout instead
+  // of a bare spinner. Renders a header skeleton + 6 form-field skeletons (label
+  // + input height), so the transition to real content is seamless.
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    <div className="app-content page-sections">
+      {/* Header skeleton */}
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      {/* Form field skeletons */}
+      <div className="max-w-2xl space-y-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ))}
+        {/* Action button skeleton */}
+        <Skeleton className="h-10 w-32" />
+      </div>
     </div>
   );
 }

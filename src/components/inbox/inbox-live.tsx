@@ -645,7 +645,7 @@ export function InboxLive() {
                       disabled
                       className="flex-1"
                     />
-                    <Button size="icon" disabled>
+                    <Button size="icon" disabled aria-label={t("inbox.send")}>
                       <Send className="h-4 w-4 icon-rtl-flip" />
                     </Button>
                   </div>

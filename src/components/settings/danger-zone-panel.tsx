@@ -41,29 +41,29 @@ export function DangerZonePanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
           <AlertTriangle className="h-5 w-5" />
-          Danger Zone
+          {t("settings.tabs.dangerZone")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Export all */}
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div>
-            <p className="text-sm font-medium">Export all data</p>
-            <p className="text-xs text-muted-foreground">Download a full backup before resetting.</p>
+            <p className="text-sm font-medium">{t("settings.dangerZone.exportAll")}</p>
+            <p className="text-xs text-muted-foreground">{t("settings.dangerZone.exportDesc")}</p>
           </div>
           <Button variant="outline" size="sm" asChild>
-            <a href="/api/export/orders"><Download className="me-2 h-4 w-4" />Export</a>
+            <a href="/api/export/orders"><Download className="me-2 h-4 w-4" />{t("common.export")}</a>
           </Button>
         </div>
 
         {/* Reset database */}
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
           <div>
-            <p className="text-sm font-medium text-destructive">Reset database</p>
-            <p className="text-xs text-muted-foreground">This will delete ALL orders, customers, products, and settings. This cannot be undone.</p>
+            <p className="text-sm font-medium text-destructive">{t("settings.dangerZone.resetDatabase")}</p>
+            <p className="text-xs text-muted-foreground">{t("settings.dangerZone.resetWarning")}</p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Type RESET to confirm</Label>
+            <Label className="text-xs">{t("settings.dangerZone.typeReset")}</Label>
             <Input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
@@ -73,7 +73,7 @@ export function DangerZonePanel() {
           </div>
           <Button variant="destructive" size="sm" onClick={handleReset} disabled={loading || confirmText !== "RESET"}>
             <Trash2 className="me-2 h-4 w-4" />
-            {loading ? "Resetting..." : "Reset everything"}
+            {loading ? t("settings.dangerZone.resetting") : t("settings.dangerZone.resetEverything")}
           </Button>
         </div>
       </CardContent>

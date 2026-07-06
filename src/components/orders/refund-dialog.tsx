@@ -128,7 +128,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
             }
           >
             {mutation.isSubmitting ? (
-              <><Loader2 className="h-4 w-4 me-1.5 animate-spin" />Processing...</>
+              <><Loader2 className="h-4 w-4 me-1.5 animate-spin" />{t("common.processing")}</>
             ) : (
               t("refund.title")
             )}

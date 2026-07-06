@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 
 /**
  * Subscribe to next-themes' resolved theme without triggering a synchronous
@@ -22,6 +23,7 @@ function useIsMounted(): boolean {
 }
 
 export function ThemeToggle() {
+  const { t } = useI18n();
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useIsMounted();
 
@@ -33,7 +35,7 @@ export function ThemeToggle() {
       size="icon"
       className="h-8 w-8"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
     >
       {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </Button>

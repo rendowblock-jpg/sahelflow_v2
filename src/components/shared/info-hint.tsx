@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface InfoHintProps {
   /** The hint content. Can be a string or rich JSX. */
@@ -40,11 +41,13 @@ interface InfoHintProps {
  */
 export function InfoHint({
   content,
-  label = "More information",
+  label,
   size = "md",
   className,
   side = "top",
 }: InfoHintProps) {
+  const { t } = useI18n();
+  const ariaLabel = label ?? t("common.moreInformation");
   const iconSize = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
 
   return (
@@ -52,7 +55,7 @@ export function InfoHint({
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={label}
+          aria-label={ariaLabel}
           className={cn(
             "inline-flex shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors",
             "hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",

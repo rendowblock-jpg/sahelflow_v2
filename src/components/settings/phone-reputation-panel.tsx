@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Phone, Plus } from "lucide-react";
 import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface BadPhone {
   phone: string;
@@ -16,6 +17,7 @@ interface BadPhone {
 }
 
 export function PhoneReputationPanel() {
+  const { t } = useI18n();
   const [list, setList] = useState<BadPhone[]>([]);
   const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
@@ -28,7 +30,7 @@ export function PhoneReputationPanel() {
   }, []);
 
   const addMutation = useApiMutation({
-    successMessage: "Phone added to blacklist",
+    successMessage: t("phoneReputation.added"),
     onSuccess: async () => {
       const res = await fetch("/api/phone-reputation");
       const d = await res.json();
@@ -43,23 +45,23 @@ export function PhoneReputationPanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Phone className="h-5 w-5" />
-          Phone Reputation
+          {t("settings.tabs.phoneReputation")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
- Phones reported as bad (refused delivery, fake number, etc.) are flagged in the risk engine for future orders.
+          {t("phoneReputation.description")}
         </p>
 
         {/* Add bad phone */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">Phone</Label>
+            <Label className="text-xs">{t("phoneReputation.phoneLabel")}</Label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0X XX XX XX XX" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Reason</Label>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Refused delivery" />
+            <Label className="text-xs">{t("phoneReputation.reasonLabel")}</Label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("phoneReputation.reasonPlaceholder")} />
           </div>
           <div className="flex items-end">
             <Button
@@ -70,7 +72,7 @@ export function PhoneReputationPanel() {
                 body: JSON.stringify({ phone, reason }),
               })}
             >
-              <Plus className="me-1 h-4 w-4" />Add
+              <Plus className="me-1 h-4 w-4" />{t("common.add")}
             </Button>
           </div>
         </div>
@@ -89,7 +91,7 @@ export function PhoneReputationPanel() {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground py-4 text-center rounded-lg border border-dashed">
-            No bad phones reported yet.
+            {t("phoneReputation.empty")}
           </p>
         )}
       </CardContent>

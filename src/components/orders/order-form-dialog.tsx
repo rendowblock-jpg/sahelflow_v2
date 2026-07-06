@@ -331,7 +331,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                             onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
                             className="w-16 text-center"
                           />
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} className="text-destructive">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} className="text-destructive" aria-label={t("orders.removeItem")}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

@@ -87,10 +87,10 @@ export function CodReconciliationClient({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Pending Remittance ({pendingOrders.length})</span>
+          <span>{t("codReconciliation.pendingRemittance")} ({pendingOrders.length})</span>
           {selected.size > 0 && (
             <span className="text-sm font-normal text-muted-foreground">
-              {selected.size} selected · {formatDZD(selectedTotal)}
+              {t("dataTable.selected", { count: selected.size })} · {formatDZD(selectedTotal)}
             </span>
           )}
         </CardTitle>
@@ -108,7 +108,7 @@ export function CodReconciliationClient({
             {selected.size > 0 && (
               <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-muted/50 p-3">
                 <div className="flex-1 min-w-[200px] space-y-1.5">
-                  <Label className="text-xs">Remittance reference</Label>
+                  <Label className="text-xs">{t("codReconciliation.remittanceRef")}</Label>
                   <Input
                     value={remittanceRef}
                     onChange={(e) => setRemittanceRef(e.target.value)}
@@ -124,10 +124,10 @@ export function CodReconciliationClient({
                   ) : (
                     <DollarSign className="h-4 w-4 me-1.5" />
                   )}
-                  Mark {selected.size} as remitted
+                  {t("codReconciliation.markRemitted", { count: selected.size })}
                 </Button>
                 <Button variant="ghost" onClick={() => setSelected(new Set())}>
-                  Clear
+                  {t("dataTable.clear")}
                 </Button>
               </div>
             )}
@@ -186,8 +186,8 @@ export function CodReconciliationClient({
             {/* Summary line */}
             <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
               <div className="flex gap-4">
-                <span className="text-muted-foreground">Collected: <span className="font-medium text-foreground">{formatDZD(totalCollected)}</span></span>
-                <span className="text-muted-foreground">Remitted: <span className="font-medium text-emerald-600">{formatDZD(totalRemitted)}</span></span>
+                <span className="text-muted-foreground">{t("codReconciliation.collected")}: <span className="font-medium text-foreground">{formatDZD(totalCollected)}</span></span>
+                <span className="text-muted-foreground">{t("codReconciliation.remitted")}: <span className="font-medium text-emerald-600">{formatDZD(totalRemitted)}</span></span>
                 <span className="text-muted-foreground">Pending: <span className="font-medium text-amber-600">{formatDZD(totalPending)}</span></span>
               </div>
             </div>

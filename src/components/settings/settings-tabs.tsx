@@ -96,7 +96,7 @@ export function SettingsTabs({
         {active === "danger" && <DangerZonePanel />}
         {active === "profile" && (
           <div className="rounded-lg border p-6">
-            <h3 className="text-base font-semibold">Profile</h3>
+            <h3 className="text-base font-semibold">{t("settings.tabs.profile")}</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Profile settings are managed via the <a href="/profile" className="text-primary underline">Profile page</a>.
             </p>
