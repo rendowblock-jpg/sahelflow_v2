@@ -55,8 +55,11 @@ describe("isPublicApiRoute", () => {
     expect(isPublicApiRoute("/api/storefront/config")).toBe(false);
   });
 
-  it("returns true for /api/whatsapp/qr-image", () => {
-    expect(isPublicApiRoute("/api/whatsapp/qr-image")).toBe(true);
+  it("returns false for /api/whatsapp/qr-image (A-S1: now auth-protected)", () => {
+    // A-S1: /api/whatsapp/qr-image removed from PUBLIC_API_ROUTES — the QR
+    // grants full WhatsApp account access, so it must require auth. Enforced
+    // by proxy.ts middleware + per-route requireAuth() (defense-in-depth).
+    expect(isPublicApiRoute("/api/whatsapp/qr-image")).toBe(false);
   });
 
   it("returns false for protected routes", () => {
@@ -88,7 +91,8 @@ describe("PUBLIC_API_ROUTES + PUBLIC_PAGES arrays", () => {
     expect(PUBLIC_API_ROUTES).toContain("/api/storefront/submit");
     // SEC-003: /api/storefront/config/ removed from PUBLIC_API_ROUTES
     expect(PUBLIC_API_ROUTES).not.toContain("/api/storefront/config/");
-    expect(PUBLIC_API_ROUTES).toContain("/api/whatsapp/qr-image");
+    // A-S1: /api/whatsapp/qr-image removed from PUBLIC_API_ROUTES
+    expect(PUBLIC_API_ROUTES).not.toContain("/api/whatsapp/qr-image");
   });
 
   it("contains the expected public pages", () => {
