@@ -54,7 +54,6 @@ async function cleanDb() {
     db.order.deleteMany(),
     db.customer.deleteMany(),
     db.integration.deleteMany(),
-    db.pollingEvent.deleteMany(),
     db.counter.deleteMany(),
   ]);
 }

@@ -34,7 +34,6 @@ export async function cleanDb(): Promise<void> {
     rawDb.notification.deleteMany(),
     rawDb.storefrontConfig.deleteMany(),
     rawDb.whatsAppTemplate.deleteMany(),
-    rawDb.pollingEvent.deleteMany(),
     rawDb.integration.deleteMany(),
     rawDb.automation.deleteMany(),
     rawDb.aiChatMessage.deleteMany(),

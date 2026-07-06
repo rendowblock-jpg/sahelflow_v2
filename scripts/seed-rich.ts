@@ -211,7 +211,6 @@ async function main() {
   await prisma.expense.deleteMany();
   await prisma.automation.deleteMany();
   await prisma.integration.deleteMany();
-  await prisma.pollingEvent.deleteMany();
   await prisma.whatsAppTemplate.deleteMany();
   await prisma.wilayaRiskProfile.deleteMany();
   await prisma.storefrontConfig.deleteMany();

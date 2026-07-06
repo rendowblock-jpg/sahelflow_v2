@@ -135,7 +135,7 @@ model Order {
   orderNumber     String
   status          String      @default("draft")
   customerId      String
-  customer        Customer    @relation(fields: [customerId], references: [id])
+  customer        Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade) // S-M3: consistent cascade
   items           OrderItem[]
   totalPrice      Int
   deliveryCost    Int?
@@ -261,6 +261,8 @@ model Conversation {
   @@index([priority])
   @@index([snoozedUntil])
   @@index([waitingSince])
+  @@index([sourceId])           // S-M1: ensureConversationForJid hot path
+  @@unique([channel, sourceId]) // S-M1: one conversation per channel+sourceId
 }
 
 model Message {
@@ -294,7 +296,7 @@ model Message {
 model Return {
   id              String    @id @default(cuid())
   orderId         String
-  order           Order     @relation(fields: [orderId], references: [id])
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade) // S-M3: consistent cascade
   reason          String
   status          String    @default("requested")
   type            String
@@ -421,18 +423,6 @@ model Integration {
   config     String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-}
-
-model PollingEvent {
-  id          String    @id @default(cuid())
-  source      String
-  eventId     String    @unique
-  payload     String
-  processed   Boolean   @default(false)
-  processedAt DateTime?
-  createdAt   DateTime  @default(now())
-
-  @@index([source, processed])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
