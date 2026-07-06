@@ -42,7 +42,8 @@
     "resources": [
       "../prisma/**/*",
       "resources/standalone/**/*",
-      "../scripts/run-migrations.ts"
+      "../scripts/run-migrations.ts",
+      "resources/runtime/**/*"
     ]
   },
   "plugins": {

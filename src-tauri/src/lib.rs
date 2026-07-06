@@ -94,6 +94,37 @@ fn get_machine_id() -> String {
     "DEV-MOCK-MACHINE-ID-FALLBACK".to_string()
 }
 
+/// Handles to spawned child processes (Next.js server + WhatsApp sidecar)
+/// kept in app state so they can be killed on app exit (T-S4). Without this,
+/// closing the window orphans the children — they keep holding ports 3000/3001,
+/// so the next launch's `wait_for_port` times out → blank window.
+#[cfg(not(debug_assertions))]
+struct SpawnedChildren {
+    server: Option<tauri_plugin_shell::process::CommandChild>,
+    sidecar: Option<tauri_plugin_shell::process::CommandChild>,
+}
+
+#[cfg(not(debug_assertions))]
+impl SpawnedChildren {
+    fn kill_all(&mut self) {
+        if let Some(child) = self.server.take() {
+            let _ = child.kill();
+            eprintln!("[sahelflow] killed Next.js server child on exit");
+        }
+        if let Some(child) = self.sidecar.take() {
+            let _ = child.kill();
+            eprintln!("[sahelflow] killed WhatsApp sidecar child on exit");
+        }
+    }
+}
+
+#[cfg(not(debug_assertions))]
+impl Default for SpawnedChildren {
+    fn default() -> Self {
+        Self { server: None, sidecar: None }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -115,10 +146,13 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![get_machine_id])
         .setup(|_app| {
-            // Only spawn services in release builds. In dev, the user runs
-            // `bun run dev` + `bun run sidecar` manually (hot reload).
+            // Register the spawned-children state so the RunEvent loop can
+            // kill children on exit (T-S4).
             #[cfg(not(debug_assertions))]
             {
+                use tauri::Manager;
+                _app.manage(SpawnedChildren::default());
+
                 // Run Prisma migrations BEFORE spawning Next.js.
                 // Ensures the user's SQLite schema is up-to-date on every
                 // app launch. Uses bun to run the migration script.
@@ -129,7 +163,9 @@ pub fn run() {
                 let resource_dir = _app.path().resource_dir()
                     .unwrap_or_else(|_| std::path::PathBuf::from("."));
                 let migration_script = resource_dir.join("scripts/run-migrations.ts");
-                let migration_result = std::process::Command::new("bun")
+                // T-S5: prefer the bundled Bun runtime so end users don't need Bun installed.
+                let bun_cmd = bundled_bun(&resource_dir).unwrap_or_else(|| "bun".to_string());
+                let migration_result = std::process::Command::new(&bun_cmd)
                     .arg(&migration_script)
                     .env("DATABASE_URL", format!("file:{}", db_path.display()))
                     .env("PRISMA_MIGRATIONS_DIR", resource_dir.join("prisma/migrations").to_str().unwrap_or(""))
@@ -153,8 +189,32 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running SahelFlow application");
+        .build(tauri::generate_context!())
+        .expect("error while building SahelFlow application")
+        .run(|_app_handle, event| {
+            // T-S4: kill spawned children on exit so they don't orphan + hold
+            // ports 3000/3001 (which would make the next launch time out and
+            // show a blank window). On Windows this also prevents bun.exe
+            // process accumulation.
+            #[cfg(not(debug_assertions))]
+            {
+                use tauri::Manager;
+                if let tauri::RunEvent::ExitRequested { .. } = event {
+                    if let Some(state) = _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+                        if let Ok(mut children) = state.lock() {
+                            children.kill_all();
+                        }
+                    }
+                }
+                if let tauri::RunEvent::Exit = event {
+                    if let Some(state) = _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+                        if let Ok(mut children) = state.lock() {
+                            children.kill_all();
+                        }
+                    }
+                }
+            }
+        });
 }
 
 /// Shared env vars passed to EVERY spawned child (sidecar + Next.js server +
@@ -212,8 +272,14 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 cmd = cmd.env(k, v);
             }
             match cmd.spawn() {
-                Ok((mut rx, _child)) => {
+                Ok((mut rx, child)) => {
                     eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
+                    // Store the child handle so the RunEvent loop can kill it on exit (T-S4).
+                    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+                        if let Ok(mut children) = state.lock() {
+                            children.sidecar = Some(child);
+                        }
+                    }
                     tauri::async_runtime::spawn(async move {
                         while let Some(event) = rx.recv().await {
                             match event {
@@ -252,28 +318,38 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let server_path = server_js.to_string_lossy().into_owned();
-    let spawn_result = if which_exists("bun") {
-        let mut cmd = app.shell().command("bun", &[server_path.clone()]);
-        for (k, v) in &env {
-            cmd = cmd.env(k, v);
+    // T-S5: prefer the bundled Bun runtime (resource_dir/runtime/bun), then
+    // PATH `bun`, then PATH `node`. End users are Algerian COD sellers who
+    // will NOT have Bun/Node installed — the installer must bundle it.
+    let resource_dir_for_bun = app.path().resource_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let (runtime, runtime_path) = match bundled_bun(&resource_dir_for_bun) {
+        Some(path) => ("bundled-bun", Some(path)),
+        None if which_exists("bun") => ("bun", None),
+        None if which_exists("node") => ("node", None),
+        None => {
+            eprintln!(
+                "[sahelflow] No runtime found: neither bundled bun, PATH bun, nor PATH node. \
+                 Run `bun run scripts/prepare-runtime.ts` before `bun run tauri:build` to bundle the runtime."
+            );
+            return Ok(());
         }
-        cmd.spawn()
-    } else if which_exists("node") {
-        let mut cmd = app.shell().command("node", &[server_path.clone()]);
-        for (k, v) in &env {
-            cmd = cmd.env(k, v);
-        }
-        cmd.spawn()
-    } else {
-        eprintln!(
-            "[sahelflow] Neither `bun` nor `node` found on PATH. Install Bun or Node.js 20+."
-        );
-        return Ok(());
     };
+    let runtime_arg = runtime_path.as_deref().unwrap_or(runtime);
+    let mut cmd = app.shell().command(runtime_arg, &[server_path.clone()]);
+    for (k, v) in &env {
+        cmd = cmd.env(k, v);
+    }
+    let spawn_result = cmd.spawn();
 
     match spawn_result {
-        Ok((_rx, _child)) => {
+        Ok((_rx, child)) => {
             eprintln!("[sahelflow] Next.js server spawned → http://localhost:3000");
+            // Store the child handle so the RunEvent loop can kill it on exit (T-S4).
+            if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+                if let Ok(mut children) = state.lock() {
+                    children.server = Some(child);
+                }
+            }
         }
         Err(e) => eprintln!("[sahelflow] failed to spawn Next.js server: {e}"),
     }
@@ -292,6 +368,21 @@ fn which_exists(cmd: &str) -> bool {
         .stderr(std::process::Stdio::null())
         .status()
         .is_ok()
+}
+
+
+/// T-S5: resolve the Bun runtime to use for spawning the migration script +
+/// Next.js server. Prefers a Bun binary bundled as a Tauri resource
+/// (`<resource_dir>/runtime/bun[.exe]`) so end users do NOT need Bun or Node
+/// installed on their machine. Falls back to PATH `bun`, then PATH `node`.
+#[cfg(not(debug_assertions))]
+fn bundled_bun(resource_dir: &std::path::Path) -> Option<String> {
+    let exe = if cfg!(target_os = "windows") { "bun.exe" } else { "bun" };
+    let candidate = resource_dir.join("runtime").join(exe);
+    if candidate.exists() {
+        return Some(candidate.to_string_lossy().into_owned());
+    }
+    None
 }
 
 #[cfg(not(debug_assertions))]
