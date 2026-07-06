@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteShop, getShop } from "@/lib/shops";
+import { deleteShop, getShop, getActiveShopId } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -40,7 +40,6 @@ export const DELETE = withErrorHandler(
       );
     }
     // Refuse to delete the active shop
-    const { getActiveShopId } = require("@/lib/shops");
     if (getActiveShopId() === id) {
       return NextResponse.json(
         { error: "Cannot delete the active shop — switch to another shop first" },
