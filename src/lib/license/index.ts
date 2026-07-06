@@ -21,7 +21,7 @@ import type {
   MachineId,
   SignedLicense,
 } from "./types";
-import { env } from "@/lib/env";
+import { env, isTauriEnv } from "@/lib/env";
 import { getMachineId } from "./machine-id";
 import { validateLicense, issueTrial } from "./license-service";
 
@@ -102,9 +102,40 @@ export async function verifyLicense(
 }
 
 /**
- * Read the stored license from localStorage (dev) or OS keychain (Tauri).
+ * Read the stored license.
+ *
+ * T-H2: in Tauri (production), the license is stored in Stronghold (the
+ * Tauri secure-storage plugin registered in lib.rs) — not localStorage.
+ * Stronghold encrypts at rest with a vault password (here: the machine-ID
+ * hash, which is deterministic + machine-bound). In dev (browser), falls
+ * back to localStorage. Ed25519 signature verification still prevents
+ * forgery; Stronghold just adds defense-in-depth (license not readable/
+ * copyable from app data in plaintext).
  */
-function readStoredLicense(): SignedLicense | null {
+async function readStoredLicense(machineId?: string): Promise<SignedLicense | null> {
+  // Tauri path — use Stronghold
+  if (isTauriEnv()) {
+    try {
+      const { Stronghold } = await import("@tauri-apps/plugin-stronghold");
+      const vaultPassword = machineId ?? "sahelflow-vault";
+      // Stronghold.load(path, password) — path is the snapshot file location.
+      // Use the app data dir; the Tauri stronghold plugin resolves relative
+      // paths against the app data dir. We use a fixed filename.
+      const stronghold = await Stronghold.load("sahelflow.stronghold", vaultPassword);
+      const client = await stronghold.loadClient("license-client");
+      const store = await client.getStore();
+      const raw = await store.get(STORAGE_KEY);
+      if (!raw) return null;
+      const text = new TextDecoder().decode(raw);
+      return JSON.parse(text) as SignedLicense;
+    } catch (err) {
+      // Stronghold not available / vault locked — fall through to localStorage
+      // so the app still works (fail-open for read, fail-closed is enforced by
+      // signature verification on the license itself).
+      console.warn("[license] Stronghold read failed, falling back to localStorage:", err);
+    }
+  }
+  // Dev / fallback path — localStorage
   if (typeof localStorage === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -116,9 +147,27 @@ function readStoredLicense(): SignedLicense | null {
 }
 
 /**
- * Store a license in localStorage (dev) or OS keychain (Tauri).
+ * Store a license.
+ * T-H2: Stronghold in Tauri, localStorage in dev.
  */
-function storeLicense(license: SignedLicense): void {
+async function storeLicense(license: SignedLicense, machineId?: string): Promise<void> {
+  // Tauri path — Stronghold
+  if (isTauriEnv()) {
+    try {
+      const { Stronghold } = await import("@tauri-apps/plugin-stronghold");
+      const vaultPassword = machineId ?? "sahelflow-vault";
+      const stronghold = await Stronghold.load("sahelflow.stronghold", vaultPassword);
+      const client = await stronghold.loadClient("license-client");
+      const store = await client.getStore();
+      const text = JSON.stringify(license);
+      await store.insert(STORAGE_KEY, Array.from(new TextEncoder().encode(text)));
+      await stronghold.save();
+      return;
+    } catch (err) {
+      console.warn("[license] Stronghold store failed, falling back to localStorage:", err);
+    }
+  }
+  // Dev / fallback path
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(license));
 }
@@ -172,7 +221,7 @@ export async function validateOnLaunch(): Promise<LicenseValidationResult> {
 
   // Step 2: read the stored license. If storage is corrupted/missing, fall
   // through to trial issuance (not an error).
-  const stored = readStoredLicense();
+  const stored = await readStoredLicense(machineId);
 
   if (stored) {
     // Step 3: validate the stored license. Propagate the result — do NOT
@@ -197,7 +246,7 @@ export async function validateOnLaunch(): Promise<LicenseValidationResult> {
   // Step 4: no stored license → issue a 7-day trial.
   try {
     const trial = await issueTrial(machineId);
-    storeLicense(trial);
+    await storeLicense(trial, machineId);
     return {
       status: "valid",
       license: trial,

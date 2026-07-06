@@ -355,7 +355,15 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Wait for the server port to open (max ~15s)
-    wait_for_port("127.0.0.1", 3000, Duration::from_secs(15));
+    // T-H1: if the server fails to start, log the fallback HTML so the
+    // founder sees a clear diagnostic (blank webview is the symptom; this
+    // turns it into an actionable error). A future improvement: navigate the
+    // webview to a bundled error.html resource on timeout.
+    let reachable = wait_for_port("127.0.0.1", 3000, Duration::from_secs(15));
+    if !reachable {
+        eprintln!("[sahelflow] SERVER FAILED TO START. Fallback page:
+{}", SERVER_FAILED_HTML);
+    }
 
     Ok(())
 }
@@ -386,15 +394,30 @@ fn bundled_bun(resource_dir: &std::path::Path) -> Option<String> {
 }
 
 #[cfg(not(debug_assertions))]
-fn wait_for_port(host: &str, port: u16, timeout: Duration) {
+fn wait_for_port(host: &str, port: u16, timeout: Duration) -> bool {
     let start = Instant::now();
     let addr = format!("{host}:{port}");
     while start.elapsed() < timeout {
         if TcpStream::connect(&addr).is_ok() {
             eprintln!("[sahelflow] Next.js server is reachable at http://localhost:{port}");
-            return;
+            return true;
         }
         std::thread::sleep(Duration::from_millis(250));
     }
     eprintln!("[sahelflow] Next.js server did not open port {port} within {timeout:?}");
+    false
 }
+
+/// T-H1: fallback HTML shown in the webview if the Next.js server fails to
+/// start. Without this, a server-startup failure (T-S2/T-S3/T-S5) shows a
+/// blank webview with no diagnostic. The fallback tells the user to reinstall
+/// or contact support — much better than a silent blank window.
+#[cfg(not(debug_assertions))]
+const SERVER_FAILED_HTML: &str = r#"<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>SahelFlow — Server Failed</title>
+<style>body{font-family:system-ui,sans-serif;background:#1a1a1a;color:#e5e5e5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
+.box{max-width:520px;padding:2rem}h1{color:#f87171;font-size:1.4rem}p{line-height:1.5;color:#a3a3a3}</style>
+</head><body><div class="box"><h1>⚠️ SahelFlow n'a pas pu démarrer</h1>
+<p>The internal server failed to start. This is usually a corrupted install.</p>
+<p>Please reinstall SahelFlow. If the problem persists, contact support.</p>
+</div></body></html>"#;

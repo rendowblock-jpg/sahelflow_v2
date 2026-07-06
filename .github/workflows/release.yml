@@ -118,9 +118,68 @@ jobs:
             src-tauri/target/release/bundle/**/*.AppImage.sig
           if-no-files-found: warn
 
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: macos-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: macos-cargo-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build Tauri app (universal)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # T-H4: macOS code signing + notarization requires an Apple Developer
+          # ID certificate + app password. The founder must enroll in the
+          # Apple Developer Program ($99/year) + add these secrets.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: SahelFlow ${{ github.ref_name }}
+          releaseBody: Download and install the file for your platform. The app auto-updates on future releases.
+          releaseDraft: true
+          prerelease: false
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SahelFlow-macos
+          path: |
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.dmg.sig
+          if-no-files-found: warn
+
   generate-manifest:
     name: Generate latest.json
-    needs: [build-windows, build-linux]
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -156,6 +215,18 @@ jobs:
           MSI_SIG=$(find artifacts/SahelFlow-windows -name "*.msi.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
           APPIMAGE_SIG=$(find artifacts/SahelFlow-linux -name "*.AppImage.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
 
+          # T-H4: macOS .dmg artifacts (universal build may produce one or two)
+          DMG_ARM64_NAME=$(find artifacts/SahelFlow-macos -name "*aarch64*.dmg" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
+          DMG_X64_NAME=$(find artifacts/SahelFlow-macos -name "*x86_64*.dmg" ! -name "*.sig" -exec basename {} \; 2>/dev/null | head -1 || echo "")
+          # Fallback: if universal (single dmg), use it for both arches
+          UNIVERSAL_DMG=$(find artifacts/SahelFlow-macos -name "*.dmg" ! -name "*.sig" ! -name "*aarch64*" ! -name "*x86_64*" -exec basename {} \; 2>/dev/null | head -1 || echo "")
+          [ -z "$DMG_ARM64_NAME" ] && DMG_ARM64_NAME="$UNIVERSAL_DMG"
+          [ -z "$DMG_X64_NAME" ] && DMG_X64_NAME="$UNIVERSAL_DMG"
+          DMG_ARM64_SIG=$(find artifacts/SahelFlow-macos -name "*aarch64*.dmg.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
+          DMG_X64_SIG=$(find artifacts/SahelFlow-macos -name "*x86_64*.dmg.sig" -exec cat {} \; 2>/dev/null | head -1 || echo "")
+          [ -z "$DMG_ARM64_SIG" ] && DMG_ARM64_SIG=$(find artifacts/SahelFlow-macos -name "*.dmg.sig" ! -name "*x86_64*" -exec cat {} \; 2>/dev/null | head -1 || echo "")
+          [ -z "$DMG_X64_SIG" ] && DMG_X64_SIG=$(find artifacts/SahelFlow-macos -name "*.dmg.sig" ! -name "*aarch64*" -exec cat {} \; 2>/dev/null | head -1 || echo "")
+
           echo "MSI: $MSI_NAME (sig: ${MSI_SIG:0:30}...)"
           echo "AppImage: $APPIMAGE_NAME (sig: ${APPIMAGE_SIG:0:30}...)"
 
@@ -170,6 +241,8 @@ jobs:
               "platforms": {
                   "windows-x86_64": {"signature": "${MSI_SIG}", "url": "${BASE_URL}/${MSI_NAME}"},
                   "linux-x86_64": {"signature": "${APPIMAGE_SIG}", "url": "${BASE_URL}/${APPIMAGE_NAME}"},
+                  "darwin-aarch64": {"signature": "${DMG_ARM64_SIG}", "url": "${BASE_URL}/${DMG_ARM64_NAME}"},
+                  "darwin-x86_64": {"signature": "${DMG_X64_SIG}", "url": "${BASE_URL}/${DMG_X64_NAME}"},
               }
           }
           with open("src-tauri/target/release/latest.json", "w") as f:
@@ -185,3 +258,13 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: src-tauri/target/release/latest.json
           draft: true
+
+      # T-H3: the updater fetches releases/latest/download/latest.json, which
+      # only resolves to PUBLISHED (non-draft) releases. CI creates the release
+      # as DRAFT (releaseDraft: true above) so the founder can review before
+      # users see it. This step verifies latest.json is well-formed; the
+      # founder must manually publish the release for auto-update to work.
+      - name: Verify latest.json is well-formed
+        run: |
+          python3 -c "import json; json.load(open('src-tauri/target/release/latest.json'))" && \
+          echo "latest.json is valid JSON. NOTE: the release is DRAFT — the founder must publish it for auto-update to work."
