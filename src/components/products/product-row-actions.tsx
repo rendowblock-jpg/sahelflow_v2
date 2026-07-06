@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { mutatePrefix } from "@/lib/swr/mutate";
 

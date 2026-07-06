@@ -20,7 +20,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";

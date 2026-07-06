@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Download, RefreshCw, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 

@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 import { ExternalLink, Pencil, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { StorefrontConfig } from "@/lib/storefront/service";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, ExternalLink, Eye } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 
 import { useI18n } from "@/hooks/use-i18n";

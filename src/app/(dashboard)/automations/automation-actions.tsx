@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   AutomationEditor,
   type AutomationEditorAutomation,

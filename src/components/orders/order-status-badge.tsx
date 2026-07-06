@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { orderStatusStyles } from "@/lib/shared";
 import { getAllowedTransitions } from "@/lib/order-transitions";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import type { OrderStatus } from "@/types/domain";
 

@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useI18n } from "@/hooks/use-i18n";
 
 interface OrderDeleteButtonProps {

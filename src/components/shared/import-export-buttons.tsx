@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Download, Upload, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface ImportExportButtonsProps {
   /** Export API route (e.g. "/api/export/orders") */

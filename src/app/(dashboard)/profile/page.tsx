@@ -10,7 +10,7 @@ import { Loader2, Save, User } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { PhotoUpload } from "@/components/shared/photo-upload";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 interface Profile {
   name?: string;
   email?: string;

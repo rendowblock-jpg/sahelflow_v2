@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus, Loader2 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";

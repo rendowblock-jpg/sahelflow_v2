@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, CheckCircle2, Plug, ExternalLink } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   ShopifyIcon,
   WooCommerceIcon,

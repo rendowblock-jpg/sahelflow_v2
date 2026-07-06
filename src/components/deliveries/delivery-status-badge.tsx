@@ -22,7 +22,7 @@ import {
 import { Check, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { mutatePrefix } from "@/lib/swr/mutate";
 
 const STATUS_STYLES: Record<string, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {

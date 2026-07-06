@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Plus, Loader2, X } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";

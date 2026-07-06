@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Check, Store, Truck, Bot, Package, ArrowRight, ArrowLeft, SkipForward } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const STEPS = [
   { id: "business", icon: Store, key: "onboarding.steps.business" },

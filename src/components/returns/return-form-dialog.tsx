@@ -7,7 +7,7 @@ import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";

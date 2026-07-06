@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus, Loader2 } from "lucide-react";
 import { useShopStore } from "@/stores/shop-store";
 import { useI18n } from "@/hooks/use-i18n";

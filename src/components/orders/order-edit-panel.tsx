@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface OrderItem {
   id: string;
