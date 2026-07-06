@@ -447,6 +447,10 @@ describe("ZR Express delivery adapter (deep)", () => {
 
   describe("status string mapping", () => {
     const cases: Array<[string, string]> = [
+      // D-S2: failed-delivery strings must map to "failed", NOT "delivered"
+      // ("non livré" contains "livré" — must be checked first).
+      ["Non livré", "failed"],
+      ["Non livre", "failed"],
       ["Livré", "delivered"],
       ["delivre", "delivered"],
       ["Retour définitif", "returned"],

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgentStream, type AgentMessage, type AgentStreamEvent, type AgentResult } from "@/lib/ai/chat/agent";
 import { isAuthenticated } from "@/lib/auth/server";
+import { redactPii } from "@/lib/redact-pii";
 
 export const dynamic = "force-dynamic";
 
@@ -166,7 +167,7 @@ export async function POST(
             content: assistantResponse || "(erreur)",
             toolCalls:
               assistantToolCalls.length > 0
-                ? JSON.stringify(assistantToolCalls)
+                ? JSON.stringify(redactPii(assistantToolCalls))
                 : null,
           },
         });

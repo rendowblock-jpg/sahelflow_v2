@@ -76,6 +76,11 @@ function normalizePhone(phone: string): string {
 /** Map ZR Express's French situation strings to our normalized DeliveryStatus. */
 function mapStatus(situation: string): DeliveryStatus {
   const s = situation.toLowerCase().trim();
+  // D-S2: "Non livré" must be checked BEFORE the "livré" branch —
+  // "non livré".includes("livré") is true, so without this guard failed
+  // deliveries are silently mapped to "delivered" (same bug class as the
+  // fixed DHD I3). Yalidine + DHD already have this guard; ZR Express did not.
+  if (s.includes("non livré") || s.includes("non livre")) return "failed";
   if (s.includes("livré") || s === "delivre" || s === "delivered") return "delivered";
   if (s.includes("retour") && !s.includes("pret")) return "returned";
   if (s.includes("refus")) return "refused";
