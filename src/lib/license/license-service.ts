@@ -334,12 +334,22 @@ export async function isLicenseValid(): Promise<boolean> {
     ]);
 
     if (statusRow?.value && payloadRow?.value) {
-      // Re-verify the license blob against the public key
+      // Re-verify the license blob against the public key.
+      //
+      // Session 29 fix (AUDIT-3 S1 + AUDIT-7 AI5): previously this called
+      // getMachineId() which returns "ssr-placeholder" server-side →
+      // validateLicense always failed the machineIds.includes() check →
+      // requireLicense() always 403'd in production.
+      // Now we read the machine ID that the client persisted via /api/license/sync.
       const license = JSON.parse(payloadRow.value) as SignedLicense;
-      const { getMachineId } = await import("./machine-id");
       const { env } = await import("@/lib/env");
-      const machineId = await getMachineId();
-      const result = await validateLicense(license, machineId, env.appVersion);
+      const machineIdRow = await db.setting.findUnique({ where: { key: "active_machine_id" } });
+      if (!machineIdRow?.value) {
+        // No machine ID synced yet — license not properly activated.
+        // Fail-closed in production.
+        return false;
+      }
+      const result = await validateLicense(license, machineIdRow.value, env.appVersion);
       cachedResult = result;
       cachedAt = Date.now();
       return result.status === "valid";

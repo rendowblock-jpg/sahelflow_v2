@@ -81,6 +81,10 @@ export function useLicense() {
           body: JSON.stringify({
             license: currentLicense,
             clientStatus: result.status,
+            // Session 29 fix (AUDIT-3 S1): send the client machineId so the
+            // server can re-verify the license against the correct machine.
+            // Safe because the license signature covers payload.machineIds.
+            machineId: mid,
           }),
         }).catch(() => { /* best-effort */ });
       }

@@ -15,7 +15,7 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { setCachedLicenseResult, validateLicense } from "@/lib/license/license-service";
-import { getMachineId } from "@/lib/license/machine-id";
+// getMachineId no longer imported — server uses client-supplied machineId (AUDIT-3 S1 fix)
 import { env } from "@/lib/env";
 import type { LicenseValidationResult, SignedLicense } from "@/lib/license/types";
 
@@ -35,6 +35,13 @@ const syncSchema = z.object({
   }),
   // Client's claimed status (for informational purposes — server re-verifies)
   clientStatus: z.string().optional(),
+  // Session 29 fix (AUDIT-3 S1 + AUDIT-7 AI5): the client's machine ID.
+  // The server cannot compute this itself (getMachineId returns
+  // "ssr-placeholder" server-side). It is SAFE to trust the client-supplied
+  // machineId because the license signature is verified against the embedded
+  // public key — a forged machineId would fail signature verification
+  // (the signature covers payload.machineIds which must include this ID).
+  machineId: z.string().min(8),
 });
 
 export const POST = withErrorHandler(async (req: Request) => {
@@ -45,12 +52,17 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   // SERVER-SIDE RE-VERIFICATION (the fix):
   // Don't trust the client's status claim. Re-run validateLicense with the
-  // actual signed blob + the server's machine ID + app version.
+  // actual signed blob + the client-supplied machine ID + app version.
+  //
+  // Session 29 fix (AUDIT-3 S1 + AUDIT-7 AI5): previously this called
+  // getMachineId() server-side which returned "ssr-placeholder" →
+  // validateLicense always failed the machineIds.includes() check →
+  // requireLicense() always 403'd in production. Tests passed because
+  // getMachineId was mocked.
   let result: LicenseValidationResult;
   try {
-    const machineId = await getMachineId();
     const appVersion = env.appVersion;
-    result = await validateLicense(license, machineId, appVersion);
+    result = await validateLicense(license, input.machineId, appVersion);
   } catch (err) {
     result = {
       status: "invalid",
@@ -70,6 +82,14 @@ export const POST = withErrorHandler(async (req: Request) => {
     where: { key: "active_license_payload" },
     create: { key: "active_license_payload", value: JSON.stringify(license) },
     update: { value: JSON.stringify(license) },
+  });
+
+  // Store the machine ID so server-side requireLicense() can re-verify
+  // without calling getMachineId() (which returns "ssr-placeholder" SSR).
+  await db.setting.upsert({
+    where: { key: "active_machine_id" },
+    create: { key: "active_machine_id", value: input.machineId },
+    update: { value: input.machineId },
   });
 
   // Update the in-memory cache
