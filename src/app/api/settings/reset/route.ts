@@ -31,7 +31,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     await tx.refund.deleteMany({});
     await tx.return.deleteMany({});
     await tx.delivery.deleteMany({});
-    await tx.reservationItem.deleteMany({});
     await tx.orderItem.deleteMany({});
     await tx.order.deleteMany({});
     await tx.message.deleteMany({});

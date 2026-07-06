@@ -63,8 +63,6 @@ model Product {
   orderItems       OrderItem[]
 
   @@unique([sku])
-  // Phase 4: reverse relation for inventory reservations
-  reservations    ReservationItem[]
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
   @@index([categoryId])
@@ -159,7 +157,6 @@ model Order {
   returns         Return[]
   orderChanges    OrderChange[]
   refunds         Refund[]
-  reservations    ReservationItem[]
 
   @@unique([orderNumber])
   @@unique([source, sourceOrderId])
@@ -726,23 +723,6 @@ model Refund {
 
 /// Inventory reservation — soft-holds stock between order creation and
 /// fulfillment. available = stocked - reserved. Restocked on cancel.
-model ReservationItem {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  quantity    Int
-  createdAt   DateTime @default(now())
-  // Released when the fulfillment is created (stock decremented) or order cancelled
-  releasedAt  DateTime?
-
-  @@index([productId])
-  @@index([orderId])
-  @@index([releasedAt])
-}
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE 6 (Session 30 D2): PHONE REPUTATION REGISTRY
