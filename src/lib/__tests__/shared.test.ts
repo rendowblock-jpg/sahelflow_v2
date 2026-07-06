@@ -157,8 +157,8 @@ describe("getRiskConfig", () => {
   it("returns low-risk style for scores ≤ 30", () => {
     const cfg: RiskConfig = getRiskConfig(0);
     expect(cfg.i18nKey).toBe("customers.riskLow");
-    expect(cfg.bg).toContain("emerald");
-    expect(cfg.progressColor).toBe("bg-emerald-500");
+    expect(cfg.bg).toContain("success");
+    expect(cfg.progressColor).toBe("bg-success");
   });
 
   it("returns low-risk style at exactly 30", () => {
@@ -168,8 +168,8 @@ describe("getRiskConfig", () => {
   it("returns medium-risk style for scores 31-60", () => {
     const cfg = getRiskConfig(45);
     expect(cfg.i18nKey).toBe("customers.riskMedium");
-    expect(cfg.bg).toContain("amber");
-    expect(cfg.progressColor).toBe("bg-amber-500");
+    expect(cfg.bg).toContain("warning");
+    expect(cfg.progressColor).toBe("bg-warning");
   });
 
   it("returns medium-risk style at exactly 60", () => {
@@ -179,8 +179,8 @@ describe("getRiskConfig", () => {
   it("returns high-risk style for scores > 60", () => {
     const cfg = getRiskConfig(85);
     expect(cfg.i18nKey).toBe("customers.riskHigh");
-    expect(cfg.bg).toContain("red");
-    expect(cfg.progressColor).toBe("bg-red-500");
+    expect(cfg.bg).toContain("destructive");
+    expect(cfg.progressColor).toBe("bg-destructive");
   });
 
   it("returns high-risk style for score 100", () => {
