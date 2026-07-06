@@ -8,7 +8,46 @@
  * and the smart router falls back to manual entry.
  */
 
+import { z } from "zod";
 import type { ExtractedOrder, ExtractionResult, ExtractionInput } from "./types";
+
+// Session 30 (AUDIT-7 AI2): runtime schema for the Gemini response.
+// Mirrors the ExtractedOrder type but with runtime validation + coercion.
+export const ExtractedOrderSchema = z.object({
+  customerName: z.string().optional(),
+  phone: z.string().optional(),
+  wilaya: z.string().optional(),
+  commune: z.string().optional(),
+  address: z.string().optional(),
+  items: z.array(z.object({
+    productName: z.string(),
+    quantity: z.number().int().min(1).or(z.string().transform((v, ctx) => {
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 1) {
+        ctx.addIssue({ code: "custom", message: "Invalid quantity" });
+        return z.NEVER;
+      }
+      return n;
+    })),
+    unitPrice: z.number().min(0).optional().or(z.string().transform((v, ctx) => {
+      const n = parseFloat(v);
+      if (isNaN(n) || n < 0) {
+        ctx.addIssue({ code: "custom", message: "Invalid unitPrice" });
+        return z.NEVER;
+      }
+      return n;
+    })).optional(),
+  })).min(0),
+  totalPrice: z.number().min(0).optional().or(z.string().transform((v, ctx) => {
+    const n = parseFloat(v);
+    if (isNaN(n) || n < 0) {
+      ctx.addIssue({ code: "custom", message: "Invalid totalPrice" });
+      return z.NEVER;
+    }
+    return n;
+  })).optional(),
+  notes: z.string().optional(),
+});
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_USER_PROMPT } from "../prompts/extraction";
 
 // Gemini API endpoint (Google AI Studio)
@@ -34,25 +73,34 @@ function parseGeminiResponse(text: string): ExtractedOrder | null {
     json = json.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   }
 
+  // Session 30 (AUDIT-7 AI2): zod-validate the response. Previously this
+  // did JSON.parse + `as ExtractedOrder` — hallucinated fields (e.g.
+  // quantity: "two", unitPrice: "free") passed through silently and broke
+  // downstream consumers.
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(json);
-    // Validate the shape
-    if (!parsed.items || !Array.isArray(parsed.items)) {
-      return null;
-    }
-    return parsed as ExtractedOrder;
+    parsed = JSON.parse(json);
   } catch {
     // Try to extract JSON from the text
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        return JSON.parse(jsonMatch[0]);
+        parsed = JSON.parse(jsonMatch[0]);
       } catch {
         return null;
       }
+    } else {
+      return null;
     }
+  }
+
+  const result = ExtractedOrderSchema.safeParse(parsed);
+  if (!result.success) {
+    // Log the validation errors for debugging
+    console.warn("[extraction] Gemini response failed zod validation:", result.error.issues);
     return null;
   }
+  return result.data;
 }
 
 export interface GeminiExtractorOptions {

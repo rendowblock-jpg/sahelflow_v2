@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireLicense } from "@/lib/license/license-service";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
+import { redactPii } from "@/lib/redact-pii";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -29,6 +31,8 @@ const sendSchema = z.object({
 /** POST /api/ai/sessions/[id]/messages — send a message + get AI response. */
 export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
+  // Session 30 (AUDIT-7 AI5): license gate on message send (not just session create)
+  await requireLicense();
   const { id } = await params;
   const body = await req.json();
   const input = sendSchema.parse(body);
@@ -61,7 +65,12 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
       sessionId: id,
       role: "assistant",
       content: result.response || "(erreur)",
-      toolCalls: result.toolCalls.length > 0 ? JSON.stringify(result.toolCalls) : null,
+      // Session 30 (AUDIT-7 AI3): redact PII before persisting tool calls.
+      // Tool results can contain customer phone, address, notes — these would
+      // be stored in plaintext, defeating the PII-encryption architecture.
+      toolCalls: result.toolCalls.length > 0
+        ? JSON.stringify(redactPii(result.toolCalls))
+        : null,
     },
   });
 

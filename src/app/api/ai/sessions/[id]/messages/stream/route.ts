@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { requireLicense } from "@/lib/license/license-service";
+import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgentStream, type AgentMessage, type AgentStreamEvent, type AgentResult } from "@/lib/ai/chat/agent";
@@ -44,6 +46,25 @@ export async function POST(
   if (!(await isAuthenticated())) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Session 30 (AUDIT-7 AI5): license gate on message stream (not just session create)
+  try {
+    await requireLicense();
+  } catch {
+    return new Response(JSON.stringify({ error: "License required" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Session 30 (AUDIT-7 AI4): rate limit
+  const rl = checkRateLimit(id);
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: rl.reason ?? "Rate limited" }), {
+      status: 429,
       headers: { "Content-Type": "application/json" },
     });
   }

@@ -412,20 +412,36 @@ registerTool({
         return { success: false, error: result.error ?? "Échec de la création de livraison" };
       }
 
-      // Create the Delivery record + update order status to 'shipped'
-      const delivery = await db.delivery.create({
-        data: {
-          orderId: order.id,
-          provider: input.provider,
-          trackingNumber: result.trackingId,
-          cost: result.cost,
-          status: "created",
-        },
-      });
-
-      await db.order.update({
-        where: { id: order.id },
-        data: { status: "shipped", shippedAt: new Date() },
+      // Session 30 (AUDIT-7 AI7): wrap delivery create + order status update
+      // in a $transaction. Previously these were two separate writes — if the
+      // second failed, you had a Delivery record but the order was still
+      // 'confirmed' (and re-running the tool would error out because a
+      // delivery already exists).
+      const delivery = await db.$transaction(async (tx) => {
+        const d = await tx.delivery.create({
+          data: {
+            orderId: order.id,
+            provider: input.provider,
+            trackingNumber: result.trackingId,
+            cost: result.cost,
+            status: "created",
+          },
+        });
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: "shipped", shippedAt: new Date() },
+        });
+        // Ledger entry — same tx
+        await tx.orderChange.create({
+          data: {
+            orderId: order.id,
+            actionType: "status_change",
+            actor: "ai",
+            status: "confirmed",
+            payload: JSON.stringify({ from: "confirmed", to: "shipped", reason: "ai_assign_delivery" }),
+          },
+        });
+        return d;
       });
 
       return {
@@ -774,9 +790,12 @@ registerTool({
             {
               OR: [
                 { orderNumber: { contains: q } },
-                { phone: { contains: q } },
+                // Session 30 (AUDIT-7 AI6): removed { phone: { contains: q } } and
+                // { customer: { phone: { contains: q } } } — these search AES-GCM
+                // ciphertext and return nothing. Phone search requires the blind
+                // index (phoneBlindIndex), which is a separate code path. For now,
+                // search by order number + customer name only.
                 { customer: { name: { contains: q } } },
-                { customer: { phone: { contains: q } } },
               ],
             },
           ],
