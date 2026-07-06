@@ -588,6 +588,10 @@ describe("search_orders", () => {
   });
 
   it("finds orders by customer name substring", async () => {
+    // AI-S1: customer.name is AES-GCM encrypted in production. This test uses
+    // the raw PrismaClient (no PII extension), so it validates the in-memory
+    // decrypt+filter logic on plaintext — the same filter runs on decrypted
+    // ciphertext in production (the PII extension decrypts on read).
     const c1 = await seedCustomer(db, { name: "Fatima Zohra", phone: uniquePhone() });
     const c2 = await seedCustomer(db, { name: "Mohamed Saidi", phone: uniquePhone() });
     await db.order.create({
@@ -602,6 +606,25 @@ describe("search_orders", () => {
 
     expect(result.success).toBe(true);
     const data = result.data as Array<{ orderNumber: string; customerName: string }>;
+    expect(data).toHaveLength(1);
+    expect(data[0]!.customerName).toBe("Fatima Zohra");
+  });
+
+  it("finds orders by customer name case-insensitively (AI-S1 in-memory filter)", async () => {
+    // AI-S1: the in-memory filter lowercases both the query and customer.name
+    // so "ZOHRA" matches "Fatima Zohra". Verifies the case-insensitive
+    // substring matching that the DB-level `contains` (case-sensitive in
+    // SQLite) did not provide.
+    const c = await seedCustomer(db, { name: "Fatima Zohra", phone: uniquePhone() });
+    await db.order.create({
+      data: { orderNumber: "ORD-CI-1", status: "draft", customerId: c.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
+    });
+
+    const tool = getTool("search_orders")!;
+    const result = await tool.execute({ query: "ZOHRA" }, ctx());
+
+    expect(result.success).toBe(true);
+    const data = result.data as Array<{ customerName: string }>;
     expect(data).toHaveLength(1);
     expect(data[0]!.customerName).toBe("Fatima Zohra");
   });

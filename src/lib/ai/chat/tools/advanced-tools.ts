@@ -779,37 +779,50 @@ registerTool({
       const input = searchOrdersSchema.parse(params);
       const db = getDb(ctx);
       const q = input.query.trim();
+      const qLower = q.toLowerCase();
 
-      // Search by order number first (exact-ish), then by customer name/phone
-      const orders = await db.order.findMany({
+      // AI-S1: Customer.name is AES-256-GCM encrypted at rest (see
+      // CUSTOMER_PII_FIELDS in src/lib/db.ts). A DB-level `contains` filter on
+      // customer.name searches CIPHERTEXT and returns nothing in production
+      // (tests pass only because they use the raw PrismaClient without the PII
+      // extension — the resume guide's "tests pass ≠ production works" caveat
+      // for PII fields). Same bug class as the fixed AI6 (search_conversations).
+      //
+      // Fix: fetch a bounded window of recent orders (the PII extension
+      // transparently decrypts customer.name/phone on read) with NO
+      // name/phone DB-level filter, then match by orderNumber OR decrypted
+      // customer.name in memory. orderNumber is NOT encrypted but we match it
+      // in memory too (simpler + case-insensitive). A COD seller's recent-
+      // order window is bounded (thousands, not millions), so 500 is a
+      // generous safety bound; results are sliced to `limit` afterward.
+      const candidateOrders = await db.order.findMany({
         where: {
           AND: [
             { deletedAt: null },
             { customer: { deletedAt: null } },
             input.status ? { status: input.status } : {},
-            {
-              OR: [
-                { orderNumber: { contains: q } },
-                // Session 30 (AUDIT-7 AI6): removed { phone: { contains: q } } and
-                // { customer: { phone: { contains: q } } } — these search AES-GCM
-                // ciphertext and return nothing. Phone search requires the blind
-                // index (phoneBlindIndex), which is a separate code path. For now,
-                // search by order number + customer name only.
-                { customer: { name: { contains: q } } },
-              ],
-            },
           ],
         },
         include: {
           customer: { select: { name: true, phone: true } },
         },
         orderBy: { createdAt: "desc" },
-        take: input.limit,
+        take: 500,
       });
+
+      // In-memory filter: match orderNumber OR decrypted customer.name
+      // (case-insensitive substring on both).
+      const matched = candidateOrders
+        .filter((o) => {
+          const name = (o.customer.name ?? "").toLowerCase();
+          const num = (o.orderNumber ?? "").toLowerCase();
+          return name.includes(qLower) || num.includes(qLower);
+        })
+        .slice(0, input.limit);
 
       return {
         success: true,
-        data: orders.map((o) => ({
+        data: matched.map((o) => ({
           orderNumber: o.orderNumber,
           status: o.status,
           totalPrice: o.totalPrice,
