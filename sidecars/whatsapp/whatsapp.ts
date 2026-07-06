@@ -62,6 +62,9 @@ export interface IncomingMessage {
 
 export interface SidecarEvent {
   type: "status" | "qr" | "message" | "message-update";
+  // Session 30 (AUDIT-6 I4): message-update now carries the actual updates
+  // (was a hardcoded empty message object).
+  updates?: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>;
   status?: ConnectionStatus;
   user?: WhatsAppUser;
   qr?: string;
@@ -226,13 +229,21 @@ class WhatsAppManager {
       }
     });
 
+    // Session 30 (AUDIT-6 I4): emit the ACTUAL update data (not empty).
+    // Previously this emitted a hardcoded empty message object — consumers
+    // (the dashboard WS hook) had no way to know which message was updated
+    // or what the new status was. Now we emit { updates: [{ jid, id, update }] }.
     this.sock.ev.on("messages.update", (updates) => {
-      const ids = updates
+      const updateList = updates
         .filter((u) => u.key.remoteJid && u.key.id)
-        .map((u) => ({ jid: u.key.remoteJid ?? "", id: u.key.id ?? "", update: u.update ?? {} }));
-      if (ids.length) {
-        this.emit({ type: "message-update", message: { key: { remoteJid: "", fromMe: false, id: "" }, message: {}, messageTimestamp: 0 } });
-        void ids; // (event shape kept simple; WS consumers re-fetch)
+        .map((u) => ({
+          jid: u.key.remoteJid ?? "",
+          id: u.key.id ?? "",
+          fromMe: u.key.fromMe ?? false,
+          update: u.update ?? {},
+        }));
+      if (updateList.length) {
+        this.emit({ type: "message-update", updates: updateList } as SidecarEvent);
       }
     });
 

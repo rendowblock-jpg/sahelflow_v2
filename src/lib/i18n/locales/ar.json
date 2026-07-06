@@ -2445,5 +2445,15 @@
   "inbox.cannedResponses.empty": "لا توجد ردود محفوظة بعد. أنشئ بعضًا في الإعدادات.",
   "inbox.cannedResponses.insert": "إدراج الرد",
   "inbox.cannedResponses.noResults": "لا توجد نتائج مطابقة",
-  "inbox.cannedResponses.open": "تصفح الردود المحفوظة"
+  "inbox.cannedResponses.open": "تصفح الردود المحفوظة",
+  "settings.dangerZone.typeReset": "اكتب \"RESET\" للتأكيد",
+  "settings.dangerZone.resetSuccess": "تمت إعادة تعيين قاعدة البيانات",
+  "settings.dangerZone.resetFailed": "فشل إعادة التعيين",
+  "settings.appearance.title": "المظهر",
+  "settings.appearance.theme": "السمة",
+  "settings.appearance.density": "الكثافة",
+  "settings.appearance.comfortable": "مريح",
+  "settings.appearance.compact": "مضغوط",
+  "integrations.syncNow": "مزامنة الآن",
+  "integrations.syncFailed": "فشلت المزامنة"
 }

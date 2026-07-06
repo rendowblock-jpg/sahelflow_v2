@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Download, Trash2 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { useI18n } from "@/hooks/use-i18n";
 
 export function DangerZonePanel() {
+  const { t } = useI18n();
   const [confirmText, setConfirmText] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleReset() {
     if (confirmText !== "RESET") {
-      toast.error('Type "RESET" to confirm');
+      toast.error(t("settings.dangerZone.typeReset"));
       return;
     }
     setLoading(true);
@@ -24,11 +26,11 @@ export function DangerZonePanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: confirmText }),
       });
-      if (!res.ok) throw new Error("Reset failed");
-      toast.success("Database reset successfully");
+      if (!res.ok) throw new Error(t("settings.dangerZone.resetFailed"));
+      toast.success(t("settings.dangerZone.resetSuccess"));
       window.location.href = "/setup";
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Reset failed");
+      toast.error(err instanceof Error ? err.message : t("settings.dangerZone.resetFailed"));
     } finally {
       setLoading(false);
     }

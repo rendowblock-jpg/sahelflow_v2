@@ -225,6 +225,29 @@ export function IntegrationsPanel({
     }
   };
 
+  // Session 30 (AUDIT-6 I2): "Sync now" button — calls /api/integrations/sync
+  // to pull orders from connected e-commerce platforms (Shopify/Woo/YouCan).
+  // Previously this endpoint required x-cron-secret + no client ever called it.
+  const [syncing, setSyncing] = useState(false);
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/integrations/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync failed");
+      const synced = Array.isArray(data.results) ? data.results.length : 0;
+      toast.success(t("integrations.syncSuccess") + (synced > 0 ? ` (${synced} order(s))` : ""));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("integrations.syncFailed"));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!connecting) return;
     setSaving(true);
@@ -265,6 +288,17 @@ export function IntegrationsPanel({
   return (
     <div className="space-y-6">
       <div>
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncNow}
+            disabled={syncing}
+          >
+            {syncing ? t("integrations.syncing") : t("integrations.syncNow")}
+          </Button>
+        </div>
+
         <h2 className="text-lg font-semibold">{t("settings.tab.integrations")}</h2>
         <p className="text-sm text-muted-foreground mt-1">{t("integrations.subtitle")}</p>
       </div>

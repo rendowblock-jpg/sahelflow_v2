@@ -2445,5 +2445,15 @@
   "inbox.cannedResponses.empty": "Aucune réponse enregistrée. Créez-en dans les Paramètres.",
   "inbox.cannedResponses.insert": "Insérer la réponse",
   "inbox.cannedResponses.noResults": "Aucune correspondance",
-  "inbox.cannedResponses.open": "Parcourir les réponses enregistrées"
+  "inbox.cannedResponses.open": "Parcourir les réponses enregistrées",
+  "settings.dangerZone.typeReset": "Tapez \"RESET\" pour confirmer",
+  "settings.dangerZone.resetSuccess": "Base de données réinitialisée",
+  "settings.dangerZone.resetFailed": "Échec de la réinitialisation",
+  "settings.appearance.title": "Apparence",
+  "settings.appearance.theme": "Thème",
+  "settings.appearance.density": "Densité",
+  "settings.appearance.comfortable": "Confortable",
+  "settings.appearance.compact": "Compact",
+  "integrations.syncNow": "Synchroniser",
+  "integrations.syncFailed": "Échec de la synchronisation"
 }

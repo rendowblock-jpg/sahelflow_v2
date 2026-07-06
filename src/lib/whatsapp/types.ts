@@ -42,6 +42,8 @@ export interface SidecarEvent {
   user?: WhatsAppUser;
   qr?: string;
   message?: IncomingMessage;
+  /** Session 30 (AUDIT-6 I4): message-update events carry the actual updates. */
+  updates?: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>;
 }
 
 /** Extract the readable text from a Baileys message object. */

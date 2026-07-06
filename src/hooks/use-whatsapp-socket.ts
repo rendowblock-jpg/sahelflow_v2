@@ -9,6 +9,10 @@ interface UseWhatsAppSocketOptions {
   onStatusChange?: (status: WhatsAppStatus, user: WhatsAppUser | null) => void;
   /** Fired when a new incoming message arrives. */
   onMessage?: (message: IncomingMessage) => void;
+  /** Session 30 (AUDIT-6 I4): fired when messages are updated (delivery
+   * receipts, read receipts, edits, deletions). Each update has the jid,
+   * message id, fromMe flag, and the partial update object from Baileys. */
+  onMessageUpdate?: (updates: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>) => void;
 }
 
 interface UseWhatsAppSocketResult {
@@ -34,7 +38,7 @@ interface UseWhatsAppSocketResult {
 export function useWhatsAppSocket(
   options: UseWhatsAppSocketOptions = {},
 ): UseWhatsAppSocketResult {
-  const { onStatusChange, onMessage } = options;
+  const { onStatusChange, onMessage, onMessageUpdate } = options;
 
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
   const [user, setUser] = useState<WhatsAppUser | null>(null);
@@ -44,12 +48,17 @@ export function useWhatsAppSocket(
   // Latest callbacks in refs (avoid stale closures + avoid re-subscribing)
   const onStatusChangeRef = useRef(onStatusChange);
   const onMessageRef = useRef(onMessage);
+  const onMessageUpdateRef = useRef(onMessageUpdate);
   useEffect(() => {
     onStatusChangeRef.current = onStatusChange;
   }, [onStatusChange]);
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
+
+  useEffect(() => {
+    onMessageUpdateRef.current = onMessageUpdate;
+  }, [onMessageUpdate]);
 
   const reconnectAttempt = useRef(0);
 
@@ -115,6 +124,9 @@ export function useWhatsAppSocket(
               onStatusChangeRef.current?.("qr", null);
             } else if (data.type === "message" && data.message) {
               onMessageRef.current?.(data.message);
+            } else if (data.type === "message-update" && data.updates) {
+              // Session 30 (AUDIT-6 I4): handle delivery/read receipts, edits, deletions
+              onMessageUpdateRef.current?.(data.updates);
             }
           } catch {
             /* ignore malformed frames */

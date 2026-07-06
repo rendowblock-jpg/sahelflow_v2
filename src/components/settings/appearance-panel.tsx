@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
+import { useI18n } from "@/hooks/use-i18n";
 
 export function AppearancePanel() {
+  const { t } = useI18n();
   const { theme, setTheme } = useTheme();
   const [density, setDensity] = useState<"comfortable" | "compact">(
     typeof window !== "undefined" ? (localStorage.getItem("sf-density") as "comfortable" | "compact") ?? "comfortable" : "comfortable"
@@ -16,12 +18,12 @@ export function AppearancePanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Appearance</CardTitle>
+        <CardTitle>{t("settings.appearance.title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Theme */}
         <div className="space-y-2">
-          <Label>Theme</Label>
+          <Label>{t("settings.appearance.theme")}</Label>
           <div className="flex gap-2">
             {(["light", "dark", "system"] as const).map((t) => (
               <button

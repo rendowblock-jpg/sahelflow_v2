@@ -2445,5 +2445,15 @@
   "inbox.cannedResponses.empty": "No saved replies yet. Create some in Settings.",
   "inbox.cannedResponses.insert": "Insert reply",
   "inbox.cannedResponses.noResults": "No matches",
-  "inbox.cannedResponses.open": "Browse saved replies"
+  "inbox.cannedResponses.open": "Browse saved replies",
+  "settings.dangerZone.typeReset": "Type \"RESET\" to confirm",
+  "settings.dangerZone.resetSuccess": "Database reset successfully",
+  "settings.dangerZone.resetFailed": "Reset failed",
+  "settings.appearance.title": "Appearance",
+  "settings.appearance.theme": "Theme",
+  "settings.appearance.density": "Density",
+  "settings.appearance.comfortable": "Comfortable",
+  "settings.appearance.compact": "Compact",
+  "integrations.syncNow": "Sync now",
+  "integrations.syncFailed": "Sync failed"
 }
