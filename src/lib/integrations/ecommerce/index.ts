@@ -54,10 +54,13 @@ export async function loadEcommerceCredentials(
 
   switch (platform) {
     case "shopify": {
-      const shop = await getSecret(keys.shop!);
+      // Session 29 fix (AUDIT-6 I1): UI sends `shopDomain` (e.g. "acme-store.myshopify.com"
+      // or "acme-store"). The previous loader read `keys.shop` (i.e. `ecommerce_shopify_shop`)
+      // which the connect route never wrote -> null -> "credentials missing" in prod.
+      const shopDomain = await getSecret(keys.shopDomain!);
       const accessToken = await getSecret(keys.accessToken!);
-      if (!shop || !accessToken) return null;
-      const creds: ShopifyCredentials = { shop, accessToken };
+      if (!shopDomain || !accessToken) return null;
+      const creds: ShopifyCredentials = { shop: shopDomain, accessToken };
       return creds;
     }
     case "woocommerce": {

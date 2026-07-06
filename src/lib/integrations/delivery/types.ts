@@ -131,16 +131,30 @@ export function deliverySecretKey(provider: string, field: string): string {
 }
 
 /** All secret keys for a provider (used by the credentials loader). */
+/**
+ * All secret keys for a provider (used by the credentials loader).
+ *
+ * CRITICAL: the field-name suffix here MUST match:
+ *   (a) the key the credentials-save route writes — i.e. the body field name
+ *       the UI sends in `credentials: { ... }` (camelCase), AND
+ *   (b) the field name the adapter reads (e.g. `creds.apiId`).
+ *
+ * Session 29 fix (AUDIT-6 I1): previously these used snake_case
+ * (`api_id`, `api_token`) while the UI + adapters used camelCase
+ * (`apiId`, `apiToken`) -> loader returned snake_case keys -> adapter
+ * `creds.apiId` was undefined -> "credentials missing" in production.
+ * Tests passed because they bypassed the loader.
+ */
 export function deliverySecretKeys(provider: string): string[] {
   switch (provider) {
     case "yalidine":
-      return [deliverySecretKey("yalidine", "api_id"), deliverySecretKey("yalidine", "api_token")];
+      return [deliverySecretKey("yalidine", "apiId"), deliverySecretKey("yalidine", "apiToken")];
     case "maystro":
-      return [deliverySecretKey("maystro", "api_token")];
+      return [deliverySecretKey("maystro", "apiToken")];
     case "zrexpress":
-      return [deliverySecretKey("zrexpress", "api_id"), deliverySecretKey("zrexpress", "api_key")];
+      return [deliverySecretKey("zrexpress", "apiId"), deliverySecretKey("zrexpress", "apiKey")];
     case "dhd":
-      return [deliverySecretKey("dhd", "api_token")];
+      return [deliverySecretKey("dhd", "apiToken")];
     default:
       return [];
   }

@@ -102,20 +102,34 @@ export interface EcommerceAdapter {
  * Secret keys for e-commerce credentials (stored encrypted in the Secret table).
  * Convention: `ecommerce_{platform}_{field}`.
  */
+/**
+ * Secret keys for e-commerce credentials (stored encrypted in the Secret table).
+ * Convention: `ecommerce_{platform}_{field}` where {field} matches the camelCase
+ * key the UI sends in the POST body to /api/integrations/connect AND the
+ * camelCase field name the typed credentials interface (ShopifyCredentials etc.)
+ * uses.
+ *
+ * Session 29 fix (AUDIT-6 I1): previously these used snake_case suffixes
+ * (`ecommerce_shopify_access_token`) while the connect route wrote
+ * `ecommerce_${provider}_${camelCaseKey}` (e.g. `ecommerce_shopify_accessToken`)
+ * - the loader returned null -> every adapter call failed with "credentials
+ * missing" in production. Also fixed: Shopify UI sends `shopDomain` (not
+ * `shop`), so the loader key is now `shopDomain` to match.
+ */
 export const ECOMMERCE_SECRET_KEYS: Record<
   EcommercePlatform,
   Record<string, string>
 > = {
   shopify: {
-    shop: "ecommerce_shopify_shop",
-    accessToken: "ecommerce_shopify_access_token",
+    shopDomain: "ecommerce_shopify_shopDomain",
+    accessToken: "ecommerce_shopify_accessToken",
   },
   woocommerce: {
-    siteUrl: "ecommerce_woocommerce_site_url",
-    consumerKey: "ecommerce_woocommerce_consumer_key",
-    consumerSecret: "ecommerce_woocommerce_consumer_secret",
+    siteUrl: "ecommerce_woocommerce_siteUrl",
+    consumerKey: "ecommerce_woocommerce_consumerKey",
+    consumerSecret: "ecommerce_woocommerce_consumerSecret",
   },
   youcan: {
-    accessToken: "ecommerce_youcan_access_token",
+    accessToken: "ecommerce_youcan_accessToken",
   },
 } as const;
