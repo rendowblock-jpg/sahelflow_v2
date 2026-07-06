@@ -116,7 +116,7 @@ export function BlacklistToggle({
             size="icon-sm"
             onClick={() => setRemoveOpen(true)}
             title={t("risk.blacklist.remove")}
-            className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+            className="text-success hover:text-success dark:text-emerald-400"
           >
             <ShieldCheck className="h-4 w-4" />
             <span className="sr-only">{t("risk.blacklist.remove")}</span>
@@ -164,7 +164,7 @@ export function BlacklistToggle({
           size="icon-sm"
           onClick={() => setAddOpen(true)}
           title={t("risk.blacklist.add")}
-          className="text-red-600 hover:text-red-700 dark:text-red-400"
+          className="text-destructive hover:text-destructive dark:text-red-400"
         >
           <Ban className="h-4 w-4" />
           <span className="sr-only">{t("risk.blacklist.add")}</span>
@@ -174,7 +174,7 @@ export function BlacklistToggle({
           variant="outline"
           size="sm"
           onClick={() => setAddOpen(true)}
-          className="text-red-600 hover:text-red-700 dark:text-red-400"
+          className="text-destructive hover:text-destructive dark:text-red-400"
         >
           <Ban className="me-1.5 h-4 w-4" />
           {t("risk.blacklist.add")}

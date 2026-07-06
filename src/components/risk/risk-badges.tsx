@@ -22,18 +22,18 @@ import type { RiskLevel, RiskAction } from "@/lib/risk-engine/types";
 import { useI18n } from "@/hooks/use-i18n";
 
 const LEVEL_STYLES: Record<RiskLevel, string> = {
-  low: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  low: "bg-emerald-500/10 text-success dark:text-emerald-400 border-emerald-500/20",
+  medium: "bg-amber-500/10 text-warning dark:text-amber-400 border-amber-500/20",
   high: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  critical: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  critical: "bg-red-500/10 text-destructive dark:text-red-400 border-red-500/20",
 };
 
 const ACTION_STYLES: Record<RiskAction, string> = {
-  auto_confirm: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  auto_confirm: "bg-emerald-500/10 text-success dark:text-emerald-400 border-emerald-500/20",
   standard: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
-  call_first: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  call_first: "bg-amber-500/10 text-warning dark:text-amber-400 border-amber-500/20",
   review: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  hold: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  hold: "bg-red-500/10 text-destructive dark:text-red-400 border-red-500/20",
   blacklisted: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border-zinc-500/20",
 };
 

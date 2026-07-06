@@ -178,7 +178,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm">
                 <span>{t("import.totalLabel")} <strong>{preview.totalRows}</strong></span>
-                <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-success dark:text-emerald-400">
                   <CheckCircle2 className="h-3 w-3" />
                   {preview.validCount} {t("import.valid")}
                 </Badge>
@@ -255,14 +255,14 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         {commitResult && (
           <div className="rounded-lg border p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
               <span className="font-medium">
                 {t("import.insertedCount", { inserted: commitResult.inserted, total: commitResult.totalRows })}
               </span>
             </div>
             {commitResult.errors.length > 0 && (
               <div className="space-y-1 max-h-32 overflow-auto">
-                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                <p className="text-xs font-medium text-warning">
                   {t("import.errorCount", { count: commitResult.errors.length })}
                 </p>
                 {commitResult.errors.slice(0, 10).map((e, i) => (

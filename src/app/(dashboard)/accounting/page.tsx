@@ -112,7 +112,7 @@ export default async function AccountingPage() {
       {/* COGS warning — some products have no cost price set */}
       {hasMissingCosts && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/50">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
             {t("accounting.missingCostsWarning")}
           </p>
@@ -126,7 +126,7 @@ export default async function AccountingPage() {
           value={formatDZD(revenue)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
@@ -142,7 +142,7 @@ export default async function AccountingPage() {
           value={formatDZD(totalExpenses)}
           icon={<Receipt />}
           accentBg="bg-red-500/10 dark:bg-red-500/15"
-          accentIcon="text-red-600 dark:text-red-400"
+          accentIcon="text-destructive"
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
@@ -150,7 +150,7 @@ export default async function AccountingPage() {
           value={formatDZD(netProfit)}
           icon={<Wallet />}
           accentBg={netProfit >= 0 ? "bg-emerald-500/10 dark:bg-emerald-500/15" : "bg-red-500/10 dark:bg-red-500/15"}
-          accentIcon={netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}
+          accentIcon={netProfit >= 0 ? "text-success" : "text-destructive"}
           trend={netProfit > 0 ? 1 : -1}
           trendLabel={netProfit > 0 ? t("accounting.profit") : t("accounting.loss")}
           style={{ animationDelay: "240ms" }}
@@ -177,7 +177,7 @@ export default async function AccountingPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 dark:bg-red-500/15">
-              <CreditCard className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+              <CreditCard className="h-3.5 w-3.5 text-destructive" />
             </div>
             {t("accounting.recentExpenses")}
           </CardTitle>
@@ -212,7 +212,7 @@ export default async function AccountingPage() {
                     <PremiumTable.Cell className="font-medium">
                       {t(`accounting.category.${expense.category}`)}
                     </PremiumTable.Cell>
-                    <PremiumTable.Cell align="end" className="font-medium text-red-600 dark:text-red-400 tabular-nums">
+                    <PremiumTable.Cell align="end" className="font-medium text-destructive tabular-nums">
                       −{formatDZD(expense.amount)}
                     </PremiumTable.Cell>
                     <PremiumTable.Cell hideOn="md" className="max-w-xs text-muted-foreground">

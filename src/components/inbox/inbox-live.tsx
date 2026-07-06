@@ -450,9 +450,9 @@ export function InboxLive() {
                 ? t("inbox.conversationsCountPlural", { count: filteredChats.length })
                 : t("inbox.conversationsCount", { count: filteredChats.length })}
               {mode === "seeded" && status !== "connected" && (
-                <span className="ms-1 text-amber-600 dark:text-amber-400">({t("inbox.demo")})</span>
+                <span className="ms-1 text-warning">({t("inbox.demo")})</span>
               )}
-              {mode === "live" && <span className="ms-1 text-emerald-600 dark:text-emerald-400">({t("inbox.live")})</span>}
+              {mode === "live" && <span className="ms-1 text-success">({t("inbox.live")})</span>}
             </p>
           </div>
           <ScrollArea className="flex-1">
@@ -479,7 +479,7 @@ export function InboxLive() {
                       }`}
                     >
                       <Avatar className="h-10 w-10 mt-1">
-                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-emerald-700" : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"}>
+                        <AvatarFallback className={c.channel === "whatsapp" ? "bg-green-100 text-success" : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"}>
                           {c.channel === "whatsapp" ? <MessageCircle className="h-5 w-5" /> : c.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -533,7 +533,7 @@ export function InboxLive() {
                     </button>
                   )}
                   <Avatar className="size-9">
-                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 dark:bg-teal-900/30 dark:text-teal-400"}>
+                    <AvatarFallback className={activeChat.channel === "whatsapp" ? "bg-emerald-100 text-success dark:bg-emerald-900/30 dark:text-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 dark:bg-teal-900/30 dark:text-teal-400"}>
                       {activeChat.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -719,7 +719,7 @@ function StatusBar({
     return (
       <div className="space-y-0">
         <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2 text-sm flex items-center justify-between">
-          <span className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+          <span className="flex items-center gap-2 text-warning">
             <AlertCircle className="h-4 w-4" />
             {t("inbox.serviceNotStarted")}
           </span>
@@ -737,7 +737,7 @@ function StatusBar({
   if (status === "connected") {
     return (
       <div className="border-b bg-emerald-50 dark:bg-emerald-950/30 px-4 py-2 text-sm flex items-center justify-between">
-        <span className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+        <span className="flex items-center gap-2 text-success">
           <CheckCircle2 className="h-4 w-4" />
           {t("inbox.whatsappConnected")}
           {user?.id && <span className="font-mono text-xs">· {user.id.split("@")[0]}</span>}

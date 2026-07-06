@@ -32,11 +32,11 @@ export const dynamic = "force-dynamic";
 type PageProps = { params: Promise<{ id: string }> };
 
 const RETURN_STATUS_STYLES: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  requested: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", border: "border-amber-500/20", dot: "bg-amber-500" },
+  requested: { bg: "bg-amber-500/10", text: "text-warning", border: "border-amber-500/20", dot: "bg-warning" },
   approved: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/20", dot: "bg-blue-500" },
   processed: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", border: "border-violet-500/20", dot: "bg-violet-500" },
-  completed: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/20", dot: "bg-emerald-500" },
-  refused: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400", border: "border-red-500/20", dot: "bg-red-500" },
+  completed: { bg: "bg-emerald-500/10", text: "text-success", border: "border-emerald-500/20", dot: "bg-success" },
+  refused: { bg: "bg-red-500/10", text: "text-destructive", border: "border-red-500/20", dot: "bg-destructive" },
 };
 
 export default async function ReturnDetailPage({ params }: PageProps) {
@@ -125,7 +125,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
           value={t(`returns.status.${ret.status}` as string) || ret.status}
           icon={<RotateCcw />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           style={{ animationDelay: "180ms" }}
         />
       </div>

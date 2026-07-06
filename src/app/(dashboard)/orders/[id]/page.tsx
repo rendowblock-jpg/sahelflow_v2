@@ -292,7 +292,7 @@ export default async function OrderDetailPage({
                           <p className="text-xs text-muted-foreground">{factor.explanation}</p>
                         </div>
                         <span
-                          className={`tabular-nums font-medium ${factor.points > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}
+                          className={`tabular-nums font-medium ${factor.points > 0 ? "text-destructive" : "text-success"}`}
                         >
                           {factor.points > 0 ? "+" : ""}{factor.points}
                         </span>
@@ -500,7 +500,7 @@ export default async function OrderDetailPage({
                     ))}
                     <div className="flex justify-between border-t pt-2 text-sm">
                       <span className="font-medium">{t("orders.refund.total")}</span>
-                      <span className="font-bold text-red-600">{formatDZD(totalRefunded)}</span>
+                      <span className="font-bold text-destructive">{formatDZD(totalRefunded)}</span>
                     </div>
                   </div>
                 )}

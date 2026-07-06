@@ -171,8 +171,8 @@ export function StatCard({
                 className={cn(
                   "gap-0.5 rounded-full px-1.5 py-0 text-xs font-medium shrink-0",
                   isPositive
-                    ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
-                    : "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400",
+                    ? "border-emerald-500/20 bg-emerald-500/5 text-success"
+                    : "border-red-500/20 bg-red-500/5 text-destructive",
                 )}
               >
                 {isPositive && <ArrowUpRight className="size-2.5" />}

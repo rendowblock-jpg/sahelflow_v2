@@ -44,7 +44,7 @@ export default async function ProductsPage() {
       {lowStockCount > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/30 p-3 animate-fade-up">
           <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTriangle className="h-4 w-4 text-warning" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
@@ -52,7 +52,7 @@ export default async function ProductsPage() {
                 ? t("products.lowStockAlertMany", { count: lowStockCount })
                 : t("products.lowStockAlertOne", { count: lowStockCount })}
             </p>
-            <p className="text-xs text-amber-600 dark:text-amber-400">
+            <p className="text-xs text-warning">
               {t("products.lowStockAlertHint")}
             </p>
           </div>
@@ -86,7 +86,7 @@ export default async function ProductsPage() {
           value={activeCount}
           icon={<Boxes />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           subtitle={t("products.activeOutOf", { total: totalProducts })}
           style={{ animationDelay: "120ms" }}
         />
@@ -95,7 +95,7 @@ export default async function ProductsPage() {
           value={lowStockCount}
           icon={<AlertTriangle />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           trend={lowStockCount > 0 ? -1 : 0}
           trendLabel={lowStockCount > 0 ? t("products.needsRestock") : t("products.stockOk")}
           style={{ animationDelay: "180ms" }}

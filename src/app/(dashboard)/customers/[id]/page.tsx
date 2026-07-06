@@ -131,17 +131,17 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       {/* Blacklist warning banner */}
       {customer.isBlacklisted && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/50">
-          <Ban className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+          <Ban className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-900 dark:text-red-100">
               {t("customers.blacklisted")}
             </p>
             {customer.blacklistReason && (
-              <p className="mt-0.5 text-sm text-red-700 dark:text-red-300">
+              <p className="mt-0.5 text-sm text-destructive">
                 {t("risk.blacklist.reason")}: {customer.blacklistReason}
               </p>
             )}
-            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+            <p className="mt-0.5 text-xs text-destructive">
               {t("risk.blacklist.subtitle")}
             </p>
           </div>
@@ -155,7 +155,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           value={formatDZD(stats.totalSpent)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           spark={spendingSeries}
           sparkColor="var(--color-chart-2)"
           style={{ animationDelay: "60ms" }}
@@ -181,7 +181,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           value={formatDZD(stats.avgOrderValue)}
           icon={<TrendingUp />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           style={{ animationDelay: "240ms" }}
         />
       </div>
@@ -196,11 +196,11 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">{t("customers.delivered")}</p>
-                <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{stats.deliveredCount}</p>
+                <p className="text-lg font-bold tabular-nums text-success">{stats.deliveredCount}</p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">{t("customers.returned")}</p>
-                <p className="text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{stats.returnedCount}</p>
+                <p className="text-lg font-bold tabular-nums text-destructive">{stats.returnedCount}</p>
               </div>
             </div>
             {stats.firstOrderDate && (

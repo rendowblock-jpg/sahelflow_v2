@@ -85,7 +85,7 @@ export default async function DashboardPage() {
           value={formatDZD(stats.revenueToday)}
           icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           trend={stats.revenueTrend}
           trendLabel={t("dashboard.vsYesterday")}
           subtitle={`${t("dashboard.realizedRevenue")}: ${formatDZD(stats.realizedRevenueToday)}`}
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
           value={stats.activeConversations}
           icon={<MessageSquare />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           subtitle={t("dashboard.pendingDeliveries", { count: stats.pendingDeliveries })}
           style={{ animationDelay: "240ms" }}
         />
@@ -121,7 +121,7 @@ export default async function DashboardPage() {
         <Button variant="outline" asChild className="h-auto justify-start gap-3 py-3">
           <Link href="/inbox">
             <span className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 dark:bg-amber-500/15">
-              <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <MessageSquare className="h-4 w-4 text-warning" />
             </span>
             <span className="flex flex-col items-start">
               <span className="text-sm font-medium">{t("nav.inbox")}</span>
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
         <Button variant="outline" asChild className="h-auto justify-start gap-3 py-3">
           <Link href="/analytics">
             <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15">
-              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <TrendingUp className="h-4 w-4 text-success" />
             </span>
             <span className="flex flex-col items-start">
               <span className="text-sm font-medium">{t("nav.analytics")}</span>
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
             <CardContent className="space-y-3">
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="text-xs text-muted-foreground">{t("dashboard.deliveryRate")}</p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                <p className="mt-1 text-3xl font-bold tabular-nums text-success">
                   {dp.deliveryRate}%
                 </p>
               </div>
@@ -266,11 +266,11 @@ export default async function DashboardPage() {
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("analytics.delivered")}</p>
-                  <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{dp.delivered}</p>
+                  <p className="text-lg font-bold tabular-nums text-success">{dp.delivered}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("analytics.returned")}</p>
-                  <p className="text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{dp.returned}</p>
+                  <p className="text-lg font-bold tabular-nums text-destructive">{dp.returned}</p>
                 </div>
               </div>
               <Button variant="outline" size="sm" asChild className="w-full">
@@ -287,7 +287,7 @@ export default async function DashboardPage() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <span className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10 dark:bg-amber-500/15">
-                  <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <Clock className="h-5 w-5 text-warning" />
                 </span>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">{t("dashboard.pendingOrders")}</p>
@@ -301,7 +301,7 @@ export default async function DashboardPage() {
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 </span>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">{t("dashboard.deliveredToday")}</p>

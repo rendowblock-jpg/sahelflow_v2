@@ -21,17 +21,17 @@ interface RiskBadgeProps {
 }
 
 const DOT_COLORS: Record<RiskLevel, string> = {
-  low: "bg-emerald-500",
-  medium: "bg-amber-500",
+  low: "bg-success",
+  medium: "bg-warning",
   high: "bg-orange-500",
-  critical: "bg-red-500",
+  critical: "bg-destructive",
 };
 
 const TEXT_COLORS: Record<RiskLevel, string> = {
-  low: "text-emerald-700 dark:text-emerald-400",
-  medium: "text-amber-700 dark:text-amber-400",
+  low: "text-success dark:text-emerald-400",
+  medium: "text-warning dark:text-amber-400",
   high: "text-orange-700 dark:text-orange-400",
-  critical: "text-red-700 dark:text-red-400",
+  critical: "text-destructive dark:text-red-400",
 };
 
 export function RiskBadge({ level, score, href }: RiskBadgeProps) {

@@ -140,7 +140,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           value={formatDZD(product.price)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           subtitle={
             product.cost !== null
               ? `${t("products.cost")}: ${formatDZD(product.cost)}${margin !== null ? ` · ${t("products.value")}: ${formatDZD(margin)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
@@ -153,7 +153,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           value={product.stock}
           icon={<Boxes />}
           accentBg={isLowStock ? "bg-amber-500/10 dark:bg-amber-500/15" : "bg-teal-500/10 dark:bg-teal-500/15"}
-          accentIcon={isLowStock ? "text-amber-600 dark:text-amber-400" : "text-teal-600 dark:text-teal-400"}
+          accentIcon={isLowStock ? "text-warning" : "text-teal-600 dark:text-teal-400"}
           subtitle={`${t("products.lowStock")}: ${product.lowStockThreshold}`}
           style={{ animationDelay: "120ms" }}
         />
@@ -170,7 +170,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           value={product.isActive ? t("common.active") : t("common.inactive")}
           icon={<DollarSign />}
           accentBg={product.isActive ? "bg-emerald-500/10 dark:bg-emerald-500/15" : "bg-muted"}
-          accentIcon={product.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}
+          accentIcon={product.isActive ? "text-success" : "text-muted-foreground"}
           style={{ animationDelay: "240ms" }}
         />
       </div>

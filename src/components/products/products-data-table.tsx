@@ -88,8 +88,8 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
       header: () => t("common.status"),
       cell: ({ row }) =>
         row.original.isActive ? (
-          <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
+          <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-success dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">
+            <span className="size-1.5 rounded-full bg-success" />
             {t("common.active")}
           </span>
         ) : (

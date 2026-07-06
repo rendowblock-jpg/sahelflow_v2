@@ -69,14 +69,14 @@ export function CodControls({
         </div>
         <div className="flex gap-1.5">
           {codCollected ? (
-            <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1">
+            <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/10 text-success dark:text-emerald-400 gap-1">
               <CheckCircle2 className="h-3 w-3" /> {t("orders.cod.collectedStatus")}
             </Badge>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">{t("orders.cod.uncollected")}</Badge>
           )}
           {codRemitted ? (
-            <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1">
+            <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/10 text-success dark:text-emerald-400 gap-1">
               <CheckCircle2 className="h-3 w-3" /> {t("orders.cod.remittedStatus")}
             </Badge>
           ) : (

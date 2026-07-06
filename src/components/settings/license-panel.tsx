@@ -85,7 +85,7 @@ export function LicensePanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           {isValid ? (
-            <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <ShieldCheck className="h-5 w-5 text-success" />
           ) : (
             <ShieldAlert className="h-5 w-5 text-destructive" />
           )}

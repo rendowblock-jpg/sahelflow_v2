@@ -69,7 +69,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
             {alreadyRefunded > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Already refunded</span>
-                <span className="font-medium text-amber-600">{formatDZD(alreadyRefunded)}</span>
+                <span className="font-medium text-warning">{formatDZD(alreadyRefunded)}</span>
               </div>
             )}
             <div className="flex justify-between border-t pt-1">

@@ -177,7 +177,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {result.order ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <CheckCircle2 className="h-4 w-4 text-success" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -230,7 +230,7 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
             )}
 
             {result.missingFields && result.missingFields.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-1.5 text-xs text-warning">
                 <AlertCircle className="h-3 w-3" />
                 <span>{t("inbox.missingFields", { fields: result.missingFields.join(", ") })}</span>
               </div>

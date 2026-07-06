@@ -68,7 +68,7 @@ export default async function CustomersPage() {
           value={formatDZD(totalSpent)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           subtitle={t("customers.avgSpent", { amount: formatDZD(avgSpent) })}
           style={{ animationDelay: "120ms" }}
         />
@@ -86,7 +86,7 @@ export default async function CustomersPage() {
           value={atRiskCount}
           icon={<AlertTriangle />}
           accentBg="bg-red-500/10 dark:bg-red-500/15"
-          accentIcon="text-red-600 dark:text-red-400"
+          accentIcon="text-destructive"
           trend={atRiskPct > 20 ? -1 : 0}
           trendLabel={atRiskPct > 0 ? t("customers.atRiskPct", { pct: atRiskPct }) : t("customers.noRisk")}
           style={{ animationDelay: "240ms" }}

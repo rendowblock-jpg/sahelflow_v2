@@ -142,7 +142,7 @@ export function StatusControl({
             {t("inbox.status.pending")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => change("resolved")}>
-            <CheckCircle2 className="me-2 h-4 w-4 text-emerald-500" />
+            <CheckCircle2 className="me-2 h-4 w-4 text-success" />
             {t("inbox.status.resolved")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -178,7 +178,7 @@ export function StatusControl({
 
 // ── PriorityControl ──────────────────────────────────────────────────────
 const PRIORITY_CONFIG: Record<ConversationPriority, { dot: string; label: string }> = {
-  urgent: { dot: "bg-red-500", label: "inbox.priority.urgent" },
+  urgent: { dot: "bg-destructive", label: "inbox.priority.urgent" },
   high: { dot: "bg-orange-500", label: "inbox.priority.high" },
   medium: { dot: "bg-blue-500", label: "inbox.priority.medium" },
   low: { dot: "bg-gray-400", label: "inbox.priority.low" },

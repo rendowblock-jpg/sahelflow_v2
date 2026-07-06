@@ -38,7 +38,7 @@ export default async function CodReconciliationPage() {
           value={summary.counts.delivered}
           icon={<CheckCircle2 />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
@@ -62,7 +62,7 @@ export default async function CodReconciliationPage() {
           value={formatDZD(summary.pendingAmount)}
           icon={<Clock />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           hint={t("codReconciliation.hint")}
           style={{ animationDelay: "240ms" }}
         />

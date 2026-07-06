@@ -146,7 +146,7 @@ export default async function RiskPage({
           value={fmtPct(k.confirmationRate)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           trend={k.confirmationRate >= 0.7 ? 1 : -1}
           style={{ animationDelay: "120ms" }}
         />
@@ -155,7 +155,7 @@ export default async function RiskPage({
           value={fmtPct(k.returnRate)}
           icon={<TrendingDown />}
           accentBg="bg-red-500/10 dark:bg-red-500/15"
-          accentIcon="text-red-600 dark:text-red-400"
+          accentIcon="text-destructive"
           trend={k.returnRate <= 0.2 ? 1 : -1}
           style={{ animationDelay: "180ms" }}
         />
@@ -164,7 +164,7 @@ export default async function RiskPage({
           value={k.highRiskOrderCount}
           icon={<AlertTriangle />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           subtitle={report.totalOrders > 0 ? `${Math.round((k.highRiskOrderCount / report.totalOrders) * 100)}% ${t("risk.confirmationByLevel.total")}` : undefined}
           style={{ animationDelay: "240ms" }}
         />
@@ -181,7 +181,7 @@ export default async function RiskPage({
           value={formatDZD(k.potentialSavingsDzd)}
           icon={<PiggyBank />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           subtitle={t("risk.blacklist.subtitle")}
           style={{ animationDelay: "360ms" }}
         />
@@ -276,8 +276,8 @@ export default async function RiskPage({
                           <RiskLevelBadgeServer level={row.level} label={t(`risk.level.${row.level}`)} />
                         </PremiumTable.Cell>
                         <PremiumTable.Cell align="end" className="tabular-nums">{row.total}</PremiumTable.Cell>
-                        <PremiumTable.Cell align="end" className="tabular-nums text-emerald-600 dark:text-emerald-400">{row.delivered}</PremiumTable.Cell>
-                        <PremiumTable.Cell align="end" className="tabular-nums text-red-600 dark:text-red-400">{row.returned + row.refused}</PremiumTable.Cell>
+                        <PremiumTable.Cell align="end" className="tabular-nums text-success">{row.delivered}</PremiumTable.Cell>
+                        <PremiumTable.Cell align="end" className="tabular-nums text-destructive">{row.returned + row.refused}</PremiumTable.Cell>
                         <PremiumTable.Cell align="end" className="tabular-nums font-medium">{fmtPct(row.confirmationRate)}</PremiumTable.Cell>
                         <PremiumTable.Cell align="end" className="tabular-nums">{fmtPct(row.returnRate)}</PremiumTable.Cell>
                       </PremiumTable.Row>
@@ -329,7 +329,7 @@ export default async function RiskPage({
                         <PremiumTable.Row key={f.factorId}>
                           <PremiumTable.Cell className="font-medium">{t(f.labelKey)}</PremiumTable.Cell>
                           <PremiumTable.Cell align="end" className="tabular-nums">{f.occurrenceCount}</PremiumTable.Cell>
-                          <PremiumTable.Cell align="end" className={`tabular-nums ${f.avgPoints > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                          <PremiumTable.Cell align="end" className={`tabular-nums ${f.avgPoints > 0 ? "text-destructive" : "text-success"}`}>
                             {f.avgPoints > 0 ? "+" : ""}{f.avgPoints}
                           </PremiumTable.Cell>
                         </PremiumTable.Row>

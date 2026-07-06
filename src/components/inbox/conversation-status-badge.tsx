@@ -7,8 +7,8 @@ import { useI18n } from "@/hooks/use-i18n";
 
 const STATUS_CONFIG = {
   open: { icon: Circle, className: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
-  pending: { icon: Clock, className: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
-  resolved: { icon: CheckCircle2, className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+  pending: { icon: Clock, className: "bg-amber-500/10 text-warning border-amber-500/20" },
+  resolved: { icon: CheckCircle2, className: "bg-emerald-500/10 text-success border-emerald-500/20" },
   snoozed: { icon: BellOff, className: "bg-muted text-muted-foreground border-border" },
 } as const;
 

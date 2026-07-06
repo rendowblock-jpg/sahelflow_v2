@@ -31,7 +31,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
         <div className="flex items-center gap-2">
           <span className="font-medium">{row.original.name}</span>
           {row.original.isBlacklisted && (
-            <Badge variant="outline" className="border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 gap-1">
+            <Badge variant="outline" className="border-red-500/20 bg-red-500/10 text-destructive gap-1">
               <Ban className="h-3 w-3" /> Blacklisted
             </Badge>
           )}

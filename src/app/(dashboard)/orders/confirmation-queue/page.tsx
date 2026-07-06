@@ -51,7 +51,7 @@ export default async function ConfirmationQueuePage() {
           value={freshCount}
           icon={<CheckCircle2 />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
@@ -59,7 +59,7 @@ export default async function ConfirmationQueuePage() {
           value={staleCount}
           icon={<AlertTriangle />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           hint={t("confirmationQueue.staleHint")}
           style={{ animationDelay: "180ms" }}
         />
@@ -78,7 +78,7 @@ export default async function ConfirmationQueuePage() {
         <CardContent className="p-0">
           {queue.length === 0 ? (
             <div className="p-8 text-center">
-              <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
+              <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
               <p className="mt-2 text-sm font-medium">{t("confirmationQueue.allCaughtUp")}</p>
               <p className="text-xs text-muted-foreground">{t("confirmationQueue.noPending")}</p>
             </div>
@@ -118,7 +118,7 @@ export default async function ConfirmationQueuePage() {
                       <td className="px-4 py-3 text-sm">{o.wilaya}</td>
                       <td className="px-4 py-3 text-end font-medium tabular-nums">{formatDZD(o.totalPrice)}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`font-medium ${o.isStale ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                        <span className={`font-medium ${o.isStale ? "text-warning" : "text-muted-foreground"}`}>
                           {o.ageLabel}
                         </span>
                         {o.isStale && <AlertTriangle className="inline h-3 w-3 ms-1 text-amber-500" />}

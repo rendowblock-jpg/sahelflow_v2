@@ -68,7 +68,7 @@ export function IntegrationsPanel({
       category: "ecommerce",
       icon: YouCanIcon,
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconColor: "text-emerald-600 dark:text-emerald-400",
+      iconColor: "text-success",
       connected: integrations.some((i) => i.platform === "youcan" && i.status === "active"),
       connectLabel: t("integrations.connect"),
       docsUrl: "https://partners.youcan.shop",
@@ -84,7 +84,7 @@ export function IntegrationsPanel({
       category: "ecommerce",
       icon: ShopifyIcon,
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconColor: "text-emerald-600 dark:text-emerald-400",
+      iconColor: "text-success",
       connected: integrations.some((i) => i.platform === "shopify" && i.status === "active"),
       connectLabel: t("integrations.connect"),
       fields: [
@@ -165,7 +165,7 @@ export function IntegrationsPanel({
       category: "delivery",
       icon: MaystroIcon,
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconColor: "text-emerald-600 dark:text-teal-400",
+      iconColor: "text-success dark:text-teal-400",
       connected: false,
       connectLabel: t("integrations.connect"),
       fields: [
@@ -181,7 +181,7 @@ export function IntegrationsPanel({
       category: "messaging",
       icon: WhatsAppIcon,
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconColor: "text-emerald-600 dark:text-emerald-400",
+      iconColor: "text-success",
       connected: false, // checked via WhatsApp status API
       connectLabel: t("integrations.connect"),
       connectUrl: "/inbox",
@@ -325,7 +325,7 @@ export function IntegrationsPanel({
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-sm">{integration.name}</p>
                             {integration.connected && (
-                              <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs px-1.5">
+                              <Badge variant="outline" className="text-success border-emerald-500/20 text-xs px-1.5">
                                 <CheckCircle2 className="me-1 h-3 w-3" />
                                 {t("integrations.connected")}
                               </Badge>

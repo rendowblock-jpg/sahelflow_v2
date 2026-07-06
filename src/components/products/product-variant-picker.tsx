@@ -129,11 +129,11 @@ export function ProductVariantPicker({
           {isOutOfStock ? (
             <Badge variant="destructive">{t("products.outOfStock")}</Badge>
           ) : isLowStock ? (
-            <Badge variant="outline" className="text-amber-700 dark:text-amber-400 border-amber-300">
+            <Badge variant="outline" className="text-warning dark:text-amber-400 border-amber-300">
               {t("products.lowStockCount", { count: effectiveStock })}
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-300">
+            <Badge variant="outline" className="text-success dark:text-emerald-400 border-emerald-300">
               {t("products.inStockCount", { count: effectiveStock })}
             </Badge>
           )}

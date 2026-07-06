@@ -73,11 +73,11 @@ const NOTIFICATION_ICONS: Record<string, typeof ShoppingCart> = {
 
 const NOTIFICATION_COLORS: Record<string, string> = {
   order: "bg-primary",
-  delivery: "bg-emerald-500",
-  stock: "bg-amber-500",
+  delivery: "bg-success",
+  stock: "bg-warning",
   info: "bg-teal-500",
   return: "bg-violet-500",
-  alert: "bg-red-500",
+  alert: "bg-destructive",
 };
 
 export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: TopbarProps) {
@@ -186,8 +186,8 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
       <div className="flex items-center gap-1 ms-auto">
         {/* Live indicator — hidden on mobile */}
         <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5">
-          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t("common.live")}</span>
+          <span className="size-1.5 rounded-full bg-success animate-pulse-subtle" />
+          <span className="text-xs font-medium text-success">{t("common.live")}</span>
         </div>
 
         <Separator orientation="vertical" className="mx-1 h-5 hidden md:block" />

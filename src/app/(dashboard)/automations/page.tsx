@@ -232,9 +232,9 @@ export default async function AutomationsPage() {
                   <div className="space-y-0.5 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`size-1.5 rounded-full shrink-0 ${
-                        log.status === "success" ? "bg-emerald-500" :
-                        log.status === "failed" ? "bg-red-500" :
-                        "bg-amber-500"
+                        log.status === "success" ? "bg-success" :
+                        log.status === "failed" ? "bg-destructive" :
+                        "bg-warning"
                       }`} />
                       <span className="font-medium truncate">{log.automation.name}</span>
                     </div>

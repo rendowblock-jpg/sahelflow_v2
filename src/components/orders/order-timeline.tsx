@@ -31,17 +31,17 @@ interface OrderTimelineProps {
 
 const ACTION_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
   status_change: { icon: Clock, color: "text-blue-500" },
-  item_add: { icon: Plus, color: "text-emerald-500" },
+  item_add: { icon: Plus, color: "text-success" },
   item_remove: { icon: Minus, color: "text-amber-500" },
   fulfill: { icon: Package, color: "text-purple-500" },
   ship: { icon: Truck, color: "text-indigo-500" },
-  deliver: { icon: CheckCircle2, color: "text-emerald-500" },
+  deliver: { icon: CheckCircle2, color: "text-success" },
   return: { icon: RotateCcw, color: "text-amber-500" },
-  refund: { icon: DollarSign, color: "text-red-500" },
-  cod_collected: { icon: DollarSign, color: "text-emerald-500" },
-  cod_remitted: { icon: CheckCircle2, color: "text-emerald-600" },
+  refund: { icon: DollarSign, color: "text-destructive" },
+  cod_collected: { icon: DollarSign, color: "text-success" },
+  cod_remitted: { icon: CheckCircle2, color: "text-success" },
   edit: { icon: Edit3, color: "text-muted-foreground" },
-  cancel: { icon: XCircle, color: "text-red-500" },
+  cancel: { icon: XCircle, color: "text-destructive" },
 };
 
 const DEFAULT_CONFIG = { icon: Hash, color: "text-muted-foreground" };

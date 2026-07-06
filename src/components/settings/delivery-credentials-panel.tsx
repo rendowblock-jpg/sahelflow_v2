@@ -177,12 +177,12 @@ export function DeliveryCredentialsPanel() {
                     <span className="font-medium">{provider.name}</span>
                   </div>
                   {configured ? (
-                    <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                    <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-success dark:text-emerald-400">
                       <CheckCircle2 className="h-3 w-3" />
                       {t("delivery.configured")}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700">
+                    <Badge variant="outline" className="text-warning border-amber-300 dark:border-amber-700">
                       {t("delivery.notConfigured")}
                     </Badge>
                   )}

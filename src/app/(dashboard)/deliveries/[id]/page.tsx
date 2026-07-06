@@ -94,7 +94,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
         }
         actions={
           <Badge variant="outline" className="gap-1.5">
-            <span className={`size-1.5 rounded-full ${delivery.status === "delivered" ? "bg-emerald-500" : delivery.status === "returned" || delivery.status === "refused" ? "bg-red-500" : "bg-amber-500"}`} />
+            <span className={`size-1.5 rounded-full ${delivery.status === "delivered" ? "bg-success" : delivery.status === "returned" || delivery.status === "refused" ? "bg-destructive" : "bg-warning"}`} />
             {t(`deliveries.status.${delivery.status}` as string)}
           </Badge>
         }
@@ -115,7 +115,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           value={delivery.cost ? formatDZD(delivery.cost) : "—"}
           icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
@@ -131,7 +131,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           value={delivery.estimatedDelivery ? formatDate(delivery.estimatedDelivery, locale) : "—"}
           icon={<Calendar />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           style={{ animationDelay: "240ms" }}
         />
       </div>
@@ -235,7 +235,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
                       isCurrent
                         ? "border-primary bg-primary/10 text-primary"
                         : isPast
-                          ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                          ? "border-emerald-500/20 bg-emerald-500/5 text-success"
                           : "border-border bg-muted/30 text-muted-foreground"
                     }`}
                   >

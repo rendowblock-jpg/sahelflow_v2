@@ -184,7 +184,7 @@ export default async function AnalyticsPage({
           value={formatDZD(s.totalRevenue)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           trend={s.revenueDelta}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "60ms" }}
@@ -214,7 +214,7 @@ export default async function AnalyticsPage({
           value={`${s.deliveryRate}%`}
           icon={<Truck />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-amber-600 dark:text-amber-400"
+          accentIcon="text-warning"
           style={{ animationDelay: "240ms" }}
         />
       </div>
@@ -273,7 +273,7 @@ export default async function AnalyticsPage({
             <div className="grid w-full grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-lg border p-2">
                 <p className="text-xs text-muted-foreground">{t("analytics.delivered")}</p>
-                <p className="text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{dp.delivered}</p>
+                <p className="text-base font-bold tabular-nums text-success">{dp.delivered}</p>
               </div>
               <div className="rounded-lg border p-2">
                 <p className="text-xs text-muted-foreground">{t("analytics.inTransit")}</p>
@@ -285,7 +285,7 @@ export default async function AnalyticsPage({
               </div>
               <div className="rounded-lg border p-2">
                 <p className="text-xs text-muted-foreground">{t("analytics.returned")}</p>
-                <p className="text-base font-bold tabular-nums text-red-600 dark:text-red-400">{dp.returned}</p>
+                <p className="text-base font-bold tabular-nums text-destructive">{dp.returned}</p>
               </div>
             </div>
           </div>
@@ -448,7 +448,7 @@ export default async function AnalyticsPage({
                   </p>
                   <Badge variant="outline" className={cn(
                     "gap-1",
-                    isPositive ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "border-red-500/20 text-red-600 dark:text-red-400",
+                    isPositive ? "border-emerald-500/20 text-success" : "border-red-500/20 text-destructive",
                     stat.change === 0 && "text-muted-foreground",
                   )}>
                     <Icon className="h-3 w-3" />
@@ -492,8 +492,8 @@ export default async function AnalyticsPage({
                       <td className="px-4 py-3 text-end text-sm font-medium tabular-nums">{formatDZD(item.margin)}</td>
                       <td className="px-4 py-3 text-end">
                         <Badge variant="outline" className={cn(
-                          item.marginPct > 40 ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "",
-                          item.marginPct < 20 ? "border-red-500/20 text-red-600 dark:text-red-400" : "",
+                          item.marginPct > 40 ? "border-emerald-500/20 text-success" : "",
+                          item.marginPct < 20 ? "border-red-500/20 text-destructive" : "",
                         )}>
                           {item.marginPct.toFixed(1)}%
                         </Badge>

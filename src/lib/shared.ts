@@ -87,9 +87,9 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
   },
   pending: {
     i18nKey: 'orders.status.pending',
-    dot: 'bg-amber-500',
+    dot: 'bg-warning',
     bg: 'bg-amber-50 dark:bg-amber-950/40',
-    text: 'text-amber-700 dark:text-amber-400',
+    text: 'text-warning dark:text-amber-400',
     border: 'border-amber-200 dark:border-amber-800/50',
     icon: '⏳',
     ring: 'ring-amber-500/20',
@@ -114,18 +114,18 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
   },
   delivered: {
     i18nKey: 'orders.status.delivered',
-    dot: 'bg-emerald-500',
+    dot: 'bg-success',
     bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-    text: 'text-emerald-700 dark:text-emerald-400',
+    text: 'text-success dark:text-emerald-400',
     border: 'border-emerald-200 dark:border-emerald-800/50',
     icon: '✅',
     ring: 'ring-emerald-500/20',
   },
   returned: {
     i18nKey: 'orders.status.returned',
-    dot: 'bg-red-500',
+    dot: 'bg-destructive',
     bg: 'bg-red-50 dark:bg-red-950/40',
-    text: 'text-red-700 dark:text-red-400',
+    text: 'text-destructive dark:text-red-400',
     border: 'border-red-200 dark:border-red-800/50',
     icon: '↩',
     ring: 'ring-red-500/20',
@@ -166,9 +166,9 @@ export const deliveryProviderConfig: Record<string, { color: string; label: stri
 // ── Customer Status Config ───────────────────────────────────────────────────
 
 export const customerStatusConfig: Record<string, { i18nKey: string; color: string; bg: string }> = {
-  active: { i18nKey: 'common.active', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
+  active: { i18nKey: 'common.active', color: 'text-success dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
   inactive: { i18nKey: 'common.inactive', color: 'text-muted-foreground', bg: 'bg-muted border-border' },
-  blocked: { i18nKey: 'common.blocked', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50' },
+  blocked: { i18nKey: 'common.blocked', color: 'text-destructive dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50' },
 }
 
 // ── Risk Score Helper ────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ export interface RiskConfig {
 }
 
 export function getRiskConfig(score: number): RiskConfig {
-  if (score <= 30) return { i18nKey: 'customers.riskLow', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-500', progressColor: 'bg-emerald-500' }
-  if (score <= 60) return { i18nKey: 'customers.riskMedium', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500', progressColor: 'bg-amber-500' }
-  return { i18nKey: 'customers.riskHigh', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-500', progressColor: 'bg-red-500' }
+  if (score <= 30) return { i18nKey: 'customers.riskLow', color: 'text-success dark:text-emerald-400', bg: 'bg-success', progressColor: 'bg-success' }
+  if (score <= 60) return { i18nKey: 'customers.riskMedium', color: 'text-warning dark:text-amber-400', bg: 'bg-warning', progressColor: 'bg-warning' }
+  return { i18nKey: 'customers.riskHigh', color: 'text-destructive dark:text-red-400', bg: 'bg-destructive', progressColor: 'bg-destructive' }
 }

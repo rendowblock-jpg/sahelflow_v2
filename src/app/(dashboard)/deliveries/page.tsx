@@ -108,7 +108,7 @@ export default async function DeliveriesPage({
           value={deliveredCount}
           icon={<PackageCheck />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-emerald-600 dark:text-emerald-400"
+          accentIcon="text-success"
           subtitle={t("dashboard.deliveryRate")}
           style={{ animationDelay: "120ms" }}
         />
@@ -117,7 +117,7 @@ export default async function DeliveriesPage({
           value={returnedCount}
           icon={<AlertCircle />}
           accentBg="bg-red-500/10 dark:bg-red-500/15"
-          accentIcon="text-red-600 dark:text-red-400"
+          accentIcon="text-destructive"
           style={{ animationDelay: "180ms" }}
         />
         <StatCard

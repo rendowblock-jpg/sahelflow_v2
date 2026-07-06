@@ -187,8 +187,8 @@ export function CodReconciliationClient({
             <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
               <div className="flex gap-4">
                 <span className="text-muted-foreground">{t("codReconciliation.collected")}: <span className="font-medium text-foreground">{formatDZD(totalCollected)}</span></span>
-                <span className="text-muted-foreground">{t("codReconciliation.remitted")}: <span className="font-medium text-emerald-600">{formatDZD(totalRemitted)}</span></span>
-                <span className="text-muted-foreground">Pending: <span className="font-medium text-amber-600">{formatDZD(totalPending)}</span></span>
+                <span className="text-muted-foreground">{t("codReconciliation.remitted")}: <span className="font-medium text-success">{formatDZD(totalRemitted)}</span></span>
+                <span className="text-muted-foreground">Pending: <span className="font-medium text-warning">{formatDZD(totalPending)}</span></span>
               </div>
             </div>
           </>
