@@ -43,8 +43,11 @@ export default async function ReturnDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
   const { id } = await params;
 
-  const ret = await db.return.findUnique({
-    where: { id },
+  // Session 30 (AUDIT-1 P2): use findFirst with deletedAt:null filter.
+  // Previously: db.return.findUnique bypassed the soft-delete filter →
+  // soft-deleted returns leaked via stale URLs.
+  const ret = await db.return.findFirst({
+    where: { id, deletedAt: null },
     include: {
       order: {
         include: {

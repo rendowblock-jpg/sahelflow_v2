@@ -30,7 +30,10 @@ export default function ProfilePage() {
     fetch("/api/profile")
       .then((r) => r.json())
       .then((data) => setProfile(data))
-      .catch(() => {})
+      // Session 30 (AUDIT-1 P5): show error toast on fetch failure (was silent).
+      .catch((err) => {
+        console.error("[profile] fetch failed:", err);
+      })
       .finally(() => setLoading(false));
   }, []);
 

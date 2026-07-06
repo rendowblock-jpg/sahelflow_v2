@@ -401,8 +401,8 @@ export default async function AnalyticsPage({
 
       {/* ── Phase 7: Return rate by wilaya (the killer COD metric) ── */}
       <ChartCard
-        title="Return Rate by Wilaya"
-        description="The #1 COD metric. Industry avg 25-40%, top performers 8-15%."
+        title={t("analytics.returnRateByWilaya")}
+        description={t("analytics.returnRateHint")}
         icon={<RotateCcw />}
         accent="bg-red-500/10 dark:bg-red-500/15"
         config={returnRateConfig}
@@ -417,7 +417,7 @@ export default async function AnalyticsPage({
           />
         ) : (
           <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-            No return data for this period
+            {t("analytics.noReturnData")}
           </div>
         )}
       </ChartCard>

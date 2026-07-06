@@ -16,14 +16,23 @@ export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
   const { t, locale } = await getI18n();
-  const [customers, totalCustomers] = await Promise.all([
+  const [customers, totalCustomers, aggregate, activeCountAgg, atRiskCountAgg] = await Promise.all([
     customerService.list({ prisma: db }, { limit: 25, offset: 0 }),
     db.customer.count({ where: { deletedAt: null } }),
+    // Session 30 (AUDIT-5 P1): compute KPIs from aggregate across ALL customers,
+    // not just the first 25 on page 1. A seller with 200 customers was seeing
+    // KPIs from a 12.5% sample.
+    db.customer.aggregate({
+      where: { deletedAt: null },
+      _sum: { totalSpent: true },
+    }),
+    db.customer.count({ where: { deletedAt: null, orderCount: { gt: 0 } } }),
+    db.customer.count({ where: { deletedAt: null, riskScore: { gte: 6 } } }),
   ]);
 
-  const totalSpent = customers.reduce((sum, c) => sum + c.totalSpent, 0);
-  const activeCount = customers.filter((c) => c.orderCount > 0).length;
-  const atRiskCount = customers.filter((c) => c.riskScore >= 6).length;
+  const totalSpent = aggregate._sum.totalSpent ?? 0;
+  const activeCount = activeCountAgg;
+  const atRiskCount = atRiskCountAgg;
 
   const activePct = totalCustomers > 0 ? Math.round((activeCount / totalCustomers) * 100) : 0;
   const avgSpent = totalCustomers > 0 ? Math.round(totalSpent / totalCustomers) : 0;

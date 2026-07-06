@@ -27,7 +27,7 @@ export default async function CodReconciliationPage() {
   return (
     <div className="app-content page-sections">
       <PageHeader
-        title="COD Reconciliation"
+        title={t("codReconciliation.title")}
         description={t("codReconciliation.description")}
       />
 
