@@ -67,6 +67,7 @@ model Product {
   reservations    ReservationItem[]
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
+  @@index([categoryId])
 
 }
 
@@ -261,6 +262,8 @@ model Conversation {
   @@index([status])
   @@index([assigneeId])
   @@index([priority])
+  @@index([snoozedUntil])
+  @@index([waitingSince])
 }
 
 model Message {
@@ -309,6 +312,7 @@ model Return {
   @@index([createdAt])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
+  @@index([exchangeOrderId])
 
 }
 
@@ -658,6 +662,7 @@ model ExtractionMetric {
   createdAt      DateTime @default(now())
 
   @@index([method, createdAt])
+  @@index([messageId])
   @@index([createdAt])
 }
 
