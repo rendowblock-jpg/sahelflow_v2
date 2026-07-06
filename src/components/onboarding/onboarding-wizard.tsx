@@ -60,7 +60,12 @@ export function OnboardingWizard() {
         });
         if (!settingRes.ok) throw new Error(`Settings save failed (${settingRes.status})`);
       }
-    } catch { toast.error(t('error.networkFailure')); }
+    } catch (err) {
+      // Session 29 fix (AUDIT-5 C3): re-throw so nextStep doesn't advance.
+      // Previously this swallowed the error → wizard advanced with no profile saved.
+      toast.error(err instanceof Error ? err.message : t('error.networkFailure'));
+      throw err;
+    }
     setLoading(false);
   }
 
@@ -90,8 +95,18 @@ export function OnboardingWizard() {
         headers: { "Content-Type": "application/json", "x-requested-with": "sahelflow" },
         body: JSON.stringify({ key: geminiKey }),
       });
-      if (res.ok) toast.success(t("onboarding.ai.keySaved"));
-    } catch { toast.error(t('error.networkFailure')); }
+      // Session 29 fix (AUDIT-5 C3): throw on !res.ok AND re-throw on catch.
+      // Previously this swallowed all errors → wizard advanced with no AI key
+      // saved → AI features silently broken on dashboard.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `AI key save failed (${res.status})`);
+      }
+      toast.success(t("onboarding.ai.keySaved"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('error.networkFailure'));
+      throw err;
+    }
     setLoading(false);
   }
 

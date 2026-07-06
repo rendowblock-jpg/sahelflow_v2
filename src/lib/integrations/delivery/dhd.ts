@@ -31,16 +31,20 @@ const DHD_BASE_URL = "https://platform.dhd-dz.com/api";
 /** Map DHD/EcoTrack status strings to our normalized DeliveryStatus. */
 function mapStatus(raw: string): DeliveryStatus {
   const s = raw.toLowerCase().trim();
-  // EcoTrack common status codes (may vary — adjust after live testing)
-  if (s.includes("nouveau") || s.includes("new") || s.includes("created")) return "created";
+  // Session 29 fix (AUDIT-6 I3): "Non livré" (not delivered) MUST be checked
+  // BEFORE "Livré" (delivered) — otherwise the includes("livré") match catches
+  // both and marks failed deliveries as delivered. Same bug pattern that
+  // Yalidine was fixed for in Session 25.
+  if (s.includes("non livré") || s.includes("non livre") || s.includes("non_livré") || s.includes("non_livre")) return "failed";
+  if (s.includes("echec") || s.includes("failed") || s.includes("fail")) return "failed";
+  if (s.includes("annul") || s.includes("cancelled") || s.includes("canceled")) return "failed";
+  if (s.includes("refus") || s.includes("refused")) return "refused";
+  if (s.includes("retour") || s.includes("returned")) return "returned";
+  if (s.includes("livré") || s.includes("delivered") || s.includes("livre")) return "delivered";
+  if (s.includes("livraison") || s.includes("out") || s.includes("distribution")) return "out_for_delivery";
   if (s.includes("ramass") || s.includes("picked") || s.includes("collected")) return "picked_up";
   if (s.includes("transit") || s.includes("hub") || s.includes("centre")) return "in_transit";
-  if (s.includes("livraison") || s.includes("out") || s.includes("distribution")) return "out_for_delivery";
-  if (s.includes("livré") || s.includes("delivered") || s.includes("livre")) return "delivered";
-  if (s.includes("retour") || s.includes("returned")) return "returned";
-  if (s.includes("refus") || s.includes("refused")) return "refused";
-  if (s.includes("annul") || s.includes("cancelled") || s.includes("canceled")) return "failed";
-  if (s.includes("echec") || s.includes("failed") || s.includes("fail")) return "failed";
+  if (s.includes("nouveau") || s.includes("new") || s.includes("created")) return "created";
   return "in_transit"; // default to in-transit for unknown statuses
 }
 

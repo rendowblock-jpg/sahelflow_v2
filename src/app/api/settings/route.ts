@@ -6,8 +6,17 @@ import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/settings — list all settings (non-secret). */
+/**
+ * GET /api/settings — list all settings (non-secret).
+ *
+ * Session 29 fix (AUDIT-2 A5): previously this had NO auth check, leaking
+ * license payload (with machine IDs), daily_report_phone, profile PII,
+ * and any other settings to anyone who could reach the route. The Next.js
+ * middleware protects it, but defense-in-depth requires the route itself
+ * to enforce auth.
+ */
 export async function GET(): Promise<NextResponse> {
+  await requireAuth();
   const settings = await getAllSettings();
   return NextResponse.json({ settings });
 }

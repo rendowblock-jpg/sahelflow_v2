@@ -7,5 +7,5 @@
  */
 export { extractWithRegex } from "./regex-extractor";
 export { extractWithGemini, verifyGeminiKey } from "./gemini-extractor";
-export { extractOrder } from "./smart-router";
+export { extractOrder, recordExtractionMetric } from "./smart-router";
 export type { ExtractionInput, ExtractionResult, ExtractedOrder, ExtractedItem } from "./types";

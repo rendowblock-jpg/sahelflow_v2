@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractOrder } from "@/lib/ai/extraction";
+import { extractOrder, recordExtractionMetric } from "@/lib/ai/extraction";
+
+// Session 29 fix (AUDIT-7 AI1): recordExtractionMetric was defined but never
+// called outside tests → extraction analytics dashboard was permanently empty.
+// Now called fire-and-forget after every extraction.
 import { getSecret } from "@/lib/secrets";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -37,10 +41,24 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     geminiApiKey = (await getSecret("gemini_api_key")) ?? undefined;
   }
 
+  const start = Date.now();
   const result = await extractOrder(
     { body: input.body, channel: input.channel, knownPhone: input.knownPhone },
     { geminiApiKey, forceGemini: input.forceGemini },
   );
+
+  // Fire-and-forget — never blocks the response. recordExtractionMetric
+  // has its own try/catch that swallows errors (best-effort).
+  // Session 29 fix (AUDIT-7 AI1): without this, the extraction-analytics
+  // dashboard at /analytics/extraction is permanently empty.
+  void recordExtractionMetric({
+    method: result.method,
+    confidence: result.confidence,
+    isComplete: result.isComplete,
+    missingFields: result.missingFields,
+    latencyMs: Date.now() - start,
+    modelVersion: result.method === "gemini" ? "gemini" : undefined,
+  }).catch(() => { /* best-effort */ });
 
   return NextResponse.json({ result });
 }, "POST /api/extraction");
