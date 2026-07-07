@@ -103,7 +103,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
       {/* Stat cards */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
-          label={t("deliveries.status.deliveryRate")}
+          label={t("deliveries.table.status")}
           value={t(`deliveries.status.${delivery.status}` as string)}
           icon={<Package />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
@@ -174,7 +174,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
             <div className="pt-2">
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/orders/${delivery.order.id}`}>
-                  {t("orders.viewDetails") || t("common.viewAll")}
+                  {t("orders.viewDetails")}
                 </Link>
               </Button>
             </div>

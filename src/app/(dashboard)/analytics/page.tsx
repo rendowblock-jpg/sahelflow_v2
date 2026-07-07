@@ -64,7 +64,7 @@ export default async function AnalyticsPage({
     color: w.returnRate > 30 ? "var(--color-chart-4)" : w.returnRate > 15 ? "var(--color-chart-3)" : "var(--color-chart-2)",
   }));
   const returnRateConfig: ChartConfig = {
-    value: { label: "Return rate %", color: "var(--color-chart-4)" },
+    value: { label: t("analytics.returnRateLabel"), color: "var(--color-chart-4)" },
   };
   const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
   const fmtShortDate = (iso: string) =>
@@ -427,21 +427,21 @@ export default async function AnalyticsPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingDown className="h-4 w-4" />
-            Period Comparison (vs previous {validDays} days)
+            {t("analytics.periodComparison", { days: String(validDays) })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Orders", current: comparison.current.orders, change: comparison.changes.orders },
-              { label: "Revenue", current: comparison.current.revenue, change: comparison.changes.revenue, format: true },
-              { label: "Delivered", current: comparison.current.delivered, change: comparison.changes.delivered },
-              { label: "Return Rate", current: comparison.current.returnRate, change: comparison.changes.returnRate, suffix: "%" },
+              { key: "orders", label: t("nav.orders"), current: comparison.current.orders, change: comparison.changes.orders, format: false as const },
+              { key: "revenue", label: t("analytics.revenueLabel"), current: comparison.current.revenue, change: comparison.changes.revenue, format: true as const },
+              { key: "delivered", label: t("analytics.delivered"), current: comparison.current.delivered, change: comparison.changes.delivered, format: false as const },
+              { key: "returnRate", label: t("analytics.returnRate"), current: comparison.current.returnRate, change: comparison.changes.returnRate, format: false as const, suffix: "%" },
             ].map((stat) => {
-              const isPositive = stat.label === "Return Rate" ? stat.change < 0 : stat.change > 0;
+              const isPositive = stat.key === "returnRate" ? stat.change < 0 : stat.change > 0;
               const Icon = stat.change > 0 ? ArrowUp : stat.change < 0 ? ArrowDown : Minus;
               return (
-                <div key={stat.label} className="space-y-1">
+                <div key={stat.key} className="space-y-1">
                   <p className="text-xs text-muted-foreground">{stat.label}</p>
                   <p className="text-xl font-bold tabular-nums">
                     {stat.format ? formatDZD(stat.current) : `${stat.current}${stat.suffix ?? ""}`}
@@ -466,7 +466,7 @@ export default async function AnalyticsPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <DollarSign className="h-4 w-4" />
-            SKU P&L (Top 10)
+            {t("analytics.skuPnl")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -475,12 +475,12 @@ export default async function AnalyticsPage({
               <table className="w-full">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-3 text-start">Product</th>
-                    <th className="px-4 py-3 text-end">Revenue</th>
-                    <th className="px-4 py-3 text-end">Cost</th>
-                    <th className="px-4 py-3 text-end">Margin</th>
-                    <th className="px-4 py-3 text-end">Margin %</th>
-                    <th className="px-4 py-3 text-end">Qty</th>
+                    <th className="px-4 py-3 text-start">{t("analytics.skuColProduct")}</th>
+                    <th className="px-4 py-3 text-end">{t("analytics.revenueLabel")}</th>
+                    <th className="px-4 py-3 text-end">{t("analytics.skuColCost")}</th>
+                    <th className="px-4 py-3 text-end">{t("analytics.skuColMargin")}</th>
+                    <th className="px-4 py-3 text-end">{t("analytics.skuColMarginPct")}</th>
+                    <th className="px-4 py-3 text-end">{t("analytics.skuColQty")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -505,7 +505,7 @@ export default async function AnalyticsPage({
               </table>
             </div>
           ) : (
-            <p className="p-8 text-center text-sm text-muted-foreground">No product data for this period</p>
+            <p className="p-8 text-center text-sm text-muted-foreground">{t("analytics.noSkuData")}</p>
           )}
         </CardContent>
       </Card>

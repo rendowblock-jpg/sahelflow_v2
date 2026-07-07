@@ -190,6 +190,54 @@ describe("Shopify adapter", () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
+    it("does NOT consume a maxPages slot on 429 retry (I-M1)", async () => {
+      // maxPages=1 + one 429 then success: the OLD code incremented `page` at
+      // the top of the loop, so the 429 burned the only slot and the success
+      // never happened (loop exited with page=1, no data). The new code only
+      // increments page on success — 429 retries are free.
+      mockFetch.mockResolvedValueOnce(res("rate limited", { status: 429, headers: { "Retry-After": "0" } }));
+      mockFetch.mockResolvedValueOnce(res({ orders: [sampleOrder({ id: 1001 })] }));
+
+      const result = await shopifyAdapter.listOrdersSince(creds, "", 1);
+      expect(result.orders).toHaveLength(1);
+      expect(result.orders[0]!.sourceOrderId).toBe("1001");
+      expect(result.nextWatermark).toBe("1001");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("still fetches the full maxPages quota when each page hits one 429 (I-M1)", async () => {
+      // maxPages=2, each page: 1x 429 then 1x success. Old code would have
+      // exited after page 1 (429 burned slot 1, success on slot 2 — but
+      // maxPages=2 meant only 2 iterations, so only 1 page of real data).
+      // New code: 2 successful pages of data, 2 429 retries on the side.
+      mockFetch.mockResolvedValueOnce(res("rate limited", { status: 429, headers: { "Retry-After": "0" } }));
+      mockFetch.mockResolvedValueOnce(
+        res(
+          { orders: [sampleOrder({ id: 1001 })] },
+          { headers: { Link: '<https://acme-store.myshopify.com/admin/api/2026-01/orders.json?page_info=abc&limit=250>; rel="next"' } },
+        ),
+      );
+      mockFetch.mockResolvedValueOnce(res("rate limited", { status: 429, headers: { "Retry-After": "0" } }));
+      mockFetch.mockResolvedValueOnce(res({ orders: [sampleOrder({ id: 1002, name: "#1002" })] }));
+
+      const result = await shopifyAdapter.listOrdersSince(creds, "", 2);
+      expect(result.orders).toHaveLength(2);
+      expect(result.orders.map((o) => o.sourceOrderId)).toEqual(["1001", "1002"]);
+      expect(result.nextWatermark).toBe("1002");
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
+
+    it("throws after exceeding the 429 retry cap (I-M1)", async () => {
+      // Always 429 → after MAX_429_RETRIES (3 retries = 4 total fetches)
+      // the adapter gives up and throws.
+      mockFetch.mockImplementation(async () =>
+        res("rate limited", { status: 429, headers: { "Retry-After": "0" } }),
+      );
+      await expect(shopifyAdapter.listOrdersSince(creds, "", 5)).rejects.toThrow(/429.*rate limit/);
+      // 1 initial attempt + 3 retries = 4 total fetch calls before throwing
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
+
     it("throws on non-OK HTTP status (non-429)", async () => {
       mockFetch.mockResolvedValueOnce(res("Internal Server Error", { status: 500 }));
       await expect(shopifyAdapter.listOrdersSince(creds, "")).rejects.toThrow("Shopify API 500");

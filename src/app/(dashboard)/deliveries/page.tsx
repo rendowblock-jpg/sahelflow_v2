@@ -47,9 +47,13 @@ export default async function DeliveriesPage({
   const where = status !== "all" ? { status, deletedAt: null } : { deletedAt: null };
   const offset = 0;
 
-  // Page-1 fallback + total (for the active filter) + stat-card aggregates
-  // (across ALL deliveries, not just page 1) + per-status counts for the tabs.
-  const [deliveries, total, allDeliveries, statusCounts] = await Promise.all([
+  // P-M14: previously `allDeliveries` was a findMany that loaded every
+  // delivery row (status + cost) into memory just to compute 4 stat-card
+  // numbers. Now: use the existing status groupBy (already fires for the tab
+  // counts) + a single-row aggregate for the cost sum. Per-status counts
+  // cover active / delivered / returned; the "all" total is derived from the
+  // groupBy sum (no separate count query needed).
+  const [deliveries, total, statusCounts, costAggregate] = await Promise.all([
     db.delivery.findMany({
       where,
       include: { order: { include: { customer: { select: { name: true, phone: true } } } } },
@@ -58,27 +62,32 @@ export default async function DeliveriesPage({
       skip: offset,
     }),
     db.delivery.count({ where }),
-    db.delivery.findMany({
-      where: { deletedAt: null },
-      select: { status: true, cost: true },
-    }),
     db.delivery.groupBy({
       by: ["status"],
       where: { deletedAt: null },
       _count: true,
     }),
+    db.delivery.aggregate({
+      where: { deletedAt: null },
+      _sum: { cost: true },
+    }),
   ]);
 
-  // Tab counts: "all" = total; each status = its count
-  const counts: Record<string, number> = { all: allDeliveries.length };
+  // Tab counts: derive "all" from the groupBy sum (covers every status,
+  // including any not explicitly listed in FILTER_I18N).
+  const counts: Record<string, number> = {};
+  let allCount = 0;
   for (const g of statusCounts) {
     counts[g.status] = g._count;
+    allCount += g._count;
   }
+  counts.all = allCount;
 
-  const activeCount = allDeliveries.filter((d) => ACTIVE_STATUSES.includes(d.status)).length;
-  const deliveredCount = allDeliveries.filter((d) => d.status === "delivered").length;
-  const returnedCount = allDeliveries.filter((d) => RETURN_STATUSES.includes(d.status)).length;
-  const totalCost = allDeliveries.reduce((sum, d) => sum + (d.cost ?? 0), 0);
+  // Stat-card aggregates from the groupBy + costAggregate (no row-level data).
+  const activeCount = ACTIVE_STATUSES.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
+  const deliveredCount = counts["delivered"] ?? 0;
+  const returnedCount = RETURN_STATUSES.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
+  const totalCost = costAggregate._sum.cost ?? 0;
 
   const STATUS_FILTERS = Object.entries(FILTER_I18N).map(([value, key]) => ({
     value,

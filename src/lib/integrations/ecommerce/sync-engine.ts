@@ -6,9 +6,16 @@
  *   1. Load credentials from the Secret store
  *   2. Load the watermark from the Integration.config (JSON: { watermark, lastSyncAt })
  *   3. Call the adapter's listOrdersSince
- *   4. For each normalized order:
+ *   4. For each normalized order (I-M3: upsert semantics):
  *      - Find-or-create the Customer (by phone)
- *      - Skip if an Order with the same sourceOrderId already exists (dedup)
+ *      - If an Order with the same sourceOrderId already exists:
+ *        - Compare the existing sourceMetadata to the new one.
+ *        - If unchanged → skip (counts as `skipped`).
+ *        - If changed (platform-side status update, e.g. cancellation) →
+ *          UPDATE the Order's sourceMetadata + set internal status to
+ *          "cancelled" if the platform reports a cancellation (counts as
+ *          `updated`). Previously the engine threw AlreadySyncedError and
+ *          platform status updates never propagated.
  *      - Otherwise create the Order (draft status) + OrderItems
  *   5. Update the Integration.config with the new watermark + lastSyncAt
  *
@@ -29,6 +36,9 @@ export interface SyncResult {
   platform: EcommercePlatform;
   fetched: number;
   created: number;
+  /** I-M3: existing orders whose platform-side state changed (e.g. cancellation). */
+  updated: number;
+  /** Existing orders whose platform-side state is unchanged (no-op). */
   skipped: number;
   errors: string[];
   watermark: string;
@@ -53,6 +63,7 @@ export async function syncPlatform(
     platform,
     fetched: 0,
     created: 0,
+    updated: 0,
     skipped: 0,
     errors: [],
     watermark: "",
@@ -93,19 +104,20 @@ export async function syncPlatform(
   result.watermark = fetchResult.nextWatermark;
   result.hasMore = fetchResult.hasMore;
 
-  // 4. Create internal Order records (deduped by sourceOrderId)
+  // 4. Upsert internal Order records (deduped by sourceOrderId).
+  // I-M3: existing orders are now UPDATED in-place when their platform-side
+  // sourceMetadata changed (status updates, cancellations), rather than
+  // throwing AlreadySyncedError and dropping the update.
   for (const normalized of fetchResult.orders) {
     try {
-      await createOrderFromSync(normalized);
-      result.created++;
+      const outcome = await upsertOrderFromSync(normalized);
+      if (outcome === "created") result.created++;
+      else if (outcome === "updated") result.updated++;
+      else result.skipped++;
     } catch (err) {
-      if (err instanceof AlreadySyncedError) {
-        result.skipped++;
-      } else {
-        result.errors.push(
-          `Order ${normalized.orderNumber}: ${err instanceof Error ? err.message : "Unknown"}`,
-        );
-      }
+      result.errors.push(
+        `Order ${normalized.orderNumber}: ${err instanceof Error ? err.message : "Unknown"}`,
+      );
     }
   }
 
@@ -132,33 +144,86 @@ export async function syncPlatform(
   return result;
 }
 
-/** Error thrown when an order was already synced (dedup). */
-class AlreadySyncedError extends Error {
-  constructor() {
-    super("Already synced");
-    this.name = "AlreadySyncedError";
+/**
+ * Outcome of an upsert for one normalized platform order.
+ * - "created": a new internal Order row was inserted.
+ * - "updated": an existing row had its sourceMetadata (and possibly status)
+ *   updated to reflect a platform-side change (I-M3).
+ * - "skipped": an existing row was found and its platform-side state is
+ *   unchanged — no DB write needed.
+ */
+type UpsertOutcome = "created" | "updated" | "skipped";
+
+/**
+ * Returns true if the platform-side metadata indicates the order was
+ * cancelled. We use this to propagate the cancellation to the internal
+ * Order.status field (so cancelled Shopify/Woo/YouCan orders don't stay
+ * "draft" forever in the SahelFlow UI).
+ *
+ * - Shopify: `cancel_reason` is a non-null string when the order is cancelled.
+ * - WooCommerce: `wooStatus === "cancelled"`.
+ * - YouCan: `statusNew === "cancelled"`.
+ */
+function isPlatformCancelled(meta: Record<string, unknown>): boolean {
+  if (typeof meta.cancelReason === "string" && meta.cancelReason.length > 0) {
+    return true;
   }
+  if (meta.wooStatus === "cancelled") return true;
+  if (meta.statusNew === "cancelled") return true;
+  return false;
 }
 
 /**
- * Create an internal Order from a normalized platform order.
- * Dedup: if an Order with the same sourceOrderId (in sourceMetadata) exists, skip.
+ * Upsert an internal Order from a normalized platform order.
+ *
+ * Dedup: uses the dedicated sourceOrderId column (backed by a unique
+ * constraint on [source, sourceOrderId]). The unique constraint makes this
+ * race-safe — concurrent syncs that pass the findUnique check will fail at
+ * create() with P2002, which surfaces as an error in the sync result.
+ *
+ * I-M3: when an existing order is found, we no longer throw AlreadySyncedError.
+ * Instead, we compare the existing sourceMetadata to the new one:
+ *   - unchanged  → return "skipped" (no DB write)
+ *   - changed    → UPDATE the row's sourceMetadata + set status to "cancelled"
+ *                  if the platform cancelled it, then return "updated".
+ * This lets platform-side status updates (cancellations, fulfillment changes)
+ * propagate to the internal Order instead of being silently dropped.
  */
-async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
-  // Dedup: use the dedicated sourceOrderId column (backed by a unique
-  // constraint on [source, sourceOrderId]). The unique constraint makes this
-  // race-safe — concurrent syncs that pass the findUnique check will fail at
-  // create() with P2002, which we catch below.
+async function upsertOrderFromSync(
+  normalized: NormalizedOrder,
+): Promise<UpsertOutcome> {
   const sourceOrderId = normalized.sourceOrderId;
+  const newMetaJson = JSON.stringify(normalized.sourceMetadata);
+
   if (sourceOrderId) {
     const existing = await db.order.findUnique({
       where: { source_sourceOrderId: { source: normalized.source, sourceOrderId } },
-      select: { id: true },
+      select: { id: true, sourceMetadata: true, status: true },
     });
     if (existing) {
-      throw new AlreadySyncedError();
+      // I-M3: only update if the platform-side metadata actually changed.
+      // Comparing the JSON string is a robust signal — adapters include
+      // rawUpdatedAt (Shopify) / rawDateModified (Woo) / updated_at (YouCan)
+      // in sourceMetadata, so any platform-side change touches the string.
+      if (existing.sourceMetadata === newMetaJson) {
+        return "skipped";
+      }
+      const updateData: Prisma.OrderUpdateInput = {
+        sourceMetadata: newMetaJson,
+      };
+      // Propagate platform cancellations to the internal status. We do NOT
+      // overwrite arbitrary internal statuses — only cancellations, since
+      // those are unambiguous platform-side state changes the merchant
+      // needs to see in the SahelFlow UI.
+      if (isPlatformCancelled(normalized.sourceMetadata)) {
+        updateData.status = "cancelled";
+      }
+      await db.order.update({ where: { id: existing.id }, data: updateData });
+      return "updated";
     }
   }
+
+  // ── New order: find-or-create customer, then create the Order + items ──
 
   // Find-or-create the customer by phone (blind index lookup via the extension).
   // If the source order has no customer phone, generate a deterministic synthetic
@@ -238,7 +303,7 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
     phone: customerPhone,
     source: normalized.source,
     sourceOrderId: sourceOrderId ?? null,
-    sourceMetadata: JSON.stringify(normalized.sourceMetadata),
+    sourceMetadata: newMetaJson,
     notes: null,
     items: {
       create: normalized.items.map((item) => ({
@@ -251,6 +316,7 @@ async function createOrderFromSync(normalized: NormalizedOrder): Promise<void> {
   };
 
   await db.order.create({ data: orderData });
+  return "created";
 }
 
 /**

@@ -25,9 +25,9 @@ export default async function EditStorefrontPage({
     notFound();
   }
 
-  // Fetch all active products for the picker
+  // Fetch all active, non-soft-deleted products for the picker (P-M6)
   const products = await db.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, deletedAt: null },
     select: {
       id: true,
       name: true,

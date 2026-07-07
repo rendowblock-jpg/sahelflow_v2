@@ -159,12 +159,12 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
       toast.success(
         isEdit
           ? t("automations.editor.updated")
-          : t("automations.editor.created") || t("automations.created"),
+          : t("automations.editor.created"),
       );
       onDone();
       router.refresh();
     } catch {
-      toast.error(t("automations.updateFailed") || t("common.error"));
+      toast.error(t("automations.updateFailed"));
     } finally {
       setLoading(false);
     }
@@ -177,7 +177,7 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
           {isEdit ? t("automations.editor.editTitle") : t("automations.editor.createTitle")}
         </DialogTitle>
         <DialogDescription>
-          {t("automations.editor.description") || t("automations.subtitle")}
+          {t("automations.editor.description")}
         </DialogDescription>
       </DialogHeader>
 
@@ -189,7 +189,7 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
             id="automation-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={t("automations.editor.namePlaceholder") || t("automations.newAutomation")}
+            placeholder={t("automations.editor.namePlaceholder")}
             disabled={loading}
           />
         </div>
@@ -230,7 +230,7 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
 
         {/* Conditions */}
         <div className="space-y-1.5">
-          <Label>{t("conditionBuilder.title") || t("automations.editor.conditionsLabel")}</Label>
+          <Label>{t("conditionBuilder.title")}</Label>
           <p className="text-xs text-muted-foreground">
             {t("automations.editor.conditionsHint")}
           </p>

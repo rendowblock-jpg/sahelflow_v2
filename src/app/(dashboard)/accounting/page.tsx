@@ -44,7 +44,7 @@ export default async function AccountingPage() {
       include: { items: { include: { product: { select: { cost: true } } } }, delivery: true },
     }),
     db.expense.findMany({
-      where: { date: { gte: periodStart } },
+      where: { date: { gte: periodStart }, deletedAt: null },
       orderBy: { date: "desc" },
     }),
   ]);
@@ -78,28 +78,45 @@ export default async function AccountingPage() {
     return date;
   });
 
-  const monthlyData = await Promise.all(
-    last6Months.map(async (date) => {
-      const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
-      const monthOrders = await db.order.findMany({
-        where: {
-          createdAt: { gte: date, lt: nextMonth },
-          status: "delivered",
-          deletedAt: null,
-        },
-      });
-      const monthExpenses = await db.expense.aggregate({
-        where: { date: { gte: date, lt: nextMonth } },
-        _sum: { amount: true },
-      });
-      const monthRevenue = monthOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-      return {
-        month: date.toLocaleDateString(dateLocale, { month: "short" }),
-        revenue: monthRevenue,
-        expenses: monthExpenses._sum.amount ?? 0,
-      };
+  // P-M13: previously an N+1 loop firing 2 queries × 6 months = 12 round-trips.
+  // Now: 2 bulk findMany (one for orders, one for expenses) restricted to the
+  // 6-month window + select-only the columns we need; in-JS grouping by month.
+  // Soft-delete filters (deletedAt: null) applied here too (P-M1 part 2).
+  // Equivalent to last6Months[0] but computed directly to avoid indexed-access
+  // (`noUncheckedIndexedAccess` would type last6Months[0] as Date | undefined).
+  const monthlyChartStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const [monthlyOrders, monthlyExpenses] = await Promise.all([
+    db.order.findMany({
+      where: {
+        createdAt: { gte: monthlyChartStart },
+        status: "delivered",
+        deletedAt: null,
+      },
+      select: { totalPrice: true, createdAt: true },
     }),
-  );
+    db.expense.findMany({
+      where: {
+        date: { gte: monthlyChartStart },
+        deletedAt: null,
+      },
+      select: { amount: true, date: true },
+    }),
+  ]);
+
+  const monthlyData = last6Months.map((date) => {
+    const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    const monthRevenue = monthlyOrders
+      .filter((o) => o.createdAt >= date && o.createdAt < nextMonth)
+      .reduce((sum, o) => sum + o.totalPrice, 0);
+    const monthExpenses = monthlyExpenses
+      .filter((e) => e.date >= date && e.date < nextMonth)
+      .reduce((sum, e) => sum + e.amount, 0);
+    return {
+      month: date.toLocaleDateString(dateLocale, { month: "short" }),
+      revenue: monthRevenue,
+      expenses: monthExpenses,
+    };
+  });
 
   return (
     <div className="app-content page-sections">

@@ -276,6 +276,65 @@ describe("YouCan adapter", () => {
       // The watermark is the max of (existing watermark, latest fetched)
       expect(result.nextWatermark).toBe("2026-01-01T00:00:00Z");
     });
+
+    it("short-circuits when an order older than the watermark is hit (I-M2)", async () => {
+      // Page 1: 3 orders sorted DESC. The 2nd is older than the watermark →
+      // we drop the 2nd + 3rd and do NOT fetch page 2 (even though next link
+      // is present) because every subsequent order is also older.
+      mockFetch.mockResolvedValueOnce(
+        res(
+          youcanResponse(
+            [
+              sampleOrder({ id: "new1", created_at: "2026-02-01T00:00:00Z" }),
+              sampleOrder({ id: "old1", created_at: "2025-12-01T00:00:00Z" }),
+              sampleOrder({ id: "old2", created_at: "2025-11-01T00:00:00Z" }),
+            ],
+            "https://api.youcan.shop/orders?page=2",
+          ),
+        ),
+      );
+
+      const result = await youcanAdapter.listOrdersSince(creds, "2026-01-01T00:00:00Z");
+      expect(result.orders).toHaveLength(1);
+      expect(result.orders[0]!.sourceOrderId).toBe("new1");
+      expect(result.hasMore).toBe(false);
+      expect(mockFetch).toHaveBeenCalledTimes(1); // page 2 NOT fetched
+      // Watermark advances to the newest order seen on this page
+      expect(result.nextWatermark).toBe("2026-02-01T00:00:00Z");
+    });
+
+    it("does NOT short-circuit when watermark is empty (first sync) (I-M2)", async () => {
+      // Even with old created_at values, no watermark = fetch everything.
+      const oldOrders = Array.from({ length: 5 }, (_, i) =>
+        sampleOrder({ id: `old-${i}`, created_at: `2024-0${i + 1}-01T00:00:00Z` }),
+      );
+      mockFetch.mockResolvedValueOnce(res(youcanResponse(oldOrders, null)));
+
+      const result = await youcanAdapter.listOrdersSince(creds, "");
+      expect(result.orders).toHaveLength(5);
+    });
+
+    it("short-circuits at the boundary (created_at == watermark is treated as old) (I-M2)", async () => {
+      // An order whose created_at EQUALS the watermark is the last order we
+      // saw last sync — skip it + everything older. (Strict > for "new".)
+      mockFetch.mockResolvedValueOnce(
+        res(
+          youcanResponse(
+            [
+              sampleOrder({ id: "same", created_at: "2026-01-01T00:00:00Z" }),
+            ],
+            "https://api.youcan.shop/orders?page=2",
+          ),
+        ),
+      );
+
+      const result = await youcanAdapter.listOrdersSince(creds, "2026-01-01T00:00:00Z");
+      expect(result.orders).toHaveLength(0);
+      expect(result.hasMore).toBe(false);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // Watermark preserved (no newer order seen)
+      expect(result.nextWatermark).toBe("2026-01-01T00:00:00Z");
+    });
   });
 
   describe("order normalization", () => {

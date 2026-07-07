@@ -4,8 +4,10 @@
  * Docs: https://developer.youcan.shop
  *
  * Auth: OAuth2 Bearer token.
- * Polling: no since_id/created_at_min filter — scan newest-first + dedup by id.
- *   Must pass ?include=shipping,customer to get the address + phone (empty by default).
+ * Polling: no API-level created_at_min filter — scan newest-first + dedup by id,
+ *   and short-circuit per-page when an order older than the watermark is hit
+ *   (I-M2: avoids re-fetching the entire catalog every sync). Must pass
+ *   ?include=shipping,customer to get the address + phone (empty by default).
  * Pagination: page-based (?page=N, ?limit=100) with meta.pagination.links.next.
  * Rate limit: undocumented — be conservative.
  *
@@ -140,7 +142,7 @@ export const youcanAdapter: EcommerceAdapter = {
 
   async listOrdersSince(
     credentials: EcommerceCredentials,
-    _watermark: string, // YouCan has no watermark filter — dedup is by sourceOrderId
+    watermark: string, // I-M2: now used as a short-circuit threshold (orders older than this are skipped)
     maxPages = 10,
   ): Promise<SyncFetchResult> {
     if (!isYouCanCreds(credentials)) {
@@ -151,7 +153,7 @@ export const youcanAdapter: EcommerceAdapter = {
     let allOrders: NormalizedOrder[] = [];
     let page = 1;
     let hasMore = false;
-    let latestCreatedAt = _watermark; // used as a hint, not a filter
+    let latestCreatedAt = watermark; // watermark is the floor; only newer orders raise it
 
     while (page <= maxPages) {
       const params = new URLSearchParams({
@@ -193,14 +195,30 @@ export const youcanAdapter: EcommerceAdapter = {
         break;
       }
 
-      const normalized = data.data.map(normalizeOrder);
-      allOrders = allOrders.concat(normalized);
-
-      // Track the latest created_at as the watermark hint
+      // I-M2: short-circuit on watermark. Orders are sorted DESC by created_at,
+      // so once we encounter an order whose created_at is <= the watermark,
+      // every subsequent order on this page (and all later pages) is also
+      // older — stop fetching, drop the rest of this page, and exit the loop.
+      // Previously every sync re-fetched up to maxPages*PAGE_SIZE orders
+      // (1000 by default) even when the catalog hadn't changed.
+      let shortCircuited = false;
+      const normalized: NormalizedOrder[] = [];
       for (const o of data.data) {
+        if (watermark && o.created_at <= watermark) {
+          shortCircuited = true;
+          break;
+        }
+        normalized.push(normalizeOrder(o));
         if (!latestCreatedAt || o.created_at > latestCreatedAt) {
           latestCreatedAt = o.created_at;
         }
+      }
+      allOrders = allOrders.concat(normalized);
+
+      if (shortCircuited) {
+        // We've reached orders we've already seen — no more pages to fetch.
+        hasMore = false;
+        break;
       }
 
       // Check for next page

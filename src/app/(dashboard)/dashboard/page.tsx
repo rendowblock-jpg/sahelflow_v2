@@ -290,7 +290,7 @@ export default async function DashboardPage() {
                   <Clock className="h-5 w-5 text-warning" />
                 </span>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">{t("dashboard.pendingOrders")}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.recentPending")}</p>
                   <p className="text-xl font-bold tabular-nums">{pendingOrders}</p>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
@@ -304,7 +304,7 @@ export default async function DashboardPage() {
                   <CheckCircle2 className="h-5 w-5 text-success" />
                 </span>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">{t("dashboard.deliveredToday")}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.recentDelivered")}</p>
                   <p className="text-xl font-bold tabular-nums">{deliveredToday}</p>
                 </div>
               </div>

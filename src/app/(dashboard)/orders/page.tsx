@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
+import { orderStatusSchema } from "@/lib/validation";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,13 +38,21 @@ export default async function OrdersPage({
   searchParams: Promise<{ status?: string; risk?: string }>;
 }) {
   const { t, locale } = await getI18n();
-  const { status: statusFilter, risk: riskFilter } = await searchParams;
+  const { status: statusFilterRaw, risk: riskFilter } = await searchParams;
+
+  // P-M11: validate statusFilter against the OrderStatus enum (safeParse).
+  // Invalid / unknown values are dropped to undefined (no filter) instead of
+  // being passed to Prisma as an arbitrary string (silent no-match or error).
+  const statusFilter =
+    statusFilterRaw && statusFilterRaw !== "all"
+      ? (orderStatusSchema.safeParse(statusFilterRaw).success
+        ? (statusFilterRaw as OrderStatus)
+        : undefined)
+      : undefined;
 
   const isHighRiskFilter = riskFilter === "high";
 
-  const where = statusFilter && statusFilter !== "all"
-    ? { status: statusFilter as OrderStatus }
-    : undefined;
+  const where = statusFilter ? { status: statusFilter } : undefined;
   // PERF-007: use select (not include) to avoid fetching + decrypting PII
   // fields (phone, address, notes) that the table doesn't display. Was: 200
   // AES-256-GCM decryptions per page load. Now: zero (only name is fetched).
@@ -74,8 +83,8 @@ export default async function OrdersPage({
     hasFilter
       ? db.order.findMany({ where: { ...where, deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
       : Promise.resolve([]),
-    db.customer.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
-    db.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
+    db.customer.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
+    db.product.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
     db.order.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
     db.order.count({ where: { deletedAt: null } }),
   ]);
@@ -87,16 +96,18 @@ export default async function OrdersPage({
     (a) => a.level === "high" || a.level === "critical",
   ).length;
 
-  // When risk=high filter is active, show only high+critical risk orders
-  // (regardless of status — the seller reviews all risky orders in one queue).
+  // P-M12: status + risk filters combine with AND. ?status=pending&risk=high
+  // now shows only high+critical-risk orders whose status is pending (not ALL
+  // high-risk orders regardless of status). Start from the status-filtered
+  // list (filteredOrders when a status is set, else allOrders), then apply
+  // the risk filter on top.
+  const baseOrders = hasFilter ? filteredOrders : allOrders;
   const displayOrders = isHighRiskFilter
-    ? allOrders.filter((o) => {
+    ? baseOrders.filter((o) => {
         const a = riskMap.get(o.id);
         return a && (a.level === "high" || a.level === "critical");
       })
-    : hasFilter
-      ? filteredOrders
-      : allOrders;
+    : baseOrders;
 
   // Serialize risk map for the client (orderId → {level, score})
   const riskData: Record<string, { level: string; score: number }> = {};

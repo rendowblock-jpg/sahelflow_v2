@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function NewStorefrontPage() {
   const { t } = await getI18n();
 
-  // Fetch all active products for the picker
+  // Fetch all active, non-soft-deleted products for the picker (P-M6)
   const products = await db.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, deletedAt: null },
     select: {
       id: true,
       name: true,

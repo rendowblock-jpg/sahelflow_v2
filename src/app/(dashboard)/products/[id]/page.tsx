@@ -53,9 +53,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
     ? await db.category.findUnique({ where: { id: product.categoryId } })
     : null;
 
-  // Pull recent order items containing this product (no service method yet)
+  // Pull recent order items containing this product (no service method yet).
+  // P-M7: filter on order.deletedAt = null so soft-deleted orders do not leak
+  // into the "recent orders" list shown on the product detail page.
   const recentItems = await db.orderItem.findMany({
-    where: { productId: id },
+    where: { productId: id, order: { deletedAt: null } },
     include: { order: true },
     orderBy: { order: { createdAt: "desc" } },
     take: 20,

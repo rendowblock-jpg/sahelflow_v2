@@ -17,7 +17,8 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "COD Reconciliation — SahelFlow" };
+  const { t } = await getI18n();
+  return { title: t("metadata.title.codReconciliation") };
 }
 
 export default async function CodReconciliationPage() {

@@ -436,6 +436,229 @@ describe("sync-engine (syncPlatform)", () => {
   });
 });
 
+describe("sync-engine — I-M3 existing-order updates", () => {
+  beforeEach(async () => {
+    await cleanDb();
+    listOrdersMock.mockReset();
+    mockCredsProvider.mockReset();
+    mockCredsProvider.mockResolvedValue(mockCreds);
+  });
+
+  afterAll(async () => {
+    await cleanDb();
+    await db.$disconnect();
+  });
+
+  it("updates existing order's sourceMetadata when platform state changed", async () => {
+    // First sync: order with financialStatus=paid, no cancelReason
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [makeOrder()],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    await syncPlatform("shopify");
+    const before = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
+    expect(before).not.toBeNull();
+    expect(before!.status).toBe("draft");
+
+    // Second sync: same sourceOrderId, but platform cancelled the order
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [
+        makeOrder({
+          sourceMetadata: {
+            shopifyOrderId: 1001,
+            shopifyOrderNumber: 1001,
+            sourceOrderId: "shop-001",
+            financialStatus: "voided",
+            fulfillmentStatus: null,
+            cancelReason: "customer",
+          },
+        }),
+      ],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    const r2 = await syncPlatform("shopify");
+
+    // No new row created, the existing one was updated
+    expect(r2.fetched).toBe(1);
+    expect(r2.created).toBe(0);
+    expect(r2.updated).toBe(1);
+    expect(r2.skipped).toBe(0);
+    expect(r2.errors).toHaveLength(0);
+
+    const after = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
+    expect(after).not.toBeNull();
+    // Cancellation propagated to internal status
+    expect(after!.status).toBe("cancelled");
+    const meta = JSON.parse(after!.sourceMetadata ?? "{}");
+    expect(meta.cancelReason).toBe("customer");
+    expect(meta.financialStatus).toBe("voided");
+
+    // No duplicate created
+    const all = await db.order.findMany({ where: { sourceOrderId: "shop-001" } });
+    expect(all).toHaveLength(1);
+  });
+
+  it("skips existing order when platform state is unchanged", async () => {
+    // First sync
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [makeOrder()],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    await syncPlatform("shopify");
+
+    // Second sync: identical order (same sourceMetadata)
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [makeOrder()],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    const r2 = await syncPlatform("shopify");
+
+    expect(r2.created).toBe(0);
+    expect(r2.updated).toBe(0);
+    expect(r2.skipped).toBe(1);
+    expect(r2.errors).toHaveLength(0);
+
+    // No duplicate
+    const all = await db.order.findMany();
+    expect(all).toHaveLength(1);
+  });
+
+  it("does NOT overwrite internal status when platform state changed but no cancellation", async () => {
+    // First sync: draft order
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [makeOrder()],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    await syncPlatform("shopify");
+
+    // Manually advance the internal status (e.g. seller confirmed it)
+    const created = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
+    expect(created).not.toBeNull();
+    await db.order.update({
+      where: { id: created!.id },
+      data: { status: "confirmed" },
+    });
+
+    // Second sync: same sourceOrderId, platform changed fulfillment_status
+    // (but no cancelReason — not a cancellation)
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [
+        makeOrder({
+          sourceMetadata: {
+            shopifyOrderId: 1001,
+            shopifyOrderNumber: 1001,
+            sourceOrderId: "shop-001",
+            financialStatus: "paid",
+            fulfillmentStatus: "fulfilled", // changed from null
+            cancelReason: null,
+          },
+        }),
+      ],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    const r2 = await syncPlatform("shopify");
+
+    expect(r2.updated).toBe(1);
+    expect(r2.skipped).toBe(0);
+
+    // sourceMetadata updated, but internal status preserved (not a cancellation)
+    const after = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
+    expect(after!.status).toBe("confirmed");
+    const meta = JSON.parse(after!.sourceMetadata ?? "{}");
+    expect(meta.fulfillmentStatus).toBe("fulfilled");
+  });
+
+  it("propagates YouCan cancellation via statusNew='cancelled'", async () => {
+    // First sync: youcan order
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [
+        makeOrder({
+          sourceOrderId: "yc-001",
+          source: "youcan",
+          sourceMetadata: {
+            youcanOrderId: "yc-001",
+            youcanRef: "ORD-YC-1",
+            statusNew: "new",
+            paymentStatusNew: "unpaid",
+            shippingStatus: "pending",
+          },
+        }),
+      ],
+      nextWatermark: "2026-01-02T10:00:00Z",
+      hasMore: false,
+    });
+    await syncPlatform("shopify"); // platform arg unused — adapter is mocked
+
+    // Second sync: platform cancelled
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [
+        makeOrder({
+          sourceOrderId: "yc-001",
+          source: "youcan",
+          sourceMetadata: {
+            youcanOrderId: "yc-001",
+            youcanRef: "ORD-YC-1",
+            statusNew: "cancelled",
+            paymentStatusNew: "unpaid",
+            shippingStatus: "pending",
+          },
+        }),
+      ],
+      nextWatermark: "2026-01-02T10:00:00Z",
+      hasMore: false,
+    });
+    const r2 = await syncPlatform("shopify");
+    expect(r2.updated).toBe(1);
+
+    const after = await db.order.findFirst({ where: { sourceOrderId: "yc-001" } });
+    expect(after!.status).toBe("cancelled");
+  });
+
+  it("propagates WooCommerce cancellation via wooStatus='cancelled'", async () => {
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [
+        makeOrder({
+          sourceOrderId: "woo-001",
+          source: "woocommerce",
+          sourceMetadata: {
+            wooOrderId: 1,
+            wooStatus: "processing",
+          },
+        }),
+      ],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    await syncPlatform("shopify");
+
+    listOrdersMock.mockResolvedValueOnce({
+      orders: [
+        makeOrder({
+          sourceOrderId: "woo-001",
+          source: "woocommerce",
+          sourceMetadata: {
+            wooOrderId: 1,
+            wooStatus: "cancelled",
+          },
+        }),
+      ],
+      nextWatermark: "1",
+      hasMore: false,
+    });
+    const r2 = await syncPlatform("shopify");
+    expect(r2.updated).toBe(1);
+
+    const after = await db.order.findFirst({ where: { sourceOrderId: "woo-001" } });
+    expect(after!.status).toBe("cancelled");
+  });
+});
+
 describe("sync-engine (syncAllPlatforms)", () => {
   beforeEach(async () => {
     await cleanDb();

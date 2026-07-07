@@ -136,6 +136,14 @@ export const shopifyAdapter: EcommerceAdapter = {
     let nextWatermark = watermark;
     let page = 0;
     let hasMore = false;
+    // I-M1: 429 retries must NOT burn a maxPages slot — otherwise under heavy
+    // rate-limiting maxPages=10 + N retries = (10-N) real pages fetched. The
+    // previous code did `page++` at the top of the loop, so a 429 + `continue`
+    // incremented page even though no data was fetched. Now `page++` only runs
+    // after a successful (non-429) fetch, and we cap 429 retries per URL to
+    // avoid an infinite loop if Shopify is genuinely overloaded.
+    const MAX_429_RETRIES = 3;
+    let retriesThisUrl = 0;
 
     // First page: use since_id if we have a watermark
     let url = `https://${baseHost}/admin/api/${API_VERSION}/orders.json?status=any&limit=${PAGE_SIZE}`;
@@ -144,7 +152,6 @@ export const shopifyAdapter: EcommerceAdapter = {
     }
 
     while (url && page < maxPages) {
-      page++;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -158,17 +165,27 @@ export const shopifyAdapter: EcommerceAdapter = {
         clearTimeout(timeoutId);
       }
 
-      // Handle rate limit
+      // Handle rate limit (bounded retries — see I-M1 note above)
       if (res.status === 429) {
+        if (retriesThisUrl >= MAX_429_RETRIES) {
+          throw new Error(
+            `Shopify API 429: rate limit exceeded after ${MAX_429_RETRIES} retries`,
+          );
+        }
+        retriesThisUrl++;
         const retryAfter = parseFloat(res.headers.get("Retry-After") ?? "1");
         await new Promise((r) => setTimeout(r, retryAfter * 1000));
-        continue; // retry same URL without incrementing page
+        continue; // retry same URL — page NOT incremented
       }
 
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(`Shopify API ${res.status}: ${body.slice(0, 200)}`);
       }
+
+      // Success: count this page + reset the retry counter for the next URL.
+      page++;
+      retriesThisUrl = 0;
 
       const data = (await res.json()) as ShopifyOrdersResponse;
       const normalized = data.orders.map(normalizeOrder);

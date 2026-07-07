@@ -97,7 +97,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
         actions={
           <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
             <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-            {t(`returns.status.${ret.status}` as string) || ret.status}
+            {t(`returns.status.${ret.status}` as string)}
           </span>
         }
       />
@@ -122,7 +122,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
         />
         <StatCard
           label={t("returns.status")}
-          value={t(`returns.status.${ret.status}` as string) || ret.status}
+          value={t(`returns.status.${ret.status}` as string)}
           icon={<RotateCcw />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-warning"
@@ -192,7 +192,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
             <div className="pt-2">
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/orders/${ret.order.id}`}>
-                  {t("orders.viewDetails") || t("common.viewAll")}
+                  {t("orders.viewDetails")}
                 </Link>
               </Button>
             </div>
