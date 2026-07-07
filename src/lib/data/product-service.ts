@@ -6,7 +6,7 @@ import { NotFoundError, ConflictError, ValidationError } from "@/types/errors";
 import { createProductSchema, updateProductSchema, createCategorySchema } from "@/lib/validation";
 import type { ServiceContext } from "./service-base";
 import { withServiceError } from "./service-base";
-import { checkAndDispatchLowStock } from "@/lib/automations/engine";
+import { detectLowStock, dispatchLowStock } from "@/lib/automations/engine";
 
 function toDomainProduct(row: Record<string, unknown>): Product {
   const r = { ...row };
@@ -113,7 +113,10 @@ export const productService = {
       // Wrap variant sync + product update + low-stock check in a single
       // $transaction (S2-7) so a failure mid-sync rolls back — matches the
       // order-service.update pattern.
-      return ctx.prisma.$transaction(async (tx) => {
+      // SV-M8: collect low-stock product info inside the tx (race-safe read
+      // of the just-updated stock) and dispatch AFTER the tx commits.
+      const lowStockToDispatch: Array<{ id: string; name: string; sku: string | null; stock: number; lowStockThreshold: number }> = [];
+      const row = await ctx.prisma.$transaction(async (tx) => {
         if (Array.isArray(legacyVariants)) {
           const existing = await tx.productVariant.findMany({ where: { productId: id } });
           const incomingIds = legacyVariants.filter(v => v.id).map(v => v.id);
@@ -144,7 +147,7 @@ export const productService = {
           ]);
         }
 
-        const row = await tx.product.update({
+        const updated = await tx.product.update({
           where: { id },
           data: {
             ...productData,
@@ -154,14 +157,23 @@ export const productService = {
           include: { productVariants: { orderBy: { sortOrder: "asc" } } },
         });
 
-        // If stock was changed, run a low-stock check inside the tx so it
-        // sees the uncommitted stock change.
+        // SV-M8: if stock was changed, DETECT low-stock inside the tx (sees
+        // the uncommitted stock change). Dispatch is deferred to after the tx
+        // commits so we don't notify on a rolled-back change.
         if (data.stock !== undefined) {
-          await checkAndDispatchLowStock(tx, id);
+          const lowStockInfo = await detectLowStock(tx, id);
+          if (lowStockInfo) lowStockToDispatch.push(lowStockInfo);
         }
 
-        return toDomainProduct(row as unknown as Record<string, unknown>);
+        return updated;
       });
+
+      // SV-M8: dispatch low-stock triggers AFTER the tx commits.
+      for (const product of lowStockToDispatch) {
+        void dispatchLowStock(product);
+      }
+
+      return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
   },
 

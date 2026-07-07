@@ -16,11 +16,17 @@ import {
   triggersStockDeduction,
   triggersStockRestoration,
   triggersCustomerStatsUpdate,
+  triggersCustomerStatsReversal,
 } from "@/lib/order-transitions";
 import type { ServiceContext } from "./service-base";
 import { recordOrderChange, recordStatusChange } from "@/lib/data/order-change-service";
 import { withServiceError, nextOrderNumber } from "./service-base";
-import { dispatchTrigger, checkAndDispatchLowStock, type TriggerEvent } from "@/lib/automations/engine";
+import {
+  dispatchTrigger,
+  detectLowStock,
+  dispatchLowStock,
+  type TriggerEvent,
+} from "@/lib/automations/engine";
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
 }
@@ -155,6 +161,12 @@ export const orderService = {
       // Capture the from-status outside the tx so we can record it in the
       // OrderChange ledger after the tx commits (S2-1).
       let fromStatus: OrderStatus | undefined;
+      // SV-M8: collect low-stock products detected INSIDE the tx (race-safe
+      // read of the just-updated stock) and dispatch the `stock.low` trigger
+      // AFTER the tx commits. Previously the dispatch fired inside the tx —
+      // if the tx rolled back, the seller got a low-stock notification for
+      // a stock change that didn't actually happen.
+      const lowStockToDispatch: Array<{ id: string; name: string; sku: string | null; stock: number; lowStockThreshold: number }> = [];
       // TOCTOU FIX: re-read the order + assert the transition INSIDE the
       // transaction. Two concurrent updateStatus calls (e.g. automation +
       // manual click) previously both passed assertCanTransition outside the
@@ -185,17 +197,16 @@ export const orderService = {
                 where: { id: item.productId },
                 data: { stock: { decrement: item.quantity } },
               });
-              // Race-safe low-stock check: read the just-decremented stock
-              // INSIDE this tx (so we see the uncommitted change), then
-              // fire-and-forget the `stock.low` dispatch. The await is just
-              // for the read — the dispatch itself is `void`-ed inside the
-              // helper and never blocks the tx.
-              await checkAndDispatchLowStock(tx, item.productId);
+              // SV-M8: race-safe low-stock DETECTION inside the tx (read
+              // sees the just-decremented stock), but dispatch is deferred
+              // to after the tx commits.
+              const lowStockInfo = await detectLowStock(tx, item.productId);
+              if (lowStockInfo) lowStockToDispatch.push(lowStockInfo);
             }
           }
         }
 
-        // Stock restoration (returned/cancelled/refused from confirmed/shipped)
+        // Stock restoration (returned/cancelled/refused from confirmed/shipped/delivered)
         if (triggersStockRestoration(from, to)) {
           for (const item of order.items) {
             if (item.productId) {
@@ -206,7 +217,8 @@ export const orderService = {
               // If the product is still at or below threshold after
               // restoration, surface the trigger so the merchant knows it's
               // still low. Same race-safe pattern as above.
-              await checkAndDispatchLowStock(tx, item.productId);
+              const lowStockInfo = await detectLowStock(tx, item.productId);
+              if (lowStockInfo) lowStockToDispatch.push(lowStockInfo);
             }
           }
         }
@@ -222,6 +234,22 @@ export const orderService = {
           });
         }
 
+        // SV-M3: Customer stats REVERSAL on delivered → returned. The order
+        // is no longer "completed" — decrement orderCount + totalSpent (by
+        // the full order total, since this path doesn't go through
+        // refund-service which decrements totalSpent by the refund amount).
+        if (triggersCustomerStatsReversal(from, to)) {
+          await tx.customer.update({
+            where: { id: order.customerId },
+            data: {
+              orderCount: { decrement: 1 },
+              totalSpent: { decrement: order.totalPrice },
+            },
+          }).catch(() => {
+            // best-effort — customer row might be soft-deleted
+          });
+        }
+
         // Update order status + timestamp fields
         const data: Record<string, unknown> = { status: to };
         if (to === "confirmed" && !order.confirmedAt) data.confirmedAt = new Date();
@@ -234,6 +262,16 @@ export const orderService = {
           include: { items: true },
         });
       });
+
+      // SV-M8: dispatch low-stock triggers AFTER the tx commits. If the tx
+      // rolled back, lowStockToDispatch is empty (the detection happened
+      // inside the tx but the array is only populated if the tx succeeded —
+      // actually it's populated regardless, but the dispatch is fire-and-
+      // forget and the product state on disk reflects the committed stock,
+      // so notifications match reality). Void-ed — never blocks the caller.
+      for (const product of lowStockToDispatch) {
+        void dispatchLowStock(product);
+      }
 
       // Record the status transition in the OrderChange ledger (S2-1).
       // AI-M4: pass the actor through so AI-initiated transitions are

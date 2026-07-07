@@ -365,12 +365,15 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => eprintln!("[sahelflow] failed to spawn Next.js server: {e}"),
     }
 
-    // Wait for the server port to open (max ~15s)
+    // Wait for the server port to open (max ~60s).
+    // T-M8: bumped from 15s to 60s — cold starts can spend 30-45s downloading
+    // the Prisma query engine binary on first launch, which exceeded the old
+    // 15s budget and caused false-negative "server failed" fallbacks.
     // T-H1: if the server fails to start, log the fallback HTML so the
     // founder sees a clear diagnostic (blank webview is the symptom; this
     // turns it into an actionable error). A future improvement: navigate the
     // webview to a bundled error.html resource on timeout.
-    let reachable = wait_for_port("127.0.0.1", 3000, Duration::from_secs(15));
+    let reachable = wait_for_port("127.0.0.1", 3000, Duration::from_secs(60));
     if !reachable {
         eprintln!("[sahelflow] SERVER FAILED TO START. Fallback page:
 {}", SERVER_FAILED_HTML);
@@ -381,12 +384,12 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(not(debug_assertions))]
 fn which_exists(cmd: &str) -> bool {
-    std::process::Command::new(cmd)
-        .arg("--version")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok()
+    // T-M1: use the `which` crate instead of `cmd --version` probing.
+    // The old probe produced false negatives when the binary existed on PATH
+    // but rejected `--version` (some shims/launchers exit non-zero on unknown
+    // args), and also spawned a subprocess each call. `which::which` does a
+    // pure PATH lookup + executable-bit check — no spawn, no false negatives.
+    which::which(cmd).is_ok()
 }
 
 

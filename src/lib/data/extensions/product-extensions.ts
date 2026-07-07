@@ -66,10 +66,28 @@ export const productServiceExtensions = {
   /**
    * Get aggregated performance stats for a single product:
    * units sold, revenue, order count, and stock status.
+   *
+   * SV-M11: exclude order items whose parent order is in a non-revenue
+   * status (returned, cancelled, refused). A product ordered 100× where 90
+   * were returned should NOT show "100 units sold" — only the 10 that
+   * actually completed should count. draft orders are kept (the order is
+   * still pending, the unit is reserved) — actually no, draft orders
+   * haven't been confirmed yet so the unit isn't "sold" either. Match the
+   * analytics-v2.ts notIn list for consistency: exclude returned, cancelled,
+   * refused + draft. The seller's "best sellers" list should reflect
+   * confirmed+shipped+delivered (i.e. real committed purchases).
    */
   async getStats(ctx: ServiceContext, productId: string): Promise<ProductStats> {
     const items = await ctx.prisma.orderItem.findMany({
-      where: { productId, order: { deletedAt: null } },
+      where: {
+        productId,
+        order: {
+          deletedAt: null,
+          // SV-M11: exclude non-revenue statuses. draft = not yet purchased,
+          // returned/cancelled/refused = purchase reversed.
+          status: { notIn: ["draft", "returned", "cancelled", "refused"] },
+        },
+      },
       select: { quantity: true, total: true, orderId: true },
     });
 

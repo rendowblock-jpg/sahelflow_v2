@@ -131,8 +131,23 @@ export async function getSkuPnl(range: DateRange) {
     .sort((a, b) => b.revenue - a.revenue);
 }
 
-/** Period-over-period comparison (current vs previous). */
+/**
+ * Period-over-period comparison (current vs previous).
+ *
+ * SV-M9: revenue is now computed excluding non-revenue statuses (cancelled,
+ * draft, returned, refused) — these don't represent real revenue (cancelled
+ * = customer backed out; draft = never submitted; returned = parcel refused
+ * at door + refunded; refused = same). Previously ALL statuses were summed,
+ * inflating the revenue number + making the period-over-period delta
+ * misleading. The order count + return-rate calcs still use the full set
+ * (they need returned/refused to compute the return rate).
+ */
 export async function getPeriodComparison(current: DateRange, previous: DateRange) {
+  // SV-M9: statuses excluded from the REVENUE sum (still counted in orders/returned).
+  const EXCLUDED_FROM_REVENUE = ["cancelled", "draft", "returned", "refused"] as const;
+  const isRevenueStatus = (s: string) =>
+    !EXCLUDED_FROM_REVENUE.includes(s as typeof EXCLUDED_FROM_REVENUE[number]);
+
   const [currentOrders, previousOrders] = await Promise.all([
     db.order.findMany({
       where: { createdAt: { gte: current.from, lte: current.to }, deletedAt: null },
@@ -144,7 +159,9 @@ export async function getPeriodComparison(current: DateRange, previous: DateRang
     }),
   ]);
 
-  const sum = (orders: typeof currentOrders) => orders.reduce((s, o) => s + o.totalPrice, 0);
+  // SV-M9: only sum totalPrice for orders in a revenue-generating status.
+  const sum = (orders: typeof currentOrders) =>
+    orders.reduce((s, o) => (isRevenueStatus(o.status) ? s + o.totalPrice : s), 0);
   const currentRevenue = sum(currentOrders);
   const previousRevenue = sum(previousOrders);
   const currentDelivered = currentOrders.filter((o) => o.status === "delivered").length;

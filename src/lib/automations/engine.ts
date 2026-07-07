@@ -133,24 +133,23 @@ interface LowStockProductRow {
 
 /**
  * After a stock change, check whether the product's stock has dropped to or
- * below its `lowStockThreshold`. If so, dispatch the `stock.low` trigger so
- * any matching automation (e.g. "send notification on low stock") can fire.
+ * below its `lowStockThreshold`. Returns the product info if low-stock,
+ * `null` otherwise.
  *
- * Call this from inside a `$transaction` callback right after the stock
- * decrement/increment — the supplied `tx` lets the read see the same row
- * state as the caller's transaction (race-safe detection). Outside a tx,
- * pass the regular `db` client (e.g. from `productService.update`).
+ * SV-M8: SPLIT out of `checkAndDispatchLowStock` so callers inside a
+ * `$transaction` can DETECT low-stock inside the tx (race-safe read of the
+ * just-updated stock) and DISPATCH the `stock.low` trigger AFTER the tx
+ * commits. Previously the dispatch fired inside the tx — if the tx rolled
+ * back, the seller got a low-stock notification for a stock change that
+ * didn't actually happen.
  *
- * The caller should `await` this helper so the read completes inside the
- * transaction (race-safe). The actual `dispatchTrigger` call inside is
- * `void`-ed — fire-and-forget, never blocks the caller, never throws. This
- * matches the pattern of the existing `order.*` dispatches in
- * `order-service.ts` (the dispatch itself is fire-and-forget).
+ * Callers that aren't inside a tx (rare — only legacy paths) can still use
+ * `checkAndDispatchLowStock` which calls both functions inline.
  */
-export async function checkAndDispatchLowStock(
+export async function detectLowStock(
   tx: LowStockQueryClient,
   productId: string,
-): Promise<void> {
+): Promise<LowStockProductRow | null> {
   try {
     const product = (await tx.product.findUnique({
       where: { id: productId },
@@ -162,25 +161,53 @@ export async function checkAndDispatchLowStock(
         lowStockThreshold: true,
       },
     })) as LowStockProductRow | null;
-    if (!product) return;
+    if (!product) return null;
     // Only fire when stock is at or below the threshold — restoration that
     // pushes stock back above the threshold will NOT re-fire (the product is
     // no longer low).
-    if (product.stock > product.lowStockThreshold) return;
-
-    void dispatchTrigger("stock.low", {
-      productId: product.id,
-      productName: product.name,
-      stockLevel: product.stock,
-      lowStockThreshold: product.lowStockThreshold,
-    });
+    if (product.stock > product.lowStockThreshold) return null;
+    return product;
   } catch (err) {
     // Never let the low-stock check bubble up to the business operation.
     logger.error("automation.lowStockCheck.failed", {
       productId,
       error: String(err),
     });
+    return null;
   }
+}
+
+/**
+ * Fire the `stock.low` trigger for a product detected as low-stock via
+ * `detectLowStock`. Fire-and-forget — never blocks the caller, never throws.
+ *
+ * SV-M8: callers should call this AFTER the surrounding `$transaction`
+ * commits, so the dispatch matches the committed stock state (no
+ * notifications for rolled-back changes).
+ */
+export function dispatchLowStock(product: LowStockProductRow): void {
+  void dispatchTrigger("stock.low", {
+    productId: product.id,
+    productName: product.name,
+    stockLevel: product.stock,
+    lowStockThreshold: product.lowStockThreshold,
+  });
+}
+
+/**
+ * Backward-compat wrapper: detect + dispatch in one call.
+ *
+ * SV-M8 WARNING: calling this inside a `$transaction` re-introduces the
+ * "dispatch fires before commit" bug. New callers should use `detectLowStock`
+ * inside the tx + `dispatchLowStock` after the tx commits. This wrapper is
+ * kept for non-tx callers only.
+ */
+export async function checkAndDispatchLowStock(
+  tx: LowStockQueryClient,
+  productId: string,
+): Promise<void> {
+  const product = await detectLowStock(tx, productId);
+  if (product) dispatchLowStock(product);
 }
 
 // ── Single automation execution ──────────────────────────────────────────────
@@ -409,6 +436,15 @@ async function executeSendWhatsapp(
 
 /**
  * Add a note to the customer record.
+ *
+ * SV-M6: the notes read-modify-write is now wrapped in a `$transaction` so
+ * two concurrent automations (e.g. order.delivered → tag_customer fires twice
+ * in quick succession) don't lose writes. Previously: both read notes="X",
+ * both append "\nTag1" / "\nTag2", both save → second save overwrites the
+ * first → "Tag1" is lost. With the tx, the second read sees the first's
+ * uncommitted write (Prisma's $transaction on SQLite uses BEGIN IMMEDIATE
+ * for the batch form, but the interactive form also serializes via the
+ * single writer lock).
  */
 async function executeTagCustomer(
   config: AutomationConfig,
@@ -419,22 +455,42 @@ async function executeTagCustomer(
   }
 
   const noteText = config.noteText ?? `Tagged by automation: ${payload.orderNumber ?? ""}`;
-  const customer = await db.customer.findUnique({
-    where: { id: payload.customerId },
-    select: { notes: true },
-  });
 
-  if (!customer) {
-    return { status: "skipped", message: "Customer not found" };
+  try {
+    await db.$transaction(async (tx) => {
+      // Re-read notes INSIDE the tx so we see any concurrent uncommitted writes.
+      const customer = await tx.customer.findUnique({
+        where: { id: payload.customerId! },
+        select: { notes: true },
+      });
+      if (!customer) {
+        // Can't throw — the caller expects a {status, message} response.
+        // Throw a sentinel error we catch below to convert to "skipped".
+        throw new TagCustomerNotFoundError();
+      }
+      const newNotes = customer.notes ? `${customer.notes}\n${noteText}` : noteText;
+      await tx.customer.update({
+        where: { id: payload.customerId! },
+        data: { notes: newNotes },
+      });
+    });
+  } catch (err) {
+    if (err instanceof TagCustomerNotFoundError) {
+      return { status: "skipped", message: "Customer not found" };
+    }
+    // Unexpected error — surface as failed so the retry loop fires.
+    throw err;
   }
 
-  const newNotes = customer.notes ? `${customer.notes}\n${noteText}` : noteText;
-  await db.customer.update({
-    where: { id: payload.customerId },
-    data: { notes: newNotes },
-  });
-
   return { status: "success", message: `Tagged customer: ${noteText}` };
+}
+
+/** Sentinel for the "customer not found" case inside executeTagCustomer's tx. */
+class TagCustomerNotFoundError extends Error {
+  constructor() {
+    super("TagCustomerNotFound");
+    this.name = "TagCustomerNotFoundError";
+  }
 }
 
 /**

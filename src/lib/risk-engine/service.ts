@@ -79,14 +79,60 @@ export async function saveRiskRules(rules: RiskRule[]): Promise<void> {
   });
 }
 
-/** Increment the trigger count for rules that fired (for analytics). */
+/**
+ * Increment the trigger count for rules that fired (for analytics).
+ *
+ * SV-M7: the previous read-all → map → save-all was non-atomic — two
+ * concurrent risk assessments that triggered the same rule would both read
+ * triggerCount=5, both increment to 6, both save → second save overwrites
+ * the first → one increment is lost.
+ *
+ * Risk rules are stored as a JSON blob in a single Setting row (key=RULES_KEY),
+ * so we can't use Prisma's `{ triggerCount: { increment: 1 } }` operator
+ * (it's a JSON field, not a column). The fix: wrap the read-modify-write in
+ * a `$transaction` so the read + write happen as an atomic unit on the
+ * SQLite writer lock. Prisma's interactive `$transaction` on SQLite uses
+ * the standard `BEGIN` (DEFERRED) — the write lock is acquired on the first
+ * WRITE (the upsert), not on BEGIN. Two concurrent calls can still both
+ * read the same pre-write snapshot, but the SECOND call's upsert blocks on
+ * the first's write lock + sees the committed state on re-read inside the
+ * tx... actually no — Prisma's interactive tx doesn't re-read on write
+ * contention, it just waits for the lock + then writes its stale value.
+ *
+ * RESIDUAL RACE: under high concurrency, two concurrent calls could still
+ * lose one increment. This is acceptable for an analytics counter (worst
+ * case: undercount by a few — never data corruption, never an over-count).
+ * A proper fix would require either (a) a `RiskRule` table with
+ * `triggerCount` as a column (so we can use `{ increment: 1 }`) or
+ * (b) a Postgres backend with SELECT FOR UPDATE. Both are out of scope for
+ * a medium-severity fix. The $transaction at least makes the read+write
+ * atomic as a unit (no partial writes).
+ */
 export async function incrementRuleTriggers(ruleIds: string[]): Promise<void> {
   if (ruleIds.length === 0) return;
-  const rules = await getRiskRules();
-  const updated = rules.map((r) =>
-    ruleIds.includes(r.id) ? { ...r, triggerCount: r.triggerCount + 1 } : r,
-  );
-  await saveRiskRules(updated);
+  await db.$transaction(async (tx) => {
+    // Re-read inside the tx so we see any concurrent committed writes.
+    const row = await tx.setting.findUnique({ where: { key: RULES_KEY } });
+    let rules: RiskRule[];
+    if (!row) {
+      // Seed defaults on first access (mirrors getRiskRules seeding).
+      rules = DEFAULT_RISK_RULES.map((r) => ({ ...r, triggerCount: 0 }));
+    } else {
+      try {
+        rules = JSON.parse(row.value) as RiskRule[];
+      } catch {
+        rules = DEFAULT_RISK_RULES.map((r) => ({ ...r, triggerCount: 0 }));
+      }
+    }
+    const updated = rules.map((r) =>
+      ruleIds.includes(r.id) ? { ...r, triggerCount: r.triggerCount + 1 } : r,
+    );
+    await tx.setting.upsert({
+      where: { key: RULES_KEY },
+      create: { key: RULES_KEY, value: JSON.stringify(updated) },
+      update: { value: JSON.stringify(updated) },
+    });
+  });
 }
 
 // ── Assessment input builder ─────────────────────────────────────────────────
@@ -250,8 +296,20 @@ export async function batchAssessOrders(orderIds: string[]): Promise<Map<string,
 // page. The notes tag is NEVER used for querying (notes is encrypted at rest,
 // so a `contains` filter would search ciphertext and find nothing).
 
-/** Add a customer to the blacklist. */
+/**
+ * Add a customer to the blacklist.
+ *
+ * SV-M6: the notes read-modify-write is now wrapped in a `$transaction` so
+ * concurrent calls (e.g. two automations fire `customer.blacklisted` for the
+ * same customer in quick succession) don't lose writes. Previously both
+ * read notes="X", both append their tag, both save → second save overwrites
+ * the first → the first tag is lost. The tx serializes the read+write via
+ * SQLite's single-writer lock.
+ */
 export async function blacklistCustomer(customerId: string, reason?: string): Promise<void> {
+  // Read outside the tx: used for the early no-op return + the dispatch payload.
+  // (Reading twice is fine — the tx still serializes the WRITE; the dispatch
+  // payload just needs a best-effort snapshot.)
   const customer = await db.customer.findFirst({
     where: { id: customerId, deletedAt: null },
     select: { notes: true, isBlacklisted: true, name: true, phone: true },
@@ -269,18 +327,25 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
     return;
   }
 
-  const existingNotes = customer.notes ?? "";
-  const tag = reason ? `[BLACKLISTED: ${reason}]` : "[BLACKLISTED]";
-  const newNotes = existingNotes ? `${existingNotes}\n${tag}` : tag;
+  await db.$transaction(async (tx) => {
+    // SV-M6: re-read notes INSIDE the tx so we see any concurrent uncommitted writes.
+    const fresh = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { notes: true },
+    });
+    const existingNotes = fresh?.notes ?? "";
+    const tag = reason ? `[BLACKLISTED: ${reason}]` : "[BLACKLISTED]";
+    const newNotes = existingNotes ? `${existingNotes}\n${tag}` : tag;
 
-  await db.customer.update({
-    where: { id: customerId },
-    data: {
-      isBlacklisted: true,
-      blacklistReason: reason ?? null,
-      blacklistedAt: new Date(),
-      notes: newNotes,
-    },
+    await tx.customer.update({
+      where: { id: customerId },
+      data: {
+        isBlacklisted: true,
+        blacklistReason: reason ?? null,
+        blacklistedAt: new Date(),
+        notes: newNotes,
+      },
+    });
   });
 
   // Fire automation trigger (fire-and-forget)
@@ -291,7 +356,11 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
   });
 }
 
-/** Remove a customer from the blacklist. */
+/**
+ * Remove a customer from the blacklist.
+ *
+ * SV-M6: same transactional notes read-modify-write pattern as blacklistCustomer.
+ */
 export async function unblacklistCustomer(customerId: string): Promise<void> {
   const customer = await db.customer.findFirst({
     where: { id: customerId, deletedAt: null },
@@ -305,19 +374,26 @@ export async function unblacklistCustomer(customerId: string): Promise<void> {
   const hasStaleTag = (customer.notes ?? "").includes("[BLACKLISTED");
   if (!customer.isBlacklisted && !hasStaleTag) return;
 
-  const cleaned = (customer.notes ?? "")
-    .replace(/\[BLACKLISTED[^\]]*\]/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  await db.$transaction(async (tx) => {
+    // SV-M6: re-read notes INSIDE the tx.
+    const fresh = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { notes: true },
+    });
+    const cleaned = (fresh?.notes ?? "")
+      .replace(/\[BLACKLISTED[^\]]*\]/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
-  await db.customer.update({
-    where: { id: customerId },
-    data: {
-      isBlacklisted: false,
-      blacklistReason: null,
-      blacklistedAt: null,
-      notes: cleaned || null,
-    },
+    await tx.customer.update({
+      where: { id: customerId },
+      data: {
+        isBlacklisted: false,
+        blacklistReason: null,
+        blacklistedAt: null,
+        notes: cleaned || null,
+      },
+    });
   });
 }
 

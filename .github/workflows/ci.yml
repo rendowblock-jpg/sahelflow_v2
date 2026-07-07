@@ -47,6 +47,30 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
+      # T-M7: verify the version is in sync across the three places it lives.
+      # A drift here causes the updater to ship a wrong latest.json or the
+      # desktop bundle to be tagged with a version that doesn't match the
+      # GitHub release tag. Cheap to check (no deps), expensive to miss.
+      - name: Version sync check (Cargo.toml == tauri.conf.json == package.json)
+        run: |
+          python3 - << 'PYEOF'
+          import json, re, sys
+          with open("package.json") as f:
+              pkg = json.load(f)["version"]
+          with open("src-tauri/tauri.conf.json") as f:
+              tauri = json.load(f)["version"]
+          with open("src-tauri/Cargo.toml") as f:
+              m = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.MULTILINE)
+              cargo = m.group(1) if m else None
+          print(f"package.json   : {pkg}")
+          print(f"tauri.conf.json: {tauri}")
+          print(f"Cargo.toml     : {cargo}")
+          if not (pkg == tauri == cargo):
+              print("::error::Version drift detected — all three must match.")
+              sys.exit(1)
+          print("OK: versions in sync.")
+          PYEOF
+
       # PROD-026: Run the project's own quality gate (replaces separate lint + tsc + vitest steps)
       - name: Quality gate (tsc + eslint + vitest + prisma)
         run: bun run sf-verify
@@ -65,3 +89,51 @@ jobs:
       - name: Migration status
         run: bunx prisma migrate status
         # Migrations are now fully wired (phase4_drift_capture)
+
+  # T-M9: Tauri build smoke — catches Rust compile errors + Cargo.toml drift
+  # that the JS-only `ci` job can't see. Runs `cargo check` (not a full
+  # `tauri build`, which would take 20+ min and need platform SDKs). This is
+  # cheap insurance against a broken release.yml run that only fails after
+  # every platform has spent 30+ min compiling.
+  tauri-build-smoke:
+    name: Tauri Rust smoke (cargo check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies (Tauri native deps)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-check-
+
+      - name: cargo check (src-tauri)
+        working-directory: src-tauri
+        # NOTE: not using --locked here because branches that add/remove a
+        # Rust dep (e.g. T-M1 added `which`) would have an out-of-date
+        # Cargo.lock until a dev runs `cargo build` locally and commits it.
+        # The smoke job's goal is to catch compile errors, not to enforce
+        # lockfile immutability. The release build (tauri-action) regenerates
+        # the lockfile the same way.
+        run: cargo check
+
+  # T-M9 (TODO): E2E (Playwright) is NOT wired into per-push CI on purpose —
+  # a full `bun run test:e2e` boots Next.js + a SQLite DB + the WhatsApp
+  # sidecar and takes 8-12 min, which is too slow for the per-PR quality gate.
+  # Plan: add a separate `e2e` job (or nightly schedule) that runs on
+  # `workflow_dispatch` + on tag pushes, gates merges to main. Track in
+  # Wave 8. For now, devs run `bun run test:e2e` locally before tagging.

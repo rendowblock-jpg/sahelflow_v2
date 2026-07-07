@@ -23,7 +23,10 @@ import { SahelFlowError } from "@/types/errors";
  * `setSetting` (and therefore via `PUT /api/settings`). They hold
  * security-sensitive values managed by dedicated, authenticated code paths.
  */
-const RESERVED_SETTING_KEY_PREFIXES = ["auth_", "active_license"] as const;
+// SV-M1/M2: include "active_machine_id" (license-related, write-protected
+// alongside the active_license_* keys — exposed machine IDs are a privacy
+// risk + deleting the key forces license re-validation).
+const RESERVED_SETTING_KEY_PREFIXES = ["auth_", "active_license", "active_machine_id"] as const;
 
 function isReservedSettingKey(key: string): boolean {
   return RESERVED_SETTING_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
@@ -85,18 +88,45 @@ export async function setSetting(key: string, value: string | number | boolean):
   });
 }
 
-/** Get all settings as a key→value record. */
+/**
+ * Get all settings as a key→value record.
+ *
+ * SV-M1: reserved keys (auth_*, active_license_*, active_machine_id) are
+ * stripped on read. These hold security-sensitive values (PIN hashes,
+ * license payloads with machine IDs) that should never be exposed via the
+ * bulk GET /api/settings endpoint. Per-key `getSetting(key)` still reads
+ * them (defense-in-depth diagnostics for trusted internal callers).
+ */
 export async function getAllSettings(): Promise<Record<string, string>> {
   const rows = await db.setting.findMany();
   const out: Record<string, string> = {};
   for (const row of rows) {
+    if (isReservedSettingKey(row.key)) continue;
     out[row.key] = row.value;
   }
   return out;
 }
 
-/** Delete a setting. No-op if not set. */
+/**
+ * Delete a setting. No-op if not set.
+ *
+ * SECURITY (SV-M2): Throws `SahelFlowError` (403) if the key is reserved
+ * (`auth_*`, `active_license_*`, `active_machine_id`). A
+ * `DELETE /api/settings/active_license_status` would otherwise force a
+ * license re-validation (and potentially allow an attacker to clear the
+ * cached "valid" status, locking the seller out OR forcing a fresh check
+ * that might fail). Trusted internal callers that legitimately need to
+ * wipe reserved keys (e.g. /api/settings/reset) use `db.setting.deleteMany`
+ * directly, bypassing this guard — they are trusted server-side code paths.
+ */
 export async function deleteSetting(key: string): Promise<void> {
+  if (isReservedSettingKey(key)) {
+    throw new SahelFlowError(
+      `Cannot delete reserved setting key '${key}' via the settings API`,
+      "SETTING_RESERVED_KEY",
+      403,
+    );
+  }
   await db.setting.deleteMany({ where: { key } });
 }
 

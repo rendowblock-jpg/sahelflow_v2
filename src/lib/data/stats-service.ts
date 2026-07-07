@@ -41,14 +41,27 @@ export const statsService = {
         },
         _sum: { totalPrice: true },
       }),
-      // Realized Revenue = delivered orders only (what was actually collected)
+      // Realized Revenue = delivered orders only (what was actually collected).
+      // SV-M10: filter by deliveredAt (not createdAt) so an order created
+      // yesterday + delivered today shows up in TODAY's realized revenue,
+      // not yesterday's. createdAt is when the order was placed; deliveredAt
+      // is when the cash was actually collected — the latter is what "realized"
+      // means. (deliveredAt is set on the shipped→delivered transition in
+      // orderService.updateStatus.) Only count orders where deliveredAt is
+      // non-null + in the date window (the status:"delivered" filter is
+      // kept as defense-in-depth in case deliveredAt is somehow null on a
+      // delivered order — shouldn't happen, but the cost is one extra filter).
       ctx.prisma.order.aggregate({
-        where: { createdAt: { gte: startOfDay }, status: "delivered", deletedAt: null },
+        where: {
+          deliveredAt: { gte: startOfDay },
+          status: "delivered",
+          deletedAt: null,
+        },
         _sum: { totalPrice: true },
       }),
       ctx.prisma.order.aggregate({
         where: {
-          createdAt: { gte: startOfYesterday, lt: startOfDay },
+          deliveredAt: { gte: startOfYesterday, lt: startOfDay },
           status: "delivered",
           deletedAt: null,
         },

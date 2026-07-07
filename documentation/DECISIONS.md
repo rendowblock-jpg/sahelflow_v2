@@ -298,7 +298,7 @@ Tauri's production build needs a `frontendDist`. The v3.0 app uses Next.js **API
 **Bundle the Next.js standalone server and spawn it as a local process at runtime.** The Tauri webview loads `http://localhost:3000`.
 
 - `next.config.ts`: `output: "standalone"` → `.next/standalone/server.js` (a minimal Node/Bun-runnable server).
-- `src-tauri/build-frontend.sh` (Tauri `beforeBuildCommand`): builds Next.js, arranges `.next/static` + `public/` into the standalone dir, copies it to `src-tauri/resources/standalone/`, and compiles the WhatsApp sidecar to a single binary (`bun build --compile`).
+- `src-tauri/build-frontend.ts` (Tauri `beforeBuildCommand`): builds Next.js, arranges `.next/static` + `public/` into the standalone dir, copies it to `src-tauri/resources/standalone/`, and compiles the WhatsApp sidecar to a single binary (`bun build --compile`). (T-M6: the legacy `build-frontend.sh` was deleted as dead code.)
 - `tauri.conf.json`: `frontendDist: "http://localhost:3000"`, `bundle.resources: ["resources/standalone/**/*"]`, `bundle.externalBin: ["binaries/sahelflow-whatsapp"]`.
 - `src-tauri/src/lib.rs` setup hook (release only): spawns the WhatsApp sidecar + the Next.js server (`bun`/`node`), waits for port 3000, then the webview loads.
 

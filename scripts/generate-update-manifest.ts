@@ -29,22 +29,56 @@ function getVersion(): string {
   return conf.version;
 }
 
-// Find a bundle file + its signature by extension pattern
+// Find a bundle file + its signature by extension pattern.
+// If multiple files match `ext`, returns the first one (callers that need
+// arch-specific selection should use findBundleByName instead).
 function findBundle(subdir: string, ext: string): { path: string; sig: string } | null {
   const dir = join(BUNDLE_DIR, subdir);
   if (!existsSync(dir)) return null;
 
-  const files = readdirSync(dir);
-  const bundleFile = files.find((f) => f.endsWith(ext));
+  const files = readdirSync(dir).filter((f) => f.endsWith(ext));
+  const bundleFile = files[0];
   if (!bundleFile) return null;
 
+  return readBundleSig(dir, bundleFile);
+}
+
+// T-M4: list every bundle file in `subdir` matching `ext` (used by the macOS
+// section to pick per-arch .dmg files when Tauri builds separate aarch64 and
+// x86_64 bundles instead of one universal binary).
+function listBundles(subdir: string, ext: string): string[] {
+  const dir = join(BUNDLE_DIR, subdir);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => f.endsWith(ext) && !f.endsWith(`${ext}.sig`));
+}
+
+// Find a bundle file by substring (e.g. "aarch64") + read its .sig sibling.
+function findBundleByName(subdir: string, ext: string, needle: string): { path: string; sig: string } | null {
+  const matches = listBundles(subdir, ext).filter((f) => f.includes(needle));
+  const file = matches[0];
+  if (!file) return null;
+  const dir = join(BUNDLE_DIR, subdir);
+  return readBundleSig(dir, file);
+}
+
+// Find a bundle file that does NOT contain any of the `exclude` substrings
+// (used to identify the universal .dmg: it matches .dmg but contains neither
+// "aarch64" nor "x86_64").
+function findBundleExcluding(subdir: string, ext: string, exclude: string[]): { path: string; sig: string } | null {
+  const matches = listBundles(subdir, ext).filter((f) => !exclude.some((x) => f.includes(x)));
+  const file = matches[0];
+  if (!file) return null;
+  const dir = join(BUNDLE_DIR, subdir);
+  return readBundleSig(dir, file);
+}
+
+function readBundleSig(dir: string, bundleFile: string): { path: string; sig: string } | null {
   const sigFile = `${bundleFile}.sig`;
   const sigPath = join(dir, sigFile);
   if (!existsSync(sigPath)) {
     console.warn(`  ⚠️  No signature found for ${bundleFile} (expected ${sigFile})`);
     return null;
   }
-
   return {
     path: bundleFile,
     sig: readFileSync(sigPath, "utf-8").trim(),
@@ -65,15 +99,32 @@ async function main(): Promise<void> {
   // Linux: .AppImage (linux-x86_64)
   const platforms: Record<string, { signature: string; url: string }> = {};
 
-  // macOS — detect architecture from the bundle dir name
-  const macosBundle = findBundle("dmg", ".dmg");
-  if (macosBundle) {
-    // Tauri builds universal binaries by default on macOS (aarch64 + x86_64)
-    // We publish one .dmg that covers both
-    const url = `https://github.com/rendowblock-jpg/sahelflow_v2/releases/download/v${version}/${macosBundle.path}`;
-    platforms["darwin-aarch64"] = { signature: macosBundle.sig, url };
-    platforms["darwin-x86_64"] = { signature: macosBundle.sig, url };
-    console.log(`  ✅ macOS: ${macosBundle.path}`);
+  // macOS — T-M4: detect arch from the .dmg filename instead of assuming a
+  // universal binary. Tauri may produce either one universal .dmg (covers both
+  // arches) OR two per-arch .dmg files (`...aarch64.dmg` + `...x86_64.dmg`).
+  // We try per-arch first, then fall back to a universal dmg for both arches.
+  const dmgArm = findBundleByName("dmg", ".dmg", "aarch64");
+  const dmgX64 = findBundleByName("dmg", ".dmg", "x86_64");
+  const dmgUniversal = findBundleExcluding("dmg", ".dmg", ["aarch64", "x86_64"]);
+
+  const macosArm = dmgArm ?? dmgUniversal;
+  const macosX64 = dmgX64 ?? dmgUniversal;
+  if (macosArm) {
+    const url = `https://github.com/rendowblock-jpg/sahelflow_v2/releases/download/v${version}/${macosArm.path}`;
+    platforms["darwin-aarch64"] = { signature: macosArm.sig, url };
+  }
+  if (macosX64) {
+    const url = `https://github.com/rendowblock-jpg/sahelflow_v2/releases/download/v${version}/${macosX64.path}`;
+    platforms["darwin-x86_64"] = { signature: macosX64.sig, url };
+  }
+  if (macosArm || macosX64) {
+    const armName = macosArm?.path ?? "(none)";
+    const x64Name = macosX64?.path ?? "(none)";
+    const isUniversal = dmgUniversal && !dmgArm && !dmgX64;
+    console.log(`  ✅ macOS: arm=${armName} x64=${x64Name}${isUniversal ? " (universal)" : ""}`);
+  } else if (listBundles("dmg", ".dmg").length > 0) {
+    // .dmg files exist but none have a matching .sig
+    console.warn("  ⚠️  macOS .dmg found but no signature readable — skipping darwin entries");
   }
 
   // Windows

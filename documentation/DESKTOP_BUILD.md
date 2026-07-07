@@ -95,7 +95,7 @@ bun run tauri:build
 
 **Architecture (ADR-010):** the app uses Next.js API routes + server components, so static export is not viable. Instead, `tauri:build`:
 
-1. Runs `src-tauri/build-frontend.sh` (the `beforeBuildCommand`):
+1. Runs `src-tauri/build-frontend.ts` (the `beforeBuildCommand`):
    - `bun run build` with `output: "standalone"` → `.next/standalone/server.js`
    - Copies `.next/static` + `public/` into the standalone dir
    - Copies the standalone dir → `src-tauri/resources/standalone/` (bundled as a Tauri resource)

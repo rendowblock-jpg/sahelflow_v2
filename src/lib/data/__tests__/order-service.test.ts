@@ -257,6 +257,41 @@ describe("orderService.updateStatus", () => {
     expect(updatedCustomer!.totalSpent).toBe(5000);
   });
 
+  it("transitions delivered → returned + decrements customer stats (SV-M3)", async () => {
+    // SV-M3: customer stats (orderCount + totalSpent) were incremented on the
+    // shipped→delivered transition. When the order moves delivered→returned
+    // (post-delivery COD return), they must be decremented — otherwise a
+    // customer who ordered 10×, had 5 returned, shows orderCount=10 + inflated
+    // totalSpent (misleading the seller about the customer's real value).
+    const customer = await seedCustomer(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "delivered", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: [{ productName: "Test", quantity: 1, unitPrice: 5000, total: 5000 }] },
+      },
+      include: { items: true },
+    });
+    // Pre-seed the customer stats as if the delivered transition had run.
+    await db.customer.update({
+      where: { id: customer.id },
+      data: { orderCount: { increment: 1 }, totalSpent: { increment: 5000 } },
+    });
+    // Sanity check: stats are 1 / 5000 before the return.
+    const beforeCustomer = await db.customer.findUnique({ where: { id: customer.id } });
+    expect(beforeCustomer!.orderCount).toBe(1);
+    expect(beforeCustomer!.totalSpent).toBe(5000);
+
+    // Transition delivered → returned (the standard COD return path).
+    const updated = await orderService.updateStatus({ prisma: db as never }, order.id, "returned");
+    expect(updated.status).toBe("returned");
+
+    // SV-M3: orderCount + totalSpent should be decremented back to 0.
+    const afterCustomer = await db.customer.findUnique({ where: { id: customer.id } });
+    expect(afterCustomer!.orderCount).toBe(0);
+    expect(afterCustomer!.totalSpent).toBe(0);
+  });
+
   it("restores stock on cancelled from confirmed", async () => {
     const customer = await seedCustomer(db);
     const product = await seedProduct(db, { stock: 50 });

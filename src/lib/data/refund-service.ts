@@ -108,6 +108,19 @@ export async function createRefund(input: CreateRefundInput) {
           });
         }
       }
+
+      // SV-M3: decrement the customer's orderCount — the order is no longer
+      // "completed" (it's now returned). totalSpent is decremented separately
+      // in step 8 below by the refund amount (which can be partial — for a
+      // full refund it equals order.totalPrice, for a partial refund the
+      // remaining amount stays in totalSpent as "real" revenue from the
+      // portion that wasn't refunded). Best-effort: customer may be soft-deleted.
+      await tx.customer.update({
+        where: { id: order.customerId },
+        data: { orderCount: { decrement: 1 } },
+      }).catch(() => {
+        // best-effort — customer row might be soft-deleted
+      });
     }
 
     // 5. Create the refund row

@@ -16,8 +16,9 @@
  *
  * Stock side effects (handled in the order service, NOT here):
  *   → confirmed (from non-confirmed): deduct stock per item
- *   → returned | cancelled | refused (from confirmed | shipped): restore stock
+ *   → returned | cancelled | refused (from confirmed | shipped | delivered): restore stock
  *   → delivered (from non-delivered): increment customer.orderCount + totalSpent
+ *   → returned (from delivered): decrement customer.orderCount + totalSpent (SV-M3)
  */
 
 import type { OrderStatus } from "@/types/domain";
@@ -144,4 +145,28 @@ export function triggersStockRestoration(from: OrderStatus, to: OrderStatus): bo
  */
 export function triggersCustomerStatsUpdate(from: OrderStatus, to: OrderStatus): boolean {
   return to === "delivered" && from !== "delivered";
+}
+
+/**
+ * Does transitioning to this status trigger a customer stats REVERSAL?
+ *
+ * SV-M3: when an order moves from "delivered" → "returned", the customer's
+ * stats that were incremented on the delivered transition (orderCount +
+ * totalSpent) must be decremented. Without this, a customer who ordered
+ * 10×, had 5 returned, shows orderCount=10 + inflated totalSpent —
+ * misleading the seller about the customer's real value.
+ *
+ * Only fires when the PREVIOUS status was "delivered" (i.e. the customer
+ * stats were actually incremented). returned/refused/cancelled from
+ * confirmed/shipped never incremented customer stats, so they don't
+ * reverse them either.
+ *
+ * Note: refund-service handles this same reversal inline (it can't call
+ * orderService.updateStatus due to nested-tx visibility) — it decrements
+ * totalSpent by the refund amount (which can be partial) + orderCount by 1.
+ * orderService.updateStatus handles the non-refund path: full reversal of
+ * both orderCount + totalSpent by order.totalPrice.
+ */
+export function triggersCustomerStatsReversal(from: OrderStatus, to: OrderStatus): boolean {
+  return from === "delivered" && to === "returned";
 }

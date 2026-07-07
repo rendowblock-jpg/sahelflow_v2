@@ -2,7 +2,7 @@
   "name": "sahelflow",
   "version": "4.1.0",
   "private": true,
-  "description": "SahelFlow — AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
+  "description": "SahelFlow \u2014 AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
@@ -18,7 +18,7 @@
     "db:studio": "prisma studio",
     "sidecar": "cd sidecars/whatsapp && bun run dev",
     "sidecar:start": "cd sidecars/whatsapp && bun run start",
-    "tauri:dev": "bun run build:sidecar && bunx tauri dev",
+    "tauri:dev": "bun run build:sidecar && bun run scripts/dev-sidecar-check.ts && bunx tauri dev",
     "tauri:build": "bunx tauri build",
     "seed": "bun --conditions react-server scripts/seed.ts",
     "seed:expanded": "bun --conditions react-server scripts/seed-expanded.ts",

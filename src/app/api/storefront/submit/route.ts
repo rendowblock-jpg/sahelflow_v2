@@ -142,6 +142,19 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Create customer + order in a transaction (D-007: was not transactional).
   // Use upsert for idempotency — if two concurrent submissions come in with
   // the same new phone, the second finds the customer the first created.
+  //
+  // SV-M12: the upsert's `update` branch now clears `deletedAt: null`. The
+  // Customer model has a blind index on `phone` (so it's findable by phone
+  // regardless of soft-delete state), which means a `customer.upsert({ where:
+  // { phone } })` finds soft-deleted rows too — previously, a storefront
+  // submission for a phone that was soft-deleted would link the new order to
+  // a "deleted" customer (the seller wouldn't see it in their customer list
+  // because the customer list filters deletedAt:null). Clearing deletedAt in
+  // the update branch "restores" the customer — they're now active again,
+  // linked to the new order + their historical orders. (Prisma upsert
+  // doesn't support a `where` filter on non-unique fields like deletedAt, so
+  // we can't filter the lookup — the update branch is the only place to
+  // clear it.)
   const order = await db.$transaction(async (tx) => {
     const customer = await tx.customer.upsert({
       where: { phone: input.customer.phone },
@@ -151,6 +164,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         wilaya: input.customer.wilaya,
         commune: input.customer.commune,
         address: input.customer.address,
+        // SV-M12: restore the customer if they were soft-deleted. Without
+        // this, the order would be linked to a "deleted" customer invisible
+        // in the customer list.
+        deletedAt: null,
       },
       create: {
         name: input.customer.name,

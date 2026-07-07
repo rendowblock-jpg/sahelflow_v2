@@ -9,6 +9,7 @@ import {
   triggersStockDeduction,
   triggersStockRestoration,
   triggersCustomerStatsUpdate,
+  triggersCustomerStatsReversal,
 } from "@/lib/order-transitions";
 import type { OrderStatus } from "@/types/domain";
 
@@ -186,5 +187,38 @@ describe("triggersCustomerStatsUpdate", () => {
 
   it("returns false for confirmed → shipped", () => {
     expect(triggersCustomerStatsUpdate("confirmed", "shipped")).toBe(false);
+  });
+});
+
+describe("triggersCustomerStatsReversal (SV-M3)", () => {
+  it("returns true for delivered → returned (the standard COD return flow)", () => {
+    // SV-M3: customer accepted parcel (→ delivered), paid, then later
+    // returned/refunded. The customer stats were incremented on the
+    // delivered transition — they must be decremented on the return.
+    expect(triggersCustomerStatsReversal("delivered", "returned")).toBe(true);
+  });
+
+  it("returns false for delivered → delivered (same status)", () => {
+    expect(triggersCustomerStatsReversal("delivered", "delivered")).toBe(false);
+  });
+
+  it("returns false for confirmed → returned (stats were never incremented)", () => {
+    // confirmed → returned restores stock but doesn't reverse customer
+    // stats (they were never incremented — only delivered increments them).
+    expect(triggersCustomerStatsReversal("confirmed", "returned")).toBe(false);
+  });
+
+  it("returns false for shipped → returned (stats were never incremented)", () => {
+    expect(triggersCustomerStatsReversal("shipped", "returned")).toBe(false);
+  });
+
+  it("returns false for shipped → delivered (that's an increment, not a reversal)", () => {
+    expect(triggersCustomerStatsReversal("shipped", "delivered")).toBe(false);
+  });
+
+  it("returns false for delivered → cancelled (not a valid transition anyway)", () => {
+    // The state machine blocks this, but the predicate should still be
+    // conservative — only delivered → returned triggers a reversal.
+    expect(triggersCustomerStatsReversal("delivered", "cancelled")).toBe(false);
   });
 });
