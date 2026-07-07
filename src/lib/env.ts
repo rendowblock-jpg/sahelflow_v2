@@ -105,7 +105,11 @@ export const env = {
   databaseUrl: required("DATABASE_URL", "file:./data/shops/dev.db"),
 
   /** App version (for license version-gating) */
-  appVersion: optional("APP_VERSION", "4.0.0") ?? "4.0.0",
+  // SV-L7: keep in sync with package.json "version" (currently 4.1.0).
+  // At Tauri build time, scripts/release.ts writes APP_VERSION into the
+  // env from package.json — this default only fires for raw `next dev`
+  // without a .env file.
+  appVersion: optional("APP_VERSION", "4.1.0") ?? "4.1.0",
 
   /** License public key (Ed25519, for verifying founder-signed licenses) */
   licensePublicKey: optional("LICENSE_PUBLIC_KEY", ""),
@@ -129,13 +133,21 @@ export const env = {
   /** Shared secret for cron-triggered API routes (/api/reports/daily, /api/integrations/sync) */
   cronSecret: optional("CRON_SECRET"),
   /** Client-exposed cron secret (for the Settings daily-report panel) */
-  publicCronSecret: optional("NEXT_PUBLIC_CRON_SECRET", "dev"),
+  // SV-L6: previously defaulted to "dev" — if a seller didn't set this,
+  // cron endpoints silently accepted ?secret=dev (a publicly-known
+  // value). Now defaults to "" (empty) which the route rejects via
+  // constantTimeEqual. Sellers must set NEXT_PUBLIC_CRON_SECRET to use
+  // the in-app "Test Now" button; production cron jobs use the
+  // server-only CRON_SECRET instead.
+  publicCronSecret: optional("NEXT_PUBLIC_CRON_SECRET", ""),
 
   // ── WhatsApp sidecar ──────────────────────────────────────────────────
   /** WhatsApp sidecar base URL (Baileys, default :3001) */
   whatsappSidecarUrl: optional("WHATSAPP_SIDECAR_URL", "http://localhost:3001"),
   /** Sidecar bearer-token auth (read from file by default) */
-  sidecarTokenFile: optional("SIDECAR_TOKEN_FILE", "/tmp/sahelflow-sidecar-token"),
+  // T-P5: use os.tmpdir() so the path resolves correctly on Windows
+  // (was hardcoded "/tmp/..." which doesn't exist on Windows).
+  sidecarTokenFile: optional("SIDECAR_TOKEN_FILE") ?? (typeof process !== "undefined" && process.platform === "win32" ? `${process.env.TEMP ?? process.env.TMP ?? "C:\\Windows\\Temp"}\\sahelflow-sidecar-token` : "/tmp/sahelflow-sidecar-token"),
   sidecarToken: optional("SIDECAR_TOKEN"),
 
   // ── Logging ───────────────────────────────────────────────────────────

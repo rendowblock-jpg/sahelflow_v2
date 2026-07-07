@@ -38,6 +38,11 @@ export const orderServiceExtensions = {
     const phoneBlindIndex = deriveBlindIndex(q, masterKey);
     const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
 
+    // SV-L1: gate the encrypted-field `contains` branches behind
+    // NODE_ENV === "test" (they only fire in tests/dev where PII encryption
+    // may be disabled; in production those columns hold ciphertext).
+    const plaintextFallback = process.env.NODE_ENV === "test";
+
     const rows = await ctx.prisma.order.findMany({
       where: { deletedAt: null,
         AND: [
@@ -47,9 +52,13 @@ export const orderServiceExtensions = {
               { orderNumber: { contains: q } },
               { phoneBlindIndex },
               { customer: { nameBlindIndex } },
-              { phone: { contains: q } },        // fallback: plaintext (tests/dev)
-              { customer: { name: { contains: q } } },  // fallback: plaintext (tests/dev)
               { wilaya: { contains: q } },
+              ...(plaintextFallback
+                ? [
+                    { phone: { contains: q } },                  // tests/dev only
+                    { customer: { name: { contains: q } } },     // tests/dev only
+                  ]
+                : []),
             ],
           },
         ],
@@ -127,6 +136,12 @@ export const orderServiceExtensions = {
     const phoneBlindIndex = deriveBlindIndex(q, masterKey);
     const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
 
+    // SV-L1: gate encrypted-field `contains` branches behind test env.
+    const plaintextFallback = process.env.NODE_ENV === "test";
+
+    // SV-L2: include { wilaya: { contains: q } } so count matches the visible
+    // list (search() above includes it; without it here, the count undercounts
+    // whenever the query matches a wilaya but not the other fields).
     return ctx.prisma.order.count({
       where: {
         deletedAt: null,
@@ -137,8 +152,13 @@ export const orderServiceExtensions = {
               { orderNumber: { contains: q } },
               { phoneBlindIndex },
               { customer: { nameBlindIndex } },
-              { phone: { contains: q } },
-              { customer: { name: { contains: q } } },
+              { wilaya: { contains: q } },
+              ...(plaintextFallback
+                ? [
+                    { phone: { contains: q } },
+                    { customer: { name: { contains: q } } },
+                  ]
+                : []),
             ],
           },
         ],

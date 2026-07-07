@@ -146,6 +146,10 @@ export const orderService = {
     ctx: ServiceContext,
     id: string,
     to: OrderStatus,
+    /** AI-M4: caller can specify the actor for the OrderChange ledger
+     *  (default "user"). AI tools pass "ai" so AI-initiated mutations are
+     *  distinguishable from human ones in the order timeline. */
+    opts?: { actor?: string },
   ): Promise<Order> {
     return withServiceError(async () => {
       // Capture the from-status outside the tx so we can record it in the
@@ -232,8 +236,10 @@ export const orderService = {
       });
 
       // Record the status transition in the OrderChange ledger (S2-1).
+      // AI-M4: pass the actor through so AI-initiated transitions are
+      // attributed correctly in the timeline.
       if (fromStatus !== undefined && fromStatus !== to) {
-        await recordStatusChange(id, fromStatus, to);
+        await recordStatusChange(id, fromStatus, to, opts?.actor ?? "user");
       }
 
       // Fire automation trigger (fire-and-forget — never blocks status update)

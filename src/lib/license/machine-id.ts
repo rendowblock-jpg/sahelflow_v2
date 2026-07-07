@@ -27,7 +27,25 @@ export async function getMachineId(): Promise<string> {
       if (realId && realId !== "DEV-MOCK-MACHINE-ID-FALLBACK") {
         return realId;
       }
+      // T-P4: in release builds, lib.rs returns "" when no native machine
+      // ID could be obtained (was previously the publicly-known
+      // "DEV-MOCK-MACHINE-ID-FALLBACK" sentinel). Fail-closed in production:
+      // throw so the license service can detect "no machine ID" and refuse
+      // to issue/validate licenses tied to a specific machine. In dev, fall
+      // through to the localStorage UUID for convenience.
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          "Could not determine machine ID from the OS — license enforcement" +
+            " is unavailable. Refusing to fall back to a browser UUID in" +
+            " production (would allow trivial license bypass via localStorage" +
+            " clearing).",
+        );
+      }
     } catch (err) {
+      // Re-throw production fail-closed errors so callers see them.
+      if (process.env.NODE_ENV === "production" && err instanceof Error && err.message.includes("machine ID")) {
+        throw err;
+      }
       console.warn("Failed to invoke Tauri get_machine_id, falling back to browser ID:", err);
     }
   }

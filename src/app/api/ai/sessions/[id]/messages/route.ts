@@ -6,7 +6,7 @@ import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { redactPii } from "@/lib/redact-pii";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +40,11 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
   // AI-H1: rate limit (parity with the streaming route). Without this, users
   // could bypass rate limiting by using the non-streaming endpoint —
   // exhausting the Gemini free-tier quota (15 RPD) in seconds.
-  const rl = checkRateLimit(id);
+  // AI-P1: pass the auth session id as userKey so the daily cap is
+  // enforced across all of the user's AI chat sessions (previously
+  // every session shared a single "default" user bucket).
+  const userKey = await getCurrentUserKey();
+  const rl = checkRateLimit(id, userKey);
   if (!rl.allowed) {
     return NextResponse.json({ error: rl.reason ?? "Rate limited" }, { status: 429 });
   }
@@ -61,10 +65,31 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
   });
 
   // Build the conversation history for the agent
-  const history: AgentMessage[] = session.messages.map((m) => ({
-    role: m.role === "assistant" ? "assistant" : "user",
-    content: m.content,
-  }));
+  // AI-M15: include prior toolCalls in the conversation history so the
+  // agent retains tool context across turns. Previously only m.content
+  // (text) was passed back to Gemini — if the AI created an order in
+  // turn 1 and the user said "annule-la" in turn 2, Gemini had no record
+  // of what "la" referred to (the create_order tool call + result were
+  // dropped). Parse the stored JSON toolCalls (already redacted on save)
+  // and forward them as part of the AgentMessage.
+  const history: AgentMessage[] = session.messages.map((m) => {
+    let toolCalls: AgentMessage["toolCalls"];
+    if (m.role === "assistant" && m.toolCalls) {
+      try {
+        const parsed = JSON.parse(m.toolCalls);
+        if (Array.isArray(parsed)) {
+          toolCalls = parsed as AgentMessage["toolCalls"];
+        }
+      } catch {
+        // Malformed JSON in DB — ignore (older rows may have invalid JSON).
+      }
+    }
+    return {
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
+    };
+  });
 
   // Run the agent
   const result = await runAgent(history, input.message);

@@ -210,7 +210,7 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
           <div className="flex items-center gap-3 pt-2">
             <Button onClick={handleSave} disabled={saving}>
               <Save className="me-2 h-4 w-4" />
-              {saving ? "..." : t("risk.control.save")}
+              {saving ? t("common.processing") : t("risk.control.save")}
             </Button>
             <Button variant="outline" onClick={() => setResetOpen(true)} disabled={saving}>
               <RotateCcw className="me-2 h-4 w-4" />

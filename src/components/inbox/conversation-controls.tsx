@@ -212,7 +212,7 @@ export function PriorityControl({
           {priority ? (
             <>
               <span className={cn("h-2 w-2 rounded-full", PRIORITY_CONFIG[priority].dot)} />
-              {t(PRIORITY_CONFIG[priority].label) || priority}
+              {t(PRIORITY_CONFIG[priority].label)}
             </>
           ) : (
             <>
@@ -227,7 +227,7 @@ export function PriorityControl({
         {(["urgent", "high", "medium", "low"] as ConversationPriority[]).map((p) => (
           <DropdownMenuItem key={p} onClick={() => change(p)}>
             <span className={cn("me-2 h-2 w-2 rounded-full", PRIORITY_CONFIG[p].dot)} />
-            {t(PRIORITY_CONFIG[p].label) || p}
+            {t(PRIORITY_CONFIG[p].label)}
           </DropdownMenuItem>
         ))}
         {priority && (
@@ -346,7 +346,7 @@ export function LabelsControl({
         <button className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors">
           <Tag className="h-3 w-3 opacity-50" />
           {labels.length > 0
-            ? (t("inbox.labels.count", { count: labels.length }) || `${labels.length} labels`)
+            ? t("inbox.labels.count", { count: labels.length })
             : (t("inbox.labels.add"))}
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>

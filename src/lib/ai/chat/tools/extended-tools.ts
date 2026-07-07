@@ -661,12 +661,33 @@ registerTool({
       if (!live) {
         return { success: false, error: `Produit introuvable ou supprimé: ${input.productId}` };
       }
+      // Capture the prior stock so the audit entry can record before/after.
+      const prior = await db.product.findUnique({
+        where: { id: input.productId },
+        select: { stock: true },
+      });
       const product = await db.product.update({
         where: { id: input.productId },
         data: { stock: input.newStock },
         select: { id: true, name: true, sku: true, stock: true },
       });
-      void input.reason; // logged in a future audit-log feature
+      // AI-P4: record an audit-log entry for the stock adjustment so the
+      // `reason` is preserved in the product timeline (AuditLog table).
+      // Previously the reason was discarded, leaving no audit trail.
+      const { logAuditAsync } = await import("@/lib/audit");
+      logAuditAsync({
+        action: "product.stock.adjusted",
+        entity: "product",
+        entityId: input.productId,
+        actor: "ai_assistant",
+        before: { stock: prior?.stock ?? null },
+        after: { stock: product.stock },
+        metadata: {
+          reason: input.reason ?? null,
+          sku: product.sku,
+          name: product.name,
+        },
+      });
       return {
         success: true,
         data: product,
@@ -688,7 +709,7 @@ registerTool({
   definition: {
     name: "cancel_order",
     description:
-      "Cancel an order by order number. Only works for orders in draft or confirmed status (not shipped/delivered). The reason is saved to the order notes.",
+      "Cancel an order by order number. Only works for orders in draft, pending, or confirmed status (not shipped/delivered). The reason is saved to the order notes.",
     parameters: {
       type: "object",
       properties: {
@@ -707,16 +728,24 @@ registerTool({
         select: { id: true, status: true, notes: true },
       });
       if (!order) return { success: false, error: "Commande introuvable" };
-      if (!["draft", "confirmed"].includes(order.status)) {
+      // AI-M2: the order state machine (ALLOWED_TRANSITIONS) permits
+      // draft→cancelled AND pending→cancelled. The previous guard
+      // rejected "pending" orders, which is more restrictive than the
+      // state machine — sellers who confirmed-at-the-AI-but-not-yet-
+      // shipped couldn't cancel via the AI. Align with the state machine.
+      if (!["draft", "pending", "confirmed"].includes(order.status)) {
         return {
           success: false,
-          error: `Impossible d'annuler une commande avec le statut "${order.status}". Seules les commandes en brouillon ou confirmées peuvent être annulées.`,
+          error: `Impossible d'annuler une commande avec le statut "${order.status}". Seules les commandes en brouillon, en attente ou confirmées peuvent être annulées.`,
         };
       }
       // Route through orderService.updateStatus to enforce the state machine
       // and restore stock (D-002). Raw db.order.update bypasses all invariants.
+      // AI-M4: pass actor: "ai" so the OrderChange ledger entry is attributed
+      // to the AI assistant (not the user) — distinguishes AI-initiated
+      // cancellations from human ones in the order timeline.
       const { orderService } = await import("@/lib/data/order-service");
-      await orderService.updateStatus({ prisma: db }, order.id, "cancelled");
+      await orderService.updateStatus({ prisma: db }, order.id, "cancelled", { actor: "ai" });
 
       // Append the cancellation reason as a note (separate from status update
       // so the state machine isn't bypassed by a second raw write).

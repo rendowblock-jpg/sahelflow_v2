@@ -193,7 +193,7 @@ export default async function AccountingPage() {
       <Card className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-fade-up" style={{ animationDelay: "300ms" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 dark:bg-red-500/15">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-destructive/10 dark:bg-destructive/15">
               <CreditCard className="h-3.5 w-3.5 text-destructive" />
             </div>
             {t("accounting.recentExpenses")}

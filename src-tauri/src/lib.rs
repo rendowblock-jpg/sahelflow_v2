@@ -91,7 +91,18 @@ fn get_machine_id() -> String {
         }
     }
 
-    "DEV-MOCK-MACHINE-ID-FALLBACK".to_string()
+    // T-P4: previously returned "DEV-MOCK-MACHINE-ID-FALLBACK" — a fake,
+    // publicly-known ID. In release builds this is a security risk:
+    // machine-id.ts falls through to a browser localStorage UUID when
+    // it sees the sentinel, which a user can clear to bypass license
+    // machine-pinning. In release builds, return an empty string so
+    // machine-id.ts can detect "no real ID available" and the license
+    // service can fail-closed. In debug builds keep the mock for dev convenience.
+    #[cfg(debug_assertions)]
+    return "DEV-MOCK-MACHINE-ID-FALLBACK".to_string();
+
+    #[cfg(not(debug_assertions))]
+    return String::new();
 }
 
 /// Handles to spawned child processes (Next.js server + WhatsApp sidecar)

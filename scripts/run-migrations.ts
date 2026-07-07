@@ -41,7 +41,16 @@ const migrationsDir = envMigrationsDir ?? join(PRISMA_DIR, "migrations");
 const dbUrl = process.argv[2] ?? process.env.DATABASE_URL;
 if (!dbUrl) {
   console.error("[migrations] No DATABASE_URL provided");
-  process.exit(0); // non-fatal — the app will create the DB on first request
+  // T-P3: in production this is a hard error — without a database URL the
+  // app cannot run, and exiting 0 makes Tauri treat the missing-DB state
+  // as success → the app launches and crashes on the first query.
+  // In dev (or test), keep the historical exit-0 behavior so `next dev`
+  // without a configured DATABASE_URL still boots (the app will create
+  // the DB on first request via db push fallback).
+  if (process.env.NODE_ENV === "production") {
+    process.exit(1);
+  }
+  process.exit(0); // non-fatal in dev — the app will create the DB on first request
 }
 
 if (!existsSync(schemaPath)) {

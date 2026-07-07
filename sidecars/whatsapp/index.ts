@@ -44,7 +44,12 @@ import { wa, type SidecarEvent } from "./whatsapp";
 
 const PORT = 3001;
 const HOST = process.env.SIDECAR_HOST || "127.0.0.1";
-const TOKEN_FILE = process.env.SIDECAR_TOKEN_FILE || "/tmp/sahelflow-sidecar-token";
+// T-P5: use os.tmpdir() instead of hardcoding /tmp — /tmp doesn't exist
+// on Windows (the equivalent is %TEMP% / %TMP%). os.tmpdir() resolves the
+// correct platform-specific temp directory at runtime.
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+const TOKEN_FILE = process.env.SIDECAR_TOKEN_FILE || join(tmpdir(), "sahelflow-sidecar-token");
 
 // ── Bearer token bootstrap ─────────────────────────────────────────────────
 //

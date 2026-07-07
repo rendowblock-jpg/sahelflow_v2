@@ -548,6 +548,23 @@ describe("cancel_order", () => {
     expect(result.error).toContain("statut");
   });
 
+  // AI-M2: cancel_order previously rejected "pending" orders — more
+  // restrictive than the state machine (which allows pending→cancelled).
+  // Now aligns with the state machine.
+  it("cancels a pending order (AI-M2: align with state machine)", async () => {
+    const customer = await seedCustomer(db, { phone: uniquePhone() });
+    await db.order.create({
+      data: { orderNumber: "ORD-0001", status: "pending", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
+    });
+
+    const tool = getTool("cancel_order")!;
+    const result = await tool.execute({ orderNumber: "ORD-0001", reason: "Client a changé d'avis" }, ctx());
+
+    expect(result.success).toBe(true);
+    const data = result.data as { orderNumber: string; status: string };
+    expect(data.status).toBe("cancelled");
+  });
+
   it("returns error when order is not found", async () => {
     const tool = getTool("cancel_order")!;
     const result = await tool.execute({ orderNumber: "ORD-9999" }, ctx());

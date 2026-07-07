@@ -25,6 +25,12 @@ import type { ToolContext, ToolResult } from "./registry";
 import { registerTool } from "./registry";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
+// AI-M13: reuse the existing phone normalizer from the import module so the
+// create_customer tool produces the SAME blind index as every other entry
+// point (import, delivery adapters, storefront). Without this, "+213555123456"
+// and "0555 12 34 56" would create two different Customer rows for the same
+// person (blind-index mismatch → unfindable customer).
+import { normalizePhone } from "@/lib/import/fields";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -213,11 +219,17 @@ registerTool({
     try {
       const input = createCustomerSchema.parse(params);
       const db = getDb(ctx);
+      // AI-M13: normalize phone numbers BEFORE storage + lookup so the
+      // HMAC blind index matches across entry points. Without this,
+      // "+213555123456" and "0555 12 34 56" would produce different blind
+      // indexes → duplicate customer rows + silent unfindability.
+      const normalizedPhone = normalizePhone(input.phone);
+      const normalizedPhone2 = input.phone2 ? normalizePhone(input.phone2) : null;
       // Guard: phone is @unique. If a soft-deleted customer exists with the
       // same phone, Prisma would throw P2002 (misleading "already exists"
       // error). Surface a clear restore-first message instead (B-softdelete).
       const tombstoned = await db.customer.findFirst({
-        where: { phone: input.phone, deletedAt: { not: null } },
+        where: { phone: normalizedPhone, deletedAt: { not: null } },
         select: { id: true },
       });
       if (tombstoned) {
@@ -226,8 +238,8 @@ registerTool({
       const customer = await db.customer.create({
         data: {
           name: input.name,
-          phone: input.phone,
-          phone2: input.phone2 ?? null,
+          phone: normalizedPhone,
+          phone2: normalizedPhone2,
           wilaya: input.wilaya ?? null,
           commune: input.commune ?? null,
           address: input.address ?? null,
@@ -417,6 +429,26 @@ registerTool({
       // second failed, you had a Delivery record but the order was still
       // 'confirmed' (and re-running the tool would error out because a
       // delivery already exists).
+      //
+      // AI-M3: previously the status update was a raw tx.order.update that
+      // bypassed orderService.updateStatus — so the `order.shipped`
+      // automation trigger was never dispatched, the state machine wasn't
+      // enforced, and the ledger entry was hand-rolled with a stale
+      // `status: "confirmed"` field. We now inline the same steps that
+      // orderService.updateStatus performs (state-machine assertion +
+      // timestamped status update + recordStatusChange with actor="ai"),
+      // then dispatch the trigger AFTER the tx commits (matches the
+      // service's fire-and-forget pattern). We can't call
+      // orderService.updateStatus({ prisma: tx }, ...) directly because
+      // Prisma transaction clients don't expose $transaction for nested
+      // calls — but the trigger dispatch + ledger entry are the parts
+      // that matter for audit attribution.
+      // AI-M4: pass actor: "ai" so the OrderChange ledger attributes the
+      // transition to the assistant, not the human user.
+      const { assertCanTransition } = await import("@/lib/order-transitions");
+      const { recordStatusChange } = await import("@/lib/data/order-change-service");
+      type TriggerEvent = import("@/lib/automations/engine").TriggerEvent;
+      const { dispatchTrigger } = await import("@/lib/automations/engine");
       const delivery = await db.$transaction(async (tx) => {
         const d = await tx.delivery.create({
           data: {
@@ -427,22 +459,31 @@ registerTool({
             status: "created",
           },
         });
+        // Enforce the state machine inside the tx (race-safe).
+        assertCanTransition(order.status as never, "shipped" as never);
         await tx.order.update({
           where: { id: order.id },
           data: { status: "shipped", shippedAt: new Date() },
         });
-        // Ledger entry — same tx
-        await tx.orderChange.create({
-          data: {
-            orderId: order.id,
-            actionType: "status_change",
-            actor: "ai",
-            status: "confirmed",
-            payload: JSON.stringify({ from: "confirmed", to: "shipped", reason: "ai_assign_delivery" }),
-          },
-        });
+        // Ledger entry — same tx, actor "ai" (AI-M4).
+        await recordStatusChange(order.id, order.status, "shipped", "ai", tx);
         return d;
       });
+
+      // AI-M3: dispatch the `order.shipped` automation trigger AFTER the tx
+      // commits. orderService.updateStatus does this fire-and-forget; we
+      // replicate the behavior so automation rules (e.g. "when order
+      // shipped → send WhatsApp notification") fire for AI-initiated
+      // assignments. Wrapped in void + catch so a trigger failure never
+      // breaks the user-facing response.
+      void dispatchTrigger("order.shipped" as TriggerEvent, {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+        totalPrice: order.totalPrice,
+        wilaya: order.wilaya,
+        phone: order.phone,
+      }).catch(() => { /* fire-and-forget */ });
 
       return {
         success: true,

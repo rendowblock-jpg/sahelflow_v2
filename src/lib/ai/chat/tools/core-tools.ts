@@ -362,10 +362,13 @@ registerTool({
       // (triggersCustomerStatsUpdate), and sets timestamp fields
       // (confirmedAt / shippedAt / deliveredAt) — all in a transaction.
       // A direct db.order.update would bypass all of this (D-002).
+      // AI-M4: attribute AI-initiated status transitions to actor "ai"
+      // in the OrderChange ledger.
       const order = await orderService.updateStatus(
         { prisma: db },
         input.orderId,
         input.status,
+        { actor: "ai" },
       );
       return {
         success: true,

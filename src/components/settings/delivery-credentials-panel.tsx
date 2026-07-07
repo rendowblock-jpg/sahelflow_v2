@@ -247,7 +247,7 @@ export function DeliveryCredentialsPanel() {
           <div
             className={`flex items-center gap-2 rounded-md p-3 text-sm ${
               result.ok
-                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                ? "bg-success/10 text-success dark:bg-success/15"
                 : "bg-destructive/10 text-destructive"
             }`}
           >

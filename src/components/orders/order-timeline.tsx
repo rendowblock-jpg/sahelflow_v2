@@ -57,9 +57,9 @@ function formatActionLabel(
       case "status_change":
         return t("orders.timeline.status_change", { from: p.from ?? "?", to: p.to ?? "?" });
       case "item_add":
-        return t("orders.timeline.item_add", { productName: p.productName ?? "unknown" });
+        return t("orders.timeline.item_add", { productName: p.productName ?? t("orders.timeline.unknown") });
       case "item_remove":
-        return t("orders.timeline.item_remove", { productName: p.productName ?? "unknown" });
+        return t("orders.timeline.item_remove", { productName: p.productName ?? t("orders.timeline.unknown") });
       case "fulfill":
         return t("orders.timeline.fulfill");
       case "ship":
@@ -69,7 +69,7 @@ function formatActionLabel(
       case "return":
         return t("orders.timeline.return");
       case "refund":
-        return t("orders.timeline.refund", { amount: p.amount ?? 0, method: p.method ?? "cash" });
+        return t("orders.timeline.refund", { amount: p.amount ?? 0, method: p.method ?? t("orders.timeline.cash") });
       case "cod_collected":
         return t("orders.timeline.cod_collected", { amount: p.amount ?? 0 });
       case "cod_remitted":

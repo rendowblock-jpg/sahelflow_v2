@@ -88,7 +88,20 @@ export async function listWilayaRisks(): Promise<WilayaRisk[]> {
   }));
 }
 
-/** Assess an order's risk based on the delivery wilaya. */
+/**
+ * Assess an order's risk based on the delivery wilaya.
+ *
+ * SV-L10 — i18n TODO: the `label` and `recommendation` strings are
+ * hardcoded French. The UI consumers (order detail page, risk badge)
+ * currently display them verbatim, which is fine for the Algerian market
+ * (French is widely read) but breaks for Arabic-only users. The proper
+ * fix is to return i18n KEYS here (e.g. `wilayaRisk.level.1`,
+ * `wilayaRisk.recommendation.1`) and let the caller translate them via
+ * `t()`. That refactor touches the API route + 2-3 UI components —
+ * deferred to a follow-up wave to avoid breaking the risk badge contract
+ * in this polish pass. For now, callers that need an Arabic label should
+ * map `level` (1-5) themselves.
+ */
 export async function assessOrderRisk(wilaya: string): Promise<{
   level: number;
   label: string;

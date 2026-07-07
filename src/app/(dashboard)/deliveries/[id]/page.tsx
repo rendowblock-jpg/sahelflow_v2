@@ -244,7 +244,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
                     {t(`deliveries.status.${s}` as string)}
                   </div>
                   {i < statusOrder.length - 1 && (
-                    <div className={`h-px w-4 ${isPast ? "bg-emerald-500/30" : "bg-border"}`} />
+                    <div className={`h-px w-4 ${isPast ? "bg-success/30" : "bg-border"}`} />
                   )}
                 </div>
               );

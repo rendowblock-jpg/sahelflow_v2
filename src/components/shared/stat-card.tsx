@@ -8,6 +8,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { InfoHint } from "@/components/shared/info-hint";
 import { cn } from "@/lib/utils";
 import { Sparkline } from "@/components/charts/sparkline";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface StatCardProps {
   label: React.ReactNode;
@@ -71,6 +72,7 @@ export function StatCard({
   tooltip,
   hint,
 }: StatCardProps) {
+  const { locale } = useI18n();
   const isPositive = (trend ?? 0) > 0;
   const isNegative = (trend ?? 0) < 0;
   const showTrend = trend !== undefined && trend !== 0;
@@ -96,8 +98,11 @@ export function StatCard({
       const t = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - t, 3);
       const current = Math.round(eased * parsed.num);
+      // C-P4: use the current locale for number formatting so Arabic
+      // users see Eastern-Arabic numerals (٠١٢٣) instead of Western
+      // (0123) during the count-up animation.
       setDisplayValue(
-        `${parsed.prefix}${current.toLocaleString("en-US")}${parsed.suffix}`,
+        `${parsed.prefix}${current.toLocaleString(locale)}${parsed.suffix}`,
       );
       if (t < 1) rafRef.current = requestAnimationFrame(tick);
     };
@@ -106,7 +111,7 @@ export function StatCard({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [value, parsed]);
+  }, [value, parsed, locale]);
 
   return (
     <Card

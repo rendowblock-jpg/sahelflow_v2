@@ -765,7 +765,7 @@ function StatusBar({
   }
   if (status === "connected") {
     return (
-      <div className="border-b bg-emerald-50 dark:bg-emerald-950/30 px-4 py-2 text-sm flex items-center justify-between">
+      <div className="border-b bg-success/10 dark:bg-success/15 px-4 py-2 text-sm flex items-center justify-between">
         <span className="flex items-center gap-2 text-success">
           <CheckCircle2 className="h-4 w-4" />
           {t("inbox.whatsappConnected")}

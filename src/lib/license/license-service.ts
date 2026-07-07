@@ -357,6 +357,22 @@ export async function isLicenseValid(): Promise<boolean> {
 
     // Legacy: only status row exists (pre-fix sync). Trust it once, then
     // the next sync will migrate to the verified-blob flow.
+    //
+    // SV-L5 — SECURITY RISK (accepted): a direct DB write of
+    //   `{ status: "valid" }` to `active_license_status` grants access
+    //   until the next /api/license/sync re-verifies. Full mitigation
+    //   requires re-verifying the signature here, but the legacy row
+    //   stores a LicenseValidationResult (no signed payload), so we
+    //   cannot re-verify from this row alone. Mitigations in place:
+    //     1. This branch only fires for pre-fix installs that haven't
+    //        synced since the S1 fix — after first sync the verified-
+    //        blob flow above takes over.
+    //     2. The DB file is local SQLite under the seller's OS account;
+    //        an attacker who can write to it already owns the machine.
+    //     3. The 5-min cache TTL means a forged row stops working as
+    //        soon as the next sync happens.
+    //   TODO: drop this legacy branch once all beta installs have synced
+    //   to the verified-blob flow (track via a telemetry counter).
     if (statusRow?.value) {
       const result = JSON.parse(statusRow.value) as LicenseValidationResult;
       cachedResult = result;
@@ -389,7 +405,14 @@ export async function requireLicense(): Promise<void> {
  */
 export async function hasFeature(feature: string): Promise<boolean> {
   if (isDevMode()) return true;
-  if (!cachedResult || cachedResult.status !== "valid") return false;
+  // SV-L4: previously this checked `cachedResult` directly without first
+  // calling isLicenseValid(). If hasFeature() was the first license call
+  // in a process (e.g. an API route that gates on a feature, not on
+  // requireLicense()), cachedResult was null → hasFeature always returned
+  // false even for valid licenses. Calling isLicenseValid() first ensures
+  // the cache is populated (and re-verified on the 5-min cadence).
+  const valid = await isLicenseValid();
+  if (!valid || !cachedResult || cachedResult.status !== "valid") return false;
   const features = cachedResult.license?.payload?.features ?? [];
   return features.includes("all") || features.includes(feature);
 }

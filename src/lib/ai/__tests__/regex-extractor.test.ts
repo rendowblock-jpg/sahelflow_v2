@@ -166,3 +166,104 @@ describe("regex extractor — confidence scoring", () => {
     expect(result.confidence).toBe(0);
   });
 });
+
+
+// ── AI-M9: findWilaya word-boundary matching ────────────────────────────────
+
+describe("regex extractor — AI-M9: findWilaya word boundaries", () => {
+  it("does NOT match 'Mila' inside 'familial'", () => {
+    // Include a product+price so extractWithRegex returns a non-null order
+    // (otherwise wilaya is undefined regardless of findWilaya's behavior).
+    const result = extractWithRegex({
+      body: "contexte familial, bati milieu, bpc 12 alger, 2x chargeur 1500 DA",
+    });
+    // 'Mila' (wilaya 43) must NOT false-positive inside 'familial' / 'milieu'.
+    // 'alger' should still be detected.
+    expect(result.order?.wilaya).toBe("Alger");
+  });
+
+  it("does NOT match 'Mila' inside 'Camila'", () => {
+    const result = extractWithRegex({
+      body: "Je m'appelle Camila, je veux 2 chargeurs 2000 DA Alger",
+    });
+    expect(result.order?.wilaya).toBe("Alger");
+  });
+});
+
+// ── AI-M10: findPhone +213 international format ─────────────────────────────
+
+describe("regex extractor — AI-M10: +213 international phone format", () => {
+  it("extracts +213555123456 and normalizes to 0555123456", () => {
+    const result = extractWithRegex({
+      body: "iPhone 14 85000 DA Alger, tel +213555123456",
+    });
+    expect(result.order?.phone).toBe("0555123456");
+  });
+
+  it("extracts +213 555 12 34 56 (with spaces) and normalizes", () => {
+    const result = extractWithRegex({
+      body: "Livraison Oran, +213 555 12 34 56, casque 3000 DA",
+    });
+    expect(result.order?.phone).toBe("0555123456");
+  });
+
+  it("still extracts local 0XXXXXXXXX format", () => {
+    const result = extractWithRegex({
+      body: "tel 0661234567, livraison Constantine, 2x stylos 500 DA",
+    });
+    expect(result.order?.phone).toBe("0661234567");
+  });
+});
+
+// ── AI-M11: parsePrice comma decimals ────────────────────────────────────────
+
+describe("regex extractor — AI-M11: parsePrice comma handling", () => {
+  it("parses '3,500 DA' (comma thousands) as 3500", () => {
+    const result = extractWithRegex({
+      body: "iPhone 14 3,500 DA Alger",
+    });
+    expect(result.order?.items).toHaveLength(1);
+    expect(result.order?.items[0]?.unitPrice).toBe(3500);
+  });
+
+  it("parses '3500,50 DA' (comma decimal) as 3501 (rounded)", () => {
+    const result = extractWithRegex({
+      body: "iPhone 14 3500,50 DA Alger",
+    });
+    expect(result.order?.items).toHaveLength(1);
+    // Decimal comma → rounded to int (DZD has no sub-unit for COD).
+    expect(result.order?.items[0]?.unitPrice).toBe(3501);
+  });
+
+  it("parses '3.500 DA' (dot thousands) as 3500 (no regression)", () => {
+    const result = extractWithRegex({
+      body: "iPhone 14 3.500 DA Alger",
+    });
+    expect(result.order?.items).toHaveLength(1);
+    expect(result.order?.items[0]?.unitPrice).toBe(3500);
+  });
+});
+
+// ── AI-M12: extractItems 'product x2' reverse pattern ───────────────────────
+
+describe("regex extractor — AI-M12: product-then-quantity pattern", () => {
+  it("extracts 'iPhone 14 x2' (product then quantity)", () => {
+    const result = extractWithRegex({
+      body: "iPhone 14 x2 8500 DA Alger, 0661234567",
+    });
+    expect(result.order?.items.length).toBeGreaterThan(0);
+    const item = result.order?.items[0];
+    expect(item?.productName?.toLowerCase()).toContain("iphone");
+    expect(item?.quantity).toBe(2);
+  });
+
+  it("extracts 'casque bluetooth x3 2500 DA' (multi-word product)", () => {
+    const result = extractWithRegex({
+      body: "casque bluetooth x3 2500 DA Oran, 0555123456",
+    });
+    expect(result.order?.items.length).toBeGreaterThan(0);
+    const item = result.order?.items[0];
+    expect(item?.productName?.toLowerCase()).toContain("casque");
+    expect(item?.quantity).toBe(3);
+  });
+});

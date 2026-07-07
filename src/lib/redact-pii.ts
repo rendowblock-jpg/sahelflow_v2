@@ -84,8 +84,11 @@ function redactRecursive(value: unknown): unknown {
     const obj = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
-      const lowerK = k.charAt(0).toLowerCase() + k.slice(1);
-      if (SENSITIVE_KEYS.has(lowerK) || SENSITIVE_KEYS.has(k)) {
+      // SV-L3: previously only the FIRST char was lowercased, so keys like
+      // "PHONE", "EMAIL", "API_KEY" (all-caps) never matched the
+      // SENSITIVE_KEYS set (which is lowercase). Lowercase the WHOLE key.
+      const lowerK = k.toLowerCase();
+      if (SENSITIVE_KEYS.has(lowerK)) {
         out[k] = redactScalar(v);
       } else {
         out[k] = redactRecursive(v);

@@ -103,10 +103,25 @@ try {
 hdr("3. Bump version + commit + tag + push");
 
 // Update tauri.conf.json
+// T-P2: previously JSON.stringify(..., 2) would reformat the file if the
+// original used a different indent. We detect the indent from the first
+// indented line so the diff stays minimal. tauri.conf.json is canonical
+// 2-space JSON today, but this keeps the script robust if the indent
+// ever changes.
 const tauriConfPath = resolve(ROOT, "src-tauri", "tauri.conf.json");
-const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf-8"));
+const tauriConfRaw = readFileSync(tauriConfPath, "utf-8");
+const tauriConf = JSON.parse(tauriConfRaw);
 tauriConf.version = version;
-writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + "\n");
+// Detect indent: count leading spaces on the first non-blank line that
+// starts with `"` (a key). Default to 2 if detection fails. The indent can
+// be a number (spaces) or "\t" (tab) — JSON.stringify's third arg accepts
+// both.
+let tauriIndent: number | string = 2;
+const indentMatch = tauriConfRaw.match(/^([ \t]+)"/m);
+if (indentMatch && indentMatch[1]) {
+  tauriIndent = indentMatch[1].includes("\t") ? "\t" : indentMatch[1].length;
+}
+writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, tauriIndent) + "\n");
 
 // PROD-005: also update Cargo.toml (was missing — stuck at 3.0.0)
 const cargoTomlPath = resolve(ROOT, "src-tauri", "Cargo.toml");

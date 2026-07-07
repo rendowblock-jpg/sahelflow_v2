@@ -32,7 +32,15 @@ function hdr(msg: string) { console.log(`\n${BOLD}── ${msg} ──${NC}`); }
 
 const ROOT = process.cwd();
 const PRIVATE_KEY_PATH = resolve(process.env.HOME || process.env.USERPROFILE || "", ".sahelflow", "tauri-updater-private.key");
-const FALLBACK_KEY_PATH = resolve(ROOT, "..", "tauri-updater-private.key");
+// T-P1: previously this fell back to `<repo-parent>/tauri-updater-private.key`
+// — a path OUTSIDE the repo root, which is suspicious (could pick up an
+// unrelated file dropped by another process). Made the fallback
+// configurable via TAURI_PRIVATE_KEY_PATH and removed the parent-dir
+// default. The canonical location is ~/.sahelflow/, set via env var, or
+// TAURI_SIGNING_PRIVATE_KEY (the actual signing key string).
+const FALLBACK_KEY_PATH = process.env.TAURI_PRIVATE_KEY_PATH
+  ? resolve(process.env.TAURI_PRIVATE_KEY_PATH)
+  : "";
 
 console.log(`${BOLD}═══════════════════════════════════════════════════`);
 console.log(`  SahelFlow — Local Installer Builder`);
@@ -65,7 +73,7 @@ if (!privateKey) {
   if (existsSync(PRIVATE_KEY_PATH)) {
     privateKey = readFileSync(PRIVATE_KEY_PATH, "utf-8").trim();
     ok(`Private key: ${PRIVATE_KEY_PATH}`);
-  } else if (existsSync(FALLBACK_KEY_PATH)) {
+  } else if (FALLBACK_KEY_PATH && existsSync(FALLBACK_KEY_PATH)) {
     privateKey = readFileSync(FALLBACK_KEY_PATH, "utf-8").trim();
     ok(`Private key: ${FALLBACK_KEY_PATH}`);
   } else {

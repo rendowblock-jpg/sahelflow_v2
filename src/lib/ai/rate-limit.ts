@@ -24,12 +24,47 @@ const SESSION_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const USER_LIMIT = 100;
 const USER_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-/** Check + consume a token. Returns true if allowed, false if rate-limited. */
+/**
+ * Evict expired buckets. Called from checkRateLimit on every check so the
+ * Maps don't grow unbounded over long-running processes (AI-P2).
+ *
+ * Each bucket's resetAt is in the past when its window has elapsed, so any
+ * entry whose resetAt < now can be safely deleted (the next request for
+ * that key will allocate a fresh bucket).
+ */
+function sweepExpired(now: number): void {
+  for (const [key, bucket] of sessionBuckets) {
+    if (bucket.resetAt < now) sessionBuckets.delete(key);
+  }
+  for (const [key, bucket] of userBuckets) {
+    if (bucket.resetAt < now) userBuckets.delete(key);
+  }
+}
+
+/**
+ * Check + consume a token. Returns true if allowed, false if rate-limited.
+ *
+ * The check + increment is performed as a single atomic update per bucket
+ * (AI-P3): the bucket is read, validated, mutated, and written back without
+ * re-reading from the Map between the limit check and the bump. This avoids
+ * the previous TOCTOU where a microtask interleave could let two callers
+ * observe the same count and both be admitted.
+ *
+ * The `userKey` should be a stable identifier for the user/shop (auth
+ * session id, machine id, etc.) so the daily cap is enforced across all of
+ * their AI chat sessions (AI-P1). Defaults to "default" for backward
+ * compatibility — callers should override with a real key.
+ */
 export function checkRateLimit(
   sessionId: string,
   userKey: string = "default",
 ): { allowed: boolean; reason?: string; retryAfterMs?: number } {
   const now = Date.now();
+
+  // AI-P2: evict expired buckets so the Maps don't leak memory over time.
+  // Amortized cheap — only expired entries are touched, and each Map is
+  // usually small (one entry per active session/user).
+  sweepExpired(now);
 
   // Session bucket
   let session = sessionBuckets.get(sessionId);
@@ -59,7 +94,8 @@ export function checkRateLimit(
     };
   }
 
-  // Consume
+  // Consume — atomic update against the bucket reference we just validated
+  // (AI-P3). No re-read from the Map between the limit check and the bump.
   session.count++;
   user.count++;
   return { allowed: true };

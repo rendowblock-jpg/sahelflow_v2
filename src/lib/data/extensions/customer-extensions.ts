@@ -59,13 +59,25 @@ export const customerServiceExtensions = {
     const phoneBlindIndex = deriveBlindIndex(q, masterKey);
     const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
 
+    // SV-L1: the `contains` branches on the encrypted `name`/`phone` columns
+    // never fire in production — those columns hold AES ciphertext, not the
+    // plaintext query the user typed. They only match in tests/dev where
+    // PII encryption may be disabled. Gate them behind NODE_ENV === "test"
+    // so production doesn't ship dead branches (and so a future schema change
+    // can't accidentally make them match something unexpected).
+    const plaintextFallback = process.env.NODE_ENV === "test";
+
     const rows = await ctx.prisma.customer.findMany({
       where: { deletedAt: null,
         OR: [
           { nameBlindIndex },
           { phone: phoneBlindIndex },
-          { name: { contains: q } },    // fallback: plaintext (tests/dev)
-          { phone: { contains: q } },  // fallback: plaintext (tests/dev)
+          ...(plaintextFallback
+            ? [
+                { name: { contains: q } },    // fallback: plaintext (tests/dev)
+                { phone: { contains: q } },   // fallback: plaintext (tests/dev)
+              ]
+            : []),
         ],
       },
       orderBy: { createdAt: "desc" },

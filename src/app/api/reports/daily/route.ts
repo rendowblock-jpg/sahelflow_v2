@@ -118,7 +118,11 @@ function verifyCronSecret(req: NextRequest): boolean {
   }
   // No real secret configured — allow the default "dev" secret in non-prod.
   if (process.env.NODE_ENV !== "production") {
-    return constantTimeEqual(headerSecret, env.publicCronSecret ?? "dev");
+    // SV-L6: no `?? "dev"` fallback — if NEXT_PUBLIC_CRON_SECRET is unset
+    // (empty string), constantTimeEqual returns false and the request is
+    // rejected. Previously the fallback let anyone hit the cron endpoint
+    // with the publicly-known "dev" secret.
+    return !!env.publicCronSecret && constantTimeEqual(headerSecret, env.publicCronSecret);
   }
   return false;
 }

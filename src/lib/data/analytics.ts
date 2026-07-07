@@ -341,12 +341,17 @@ export const analyticsService = {
     );
     for (let i = 0; i < dayCount; i++) {
       const d = addDays(start, i);
-      const iso = d.toISOString().slice(0, 10);
+      // SV-L9: use localDateString (not toISOString().slice(0,10)) so
+      // customer-growth buckets agree with buildTimeSeries buckets
+      // near midnight. Previously this used UTC, causing a 23:30 local
+      // "new customer" to land in tomorrow's bucket while the same
+      // customer's order (in buildTimeSeries) landed in today's.
+      const iso = localDateString(d);
       buckets.push({ date: iso, label: iso, newCustomers: 0, cumulative: 0 });
     }
     const idx = new Map(buckets.map((b, i) => [b.date, i]));
     for (const c of customers) {
-      const iso = c.createdAt.toISOString().slice(0, 10);
+      const iso = localDateString(c.createdAt);
       const i = idx.get(iso);
       if (i !== undefined) buckets[i]!.newCustomers += 1;
     }

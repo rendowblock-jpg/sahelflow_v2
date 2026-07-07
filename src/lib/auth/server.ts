@@ -203,3 +203,20 @@ export async function auditLog(
     });
   } catch { /* best-effort */ }
 }
+
+/**
+ * Returns a stable identifier for the current authenticated user (their
+ * auth Session.id from the cookie token). Used as the `userKey` for the AI
+ * rate limiter (AI-P1) so the daily cap is enforced across all of a user's
+ * AI chat sessions, not shared globally as "default".
+ *
+ * Returns "default" if no session token is present or the token is
+ * unverifiable — this preserves backward-compatible behavior in setups
+ * where auth isn't fully configured (e.g. dev mode).
+ */
+export async function getCurrentUserKey(): Promise<string> {
+  const token = await getSessionToken();
+  if (!token) return "default";
+  const sid = getSessionIdFromToken(token);
+  return sid ?? "default";
+}

@@ -8,6 +8,7 @@ import { getSecret } from "@/lib/secrets";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { checkRateLimit } from "@/lib/ai/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,11 @@ const extractionSchema = z.object({
   geminiApiKey: z.string().optional(),
   /** Force Gemini even if regex is confident (for testing). */
   forceGemini: z.boolean().optional(),
+  /** AI-M14: optional messageId so the ExtractionMetric row can be linked
+   *  back to the WhatsApp/TikTok Message that was extracted. Previously
+   *  metrics were always recorded with messageId=null, making the
+   *  extraction-analytics dashboard unable to drill into specific messages. */
+  messageId: z.string().optional(),
 });
 
 /** POST /api/extraction — extract an order from a message body.
@@ -34,6 +40,22 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = extractionSchema.parse(body);
+
+  // AI-M1: rate-limit the extraction route to prevent Gemini-quota
+  // exhaustion. Parity with the chat routes (/api/ai/sessions/[id]/messages
+  // + stream), which already call checkRateLimit. Without this, an
+  // authenticated user could spam /api/extraction to drain the 1500 RPD
+  // Gemini free-tier in seconds.
+  // Use a synthetic session key for the per-session bucket (the extraction
+  // route has no sessionId; the user-key bucket is the real protection).
+  const extractionSessionKey = `extraction:${input.messageId ?? "anonymous"}`;
+  const rl = checkRateLimit(extractionSessionKey);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: rl.reason ?? "Rate limited" },
+      { status: 429, headers: rl.retryAfterMs ? { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } : {} },
+    );
+  }
 
   // Resolve the Gemini key: explicit override > stored secret > none
   let geminiApiKey = input.geminiApiKey;
@@ -51,7 +73,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // has its own try/catch that swallows errors (best-effort).
   // Session 29 fix (AUDIT-7 AI1): without this, the extraction-analytics
   // dashboard at /analytics/extraction is permanently empty.
+  // AI-M14: forward the messageId (when provided by the caller) so the
+  // ExtractionMetric row can be linked back to the source Message.
   void recordExtractionMetric({
+    messageId: input.messageId,
     method: result.method,
     confidence: result.confidence,
     isComplete: result.isComplete,

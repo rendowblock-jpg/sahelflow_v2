@@ -40,6 +40,8 @@ import {
   type ColumnDef,
   type SortingState,
   type RowSelectionState,
+  type Table,
+  type Row,
 } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
 import { cn } from "@/lib/utils";
@@ -370,7 +372,7 @@ export function DataTable<TData>({
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Density toggle */}
         {showDensityToggle && (
-          <div className="flex items-center gap-1 rounded-md border p-0.5" role="group" aria-label="Density">
+          <div className="flex items-center gap-1 rounded-md border p-0.5" role="group" aria-label={t("dataTable.density")}>
             {(["comfortable", "compact"] as Density[]).map((d) => (
               <button
                 key={d}
@@ -444,29 +446,45 @@ export function DataTable<TData>({
 }
 
 // ── Helper: select column definition (reusable) ───────────────────────
+
+/** Header checkbox for the select column — uses the i18n label. */
+function SelectAllHeader<T>({ table }: { table: Table<T> }) {
+  const { t } = useI18n();
+  return (
+    <Checkbox
+      checked={
+        table.getIsAllPageRowsSelected()
+          ? true
+          : table.getIsSomePageRowsSelected()
+            ? "indeterminate"
+            : false
+      }
+      onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+      aria-label={t("dataTable.selectAll")}
+    />
+  );
+}
+
+/** Row checkbox for the select column — uses the i18n label. */
+function SelectRowCell<T>({ row }: { row: Row<T> }) {
+  const { t } = useI18n();
+  return (
+    <Checkbox
+      checked={row.getIsSelected()}
+      onCheckedChange={(v) => row.toggleSelected(!!v)}
+      aria-label={t("dataTable.selectRow")}
+    />
+  );
+}
+
 export function selectColumn<T>(): ColumnDef<T, unknown> {
   return {
     id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected()
-            ? true
-            : table.getIsSomePageRowsSelected()
-              ? "indeterminate"
-              : false
-        }
-        onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(v) => row.toggleSelected(!!v)}
-        aria-label="Select row"
-      />
-    ),
+    // C-P3: use i18n keys (dataTable.selectAll / selectRow) instead of
+    // hardcoded English aria-labels — screen readers announce the user's
+    // locale, not English.
+    header: ({ table }) => <SelectAllHeader table={table} />,
+    cell: ({ row }) => <SelectRowCell row={row} />,
     meta: { width: "w-10", align: "center" },
     enableSorting: false,
   };

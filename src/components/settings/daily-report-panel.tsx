@@ -75,6 +75,12 @@ export function DailyReportPanel() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            // SV-L6: send the configured public secret. If unset (""),
+            // the route rejects the request — the seller must configure
+            // NEXT_PUBLIC_CRON_SECRET to use the in-app Test button.
+            // The "dev" fallback is only for type safety (optional() returns
+            // string | undefined); an empty/undefined secret is rejected by
+            // the route, so behavior is unchanged.
             "x-cron-secret": env.publicCronSecret ?? "dev",
           },
         });

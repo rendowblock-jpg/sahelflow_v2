@@ -130,10 +130,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
       {/* Blacklist warning banner */}
       {customer.isBlacklisted && (
-        <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/50">
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <Ban className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+            <p className="text-sm font-semibold text-destructive">
               {t("customers.blacklisted")}
             </p>
             {customer.blacklistReason && (

@@ -213,6 +213,39 @@ describe("runAgent — tool calls", () => {
     expect(result.toolCalls[0]!.result).toEqual({ error: "Client introuvable" });
   });
 
+  // AI-M8: when Gemini returns text + a function call in the SAME response,
+  // the non-streaming agent must preserve the text (prepend it to the final
+  // response). Previously the text was dropped when a functionCall was present.
+  it("preserves pre-tool text when text + function call arrive together (AI-M8)", async () => {
+    vi.mocked(getSecret).mockResolvedValue("test-key");
+
+    const execute = vi.fn().mockResolvedValue({ success: true, data: { totalOrders: 5 } });
+    vi.mocked(getTool).mockReturnValue(mockTool("get_stats", execute));
+
+    // First call: Gemini returns BOTH text AND a function call.
+    // Second call: Gemini returns the final text.
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(geminiJsonResponse({
+        candidates: [{
+          content: {
+            parts: [
+              { text: "Je vais vérifier vos statistiques..." },
+              { functionCall: { name: "get_stats", args: {} } },
+            ],
+          },
+        }],
+      }))
+      .mockResolvedValueOnce(geminiTextResponse("Vous avez 5 commandes au total."));
+
+    const result = await runAgent([], "Combien de commandes ?");
+
+    // The pre-tool text must be prepended to the final response.
+    expect(result.response).toContain("Je vais vérifier vos statistiques...");
+    expect(result.response).toContain("Vous avez 5 commandes au total.");
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]!.name).toBe("get_stats");
+  });
+
   it("handles an unknown tool name gracefully", async () => {
     vi.mocked(getSecret).mockResolvedValue("test-key");
     vi.mocked(getTool).mockReturnValue(undefined); // tool not found
