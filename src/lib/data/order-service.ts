@@ -27,6 +27,13 @@ import {
   dispatchLowStock,
   type TriggerEvent,
 } from "@/lib/automations/engine";
+
+// Phase 1 bug 1.3: callers may pass a transaction client so orderService.create
+// can run inside an existing $transaction (storefront/submit + import/orders
+// wrap customer-find-or-create + order-create in one tx). Same shape as the
+// DbOrTx type in order-change-service.ts.
+type DbOrTx = Parameters<Parameters<ServiceContext["prisma"]["$transaction"]>[0]>[0] | ServiceContext["prisma"];
+
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
 }
@@ -70,13 +77,33 @@ export const orderService = {
    * Create a new order (draft status by default).
    * Calculates totalPrice from items + deliveryCost.
    * Does NOT deduct stock (that happens on confirmation).
+   *
+   * Phase 1 bug 1.3: accepts an optional \`tx\` so the 4 order-creation paths
+   * (storefront/submit, import/orders, ecommerce sync-engine, AI core-tools)
+   * can route through this canonical service instead of bypassing it. This
+   * ensures every created order gets:
+   *   - an OrderChange "created" ledger entry (powers the order timeline)
+   *   - the \`order.created\` automation trigger (so "new order → WhatsApp
+   *     notify" automations fire for storefront/import/sync/AI orders, not
+   *     just manual UI orders)
+   * If \`opts.tx\` is provided, the order.create + ledger entry participate in
+   * the caller's $transaction (atomic with the caller's customer-find-or-
+   * create, etc.). If not, the service opens its own $transaction (legacy
+   * behavior).
    */
-  async create(ctx: ServiceContext, input: unknown): Promise<Order> {
+  async create(
+    ctx: ServiceContext,
+    input: unknown,
+    opts?: { tx?: DbOrTx },
+  ): Promise<Order> {
     return withServiceError(async () => {
       const data = createOrderSchema.parse(input);
 
+      // Pick the client: caller's tx if provided, else the context's prisma.
+      const client = opts?.tx ?? ctx.prisma;
+
       // Verify customer exists
-      const customer = await ctx.prisma.customer.findFirst({ where: { id: data.customerId, deletedAt: null } });
+      const customer = await client.customer.findFirst({ where: { id: data.customerId, deletedAt: null } });
       if (!customer) throw new NotFoundError("Customer", data.customerId);
 
       // Calculate total
@@ -86,50 +113,66 @@ export const orderService = {
       );
       const totalPrice = itemsTotal + (data.deliveryCost ?? 0);
 
-      // Generate order number atomically (D-005/T-011: was racy count()+1)
-      const orderNumber = await nextOrderNumber(ctx.prisma);
+      // Generate order number atomically (D-005/T-011: was racy count()+1).
+      // Phase 1 bug 1.3: caller can override the prefix (e-commerce sync uses
+      // "SYNC-SHOPIFY" etc. so synced orders are distinguishable).
+      const orderNumber = await nextOrderNumber(
+        client as ServiceContext["prisma"],
+        data.orderNumberPrefix ?? "ORD",
+      );
 
-      // Create order + items in a transaction
-      const row = await ctx.prisma.$transaction(async (tx) => {
-        const order = await tx.order.create({
-          data: {
-            orderNumber,
-            status: "draft",
-            customerId: data.customerId,
-            totalPrice,
-            deliveryCost: data.deliveryCost ?? null,
-            wilaya: data.wilaya,
-            commune: data.commune,
-            address: data.address,
-            phone: data.phone,
-            source: data.source,
-            sourceMetadata: data.sourceMetadata ? JSON.stringify(data.sourceMetadata) : null,
-            notes: data.notes ?? null,
-            items: {
-              create: data.items.map((item) => ({
-                productId: item.productId ?? null,
-                productVariantId: item.productVariantId ?? null,
-                productName: item.productName,
-                productVariantName: item.productVariantName ?? null,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.unitPrice * item.quantity,
-              })),
-            },
-          },
-          include: { items: true },
+      // The order.create payload — shared between the tx + non-tx paths.
+      const orderCreateData = {
+        orderNumber,
+        status: data.status ?? "draft",
+        customerId: data.customerId,
+        totalPrice,
+        deliveryCost: data.deliveryCost ?? null,
+        wilaya: data.wilaya,
+        commune: data.commune,
+        address: data.address,
+        phone: data.phone,
+        source: data.source,
+        sourceOrderId: data.sourceOrderId ?? null,
+        sourceMetadata: data.sourceMetadata ? JSON.stringify(data.sourceMetadata) : null,
+        notes: data.notes ?? null,
+        items: {
+          create: data.items.map((item) => ({
+            productId: item.productId ?? null,
+            productVariantId: item.productVariantId ?? null,
+            productName: item.productName,
+            productVariantName: item.productVariantName ?? null,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.unitPrice * item.quantity,
+          })),
+        },
+      } as const;
+
+      // Create order + items — either inside the caller's tx, or in a new tx.
+      let row;
+      if (opts?.tx) {
+        row = await opts.tx.order.create({ data: orderCreateData, include: { items: true } });
+      } else {
+        row = await ctx.prisma.$transaction(async (tx) => {
+          return tx.order.create({ data: orderCreateData, include: { items: true } });
         });
-        return order;
-      });
+      }
 
       // Record the order-creation event in the OrderChange ledger (S2-2).
+      // If the caller provided a tx, the ledger entry participates in that tx
+      // (atomic with the order.create). Otherwise it goes through the outer db.
       await recordOrderChange({
         orderId: row.id,
         actionType: "created",
         payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
+        tx: opts?.tx,
       });
 
-      // Fire automation trigger (fire-and-forget — never blocks order creation)
+      // Fire automation trigger (fire-and-forget — never blocks order creation).
+      // The trigger payload carries everything the action needs (no DB re-read),
+      // so it's safe to dispatch even when the caller's tx hasn't committed yet
+      // — executeAutomation uses the payload directly.
       void dispatchTrigger("order.created" as TriggerEvent, {
         orderId: row.id,
         orderNumber: row.orderNumber,

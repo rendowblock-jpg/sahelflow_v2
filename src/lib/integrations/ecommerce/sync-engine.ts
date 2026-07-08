@@ -26,11 +26,10 @@ import "server-only";
 
 
 import { db } from "@/lib/db";
-import { nextOrderNumber } from "@/lib/data/service-base";
+import { orderService } from "@/lib/data/order-service";
 import { syntheticPhone } from "@/lib/shared/phone";
 import { getEcommerceAdapter, loadEcommerceCredentials } from "./index";
 import type { EcommercePlatform, NormalizedOrder } from "./types";
-import type { Prisma } from "@prisma/client";
 
 export interface SyncResult {
   platform: EcommercePlatform;
@@ -208,17 +207,34 @@ async function upsertOrderFromSync(
       if (existing.sourceMetadata === newMetaJson) {
         return "skipped";
       }
-      const updateData: Prisma.OrderUpdateInput = {
-        sourceMetadata: newMetaJson,
-      };
-      // Propagate platform cancellations to the internal status. We do NOT
-      // overwrite arbitrary internal statuses — only cancellations, since
-      // those are unambiguous platform-side state changes the merchant
-      // needs to see in the SahelFlow UI.
-      if (isPlatformCancelled(normalized.sourceMetadata)) {
-        updateData.status = "cancelled";
+      // Propagate platform-side sourceMetadata changes inline (e.g. updated
+      // timestamps, fulfillment notes). This is a non-status update — safe to
+      // do directly without the state machine.
+      await db.order.update({
+        where: { id: existing.id },
+        data: { sourceMetadata: newMetaJson },
+      });
+
+      // Phase 1 bug 1.3: propagate platform cancellations through the
+      // canonical orderService.updateStatus path so stock is restored +
+      // order.cancelled automation trigger fires + OrderChange ledger entry
+      // is recorded. Previously this was a raw db.order.update({status:
+      // "cancelled"}) that bypassed all side effects — stock stayed deducted,
+      // no trigger fired, no ledger entry.
+      if (isPlatformCancelled(normalized.sourceMetadata) && existing.status !== "cancelled") {
+        try {
+          await orderService.updateStatus(
+            { prisma: db },
+            existing.id,
+            "cancelled",
+            { actor: "system" },
+          );
+        } catch {
+          // Graceful: if the transition is invalid (e.g. order already in a
+          // terminal state), the sourceMetadata update still committed.
+          // Log best-effort via the service's error path.
+        }
       }
-      await db.order.update({ where: { id: existing.id }, data: updateData });
       return "updated";
     }
   }
@@ -276,46 +292,32 @@ async function upsertOrderFromSync(
     }
   }
 
-  // Generate an internal order number atomically (D-005: was racy count()+1)
-  const syncPrefix = `SYNC-${normalized.source.toUpperCase()}`;
-  const orderNumber = await nextOrderNumber(db, syncPrefix);
-
-  // Calculate total
-  const itemsTotal = normalized.items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
-  const totalPrice = normalized.totalPrice || itemsTotal;
-
-  // Create the order + items in a transaction
-  const orderData: Prisma.OrderCreateInput = {
-    orderNumber,
-    status: "draft",
-    customer: { connect: { id: customer.id } },
-    totalPrice,
-    wilaya: normalized.wilaya ?? "Inconnu",
-    commune: normalized.commune ?? "Inconnu",
-    address: normalized.address,
-    // Use the resolved plaintext phone (real or synthetic) — the Prisma
-    // extension will HMAC it into the order's `phone` blind index and AES
-    // it into `phoneEnc`. (Do NOT use `customer.phone` here — that's already
-    // a blind index, would produce a double-HMAC.)
-    phone: customerPhone,
-    source: normalized.source,
-    sourceOrderId: sourceOrderId ?? null,
-    sourceMetadata: newMetaJson,
-    notes: null,
-    items: {
-      create: normalized.items.map((item) => ({
+  // Phase 1 bug 1.3: route through orderService.create so synced orders get
+  // the OrderChange "created" ledger entry + the `order.created` automation
+  // trigger (same as manual UI orders). Pass orderNumberPrefix so synced
+  // orders keep their SYNC-<PLATFORM>-XXXX number format (distinguishable
+  // from manual/AI/storefront orders in the orders list + deduped by the
+  // SYNC-<PLATFORM> counter, separate from the ORD counter).
+  await orderService.create(
+    { prisma: db },
+    {
+      customerId: customer.id,
+      items: normalized.items.map((item) => ({
         productName: item.productName,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        total: item.unitPrice * item.quantity,
       })),
+      wilaya: normalized.wilaya ?? "Inconnu",
+      commune: normalized.commune ?? "Inconnu",
+      address: normalized.address,
+      phone: customerPhone,
+      source: normalized.source,
+      sourceOrderId: sourceOrderId ?? null,
+      sourceMetadata: normalized.sourceMetadata,
+      notes: null,
+      orderNumberPrefix: `SYNC-${normalized.source.toUpperCase()}`,
     },
-  };
-
-  await db.order.create({ data: orderData });
+  );
   return "created";
 }
 

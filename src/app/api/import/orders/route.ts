@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { orderStatusSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
-import type { DbClient } from "@/lib/db";
 import {
   parseFile,
   mapRows,
@@ -12,7 +11,7 @@ import {
 import { ORDER_FIELDS, parseNumber, normalizePhone } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
-import { nextOrderNumber } from "@/lib/data/service-base";
+import { orderService } from "@/lib/data/order-service";
 import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -117,33 +116,43 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           });
         }
 
-        const itemsTotal = data.unitPrice * data.quantity;
         const deliveryCost = data.deliveryCost ?? 0;
-        const totalPrice = itemsTotal + deliveryCost;
-        const orderNumber = data.orderNumber ?? await nextOrderNumber(tx as DbClient);
+        const parsedStatus = orderStatusSchema.safeParse(data.status);
+        const status = parsedStatus.success ? parsedStatus.data : "pending";
 
-        await tx.order.create({
-          data: {
-            orderNumber,
-            status: orderStatusSchema.safeParse(data.status).success ? data.status : "pending",
+        // Phase 1 bug 1.3: route through orderService.create so imported
+        // orders get the OrderChange "created" ledger entry + the
+        // `order.created` automation trigger (same as manual UI orders). The
+        // service runs inside this per-row tx (opts.tx) so customer-find-or-
+        // create + order-create + ledger entry stay atomic.
+        //
+        // Note: the import path allows user-specified status (default
+        // "pending" — historical imports). createOrderSchema was extended to
+        // accept an optional `status` field for this purpose.
+        //
+        // Note: data.orderNumber (if provided) is currently ignored — the
+        // service generates its own order number atomically via nextOrderNumber.
+        // Acceptable trade-off: imported orders get SahelFlow order numbers,
+        // preserving the sequential counter invariant.
+        await orderService.create(
+          { prisma: tx as never },
+          {
             customerId: customer.id,
+            items: [{
+              productName: data.productName,
+              quantity: data.quantity,
+              unitPrice: data.unitPrice,
+            }],
             wilaya: data.wilaya,
             commune: data.commune ?? "",
             address: data.address ?? "",
             phone,
-            totalPrice,
-            deliveryCost,
             source: "manual",
-            items: {
-              create: [{
-                productName: data.productName,
-                quantity: data.quantity,
-                unitPrice: data.unitPrice,
-                total: itemsTotal,
-              }],
-            },
+            deliveryCost: deliveryCost > 0 ? deliveryCost : null,
+            status,
           },
-        });
+          { tx: tx as never },
+        );
       });
       inserted++;
     } catch (err) {

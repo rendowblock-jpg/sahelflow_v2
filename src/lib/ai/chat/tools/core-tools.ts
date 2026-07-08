@@ -14,7 +14,6 @@ import { registerTool } from "./registry";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
-import { nextOrderNumber } from "@/lib/data/service-base";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -243,22 +242,19 @@ registerTool({
           productName: product.name,
           quantity: i.quantity,
           unitPrice: product.price,
-          total: product.price * i.quantity,
         };
       });
 
-      const total = items.reduce((sum, i) => sum + i.total, 0);
-
-      // Generate order number atomically (D-005: was racy count()+1)
-      const orderNumber = await nextOrderNumber(db);
-
-      const order = await db.order.create({
-        data: {
-          orderNumber,
+      // Phase 1 bug 1.3: route through orderService.create so AI-created
+      // orders get the OrderChange "created" ledger entry + the
+      // `order.created` automation trigger (same as manual UI orders). The
+      // service handles orderNumber generation, status (default "draft"),
+      // totalPrice calculation, items, ledger, and trigger dispatch.
+      const order = await orderService.create(
+        { prisma: db },
+        {
           customerId: input.customerId,
-          status: "draft",
-          items: { create: items },
-          totalPrice: total,
+          items,
           wilaya: input.wilaya,
           commune: input.commune,
           address: input.address,
@@ -266,8 +262,7 @@ registerTool({
           source: "ai_chat",
           notes: input.notes,
         },
-        include: { items: true },
-      });
+      );
 
       return {
         success: true,

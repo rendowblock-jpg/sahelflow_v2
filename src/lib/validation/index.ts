@@ -48,6 +48,8 @@ export const orderSourceSchema = z.enum([
   "tiktok",
   "manual",
   "webstore",
+  "storefront",
+  "ai_chat",
   "shopify",
   "woocommerce",
   "youcan",
@@ -73,6 +75,19 @@ export const createOrderSchema = z.object({
   sourceMetadata: z.record(z.string(), z.unknown()).nullable().optional(),
   notes: z.string().nullable().optional(),
   deliveryCost: nonNegInt.nullable().optional(),
+  // Phase 1 bug 1.3: optional fields so storefront/import/sync/AI paths can
+  // route through orderService.create without losing their per-path data.
+  //   - status: import path creates orders with user-specified status
+  //     (default "pending" — historical imports). Service defaults to "draft".
+  //   - sourceOrderId: e-commerce sync dedupes by [source, sourceOrderId]
+  //     (unique constraint in prisma/schema.prisma).
+  status: orderStatusSchema.optional(),
+  sourceOrderId: z.string().nullable().optional(),
+  // Phase 1 bug 1.3: optional order-number prefix (e-commerce sync uses
+  // "SYNC-SHOPIFY" / "SYNC-WOOCOMMERCE" / "SYNC-YOUCAN" so synced orders are
+  // distinguishable from manual/AI/storefront orders in the orders list).
+  // Service defaults to "ORD" (the standard SahelFlow order-number prefix).
+  orderNumberPrefix: z.string().optional(),
 });
 
 export const updateOrderStatusSchema = z.object({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { nextOrderNumber } from "@/lib/data/service-base";
+import { orderService } from "@/lib/data/order-service";
 import { dzPhone } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 
@@ -122,7 +122,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     }
   }
 
-  // Build order items
+  // Build order items (schema shape — no `total`, the service computes it).
   const orderItems = input.items.map((item) => {
     const product = productMap.get(item.productId)!;
     return {
@@ -130,14 +130,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       productName: product.name,
       quantity: item.quantity,
       unitPrice: product.price,
-      total: product.price * item.quantity,
     };
   });
-
-  const total = orderItems.reduce((sum, i) => sum + i.total, 0);
-
-  // Generate order number atomically (D-005: was racy count()+1)
-  const orderNumber = await nextOrderNumber(db);
 
   // Create customer + order in a transaction (D-007: was not transactional).
   // Use upsert for idempotency — if two concurrent submissions come in with
@@ -155,6 +149,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // doesn't support a `where` filter on non-unique fields like deletedAt, so
   // we can't filter the lookup — the update branch is the only place to
   // clear it.)
+  //
+  // Phase 1 bug 1.3: route the order.create through orderService.create so
+  // storefront orders get the OrderChange "created" ledger entry + the
+  // `order.created` automation trigger (same as manual UI orders). The
+  // service runs inside this tx (opts.tx) so customer-upsert + order-create
+  // + ledger entry all stay atomic.
   const order = await db.$transaction(async (tx) => {
     const customer = await tx.customer.upsert({
       where: { phone: input.customer.phone },
@@ -178,23 +178,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     });
 
-    return tx.order.create({
-      data: {
-        orderNumber,
+    return orderService.create(
+      { prisma: tx as never },
+      {
         customerId: customer.id,
-        status: "draft",
-        items: { create: orderItems },
-        totalPrice: total,
+        items: orderItems,
         wilaya: input.customer.wilaya,
         commune: input.customer.commune,
         address: input.customer.address,
         phone: input.customer.phone,
         source: "storefront",
-        sourceMetadata: JSON.stringify({ storefrontSlug: input.slug }),
+        sourceMetadata: { storefrontSlug: input.slug },
         notes: input.notes,
       },
-      include: { items: true },
-    });
+      { tx: tx as never },
+    );
   });
 
   return NextResponse.json({
