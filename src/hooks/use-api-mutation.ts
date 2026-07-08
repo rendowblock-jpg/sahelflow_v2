@@ -23,6 +23,8 @@
 import { useCallback, useState } from "react";
 import { toast } from "@/lib/toast";
 import { ApiError } from "@/lib/swr/fetcher";
+import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 
 interface UseApiMutationOptions {
   /** Auto-show this toast on success (skip if you want custom handling). */
@@ -44,6 +46,7 @@ interface UseApiMutationResult {
 export function useApiMutation(
   options: UseApiMutationOptions = {},
 ): UseApiMutationResult {
+  const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -69,12 +72,16 @@ export function useApiMutation(
         }
 
         if (!res.ok) {
-          const msg =
-            (data as { error?: { message?: string } | string })?.error
-              ? typeof (data as { error: { message?: string } | string }).error === "string"
-                ? ((data as { error: string }).error)
-                : ((data as { error: { message?: string } }).error?.message ?? `Request failed (${res.status})`)
-              : `Request failed (${res.status})`;
+          // Extract the raw server error string (may be English/French), then
+          // translate it via the client locale. Falls back to a translated
+          // generic "request failed" message. (Bug 1: notifications i18n.)
+          const rawError = (data as { error?: { message?: string } | string })?.error;
+          const rawMsg = rawError
+            ? typeof rawError === "string"
+              ? rawError
+              : (rawError.message ?? `Request failed (${res.status})`)
+            : `Request failed (${res.status})`;
+          const msg = translateServerError(rawMsg, t, t("error.requestFailed"));
           throw new ApiError(msg, res.status);
         }
 
@@ -89,14 +96,19 @@ export function useApiMutation(
         if (options.onError) {
           options.onError(e);
         } else if (!options.suppressErrorToast) {
-          toast.error(e.message);
+          // ApiError messages are already translated (see above). Raw network
+          // errors (fetch rejected) produce English — translate the common ones.
+          const msg = e instanceof ApiError
+            ? e.message
+            : translateServerError(e.message, t, t("error.networkFailure"));
+          toast.error(msg);
         }
         throw e;
       } finally {
         setIsSubmitting(false);
       }
     },
-    [options],
+    [options, t],
   );
 
   return { isSubmitting, error, submit };

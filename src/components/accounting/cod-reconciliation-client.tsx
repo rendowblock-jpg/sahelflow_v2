@@ -135,7 +135,7 @@ export function CodReconciliationClient({
             {/* Table */}
             <div className="overflow-hidden rounded-lg border">
               <table className="w-full">
-                <thead className="sticky top-0 border-b bg-muted/50">
+                <thead className="sticky top-0 z-10 border-b bg-muted">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3 w-10">
                       <Checkbox

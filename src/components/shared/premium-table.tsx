@@ -72,7 +72,7 @@ export function PremiumTable({ children, className, maxHeight, ...props }: Premi
 
 function Header({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="sticky top-0 z-10 border-b bg-muted/50">
+    <thead className="sticky top-0 z-10 border-b bg-muted">
       {children}
     </thead>
   );

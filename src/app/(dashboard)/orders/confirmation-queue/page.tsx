@@ -85,7 +85,7 @@ export default async function ConfirmationQueuePage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="sticky top-0 border-b bg-muted/50">
+                <thead className="sticky top-0 z-10 border-b bg-muted">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3 text-start">{t("confirmationQueue.col.order")}</th>
                     <th className="px-4 py-3 text-start">{t("confirmationQueue.col.customer")}</th>

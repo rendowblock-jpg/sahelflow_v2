@@ -9,6 +9,7 @@ import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { Plus, Loader2 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
@@ -186,7 +187,7 @@ export function ExpenseFormDialog({
             first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
           );
         } else {
-          setServerError(data?.error ?? `Request failed (${res.status})`);
+          setServerError(translateServerError(data?.error, t, t("error.requestFailed")));
         }
         return;
       }

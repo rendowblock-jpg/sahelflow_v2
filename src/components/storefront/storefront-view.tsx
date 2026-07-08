@@ -148,7 +148,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
 
   if (result?.ok) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4" >
+      <div className="min-h-full flex items-center justify-center bg-background p-4" >
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center space-y-4">
             <CheckCircle2 className="h-16 w-16 text-success mx-auto" />
@@ -170,7 +170,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
   }
 
   return (
-    <div className="min-h-screen" >
+    <div className="min-h-full" >
       {/* Header */}
       <header
         className="border-b"

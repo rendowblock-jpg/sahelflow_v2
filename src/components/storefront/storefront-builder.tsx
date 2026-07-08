@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Loader2, ExternalLink, Search, Check } from "lucide-react";
@@ -128,7 +129,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
           });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || t("storefront.builder.error.createFailed"));
+            throw new Error(translateServerError(data.error, t, t("storefront.builder.error.createFailed")));
           }
           const { config: created } = await res.json();
           toast.success(t("storefront.builder.created"));
@@ -142,7 +143,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
           });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || t("storefront.builder.error.updateFailed"));
+            throw new Error(translateServerError(data.error, t, t("storefront.builder.error.updateFailed")));
           }
           toast.success(t("storefront.builder.saved"));
           router.refresh();

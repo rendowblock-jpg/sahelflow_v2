@@ -48,6 +48,7 @@ export default function DashboardTemplate({
       }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
+      className="h-full"
     >
       {children}
     </motion.div>

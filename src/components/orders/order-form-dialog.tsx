@@ -36,6 +36,7 @@ import { usePhoneMask } from "@/hooks/form/use-phone-mask";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
 
@@ -172,7 +173,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
         });
         if (!custRes.ok) {
           const err = await custRes.json().catch(() => ({}));
-          toast.error(err.error?.message ?? err.error ?? t("orders.form.errorCreatingCustomer"));
+          toast.error(translateServerError(err.error?.message ?? err.error, t, t("orders.form.errorCreatingCustomer")));
           setLoading(false);
           return;
         }

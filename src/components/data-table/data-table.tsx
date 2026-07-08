@@ -250,7 +250,7 @@ export function DataTable<TData>({
       <div className="overflow-hidden rounded-lg border bg-card shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="sticky top-0 z-10 border-b bg-muted/50">
+            <thead className="sticky top-0 z-10 border-b bg-muted">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="text-start">
                   {hg.headers.map((header) => {

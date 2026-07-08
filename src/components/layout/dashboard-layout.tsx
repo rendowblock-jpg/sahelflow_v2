@@ -75,7 +75,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   return (
     <div
       dir={dir}
-      className="flex h-screen overflow-hidden bg-muted/30 lg:bg-muted/40" style={{ height: "100dvh" }}
+      className="flex h-[100vh] overflow-hidden bg-muted/30 lg:bg-muted/40" style={{ height: "100dvh" }}
     >
       {/* Sidebar — hidden on mobile, shown on lg+.
           In RTL, the sidebar visually appears on the RIGHT because the
@@ -91,7 +91,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       <div className="flex flex-col flex-1 overflow-hidden p-0 lg:p-2 lg:ps-0 rtl:lg:ps-2 rtl:lg:pe-0">
         <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
           <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
-          <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <main id="main-content" className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden min-h-0 scroll-pt-16">
             {children}
           </main>
         </div>

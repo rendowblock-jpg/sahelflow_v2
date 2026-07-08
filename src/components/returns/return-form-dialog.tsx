@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
@@ -133,7 +134,7 @@ export function ReturnFormDialog({
         const data = (await res.json().catch(() => null)) as
           | { error?: string; details?: unknown }
           | null;
-        const msg = data?.error ?? `Request failed (${res.status})`;
+        const msg = translateServerError(data?.error, t, t("error.requestFailed"));
         toast.error(msg);
         return;
       }
