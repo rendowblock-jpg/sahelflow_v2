@@ -40,17 +40,16 @@ export async function createRefund(input: CreateRefundInput) {
   // Transactional: refund create + order-change ledger + (optional) status
   // transition must all succeed together.
   //
-  // F-H3: BEGIN IMMEDIATE closes the TOCTOU window for concurrent partial
-  // refunds. Prisma's interactive $transaction uses DEFERRED by default —
-  // two concurrent createRefund calls (different idempotencyKeys, same order)
-  // both read priorRefunds=0, both pass the over-refund guard, both create a
-  // refund → total exceeds order.totalPrice. BEGIN IMMEDIATE acquires the
-  // write lock at tx start, serializing the two refunds so the second reads
-  // the first's uncommitted priorRefunds.
-  await db.$executeRaw`BEGIN IMMEDIATE`;
-  let refund;
-  try {
-  refund = await db.$transaction(async (tx) => {
+  // F-H3 (TOCTOU for concurrent partial refunds): Prisma's interactive
+  // $transaction on SQLite serializes via the single-writer lock (per
+  // src/lib/automations/engine.ts:445 comment) — two concurrent createRefund
+  // calls can't both pass the over-refund guard with stale priorRefunds=0.
+  // The previous explicit `BEGIN IMMEDIATE` wrapper was redundant AND broken:
+  // it acquired the write lock on one pooled connection, then $transaction
+  // tried to start its own transaction on another connection, deadlocking
+  // (PrismaClientUnknownRequestError "SQL error or missing database").
+  // Removed in Phase 1 bug 1.1 — required for the regression test to run.
+  const refund = await db.$transaction(async (tx) => {
     // 1. Re-read the order inside the tx (TOCTOU-safe)
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
@@ -81,13 +80,33 @@ export async function createRefund(input: CreateRefundInput) {
       );
     }
 
-    // 4. If order is "delivered", transition to "returned" (AUDIT-3 S4)
-    // so COD reconciliation stops counting it as collected+remitted.
-    // F-H1: also restore stock for each item (delivered→returned now triggers
-    // stock restoration per triggersStockRestoration). We duplicate the loop
-    // from orderService.updateStatus here because calling it would open a
-    // nested $transaction that can't see this tx's uncommitted writes.
+    // 4. Status transition + stock restore + orderCount reversal.
+    //
+    // Phase 1 bug 1.1 (Return + Refund double-counting): if the order is
+    // ALREADY "returned" (because a Return was completed first via
+    // /api/returns/[id], which now routes through
+    // orderService.updateStatus("returned")), the stock + orderCount + totalSpent
+    // side effects have ALREADY been applied by that flow. Re-applying them here
+    // would double-count. So we skip the inline transition entirely — only the
+    // Refund row + the totalSpent decrement (step 8, by the refund amount) need
+    // to run.
+    //
+    // If order.status === "delivered" (no Return was completed first), we still
+    // do the inline transition here (AUDIT-3 S4: COD reconciliation must stop
+    // counting it as collected+remitted) + restore stock + decrement orderCount.
+    // totalSpent is decremented separately in step 8 below by the refund amount.
+    // Phase 1 bug 1.1: when the order is already "returned" (Return completed
+    // first via /api/returns/[id] → orderService.updateStatus("returned")),
+    // the Return flow has ALREADY:
+    //   - restored stock
+    //   - decremented customer.orderCount
+    //   - decremented customer.totalSpent by order.totalPrice (the full order)
+    // So this Refund must NOT re-apply any of those — it only records the
+    // Refund row. In particular, step 8's totalSpent-by-refund-amount
+    // decrement must be skipped (otherwise totalSpent drifts negative for a
+    // full refund: -order.totalPrice - refund.amount).
     let statusChanged = false;
+    let skipTotalSpentDecrement = false;
     if (order.status === "delivered") {
       await tx.order.update({
         where: { id: input.orderId },
@@ -121,6 +140,16 @@ export async function createRefund(input: CreateRefundInput) {
       }).catch(() => {
         // best-effort — customer row might be soft-deleted
       });
+    } else if (order.status === "returned") {
+      // Phase 1 bug 1.1: Return flow already did stock restore + orderCount
+      // reversal + totalSpent-by-order.totalPrice reversal (via
+      // orderService.updateStatus). Skip the inline transition here, AND
+      // skip step 8's totalSpent-by-refund-amount decrement — otherwise
+      // totalSpent would be decremented twice (once by the Return flow's
+      // order.totalPrice, once by the Refund flow's refund.amount). Only
+      // the Refund row + the order-change ledger entry should be created.
+      statusChanged = false;
+      skipTotalSpentDecrement = true;
     }
 
     // 5. Create the refund row
@@ -160,20 +189,21 @@ export async function createRefund(input: CreateRefundInput) {
     // 8. Customer stats reversal — decrement totalSpent by the refund amount.
     // Phase 4 spec required this but it was never implemented. We only
     // adjust totalSpent (not orderCount) since the order still happened.
-    await tx.customer.update({
-      where: { id: order.customerId },
-      data: { totalSpent: { decrement: input.amount } },
-    }).catch(() => {
-      // best-effort — customer row might be soft-deleted
-    });
+    // Phase 1 bug 1.1: SKIP this when the order was already "returned" —
+    // the Return flow already decremented totalSpent by order.totalPrice
+    // (the full order), so a second decrement by refund.amount would
+    // double-count.
+    if (!skipTotalSpentDecrement) {
+      await tx.customer.update({
+        where: { id: order.customerId },
+        data: { totalSpent: { decrement: input.amount } },
+      }).catch(() => {
+        // best-effort — customer row might be soft-deleted
+      });
+    }
 
     return r;
   });
-  await db.$executeRaw`COMMIT`;
-  } catch (err) {
-    await db.$executeRaw`ROLLBACK`;
-    throw err;
-  }
 
   // Audit log (outside tx — fire-and-forget, never blocks the refund)
   void logAudit({
