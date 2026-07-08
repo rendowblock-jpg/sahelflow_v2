@@ -5,6 +5,48 @@ All notable changes to SahelFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Session 35 (2026-07-08/09)
+
+### Session 35 — Founder testing, critical bugfixes, i18n, dev-perf, data-integrity plan
+
+Founder launched the app in Tauri and found 3 critical runtime bugs. Deep investigation (2 subagents) found 5 data-flow bugs + 6 revenue-formula variants + orphaned tables. Authored a 7-phase data-integrity plan.
+
+#### Fixed — Critical runtime bugs
+- **nuqs adapter missing** (`8026110`): root layout was missing `<NuqsAdapter>` from `nuqs/adapters/next/app`. nuqs v2 requires this wrapper — without it, `useQueryState` throws NUQS-404. This crashed the orders page + would crash 4 more list pages (deliveries, returns, customers, products) + DataTable sorting. Added the wrapper in `src/app/layout.tsx`.
+- **Viewport cut from bottom in Tauri** (`1146313`): the `h-full` approach (inheriting from html/body height:100%) broke in Tauri WebView2 on Windows. Replaced with `100dvh` viewport unit directly on html, body, dashboard-layout root, + sidebar. Removed bottom padding gap (`lg:pb-0`). Added explicit `margin:0` on body.
+- **Prisma transaction timeout** (`8026110`): `incrementRuleTriggers` in `risk-engine/service.ts:113` used the default 5s timeout — expired on dev server's first compile (42s > 5s → "Transaction already closed" + unhandledRejection). Increased to `{ maxWait: 10_000, timeout: 30_000 }`.
+
+#### Fixed — i18n (founder-reported: notifications hardcoded English in Arabic mode)
+- **Error toast i18n** (`8602bc3`): new `src/lib/i18n/translate-server-error.ts` (28-rule mapping from known English/French server error strings to i18n keys). Wired into `use-api-mutation.ts` (~92 call sites) + 4 form dialogs (return-form, expense-form, order-form, storefront-builder). +24 i18n keys to ar/en/fr.
+- **Notifications bell dropdown i18n** (`93399b4`): rewrote `/api/notifications` route to call `getI18n()` + build all notification strings via `t()` (5 types: stale-queue, new-order, delivery, low-stock, return; + relative time; + delivery status snake_case→camelCase i18n mapping; + locale-aware price formatting; + CLDR plurals). +19 i18n keys to ar/en/fr.
+
+#### Fixed — Viewport iteration (Bug 2 from Task 7)
+- `8602bc3`: opaque sticky theads (`bg-muted/50` → `bg-muted`) on 5 tables; `h-screen` + `100dvh` inline.
+- `8026110`: `h-full` (inherit from html/body 100%) + `overflow:hidden` on body.
+- `1146313`: `100dvh` viewport unit directly + `margin:0` + `lg:pb-0` (nuclear fix).
+
+#### Changed — Dev workflow performance
+- **Sidecar binary caching** (`d7be246`): `scripts/build-sidecar.ts` now compares source mtime vs binary mtime; skips the 70s `bun build --compile` if source unchanged. Force with `SF_FORCE_SIDECAR=1` or `--force`.
+- **New `dev:web` script** (`d7be246`): `next dev` only (browser, no Tauri/sidecar/Rust) — instant HMR for UI iteration.
+- **New `dev:tauri:skip-sidecar` script** (`d7be246`): `bunx tauri dev` (skips sidecar build + check) — cached sidecar, real Tauri window.
+
+#### Added — Data-integrity plan
+- **`documentation/DATA_INTEGRITY_PLAN.md`** (`0b8950f`): 7-phase plan to guarantee flawless data flows. Phase 1: fix 5 data-flow bugs. Phase 2: fix build ship-blocker. Phase 3: cross-table data-integrity test suite (15 scenarios). Phase 4: consolidate 6 revenue + 3 delivery-rate formulas. Phase 5: remove orphaned Notification + DailyAnalyticsReport tables. Phase 6: 8 e2e golden paths. Phase 7: API route integration tests (top 30). Total ~8-9 sessions.
+
+#### Added — i18n keys
+- 43 new keys to ar/en/fr (2,499 → 2,560 total, all in sync): `auth.incorrectPin/tooManyAttempts/accountLocked/notSetUp/samePin/alreadySetUp`, `error.rateLimited/requestFailed/notFound/unauthorized/forbidden/validationFailed`, `whatsapp.sidecarUnreachable/sidecarTokenUnavailable/noQr`, `storefront.errors.notFound/productNotFound`, `orders.errors.notFound`, `deliveries.errors.notFound/mustBeConfirmed/noTrackingNumber`, `common.invalidWilaya/failedToLoadCommunes/requestFailed/unknown`, `notif.staleQueue.*`, `notif.newOrder.*`, `notif.delivery.*`, `notif.lowStock.*`, `notif.return.*`, `notif.time.*`, `deliveries.noTracking`, `returns.type.refund`.
+
+#### Documentation
+- `PROJECT_STATE.md` updated to Session 35 complete (HEAD `d7be246`, 1257 tests, 33 models, 5 migrations, 2560 i18n keys).
+- `AGENT_HANDOFF.md` bumped to v26.0 with full Session 35 record + next-session instructions.
+
+#### Known issues (unchanged, documented)
+- ❌ **`bun run build` FAILS** — `use-license.ts` (client) imports `license-service.ts` (server) → drags `db.ts`/`master-key.ts`/`fs`/`server-only` into client bundle. Phase 2 of the data-integrity plan.
+- ⚠️ **5 data-flow bugs** (Return+Refund double-counting, delivery PATCH skips side effects, 4 order-create paths bypass orderService.create, delivery/create skips trigger, orders-page stat capped at 200). Phase 1 of the plan.
+- 3 Wave 7 deferrals: SV-L5, SV-L10, C-P1.
+
+---
+
 ## [4.1.0] — 2026-07-06
 
 ### Session 30 — 10-Phase Deep Wave

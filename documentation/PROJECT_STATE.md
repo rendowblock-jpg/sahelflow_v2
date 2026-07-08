@@ -3,12 +3,14 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-08 (Session 35 resume — verified green at HEAD `1a9bef3`; doc drift fixed; production-build ship-blocker found)
-**Main HEAD:** `1a9bef3`
+**Last updated:** 2026-07-09 (Session 35 COMPLETE — founder-tested, 3 critical bugs fixed, data-integrity plan authored, docs current)
+**Main HEAD:** `d7be246`
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
-> **Sessions 31–34 summary:** Session 31–32 continued audit-wave fixes; Session 33 ran a 7-stream deep re-audit (~102 new findings); Session 34 executed all 3 remaining waves (Wave 5: 12 ship-blockers 🔴, Wave 6: 25 high 🟠, Wave 7: ~65 medium+polish 🟡⚪), all merged to `main` linearly across 19 phases on 3 feature branches. main progression: `9602c8a` (S33 audit) → `6e80cb4` (W5) → `d21fcdd` (W6) → `aece101` (W7) → `1a9bef3` (T-S5 Tauri regression follow-up). See `AGENT_HANDOFF.md` (v25.0, on the `agent-handoff` branch) for the full Session 34 record.
+> **Sessions 31–34 summary:** Session 31–32 continued audit-wave fixes; Session 33 ran a 7-stream deep re-audit (~102 new findings); Session 34 executed all 3 remaining waves (Wave 5: 12 ship-blockers 🔴, Wave 6: 25 high 🟠, Wave 7: ~65 medium+polish 🟡⚪), all merged to `main` linearly across 19 phases on 3 feature branches. main progression: `9602c8a` (S33 audit) → `6e80cb4` (W5) → `d21fcdd` (W6) → `aece101` (W7) → `1a9bef3` (T-S5 follow-up) → `d7be246` (S35 complete). See `AGENT_HANDOFF.md` (v26.0, on the `agent-handoff` branch) for the full record + next-session instructions.
+
+> **Session 35 summary:** Founder-driven testing revealed 3 critical runtime bugs (nuqs adapter missing → 5 list pages crash; viewport cut in Tauri; Prisma tx timeout). All fixed. 2 i18n bugs fixed (error toasts + notifications dropdown hardcoded English). Dev workflow sped up (sidecar caching + fast dev scripts). Deep investigation (2 subagents) found 5 data-flow bugs + 6 revenue-formula variants + orphaned tables. Authored a 7-phase data-integrity plan (`documentation/DATA_INTEGRITY_PLAN.md`). **Next session: execute Phase 1 (fix 5 data-flow bugs) + Phase 2 (fix build ship-blocker).**
 
 ---
 
@@ -16,21 +18,21 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-34 complete. Session 34: all 3 remaining audit waves (5/6/7, ~102 findings) merged to main. Session 35 (resume): verified green, fixed doc drift, flagged production-build ship-blocker. |
+| Phase | Sessions 1-35 complete. S34: all 3 audit waves merged. S35: founder-tested, fixed 3 critical runtime bugs + 2 i18n bugs + dev-perf, authored data-integrity plan. **Next: Phase 1+2 of the plan** (see `DATA_INTEGRITY_PLAN.md`). |
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1257 pass | 0 skip | 0 fail** (re-verified Session 35: tsc 0 err, eslint 0 err / 738 warn, vitest 1257/1257, prisma valid, 5 migrations clean) |
+| Tests | **1257 pass | 0 skip | 0 fail** (re-verified Session 35 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1257/1257, prisma valid, 5 migrations clean) |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
 | Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
-| i18n keys | ~2,400 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) |
+| i18n keys | 2,560 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) — +24 error-translation keys + 19 notification keys added Session 35 |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
 | Delivery adapters | 4 (Yalidine + Maystro + ZR Express + DHD) |
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (isBlacklisted column) + phone reputation registry |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 1257 tests green (0 skip, 80% coverage floor) — re-verified Session 35. ⚠️ **`bun run build` (Turbopack) FAILS** — see ship-blocker below |
+| Quality gate | ✅ tsc + eslint + 1257 tests green (0 skip, 80% coverage floor) — re-verified Session 35 end. ⚠️ **`bun run build` (Turbopack) still FAILS** (use-license.ts→license-service.ts server/client boundary) — Phase 2 of the data-integrity plan |
 | Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF + proxy.ts enforces on all routes + React cache() dedup |
 | Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message) + blind index + nested-read decryption + Prisma safety guards |
 | Theme | ✅ Emerald/teal palette, 0 arbitrary text-size values (eliminated in Phase 11) |
@@ -41,45 +43,79 @@
 | Sentry | ✅ @sentry/nextjs installed + env-gated (zero-overhead until SENTRY_DSN set) + global-error.tsx only-fires-on-unexpected |
 | Agent toolkit | ✅ sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit |
 
-## Session 35 — 2026-07-08: Resume verification + doc-drift fix + build ship-blocker found
+## Session 35 — 2026-07-08/09: Founder testing, 3 critical bugfixes, i18n, dev-perf, data-integrity plan
 
-**Agent resumed** from the `agent-handoff` v25.0 doc. `bootstrap.sh` ran (degraded mode: the PAT initially looked invalid due to a transcription typo — fixed; Supabase v2-legacy DB + local SQLite both verified). Repo on `main` @ `1a9bef3` (1 commit ahead of the handoff's stated `aece101` — a T-S5 Tauri regression follow-up: `fix(tauri): add resources/runtime/README.md placeholder so bundle glob matches`).
+**Agent resumed** from `agent-handoff` v25.0. PAT initially looked invalid (transcription typo — fixed on re-paste). Bootstrap ran degraded (no package.json on agent-handoff branch + PAT 401); all 8 tools installed, Supabase v2-legacy DB + local SQLite verified. Repo on `main` @ `d7be246` (was `1a9bef3` at session start; 5 commits added this session).
 
-### Verification gate (re-run at HEAD `1a9bef3`)
+### Verification gate (re-verified at session end, HEAD `d7be246`)
 
 | Gate | Result |
 |---|---|
-| `tsc --noEmit` | ✅ 0 errors (50s) |
-| `eslint .` | ✅ 0 errors, 738 warnings (24s) — matches handoff exactly |
-| `vitest run` | ✅ **1257/1257 pass**, 66 test files (77s) — matches handoff exactly |
-| `prisma validate` | ✅ valid |
-| fresh-DB `migrate deploy` | ✅ 5/5 migrations apply clean (handoff said "6 migrations" — **actual is 5**; doc drift, fixed) |
+| `tsc --noEmit` | ✅ 0 errors |
+| `eslint .` | ✅ 0 errors, 738 warnings (unchanged) |
+| `vitest run` | ✅ **1257/1257 pass**, 66 test files |
+| `prisma validate` | ✅ valid, 33 models, 5 migrations clean |
+| `bun run build` | ❌ **STILL FAILS** — Phase 2 of the data-integrity plan |
 
-### Browser verification (curl-fallback — sandbox RAM ~4.1GB shared with my-project dev server)
+### Founder testing revealed 3 critical runtime bugs (all fixed)
 
-| Check | Result |
-|---|---|
-| `sf-seed` (rich seed + master-key verify) | ✅ dev.db 728KB, PIN `12345678`, master.key present |
-| `POST /api/auth/login {pin:"12345678"}` | ✅ `{"success":true}`, `sf_session` cookie set |
-| Auth middleware `src/proxy.ts` (static) | ✅ matcher protects all routes except static + `/login` `/setup` `/storefront`; HMAC-SHA256 session verify; redirects unauth → `/login`; defense-in-depth `requireAuth()` per route; setup-mode bypass when `AUTH_SECRET` unset |
-| 16 dashboard pages (live) | ⚠️ **Could not verify** — dev server OOM-killed on first dashboard-route compile (Turbopack pulls Prisma + data-service + crypto chain; sandbox RAM insufficient alongside the my-project dev server). **Founder must verify on their machine.** |
+| Bug | Commit | Fix |
+|---|---|---|
+| **Orders page crashes** (nuqs adapter missing → 5 list pages + DataTable sorting would crash) | `8026110` | Added `<NuqsAdapter>` to root layout `src/app/layout.tsx`. Pre-existing bug — nuqs v2 requires the wrapper. |
+| **Viewport cut from bottom** (Tauri WebView2 height-chain broke) | `1146313` | `100dvh` viewport unit directly on html + body + dashboard-layout root + sidebar. Removed bottom padding gap. Explicit `margin:0` on body. |
+| **Prisma tx timeout** (`incrementRuleTriggers` 5s default expired on slow dev compile) | `8026110` | Increased to `{ maxWait: 10_000, timeout: 30_000 }` in `risk-engine/service.ts:113`. |
 
-### 🚨 NEW ship-blocker found: `bun run build` (Turbopack) FAILS
+### i18n bugs fixed (founder-reported)
 
-The handoff doc states web dev mode is "~95% ready" and assumes `bun run build` works for the Playwright prod-build run. **It does not.** The production build fails with 6 errors:
+| Bug | Commit | Fix |
+|---|---|---|
+| **Error toasts hardcoded English** (Arabic mode) | `8602bc3` | New `src/lib/i18n/translate-server-error.ts` (28-rule mapping). Wired into `use-api-mutation` (~92 call sites) + 4 form dialogs. +24 i18n keys to ar/en/fr. |
+| **Notifications bell dropdown hardcoded English** | `93399b4` | Rewrote `/api/notifications` route to use `getI18n()` + `t()` for all 5 notification types + relative time + status mapping. +19 i18n keys to ar/en/fr. |
 
-- **Root cause:** server/client boundary violation. `src/app/(dashboard)/agents/page.tsx` (server) → `src/components/license/feature-gate.tsx` (client) → `src/hooks/use-license.ts` (client hook) → **directly imports** `validateLicense, issueTrial` from `src/lib/license/license-service.ts` (server code). This drags `src/lib/db.ts` → `src/lib/crypto/master-key.ts` (`import "server-only"` + `fs`) into the client bundle → Turbopack errors: `Can't resolve 'fs'` + `importing a module that depends on "server-only" … in the Pages Router`.
-- **Dev mode is unaffected** (Turbopack dev compiles on-demand and is permissive), which is why this wasn't caught earlier — the dev server serves `/login` (200) and the login API works.
-- **Fix direction (not yet applied):** the client hook `use-license.ts` must not import server services directly. Either (a) move `validateLicense`/`issueTrial` behind a server action / API route and call via `fetch`, or (b) split `license-service.ts` into a client-safe signature-verify path (`license/crypto.ts` is already client-safe — uses `@noble/ed25519`) vs the server-only DB path, and have the hook import only the client-safe part. This is the **top priority for the next work session** — without a green build, the Playwright e2e run (`bun run build && bun run start`) and any production deploy are blocked.
+### Viewport fix iteration (Bug 2 from Task 7)
 
-### Doc drift fixed (this session)
+| Attempt | Commit | Approach | Result |
+|---|---|---|---|
+| 1 | `8602bc3` | `h-screen` + opaque sticky theads | Insufficient (founder still saw cut) |
+| 2 | `8026110` | `h-full` (inherit from html/body 100%) | Insufficient (Tauri WebView2 height-chain broke) |
+| 3 | `1146313` | `100dvh` viewport unit directly + `margin:0` + `lg:pb-0` | ✅ Applied — founder to verify |
 
-- `PROJECT_STATE.md` was stuck at Session 30 (HEAD `91619d4`, 1209 tests). Updated to Session 35 / HEAD `1a9bef3` / 1257 tests / 33 models / 5 migrations. Added this Session 35 section.
-- `AGENT_HANDOFF.md` (on `agent-handoff` branch) stated HEAD `aece101`; bumped to `1a9bef3` + noted the T-S5 follow-up commit + this session's findings.
+### Dev workflow performance (founder-reported "slow every time")
 
-### 3 known Wave 7 deferrals (unchanged, documented with TODOs)
+| Fix | Commit | Impact |
+|---|---|---|
+| Sidecar binary caching | `d7be246` | Skips 70s `bun build --compile` if source unchanged (mtime check). Force with `SF_FORCE_SIDECAR=1`. |
+| `dev:web` script | `d7be246` | `next dev` only (browser, no Tauri/sidecar/Rust) — instant HMR for UI iteration |
+| `dev:tauri:skip-sidecar` script | `d7be246` | `bunx tauri dev` (skips sidecar build + check) — cached sidecar, real Tauri window |
 
-`SV-L5` statusRow re-verification · `SV-L10` wilaya-risk i18n · `C-P1` partial palette — all still open, all documented.
+### Deep investigation (2 parallel subagents — P0-A + P0-B)
+
+Mapped every order→delivery→return→analytics data flow + audited all 1257 tests. Key findings:
+- **5 real data-flow BUGS** (not test gaps): Return+Refund double-counting, delivery PATCH skips side effects, 4 order-create paths bypass `orderService.create`, delivery/create skips `order.shipped` trigger, orders-page stat capped at 200.
+- **6 different revenue formulas** + **3 delivery-rate formulas** across dashboard/analytics/accounting/reports/AI (drift risk).
+- **Orphaned `Notification` table** (write-only, never read) + `DailyAnalyticsReport` (never written to in src/).
+- **110/111 API routes untested** (0.9%), **9/18 services untested** (COD, refunds, conversations, dashboard, analytics-v2).
+- **0 cross-page e2e** (orders.spec is API-only).
+- Full findings in `worklog.md` Task IDs P0-A + P0-B.
+
+### Data-integrity plan authored
+
+`documentation/DATA_INTEGRITY_PLAN.md` (457 lines, commit `0b8950f` + `d7be246`). 7 phases:
+1. Fix the 5 data-flow bugs (1 session) — **NEXT**
+2. Fix the build ship-blocker (0.5 session) — **NEXT**
+3. Cross-table data-integrity test suite, 15 scenarios (1 session)
+4. Consolidate revenue + delivery-rate formulas (1 session)
+5. Remove orphaned tables (0.5 session)
+6. E2e golden-path suite, 8 specs (2 sessions)
+7. API route integration tests, top 30 routes (2-3 sessions)
+
+### Session commits (main progression)
+
+`1a9bef3` (start) → `6d3be12` (doc drift) → `8602bc3` (i18n toasts + viewport v1) → `93399b4` (notifications i18n) → `0b8950f` (data-integrity plan) → `8026110` (nuqs + viewport v2 + tx timeout) → `1146313` (viewport v3 nuclear) → `d7be246` (dev perf). **8 commits, 4 feature branches (all fast-forward-merged + deleted).**
+
+### 3 known Wave 7 deferrals (unchanged)
+
+`SV-L5` statusRow re-verification · `SV-L10` wilaya-risk i18n · `C-P1` partial palette — all still open, all documented with TODOs.
 
 ## Session 30 — 2026-07-06: 10-Phase Deep Wave (merged to main, HEAD `91619d4`, v4.1.0)
 
