@@ -6,6 +6,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { assertCanTransition } from "@/lib/order-transitions";
 import { recordOrderChange } from "@/lib/data/order-change-service";
+import { dispatchTrigger } from "@/lib/automations/engine";
 import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
@@ -134,6 +135,20 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     }
 
     return [d];
+  });
+
+  // Phase 1 bug 1.4: fire order.shipped trigger (fire-and-forget) AFTER the tx
+  // commits — so "ship → WhatsApp notify" automations fire when a shipment is
+  // created via this route (the most common shipment path). Previously only the
+  // AI create_shipment tool fired this trigger, so API/UI shipments silently
+  // skipped automations. orderService.updateStatus does the same after its tx.
+  void dispatchTrigger("order.shipped", {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    customerId: order.customerId,
+    totalPrice: order.totalPrice,
+    wilaya: order.wilaya,
+    phone: order.phone,
   });
 
   return NextResponse.json({
