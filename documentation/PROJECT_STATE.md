@@ -1,12 +1,14 @@
-# SahelFlow v4.0 — Project State
+# SahelFlow v4.1 — Project State
 
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-06 (Session 30 complete — 10-phase deep wave merged to main, v4.1.0)
-**Main HEAD:** `91619d4`
+**Last updated:** 2026-07-08 (Session 35 resume — verified green at HEAD `1a9bef3`; doc drift fixed; production-build ship-blocker found)
+**Main HEAD:** `1a9bef3`
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
+
+> **Sessions 31–34 summary:** Session 31–32 continued audit-wave fixes; Session 33 ran a 7-stream deep re-audit (~102 new findings); Session 34 executed all 3 remaining waves (Wave 5: 12 ship-blockers 🔴, Wave 6: 25 high 🟠, Wave 7: ~65 medium+polish 🟡⚪), all merged to `main` linearly across 19 phases on 3 feature branches. main progression: `9602c8a` (S33 audit) → `6e80cb4` (W5) → `d21fcdd` (W6) → `aece101` (W7) → `1a9bef3` (T-S5 Tauri regression follow-up). See `AGENT_HANDOFF.md` (v25.0, on the `agent-handoff` branch) for the full Session 34 record.
 
 ---
 
@@ -14,13 +16,13 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-30 complete. Session 30: 10-phase deep wave (schema migrations, service fixes, API idempotency, inbox rebuild, AI hardening, Darija upgrade, pages fixes, dead code cleanup, settings/WhatsApp/i18n, verification). |
+| Phase | Sessions 1-34 complete. Session 34: all 3 remaining audit waves (5/6/7, ~102 findings) merged to main. Session 35 (resume): verified green, fixed doc drift, flagged production-build ship-blocker. |
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1209 pass | 0 skip | 0 fail** (8 new redact-pii tests) |
+| Tests | **1257 pass | 0 skip | 0 fail** (re-verified Session 35: tsc 0 err, eslint 0 err / 738 warn, vitest 1257/1257, prisma valid, 5 migrations clean) |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
-| Prisma models | 35 (Session 30: +PhoneReputation; Refund gained idempotencyKey/status/processedAt/reference; Automation gained retry fields) |
+| Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
 | i18n keys | ~2,400 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
@@ -28,7 +30,7 @@
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (isBlacklisted column) + phone reputation registry |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 1209 tests green (0 skip, 80% coverage floor) |
+| Quality gate | ✅ tsc + eslint + 1257 tests green (0 skip, 80% coverage floor) — re-verified Session 35. ⚠️ **`bun run build` (Turbopack) FAILS** — see ship-blocker below |
 | Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF + proxy.ts enforces on all routes + React cache() dedup |
 | Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message) + blind index + nested-read decryption + Prisma safety guards |
 | Theme | ✅ Emerald/teal palette, 0 arbitrary text-size values (eliminated in Phase 11) |
@@ -38,6 +40,46 @@
 | License | ✅ Ed25519 + server-side enforcement + FeatureGate (dev-bypass unlocks correctly) |
 | Sentry | ✅ @sentry/nextjs installed + env-gated (zero-overhead until SENTRY_DSN set) + global-error.tsx only-fires-on-unexpected |
 | Agent toolkit | ✅ sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit |
+
+## Session 35 — 2026-07-08: Resume verification + doc-drift fix + build ship-blocker found
+
+**Agent resumed** from the `agent-handoff` v25.0 doc. `bootstrap.sh` ran (degraded mode: the PAT initially looked invalid due to a transcription typo — fixed; Supabase v2-legacy DB + local SQLite both verified). Repo on `main` @ `1a9bef3` (1 commit ahead of the handoff's stated `aece101` — a T-S5 Tauri regression follow-up: `fix(tauri): add resources/runtime/README.md placeholder so bundle glob matches`).
+
+### Verification gate (re-run at HEAD `1a9bef3`)
+
+| Gate | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors (50s) |
+| `eslint .` | ✅ 0 errors, 738 warnings (24s) — matches handoff exactly |
+| `vitest run` | ✅ **1257/1257 pass**, 66 test files (77s) — matches handoff exactly |
+| `prisma validate` | ✅ valid |
+| fresh-DB `migrate deploy` | ✅ 5/5 migrations apply clean (handoff said "6 migrations" — **actual is 5**; doc drift, fixed) |
+
+### Browser verification (curl-fallback — sandbox RAM ~4.1GB shared with my-project dev server)
+
+| Check | Result |
+|---|---|
+| `sf-seed` (rich seed + master-key verify) | ✅ dev.db 728KB, PIN `12345678`, master.key present |
+| `POST /api/auth/login {pin:"12345678"}` | ✅ `{"success":true}`, `sf_session` cookie set |
+| Auth middleware `src/proxy.ts` (static) | ✅ matcher protects all routes except static + `/login` `/setup` `/storefront`; HMAC-SHA256 session verify; redirects unauth → `/login`; defense-in-depth `requireAuth()` per route; setup-mode bypass when `AUTH_SECRET` unset |
+| 16 dashboard pages (live) | ⚠️ **Could not verify** — dev server OOM-killed on first dashboard-route compile (Turbopack pulls Prisma + data-service + crypto chain; sandbox RAM insufficient alongside the my-project dev server). **Founder must verify on their machine.** |
+
+### 🚨 NEW ship-blocker found: `bun run build` (Turbopack) FAILS
+
+The handoff doc states web dev mode is "~95% ready" and assumes `bun run build` works for the Playwright prod-build run. **It does not.** The production build fails with 6 errors:
+
+- **Root cause:** server/client boundary violation. `src/app/(dashboard)/agents/page.tsx` (server) → `src/components/license/feature-gate.tsx` (client) → `src/hooks/use-license.ts` (client hook) → **directly imports** `validateLicense, issueTrial` from `src/lib/license/license-service.ts` (server code). This drags `src/lib/db.ts` → `src/lib/crypto/master-key.ts` (`import "server-only"` + `fs`) into the client bundle → Turbopack errors: `Can't resolve 'fs'` + `importing a module that depends on "server-only" … in the Pages Router`.
+- **Dev mode is unaffected** (Turbopack dev compiles on-demand and is permissive), which is why this wasn't caught earlier — the dev server serves `/login` (200) and the login API works.
+- **Fix direction (not yet applied):** the client hook `use-license.ts` must not import server services directly. Either (a) move `validateLicense`/`issueTrial` behind a server action / API route and call via `fetch`, or (b) split `license-service.ts` into a client-safe signature-verify path (`license/crypto.ts` is already client-safe — uses `@noble/ed25519`) vs the server-only DB path, and have the hook import only the client-safe part. This is the **top priority for the next work session** — without a green build, the Playwright e2e run (`bun run build && bun run start`) and any production deploy are blocked.
+
+### Doc drift fixed (this session)
+
+- `PROJECT_STATE.md` was stuck at Session 30 (HEAD `91619d4`, 1209 tests). Updated to Session 35 / HEAD `1a9bef3` / 1257 tests / 33 models / 5 migrations. Added this Session 35 section.
+- `AGENT_HANDOFF.md` (on `agent-handoff` branch) stated HEAD `aece101`; bumped to `1a9bef3` + noted the T-S5 follow-up commit + this session's findings.
+
+### 3 known Wave 7 deferrals (unchanged, documented with TODOs)
+
+`SV-L5` statusRow re-verification · `SV-L10` wilaya-risk i18n · `C-P1` partial palette — all still open, all documented.
 
 ## Session 30 — 2026-07-06: 10-Phase Deep Wave (merged to main, HEAD `91619d4`, v4.1.0)
 
