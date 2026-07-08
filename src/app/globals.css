@@ -249,6 +249,7 @@
   body {
     @apply bg-background text-foreground;
     height: 100%;
+    overflow: hidden;
     font-feature-settings: "cv01", "ss03", "calt", "kern";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

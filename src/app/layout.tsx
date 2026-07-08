@@ -9,6 +9,7 @@ import { UpdateChecker } from "@/components/updater/update-checker";
 import { getDirection, type Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 // CSS variable renamed from --font-geist-sans to --font-inter to match the
 // actual font being loaded (Inter, not Geist Sans). The `geist` package is
@@ -88,15 +89,17 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();` }} />
       </head>
       <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
-        <ServerLocaleProvider locale={locale}>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            <TooltipProvider delayDuration={300}>
-              {children}
-              <ServiceWorkerRegister />
-              <UpdateChecker />
-            </TooltipProvider>
-          </ThemeProvider>
-        </ServerLocaleProvider>
+        <NuqsAdapter>
+          <ServerLocaleProvider locale={locale}>
+            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+              <TooltipProvider delayDuration={300}>
+                {children}
+                <ServiceWorkerRegister />
+                <UpdateChecker />
+              </TooltipProvider>
+            </ThemeProvider>
+          </ServerLocaleProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

@@ -110,7 +110,8 @@ export async function saveRiskRules(rules: RiskRule[]): Promise<void> {
  */
 export async function incrementRuleTriggers(ruleIds: string[]): Promise<void> {
   if (ruleIds.length === 0) return;
-  await db.$transaction(async (tx) => {
+  await db.$transaction(
+    async (tx) => {
     // Re-read inside the tx so we see any concurrent committed writes.
     const row = await tx.setting.findUnique({ where: { key: RULES_KEY } });
     let rules: RiskRule[];
@@ -132,7 +133,12 @@ export async function incrementRuleTriggers(ruleIds: string[]): Promise<void> {
       create: { key: RULES_KEY, value: JSON.stringify(updated) },
       update: { value: JSON.stringify(updated) },
     });
-  });
+  },
+    // Increase from the default 5s — the dev server's first-compile is slow
+    // (Turbopack can take 40s+ on first request), and the transaction would
+    // otherwise expire. In production this completes in <100ms.
+    { maxWait: 10_000, timeout: 30_000 },
+  );
 }
 
 // ── Assessment input builder ─────────────────────────────────────────────────

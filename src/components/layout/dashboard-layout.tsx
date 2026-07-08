@@ -75,7 +75,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   return (
     <div
       dir={dir}
-      className="flex h-[100vh] overflow-hidden bg-muted/30 lg:bg-muted/40" style={{ height: "100dvh" }}
+      className="flex h-full overflow-hidden bg-muted/30 lg:bg-muted/40"
     >
       {/* Sidebar — hidden on mobile, shown on lg+.
           In RTL, the sidebar visually appears on the RIGHT because the
