@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 import { useLicenseStore } from "@/stores/license-store";
 import { getMachineId, shortMachineId } from "@/lib/license/machine-id";
-import { validateLicense, issueTrial } from "@/lib/license/license-service";
+import { validateLicense, issueTrial } from "@/lib/license/license-client";
 import { env } from "@/lib/env";
 
 

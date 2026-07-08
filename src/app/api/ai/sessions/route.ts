@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { requireLicense } from "@/lib/license/license-service";
+import { requireLicense } from "@/lib/license/license-server";
 
 export const dynamic = "force-dynamic";
 

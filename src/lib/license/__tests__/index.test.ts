@@ -5,7 +5,7 @@
  * issueTrialLicense, verifyLicense, validateOnLaunch.
  *
  * Mocks @/lib/env to control dev bypass + licensePublicKey, and mocks
- * ./license-machine-id + ./license-service to isolate facade logic. A
+ * ./license-machine-id + ./license-client to isolate facade logic. A
  * controllable localStorage mock lets us exercise validateOnLaunch's
  * stored-license path.
  */
@@ -54,13 +54,13 @@ vi.mock("../machine-id", () => ({
   getMachineId: vi.fn(async () => mockState.machineId),
 }));
 
-// ── Mock ./license-service ──────────────────────────────────────────────────
+// ── Mock ./license-client ──────────────────────────────────────────────────
 const serviceMock = vi.hoisted(() => ({
   validateLicense: vi.fn(),
   issueTrial: vi.fn(),
 }));
 
-vi.mock("../license-service", () => ({
+vi.mock("../license-client", () => ({
   validateLicense: serviceMock.validateLicense,
   issueTrial: serviceMock.issueTrial,
 }));

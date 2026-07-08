@@ -67,15 +67,21 @@ vi.mock("@/lib/license/crypto", () => ({
   meetsVersionRequirement: cryptoMock.meetsVersionRequirement,
 }));
 
+// Phase 2 split: pure helpers (validateLicense, issueTrial, getStatusLabel)
+// live in license-client.ts; DB-backed enforcement (isLicenseValid,
+// requireLicense, hasFeature, setCachedLicenseResult) lives in
+// license-server.ts. Both are mocked below (env, db, crypto).
 import {
   validateLicense,
   issueTrial,
+  getStatusLabel,
+} from "../license-client";
+import {
   isLicenseValid,
   requireLicense,
   hasFeature,
   setCachedLicenseResult,
-  getStatusLabel,
-} from "../license-service";
+} from "../license-server";
 import type { LicensePayload, SignedLicense } from "../types";
 import { SahelFlowError } from "@/types/errors";
 

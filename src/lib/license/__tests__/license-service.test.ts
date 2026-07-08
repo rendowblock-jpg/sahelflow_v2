@@ -18,7 +18,7 @@ const { TEST_PUBLIC_KEY_B64 } = vi.hoisted(() => ({
 // Hardcoded test keypair
 const TEST_PRIVATE_KEY_HEX = "883e9345ecd41c7cc2d2761720aabada5fd6e1316d6799206cd2707537ea968b";
 
-// Mock env BEFORE importing license-service (env.ts caches at module load)
+// Mock env BEFORE importing license-client (env.ts caches at module load)
 vi.mock("@/lib/env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/env")>();
   return {
@@ -32,7 +32,7 @@ vi.mock("@/lib/env", async (importOriginal) => {
 
 import { signAsync, utils } from "@noble/ed25519";
 
-import { validateLicense, issueTrial } from "../license-service";
+import { validateLicense, issueTrial } from "../license-client";
 import type { LicensePayload, SignedLicense } from "../types";
 
 const MACHINE_ID = "test-machine-12345";

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireLicense } from "@/lib/license/license-service";
+import { requireLicense } from "@/lib/license/license-server";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { z } from "zod";
 import { db } from "@/lib/db";

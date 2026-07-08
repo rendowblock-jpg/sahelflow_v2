@@ -4,7 +4,17 @@
  * This façade delegates to the underlying modules:
  *   - machine-id.ts: Machine ID fingerprinting (Tauri + browser fallback)
  *   - crypto.ts: Ed25519 signature verification
- *   - license-service.ts: Full validation flow + trial issuance
+ *   - license-client.ts: Pure client-safe validation flow + trial issuance
+ *
+ * CLIENT-SAFE BARREL (Phase 2 build fix):
+ *   This module is intentionally client-safe — it MUST NOT re-export
+ *   anything from `./license-server.ts` (which has `import "server-only"`
+ *   + a static `@/lib/db` import). Re-exporting server functions here
+ *   would pull `db.ts` -> `master-key.ts` -> `server-only` into any client
+ *   bundle importing from this barrel, breaking the build (the exact
+ *   ship-blocker Phase 2 fixes). Server code imports `requireLicense` /
+ *   `hasFeature` / `setCachedLicenseResult` / `FEATURE_KEYS` DIRECTLY from
+ *   `@/lib/license/license-server` — not via this barrel.
  *
  * On every app launch:
  *   1. Get machine ID (getMachineFingerprint → computeMachineId)
@@ -23,7 +33,7 @@ import type {
 } from "./types";
 import { env, isTauriEnv } from "@/lib/env";
 import { getMachineId } from "./machine-id";
-import { validateLicense, issueTrial } from "./license-service";
+import { validateLicense, issueTrial } from "./license-client";
 
 const STORAGE_KEY = "sahelflow-license";
 const APP_VERSION = env.appVersion;
@@ -81,7 +91,7 @@ export async function getMachineFingerprint(): Promise<MachineFingerprint> {
 
 /**
  * Self-issue a trial license (7 days, machine-ID-tied).
- * Delegates to license-service.ts which handles the payload construction.
+ * Delegates to license-client.ts which handles the payload construction.
  */
 export async function issueTrialLicense(
   machineId: MachineId,
@@ -91,7 +101,7 @@ export async function issueTrialLicense(
 
 /**
  * Verify a founder-signed permanent license.
- * Delegates to license-service.ts which handles Ed25519 verification.
+ * Delegates to license-client.ts which handles Ed25519 verification.
  */
 export async function verifyLicense(
   license: SignedLicense,

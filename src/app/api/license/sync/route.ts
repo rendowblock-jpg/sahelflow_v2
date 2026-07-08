@@ -14,7 +14,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { setCachedLicenseResult, validateLicense } from "@/lib/license/license-service";
+import { setCachedLicenseResult, validateLicense } from "@/lib/license/license-server";
 // getMachineId no longer imported — server uses client-supplied machineId (AUDIT-3 S1 fix)
 import { env } from "@/lib/env";
 import type { LicenseValidationResult, SignedLicense } from "@/lib/license/types";

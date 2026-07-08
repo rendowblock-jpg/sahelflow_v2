@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireLicense } from "@/lib/license/license-service";
+import { requireLicense } from "@/lib/license/license-server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";

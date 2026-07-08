@@ -1,14 +1,29 @@
 /**
- * License service — the full validation flow.
+ * License service — CLIENT-SAFE module.
  *
- * On every app launch:
- *   1. Read license from storage (localStorage in dev, OS keychain in Tauri)
- *   2. If it's a real (Ed25519-signed) license → verify signature with the
- *      founder's public key, check machine ID, version, expiry
- *   3. If it's a self-issued trial → verify the trial invariants (issuedAt +
- *      7d == expiresAt, not expired, machineId matches) — no signature check
- *      because trials are unsigned by design
- *   4. Return LicenseValidationResult
+ * This module contains ONLY pure functions that are safe to import from
+ * client components (browser / Tauri webview). It must NEVER import:
+ *   - `@/lib/db` (static or dynamic) — pulls master-key.ts → `server-only`
+ *   - `@/lib/crypto/master-key` — has `import "server-only"`
+ *   - any other module that has `import "server-only"`
+ *
+ * Allowed imports:
+ *   - `@/lib/env` — client-safe (reads process.env but only exposes public
+ *     vars; use-license.ts already imports it on the client).
+ *   - `./crypto` — uses `@noble/ed25519` (browser-safe, audited).
+ *   - `./types` — type-only.
+ *
+ * Background (Phase 2 build fix):
+ *   `use-license.ts` (a `"use client"` hook) imports `validateLicense` +
+ *   `issueTrial`. Previously these lived in `license-service.ts` alongside
+ *   `isLicenseValid` / `requireLicense` / `hasFeature`, which dynamically
+ *   import `@/lib/db`. Turbopack traces the ENTIRE module when any export
+ *   is imported, so the server-only `db.ts` → `master-key.ts` chain got
+ *   bundled into the client → `bun run build` failed with 6 errors
+ *   ("You're importing a module that depends on server-only").
+ *
+ *   Splitting the pure client functions into this file breaks that chain.
+ *   The DB-backed enforcement functions live in `./license-server.ts`.
  *
  * Trial design (post AAA audit fix, S-002):
  *   - Trials are unsigned (`signature: "self-issued-trial"`). The previous
@@ -19,30 +34,29 @@
  *       b. `issuedAt` is not in the future (no clock rollback)
  *       c. `machineIds[0] === currentMachineId` (not copied from another machine)
  *       d. `expiresAt > now` (not expired)
- *   - This stops casual tampering. A sophisticated user can still delete
- *     localStorage and re-issue a trial — to prevent that, store a trial
- *     counter in Stronghold (TODO: future hardening).
  *
  * Fail-closed policy (post AAA audit fix, S-002):
  *   - In production, if signature verification throws (corrupted license,
  *     missing public key, crypto failure), return `status: "invalid"` — NOT
- *     "valid" in a grace-mode catch-all. The previous grace-mode behavior
- *     converted every failure into "license valid", which is the opposite
- *     of fail-closed.
- *   - In dev, license checks are bypassed entirely (NODE_ENV=development).
- *
- * Public key requirement:
- *   - In production, `LICENSE_PUBLIC_KEY` MUST be set (embedded at Tauri
- *     build time). If it's missing, we log a loud warning. The app still
- *     runs (so the founder isn't locked out of a misconfigured build) but
- *     every stored license will fail signature verification and the user
- *     will see "License invalid" until they obtain a real key.
+ *     "valid" in a grace-mode catch-all.
+ *   - In dev, license checks are bypassed entirely (NODE_ENV=development)
+ *     UNLESS a public key is configured (so dev tests with a real key still
+ *     exercise the verification path).
  */
 
 import { env } from "@/lib/env";
-import type { LicensePayload, LicenseStatus, LicenseValidationResult, SignedLicense } from "./types";
-import { verifyLicenseSignature, isExpired, daysRemaining, meetsVersionRequirement } from "./crypto";
-import { SahelFlowError } from "@/types/errors";
+import type {
+  LicensePayload,
+  LicenseStatus,
+  LicenseValidationResult,
+  SignedLicense,
+} from "./types";
+import {
+  verifyLicenseSignature,
+  isExpired,
+  daysRemaining,
+  meetsVersionRequirement,
+} from "./crypto";
 
 // Read NODE_ENV at call time (not module load) so tests can mutate it.
 function isDevMode(): boolean {
@@ -70,6 +84,8 @@ const EXPIRY_TOLERANCE_MS = 1000;
 /**
  * Validate a signed license.
  * Does NOT check storage — just verifies the license itself.
+ *
+ * Pure: no DB, no fs, no server-only deps. Safe to call from client code.
  */
 export async function validateLicense(
   license: SignedLicense,
@@ -264,6 +280,8 @@ function getStatusMessage(payload: LicensePayload): string {
  *
  * Permanent licenses use the founder's Ed25519 key (issued offline via
  * `sf-license sign`).
+ *
+ * Pure: no DB, no fs, no server-only deps. Safe to call from client code.
  */
 export async function issueTrial(machineId: string): Promise<SignedLicense> {
   const now = new Date();
@@ -285,6 +303,8 @@ export async function issueTrial(machineId: string): Promise<SignedLicense> {
 
 /**
  * Get the license status label for display.
+ *
+ * Pure: returns i18n key strings.
  */
 export function getStatusLabel(status: LicenseStatus): string {
   // Return i18n keys — the UI layer translates these via t(`license.status.${key}`)
@@ -300,135 +320,22 @@ export function getStatusLabel(status: LicenseStatus): string {
   return keys[status] ?? status;
 }
 
-
-// ── API-level enforcement (D-006: license enforcement gate) ───────────────
-
 /**
- * Cache the last validation result to avoid re-validating on every API call.
- * License is validated once on app launch + cached. Re-validated every 5 min.
+ * Client-safe validity check: verifies a SignedLicense against the given
+ * machineId + appVersion using the pure `validateLicense` logic.
+ *
+ * This is the CLIENT counterpart of `license-server.ts`'s DB-backed
+ * `isLicenseValid()` (which takes no args and reads the synced license
+ * from the Setting table). The signatures intentionally differ — do NOT
+ * confuse the two.
+ *
+ * Pure: no DB, no fs, no server-only deps. Safe to call from client code.
  */
-let cachedResult: LicenseValidationResult | null = null;
-let cachedAt = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-/**
- * Check if the current license is valid.
- * In dev mode, always returns true (license bypassed).
- * In production, checks the cached validation result (or validates fresh).
- */
-export async function isLicenseValid(): Promise<boolean> {
-  if (isDevMode()) return true;
-  if (cachedResult && Date.now() - cachedAt < CACHE_TTL_MS) {
-    return cachedResult.status === "valid";
-  }
-
-  // Read the synced license BLOB + status from the DB.
-  // SECURITY: we re-verify the license signature server-side (don't trust
-  // the stored status blob — a direct DB write could forge it). The sync
-  // route already re-verifies on sync, but this catches post-sync tampering.
-  try {
-    const { db } = await import("@/lib/db");
-    const [statusRow, payloadRow] = await Promise.all([
-      db.setting.findUnique({ where: { key: "active_license_status" } }),
-      db.setting.findUnique({ where: { key: "active_license_payload" } }),
-    ]);
-
-    if (statusRow?.value && payloadRow?.value) {
-      // Re-verify the license blob against the public key.
-      //
-      // Session 29 fix (AUDIT-3 S1 + AUDIT-7 AI5): previously this called
-      // getMachineId() which returns "ssr-placeholder" server-side →
-      // validateLicense always failed the machineIds.includes() check →
-      // requireLicense() always 403'd in production.
-      // Now we read the machine ID that the client persisted via /api/license/sync.
-      const license = JSON.parse(payloadRow.value) as SignedLicense;
-      const { env } = await import("@/lib/env");
-      const machineIdRow = await db.setting.findUnique({ where: { key: "active_machine_id" } });
-      if (!machineIdRow?.value) {
-        // No machine ID synced yet — license not properly activated.
-        // Fail-closed in production.
-        return false;
-      }
-      const result = await validateLicense(license, machineIdRow.value, env.appVersion);
-      cachedResult = result;
-      cachedAt = Date.now();
-      return result.status === "valid";
-    }
-
-    // Legacy: only status row exists (pre-fix sync). Trust it once, then
-    // the next sync will migrate to the verified-blob flow.
-    //
-    // SV-L5 — SECURITY RISK (accepted): a direct DB write of
-    //   `{ status: "valid" }` to `active_license_status` grants access
-    //   until the next /api/license/sync re-verifies. Full mitigation
-    //   requires re-verifying the signature here, but the legacy row
-    //   stores a LicenseValidationResult (no signed payload), so we
-    //   cannot re-verify from this row alone. Mitigations in place:
-    //     1. This branch only fires for pre-fix installs that haven't
-    //        synced since the S1 fix — after first sync the verified-
-    //        blob flow above takes over.
-    //     2. The DB file is local SQLite under the seller's OS account;
-    //        an attacker who can write to it already owns the machine.
-    //     3. The 5-min cache TTL means a forged row stops working as
-    //        soon as the next sync happens.
-    //   TODO: drop this legacy branch once all beta installs have synced
-    //   to the verified-blob flow (track via a telemetry counter).
-    if (statusRow?.value) {
-      const result = JSON.parse(statusRow.value) as LicenseValidationResult;
-      cachedResult = result;
-      cachedAt = Date.now();
-      return result.status === "valid";
-    }
-  } catch {
-    // DB not ready — fall through
-  }
-
-  // No license synced — fail-closed in production.
-  return false;
-}
-
-/**
- * Require a valid license — throws 403 if invalid.
- * Use in API routes: `await requireLicense();`
- */
-export async function requireLicense(): Promise<void> {
-  const valid = await isLicenseValid();
-  if (!valid) {
-    throw new SahelFlowError("License required", "LICENSE_REQUIRED", 403);
-  }
-}
-
-/**
- * Check if the current license includes a specific feature.
- * All licenses (trial + permanent) include "all" features by default.
- * Use for feature gating: `if (await hasFeature("ai_chat")) { ... }`
- */
-export async function hasFeature(feature: string): Promise<boolean> {
-  if (isDevMode()) return true;
-  // SV-L4: previously this checked `cachedResult` directly without first
-  // calling isLicenseValid(). If hasFeature() was the first license call
-  // in a process (e.g. an API route that gates on a feature, not on
-  // requireLicense()), cachedResult was null → hasFeature always returned
-  // false even for valid licenses. Calling isLicenseValid() first ensures
-  // the cache is populated (and re-verified on the 5-min cadence).
-  const valid = await isLicenseValid();
-  if (!valid || !cachedResult || cachedResult.status !== "valid") return false;
-  const features = cachedResult.license?.payload?.features ?? [];
-  return features.includes("all") || features.includes(feature);
-}
-
-/** Well-known feature keys for gating. */
-export const FEATURE_KEYS = {
-  AI_CHAT: "ai_chat",
-  STOREFRONT: "storefront",
-  ECOMMERCE_SYNC: "ecommerce_sync",
-  MULTI_SHOP: "multi_shop",
-  DAILY_REPORTS: "daily_reports",
-  GOOGLE_SHEETS: "google_sheets",
-} as const;
-
-/** Update the cached license validation result (called from client after check). */
-export function setCachedLicenseResult(result: LicenseValidationResult | null): void {
-  cachedResult = result;
-  cachedAt = Date.now();
+export async function isLicenseValid(
+  license: SignedLicense,
+  machineId: string,
+  appVersion: string,
+): Promise<boolean> {
+  const result = await validateLicense(license, machineId, appVersion);
+  return result.status === "valid";
 }
