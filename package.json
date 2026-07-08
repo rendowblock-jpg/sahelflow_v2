@@ -29,7 +29,9 @@
     "release": "bun run scripts/release.ts",
     "seed:rich": "bun --conditions react-server scripts/seed-rich.ts",
     "dev:reset": "bun run scripts/dev-reset.ts",
-    "build:sidecar": "bun run scripts/build-sidecar.ts"
+    "build:sidecar": "bun run scripts/build-sidecar.ts",
+    "dev:web": "next dev -p 3000",
+    "dev:tauri:skip-sidecar": "bunx tauri dev"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",

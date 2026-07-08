@@ -50,24 +50,69 @@ if (!existsSync(SIDECAR_SRC)) {
   process.exit(1);
 }
 
-// ── 3. Compile ───────────────────────────────────────────────────────────────
+// ── 3. Cache check — skip rebuild if source unchanged ──────────────────────
+import { statSync } from "fs";
+
 mkdirSync(SIDECAR_DIR, { recursive: true });
 
-console.log(`── Compiling WhatsApp sidecar → ${sidecarName} ──`);
+// Compare source mtime vs binary mtime. Skip the 70s rebuild if source
+// hasn't changed since the last build.
+const SRC_DIRS = [
+  resolve(ROOT, "sidecars/whatsapp"),
+  resolve(ROOT, "package.json"),
+];
+let newestSrcMtime = 0;
+function walkDir(dir: string): void {
+  try {
+    const entries = require("fs").readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = resolve(dir, entry.name);
+      const st = statSync(full);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules") continue;
+        walkDir(full);
+      } else if (st.mtimeMs > newestSrcMtime) {
+        newestSrcMtime = st.mtimeMs;
+      }
+    }
+  } catch { /* ignore */ }
+}
+for (const d of SRC_DIRS) {
+  try {
+    const st = statSync(d);
+    if (st.isDirectory()) walkDir(d);
+    else if (st.mtimeMs > newestSrcMtime) newestSrcMtime = st.mtimeMs;
+  } catch { /* ignore */ }
+}
 
-try {
-  execSync(
-    "bun build --compile " +
-    "--external jimp --external link-preview-js --external sharp " +
-    "--external qrcode-terminal --external pino-pretty --external music-metadata " +
-    "--external fluent-ffmpeg --external libphonenumber-js " +
-    `sidecars/whatsapp/index.ts --outfile "${sidecarOut}"`,
-    { stdio: "inherit", cwd: ROOT }
-  );
-  console.log(`✅ Sidecar compiled → src-tauri/binaries/${sidecarName}`);
-} catch (err) {
-  console.error("❌ Sidecar compilation failed.");
-  console.error("   The externalBin is required for both tauri dev and tauri build.");
-  console.error("   Fix the compilation error above and re-run.");
-  process.exit(1);
+const FORCE = process.env.SF_FORCE_SIDECAR === "1" || process.argv.includes("--force");
+let skipBuild = false;
+if (!FORCE && existsSync(sidecarOut)) {
+  const binaryMtime = statSync(sidecarOut).mtimeMs;
+  if (binaryMtime >= newestSrcMtime) {
+    skipBuild = true;
+  }
+}
+
+if (skipBuild) {
+  console.log(`✅ Sidecar binary up-to-date (cached) → src-tauri/binaries/${sidecarName}`);
+  console.log("   (skipped 70s rebuild — source unchanged. Run with SF_FORCE_SIDECAR=1 to force.)");
+} else {
+  console.log(`── Compiling WhatsApp sidecar → ${sidecarName} ──`);
+  try {
+    execSync(
+      "bun build --compile " +
+      "--external jimp --external link-preview-js --external sharp " +
+      "--external qrcode-terminal --external pino-pretty --external music-metadata " +
+      "--external fluent-ffmpeg --external libphonenumber-js " +
+      `sidecars/whatsapp/index.ts --outfile "${sidecarOut}"`,
+      { stdio: "inherit", cwd: ROOT }
+    );
+    console.log(`✅ Sidecar compiled → src-tauri/binaries/${sidecarName}`);
+  } catch (err) {
+    console.error("❌ Sidecar compilation failed.");
+    console.error("   The externalBin is required for both tauri dev and tauri build.");
+    console.error("   Fix the compilation error above and re-run.");
+    process.exit(1);
+  }
 }
