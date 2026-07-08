@@ -15,6 +15,7 @@ import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import { orderStatusSchema } from "@/lib/validation";
+import { computeActiveOrderCount } from "./active-orders";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -121,9 +122,10 @@ export default async function OrdersPage({
     counts[g.status] = g._count._all;
   }
 
-  const activeOrders = allOrders.filter((o) =>
-    ["pending", "confirmed", "shipped"].includes(o.status),
-  );
+  // Active orders = pending + confirmed + shipped. Computed from the uncapped
+  // `counts` groupBy (S2-6) so shops with >200 orders aren't undercounted —
+  // `allOrders` is fetched with `take: 200` and would silently cap this stat.
+  const activeOrders = computeActiveOrderCount(statusGroups);
   const deliveredToday = allOrders.filter(
     (o) => o.status === "delivered" && o.deliveredAt &&
     new Date(o.deliveredAt).toDateString() === new Date().toDateString(),
@@ -148,7 +150,7 @@ export default async function OrdersPage({
       <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("orders.activeOrders")}
-          value={activeOrders.length}
+          value={activeOrders}
           icon={<ShoppingBag />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
           accentIcon="text-teal-600 dark:text-teal-400"
