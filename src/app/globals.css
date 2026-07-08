@@ -240,6 +240,7 @@
 @layer base {
   html {
     height: 100%;
+    height: 100dvh; /* viewport unit — overrides 100% for modern webviews */
   }
 
   * {
@@ -249,7 +250,9 @@
   body {
     @apply bg-background text-foreground;
     height: 100%;
+    height: 100dvh; /* viewport unit — overrides 100% for modern webviews */
     overflow: hidden;
+    margin: 0; /* explicit — in case Tailwind preflight doesn't apply in Tauri WebView2 */
     font-feature-settings: "cv01", "ss03", "calt", "kern";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
