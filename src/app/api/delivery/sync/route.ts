@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Route through orderService.updateStatus so the state machine enforces
   // transitions and customer stats (orderCount, totalSpent) are updated.
   // The old code did a direct db.order.update which bypassed both.
+  //
+  // Phase 7 (discovered by integration test delivery.test.ts): the
+  // orderService.updateStatus call MUST run AFTER the delivery-update tx
+  // commits, NOT inside it. The service opens its own $transaction; calling
+  // it from inside this $transaction deadlocks on SQLite (the outer tx
+  // holds the write lock, the inner tx waits for it forever → socket
+  // timeout). Same pattern as the Phase 1 bug 1.2 fix in
+  // /api/delivery/[id]/route.ts. The delivery update stays in the tx (F-H5:
+  // delivery + order transition stay consistent — the order transition now
+  // runs AFTER the tx commits via orderService.updateStatus, which opens its
+  // own tx; SQLite serializes writes so this is safe).
+  let shouldTransitionToDelivered = false;
   await db.$transaction(async (tx) => {
     await tx.delivery.update({
       where: { id: delivery.id },
@@ -61,22 +74,34 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     });
 
-    // If delivered, update the order via the service (enforces state
-    // machine + stock + customer stats side effects). Skip if the order
-    // is already delivered (idempotent).
+    // If delivered, flag for the post-tx order transition. Skip if the
+    // order is already delivered (idempotent).
     if (tracking.status === "delivered") {
       const order = await tx.order.findUnique({
         where: { id: delivery.orderId },
         select: { status: true },
       });
       if (order && order.status !== "delivered") {
-        // orderService.updateStatus uses its own prisma client, not tx —
-        // but since SQLite serializes writes, this is safe. The delivery
-        // update above is already committed in this tx.
-        await orderService.updateStatus({ prisma: db }, delivery.orderId, "delivered");
+        shouldTransitionToDelivered = true;
       }
     }
   });
+
+  // After the tx commits: route the order transition through the canonical
+  // service so all side effects (deliveredAt, customer stats, ledger,
+  // automation trigger) fire. Wrapped in try/catch — if the transition is
+  // invalid (e.g. order already terminal), we don't want to 500 the
+  // delivery update that already committed.
+  if (shouldTransitionToDelivered) {
+    try {
+      await orderService.updateStatus({ prisma: db }, delivery.orderId, "delivered");
+    } catch (err) {
+      logger.warn("delivery/sync: order status transition skipped", {
+        orderId: delivery.orderId,
+        error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      });
+    }
+  }
 
   return NextResponse.json({
     ok: true,
