@@ -52,9 +52,23 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Type-checking + linting run via sf-verify (not during builds — avoids OOM).
-  // typescript.ignoreBuildErrors was previously true; now removed so `next build`
-  // enforces types in CI. sf-verify still runs tsc + eslint + vitest separately.
+  // Type-checking + linting run via sf-verify (NOT during `next build`).
+  //
+  // Rationale: `next build` spawns a separate worker for `tsc` + eslint.
+  // On memory-constrained dev/CI boxes (4 GB RAM, no swap) that worker gets
+  // SIGKILL'd by the OOM killer after Turbopack compilation succeeds —
+  // `bun run build` exits 1 even though the bundle compiled cleanly.
+  // Phase 2 of the data-integrity plan re-enabled these checks but the OOM
+  // makes `next build` non-functional on the founder's deploy box, so we
+  // re-disable them here. The canonical type/lint gate is `sf-verify --fast`
+  // (tsc --noEmit + eslint .) which runs separately and passes; `next build`
+  // is ONLY responsible for producing the standalone bundle.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  // Note: Next.js 16 removed `next build`'s eslint step entirely (eslint now
+  // runs via `next lint` / sf-verify). The legacy `eslint.ignoreDuringBuilds`
+  // key is unrecognized and warns — omitted intentionally.
   reactStrictMode: true,
   poweredByHeader: false,
   // Explicit — defaults to false in Next.js, but pin to prevent future
