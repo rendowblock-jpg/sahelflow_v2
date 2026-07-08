@@ -60,3 +60,6 @@ tsconfig.tsbuildinfo
 
 # App metadata (per-machine shop registry)
 data/app-meta.json
+
+# Test-generated auth secret file (POST /api/auth/setup writes it)
+data/auth-secret
