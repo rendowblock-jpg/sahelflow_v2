@@ -3,12 +3,14 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-09 (Session 35 COMPLETE — founder-tested, 3 critical bugs fixed, data-integrity plan authored, docs current)
-**Main HEAD:** `d7be246`
+**Last updated:** 2026-07-09 (Session 36 COMPLETE — Phase 1 + Phase 2 of data-integrity plan executed: 5 data-flow bugs fixed, build ship-blocker fixed, 1278 tests green, `bun run build` exits 0)
+**Main HEAD:** `9ee5ee3`
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
 > **Sessions 31–34 summary:** Session 31–32 continued audit-wave fixes; Session 33 ran a 7-stream deep re-audit (~102 new findings); Session 34 executed all 3 remaining waves (Wave 5: 12 ship-blockers 🔴, Wave 6: 25 high 🟠, Wave 7: ~65 medium+polish 🟡⚪), all merged to `main` linearly across 19 phases on 3 feature branches. main progression: `9602c8a` (S33 audit) → `6e80cb4` (W5) → `d21fcdd` (W6) → `aece101` (W7) → `1a9bef3` (T-S5 follow-up) → `d7be246` (S35 complete). See `AGENT_HANDOFF.md` (v26.0, on the `agent-handoff` branch) for the full record + next-session instructions.
+
+> **Session 36 summary:** Executed Phase 1 + Phase 2 of the data-integrity plan in parallel (2 subagents, isolated git worktrees). **Phase 1:** fixed all 5 data-flow bugs (Return+Refund double-counting, delivery PATCH skips side effects, 4 order-create paths bypass orderService.create, delivery/create skips order.shipped trigger, orders-page stat capped at 200). +21 new tests across 5 test files. Also fixed a pre-existing `BEGIN IMMEDIATE` deadlock in refund-service. **Phase 2:** split `license-service.ts` into `license-client.ts` (client-safe) + `license-server.ts` (DB-backed, server-only) — `bun run build` now exits 0 (was failing with 6 server-only errors). 7 commits linearly on main. **Next: Phase 3 (cross-table data-integrity test suite) per `DATA_INTEGRITY_PLAN.md`.**
 
 > **Session 35 summary:** Founder-driven testing revealed 3 critical runtime bugs (nuqs adapter missing → 5 list pages crash; viewport cut in Tauri; Prisma tx timeout). All fixed. 2 i18n bugs fixed (error toasts + notifications dropdown hardcoded English). Dev workflow sped up (sidecar caching + fast dev scripts). Deep investigation (2 subagents) found 5 data-flow bugs + 6 revenue-formula variants + orphaned tables. Authored a 7-phase data-integrity plan (`documentation/DATA_INTEGRITY_PLAN.md`). **Next session: execute Phase 1 (fix 5 data-flow bugs) + Phase 2 (fix build ship-blocker).**
 
@@ -18,11 +20,11 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-35 complete. S34: all 3 audit waves merged. S35: founder-tested, fixed 3 critical runtime bugs + 2 i18n bugs + dev-perf, authored data-integrity plan. **Next: Phase 1+2 of the plan** (see `DATA_INTEGRITY_PLAN.md`). |
+| Phase | Sessions 1-36 complete. S36: Phase 1+2 of `DATA_INTEGRITY_PLAN.md` executed — 5 data-flow bugs fixed, build ship-blocker fixed, `bun run build` exits 0. **Next: Phase 3** (cross-table data-integrity test suite, 15 scenarios). |
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1257 pass | 0 skip | 0 fail** (re-verified Session 35 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1257/1257, prisma valid, 5 migrations clean) |
+| Tests | **1278 pass | 0 skip | 0 fail** (re-verified Session 36 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1278/1278, prisma valid, 5 migrations clean) — +21 tests from Phase 1 data-flow bug regression tests |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
 | Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
@@ -32,7 +34,7 @@
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (isBlacklisted column) + phone reputation registry |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 1257 tests green (0 skip, 80% coverage floor) — re-verified Session 35 end. ⚠️ **`bun run build` (Turbopack) still FAILS** (use-license.ts→license-service.ts server/client boundary) — Phase 2 of the data-integrity plan |
+| Quality gate | ✅ tsc + eslint + 1278 tests green (0 skip, 80% coverage floor) — re-verified Session 36 end. ✅ **`bun run build` (Turbopack) now EXITS 0** — Phase 2 ship-blocker fixed (license-service split into client-safe + server-only). Standalone output produced. |
 | Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF + proxy.ts enforces on all routes + React cache() dedup |
 | Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message) + blind index + nested-read decryption + Prisma safety guards |
 | Theme | ✅ Emerald/teal palette, 0 arbitrary text-size values (eliminated in Phase 11) |
@@ -42,6 +44,58 @@
 | License | ✅ Ed25519 + server-side enforcement + FeatureGate (dev-bypass unlocks correctly) |
 | Sentry | ✅ @sentry/nextjs installed + env-gated (zero-overhead until SENTRY_DSN set) + global-error.tsx only-fires-on-unexpected |
 | Agent toolkit | ✅ sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit |
+
+## Session 36 — 2026-07-09: Phase 1 + Phase 2 of data-integrity plan (5 data-flow bugs fixed + build ship-blocker fixed)
+
+Executed Phase 1 + Phase 2 of `documentation/DATA_INTEGRITY_PLAN.md` in parallel using 2 subagents in isolated git worktrees (`/tmp/sf-phase1` + `/tmp/sf-phase2`). Both branches merged linearly to main (ff-merge Phase 1, rebase + ff-merge Phase 2). No file overlap between the two phases.
+
+### Verification gate (re-verified at session end, HEAD `9ee5ee3`)
+
+| Gate | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| `eslint .` | ✅ 0 errors, 738 warnings (unchanged) |
+| `vitest run` | ✅ **1278/1278 pass**, 71 test files (was 1257/66 — +21 tests, +5 files) |
+| `prisma validate` | ✅ valid, 33 models, 5 migrations clean |
+| `bun run build` | ✅ **EXITS 0** — standalone output produced (was FAILING with 6 server-only errors) |
+
+### Phase 1 — 5 data-flow bugs fixed (commits `c97a8cd` → `47948d8`)
+
+| Bug | Commit | Fix |
+|---|---|---|
+| **1.5 Orders-page "active orders" stat capped at 200** | `c97a8cd` | Compute from uncapped `groupBy` counts (`pending + confirmed + shipped`) instead of filtering the `take:200` display list. Extracted `computeActiveOrderCount` helper. |
+| **1.4 `POST /api/delivery/create` skips `order.shipped` trigger** | `26036cf` | Added fire-and-forget `dispatchTrigger("order.shipped", ...)` after the tx commits. "Ship → WhatsApp notify" automations now fire on the most common shipment path. |
+| **1.2 `PATCH /api/delivery/[id]` skips side effects** | `de55b2b` | Replaced inline order-status-update with `orderService.updateStatus(...)` after tx commits. Now sets `deliveredAt`, increments customer stats, writes ledger, fires trigger — same as `/api/delivery/sync`. |
+| **1.1 Return + Refund double-counting** | `f00f2f2` | Return completion routes through `orderService.updateStatus("returned")` (canonical). Refund-service guards: if order already "returned", skip stock restore + stat reversal. Also fixed pre-existing `BEGIN IMMEDIATE` deadlock. |
+| **1.3 4 order-create paths bypass `orderService.create`** | `47948d8` | `orderService.create` now accepts optional `opts.tx`. Storefront/import/sync/AI all route through it → each gets OrderChange "created" ledger + `order.created` trigger. Sync-engine cancellation routes through `updateStatus("cancelled")`. |
+
+### Phase 2 — Build ship-blocker fixed (commits `0a71fdd` + `9ee5ee3`)
+
+| Change | Commit | Description |
+|---|---|---|
+| **License service split** | `0a71fdd` | Split `license-service.ts` (434 lines) into `license-client.ts` (client-safe: `validateLicense`, `issueTrial`, `getStatusLabel` — no DB, no server-only) + `license-server.ts` (DB-backed: `isLicenseValid`, `requireLicense`, `hasFeature`, `setCachedLicenseResult` — `import "server-only"`). `use-license.ts` imports only from client. Barrel `index.ts` kept client-safe only. |
+| **Build TS-check OOM workaround** | `9ee5ee3` | Re-enabled `typescript.ignoreBuildErrors: true` in `next.config.ts` — the TS-check worker gets OOM-killed on 4GB/no-swap boxes after Turbopack compiles. `sf-verify --fast` (tsc + eslint) remains the canonical type/lint gate. |
+
+### New test files (5 files, 21 tests, ~620 lines)
+
+| File | Tests | Bug |
+|---|---|---|
+| `src/app/(dashboard)/orders/__tests__/active-orders.test.ts` | 5 | 1.5 |
+| `src/lib/automations/__tests__/order-triggers.test.ts` | 2 | 1.4 |
+| `src/app/api/__tests__/delivery-patch.test.ts` | 4 | 1.2 |
+| `src/lib/data/__tests__/return-refund-integrity.test.ts` | 3 | 1.1 |
+| `src/lib/data/__tests__/order-create-paths.test.ts` | 7 | 1.3 |
+
+### What's next (Phase 3+)
+
+Per `DATA_INTEGRITY_PLAN.md`:
+- **Phase 3** (next): cross-table data-integrity test suite (15 scenarios). ~800 lines, 1 session. Depends on Phase 1 (tests the fixes).
+- **Phase 4**: consolidate 6 revenue + 3 delivery-rate formulas into `src/lib/data/metrics.ts`. 1 session.
+- **Phase 5**: remove orphaned Notification + DailyAnalyticsReport tables. 0.5 session.
+- **Phase 6**: 8 e2e golden-path Playwright specs. 2 sessions. Depends on Phase 2 (needs build).
+- **Phase 7**: top-30 API route integration tests. 2-3 sessions.
+
+---
 
 ## Session 35 — 2026-07-08/09: Founder testing, 3 critical bugfixes, i18n, dev-perf, data-integrity plan
 
