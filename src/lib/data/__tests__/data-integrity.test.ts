@@ -30,12 +30,14 @@
  *   9.  Low-stock consistency: bell vs products page vs dashboard.
  *       NOTE: documents a CURRENT discrepancy (products page counts inactive
  *       products; bell + dashboard exclude them). Phase 4 will consolidate.
- *   10. Revenue formula consistency (current behavior — Phase 4 consolidates):
- *       dashboard "gross today" = pending+delivered (excludes cancelled),
- *       dashboard "realized today" = delivered only (filter by deliveredAt),
- *       analytics "total revenue" = same as dashboard gross (excludes
- *       cancelled+draft), accounting "revenue" = delivered only (filter by
- *       createdAt + status=delivered).
+ *   10. Revenue formula consistency (Phase 4 canonical): every surface
+ *       (dashboard / analytics / accounting) agrees with the canonical
+ *       metrics.ts formulas. Setup: 4 orders today (delivered / pending /
+ *       returned / cancelled). Expected: gross=6000 (excludes cancelled +
+ *       draft, INCLUDES returned), realized=1000 (deliveredAt today +
+ *       status=delivered), net=1000 (realized - refunds - deliveryCosts),
+ *       deliveryRate=25% (1/4 by order.status), courierDeliveryRate=0%
+ *       (no Delivery rows).
  *   11. COD reconciliation arithmetic (deliveredCount, collectedCount
  *       includes shipped+collected, pendingRemittance).
  *   12. Notifications bell i18n (ar / fr / en — protects Task 8 i18n fix).
@@ -133,6 +135,17 @@ import {
 import { orderService } from "@/lib/data/order-service";
 import { statsService } from "@/lib/data/stats-service";
 import { analyticsService } from "@/lib/data/analytics";
+// Phase 4: canonical revenue + delivery-rate formulas. Scenario 10 now
+// asserts the canonical definitions directly (gross / realized / net /
+// deliveryRate / courierDeliveryRate) rather than documenting the old
+// inconsistent per-surface behavior.
+import {
+  grossRevenue,
+  realizedRevenue,
+  netRevenue,
+  deliveryRate,
+  courierDeliveryRate,
+} from "@/lib/data/metrics";
 import { getCodReconciliationSummary, markCodCollected } from "@/lib/data/cod-service";
 import { getConfirmationQueue, getStaleOrderCount } from "@/lib/data/confirmation-queue";
 import { createBackup, restoreBackup, deleteBackup } from "@/lib/backup";
@@ -967,12 +980,30 @@ describe("Scenario 9 — Low-stock consistency (with documented discrepancy)", (
 });
 
 // ============================================================================
-// Scenario 10 — Revenue formula consistency (current behavior — Phase 4
-// consolidates)
+// Scenario 10 — Revenue formula consistency (Phase 4 canonical definitions)
 // ============================================================================
+// Phase 4 consolidated 6 revenue formulas + 3 delivery-rate formulas into
+// a single `src/lib/data/metrics.ts` module. This scenario now asserts the
+// CANONICAL behavior directly (via the metrics.ts functions) AND verifies
+// that every read-site (dashboard / analytics / accounting) agrees with
+// the canonical functions.
+//
+// Setup: 4 orders created today --
+//   o1: pending → confirmed → shipped → delivered (deliveredAt today)
+//   o2: pending (still pending today)
+//   o3: pending → confirmed → shipped → delivered → returned (was
+//       delivered today, now returned)
+//   o4: pending → confirmed → cancelled
+//
+// Canonical expected values (per DATA_INTEGRITY_PLAN.md Phase 4):
+//   grossRevenue(today)     = 1000 + 2000 + 3000 = 6000  (excludes cancelled + draft; INCLUDES returned)
+//   realizedRevenue(today)  = 1000  (deliveredAt today AND status="delivered" — o3 excluded by status)
+//   netRevenue(30d)         = 1000  (realized - refunds(0) - deliveryCosts(0); no Delivery rows in setup)
+//   deliveryRate(today)     = 1/4 = 25%  (by order.status, not delivery.status)
+//   courierDeliveryRate     = 0/0 = 0%   (no Delivery rows)
 
-describe("Scenario 10 — Revenue formula consistency (current behavior, documented)", () => {
-  it("seed 4 orders (delivered-today, pending-today, returned-today, cancelled-today) → dashboard gross today = pending+delivered (excludes cancelled, INCLUDES returned); dashboard realized today = delivered only; analytics totalRevenue (today) = same as dashboard gross; accounting revenue (today) = delivered only", async () => {
+describe("Scenario 10 — Revenue formula consistency (Phase 4 canonical definitions)", () => {
+  it("seed 4 orders (delivered / pending / returned / cancelled — all today) → every surface agrees with the canonical metrics.ts formulas: gross=6000, realized=1000, net=1000, deliveryRate=25%, courierDeliveryRate=0%", async () => {
     const customer = await seedCustomerRaw();
 
     // 1. Delivered today (deliveredAt set).
@@ -984,7 +1015,6 @@ describe("Scenario 10 — Revenue formula consistency (current behavior, documen
     await orderService.updateStatus({ prisma: rawDb as never }, o1.id, "confirmed");
     await orderService.updateStatus({ prisma: rawDb as never }, o1.id, "shipped");
     await orderService.updateStatus({ prisma: rawDb as never }, o1.id, "delivered");
-    // sanity: deliveredAt is today.
 
     // 2. Pending today.
     await seedOrderRaw({
@@ -1013,54 +1043,61 @@ describe("Scenario 10 — Revenue formula consistency (current behavior, documen
     await orderService.updateStatus({ prisma: rawDb as never }, o4.id, "confirmed");
     await orderService.updateStatus({ prisma: rawDb as never }, o4.id, "cancelled");
 
-    // ── Dashboard "gross revenue today" ─────────────────────────────────────
-    // Definition (stats-service.ts): sum of totalPrice where createdAt today
-    // AND status NOT IN ["cancelled"]. So this EXCLUDES cancelled (4000) but
-    // INCLUDES delivered (1000) + pending (2000) + returned (3000) = 6000.
+    // Half-open today period [startOfDay, startOfTomorrow).
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const startOfTomorrow = new Date(startOfDay);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const todayPeriod = { from: startOfDay, to: startOfTomorrow };
+
+    // Last-30-days period [now - 30d, now + 1d) — matches the accounting page.
+    const last30d = {
+      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      to: new Date(Date.now() + 86_400_000),
+    };
+
+    // ── Canonical metrics (metrics.ts) ──────────────────────────────────────
+    // Single source of truth. Every surface below must agree with these.
+    expect(await grossRevenue(rawDb as never, todayPeriod)).toBe(6000);
+    expect(await realizedRevenue(rawDb as never, todayPeriod)).toBe(1000);
+    expect(await netRevenue(rawDb as never, last30d)).toBe(1000);
+
+    const dr = await deliveryRate(rawDb as never, todayPeriod);
+    expect(dr).toEqual({ rate: 25, delivered: 1, total: 4 });
+
+    const cdr = await courierDeliveryRate(rawDb as never);
+    expect(cdr).toEqual({ rate: 0, delivered: 0, total: 0 });
+
+    // ── Dashboard (stats-service.ts → delegates to grossRevenue + realizedRevenue) ─
+    // dashboard.revenueToday        = grossRevenue(today) = 6000
+    // dashboard.realizedRevenueToday = realizedRevenue(today) = 1000
     const dash = await statsService.getDashboard({ prisma: rawDb as never });
     expect(dash.revenueToday).toBe(6000);
-
-    // ── Dashboard "realized revenue today" ──────────────────────────────────
-    // Definition: sum of totalPrice where deliveredAt today AND status =
-    // "delivered". Only o1 qualifies (delivered today + status=delivered).
-    // o3 was delivered today but is now "returned" — excluded by the
-    // status="delivered" filter.
     expect(dash.realizedRevenueToday).toBe(1000);
 
-    // ── Analytics "total revenue" (today's bucket, but we sum across the
-    //    30-day window) ─────────────────────────────────────────────────────
-    // Definition (analytics.ts buildSummary): sum of totalPrice where status
-    // NOT IN ["cancelled", "draft"]. Same as dashboard gross (the only
-    // difference is draft exclusion — but no draft orders here).
+    // ── Analytics (analytics.ts → uses REVENUE_EXCLUDED_STATUSES from metrics.ts) ─
+    // analytics.summary.totalRevenue = canonical gross = 6000
+    // analytics.summary.totalOrders  = 4 (all orders in the 30d window)
     const analytics = await analyticsService.getReport({ prisma: rawDb as never }, 30);
     expect(analytics.summary.totalRevenue).toBe(6000);
     expect(analytics.summary.totalOrders).toBe(4);
 
-    // ── Accounting "revenue (last 30 days)" ─────────────────────────────────
-    // Definition (accounting page): sum of totalPrice where status =
-    // "delivered" AND createdAt in the period. Only o1 qualifies (status=
-    // delivered; createdAt today within 30d).
-    const accountingRev = await rawDb.order.aggregate({
-      where: {
-        status: "delivered",
-        createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-        deletedAt: null,
-      },
-      _sum: { totalPrice: true },
-    });
-    expect(accountingRev._sum.totalPrice ?? 0).toBe(1000);
+    // ── Accounting (page.tsx → delegates to netRevenue(period)) ──────────────
+    // accounting revenue = netRevenue(30d) = realized - refunds - deliveryCosts
+    //                    = 1000 - 0 - 0 = 1000
+    // (No Delivery rows in this setup — orderService.updateStatus("shipped")
+    //  does NOT create a Delivery row; that's done by /api/delivery/create.)
+    expect(await netRevenue(rawDb as never, last30d)).toBe(1000);
 
-    // ── Documented variant table ────────────────────────────────────────────
-    // | Surface              | Filter                                              | Sum  |
-    // |----------------------|-----------------------------------------------------|------|
-    // | Dashboard gross      | createdAt today, status != cancelled                | 6000 |
-    // | Dashboard realized   | deliveredAt today, status = delivered               | 1000 |
-    // | Analytics total      | createdAt in 30d, status NOT IN [cancelled, draft]  | 6000 |
-    // | Accounting revenue   | createdAt in 30d, status = delivered                | 1000 |
-    //
-    // Phase 4 will consolidate these into a single `metrics.ts` module with
-    // canonical definitions (gross, realized, net). The test encodes the
-    // CURRENT behavior so Phase 4's refactor must consciously update it.
+    // ── Phase 4 consolidated variant table ───────────────────────────────────
+    // | Surface              | Canonical fn           | Filter                                              | Value  |
+    // |----------------------|------------------------|-----------------------------------------------------|--------|
+    // | Dashboard gross      | grossRevenue(today)    | createdAt today, status NOT IN [cancelled, draft]   | 6000   |
+    // | Dashboard realized   | realizedRevenue(today) | deliveredAt today, status = delivered               | 1000   |
+    // | Analytics total      | grossRevenue(period)   | createdAt in 30d, status NOT IN [cancelled, draft]  | 6000   |
+    // | Accounting revenue   | netRevenue(30d)        | realized - refunds - deliveryCosts                  | 1000   |
+    // | Delivery rate        | deliveryRate(today)    | delivered orders / total orders (by order.status)   | 25%    |
+    // | Courier delivery     | courierDeliveryRate    | delivered Deliveries / total Deliveries (all-time)  | 0%     |
   });
 });
 

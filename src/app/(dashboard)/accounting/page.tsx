@@ -8,6 +8,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import type { ExpenseCategory } from "@/lib/validation";
+// Phase 4: canonical net-revenue formula (realized - refunds - delivery
+// costs). Replaces the page's local sum-of-delivered-totalPrice calc,
+// which (a) didn't subtract refunds and (b) duplicated the delivery-cost
+// subtraction that was also in netProfit, double-counting it.
+import { netRevenue } from "@/lib/data/metrics";
 import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
 import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
 import {
@@ -49,12 +54,18 @@ export default async function AccountingPage() {
     }),
   ]);
 
-  // Calculate P&L — use actual product cost when available.
-  // REMOVED: the silent 60% margin estimate (item.unitPrice * 0.6) that
-  // fabricated a COGS value when no cost was set. Now: if cost is missing,
-  // it contributes 0 to COGS and a warning banner is shown.
+  // Phase 4: revenue is now the CANONICAL net revenue (realized - refunds
+  // - delivery costs) from metrics.ts. Previously this was sum-of-
+  // delivered-totalPrice (which equals realized), and deliveryCosts were
+  // subtracted AGAIN in netProfit below -- double-counting them. Now:
+  //   - revenue (StatCard)       = netRevenue(period) = realized - refunds - deliveryCosts
+  //   - netProfit (StatCard)     = netRevenue - cogs - totalExpenses
+  //                                (deliveryCosts + refunds already inside netRevenue)
+  // COGS still uses actual product cost when available; if cost is
+  // missing, it contributes 0 and a warning banner is shown.
+  const period = { from: periodStart, to: now };
+  const revenue = await netRevenue(db, period);
   const deliveredOrders = orders.filter((o) => o.status === "delivered");
-  const revenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
   const cogs = deliveredOrders.reduce((sum, o) => {
     return sum + o.items.reduce((s, item) => {
       const productCost = (item as { product?: { cost?: number } }).product?.cost;
@@ -68,9 +79,10 @@ export default async function AccountingPage() {
       return productCost === undefined || productCost === null;
     }),
   );
-  const deliveryCosts = deliveredOrders.reduce((sum, o) => sum + (o.delivery?.cost ?? 0), 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const netProfit = revenue - cogs - deliveryCosts - totalExpenses;
+  // deliveryCosts are already inside `revenue` (netRevenue) -- don't
+  // subtract them again here.
+  const netProfit = revenue - cogs - totalExpenses;
 
   // Monthly data for chart (last 6 months)
   const last6Months = Array.from({ length: 6 }, (_, i) => {
@@ -139,7 +151,7 @@ export default async function AccountingPage() {
       {/* P&L Summary — upgraded with accent icons */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
-          label={t("accounting.revenueMonth")}
+          label={t("accounting.netRevenue")}
           value={formatDZD(revenue)}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"

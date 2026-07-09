@@ -19,6 +19,11 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+// Phase 4: canonical gross-revenue formula. Replaces the local
+// `status: { not: "cancelled" }` aggregate, which excluded cancelled
+// but NOT draft -- diverging from the dashboard (canonical excludes
+// both cancelled + draft). Half-open period [startOfYesterday, endOfYesterday+1ms).
+import { grossRevenue } from "@/lib/data/metrics";
 import { formatDZDBare as formatDZD } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import { loadTranslationsSync } from "@/lib/i18n-server";
@@ -85,7 +90,7 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
   // Fetch all the data in parallel
   const [
     orders,
-    revenueAgg,
+    revenue,
     newCustomers,
     topProductItems,
     lowStockProducts,
@@ -94,14 +99,13 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
       where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null },
       select: { id: true, status: true, totalPrice: true },
     }),
-    db.order.aggregate({
-      where: {
-        createdAt: { gte: startOfYesterday, lte: endOfYesterday },
-        status: { not: "cancelled" },
-        deletedAt: null,
-      },
-      _sum: { totalPrice: true },
-    }),
+    // Phase 4: canonical gross revenue for yesterday -- excludes
+    // cancelled + draft (matches dashboard + analytics). Half-open
+    // period [startOfYesterday, endOfYesterday+1ms) matches the
+    // inclusive [startOfYesterday, endOfYesterday] window used by the
+    // orders query above (endOfYesterday is 23:59:59.999, so +1ms
+    // reaches the next midnight without including it).
+    grossRevenue(db, { from: startOfYesterday, to: new Date(endOfYesterday.getTime() + 1) }),
     db.customer.count({
       where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null },
     }),
@@ -151,7 +155,7 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 3);
 
-  const revenue = revenueAgg._sum.totalPrice ?? 0;
+  // revenue is already a number from grossRevenue (Phase 4 refactor).
 
   // Build the WhatsApp message (locale-aware, emoji-formatted, WhatsApp-friendly)
   const lines: string[] = [];

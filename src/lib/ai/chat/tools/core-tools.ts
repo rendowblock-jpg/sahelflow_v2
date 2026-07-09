@@ -14,6 +14,13 @@ import { registerTool } from "./registry";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
+// Phase 4: canonical gross-revenue formula. Replaces the local
+// `status: { in: ["confirmed", "shipped", "delivered"] }` aggregate,
+// which (a) excluded pending orders (so an unconfirmed-but-placed order
+// didn't count as gross) and (b) excluded returned/refused orders (which
+// the canonical def INCLUDES -- the order was placed; the return is
+// downstream). Now matches dashboard + analytics + reports exactly.
+import { grossRevenue } from "@/lib/data/metrics";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -284,20 +291,27 @@ registerTool({
 registerTool({
   definition: {
     name: "get_stats",
-    description: "Get dashboard statistics: total orders, revenue, customers, low stock count. No parameters.",
+    description: "Get dashboard statistics: total orders, gross revenue (all-time, excludes cancelled + draft orders), customers, low stock count. No parameters.",
     parameters: { type: "object", properties: {} },
   },
   async execute(_params, ctx): Promise<ToolResult> {
     try {
       const db = getDb(ctx);
-      // Revenue = sum of totalPrice for orders that are confirmed/shipped/delivered.
-      // Excludes drafts, cancellations, and returns — those are not realized revenue.
-      const [totalOrders, revenueAgg, totalCustomers, lowStockCount] = await Promise.all([
+      // Phase 4: gross revenue (all-time) = sum of totalPrice where
+      // status NOT IN [cancelled, draft]. Labeled "gross" so the agent
+      // + the user understand this is "what was ordered", not "what was
+      // collected" (realized) or "what was kept" (net). Previously this
+      // used a narrower status filter (confirmed/shipped/delivered)
+      // that excluded pending orders -- undercounting gross.
+      // All-time = [epoch, tomorrow midnight) -- half-open, covers all
+      // orders that exist now (no future orders possible).
+      const allTime = {
+        from: new Date(0),
+        to: new Date(Date.now() + 86_400_000),
+      };
+      const [totalOrders, grossRevenueAllTime, totalCustomers, lowStockCount] = await Promise.all([
         db.order.count({ where: { deletedAt: null } }),
-        db.order.aggregate({
-          _sum: { totalPrice: true },
-          where: { status: { in: ["confirmed", "shipped", "delivered"] }, deletedAt: null },
-        }),
+        grossRevenue(db, allTime),
         db.customer.count({ where: { deletedAt: null } }),
         db.product.count({
           where: {
@@ -307,12 +321,14 @@ registerTool({
           },
         }),
       ]);
-      const totalRevenue = revenueAgg._sum.totalPrice ?? 0;
       return {
         success: true,
         data: {
           totalOrders,
-          totalRevenue,
+          // Labeled "grossRevenue" (not "totalRevenue") so downstream
+          // consumers (the LLM agent + any UI surfacing this) know which
+          // variant they're getting.
+          grossRevenue: grossRevenueAllTime,
           totalCustomers,
           lowStockCount,
         },

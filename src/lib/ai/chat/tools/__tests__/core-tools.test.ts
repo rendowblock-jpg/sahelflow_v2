@@ -269,9 +269,9 @@ describe("get_stats", () => {
     const result = await tool.execute({}, ctx());
 
     expect(result.success).toBe(true);
-    const data = result.data as { totalOrders: number; totalRevenue: number; totalCustomers: number; lowStockCount: number };
+    const data = result.data as { totalOrders: number; grossRevenue: number; totalCustomers: number; lowStockCount: number };
     expect(data.totalOrders).toBe(0);
-    expect(data.totalRevenue).toBe(0);
+    expect(data.grossRevenue).toBe(0);
     expect(data.totalCustomers).toBe(0);
     expect(data.lowStockCount).toBe(0);
   });
@@ -304,9 +304,11 @@ describe("get_stats", () => {
     const result = await tool.execute({}, ctx());
 
     expect(result.success).toBe(true);
-    const data = result.data as { totalOrders: number; totalRevenue: number; totalCustomers: number; lowStockCount: number };
+    const data = result.data as { totalOrders: number; grossRevenue: number; totalCustomers: number; lowStockCount: number };
     expect(data.totalOrders).toBe(2);
-    expect(data.totalRevenue).toBe(4000); // only delivered counts
+    // Phase 4: canonical gross = excludes cancelled + draft only.
+    // Setup: 1 delivered (4000) + 1 draft (excluded). Gross = 4000.
+    expect(data.grossRevenue).toBe(4000);
     expect(data.totalCustomers).toBe(1);
     expect(data.lowStockCount).toBe(1);
   });

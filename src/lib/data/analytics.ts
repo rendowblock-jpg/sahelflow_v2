@@ -12,6 +12,15 @@
 import "server-only";
 import type { ServiceContext } from "./service-base";
 import type { OrderStatus } from "@/types/domain";
+// Phase 4: import the canonical revenue-exclusion set so this service
+// can never drift from `metrics.grossRevenue`'s definition. The local
+// in-memory aggregation (buildSummary/buildTimeSeries/etc.) cannot
+// call `grossRevenue(db, period)` directly without sacrificing the
+// single-fetch optimization (one findMany -> many in-memory aggregates),
+// so we reuse the constant instead. The exclusion set is the ONLY thing
+// that could drift -- the period filter (createdAt in period) already
+// matches the canonical half-open [from, to) semantics.
+import { REVENUE_EXCLUDED_STATUSES } from "./metrics";
 
 export interface TimeSeriesPoint {
   date: string; // ISO yyyy-mm-dd
@@ -87,7 +96,10 @@ export interface AnalyticsReport {
   customerGrowth: CustomerGrowthPoint[];
 }
 
-const EXCLUDED_FROM_REVENUE: OrderStatus[] = ["cancelled", "draft"];
+// Phase 4: canonical exclusion set -- same constant as
+// `metrics.grossRevenue`. Aliased locally for the in-memory aggregators
+// below (which filter already-fetched rows by status, not by DB query).
+const EXCLUDED_FROM_REVENUE: OrderStatus[] = [...REVENUE_EXCLUDED_STATUSES] as OrderStatus[];
 
 /**
  * Returns a yyyy-mm-dd date string in the server's LOCAL timezone (not UTC).

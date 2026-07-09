@@ -1,8 +1,16 @@
 /**
  * Stats service — aggregated metrics for the dashboard.
+ *
+ * Phase 4: revenue figures (gross + realized) now delegate to the
+ * canonical `metrics.ts` module. Previously this service defined its
+ * own revenue formula (`status: { not: "cancelled" }` — which excluded
+ * cancelled but NOT draft, diverging from the analytics-page formula
+ * that excluded both cancelled + draft). The canonical definition
+ * (DATA_INTEGRITY_PLAN.md Phase 4) excludes both cancelled + draft.
  */
 import type { DashboardStats } from "@/types/domain";
 import type { ServiceContext } from "./service-base";
+import { grossRevenue, realizedRevenue } from "./metrics";
 
 export const statsService = {
   async getDashboard(ctx: ServiceContext): Promise<DashboardStats> {
@@ -12,13 +20,23 @@ export const statsService = {
     const startOfYesterday = new Date(startOfDay);
     startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
+    const startOfTomorrow = new Date(startOfDay);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+    // Half-open periods: today = [startOfDay, startOfTomorrow);
+    // yesterday = [startOfYesterday, startOfDay). These chain cleanly
+    // (yesterday.to === today.from) so an order placed at exactly
+    // midnight belongs to exactly one period, never both.
+    const todayPeriod = { from: startOfDay, to: startOfTomorrow };
+    const yesterdayPeriod = { from: startOfYesterday, to: startOfDay };
+
     const [
       ordersToday,
       ordersYesterday,
       revenueToday,
       revenueYesterday,
-      realizedRevenueTodayAgg,
-      realizedRevenueYesterdayAgg,
+      realizedRevenueToday,
+      realizedRevenueYesterday,
       newCustomersToday,
       activeConversations,
       pendingDeliveries,
@@ -28,45 +46,15 @@ export const statsService = {
       ctx.prisma.order.count({
         where: { createdAt: { gte: startOfYesterday, lt: startOfDay }, deletedAt: null },
       }),
-      // Gross Revenue = all non-cancelled orders (what was ordered)
-      ctx.prisma.order.aggregate({
-        where: { createdAt: { gte: startOfDay }, status: { not: "cancelled" }, deletedAt: null },
-        _sum: { totalPrice: true },
-      }),
-      ctx.prisma.order.aggregate({
-        where: {
-          createdAt: { gte: startOfYesterday, lt: startOfDay },
-          status: { not: "cancelled" },
-          deletedAt: null,
-        },
-        _sum: { totalPrice: true },
-      }),
-      // Realized Revenue = delivered orders only (what was actually collected).
-      // SV-M10: filter by deliveredAt (not createdAt) so an order created
-      // yesterday + delivered today shows up in TODAY's realized revenue,
-      // not yesterday's. createdAt is when the order was placed; deliveredAt
-      // is when the cash was actually collected — the latter is what "realized"
-      // means. (deliveredAt is set on the shipped→delivered transition in
-      // orderService.updateStatus.) Only count orders where deliveredAt is
-      // non-null + in the date window (the status:"delivered" filter is
-      // kept as defense-in-depth in case deliveredAt is somehow null on a
-      // delivered order — shouldn't happen, but the cost is one extra filter).
-      ctx.prisma.order.aggregate({
-        where: {
-          deliveredAt: { gte: startOfDay },
-          status: "delivered",
-          deletedAt: null,
-        },
-        _sum: { totalPrice: true },
-      }),
-      ctx.prisma.order.aggregate({
-        where: {
-          deliveredAt: { gte: startOfYesterday, lt: startOfDay },
-          status: "delivered",
-          deletedAt: null,
-        },
-        _sum: { totalPrice: true },
-      }),
+      // Gross Revenue (today) — canonical: status NOT IN [cancelled, draft].
+      grossRevenue(ctx.prisma, todayPeriod),
+      grossRevenue(ctx.prisma, yesterdayPeriod),
+      // Realized Revenue (today) — canonical: deliveredAt in period AND
+      // status = "delivered". SV-M10: filter by deliveredAt (not
+      // createdAt) so an order created yesterday + delivered today
+      // shows up in TODAY's realized revenue, not yesterday's.
+      realizedRevenue(ctx.prisma, todayPeriod),
+      realizedRevenue(ctx.prisma, yesterdayPeriod),
       ctx.prisma.customer.count({ where: { createdAt: { gte: startOfDay }, deletedAt: null } }),
       ctx.prisma.conversation.count({ where: { unreadCount: { gt: 0 } } }),
       ctx.prisma.delivery.count({
@@ -77,10 +65,10 @@ export const statsService = {
       }),
     ]);
 
-    const todayRev = revenueToday._sum.totalPrice ?? 0;
-    const yesterdayRev = revenueYesterday._sum.totalPrice ?? 0;
-    const todayRealized = realizedRevenueTodayAgg._sum.totalPrice ?? 0;
-    const yesterdayRealized = realizedRevenueYesterdayAgg._sum.totalPrice ?? 0;
+    const todayRev = revenueToday;
+    const yesterdayRev = revenueYesterday;
+    const todayRealized = realizedRevenueToday;
+    const yesterdayRealized = realizedRevenueYesterday;
 
     // Calculate trends (avoid division by zero)
     const ordersTrend =

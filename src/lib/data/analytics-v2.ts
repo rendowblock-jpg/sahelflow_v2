@@ -7,6 +7,15 @@
  */
 import "server-only";
 import { db } from "@/lib/db";
+// Phase 4: canonical revenue-exclusion set -- shared with
+// `metrics.grossRevenue`. Previously this module excluded
+// returned/refused from the revenue sum (4-status exclusion), but the
+// canonical definition (DATA_INTEGRITY_PLAN.md Phase 4) excludes only
+// cancelled + draft -- returned/refused ARE gross (the order was
+// placed; the return is a separate downstream event tracked by the
+// return-rate metric). Using the shared constant keeps the period-
+// comparison revenue aligned with the dashboard + analytics + reports.
+import { REVENUE_EXCLUDED_STATUSES } from "@/lib/data/metrics";
 
 export interface DateRange {
   from: Date;
@@ -134,17 +143,19 @@ export async function getSkuPnl(range: DateRange) {
 /**
  * Period-over-period comparison (current vs previous).
  *
- * SV-M9: revenue is now computed excluding non-revenue statuses (cancelled,
- * draft, returned, refused) — these don't represent real revenue (cancelled
- * = customer backed out; draft = never submitted; returned = parcel refused
- * at door + refunded; refused = same). Previously ALL statuses were summed,
- * inflating the revenue number + making the period-over-period delta
- * misleading. The order count + return-rate calcs still use the full set
- * (they need returned/refused to compute the return rate).
+ * Phase 4 (replaces SV-M9): revenue now uses the CANONICAL gross definition
+ * from `metrics.grossRevenue` -- sum of totalPrice where status NOT IN
+ * [cancelled, draft]. Returned/refused orders ARE included in gross (the
+ * order was placed; the return is a separate downstream event tracked by
+ * the return-rate metric, not by shrinking gross). The order count +
+ * return-rate calcs still use the full status set (they need
+ * returned/refused to compute the return rate).
  */
 export async function getPeriodComparison(current: DateRange, previous: DateRange) {
-  // SV-M9: statuses excluded from the REVENUE sum (still counted in orders/returned).
-  const EXCLUDED_FROM_REVENUE = ["cancelled", "draft", "returned", "refused"] as const;
+  // Phase 4: canonical exclusion set -- cancelled + draft only.
+  // Returned/refused orders ARE gross (the order was placed; the return
+  // is a separate downstream event). Shared with `metrics.grossRevenue`.
+  const EXCLUDED_FROM_REVENUE = [...REVENUE_EXCLUDED_STATUSES] as const;
   const isRevenueStatus = (s: string) =>
     !EXCLUDED_FROM_REVENUE.includes(s as typeof EXCLUDED_FROM_REVENUE[number]);
 
@@ -159,7 +170,7 @@ export async function getPeriodComparison(current: DateRange, previous: DateRang
     }),
   ]);
 
-  // SV-M9: only sum totalPrice for orders in a revenue-generating status.
+  // Phase 4: canonical gross -- exclude cancelled + draft only.
   const sum = (orders: typeof currentOrders) =>
     orders.reduce((s, o) => (isRevenueStatus(o.status) ? s + o.totalPrice : s), 0);
   const currentRevenue = sum(currentOrders);
