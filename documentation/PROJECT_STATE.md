@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-09 (Session 36 COMPLETE — Phase 1 + Phase 2 of data-integrity plan executed: 5 data-flow bugs fixed, build ship-blocker fixed, 1278 tests green, `bun run build` exits 0)
-**Main HEAD:** `9ee5ee3`
+**Last updated:** 2026-07-09 (Session 37 COMPLETE — Phases 3-7 of data-integrity plan executed: cross-table data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API integration tests. 1416 tests green, `bun run build` exits 0)
+**Main HEAD:** `a6825a6`
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
@@ -20,11 +20,11 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-36 complete. S36: Phase 1+2 of `DATA_INTEGRITY_PLAN.md` executed — 5 data-flow bugs fixed, build ship-blocker fixed, `bun run build` exits 0. **Next: Phase 3** (cross-table data-integrity test suite, 15 scenarios). |
+| Phase | Sessions 1-37 complete. S37: Phases 3-7 of `DATA_INTEGRITY_PLAN.md` ALL EXECUTED — data-integrity suite (14 scenarios), metrics consolidation (6→1 formula), orphan removal (2 tables + dead code), 8 e2e specs, API integration tests (8 groups). **Data-integrity plan COMPLETE.** |
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1278 pass | 0 skip | 0 fail** (re-verified Session 36 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1278/1278, prisma valid, 5 migrations clean) — +21 tests from Phase 1 data-flow bug regression tests |
+| Tests | **1416 pass | 0 skip | 0 fail** (re-verified Session 37 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1416/1416, prisma valid, 6 migrations clean) — +138 tests across Phases 3-7 (−6 dead tests removed in Phase 5) |
 | Test coverage | **88.8% statements** (floor locked at 80%) |
 | Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
@@ -34,7 +34,7 @@
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
 | Risk engine | ✅ 7 factors, weighted scoring, rules, blacklist (isBlacklisted column) + phone reputation registry |
 | ADRs | 12 accepted, 0 open |
-| Quality gate | ✅ tsc + eslint + 1278 tests green (0 skip, 80% coverage floor) — re-verified Session 36 end. ✅ **`bun run build` (Turbopack) now EXITS 0** — Phase 2 ship-blocker fixed (license-service split into client-safe + server-only). Standalone output produced. |
+| Quality gate | ✅ tsc + eslint + 1416 tests green (0 skip, 80% coverage floor) — re-verified Session 37 end. ✅ **`bun run build` (Turbopack) EXITS 0** — standalone output produced. ✅ 8 e2e specs authored (Phase 6, run on founder machine). |
 | Auth | ✅ PIN PBKDF2 600k + rate limiting + Session revocation + AuditLog + CSRF + proxy.ts enforces on all routes + React cache() dedup |
 | Encryption | ✅ AES-256-GCM PII (Customer + Order + Conversation + Message) + blind index + nested-read decryption + Prisma safety guards |
 | Theme | ✅ Emerald/teal palette, 0 arbitrary text-size values (eliminated in Phase 11) |
@@ -44,6 +44,63 @@
 | License | ✅ Ed25519 + server-side enforcement + FeatureGate (dev-bypass unlocks correctly) |
 | Sentry | ✅ @sentry/nextjs installed + env-gated (zero-overhead until SENTRY_DSN set) + global-error.tsx only-fires-on-unexpected |
 | Agent toolkit | ✅ sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit |
+
+## Session 37 — 2026-07-09: Phases 3-7 of data-integrity plan COMPLETE (data-integrity suite + metrics consolidation + orphan removal + e2e specs + API tests)
+
+Executed all remaining phases (3-7) of `documentation/DATA_INTEGRITY_PLAN.md` using 5 subagents across 2 waves (Wave 1: Phases 3, 6, 7 parallel; Wave 2: Phases 4, 5 parallel). 14 commits linearly on main. **The 7-phase data-integrity plan is now COMPLETE.**
+
+### Verification gate (re-verified at session end, HEAD `a6825a6`)
+
+| Gate | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| `eslint .` | ✅ 0 errors, 738 warnings (unchanged) |
+| `vitest run` | ✅ **1416/1416 pass**, 80 test files (was 1278/71 — +138 tests, +9 files, −6 dead tests removed) |
+| `prisma validate` | ✅ valid, 31 models (was 33 — dropped 2 orphans), 6 migrations clean |
+| `bun run build` | ✅ **EXITS 0** — standalone output produced |
+| `sf-audit` | ✅ NO DRIFT |
+
+### Phase 3 — Cross-table data-integrity test suite (`9733207`)
+- **14 scenarios** in `src/lib/data/__tests__/data-integrity.test.ts` (1525 lines): order lifecycle (create→confirm→ship→deliver→return), return+refund cross-table, stale-queue consistency, low-stock consistency, revenue formula consistency, COD reconciliation arithmetic, notifications bell i18n, PII backup→restore, e-commerce sync dedup, multi-shop isolation.
+- Documented 2 real bugs for future fix: products-page low-stock counts inactive products, COD `codRemitted` NULL-vs-false Prisma bug.
+
+### Phase 4 — Metrics consolidation (`2a12fc6`)
+- **New `src/lib/data/metrics.ts`** (215 lines): 5 canonical functions — `grossRevenue`, `realizedRevenue`, `netRevenue`, `deliveryRate`, `courierDeliveryRate`. Single source of truth for all revenue/delivery-rate calculations.
+- Refactored 6 read-sites: stats-service (dashboard), analytics, analytics-v2, accounting page, daily-report, AI get_stats — ALL now delegate to `metrics.ts`.
+- **34 new tests** in `metrics.test.ts` (509 lines): edge cases per formula.
+- Updated Phase 3 scenario #10 to assert canonical definitions (was documenting old inconsistent behavior).
+- UI labels updated: "Gross Revenue (today)" / "Realized (today)" / "Net Revenue (30d)" across ar/fr/en.
+
+### Phase 5 — Orphan removal (`86ab15b`, `372b7c9`, `a6825a6`)
+- Dropped **Notification** table (orphaned — `/api/notifications` computes fresh, never read from table).
+- Dropped **DailyAnalyticsReport** table (never written to in `src/`).
+- Deleted dead `deliveryService.create` + `updateStatus` methods (only used in tests — API routes call `orderService` directly since Phase 1).
+- 1 new migration (`20260707000000_drop_orphaned_tables`), −168 lines / +40 lines, 6 dead tests removed.
+
+### Phase 6 — 8 e2e golden-path Playwright specs (`9c0741a`)
+- **1,281 lines** across 8 specs in `e2e/`: order-lifecycle, storefront-roundtrip, notifications (Arabic i18n), cod-reconciliation, return-refund (Phase 1 bug 1.1 regression guard), language-switch (RTL/LTR), backup-restore, automation-fire.
+- Authored + committed (can't run in sandbox — OOM; founder runs against prod build on their machine).
+- Found + flagged: `POST /api/backup/restore` requires `confirm:"RESTORE"` body but the UI panel doesn't send it (UI restore flow is broken at runtime).
+
+### Phase 7 — API route integration tests (`9b49b22` → `054c71d`)
+- **~102 tests** across 8 files in `src/app/api/__tests__/`: orders (17), auth (16), returns (12), cod-reconciliation (9), delivery create+sync (13), notifications (8), risk (21), storefront-submit (6).
+- Tests: happy path, validation (400), not-found (404), auth, DB state after writes.
+- Fixed 2 real test bugs: auth change-pin `cache()` stale `isAuthSetup` (bypassed with direct `setupAuth` call), risk assess `rawDb` plaintext PII vs `db` Proxy encrypted (switched to `db` for seeding).
+
+### What's next
+
+The **7-phase data-integrity plan is COMPLETE.** Remaining items are founder-machine-only or external:
+1. **Founder browser-verification** of all Phase 1-5 changes (return+refund, delivery flows, storefront/import orders, revenue labels, >200 orders stat).
+2. **Run e2e suite** on founder machine: `bun run build && bun run start` then `bunx playwright test`.
+3. **Real Darija validation** — 50+ real WhatsApp messages through the extraction pipeline.
+4. **Professional pen test** before mass launch.
+5. **Real beta users** — 3-5 Algerian COD sellers.
+6. **macOS release build** — Apple Developer Program ($99/year).
+7. **Fix 2 documented bugs** from Phase 3: products-page low-stock inactive filter, COD `codRemitted` NULL-vs-false.
+8. **Fix UI backup-restore** — the panel doesn't send `confirm:"RESTORE"` body (flagged by Phase 6).
+9. **Pre-existing flake** in `return-refund-integrity.test.ts` — fire-and-forget automation dispatch race (port `waitForDispatch` pattern from `data-integrity.test.ts`).
+
+---
 
 ## Session 36 — 2026-07-09: Phase 1 + Phase 2 of data-integrity plan (5 data-flow bugs fixed + build ship-blocker fixed)
 

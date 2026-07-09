@@ -5,7 +5,53 @@ All notable changes to SahelFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Session 36 (2026-07-09)
+## [Unreleased] — Session 37 (2026-07-09)
+
+### Session 37 — Phases 3-7 of data-integrity plan COMPLETE (data-integrity suite + metrics consolidation + orphan removal + e2e specs + API tests)
+
+Executed all remaining phases (3-7) of `documentation/DATA_INTEGRITY_PLAN.md` using 5 subagents across 2 waves. 14 commits linearly on main. **The 7-phase data-integrity plan is now COMPLETE.** 1416 tests green (+138), `bun run build` exits 0.
+
+#### Phase 3 — Cross-table data-integrity test suite (`9733207`)
+- **14 scenarios** (1525 lines): order lifecycle, return+refund cross-table, stale-queue consistency, low-stock consistency, revenue formula consistency, COD reconciliation, notifications i18n, PII backup→restore, e-commerce sync dedup, multi-shop isolation.
+- Documented 2 real bugs: products-page low-stock counts inactive products, COD `codRemitted` NULL-vs-false Prisma bug.
+
+#### Phase 4 — Metrics consolidation (`2a12fc6`)
+- **New `src/lib/data/metrics.ts`** (215 lines): `grossRevenue`, `realizedRevenue`, `netRevenue`, `deliveryRate`, `courierDeliveryRate` — single source of truth.
+- Refactored 6 read-sites (dashboard, analytics, analytics-v2, accounting, daily-report, AI get_stats) to delegate to `metrics.ts`.
+- 34 new tests (509 lines). UI labels updated across ar/fr/en.
+- Canonical definitions: Gross = createdAt in period AND status NOT IN [cancelled, draft]. Realized = deliveredAt in period AND status = delivered. Net = realized − refunds − delivery costs.
+
+#### Phase 5 — Orphan removal (`86ab15b`, `372b7c9`, `a6825a6`)
+- Dropped **Notification** table (orphaned — computed fresh, never read from table).
+- Dropped **DailyAnalyticsReport** table (never written to in src/).
+- Deleted dead `deliveryService.create` + `updateStatus` (only used in tests since Phase 1).
+- 1 new migration, −168 lines, 6 dead tests removed. Prisma models: 33 → 31.
+
+#### Phase 6 — 8 e2e golden-path Playwright specs (`9c0741a`)
+- 1,281 lines across 8 specs: order-lifecycle, storefront-roundtrip, notifications (Arabic), cod-reconciliation, return-refund, language-switch (RTL), backup-restore, automation-fire.
+- Authored + committed (run on founder machine against prod build).
+- Flagged: UI backup-restore panel doesn't send required `confirm:"RESTORE"` body.
+
+#### Phase 7 — API route integration tests (`9b49b22` → `054c71d`)
+- ~102 tests across 8 files: orders (17), auth (16), returns (12), cod-reconciliation (9), delivery (13), notifications (8), risk (21), storefront-submit (6).
+- Fixed: auth change-pin `cache()` stale `isAuthSetup`, risk assess PII plaintext-vs-encrypted.
+
+#### Resolved known issues
+- ✅ **Data-integrity plan Phases 3-7** — ALL COMPLETE. The 7-phase plan is done.
+
+#### New known issues (documented)
+- ⚠️ Products-page low-stock counts inactive products (Phase 3 scenario #9).
+- ⚠️ COD `codRemitted` NULL-vs-false Prisma bug (Phase 3 scenario #11).
+- ⚠️ UI backup-restore panel doesn't send `confirm:"RESTORE"` (Phase 6).
+- ⚠️ Pre-existing flake in `return-refund-integrity.test.ts` (fire-and-forget dispatch race).
+
+#### Documentation
+- `PROJECT_STATE.md` updated to Session 37 complete (HEAD `a6825a6`, 1416 tests, 31 models, 6 migrations).
+- `AGENT_HANDOFF.md` to be updated to v28.0 on the `agent-handoff` branch.
+
+---
+
+## [4.1.2] — 2026-07-09 (Session 36)
 
 ### Session 36 — Phase 1 + Phase 2 of data-integrity plan (5 data-flow bugs fixed + build ship-blocker fixed)
 
