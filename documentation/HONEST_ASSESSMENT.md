@@ -1,7 +1,7 @@
 # SahelFlow — Honest Assessment
 
 > **Created:** 2026-06-26 (Session 16)
-> **Updated:** 2026-07-05 (Session 27 — connectivity audit + runtime fixes)
+> **Updated:** 2026-07-09 (Session 37 — data-integrity plan COMPLETE: 1416 tests, `bun run build` exits 0, all 7 phases executed)
 > **Purpose:** Candid evaluation of where the app stands vs a top-tier company product.
 
 ---
@@ -35,6 +35,19 @@
 
 **What's still open (honestly):**
 
+✅ Session 36 (2026-07-09) closed the data-flow + build blocker gaps:
+- ✅ All 5 data-flow bugs fixed (Return+Refund double-counting, delivery PATCH side effects, 4 order-create paths bypass orderService, delivery/create trigger, orders-page stat cap) — Phase 1
+- ✅ `bun run build` now EXITS 0 (license-service split into client-safe + server-only) — Phase 2
+- ✅ 1278 tests (was 1257 — +21 regression tests)
+
+✅ Session 37 (2026-07-09) completed the data-integrity plan:
+- ✅ Cross-table data-integrity suite (14 scenarios, 1525 lines) — Phase 3
+- ✅ Metrics consolidation (6→1 revenue formula, new `metrics.ts`) — Phase 4
+- ✅ Orphan removal (dropped Notification + DailyAnalyticsReport tables, deleted dead code) — Phase 5
+- ✅ 8 e2e golden-path Playwright specs authored (1281 lines) — Phase 6
+- ✅ ~102 API route integration tests across 8 files — Phase 7
+- ✅ 1416 tests (was 1278 — +138 net), 31 Prisma models (was 33 — dropped 2 orphans)
+
 ✅ Session 30 (2026-07-06) closed the BIG gaps:
 - ✅ All 44 S1 ship-blockers from the Session 29 deep audit addressed
 - ✅ License enforcement now works in production (was 403'ing real licenses)
@@ -49,13 +62,15 @@
 - ✅ WhatsApp sidecar now emits real message-update events (delivery/read receipts unblocked)
 
 Still open (founder-machine-only OR external):
-1. **Tauri desktop build unverified** — needs Rust toolchain (sandbox has none)
-2. **Playwright full-suite green** — needs prod build (sandbox OOM blocks it)
-3. **Real Darija validation** — 50+ real WhatsApp messages through the new prompt
-4. **Professional pen test** — before mass launch
-5. **Real beta users** — 3-5 Algerian COD sellers
-6. **macOS release build** — Apple Developer Program ($99/year)
-7. **Wave 2/3/4 remaining** — ~33 S2 high + ~183 S3 medium + ~101 S4 polish findings from the master audit (lower priority; not blocking launch)
+1. **Founder browser-verification** of all Phase 1-5 changes (return+refund, delivery flows, storefront/import orders, revenue labels, >200 orders stat)
+2. **Run e2e suite** on founder machine: `bun run build && bun run start` then `bunx playwright test` (8 specs authored, can't run in sandbox — OOM)
+3. **Tauri desktop build unverified** — needs Rust toolchain (sandbox has none)
+4. **Real Darija validation** — 50+ real WhatsApp messages through the new prompt
+5. **Professional pen test** — before mass launch
+6. **Real beta users** — 3-5 Algerian COD sellers
+7. **macOS release build** — Apple Developer Program ($99/year)
+8. **3 documented bugs** (from Phase 3 data-integrity suite): products-page low-stock counts inactive products, COD `codRemitted` NULL-vs-false Prisma bug, UI backup-restore missing `confirm:"RESTORE"` body
+9. **Pre-existing flake** in `return-refund-integrity.test.ts` (fire-and-forget dispatch race — port `waitForDispatch` pattern from `data-integrity.test.ts`)
 
 ---
 
@@ -133,4 +148,6 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-06 — Session 30 complete (10-phase deep wave merged to main). main = `564ac9c`. v4.1.0. 1209 tests, 0 skip. All 5 Session-28 commits fast-forward-merged linearly to main: tsc-green baseline (16 errors→0), AI-tool soft-delete guards (3 unguarded writes + 6 service filters), 8 runtime ship-blockers (danger-zone reset, order-change ledger, orders-page counts, 35 i18n keys), inbox workflow UI (5 controls + snooze dialog + activity renderer), automation editor (ConditionBuilder wired), canned-response picker wired, Playwright e2e now RUNS (chromium installed, config fixed). Remaining: Tauri build verification (needs Rust), Playwright full-suite green (founder machine — sandbox OOM), real Darija validation, professional pen test, real beta users, macOS release build._
+_Last updated: 2026-07-09 — Session 37 complete (data-integrity plan ALL 7 phases executed: 5 data-flow bugs fixed, build unblocked, data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API tests. 1416 tests, `bun run build` exits 0). Remaining: founder browser-verification + e2e on founder machine + real Darija validation + pen test + beta users + macOS release._
+
+<!-- Legacy: _Last updated: 2026-07-06 — Session 30 complete (10-phase deep wave merged to main). main = `564ac9c`. v4.1.0. 1209 tests, 0 skip. All 5 Session-28 commits fast-forward-merged linearly to main: tsc-green baseline (16 errors→0), AI-tool soft-delete guards (3 unguarded writes + 6 service filters), 8 runtime ship-blockers (danger-zone reset, order-change ledger, orders-page counts, 35 i18n keys), inbox workflow UI (5 controls + snooze dialog + activity renderer), automation editor (ConditionBuilder wired), canned-response picker wired, Playwright e2e now RUNS (chromium installed, config fixed). Remaining: Tauri build verification (needs Rust), Playwright full-suite green (founder machine — sandbox OOM), real Darija validation, professional pen test, real beta users, macOS release build._

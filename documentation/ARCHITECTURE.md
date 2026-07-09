@@ -388,4 +388,6 @@ Seller downloads + installs
 
 ---
 
-_Last updated: 2026-06-21 — v3.0 architecture. Foundation scaffold done. Most layers not yet implemented._
+_Last updated: 2026-07-09 (Session 37) — v4.1 architecture. All layers implemented + hardened. Data-integrity plan complete (1416 tests, `bun run build` exits 0). License module split into client-safe (`license-client.ts`) + server-only (`license-server.ts`) — see ADR-013. Revenue/delivery-rate formulas consolidated into `src/lib/data/metrics.ts` (see ADR-014). Orphaned Notification + DailyAnalyticsReport tables dropped (see ADR-015)._
+
+<!-- Legacy: _Last updated: 2026-06-21 — v3.0 architecture. Foundation scaffold done. Most layers not yet implemented._

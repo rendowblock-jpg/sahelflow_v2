@@ -4,6 +4,97 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+---
+## Session 37 — 2026-07-09: Data-integrity plan Phases 3-7 COMPLETE
+
+Founder instruction: "continue the rest of the plan phases here fully and professionally."
+
+Executed all remaining phases (3-7) of `documentation/DATA_INTEGRITY_PLAN.md` using 5 subagents across 2 waves (Wave 1: Phases 3, 6, 7 parallel; Wave 2: Phases 4, 5 parallel). 14 commits linearly on main. **The 7-phase data-integrity plan is now COMPLETE.**
+
+### Phase 3 — Cross-table data-integrity test suite (commit `9733207`)
+- 14 scenarios in `src/lib/data/__tests__/data-integrity.test.ts` (1525 lines): order lifecycle, return+refund cross-table, stale-queue consistency, low-stock consistency, revenue formula consistency, COD reconciliation, notifications i18n, PII backup→restore, e-commerce sync dedup, multi-shop isolation.
+- Documented 2 real bugs: products-page low-stock counts inactive products, COD `codRemitted` NULL-vs-false Prisma bug.
+
+### Phase 4 — Metrics consolidation (commit `2a12fc6`)
+- New `src/lib/data/metrics.ts` (215 lines): 5 canonical functions (grossRevenue, realizedRevenue, netRevenue, deliveryRate, courierDeliveryRate).
+- Refactored 6 read-sites: stats-service, analytics, analytics-v2, accounting page, daily-report, AI get_stats.
+- 34 new tests in `metrics.test.ts` (509 lines). UI labels updated across ar/fr/en.
+
+### Phase 5 — Orphan removal (commits `86ab15b`, `372b7c9`, `a6825a6`)
+- Dropped Notification table (orphaned — computed fresh, never read from table).
+- Dropped DailyAnalyticsReport table (never written to in src/).
+- Deleted dead `deliveryService.create` + `updateStatus` methods.
+- 1 new migration (`20260707000000_drop_orphaned_tables`), −168 lines, 6 dead tests removed. Models: 33→31.
+
+### Phase 6 — 8 e2e golden-path Playwright specs (commit `9c0741a`)
+- 1,281 lines across 8 specs in `e2e/`: order-lifecycle, storefront-roundtrip, notifications (Arabic i18n), cod-reconciliation, return-refund, language-switch (RTL), backup-restore, automation-fire.
+- Authored + committed (can't run in sandbox — OOM; founder runs against prod build).
+- Flagged: UI backup-restore panel doesn't send required `confirm:"RESTORE"` body.
+
+### Phase 7 — API route integration tests (commits `9b49b22` → `054c71d`)
+- ~102 tests across 8 files in `src/app/api/__tests__/`: orders (17), auth (16), returns (12), cod-reconciliation (9), delivery (13), notifications (8), risk (21), storefront-submit (6).
+- Fixed 2 test bugs: auth change-pin `cache()` stale `isAuthSetup`, risk assess PII plaintext-vs-encrypted.
+
+### Verification (HEAD `a6825a6`)
+- tsc 0 err, eslint 0 err / 738 warn, vitest **1416/1416** (80 files), prisma valid (31 models, 6 migrations), `bun run build` exits 0.
+
+---
+
+## Session 36 — 2026-07-09: Phase 1 + Phase 2 of data-integrity plan (5 data-flow bugs + build ship-blocker fixed)
+
+Founder instruction: "start on what u think is best."
+
+Executed Phase 1 + Phase 2 in parallel using 2 subagents in isolated git worktrees. 7 code commits + 1 doc commit. Both branches merged linearly to main (no file overlap).
+
+### Phase 1 — 5 data-flow bugs fixed (commits `c97a8cd` → `47948d8`)
+- **1.5** Orders-page "active orders" stat capped at 200 → compute from uncapped `groupBy`.
+- **1.4** `POST /api/delivery/create` skips `order.shipped` trigger → added fire-and-forget `dispatchTrigger`.
+- **1.2** `PATCH /api/delivery/[id]` skips side effects → routes through `orderService.updateStatus`.
+- **1.1** Return + Refund double-counting → Return routes through `updateStatus("returned")`; Refund guards if already "returned". Also fixed `BEGIN IMMEDIATE` deadlock.
+- **1.3** 4 order-create paths bypass `orderService.create` → `orderService.create` accepts `opts.tx`; storefront/import/sync/AI all route through it.
+- +21 new tests across 5 test files.
+
+### Phase 2 — Build ship-blocker fixed (commits `0a71fdd` + `9ee5ee3`)
+- Split `license-service.ts` → `license-client.ts` (client-safe) + `license-server.ts` (DB-backed, server-only). `bun run build` now exits 0.
+- Re-enabled `typescript.ignoreBuildErrors` in next.config.ts (TS-check worker OOM on 4GB boxes; sf-verify --fast is the canonical gate).
+
+### Verification (HEAD `56a7e25`)
+- tsc 0 err, eslint 0 err, vitest **1278/1278** (71 files), `bun run build` exits 0.
+
+---
+
+## Session 35 — 2026-07-08/09: Founder testing, 3 critical bugfixes, i18n, dev-perf, data-integrity plan
+
+Founder launched the app in Tauri + found 3 critical runtime bugs. Deep investigation (2 subagents) found 5 data-flow bugs + 6 revenue-formula variants + orphaned tables. Authored a 7-phase data-integrity plan.
+
+### Critical runtime bugs fixed
+- `8026110`: nuqs adapter missing → 5 list pages crash. Added `<NuqsAdapter>` to root layout.
+- `1146313`: Viewport cut from bottom in Tauri. `100dvh` nuclear fix.
+- `8026110`: Prisma tx timeout. Increased to 30s.
+
+### i18n bugs fixed
+- `8602bc3`: Error toast i18n (28-rule `translate-server-error.ts`). +24 keys.
+- `93399b4`: Notifications bell i18n (`getI18n()` in route). +19 keys.
+
+### Dev-perf
+- `d7be246`: Sidecar binary caching (70s→0s). New `dev:web` + `dev:tauri:skip-sidecar` scripts.
+
+### Data-integrity plan
+- `0b8950f`: Authored `documentation/DATA_INTEGRITY_PLAN.md` (7 phases, ~8-9 sessions).
+
+### Verification (HEAD `d7be246`)
+- tsc 0 err, eslint 0 err, vitest 1257/1257, prisma valid (33 models, 5 migrations). `bun run build` still FAILS (Phase 2).
+
+---
+
+## Sessions 31-34 — 2026-07-06/07: Audit-wave fixes + deep re-audit + 3-wave execution
+
+- **S31-32**: Continued audit-wave fixes (Wave 2/3/4 from Session 29 master audit).
+- **S33**: 7-stream deep re-audit (~102 new findings). Commit `9602c8a`.
+- **S34**: Executed all 3 remaining waves — Wave 5 (12 ship-blockers 🔴), Wave 6 (25 high 🟠), Wave 7 (~65 medium+polish 🟡⚪). 19 phases on 3 feature branches, all merged linearly. main: `9602c8a` → `6e80cb4` → `d21fcdd` → `aece101` → `1a9bef3` → `d7be246`. See `AGENT_HANDOFF.md` (v26.0) for details.
+
+---
+
 ## Session 30 — 2026-07-06: 10-Phase Deep Wave (all 475 audit findings addressed)
 
 Founder instruction: "do the work of session 30 now — multi-phase deep wave to address all 475 audit findings professionally."

@@ -378,4 +378,53 @@ Tauri's production build needs a `frontendDist`. The v3.0 app uses Next.js **API
 
 ---
 
-_Last updated: 2026-06-21 (session 10) — 12 ADRs (12 accepted, 0 open). ADR-003 (encryption) resolved → application-layer field-level AES-256-GCM. ADR-004 (Stronghold) implemented in PR #32. ADR-011 (TikTok) killed. ADR-012 (Meta verification) killed. Main = `bffae33`._
+---
+
+## ADR-013: License service client/server split (Session 36, Phase 2)
+
+**Status:** Accepted (2026-07-09)
+
+**Context.** `bun run build` (Turbopack) failed with 6 errors: `use-license.ts` (a `"use client"` hook) imported `validateLicense`/`issueTrial` from `license-service.ts`, which also contained `isLicenseValid`/`requireLicense`/`hasFeature` with dynamic `import("@/lib/db")`. Turbopack traces the ENTIRE module when any export is imported, so `db.ts` → `master-key.ts` (`import "server-only"`) got bundled into the client → build failure. This blocked production deploy, Playwright-against-prod-build, and the installer/auto-update workflow.
+
+**Decision.** Split `license-service.ts` (434 lines) into two modules:
+- `license-client.ts` — client-safe: `validateLicense`, `issueTrial`, `getStatusLabel` (pure functions, no DB, no `server-only`). `use-license.ts` imports ONLY from here.
+- `license-server.ts` — DB-backed: `isLicenseValid`, `requireLicense`, `hasFeature`, `setCachedLicenseResult` (`import "server-only"`, static `import { db }`). Called only from API routes / server components.
+- The barrel `index.ts` is kept **client-safe only** (does NOT re-export server functions — would re-introduce the tracing footgun).
+
+**Consequences.** `bun run build` exits 0. The client/server boundary is now enforced by file structure, not just `"use client"` directives. Server code imports `@/lib/license/license-server` directly; client code imports `@/lib/license/license-client` or the barrel. Also re-enabled `typescript.ignoreBuildErrors: true` in next.config.ts — the TS-check worker OOM-kills on 4GB/no-swap boxes; `sf-verify --fast` (tsc + eslint) remains the canonical type/lint gate.
+
+---
+
+## ADR-014: Consolidate revenue + delivery-rate formulas into metrics.ts (Session 37, Phase 4)
+
+**Status:** Accepted (2026-07-09)
+
+**Context.** A deep investigation (Session 35) found **6 different revenue formulas** + **3 different delivery-rate formulas** across dashboard/analytics/accounting/reports/AI. This caused legitimate confusion ("why does the dashboard say 50k but analytics says 42k?") and drift risk. Each site independently decided which order statuses to exclude, whether to use `createdAt` or `deliveredAt`, whether to subtract refunds, etc.
+
+**Decision.** Extract 5 canonical functions into `src/lib/data/metrics.ts`:
+- `grossRevenue(db, period)` = Σ `order.totalPrice` WHERE `createdAt ∈ [from, to)` AND `status NOT IN [cancelled, draft]`
+- `realizedRevenue(db, period)` = Σ `order.totalPrice` WHERE `deliveredAt ∈ [from, to)` AND `status = "delivered"`
+- `netRevenue(db, period)` = realized − completed refunds in period − delivery costs in period
+- `deliveryRate(db, period)` = delivered orders / total orders (by `order.status`, NOT `delivery.status`)
+- `courierDeliveryRate(db)` = from `Delivery` table (all-time, courier performance — separate metric)
+
+All 6 read-sites (stats-service, analytics, analytics-v2, accounting page, daily-report, AI get_stats) now delegate to these functions. UI surfaces are labeled with their variant ("Gross Revenue (today)" vs "Realized Revenue (today)" vs "Net Revenue (30d)").
+
+**Consequences.** Single source of truth — no more formula drift. The AI `get_stats` tool's output field renamed `totalRevenue` → `grossRevenue` (breaking change for any consumer expecting the old field name). 34 new tests in `metrics.test.ts` encode the canonical definitions + edge cases. Phase 3 scenario #10 updated to assert the new consolidated behavior.
+
+---
+
+## ADR-015: Drop orphaned Notification + DailyAnalyticsReport tables (Session 37, Phase 5)
+
+**Status:** Accepted (2026-07-09)
+
+**Context.** The `Notification` model was orphaned: `/api/notifications` computes the notification feed fresh (stale orders, low-stock products, etc.) on every request — it never reads from the `Notification` table. The table was written to by the daily-report route + seed scripts but never read. "Mark as read" was low-value for a COD seller (they clear notifications by acting on the order). The `DailyAnalyticsReport` model was never written to anywhere in `src/` — pure dead schema. Additionally, `deliveryService.create` + `updateStatus` were only called from tests (Phase 1 made API routes call `orderService` directly).
+
+**Decision.** Drop both tables (1 migration: `20260707000000_drop_orphaned_tables`). Remove all `db.notification.*` references (reports/daily route, api/helpers cleanDb, 3 seed scripts, settings/reset route). Delete dead `deliveryService.create` + `updateStatus` + their 6 tests + the dead `createDeliverySchema`/`deliveryProviderSchema` exports. Read methods (`list`, `getById`, `getByOrderId`, `listActive`) untouched — still used in production.
+
+**Consequences.** Prisma models: 33 → 31. Tests: 1422 → 1416 (−6 dead tests removed, no regressions). −168 lines of dead code. The daily-report route's `db.notification.create` removed (replaced with nothing — the notification bell computes fresh anyway). The `init` migration still creates both tables (then the new migration drops them) — standard Prisma pattern (don't rewrite history).
+
+
+_Last updated: 2026-07-09 (Session 37) — 15 ADRs (15 accepted, 0 open). Main = `bcd6aa0`._
+
+<!-- Legacy: _Last updated: 2026-06-21 (session 10) — 12 ADRs (12 accepted, 0 open). ADR-003 (encryption) resolved → application-layer field-level AES-256-GCM. ADR-004 (Stronghold) implemented in PR #32. ADR-011 (TikTok) killed. ADR-012 (Meta verification) killed. Main = `bffae33`._
