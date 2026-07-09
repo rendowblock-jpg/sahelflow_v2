@@ -10,7 +10,6 @@
 import type { Prisma } from "@prisma/client";
 import type { Delivery, DeliveryStatus } from "@/types/domain";
 import { NotFoundError } from "@/types/errors";
-import { createDeliverySchema } from "@/lib/validation";
 import type { ServiceContext } from "./service-base";
 import { withServiceError } from "./service-base";
 
@@ -48,52 +47,16 @@ export const deliveryService = {
     return row ? toDomain(row as unknown as Record<string, unknown>) : null;
   },
 
-  /**
-   * Create a delivery record (without calling the adapter yet).
-   * The adapter integration (createShipment) is Phase 0 item #16.
-   */
-  async create(ctx: ServiceContext, input: unknown): Promise<Delivery> {
-    return withServiceError(async () => {
-      const data = createDeliverySchema.parse(input);
-
-      // Verify order exists
-      const order = await ctx.prisma.order.findFirst({ where: { id: data.orderId, deletedAt: null } });
-      if (!order) throw new NotFoundError("Order", data.orderId);
-
-      // Check no existing delivery for this order
-      const existing = await ctx.prisma.delivery.findFirst({ where: { orderId: data.orderId, deletedAt: null } });
-      if (existing) {
-        return toDomain(existing as unknown as Record<string, unknown>);
-      }
-
-      const row = await ctx.prisma.delivery.create({
-        data: {
-          orderId: data.orderId,
-          provider: data.provider,
-          status: "pending",
-        },
-      });
-      return toDomain(row as unknown as Record<string, unknown>);
-    }, "Delivery");
-  },
-
-  async updateStatus(
-    ctx: ServiceContext,
-    id: string,
-    status: DeliveryStatus,
-    trackingNumber?: string,
-  ): Promise<Delivery> {
-    return withServiceError(async () => {
-      const row = await ctx.prisma.delivery.update({
-        where: { id },
-        data: {
-          status,
-          ...(trackingNumber ? { trackingNumber } : {}),
-        },
-      });
-      return toDomain(row as unknown as Record<string, unknown>);
-    }, "Delivery");
-  },
+  // (Phase 5) `create` + `updateStatus` removed — they were only ever called
+  // from delivery-service.test.ts. Production write paths go through:
+  //   - POST /api/delivery/create    (delivery.upsert + order state machine)
+  //   - POST /api/delivery/sync      (delivery.update + order state machine)
+  //   - PATCH /api/delivery/[id]     (delivery.update + orderService.updateStatus)
+  // Each route inlines the write logic in its own $transaction so it can
+  // keep the delivery update + order transition atomic. Centralizing the
+  // writes back into the service would either (a) split the tx or (b) force
+  // every caller to pass a tx handle — neither pays for itself given that
+  // the routes are the only callers.
 
   /** List deliveries with active (non-terminal) status. */
   async listActive(ctx: ServiceContext): Promise<Delivery[]> {

@@ -173,13 +173,10 @@ export const createCategorySchema = z.object({
 });
 
 // ─── Delivery ─────────────────────────────────────────────────────────────────
-
-export const deliveryProviderSchema = z.enum(["yalidine", "maystro", "zrexpress", "dhd"]);
-
-export const createDeliverySchema = z.object({
-  orderId: cuid,
-  provider: deliveryProviderSchema,
-});
+// (Phase 5) createDeliverySchema + deliveryProviderSchema removed — they were
+// only consumed by deliveryService.create, which was dead production code.
+// The API routes (/api/delivery/create, /sync, /[id]) define their own
+// per-route z.object schemas inline.
 
 // ─── Expense ──────────────────────────────────────────────────────────────────
 
@@ -217,7 +214,6 @@ export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
-export type CreateDeliveryInput = z.infer<typeof createDeliverySchema>;
 export type ExpenseCategory = z.infer<typeof expenseCategorySchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;

@@ -79,60 +79,11 @@ describe("deliveryService.getByOrderId", () => {
   });
 });
 
-describe("deliveryService.create", () => {
-  it("creates a delivery for an order", async () => {
-    const order = await createOrder();
-    const delivery = await deliveryService.create({ prisma: db as never }, {
-      orderId: order.id,
-      provider: "yalidine",
-    });
-    expect(delivery.id).toBeTruthy();
-    expect(delivery.status).toBe("pending");
-    expect(delivery.provider).toBe("yalidine");
-  });
-
-  it("returns existing delivery if one already exists for the order", async () => {
-    const order = await createOrder();
-    const d1 = await deliveryService.create({ prisma: db as never }, { orderId: order.id, provider: "yalidine" });
-    const d2 = await deliveryService.create({ prisma: db as never }, { orderId: order.id, provider: "maystro" });
-    expect(d1.id).toBe(d2.id); // same delivery, not a new one
-  });
-
-  it("throws NotFoundError for non-existent order", async () => {
-    await expect(
-      deliveryService.create({ prisma: db as never }, { orderId: "cnonexistent123456789012", provider: "yalidine" }),
-    ).rejects.toThrow();
-  });
-
-  it("rejects invalid provider", async () => {
-    const order = await createOrder();
-    await expect(
-      deliveryService.create({ prisma: db as never }, { orderId: order.id, provider: "invalid" as never }),
-    ).rejects.toThrow();
-  });
-});
-
-describe("deliveryService.updateStatus", () => {
-  it("updates delivery status", async () => {
-    const order = await createOrder();
-    const delivery = await db.delivery.create({
-      data: { orderId: order.id, provider: "yalidine", status: "pending" },
-    });
-    const updated = await deliveryService.updateStatus({ prisma: db as never }, delivery.id, "in_transit");
-    expect(updated.status).toBe("in_transit");
-  });
-
-  it("updates tracking number", async () => {
-    const order = await createOrder();
-    const delivery = await db.delivery.create({
-      data: { orderId: order.id, provider: "yalidine", status: "pending" },
-    });
-    const updated = await deliveryService.updateStatus(
-      { prisma: db as never }, delivery.id, "created", "TRK12345",
-    );
-    expect(updated.trackingNumber).toBe("TRK12345");
-  });
-});
+// (Phase 5) deliveryService.create + deliveryService.updateStatus tests
+// removed — the methods were dead production code (only called from this
+// file). The write paths are now covered by:
+//   - src/app/api/__tests__/delivery.test.ts       (POST /api/delivery/create, POST /api/delivery/sync)
+//   - src/app/api/__tests__/delivery-patch.test.ts (PATCH /api/delivery/[id])
 
 describe("deliveryService.listActive", () => {
   it("returns only active (non-terminal) deliveries", async () => {
