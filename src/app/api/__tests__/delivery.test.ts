@@ -39,6 +39,19 @@ vi.mock("@/lib/integrations/delivery", () => ({
   loadDeliveryCredentials: vi.fn().mockResolvedValue({ apiId: "x", apiToken: "y" }),
 }));
 
+
+// Mock the automation dispatcher so orderService.create/updateStatus's
+// fire-and-forget dispatchTrigger('order.created'/'order.{status}') is a no-op.
+// Without this, the dispatch can still be in flight when the next test's
+// cleanDb() runs (or when the next test file starts), causing flaky races
+// with other test files that share the SQLite file (see Phase 3 worklog note
+// on waitForDispatch). No PG1/PG3/PG5 test asserts on automation triggers.
+vi.mock("@/lib/automations/engine", () => ({
+  dispatchTrigger: vi.fn(async () => {}),
+  dispatchLowStock: vi.fn(async () => {}),
+  detectLowStock: vi.fn(async () => null),
+}));
+
 import { POST as POSTCreate } from "@/app/api/delivery/create/route";
 import { POST as POSTSync } from "@/app/api/delivery/sync/route";
 

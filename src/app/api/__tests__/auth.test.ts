@@ -39,6 +39,7 @@ import { POST as POSTSetup } from "@/app/api/auth/setup/route";
 import { POST as POSTLogin } from "@/app/api/auth/login/route";
 import { POST as POSTChangePin } from "@/app/api/auth/change-pin/route";
 import { POST as POSTLogout } from "@/app/api/auth/logout/route";
+import { setupAuth, createSession } from "@/lib/auth/server";
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -201,8 +202,12 @@ describe("auth routes", () => {
     });
 
     it("changes the PIN on correct current PIN (200) + new PIN works for login", async () => {
-      // Setup with PIN "12345678" — cookie is set in the store
-      await POSTSetup(mockPost("http://localhost/api/auth/setup", { pin: "12345678" }));
+      // Setup with PIN "12345678" — call setupAuth directly (bypasses the
+      // POSTSetup route's isAuthSetup() check, which can 409 due to React
+      // cache() returning a stale getAuthSecret result from a prior test).
+      const { secret } = await setupAuth("12345678");
+      process.env.AUTH_SECRET = secret;
+      await createSession("127.0.0.1");
 
       // change-pin: requireAuth passes (cookie present), currentPin matches
       const res = await POSTChangePin(

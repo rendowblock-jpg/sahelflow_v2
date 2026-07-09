@@ -27,6 +27,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { rawDb, cleanDb, mockPost, mockGet, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { db } from "@/lib/db";
 
 // ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
 //    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
@@ -38,6 +39,15 @@ vi.mock("next/headers", () => ({
     set: () => undefined,
     delete: () => undefined,
   })),
+}));
+
+// Mock the automation dispatcher so blacklistCustomer's fire-and-forget
+// dispatchTrigger('customer.blacklisted') is a no-op. Without this, the
+// dispatch can still be in flight when the next test's cleanDb() runs,
+// causing flaky races with other test files that share the SQLite file
+// (see Phase 3 worklog note on waitForDispatch).
+vi.mock("@/lib/automations/engine", () => ({
+  dispatchTrigger: vi.fn(async () => {}),
 }));
 
 import { GET as GETBlacklist, POST as POSTBlacklist } from "@/app/api/risk/blacklist/route";
@@ -75,8 +85,20 @@ async function seedCustomer() {
 /** Seed a real order (for the assess route) — needs customer + product + items. */
 async function seedOrderForAssessment(opts?: { totalPrice?: number }) {
   const product = await seedProduct({ price: 2500 });
-  const customer = await seedCustomer();
-  const order = await rawDb.order.create({
+  // Use db Proxy (not rawDb) for customer + order — the PII extension encrypts
+  // the phone field. rawDb writes plaintext, which the db Proxy can't decrypt
+  // on read → buildAssessmentInputFromOrder returns null → 404.
+  const customer = await db.customer.create({
+    data: {
+      name: "Risk Test Customer",
+      phone: "0770000001",
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue Test",
+    },
+  });
+  const _custCounter = Date.now();
+  const order = await db.order.create({
     data: {
       orderNumber: `ORD-RISK-${_custCounter}`,
       status: "pending",
