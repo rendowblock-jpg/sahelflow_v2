@@ -1,6 +1,5 @@
 import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
 import { generateDailyReport } from "@/lib/reports/daily-report";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
@@ -26,7 +25,8 @@ export const dynamic = "force-dynamic";
  *   - If daily_report_phone is not set → 200 { ok: false, reason: "no phone" }
  *   - If no orders yesterday → 200 { ok: false, reason: "no orders" }
  *   - If WhatsApp sidecar is down → 200 { ok: false, reason: "sidecar unavailable" }
- *     (still creates a Notification so the seller sees the report in-app)
+ *     (Phase 5: the in-app Notification row was removed; the WhatsApp send
+ *     is the persistent record of the report)
  *   - On success → 200 { ok: true, report: {...} }
  *
  * Also accepts GET (same behavior, same auth) for cron services that can't
@@ -51,7 +51,7 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
   }
 
   // 3. Read locale (manual trigger has cookie; cron falls back to default fr)
-  const { t, locale } = await getI18n();
+  const { locale } = await getI18n();
 
   // 4. Generate the report
   const report = await generateDailyReport(locale);
@@ -59,17 +59,10 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "no orders yesterday" });
   }
 
-  // 5. Create an in-app Notification (always — so the report is visible even
-  //    if the WhatsApp send fails)
-  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
-  await db.notification.create({
-    data: {
-      type: "daily_report",
-      title: t("dailyReport.notificationTitle", { date: report.date.toLocaleDateString(localeTag) }),
-      body: t("dailyReport.notificationBody", { count: report.ordersCount, revenue: report.revenue.toLocaleString(localeTag) }),
-      read: false,
-    },
-  });
+  // 5. (Phase 5) In-app Notification row removed — the bell at
+  //    /api/notifications computes fresh from orders/deliveries/products/
+  //    returns, so a persisted daily_report row was never surfaced anyway.
+  //    The WhatsApp send below is the persistent record of the report.
 
   // 6. Send via WhatsApp
   let whatsappSent = false;

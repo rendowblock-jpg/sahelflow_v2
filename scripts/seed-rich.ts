@@ -194,7 +194,6 @@ async function main() {
   await prisma.extractionMetric.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.session.deleteMany();
-  await prisma.notification.deleteMany();
   await prisma.aiChatMessage.deleteMany();
   await prisma.aiChatSession.deleteMany();
   await prisma.returnNote.deleteMany();
@@ -590,20 +589,7 @@ async function main() {
   });
   console.log("  ✅ 1 storefront config (active, 8 products)");
 
-  // ─── Notifications (5) ────────────────────────────────────────────────────
-  const NOTIF_DATA = [
-    { type: "new_order", title: "Nouvelle commande", body: "ORD-0001 — Ahmed Benali — 5300 DA", read: false, daysAgo: 0 },
-    { type: "delivery_update", title: "Livraison mise à jour", body: "Yalidine-00001 — En transit", read: false, daysAgo: 1 },
-    { type: "return_request", title: "Demande de retour", body: "ORD-0015 — Taille ne convient pas", read: true, daysAgo: 2 },
-    { type: "low_stock", title: "Stock faible", body: "Power Bank 20000mAh — 3 unités restantes", read: false, daysAgo: 0 },
-    { type: "daily_report", title: "Rapport quotidien", body: "Hier: 8 commandes, 45000 DA de revenu", read: true, daysAgo: 1 },
-  ];
-  for (const n of NOTIF_DATA) {
-    await prisma.notification.create({
-      data: { type: n.type, title: n.title, body: n.body, read: n.read, createdAt: daysAgo(n.daysAgo) },
-    });
-  }
-  console.log(`  ✅ ${NOTIF_DATA.length} notifications`);
+  // ─── Notifications — removed in Phase 5 (table dropped; the bell computes fresh).
 
   // ─── Automations (3) ──────────────────────────────────────────────────────
   const AUTOMATIONS = [

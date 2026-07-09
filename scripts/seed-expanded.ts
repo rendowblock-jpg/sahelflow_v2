@@ -147,7 +147,6 @@ async function main() {
   console.log("🌱 Seeding expanded dev database...");
 
   // Clean existing data (order matters for FK constraints)
-  await prisma.notification.deleteMany();
   await prisma.aiChatMessage.deleteMany();
   await prisma.aiChatSession.deleteMany();
   await prisma.returnNote.deleteMany();

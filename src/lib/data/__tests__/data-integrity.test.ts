@@ -180,7 +180,6 @@ async function cleanAll() {
     rawDb.counter.deleteMany(),
     rawDb.setting.deleteMany(),
     rawDb.authSecret.deleteMany(),
-    rawDb.notification.deleteMany(),
     rawDb.storefrontConfig.deleteMany(),
     rawDb.whatsAppTemplate.deleteMany(),
     rawDb.integration.deleteMany(),

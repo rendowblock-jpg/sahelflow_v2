@@ -467,19 +467,10 @@ model Secret {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NOTIFICATIONS
+// NOTIFICATIONS — dropped in Phase 5 (the bell at /api/notifications computes
+// fresh from orders/deliveries/products/returns; "mark as read" was low-value
+// for a COD seller). See prisma/migrations/20260707000000_drop_orphaned_tables.
 // ─────────────────────────────────────────────────────────────────────────────
-
-model Notification {
-  id        String   @id @default(cuid())
-  type      String
-  title     String
-  body      String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@index([read, createdAt])
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WILAYA RISK PROFILES (reference data, loaded from data/wilayas.json on init)
