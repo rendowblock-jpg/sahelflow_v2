@@ -46,7 +46,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     await tx.aiChatMessage.deleteMany({});
     await tx.aiChatSession.deleteMany({});
     await tx.extractionMetric.deleteMany({});
-    await tx.dailyAnalyticsReport.deleteMany({});
     await tx.auditLog.deleteMany({});
     // Settings — clear business settings but KEEP auth/license/integration creds
     const protectedKeys = [

@@ -343,18 +343,8 @@ model Expense {
   @@index([deletedAt])
 }
 
-model DailyAnalyticsReport {
-  id             String   @id @default(cuid())
-  date           DateTime @unique
-  ordersCount    Int
-  revenue        Int
-  confirmedCount Int
-  deliveredCount Int
-  returnedCount  Int
-  expenses       Int
-  netProfit      Int
-  createdAt      DateTime @default(now())
-}
+// DailyAnalyticsReport — dropped in Phase 5 (declared in schema but never
+// written to in src/). See prisma/migrations/20260707000000_drop_orphaned_tables.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTOMATION
