@@ -39,6 +39,7 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   // lets anyone scan it during the pairing window and hijack the WhatsApp
   // account. The route now calls requireAuth() (defense-in-depth) and is
   // enforced by proxy.ts middleware.
+  "/api/reports/daily", // B7: cron-triggered daily WhatsApp report — self-protects via verifyCronSecret (x-cron-secret header)
 ];
 
 /** Public pages — accessible without authentication. */
@@ -46,6 +47,7 @@ export const PUBLIC_PAGES: readonly string[] = [
   "/login",
   "/setup",
   "/storefront",
+  "/api/reports/daily", // B7: cron-triggered daily WhatsApp report — self-protects via verifyCronSecret (x-cron-secret header)
 ];
 
 /**
