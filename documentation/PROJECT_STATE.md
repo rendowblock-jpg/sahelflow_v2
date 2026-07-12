@@ -4,7 +4,7 @@
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
 **Last updated:** 2026-07-12 (Session 39 COMPLETE — Wave 2 + Wave 3 of full-depth audit executed to completion. 35 items across 8 layers, 1502 tests green, `bun run build` exits 0, 1 new migration)
-**Main HEAD:** `b7941cd`
+**Main HEAD:** `9804bbb` (code HEAD — Session 39 Wave 2+3; docs commits d7e484c on top)
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
