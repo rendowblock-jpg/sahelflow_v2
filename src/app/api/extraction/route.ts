@@ -8,7 +8,7 @@ import { getSecret } from "@/lib/secrets";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -70,8 +70,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Gemini free-tier in seconds.
   // Use a synthetic session key for the per-session bucket (the extraction
   // route has no sessionId; the user-key bucket is the real protection).
+  // W3-19: pass the user's auth key (was: omitted → defaulted to "default",
+  // so ALL users shared a single daily bucket, defeating the per-user cap).
+  // Now each authenticated user gets their own 100/day bucket, matching
+  // the chat routes' behavior.
   const extractionSessionKey = `extraction:${input.messageId ?? "anonymous"}`;
-  const rl = checkRateLimit(extractionSessionKey);
+  const userKey = await getCurrentUserKey();
+  const rl = checkRateLimit(extractionSessionKey, userKey);
   if (!rl.allowed) {
     return NextResponse.json(
       { error: rl.reason ?? "Rate limited" },

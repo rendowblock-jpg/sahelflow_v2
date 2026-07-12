@@ -278,6 +278,49 @@ describe("WooCommerce adapter", () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
+    it("W3-7: caps 429 retries at 5 then throws (infinite-loop guard)", async () => {
+      // Mock a permanently-429'ing host (no Retry-After → exponential
+      // backoff path). Without the cap, this loop would run forever.
+      mockFetch.mockResolvedValue(
+        res("rate limited", { status: 429 }),
+      );
+
+      // Speed up the test by stubbing setTimeout to resolve immediately.
+      vi.spyOn(global, "setTimeout").mockImplementation((cb: TimerHandler) => {
+        // Fire the timer synchronously so the test doesn't take ~62s.
+        queueMicrotask(() => (cb as () => void)());
+        return 0 as unknown as NodeJS.Timeout;
+      });
+
+      try {
+        await expect(
+          woocommerceAdapter.listOrdersSince(creds, ""),
+        ).rejects.toThrow(/rate-limited.*429.*after 5 retries/);
+        // 1 initial attempt + 5 retries = 6 total fetch calls before the throw.
+        expect(mockFetch).toHaveBeenCalledTimes(6);
+      } finally {
+        vi.restoreAllMocks();
+      }
+    });
+
+    it("W3-7: resets the per-page retry counter after a successful page", async () => {
+      // Page 1: 429 once, then success (full 100-item page → advances).
+      // Page 2: 429 once, then success. Without the per-page reset, the
+      // second 429 would be retry #2 of the SAME counter and the cap (5)
+      // would be hit prematurely across pages.
+      const fullPage = Array.from({ length: 100 }, (_, i) =>
+        sampleOrder({ id: 1000 + i, number: String(1000 + i) }),
+      );
+      mockFetch.mockResolvedValueOnce(res("rate limited", { status: 429, headers: { "Retry-After": "0" } }));
+      mockFetch.mockResolvedValueOnce(res(fullPage, { headers: { "X-WP-TotalPages": "2" } }));
+      mockFetch.mockResolvedValueOnce(res("rate limited", { status: 429, headers: { "Retry-After": "0" } }));
+      mockFetch.mockResolvedValueOnce(res([sampleOrder({ id: 2002, number: "2002" })], { headers: { "X-WP-TotalPages": "2" } }));
+
+      const result = await woocommerceAdapter.listOrdersSince(creds, "", 2);
+      expect(result.orders).toHaveLength(101); // 100 + 1
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
+
     it("throws on non-OK HTTP status", async () => {
       mockFetch.mockResolvedValueOnce(res("Server error", { status: 500 }));
       await expect(woocommerceAdapter.listOrdersSince(creds, "")).rejects.toThrow("WooCommerce API 500");

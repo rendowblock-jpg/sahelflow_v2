@@ -89,7 +89,9 @@ registerTool({
 
 // ── Tool 20: update_product_price ───────────────────────────────────────────
 
-const updateProductPriceSchema = z.object({
+// W3-21: exported for the schema-drift test (verifies the zod schema matches
+// the hand-written JSON schema sent to Gemini).
+export const updateProductPriceSchema = z.object({
   productId: z.string(),
   newPrice: z.number().int().min(0),
 });
@@ -98,6 +100,8 @@ registerTool({
   definition: {
     name: "update_product_price",
     description: "Update a product's selling price. Useful for promotions or price adjustments.",
+    // W2-3: structural confirmation gate — see agent.ts.
+    requiresConfirmation: true,
     parameters: {
       type: "object",
       properties: {

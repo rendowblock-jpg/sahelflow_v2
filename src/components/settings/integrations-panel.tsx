@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, CheckCircle2, Plug, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle2, Plug, ExternalLink, FlaskConical } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 import {
@@ -42,6 +42,11 @@ interface Integration {
   connectLabel: string;
   connectUrl?: string;
   docsUrl?: string;
+  /**
+   * W2-10: marks adapters whose endpoints are unverified guesses
+   * (DHD today). The card shows an amber "Experimental" badge.
+   */
+  isExperimental?: boolean;
   /** Fields needed to connect (for the dialog) */
   fields?: Array<{ key: string; label: string; type: "text" | "password"; placeholder?: string }>;
   /** API endpoint to save credentials (POST with JSON body) */
@@ -58,6 +63,8 @@ export function IntegrationsPanel({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // W2-10: track "Test connection" loading state per integration id.
+  const [testing, setTesting] = useState<string | null>(null);
 
   const integrationList: Integration[] = [
     // E-commerce
@@ -73,7 +80,7 @@ export function IntegrationsPanel({
       connectLabel: t("integrations.connect"),
       docsUrl: "https://partners.youcan.shop",
       fields: [
-        { key: "accessToken", label: "Access Token", type: "password", placeholder: "yc_..." },
+        { key: "accessToken", label: t("integrations.field.accessToken"), type: "password", placeholder: t("integrations.placeholder.youcanToken") },
       ],
       saveEndpoint: "/api/integrations/connect",
     },
@@ -88,8 +95,8 @@ export function IntegrationsPanel({
       connected: integrations.some((i) => i.platform === "shopify" && i.status === "active"),
       connectLabel: t("integrations.connect"),
       fields: [
-        { key: "shopDomain", label: "Shop Domain", type: "text", placeholder: "my-store.myshopify.com" },
-        { key: "accessToken", label: "Access Token", type: "password", placeholder: "shpat_..." },
+        { key: "shopDomain", label: t("integrations.field.shopDomain"), type: "text", placeholder: t("integrations.placeholder.shopifyDomain") },
+        { key: "accessToken", label: t("integrations.field.accessToken"), type: "password", placeholder: t("integrations.placeholder.shopifyToken") },
       ],
       saveEndpoint: "/api/integrations/connect",
     },
@@ -104,9 +111,9 @@ export function IntegrationsPanel({
       connected: integrations.some((i) => i.platform === "woocommerce" && i.status === "active"),
       connectLabel: t("integrations.connect"),
       fields: [
-        { key: "siteUrl", label: "Site URL", type: "text", placeholder: "https://my-store.com" },
-        { key: "consumerKey", label: "Consumer Key", type: "text", placeholder: "ck_..." },
-        { key: "consumerSecret", label: "Consumer Secret", type: "password", placeholder: "cs_..." },
+        { key: "siteUrl", label: t("integrations.field.siteUrl"), type: "text", placeholder: t("integrations.placeholder.wooSiteUrl") },
+        { key: "consumerKey", label: t("integrations.field.consumerKey"), type: "text", placeholder: t("integrations.placeholder.wooConsumerKey") },
+        { key: "consumerSecret", label: t("integrations.field.consumerSecret"), type: "password", placeholder: t("integrations.placeholder.wooConsumerSecret") },
       ],
       saveEndpoint: "/api/integrations/connect",
     },
@@ -121,8 +128,12 @@ export function IntegrationsPanel({
       iconColor: "text-rose-600 dark:text-rose-400",
       connected: false, // checked via delivery credentials API
       connectLabel: t("integrations.connect"),
+      // W2-10: DHD has no public API docs — endpoints are guesses. The card
+      // shows an amber "Experimental" badge so sellers know to verify before
+      // relying on the adapter. See src/lib/integrations/delivery/dhd.ts.
+      isExperimental: true,
       fields: [
-        { key: "apiToken", label: "API Token", type: "password", placeholder: "Enter DHD API token" },
+        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.dhdToken") },
       ],
       saveEndpoint: "/api/delivery/credentials",
     },
@@ -137,8 +148,8 @@ export function IntegrationsPanel({
       connected: false,
       connectLabel: t("integrations.connect"),
       fields: [
-        { key: "apiId", label: "API ID", type: "text", placeholder: "ZR Express API ID" },
-        { key: "apiKey", label: "API Key", type: "password", placeholder: "ZR Express API Key" },
+        { key: "apiId", label: t("integrations.field.apiId"), type: "text", placeholder: t("integrations.placeholder.zrApiId") },
+        { key: "apiKey", label: t("integrations.field.apiKey"), type: "password", placeholder: t("integrations.placeholder.zrApiKey") },
       ],
       saveEndpoint: "/api/delivery/credentials",
     },
@@ -153,8 +164,8 @@ export function IntegrationsPanel({
       connected: false,
       connectLabel: t("integrations.connect"),
       fields: [
-        { key: "apiId", label: "API ID", type: "text", placeholder: "Yalidine API ID" },
-        { key: "apiToken", label: "API Token", type: "password", placeholder: "Yalidine API Token" },
+        { key: "apiId", label: t("integrations.field.apiId"), type: "text", placeholder: t("integrations.placeholder.yalidineApiId") },
+        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.yalidineApiToken") },
       ],
       saveEndpoint: "/api/delivery/credentials",
     },
@@ -169,7 +180,7 @@ export function IntegrationsPanel({
       connected: false,
       connectLabel: t("integrations.connect"),
       fields: [
-        { key: "apiToken", label: "API Token", type: "password", placeholder: "Maystro API Token" },
+        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.maystroApiToken") },
       ],
       saveEndpoint: "/api/delivery/credentials",
     },
@@ -285,6 +296,36 @@ export function IntegrationsPanel({
     }
   };
 
+  // W2-10: "Test connection" — calls POST /api/delivery/test-connection to
+  // validate a delivery provider's credentials without creating a shipment.
+  // Currently only DHD implements testConnection; the route returns a
+  // friendly "not implemented yet" message for the other providers.
+  const handleTestConnection = async (integration: Integration) => {
+    setTesting(integration.id);
+    try {
+      const res = await fetch("/api/delivery/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: integration.id }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; error?: string }
+        | null;
+      const message = data?.message ?? data?.error ?? t("integrations.testFailed");
+      if (res.ok && data?.ok) {
+        toast.success(t("integrations.testSuccess"), { description: message });
+      } else {
+        toast.error(t("integrations.testFailed"), { description: message });
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : t("integrations.testFailed"),
+      );
+    } finally {
+      setTesting(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -314,6 +355,9 @@ export function IntegrationsPanel({
             <div className="grid gap-3 sm:grid-cols-2">
               {items.map((integration) => {
                 const Icon = integration.icon;
+                // W2-10: delivery cards get a "Test connection" button.
+                const isDelivery = integration.saveEndpoint === "/api/delivery/credentials";
+                const isTesting = testing === integration.id;
                 return (
                   <Card key={integration.id} className="shadow-xs hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
                     <CardContent className="p-4">
@@ -322,8 +366,18 @@ export function IntegrationsPanel({
                           <Icon className={`h-5 w-5 ${integration.iconColor}`} />
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium text-sm">{integration.name}</p>
+                            {integration.isExperimental && (
+                              <Badge
+                                variant="outline"
+                                className="text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/10 text-xs px-1.5"
+                                title={t("integrations.experimentalHint")}
+                              >
+                                <FlaskConical className="me-1 h-3 w-3" />
+                                {t("integrations.experimental")}
+                              </Badge>
+                            )}
                             {integration.connected && (
                               <Badge variant="outline" className="text-success border-emerald-500/20 text-xs px-1.5">
                                 <CheckCircle2 className="me-1 h-3 w-3" />
@@ -334,7 +388,7 @@ export function IntegrationsPanel({
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                             {integration.description}
                           </p>
-                          <div className="flex items-center gap-2 mt-3">
+                          <div className="flex items-center gap-2 mt-3 flex-wrap">
                             <Button
                               size="sm"
                               variant={integration.connected ? "outline" : "default"}
@@ -344,6 +398,20 @@ export function IntegrationsPanel({
                               {!integration.connected && <Plug className="me-1.5 h-3.5 w-3.5" />}
                               {integration.connected ? t("integrations.connected") : integration.connectLabel}
                             </Button>
+                            {isDelivery && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleTestConnection(integration)}
+                                disabled={isTesting}
+                                title={t("integrations.testConnectionHint")}
+                              >
+                                {isTesting ? (
+                                  <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
+                                ) : null}
+                                {isTesting ? t("integrations.testing") : t("integrations.testConnection")}
+                              </Button>
+                            )}
                             {integration.docsUrl && (
                               <Button size="sm" variant="ghost" asChild>
                                 <a href={integration.docsUrl} target="_blank" rel="noopener noreferrer">

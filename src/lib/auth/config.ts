@@ -11,18 +11,18 @@ export const AUTH_PIN_SETTING_KEY = "auth_pin_hash";
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Public API route PREFIXES — these do NOT require authentication.
+ * Public API routes — these do NOT require authentication.
  *
- * SECURITY: Each prefix must be as NARROW as possible to avoid accidentally
- * exposing protected mutations. The previous list had `/api/storefront/config`
- * as a prefix, which matched ALL methods (GET + POST + PUT + DELETE) on
- * `/api/storefront/config/*` — allowing anyone to create/modify/delete
- * storefronts. Now we only expose the specific public paths.
+ * SECURITY (W3-15): Each entry is treated as EITHER an exact match OR a
+ * prefix match anchored on "/". The previous matcher used bare `startsWith`,
+ * which let `/api/auth` match `/api/authors` (false-positive public route =
+ * auth bypass). Now `/api/auth` matches `/api/auth` and `/api/auth/login`
+ * but NOT `/api/authors`; `/api/health` matches `/api/health` but NOT
+ * `/api/healthcheck`.
  *
  * - /api/auth/* — login, logout, setup, status (obviously)
  * - /api/health — health check (used by Tauri to verify the server is up)
  * - /api/storefront/submit — public COD checkout (customers place orders)
- * - /api/storefront/config/[slug] GET — public storefront config (renders the page)
  * - (none — /api/whatsapp/qr-image was removed in A-S1; it now requires auth)
  */
 export const PUBLIC_API_ROUTES: readonly string[] = [
@@ -53,12 +53,19 @@ export const PUBLIC_PAGES: readonly string[] = [
 /**
  * Check if a pathname is a public API route (no auth required).
  *
- * SECURITY: Uses startsWith for prefix matching. Each prefix must be as
- * narrow as possible. Storefront config API routes are NOT public — the
- * public storefront page reads config via the service directly (SEC-003).
+ * SECURITY (W3-15): Two-stage match —
+ *   1. Exact equality (e.g. `/api/health` matches `/api/health`).
+ *   2. Prefix match anchored on "/" — `route + "/"` is a prefix of the
+ *      pathname (e.g. `/api/auth/` matches `/api/auth/login` but NOT
+ *      `/api/authors`).
+ *
+ * Storefront config API routes are NOT public — the public storefront page
+ * reads config via the service directly (SEC-003).
  */
 export function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some((route) => pathname.startsWith(route));
+  return PUBLIC_API_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
 }
 
 /**

@@ -13,7 +13,7 @@
  *
  * The submit logic (create customer → create order → navigate) is preserved.
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,9 +25,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Loader2, AlertTriangle } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
@@ -39,6 +42,7 @@ import { toast } from "@/lib/toast";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
+import type { RiskAssessment } from "@/lib/risk-engine/types";
 
 interface Customer {
   id: string; name: string; phone: string;
@@ -62,6 +66,15 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const { format: formatPhone } = usePhoneMask();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  // W3-4 (task 2-g): HIGH-risk confirmation state. When non-null, an
+  // AlertDialog renders with the assessment breakdown + Proceed/Cancel.
+  const [riskWarning, setRiskWarning] = useState<{
+    assessment: RiskAssessment;
+    data: OrderFormValues;
+  } | null>(null);
+  // W3-4: skip the risk check on re-submission after the seller confirms.
+  // Reset to false after the order is successfully created.
+  const skipRiskCheckRef = useRef(false);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -158,68 +171,150 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   async function onSubmit(data: OrderFormValues) {
     setLoading(true);
     try {
-      let finalCustomerId = data.customerId;
-      if (data.isNewCustomer) {
-        const custRes = await fetch("/api/customers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: data.newCustomerName,
-            phone: data.phone,
-            wilaya: data.wilaya,
-            commune: data.commune,
-            address: data.address,
-          }),
-        });
-        if (!custRes.ok) {
-          const err = await custRes.json().catch(() => ({}));
-          toast.error(translateServerError(err.error?.message ?? err.error, t, t("orders.form.errorCreatingCustomer")));
+      // ── W3-4 (task 2-g): pre-create risk check ──────────────────────────
+      // Before creating the order, call /api/risk/assess-pre-create with the
+      // form data. If the risk score is HIGH (>70), show a confirmation
+      // dialog with the risk breakdown. The seller can proceed anyway (it's
+      // a warning, not a block) or cancel to edit the form.
+      //
+      // skipRiskCheckRef is set to true when the seller clicks "Proceed
+      // anyway" in the risk dialog — we then re-call onSubmit and skip the
+      // check to avoid an infinite loop. The ref is reset after the order
+      // is created (so the next order gets a fresh risk check).
+      if (!skipRiskCheckRef.current) {
+        const assessment = await checkPreCreateRisk(data);
+        if (assessment && assessment.score > 70) {
+          setRiskWarning({ assessment, data });
           setLoading(false);
           return;
         }
-        const custData = await custRes.json();
-        finalCustomerId = custData.customer.id;
       }
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: finalCustomerId,
-          items: data.items.map((i) => ({
-            productId: i.productId,
-            productName: i.productName,
-            productVariantId: i.productVariantId,
-            productVariantName: i.productVariantName,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-          })),
-          wilaya: data.wilaya,
-          commune: data.commune,
-          address: data.address,
-          phone: data.phone,
-          source: "manual",
-          deliveryCost: data.deliveryCost ?? 600,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error?.message ?? errData.error ?? t("orders.form.createFailed"));
-      }
-
-      const { order } = await res.json();
-      setOpen(false);
-      form.reset();
-      clearFormDraft(DRAFT_KEY);
-      await mutatePrefix("/api/orders");
-      toast.success(t("orders.orderCreated"));
-      router.push(`/orders/${order.id}`);
+      await createOrder(data);
+      // Reset the skip flag after successful creation — next order gets a
+      // fresh risk check.
+      skipRiskCheckRef.current = false;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("orders.form.createFailed"));
     } finally {
       setLoading(false);
     }
+  }
+
+  /**
+   * W3-4 (task 2-g): call the pre-create risk endpoint. Returns the
+   * assessment, or null if the check failed (network error, 500, etc.).
+   *
+   * On failure, we proceed with order creation — risk is a WARNING, not a
+   * gate. A risk-check API outage should NOT block all order creation.
+   */
+  async function checkPreCreateRisk(data: OrderFormValues): Promise<RiskAssessment | null> {
+    try {
+      const res = await fetch("/api/risk/assess-pre-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: data.phone,
+          wilaya: data.wilaya,
+          commune: data.commune,
+          address: data.address,
+          totalPrice: total,
+          source: "manual",
+          items: data.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          })),
+        }),
+      });
+      if (!res.ok) return null;
+      const { assessment } = (await res.json()) as { assessment: RiskAssessment };
+      return assessment;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * W3-4 (task 2-g): proceed with order creation after the seller confirms
+   * the HIGH-risk warning. Sets skipRiskCheckRef so the re-submission
+   * doesn't re-trigger the risk check.
+   */
+  async function proceedWithCreate() {
+    if (!riskWarning) return;
+    const { data } = riskWarning;
+    setRiskWarning(null);
+    skipRiskCheckRef.current = true;
+    await onSubmit(data);
+  }
+
+  /** W3-4: cancel the risk warning — return to the form for editing. */
+  function cancelRiskWarning() {
+    setRiskWarning(null);
+    // skipRiskCheckRef is NOT set — the next submit will re-check.
+  }
+
+  /**
+   * Create the customer (if new) + the order. Extracted from onSubmit so
+   * the risk-check flow can call it directly after confirmation.
+   */
+  async function createOrder(data: OrderFormValues) {
+    let finalCustomerId = data.customerId;
+    if (data.isNewCustomer) {
+      const custRes = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.newCustomerName,
+          phone: data.phone,
+          wilaya: data.wilaya,
+          commune: data.commune,
+          address: data.address,
+        }),
+      });
+      if (!custRes.ok) {
+        const err = await custRes.json().catch(() => ({}));
+        toast.error(translateServerError(err.error?.message ?? err.error, t, t("orders.form.errorCreatingCustomer")));
+        return;
+      }
+      const custData = await custRes.json();
+      finalCustomerId = custData.customer.id;
+    }
+
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerId: finalCustomerId,
+        items: data.items.map((i) => ({
+          productId: i.productId,
+          productName: i.productName,
+          productVariantId: i.productVariantId,
+          productVariantName: i.productVariantName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        wilaya: data.wilaya,
+        commune: data.commune,
+        address: data.address,
+        phone: data.phone,
+        source: "manual",
+        deliveryCost: data.deliveryCost ?? 600,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error?.message ?? errData.error ?? t("orders.form.createFailed"));
+    }
+
+    const { order } = await res.json();
+    setOpen(false);
+    form.reset();
+    clearFormDraft(DRAFT_KEY);
+    await mutatePrefix("/api/orders");
+    toast.success(t("orders.orderCreated"));
+    router.push(`/orders/${order.id}`);
   }
 
   const handleSubmit = form.handleSubmit(onSubmit as never);
@@ -440,6 +535,80 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* W3-4 (task 2-g): HIGH-risk pre-create confirmation dialog.
+          Renders when `riskWarning` is set (i.e. the pre-create risk check
+          returned score > 70). The seller can proceed anyway (warning, not
+          a block) or cancel to edit the form. */}
+      <AlertDialog
+        open={riskWarning !== null}
+        onOpenChange={(open) => {
+          if (!open) cancelRiskWarning();
+        }}
+      >
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" aria-hidden="true" />
+              {t("orders.form.riskWarningTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              {/* asChild so we can render block-level content (the factor
+                  list) inside the description — Radix's default is a <p>
+                  which would nest <div>/<ul> illegally. */}
+              <div className="space-y-3 text-sm">
+                <p>
+                  {t("orders.form.riskWarningBody", {
+                    score: riskWarning?.assessment.score ?? 0,
+                    level: riskWarning?.assessment.level ?? "high",
+                  })}
+                </p>
+                {riskWarning && riskWarning.assessment.factors.length > 0 && (
+                  <ul className="space-y-1 rounded-md bg-muted p-3 text-xs">
+                    {riskWarning.assessment.factors
+                      .filter((f) => f.direction === "risk" && f.points > 0)
+                      .sort((a, b) => b.points - a.points)
+                      .slice(0, 5)
+                      .map((f) => (
+                        <li key={f.id} className="flex items-start gap-2">
+                          <span className="font-mono text-amber-600 dark:text-amber-400">
+                            +{f.points}
+                          </span>
+                          <span>{f.explanation}</span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+                <p className="text-muted-foreground">
+                  {t("orders.form.riskWarningHint")}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelRiskWarning} disabled={loading}>
+              {t("orders.form.riskWarningCancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault(); // don't auto-close — let proceedWithCreate drive state
+                void proceedWithCreate();
+              }}
+              disabled={loading}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
+                  {t("orders.form.creating")}
+                </>
+              ) : (
+                t("orders.form.riskWarningProceed")
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FormProvider>
   );
 }

@@ -47,6 +47,27 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
+// Mock the automation dispatcher so orderService.updateStatus's fire-and-forget
+// dispatchTrigger('order.confirmed'/'order.shipped'/'order.delivered'/'order.returned')
+// is a no-op. Without this, the dispatch can still be in flight when the next
+// test's disconnectTestPrisma() runs (or when the next test file starts),
+// causing flaky races with other test files that share the SQLite file
+// (see Phase 3 worklog note on waitForDispatch).
+//
+// detectLowStock + dispatchLowStock are also mocked because orderService imports
+// them from the same module and vi.mock replaces the whole module — leaving
+// them undefined would crash on the awaited detectLowStock call inside the
+// `confirmed` transition (stock-check branch). Mirrors the pattern documented
+// at src/app/api/__tests__/orders.test.ts:40-44 (W2-7).
+//
+// No assertion in this test file checks that a trigger fired — all assertions
+// are on DB state (stock, customer stats, refund rows, order.status).
+vi.mock("@/lib/automations/engine", () => ({
+  dispatchTrigger: vi.fn(async () => {}),
+  dispatchLowStock: vi.fn(async () => {}),
+  detectLowStock: vi.fn(async () => null),
+}));
+
 import { PATCH as patchReturn } from "@/app/api/returns/[id]/route";
 import { mockPost } from "@/app/api/__tests__/helpers";
 

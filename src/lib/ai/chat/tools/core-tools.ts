@@ -179,7 +179,9 @@ registerTool({
 
 // ── Tool 3: create_order ────────────────────────────────────────────────────
 
-const createOrderSchema = z.object({
+// W3-21: exported for the schema-drift test (verifies the zod schema matches
+// the hand-written JSON schema sent to Gemini).
+export const createOrderSchema = z.object({
   customerId: z.string().describe("Existing customer ID"),
   items: z.array(z.object({
     productId: z.string(),
@@ -196,6 +198,9 @@ registerTool({
   definition: {
     name: "create_order",
     description: "Create a new order for an existing customer. Items reference product IDs. Returns the created order.",
+    // W2-3: structural confirmation gate — see agent.ts. A prompt-injected
+    // WhatsApp message cannot bypass this by impersonating the system prompt.
+    requiresConfirmation: true,
     parameters: {
       type: "object",
       properties: {

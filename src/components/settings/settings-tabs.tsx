@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
+import { isRTL } from "@/lib/i18n";
 import { LicensePanel } from "@/components/settings/license-panel";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
@@ -37,7 +38,8 @@ export function SettingsTabs({
 }: {
   integrations: Array<{ platform: string; status: string }>;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const rtl = isRTL(locale);
   const [active, setActive] = useState<Tab>("license");
   const tabListRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +61,11 @@ export function SettingsTabs({
                 if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
                   e.preventDefault();
                   const idx = TABS.findIndex((x) => x.id === active);
-                  const dir = e.key === "ArrowRight" ? 1 : -1;
+                  // W3-17: In RTL, ArrowRight should go to the PREVIOUS tab
+                  // (right→left reading order) and ArrowLeft to the NEXT tab.
+                  // In LTR, the standard direction applies (Right→next, Left→prev).
+                  const rawDir = e.key === "ArrowRight" ? 1 : -1;
+                  const dir = rtl ? -rawDir : rawDir;
                   const next = TABS[(idx + dir + TABS.length) % TABS.length];
                   if (next) setActive(next.id);
                 }

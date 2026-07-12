@@ -1,11 +1,28 @@
 import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
+import { db } from "@/lib/db";
 import { generateDailyReport } from "@/lib/reports/daily-report";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { getI18n } from "@/lib/i18n-server";
+
+/** Setting key for the daily-report idempotency guard (W2-9).
+ *  Stores the last Algiers-local date (YYYY-MM-DD) on which the report
+ *  was successfully sent. The cron route skips re-sending when this
+ *  matches today's Algiers date. */
+const DAILY_REPORT_LAST_SENT_KEY = "daily_report_last_sent_at";
+
+/** Format a Date as the Algiers-local calendar date "YYYY-MM-DD". */
+function getAlgiersTodayDate(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Algiers",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +67,18 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "no phone configured" });
   }
 
+  // W2-9 (idempotency): if the report was already sent today (Algiers
+  // local date), skip. This prevents duplicate reports when the cron
+  // fires multiple times in a day (e.g. cron-job.org retry, manual
+  // trigger + scheduled cron, clock drift). The check uses the Algiers
+  // calendar date so a UTC-server cron firing at 23:30 UTC = 00:30
+  // Algiers next day correctly rolls over to the new day.
+  const todayAlgiers = getAlgiersTodayDate();
+  const lastSent = await getSetting(DAILY_REPORT_LAST_SENT_KEY);
+  if (lastSent === todayAlgiers) {
+    return NextResponse.json({ ok: true, skipped: "already sent today" });
+  }
+
   // 3. Read locale (manual trigger has cookie; cron falls back to default fr)
   const { locale } = await getI18n();
 
@@ -72,6 +101,25 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
     whatsappSent = result.ok !== false;
   } catch (err) {
     whatsappError = err instanceof Error ? err.message : "Send failed";
+  }
+
+  // W2-9 (idempotency): only mark as sent when the WhatsApp send
+  // actually succeeded. If it failed, leave last_sent_at unset so the
+  // next cron tick can retry. (If the sidecar is down for an entire
+  // day, the seller misses that day's report — preferable to silently
+  // marking it as sent and never retrying.)
+  if (whatsappSent) {
+    try {
+      await db.setting.upsert({
+        where: { key: DAILY_REPORT_LAST_SENT_KEY },
+        create: { key: DAILY_REPORT_LAST_SENT_KEY, value: todayAlgiers },
+        update: { value: todayAlgiers },
+      });
+    } catch {
+      // Non-fatal — the report was sent; we just couldn't persist the
+      // idempotency marker. The next cron tick may re-send (duplicate
+      // report), which is a minor UX issue, not a data-loss issue.
+    }
   }
 
   return NextResponse.json({

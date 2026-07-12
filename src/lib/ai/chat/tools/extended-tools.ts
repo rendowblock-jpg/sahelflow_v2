@@ -628,7 +628,9 @@ registerTool({
 
 // ── Tool 16: update_product_stock ───────────────────────────────────────────
 
-const updateProductStockSchema = z.object({
+// W3-21: exported for the schema-drift test (verifies the zod schema matches
+// the hand-written JSON schema sent to Gemini).
+export const updateProductStockSchema = z.object({
   productId: z.string().describe("The product ID (cuid)"),
   newStock: z.number().int().min(0).describe("The new stock value"),
   reason: z.string().optional().describe("Optional reason for the adjustment"),
@@ -639,6 +641,8 @@ registerTool({
     name: "update_product_stock",
     description:
       "Update a product's stock to a new value. Use for manual corrections (damaged goods, miscounts, restocks).",
+    // W2-3: structural confirmation gate — see agent.ts.
+    requiresConfirmation: true,
     parameters: {
       type: "object",
       properties: {
@@ -700,7 +704,9 @@ registerTool({
 
 // ── Tool 17: cancel_order ───────────────────────────────────────────────────
 
-const cancelOrderSchema = z.object({
+// W3-21: exported for the schema-drift test (verifies the zod schema matches
+// the hand-written JSON schema sent to Gemini).
+export const cancelOrderSchema = z.object({
   orderNumber: z.string().describe("The order number to cancel"),
   reason: z.string().optional().describe("Reason for cancellation"),
 });
@@ -710,6 +716,8 @@ registerTool({
     name: "cancel_order",
     description:
       "Cancel an order by order number. Only works for orders in draft, pending, or confirmed status (not shipped/delivered). The reason is saved to the order notes.",
+    // W2-3: structural confirmation gate — see agent.ts.
+    requiresConfirmation: true,
     parameters: {
       type: "object",
       properties: {

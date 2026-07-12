@@ -30,7 +30,20 @@ export interface OrderChangeEntry {
   tx?: DbOrTx;
 }
 
-/** Record an order change (append-only). Best-effort — never throws. */
+/** Record an order change (append-only). Best-effort — never throws.
+ *
+ *  W3-23 (Session 39): this is the fire-and-forget variant for post-transaction
+ *  use (the business operation already succeeded; the ledger entry is for
+ *  audit/timeline, not for transactional integrity). Failures are now LOGGED
+ *  via `console.error` instead of silently swallowed — a DB-down or schema-
+ *  mismatch issue that drops ledger entries will at least leave a trace in
+ *  the server logs.
+ *
+ *  For use INSIDE a Prisma `$transaction` (where the ledger entry MUST
+ *  participate atomically in the caller's tx — if the ledger write fails,
+ *  the whole tx should roll back), use `recordOrderChangeInTx` instead.
+ *  That variant does NOT catch errors.
+ */
 export async function recordOrderChange(entry: OrderChangeEntry): Promise<void> {
   try {
     const client = entry.tx ?? db;
@@ -44,10 +57,61 @@ export async function recordOrderChange(entry: OrderChangeEntry): Promise<void> 
         payload: entry.payload ? JSON.stringify(redactPii(entry.payload)) : null,
       },
     });
-  } catch {
-    // Best-effort: the business operation already succeeded; the ledger
-    // entry is for audit/timeline, not for transactional integrity.
+  } catch (err) {
+    // W3-23: log the error so failures are at least visible in the server
+    // logs. The business operation already succeeded; the ledger entry is
+    // for audit/timeline, not for transactional integrity — so we still
+    // swallow the error (don't crash the caller). But silent swallowing
+    // made DB-down + schema-mismatch issues invisible.
+    console.error(
+      "[recordOrderChange] failed to write ledger entry:",
+      {
+        orderId: entry.orderId,
+        actionType: entry.actionType,
+        actor: entry.actor,
+      },
+      err,
+    );
   }
+}
+
+/**
+ * Record an order change INSIDE a Prisma `$transaction` (W3-23, Session 39).
+ *
+ * Unlike `recordOrderChange`, this variant does NOT catch errors — if the
+ * ledger write fails, the error propagates and the caller's `$transaction`
+ * rolls back. This ensures the ledger entry is atomic with the business
+ * operation (no orphan mutations without a ledger record).
+ *
+ * Use this when the ledger entry is part of the transaction's correctness
+ * guarantee (e.g. `createRefund` writes a `refund` ledger entry in the same
+ * tx as the Refund row — if the ledger write fails, the refund should roll
+ * back too, not leave a Refund row with no audit trail).
+ *
+ * Migration: existing callers that pass `entry.tx` to `recordOrderChange`
+ * should switch to this variant for proper atomicity. The convenience
+ * wrappers `recordStatusChange` + `recordRefund` below still call the
+ * best-effort `recordOrderChange` for backward compat — a future task
+ * should migrate them (and their callers) to `recordOrderChangeInTx`.
+ *
+ * @param tx    The Prisma transaction client (from `db.$transaction(async (tx) => ...)`)
+ * @param entry The ledger entry (without the `tx` field — `tx` is passed separately)
+ */
+export async function recordOrderChangeInTx(
+  tx: DbOrTx,
+  entry: Omit<OrderChangeEntry, "tx">,
+): Promise<void> {
+  // No try/catch — let errors propagate so the caller's $transaction rolls back.
+  await tx.orderChange.create({
+    data: {
+      orderId: entry.orderId,
+      actionType: entry.actionType,
+      actor: entry.actor ?? "user",
+      status: entry.status ?? "confirmed",
+      // Session 30 (AUDIT-4 D6): redact PII before persisting
+      payload: entry.payload ? JSON.stringify(redactPii(entry.payload)) : null,
+    },
+  });
 }
 
 /** Get the full timeline for an order (newest first). */
@@ -63,7 +127,14 @@ export async function getOrderTimeline(orderId: string, limit = 50) {
   }
 }
 
-/** Convenience: record a status change with before→after. */
+/** Convenience: record a status change with before→after.
+ *
+ *  TODO(W3-23): when `tx` is provided, this should call `recordOrderChangeInTx`
+ *  for proper atomicity (so a ledger-write failure rolls back the caller's tx).
+ *  Currently it calls the best-effort `recordOrderChange` which swallows
+ *  errors even when a tx is passed — the ledger entry may be silently lost.
+ *  Migration deferred per task 2-e scope (callers not updated in this batch).
+ */
 export async function recordStatusChange(
   orderId: string,
   from: string,
@@ -81,7 +152,15 @@ export async function recordStatusChange(
   });
 }
 
-/** Convenience: record a refund. */
+/** Convenience: record a refund.
+ *
+ *  TODO(W3-23): when `tx` is provided, this should call `recordOrderChangeInTx`
+ *  for proper atomicity (so a ledger-write failure rolls back the refund tx).
+ *  Currently it calls the best-effort `recordOrderChange` which swallows
+ *  errors even when a tx is passed — the ledger entry may be silently lost,
+ *  leaving a Refund row with no audit trail. Migration deferred per task 2-e
+ *  scope (callers not updated in this batch).
+ */
 export async function recordRefund(
   orderId: string,
   refundId: string,

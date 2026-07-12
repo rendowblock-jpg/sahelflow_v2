@@ -443,6 +443,26 @@ describe("ZR Express delivery adapter (deep)", () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain("pas supportée");
     });
+
+    // W3-11: structured result for the "open dashboard" UI flow.
+    it("W3-11: returns action='open_dashboard' + dashboardUrl + message", async () => {
+      const result = await zrExpressAdapter.cancelShipment!("SF-001", validCreds);
+      expect(result.action).toBe("open_dashboard");
+      expect(result.cancelled).toBe(false);
+      expect(result.dashboardUrl).toMatch(/^https?:\/\/zrexpress\.com\//);
+      expect(typeof result.message).toBe("string");
+      expect(result.message!.length).toBeGreaterThan(0);
+      // The original error string is preserved (backward-compat with any
+      // caller that reads `result.error`).
+      expect(result.error).toBe(result.message);
+    });
+
+    it("W3-11: dashboardUrl is a real, reachable-looking URL", async () => {
+      const result = await zrExpressAdapter.cancelShipment!("SF-001", validCreds);
+      const url = new URL(result.dashboardUrl!);
+      expect(url.protocol).toBe("https:");
+      expect(url.hostname).toBe("zrexpress.com");
+    });
   });
 
   describe("status string mapping", () => {

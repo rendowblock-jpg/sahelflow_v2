@@ -36,6 +36,7 @@ const sheetsClient = vi.hoisted(() => ({
       get: vi.fn(),
       append: vi.fn(),
       update: vi.fn(),
+      clear: vi.fn(),
     },
     create: vi.fn(),
   },
@@ -91,9 +92,13 @@ beforeEach(() => {
   sheetsClient.spreadsheets.values.get.mockReset();
   sheetsClient.spreadsheets.values.append.mockReset();
   sheetsClient.spreadsheets.values.update.mockReset();
+  sheetsClient.spreadsheets.values.clear.mockReset();
   sheetsClient.spreadsheets.create.mockReset();
 
   jwtInstance.authorize.mockResolvedValue(undefined);
+  // W3-6: default the clear mock to a no-op success (most tests don't care
+  // about the clear call — only the exportOrdersToSheet tests assert on it).
+  sheetsClient.spreadsheets.values.clear.mockResolvedValue({ data: {} });
 });
 
 // ── isGoogleSheetsConfigured ─────────────────────────────────────────────────
@@ -253,19 +258,27 @@ describe("exportOrdersToSheet", () => {
     },
   ];
 
-  it("writes headers + appends data when the sheet is empty (no headers)", async () => {
+  // W3-6: the new "clear + rewrite" contract. Every export:
+  //   1. Writes headers to A1 via updateSheet (overwrite mode).
+  //   2. Clears the data range A2:Z100000 via clearSheetRange.
+  //   3. Writes order rows via updateSheet at A2:H{N+1}.
+  //
+  // No more "does the sheet have headers?" branch — we always (re)write
+  // headers + clear, which structurally eliminates the duplicate-append
+  // problem (re-exporting no longer appends to the previous dataset).
+  it("W3-6: writes headers, clears data range, then writes rows (clear+rewrite)", async () => {
     secretsMock.getSecret.mockResolvedValue(VALID_SA_JSON);
-    // First call: readSheet returns [] (no headers)
-    sheetsClient.spreadsheets.values.get.mockResolvedValueOnce({ data: { values: [] } });
+    // headers updateSheet (returned updatedRows discarded — prepare step)
     sheetsClient.spreadsheets.values.update.mockResolvedValueOnce({ data: { updatedRows: 1 } });
-    sheetsClient.spreadsheets.values.append.mockResolvedValueOnce({
-      data: { updates: { updatedRows: 1 } },
-    });
+    // data updateSheet — 1 data row written
+    sheetsClient.spreadsheets.values.update.mockResolvedValueOnce({ data: { updatedRows: 1 } });
 
     const result = await exportOrdersToSheet("sheet-1", orders);
+    // updatedRows counts ONLY data rows, not the headers (prepare step is
+    // a setup side-effect, not part of the export count).
     expect(result).toEqual({ updatedRows: 1 });
 
-    // Headers were written via updateSheet
+    // 1. Headers written to A1
     expect(sheetsClient.spreadsheets.values.update).toHaveBeenCalledWith({
       spreadsheetId: "sheet-1",
       range: "A1",
@@ -274,10 +287,17 @@ describe("exportOrdersToSheet", () => {
         values: [["Order #", "Customer", "Phone", "Wilaya", "Commune", "Total (DZD)", "Status", "Date"]],
       },
     });
-    // Data was appended at A2
-    expect(sheetsClient.spreadsheets.values.append).toHaveBeenCalledWith({
+
+    // 2. Data range cleared (W3-6 — no duplicates, no phantom tail)
+    expect(sheetsClient.spreadsheets.values.clear).toHaveBeenCalledWith({
       spreadsheetId: "sheet-1",
-      range: "A2",
+      range: "A2:Z100000",
+    });
+
+    // 3. Data written at A2:H2 (1 order → 1 row starting at row 2)
+    expect(sheetsClient.spreadsheets.values.update).toHaveBeenNthCalledWith(2, {
+      spreadsheetId: "sheet-1",
+      range: "A2:H2",
       valueInputOption: "RAW",
       requestBody: {
         values: [[
@@ -292,40 +312,86 @@ describe("exportOrdersToSheet", () => {
         ]],
       },
     });
+
+    // W3-6: append should NEVER be called (clear+rewrite uses update only)
+    expect(sheetsClient.spreadsheets.values.append).not.toHaveBeenCalled();
   });
 
-  it("only appends data when headers already exist", async () => {
+  it("W3-6: returns 0 + still clears when there are no orders", async () => {
     secretsMock.getSecret.mockResolvedValue(VALID_SA_JSON);
-    // readSheet returns existing headers
-    sheetsClient.spreadsheets.values.get.mockResolvedValueOnce({
-      data: { values: [["Order #", "Customer", "Phone", "Wilaya", "Commune", "Total (DZD)", "Status", "Date"]] },
-    });
-    sheetsClient.spreadsheets.values.append.mockResolvedValueOnce({
-      data: { updates: { updatedRows: 1 } },
-    });
-
-    const result = await exportOrdersToSheet("sheet-1", orders);
-    expect(result).toEqual({ updatedRows: 1 });
-
-    // Headers should NOT have been updated
-    expect(sheetsClient.spreadsheets.values.update).not.toHaveBeenCalled();
-    // Data appended at A:Z (default range)
-    expect(sheetsClient.spreadsheets.values.append).toHaveBeenCalledWith(
-      expect.objectContaining({ spreadsheetId: "sheet-1", range: "A:Z" }),
-    );
-  });
-
-  it("writes headers when readSheet returns empty inner array", async () => {
-    secretsMock.getSecret.mockResolvedValue(VALID_SA_JSON);
-    sheetsClient.spreadsheets.values.get.mockResolvedValueOnce({ data: { values: [[]] } });
     sheetsClient.spreadsheets.values.update.mockResolvedValueOnce({ data: { updatedRows: 1 } });
-    sheetsClient.spreadsheets.values.append.mockResolvedValueOnce({
-      data: { updates: { updatedRows: 0 } },
-    });
 
-    await exportOrdersToSheet("sheet-1", orders);
-    // existing[0]?.length is 0 → falsy → headers path
-    expect(sheetsClient.spreadsheets.values.update).toHaveBeenCalled();
+    const result = await exportOrdersToSheet("sheet-1", []);
+    expect(result).toEqual({ updatedRows: 0 });
+
+    // Headers still written (handles schema drift on a re-export)
+    expect(sheetsClient.spreadsheets.values.update).toHaveBeenCalledTimes(1);
+    expect(sheetsClient.spreadsheets.values.update).toHaveBeenCalledWith({
+      spreadsheetId: "sheet-1",
+      range: "A1",
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [["Order #", "Customer", "Phone", "Wilaya", "Commune", "Total (DZD)", "Status", "Date"]],
+      },
+    });
+    // Range still cleared (wipes any leftover rows from a previous export)
+    expect(sheetsClient.spreadsheets.values.clear).toHaveBeenCalledWith({
+      spreadsheetId: "sheet-1",
+      range: "A2:Z100000",
+    });
+  });
+
+  it("W3-6: paginates writes in batches of 500 (>500 orders → 2+ update calls)", async () => {
+    secretsMock.getSecret.mockResolvedValue(VALID_SA_JSON);
+    // Build 750 orders → 2 batches (500 + 250)
+    const bigOrderList = Array.from({ length: 750 }, (_, i) => ({
+      orderNumber: `ORD-${String(i + 1).padStart(4, "0")}`,
+      customerName: `Customer ${i + 1}`,
+      customerPhone: "0555123456",
+      wilaya: "Alger",
+      commune: "Alger",
+      totalPrice: 1000,
+      status: "confirmed",
+      createdAt: new Date("2026-01-15T10:30:00.000Z"),
+    }));
+
+    // Three sequential updateSheet responses: headers + 2 batches
+    sheetsClient.spreadsheets.values.update
+      .mockResolvedValueOnce({ data: { updatedRows: 1 } })   // headers
+      .mockResolvedValueOnce({ data: { updatedRows: 500 } })  // batch 1
+      .mockResolvedValueOnce({ data: { updatedRows: 250 } }); // batch 2
+
+    const result = await exportOrdersToSheet("sheet-1", bigOrderList);
+
+    // 3 update calls: 1 header + 2 batches (500 + 250)
+    expect(sheetsClient.spreadsheets.values.update).toHaveBeenCalledTimes(3);
+    // 1 clear call
+    expect(sheetsClient.spreadsheets.values.clear).toHaveBeenCalledTimes(1);
+
+    // Batch 1: rows 2..501 → range A2:H501
+    expect(sheetsClient.spreadsheets.values.update).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      spreadsheetId: "sheet-1",
+      range: "A2:H501",
+    }));
+    // Batch 2: rows 502..751 → range A502:H751
+    expect(sheetsClient.spreadsheets.values.update).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      spreadsheetId: "sheet-1",
+      range: "A502:H751",
+    }));
+
+    // Each batch's body has the right number of rows
+    const batch1Call = sheetsClient.spreadsheets.values.update.mock.calls[1]![0] as {
+      requestBody: { values: string[][] };
+    };
+    expect(batch1Call.requestBody.values).toHaveLength(500);
+    const batch2Call = sheetsClient.spreadsheets.values.update.mock.calls[2]![0] as {
+      requestBody: { values: string[][] };
+    };
+    expect(batch2Call.requestBody.values).toHaveLength(250);
+
+    // updatedRows aggregates across batches (500 + 250 = 750 data rows).
+    // Headers updatedRows is NOT counted.
+    expect(result.updatedRows).toBe(750);
   });
 });
 

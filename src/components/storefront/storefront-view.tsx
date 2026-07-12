@@ -53,6 +53,12 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     commune: "",
     address: "",
     notes: "",
+    // W3-13: honeypot field. Visually hidden (see the input's className +
+    // inline style below) — real customers never see it. Bots that fill all
+    // form fields indiscriminately will populate it; the API silently rejects
+    // any submission where this is non-empty. Kept in the same form state
+    // object so it's submitted alongside the real fields.
+    website: "",
   });
 
   function addToCart(product: StorefrontProduct) {
@@ -124,6 +130,20 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             quantity: i.quantity,
           })),
           notes: form.notes || undefined,
+          // W3-13: honeypot — sent on every submission. The API silently
+          // rejects if non-empty. Real customers never fill this (the input
+          // is hidden off-screen + aria-hidden + tabIndex=-1 + autocomplete=off).
+          website: form.website,
+          // W3-13: Cloudflare Turnstile token (non-Tauri web deployments).
+          // Undefined in Tauri (no widget rendered). When a Turnstile widget
+          // is mounted (future web-deployment work), it writes its token to
+          // window.__TURNSTILE_TOKEN__ and we read it here. For now this is
+          // always undefined — the API only requires it when
+          // TURNSTILE_SECRET_KEY is set + the request is non-Tauri.
+          "cf-turnstile-response":
+            typeof window !== "undefined"
+              ? (window as unknown as { __TURNSTILE_TOKEN__?: string }).__TURNSTILE_TOKEN__
+              : undefined,
         }),
       });
       const data = (await res.json()) as {
@@ -135,7 +155,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       if (data.ok) {
         setResult(data);
         setCart([]);
-        setForm({ name: "", phone: "", wilaya: "", commune: "", address: "", notes: "" });
+        setForm({ name: "", phone: "", wilaya: "", commune: "", address: "", notes: "", website: "" });
       } else {
         setResult({ ok: false, message: data.error ?? t("storefront.view.error.orderFailed") });
       }
@@ -306,6 +326,25 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-3">
+                  {/* W3-13: honeypot field — hidden from real users, bait for bots. */}
+                  {/* Visually hidden via absolute off-screen positioning (not */}
+                  {/* display:none, which some bots skip). aria-hidden + tabIndex=-1 */}
+                  {/* + autocomplete=off ensure screen readers + browsers ignore it. */}
+                  <div
+                    aria-hidden="true"
+                    style={{ position: "absolute", left: "-9999px", top: "auto", width: 1, height: 1, overflow: "hidden" }}
+                  >
+                    <Label htmlFor="website">Website (leave empty)</Label>
+                    <Input
+                      id="website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={form.website}
+                      onChange={(e) => setForm({ ...form, website: e.target.value })}
+                    />
+                  </div>
                   <div className="space-y-1">
                     <Label htmlFor="name">{t("storefront.view.fullName")} *</Label>
                     <Input id="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

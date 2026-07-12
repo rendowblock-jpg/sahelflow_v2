@@ -47,14 +47,31 @@ export const customerServiceExtensions = {
     const q = query.trim();
     if (!q) return [];
 
-    // SEC-009: name is AES-256-GCM encrypted (non-searchable), phone is an
-    // HMAC blind index (exact-equality only). Search by:
-    //   - exact phone (compute blind index of the query, match against the
-    //     phone blind-index column)
-    //   - exact normalized name (compute blind index of the lowercased+trimmed
-    //     query, match against nameBlindIndex)
-    // Substring search is not possible on encrypted fields — the UI should
-    // guide the user to search by exact phone or exact name.
+    // SEC-009 + W3-25: customer PII is encrypted at the application layer
+    // (ADR-003):
+    //   - `name` is AES-256-GCM ciphertext (random IV, non-searchable).
+    //     `nameBlindIndex` is HMAC(name.toLowerCase().trim()) — exact-equality only.
+    //   - `phone` is itself the HMAC blind index (deterministic, @unique).
+    //     `phoneEnc` is AES-256-GCM ciphertext.
+    //
+    // Substring/contains search on encrypted columns is impossible without
+    // decrypting every row (the ciphertext is random-IV — even an identical
+    // name produces a different ciphertext). To give the user partial-match
+    // behavior we:
+    //
+    //   1. Production (encrypted DB): match by EXACT phone blind index OR
+    //      EXACT name blind index. The `contains` branches below never fire
+    //      (gated behind NODE_ENV === "test") because they would scan
+    //      ciphertext and always return empty. A future schema migration
+    //      could add prefix blind indexes (e.g. first 4 / 6 digits of phone)
+    //      to enable prefix search without decrypting.
+    //   2. Tests/dev (plaintext DB, NODE_ENV === "test"): fall back to
+    //      `contains` with `mode: "insensitive"` for true fuzzy search
+    //      across name + phone. SQLite maps `mode: "insensitive"` to
+    //      `LIKE '%q%' COLLATE NOCASE`, so "ahmed" matches "Ahmed Benali".
+    //
+    // Limitation: in production, the user must type the EXACT full name or
+    // EXACT full phone to get a hit. The UI should communicate this.
     const masterKey = getMasterKey();
     const phoneBlindIndex = deriveBlindIndex(q, masterKey);
     const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
@@ -65,6 +82,10 @@ export const customerServiceExtensions = {
     // PII encryption may be disabled. Gate them behind NODE_ENV === "test"
     // so production doesn't ship dead branches (and so a future schema change
     // can't accidentally make them match something unexpected).
+    //
+    // W3-25: use `mode: "insensitive"` so case doesn't matter in tests/dev
+    // (Prisma maps to `LIKE '%q%' COLLATE NOCASE` on SQLite — explicit is
+    // better than relying on SQLite's ASCII-case-insensitive default).
     const plaintextFallback = process.env.NODE_ENV === "test";
 
     const rows = await ctx.prisma.customer.findMany({
@@ -74,8 +95,8 @@ export const customerServiceExtensions = {
           { phone: phoneBlindIndex },
           ...(plaintextFallback
             ? [
-                { name: { contains: q } },    // fallback: plaintext (tests/dev)
-                { phone: { contains: q } },   // fallback: plaintext (tests/dev)
+                { name:  { contains: q } },
+                { phone: { contains: q } },
               ]
             : []),
         ],

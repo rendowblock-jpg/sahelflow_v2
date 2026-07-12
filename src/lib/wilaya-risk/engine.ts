@@ -91,21 +91,32 @@ export async function listWilayaRisks(): Promise<WilayaRisk[]> {
 /**
  * Assess an order's risk based on the delivery wilaya.
  *
- * SV-L10 — i18n TODO: the `label` and `recommendation` strings are
- * hardcoded French. The UI consumers (order detail page, risk badge)
- * currently display them verbatim, which is fine for the Algerian market
- * (French is widely read) but breaks for Arabic-only users. The proper
- * fix is to return i18n KEYS here (e.g. `wilayaRisk.level.1`,
- * `wilayaRisk.recommendation.1`) and let the caller translate them via
- * `t()`. That refactor touches the API route + 2-3 UI components —
- * deferred to a follow-up wave to avoid breaking the risk badge contract
- * in this polish pass. For now, callers that need an Arabic label should
- * map `level` (1-5) themselves.
+ * i18n (W3-5 — partial fix): the function now returns TWO views of the
+ * risk label + recommendation:
+ *   - `label` / `recommendation`: French strings (BACKWARD COMPATIBLE —
+ *     the existing `wilaya-risk/engine.test.ts` asserts these exact
+ *     strings, and the AI tool `extended-tools.ts:getWilayaRisk` feeds
+ *     them verbatim to the LLM, which can't translate i18n keys).
+ *   - `labelKey` / `recommendationKey`: dotted i18n keys (e.g.
+ *     `wilaya.risk.level.5`) that UI consumers can pass to `t()` for
+ *     locale-aware display. Available in all 3 locale files (en/fr/ar).
+ *
+ * The full refactor (deprecate `label`/`recommendation` and have all
+ * consumers use the `*Key` fields) is deferred to a follow-up wave —
+ * it touches the API route, the AI tool, and 2-3 UI components, and
+ * would break the risk badge contract in this polish pass.
+ *
+ * Consumers that want locale-aware display TODAY should prefer
+ * `t(labelKey)` over `label`. Consumers that need a stable,
+ * locale-independent value (e.g. for AI tool output, logging, or
+ * non-UI surfaces) should keep using `label`.
  */
 export async function assessOrderRisk(wilaya: string): Promise<{
   level: number;
   label: string;
   recommendation: string;
+  labelKey: string;
+  recommendationKey: string;
 }> {
   const risk = await getWilayaRisk(wilaya);
   const level = risk?.riskLevel ?? 3;
@@ -123,9 +134,25 @@ export async function assessOrderRisk(wilaya: string): Promise<{
     4: "Confirmation obligatoire + suivi renforcé",
     5: "Prépaiement recommandé ou confirmation double",
   };
+  const labelKeys: Record<number, string> = {
+    1: "wilaya.risk.level.1",
+    2: "wilaya.risk.level.2",
+    3: "wilaya.risk.level.3",
+    4: "wilaya.risk.level.4",
+    5: "wilaya.risk.level.5",
+  };
+  const recommendationKeys: Record<number, string> = {
+    1: "wilaya.risk.recommendation.1",
+    2: "wilaya.risk.recommendation.2",
+    3: "wilaya.risk.recommendation.3",
+    4: "wilaya.risk.recommendation.4",
+    5: "wilaya.risk.recommendation.5",
+  };
   return {
     level,
     label: labels[level] ?? "Modéré",
     recommendation: recommendations[level] ?? "Confirmation standard",
+    labelKey: labelKeys[level] ?? "wilaya.risk.level.3",
+    recommendationKey: recommendationKeys[level] ?? "wilaya.risk.recommendation.3",
   };
 }

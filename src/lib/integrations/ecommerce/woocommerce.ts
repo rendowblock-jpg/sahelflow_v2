@@ -8,6 +8,12 @@
  *   Catches both new orders and status updates.
  * Pagination: page-based (?page=N) with Link header. per_page=100 (max).
  * Rate limit: no built-in limit (host/plugin dependent). Handle 429 with backoff.
+ *
+ * W3-7 (429 retry cap): if the WooCommerce host keeps returning 429, we cap
+ * retries at MAX_429_RETRIES (5) per page so a misconfigured rate limiter
+ * can't trap the sync loop forever. Backoff is exponential (2s, 4s, 8s, 16s, 32s)
+ * by default, OR the value of the `Retry-After` header if the API provides one
+ * (some WooCommerce rate-limit plugins return seconds, others return HTTP-date).
  */
 
 import type {
@@ -19,6 +25,15 @@ import type {
 } from "./types";
 
 const PAGE_SIZE = 100;
+// W3-7: max consecutive 429 retries per page before we give up + throw.
+// 5 retries × exponential backoff (2s, 4s, 8s, 16s, 32s) = ~62s of waiting
+// before the cap fires — long enough to ride out a transient rate-limit
+// spike, short enough that a permanently rate-limited host doesn't trap
+// the sync loop forever.
+const MAX_429_RETRIES = 5;
+// W3-7: backoff floor (ms) for the exponential schedule. The Retry-After
+// header is preferred when present; this is the fallback.
+const BACKOFF_BASE_MS = 2000;
 
 interface WooOrder {
   id: number;
@@ -173,6 +188,10 @@ export const woocommerceAdapter: EcommerceAdapter = {
     let nextWatermark = watermark;
     let page = 1;
     let hasMore = false;
+    // W3-7: track consecutive 429s PER PAGE. Reset to 0 on any non-429
+    // response (success or hard error) so a 429 on page 5 doesn't count
+    // against the cap when page 6 hits a 429.
+    let retriesThisPage = 0;
 
     while (page <= maxPages) {
       const params = new URLSearchParams({
@@ -202,12 +221,35 @@ export const woocommerceAdapter: EcommerceAdapter = {
         clearTimeout(timeoutId);
       }
 
-      // Handle rate limit (host/plugin)
+      // W3-7: Handle rate limit (host/plugin). Cap retries at MAX_429_RETRIES
+      // per page so a permanently-429'ing host can't trap the sync loop.
+      // Backoff: respect `Retry-After` if present, else exponential 2s, 4s,
+      // 8s, 16s, 32s.
       if (res.status === 429) {
-        const retryAfter = parseFloat(res.headers.get("Retry-After") ?? "2");
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
+        if (retriesThisPage >= MAX_429_RETRIES) {
+          throw new Error(
+            `WooCommerce API rate-limited (429) on page ${page} after ${MAX_429_RETRIES} retries. ` +
+              `Backoff schedule exhausted (2s, 4s, 8s, 16s, 32s = ~62s total). ` +
+              `The host's rate limiter may be misconfigured or the store is too busy — retry the sync later.`,
+          );
+        }
+        const retryAfterHeader = res.headers.get("Retry-After");
+        let delayMs: number;
+        if (retryAfterHeader !== null) {
+          // Retry-After is either seconds (most common) or an HTTP-date.
+          // Parse as seconds first; if NaN, fall back to exponential backoff.
+          const seconds = parseFloat(retryAfterHeader);
+          delayMs = Number.isFinite(seconds) ? seconds * 1000 : BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
+        } else {
+          delayMs = BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
+        }
+        await new Promise((r) => setTimeout(r, delayMs));
+        retriesThisPage++;
         continue; // retry same page
       }
+
+      // Non-429 response — reset the per-page retry counter for the next page.
+      retriesThisPage = 0;
 
       if (!res.ok) {
         const body = await res.text().catch(() => "");

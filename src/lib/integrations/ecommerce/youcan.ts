@@ -22,6 +22,11 @@
  * Pagination: page-based (?page=N, ?limit=100) with meta.pagination.links.next.
  * Rate limit: undocumented — be conservative.
  *
+ * W3-7 (429 retry cap): if YouCan keeps returning 429, we cap retries at
+ * MAX_429_RETRIES (5) per page so an undocumented rate limit can't trap
+ * the sync loop forever. Backoff is exponential (2s, 4s, 8s, 16s, 32s)
+ * by default, OR the value of the `Retry-After` header if the API provides one.
+ *
  * GOTCHA: order ID is a UUID string (not monotonic). Dedup by sourceOrderId.
  */
 
@@ -35,6 +40,15 @@ import type {
 
 const PAGE_SIZE = 100;
 const BASE_URL = "https://api.youcan.shop";
+// W3-7: max consecutive 429 retries per page before we give up + throw.
+// 5 retries × exponential backoff (2s, 4s, 8s, 16s, 32s) = ~62s of waiting
+// before the cap fires — long enough to ride out a transient rate-limit
+// spike, short enough that a permanently-429'ing API doesn't trap the
+// sync loop forever.
+const MAX_429_RETRIES = 5;
+// W3-7: backoff floor (ms) for the exponential schedule. The Retry-After
+// header is preferred when present; this is the fallback.
+const BACKOFF_BASE_MS = 2000;
 
 interface YouCanOrder {
   id: string; // UUID
@@ -164,6 +178,10 @@ export const youcanAdapter: EcommerceAdapter = {
     let allOrders: NormalizedOrder[] = [];
     let page = 1;
     let hasMore = false;
+    // W3-7: track consecutive 429s PER PAGE. Reset to 0 on any non-429
+    // response (success or hard error) so a 429 on page 5 doesn't count
+    // against the cap when page 6 hits a 429.
+    let retriesThisPage = 0;
     // Track the latest updated_at across all fetched orders. This becomes the
     // persisted watermark for diagnostics / future optimization, but we no
     // longer use it as a server-side filter (fix-B5: YouCan has no
@@ -195,11 +213,35 @@ export const youcanAdapter: EcommerceAdapter = {
         clearTimeout(timeoutId);
       }
 
+      // W3-7: Handle rate limit. Cap retries at MAX_429_RETRIES per page so
+      // a permanently-429'ing API can't trap the sync loop forever.
+      // Backoff: respect `Retry-After` if present, else exponential 2s, 4s,
+      // 8s, 16s, 32s.
       if (res.status === 429) {
-        const retryAfter = parseFloat(res.headers.get("Retry-After") ?? "2");
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
+        if (retriesThisPage >= MAX_429_RETRIES) {
+          throw new Error(
+            `YouCan API rate-limited (429) on page ${page} after ${MAX_429_RETRIES} retries. ` +
+              `Backoff schedule exhausted (2s, 4s, 8s, 16s, 32s = ~62s total). ` +
+              `YouCan's rate limit is undocumented — retry the sync later or contact YouCan support.`,
+          );
+        }
+        const retryAfterHeader = res.headers.get("Retry-After");
+        let delayMs: number;
+        if (retryAfterHeader !== null) {
+          // Retry-After is either seconds (most common) or an HTTP-date.
+          // Parse as seconds first; if NaN, fall back to exponential backoff.
+          const seconds = parseFloat(retryAfterHeader);
+          delayMs = Number.isFinite(seconds) ? seconds * 1000 : BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
+        } else {
+          delayMs = BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
+        }
+        await new Promise((r) => setTimeout(r, delayMs));
+        retriesThisPage++;
         continue;
       }
+
+      // Non-429 response — reset the per-page retry counter for the next page.
+      retriesThisPage = 0;
 
       if (!res.ok) {
         const body = await res.text().catch(() => "");

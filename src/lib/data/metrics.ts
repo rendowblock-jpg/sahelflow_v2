@@ -22,7 +22,10 @@
  * Money is integer DZD. All queries apply `deletedAt: null` on tables
  * that support soft-delete (Order, Delivery). Refund has no deletedAt
  * column (refunds are append-only — once issued, they cannot be deleted;
- * a wrong refund gets a compensating reverse entry, not a soft-delete).
+ * a wrong refund gets a compensating reverse entry via `reverseRefund`
+ * (W3-2, Session 39), not a soft-delete). The `Refund.reversed` boolean
+ * marks reversed refunds; `netRevenue` below filters `reversed: false`
+ * so reversed refunds no longer reduce net revenue.
  *
  * Periods are half-open intervals `[from, to)` — `from` is inclusive,
  * `to` is exclusive. This lets adjacent periods chain cleanly
@@ -128,6 +131,9 @@ export async function netRevenue(db: DbClient, period: Period): Promise<number> 
       where: {
         createdAt: { gte: period.from, lt: period.to },
         status: "completed",
+        // W3-2 (Session 39): exclude reversed refunds — they no longer
+        // represent money returned to the customer.
+        reversed: false,
       },
       _sum: { amount: true },
     }),

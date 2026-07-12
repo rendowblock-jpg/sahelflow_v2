@@ -42,7 +42,12 @@ export function getPreviousPeriod(range: DateRange): DateRange {
 export async function getReturnRateByWilaya(range: DateRange) {
   const orders = await db.order.findMany({
     where: {
-      createdAt: { gte: range.from, lte: range.to },
+      // W3-1: half-open interval [from, to) — `to` is exclusive.
+      // `range.to` from getLastNDays is a moment boundary (now), and
+      // getPreviousPeriod returns `to = current.from` (the boundary).
+      // Using `lt` (not `lte`) avoids double-counting an order at the
+      // exact boundary moment into BOTH the current and previous periods.
+      createdAt: { gte: range.from, lt: range.to },
       deletedAt: null,
       status: { in: ["delivered", "returned", "refused"] },
     },
@@ -73,7 +78,8 @@ export async function getReturnRateByProduct(range: DateRange) {
   const items = await db.orderItem.findMany({
     where: {
       order: {
-        createdAt: { gte: range.from, lte: range.to },
+        // W3-1: half-open interval [from, to) — see getReturnRateByWilaya.
+        createdAt: { gte: range.from, lt: range.to },
         deletedAt: null,
         status: { in: ["delivered", "returned", "refused"] },
       },
@@ -106,7 +112,8 @@ export async function getSkuPnl(range: DateRange) {
   const items = await db.orderItem.findMany({
     where: {
       order: {
-        createdAt: { gte: range.from, lte: range.to },
+        // W3-1: half-open interval [from, to) — see getReturnRateByWilaya.
+        createdAt: { gte: range.from, lt: range.to },
         deletedAt: null,
         status: { notIn: ["cancelled", "draft"] },
       },
@@ -161,11 +168,15 @@ export async function getPeriodComparison(current: DateRange, previous: DateRang
 
   const [currentOrders, previousOrders] = await Promise.all([
     db.order.findMany({
-      where: { createdAt: { gte: current.from, lte: current.to }, deletedAt: null },
+      // W3-1: half-open [from, to) — current.to is exclusive. An order at
+      // exactly current.from is in the current period (NOT in the previous
+      // period whose previous.to === current.from is exclusive).
+      where: { createdAt: { gte: current.from, lt: current.to }, deletedAt: null },
       select: { totalPrice: true, status: true, deliveryCost: true },
     }),
     db.order.findMany({
-      where: { createdAt: { gte: previous.from, lte: previous.to }, deletedAt: null },
+      // W3-1: half-open [from, to) — previous.to === current.from (exclusive).
+      where: { createdAt: { gte: previous.from, lt: previous.to }, deletedAt: null },
       select: { totalPrice: true, status: true, deliveryCost: true },
     }),
   ]);

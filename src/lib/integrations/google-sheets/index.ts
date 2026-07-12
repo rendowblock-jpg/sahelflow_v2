@@ -128,6 +128,28 @@ export async function updateSheet(
   };
 }
 
+/**
+ * Clear a range of cells (W3-6: "clear + rewrite" export strategy).
+ *
+ * Used by exportOrdersToSheet to wipe any stale rows left over from a
+ * previous export before writing the fresh dataset. Without this, an
+ * export that has FEWER rows than the previous one would leave the
+ * old bottom rows visible (a misleading "phantom tail" of stale data).
+ *
+ * Google Sheets treats clearing an empty range as a no-op, so it's safe
+ * to call unconditionally even on a fresh sheet.
+ */
+export async function clearSheetRange(
+  spreadsheetId: string,
+  range: string,
+): Promise<void> {
+  const sheets = await getSheetsClient();
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range,
+  });
+}
+
 /** Create a new spreadsheet and return its ID. */
 export async function createSpreadsheet(title: string): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
   const key = await loadServiceAccountKey();
@@ -158,8 +180,92 @@ export async function createSpreadsheet(title: string): Promise<{ spreadsheetId:
 }
 
 /**
+ * W3-6: prepare the sheet for a fresh "clear + rewrite" export.
+ *
+ * Writes the canonical header row at A1 (overwrites any existing headers
+ * — handles schema drift if we ever add a column) and clears the data
+ * range below the header (A2:Z100000) so a smaller dataset doesn't leave
+ * a phantom tail of stale rows from the previous export.
+ *
+ * Called once per export, BEFORE any writeOrdersBatch calls.
+ */
+export async function prepareSheetForExport(spreadsheetId: string): Promise<void> {
+  const headers = [["Order #", "Customer", "Phone", "Wilaya", "Commune", "Total (DZD)", "Status", "Date"]];
+  await updateSheet(spreadsheetId, "A1", headers);
+  await clearSheetRange(spreadsheetId, "A2:Z100000");
+}
+
+/**
+ * W3-6: write a single batch of orders to the sheet at the given 1-based
+ * start row. Each batch maps to a contiguous row range
+ * (e.g. startRow=2 → A2:H501 for a 500-row batch) so successive batches
+ * never overlap.
+ *
+ * Use this when you want to stream orders from a paginated DB cursor
+ * into the sheet without holding the full dataset in memory.
+ *
+ * Caller is responsible for:
+ *   - Calling prepareSheetForExport ONCE before the first batch.
+ *   - Computing the correct startRow for each batch (row 1 = headers,
+ *     so batch N starts at row 2 + N * BATCH_SIZE).
+ */
+export async function writeOrdersBatch(
+  spreadsheetId: string,
+  orders: Array<{
+    orderNumber: string;
+    customerName: string;
+    customerPhone: string;
+    wilaya: string;
+    commune: string;
+    totalPrice: number;
+    status: string;
+    createdAt: Date;
+  }>,
+  startRow: number,
+): Promise<{ updatedRows: number }> {
+  if (orders.length === 0) {
+    return { updatedRows: 0 };
+  }
+  const rows: string[][] = orders.map((o) => [
+    o.orderNumber,
+    o.customerName,
+    o.customerPhone,
+    o.wilaya,
+    o.commune,
+    String(o.totalPrice),
+    o.status,
+    o.createdAt.toISOString(),
+  ]);
+  const endRow = startRow + rows.length - 1;
+  const range = `A${startRow}:H${endRow}`;
+  return updateSheet(spreadsheetId, range, rows);
+}
+
+/**
  * Export orders to a Google Sheet.
- * Creates headers if the sheet is empty, then appends order rows.
+ *
+ * W3-6 (clear + rewrite strategy): previously this function APPENDED order
+ * rows to whatever was already in the sheet — so re-exporting produced
+ * duplicates, and the route capped the input at 1000 orders. The new
+ * contract:
+ *   1. Always (re)write the header row at A1 — handles schema drift if
+ *      we ever add a new column.
+ *   2. Clear the entire data range (A2:Z100000) — wipes stale rows from
+ *      the previous export (so a smaller dataset doesn't leave a phantom
+ *      tail of old data, AND re-exporting doesn't append duplicates).
+ *   3. Write all order rows back in batches of 500 — keeps each API
+ *      request body well under the Sheets API's 10MB limit.
+ *
+ * The dedup problem is solved structurally: there is never an "old row
+ * next to a new row" because every export starts from a clean slate.
+ *
+ * For very large datasets (50k+ orders), prefer calling prepareSheetForExport
+ * + writeOrdersBatch directly from the route so you can stream DB batches
+ * into the sheet without holding the full dataset in memory.
+ *
+ * The 1000-order cap is removed at the route layer (which now paginates
+ * Prisma with skip/take in batches of 500) — this function accepts any
+ * number of orders.
  */
 export async function exportOrdersToSheet(
   spreadsheetId: string,
@@ -174,29 +280,24 @@ export async function exportOrdersToSheet(
     createdAt: Date;
   }>,
 ): Promise<{ updatedRows: number }> {
-  // Check if headers exist
-  const existing = await readSheet(spreadsheetId, "A1:Z1");
-  const hasHeaders = existing.length > 0 && existing[0]?.length;
+  await prepareSheetForExport(spreadsheetId);
 
-  const rows: string[][] = orders.map((o) => [
-    o.orderNumber,
-    o.customerName,
-    o.customerPhone,
-    o.wilaya,
-    o.commune,
-    String(o.totalPrice),
-    o.status,
-    o.createdAt.toISOString(),
-  ]);
-
-  if (!hasHeaders) {
-    // Write headers first, then append data
-    const headers = [["Order #", "Customer", "Phone", "Wilaya", "Commune", "Total (DZD)", "Status", "Date"]];
-    await updateSheet(spreadsheetId, "A1", headers);
-    return appendToSheet(spreadsheetId, "A2", rows);
+  if (orders.length === 0) {
+    return { updatedRows: 0 };
   }
 
-  return appendToSheet(spreadsheetId, "A:Z", rows);
+  // Write in batches of 500 — each batch starts at the row after the
+  // previous one. Row 1 = headers, so batch 0 starts at row 2.
+  const BATCH_SIZE = 500;
+  let totalUpdated = 0;
+  for (let i = 0; i < orders.length; i += BATCH_SIZE) {
+    const batch = orders.slice(i, i + BATCH_SIZE);
+    const startRow = i + 2; // +2 because row 1 = headers
+    const result = await writeOrdersBatch(spreadsheetId, batch, startRow);
+    totalUpdated += result.updatedRows;
+  }
+
+  return { updatedRows: totalUpdated };
 }
 
 /** Store the service account JSON (from the Settings UI upload). */

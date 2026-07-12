@@ -32,7 +32,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           <span className="font-medium">{row.original.name}</span>
           {row.original.isBlacklisted && (
             <Badge variant="outline" className="border-red-500/20 bg-red-500/10 text-destructive gap-1">
-              <Ban className="h-3 w-3" /> Blacklisted
+              <Ban className="h-3 w-3" /> {t("customers.blacklisted")}
             </Badge>
           )}
         </div>

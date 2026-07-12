@@ -21,6 +21,7 @@ import { z } from "zod";
 import { SahelFlowError } from "@/types/errors";
 import { logger } from "@/lib/logger";
 import { captureError } from "@/lib/monitoring/sentry";
+import { redactError } from "@/lib/redact-pii";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
@@ -61,8 +62,12 @@ export function withErrorHandler<T extends RouteHandler>(
         `api.${path}.unexpected`,
         err instanceof Error ? err : undefined,
       );
-      // Wave 2: capture to Sentry (no-op if SENTRY_DSN not set)
-      void captureError(err, { path, method: req?.method });
+      // Wave 2: capture to Sentry (no-op if SENTRY_DSN not set).
+      // W3-24: redact PII from the error BEFORE capturing — Prisma errors,
+      // validation messages, and stack traces can contain customer phone,
+      // email, or address. The redacted copy goes to Sentry; the original
+      // (full) error is what we logged above for local debugging.
+      void captureError(redactError(err), { path, method: req?.method });
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 },

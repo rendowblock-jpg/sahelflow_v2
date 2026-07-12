@@ -8,6 +8,7 @@ import {
 import { deliverySecretKey, deliverySecretKeys, DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -85,9 +86,22 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   const input = deleteSchema.parse({ provider });
 
   const keys = deliverySecretKeys(input.provider);
+  // Capture before-state (which keys were actually present?) for audit.
+  const before: Record<string, boolean> = {};
   for (const key of keys) {
+    before[key] = await hasSecret(key);
     await deleteSecret(key);
   }
+
+  // W2-5: audit credential deletion (security-relevant — strips delivery integration access).
+  void logAudit({
+    action: "delivery.credentials.deleted",
+    entity: "delivery_credentials",
+    entityId: input.provider,
+    actor: "user",
+    before: before as unknown as Record<string, unknown>,
+    metadata: { provider: input.provider, keys },
+  });
 
   return NextResponse.json({
     ok: true,

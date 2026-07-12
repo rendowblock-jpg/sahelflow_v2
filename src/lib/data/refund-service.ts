@@ -6,6 +6,11 @@
  *
  * Each refund also writes an OrderChange ledger entry (actionType: "refund")
  * so it appears in the order timeline.
+ *
+ * W3-2 (Session 39): added `reverseRefund` to undo a refund issued by
+ * mistake. Reversal marks the Refund row `reversed: true` (kept for audit),
+ * re-applies customer stats, re-deducts restored stock, and writes an
+ * OrderChange entry (actionType: "refund_reversed").
  */
 import "server-only";
 import { db } from "@/lib/db";
@@ -67,9 +72,11 @@ export async function createRefund(input: CreateRefundInput) {
       throw new Error("Cannot refund a cancelled order");
     }
 
-    // 3. Over-refund guard — total refunds must not exceed order total
+    // 3. Over-refund guard — total refunds must not exceed order total.
+    //    W3-2: exclude reversed refunds (they no longer count toward the
+    //    total — a reversed refund is conceptually "undone").
     const priorRefunds = await tx.refund.findMany({
-      where: { orderId: input.orderId, status: { in: ["completed", "pending"] } },
+      where: { orderId: input.orderId, status: { in: ["completed", "pending"] }, reversed: false },
       select: { amount: true },
     });
     const alreadyRefunded = priorRefunds.reduce((sum, r) => sum + r.amount, 0);
@@ -217,7 +224,10 @@ export async function createRefund(input: CreateRefundInput) {
   return refund;
 }
 
-/** Get all refunds for an order (newest first). */
+/** Get all refunds for an order (newest first). Includes reversed refunds
+ *  (the UI shows them with a "reversed" badge). Use `getTotalRefunded` for
+ *  the effective total that excludes reversed refunds.
+ */
 export async function getRefundsForOrder(orderId: string) {
   return db.refund.findMany({
     where: { orderId },
@@ -225,11 +235,227 @@ export async function getRefundsForOrder(orderId: string) {
   });
 }
 
-/** Get total refunded amount for an order. */
+/** Get total refunded amount for an order.
+ *  W3-2: excludes reversed refunds (they no longer represent money returned
+ *  to the customer).
+ */
 export async function getTotalRefunded(orderId: string): Promise<number> {
   const refunds = await db.refund.findMany({
-    where: { orderId },
+    where: { orderId, reversed: false },
     select: { amount: true },
   });
   return refunds.reduce((sum, r) => sum + r.amount, 0);
+}
+
+export interface ReverseRefundInput {
+  /** Optional reason for the reversal (stored in the OrderChange payload + audit log). */
+  reason?: string;
+  /** Who initiated the reversal. */
+  actor?: string;
+}
+
+/**
+ * Reverse a refund (W3-2, Session 39).
+ *
+ * Undoes everything `createRefund` did:
+ *   - Marks the Refund row as `reversed: true` (kept in the table for audit;
+ *     excluded from `getTotalRefunded` and the over-refund guard).
+ *   - Re-applies customer stats (increments `totalSpent` by the refund amount,
+ *     if `createRefund` decremented it).
+ *   - If the refund had restored stock (the `delivered → returned` inline
+ *     transition), re-deducts the stock + increments `customer.orderCount` +
+ *     flips `order.status` back to "delivered".
+ *   - Records an OrderChange ledger entry (actionType: "refund_reversed").
+ *
+ * Detection of what `createRefund` did (the refund row doesn't store this
+ * explicitly, so we re-derive it from the OrderChange ledger + the order's
+ * current state):
+ *   - The inline `delivered → returned` transition is detected by looking for
+ *     a `status_change` OrderChange entry on the same order whose payload is
+ *     `{ from: "delivered", to: "returned", reason: "refund" }` (this is what
+ *     `createRefund` writes in step 7 when `statusChanged === true`).
+ *   - The `customer.totalSpent` decrement (createRefund step 8) is detected
+ *     heuristically: if the inline transition ran, step 8 definitely ran.
+ *     If the inline transition did NOT run, step 8 was skipped ONLY when the
+ *     order was already "returned" at refund time (the `returned` branch with
+ *     `skipTotalSpentDecrement = true`). We approximate "order was returned
+ *     at refund time" by "order is currently `returned` AND no inline-
+ *     transition ledger entry exists".
+ *
+ *     TODO(W3-2): this heuristic is wrong if the order was transitioned away
+ *     from "returned" after a refund-on-already-returned-order (rare — would
+ *     require a re-ship after a Return + Refund). A future task should add a
+ *     `customerStatsAdjusted Boolean @default(true)` column to the Refund
+ *     model, set explicitly in `createRefund`, for a definitive signal.
+ *
+ * @param refundId  The Refund row id to reverse.
+ * @param opts      Optional `reason` + `actor` for the audit trail.
+ * @throws if the refund is not found or is already reversed.
+ */
+export async function reverseRefund(
+  refundId: string,
+  opts?: ReverseRefundInput,
+): Promise<void> {
+  const actor = opts?.actor ?? "user";
+
+  // 1. Read the refund + its order (outside tx — read-only precheck so we
+  //    can produce a clear error before opening a tx).
+  const refund = await db.refund.findUnique({
+    where: { id: refundId },
+    select: {
+      id: true,
+      orderId: true,
+      amount: true,
+      method: true,
+      reversed: true,
+      reversedAt: true,
+      createdAt: true,
+      order: { select: { id: true, customerId: true, status: true } },
+    },
+  });
+  if (!refund) {
+    throw new Error(`Refund ${refundId} not found`);
+  }
+  if (refund.reversed) {
+    throw new Error(
+      `Refund ${refundId} is already reversed (reversedAt=${refund.reversedAt?.toISOString() ?? "null"})`,
+    );
+  }
+
+  await db.$transaction(async (tx) => {
+    // 2. Re-read inside tx (TOCTOU-safe — two concurrent reverseRefund
+    //    calls can't both pass the reversed check with stale state).
+    const current = await tx.refund.findUnique({
+      where: { id: refundId },
+      select: { reversed: true },
+    });
+    if (current?.reversed) {
+      throw new Error(`Refund ${refundId} was reversed concurrently`);
+    }
+
+    // 3. Mark the refund as reversed (kept in the table for audit — refunds
+    //    are append-only; a reversal is a compensating action, not a delete).
+    await tx.refund.update({
+      where: { id: refundId },
+      data: { reversed: true, reversedAt: new Date() },
+    });
+
+    // 4. Detect if createRefund did the inline `delivered → returned`
+    //    transition (which also restored stock + decremented orderCount).
+    //    Signal: a `status_change` OrderChange on the same order whose
+    //    payload is `{ from: "delivered", to: "returned", reason: "refund" }`,
+    //    written within ±5 seconds of the refund's createdAt (same tx →
+    //    same timestamp, but allow slack for clock skew in test setups).
+    const statusChanges = await tx.orderChange.findMany({
+      where: {
+        orderId: refund.orderId,
+        actionType: "status_change",
+      },
+      select: { payload: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    let inlineTransitionRan = false;
+    const refundTime = refund.createdAt.getTime();
+    for (const sc of statusChanges) {
+      if (!sc.payload) continue;
+      if (Math.abs(sc.createdAt.getTime() - refundTime) > 5000) continue;
+      try {
+        const p = JSON.parse(sc.payload) as {
+          from?: string;
+          to?: string;
+          reason?: string;
+        };
+        if (p?.from === "delivered" && p?.to === "returned" && p?.reason === "refund") {
+          inlineTransitionRan = true;
+          break;
+        }
+      } catch {
+        // payload not JSON — skip
+      }
+    }
+
+    // 5. Reverse the inline-transition side effects (if they ran).
+    if (inlineTransitionRan) {
+      // 5a. Re-deduct stock for each item with a productId (createRefund
+      //     incremented stock — we decrement it back).
+      const items = await tx.orderItem.findMany({
+        where: { orderId: refund.orderId, productId: { not: null } },
+        select: { productId: true, quantity: true },
+      });
+      for (const item of items) {
+        if (item.productId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
+      }
+
+      // 5b. Undo the orderCount decrement (createRefund decremented by 1).
+      await tx.customer.update({
+        where: { id: refund.order.customerId },
+        data: { orderCount: { increment: 1 } },
+      }).catch(() => {
+        // best-effort — customer row might be soft-deleted
+      });
+
+      // 5c. Flip order.status back to "delivered" (best-effort — only if
+      //     the order is currently "returned"; if another flow transitioned
+      //     it since the refund, leave it alone).
+      if (refund.order.status === "returned") {
+        await tx.order.update({
+          where: { id: refund.orderId },
+          data: { status: "delivered" },
+        });
+      }
+    }
+
+    // 6. Reverse the customer.totalSpent decrement (createRefund step 8).
+    //    Heuristic: step 8 ran UNLESS the order was already "returned" at
+    //    refund time (the `returned` branch with skipTotalSpentDecrement=true).
+    //    We approximate "order was returned at refund time" by "order is
+    //    currently `returned` AND no inline-transition ledger entry exists"
+    //    (if the inline transition ran, the order was `delivered` at refund
+    //    time, so step 8 ran). See the function docstring for the known edge
+    //    case where this heuristic is wrong.
+    const step8Ran = inlineTransitionRan || refund.order.status !== "returned";
+    if (step8Ran) {
+      await tx.customer.update({
+        where: { id: refund.order.customerId },
+        data: { totalSpent: { increment: refund.amount } },
+      }).catch(() => {
+        // best-effort — customer row might be soft-deleted
+      });
+    }
+
+    // 7. Record the reversal in the order-change ledger (in-tx → atomic
+    //    with the reversal; if the tx rolls back, the ledger entry rolls
+    //    back too — no orphan reversal records).
+    await tx.orderChange.create({
+      data: {
+        orderId: refund.orderId,
+        actionType: "refund_reversed",
+        actor,
+        status: "confirmed",
+        payload: JSON.stringify({
+          refundId,
+          amount: refund.amount,
+          method: refund.method,
+          reason: opts?.reason ?? null,
+          inlineTransitionReversed: inlineTransitionRan,
+          customerStatsReversed: step8Ran,
+        }),
+      },
+    });
+  });
+
+  // 8. Audit log (outside tx — fire-and-forget, never blocks the reversal).
+  void logAudit({
+    action: "order.refund_reversed",
+    entity: "order",
+    entityId: refund.orderId,
+    actor,
+    after: { refundId, amount: refund.amount, method: refund.method },
+    metadata: { reason: opts?.reason ?? null },
+  });
 }

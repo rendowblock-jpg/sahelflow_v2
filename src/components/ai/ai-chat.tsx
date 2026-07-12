@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bot, Send, Loader2, Plus, MessageSquare, Wrench, ArrowLeft } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { useMobile } from "@/hooks/use-mobile";
+import { toast } from "@/lib/toast";
 
 interface Message {
   id: string;
@@ -139,9 +140,15 @@ export function AiChat() {
     }
   }
 
-  async function handleSend() {
-    if (!input.trim() || !activeSessionId || sending) return;
-    const userMessage = input.trim();
+  async function handleSend(messageOverride?: string) {
+    // W2-3: optional messageOverride lets callers (e.g. the confirmation
+    // toast's "Confirm" button) send a fixed message ("oui") without going
+    // through the input field. The input field's value would be stale at
+    // click time because React's setState is async.
+    // NOTE: `onClick={handleSend}` passes the click Event as the first arg;
+    // the typeof check filters that out (Event is not a string).
+    const userMessage = (typeof messageOverride === "string" ? messageOverride : input).trim();
+    if (!userMessage || !activeSessionId || sending) return;
     setInput("");
     setSending(true);
 
@@ -267,6 +274,35 @@ export function AiChat() {
                     }
                   : m,
               ),
+            );
+          } else if (eventType === "pending_confirmation") {
+            // W2-3: destructive tool needs user confirmation. Show a toast
+            // with Confirm / Cancel actions. Confirm sends "oui" as the next
+            // message — the agent loop will detect the confirmation word and
+            // execute the tool (the prior pending_confirmation result is in
+            // the conversation history, so Gemini knows which tool to call).
+            const tool = payload.tool as string;
+            const message = payload.message as string;
+            toast.warning(
+              `${t("ai.confirmation.title")}: ${tool}`,
+              {
+                description: message,
+                duration: 30000, // long enough for the user to decide
+                action: {
+                  label: t("ai.confirmation.confirm"),
+                  onClick: () => {
+                    // Pre-fill the input with "oui" for visual feedback, then
+                    // send it. handleSend's override bypasses the stale
+                    // input state (React setState is async at click time).
+                    setInput("oui");
+                    void handleSend("oui");
+                  },
+                },
+                cancel: {
+                  label: t("ai.confirmation.cancel"),
+                  onClick: () => { /* just dismiss — no-op */ },
+                },
+              },
             );
           } else if (eventType === "error") {
             const message = payload.message as string;
@@ -504,7 +540,7 @@ export function AiChat() {
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </Button>
                 ) : (
-                  <Button size="icon" onClick={handleSend} disabled={!input.trim()} aria-label={t("ai.send")}>
+                  <Button size="icon" onClick={() => handleSend()} disabled={!input.trim()} aria-label={t("ai.send")}>
                     <Send className="h-4 w-4 icon-rtl-flip" />
                   </Button>
                 )}

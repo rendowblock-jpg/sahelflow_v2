@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ExternalLink, Eye } from "lucide-react";
+import { RefreshCw, ExternalLink, Eye, Ban } from "lucide-react";
 import { toast } from "@/lib/toast";
 import Link from "next/link";
 
@@ -28,6 +28,24 @@ const PROVIDER_TRACKING_URLS: Record<string, string> = {
   zrexpress: "https://zrexpress.com/",
 };
 
+/**
+ * W3-11: providers that don't support API-based cancellation get an
+ * "Open Dashboard" cancel affordance instead of a real cancel button.
+ *
+ * Each entry maps provider → dashboard URL the seller can visit to
+ * cancel manually. The ZR Express adapter's cancelShipment returns
+ * this same URL structurally (see zr-express.ts), but the UI doesn't
+ * need to call the API to know the result — the dashboard URL is a
+ * static property of the provider.
+ *
+ * For providers NOT in this map (Yalidine, Maystro, DHD), no Cancel
+ * button is rendered. A real cancel API endpoint would be needed to
+ * wire those up (out of scope for W3-11 — ZR Express is the stub).
+ */
+const PROVIDER_DASHBOARD_URLS: Record<string, string> = {
+  zrexpress: "https://zrexpress.com/ZREXPRESS_WEB/FR/",
+};
+
 function getTrackingUrl(provider: string, trackingNumber: string): string {
   const base = PROVIDER_TRACKING_URLS[provider];
   if (base) return base;
@@ -35,11 +53,14 @@ function getTrackingUrl(provider: string, trackingNumber: string): string {
 }
 
 /**
- * DeliveryRowActions — Sync + Track actions for a single delivery row.
+ * DeliveryRowActions — Sync + Track + Cancel actions for a single delivery row.
  *
  * Sync calls POST /api/delivery/sync to refresh the status from the provider
  * (and update the order if delivered). Track opens the provider's tracking
- * page in a new tab. Rendered inside the server-component deliveries table.
+ * page in a new tab. Cancel opens the provider's dashboard (W3-11: ZR Express
+ * does not support API-based cancellation — the seller must cancel manually
+ * in the provider's dashboard). Rendered inside the server-component
+ * deliveries table.
  */
 export function DeliveryRowActions({
   deliveryId,
@@ -75,6 +96,26 @@ export function DeliveryRowActions({
     }
   }
 
+  // W3-11: cancel handler — for providers that don't support API cancellation
+  // (ZR Express today), we show a toast with an "Open Dashboard" action button
+  // instead of calling a (non-existent) cancel endpoint. The dashboard URL is
+  // a static property of the provider (matches the adapter's structured
+  // cancelShipment result — see zr-express.ts).
+  const dashboardUrl = PROVIDER_DASHBOARD_URLS[provider];
+  function handleCancel() {
+    if (!dashboardUrl) return; // unreachable — button only renders when set
+    toast.warning(t("deliveries.cancelTitle"), {
+      description: t("deliveries.cancelZrExpressMessage"),
+      duration: 20000, // longer so the user has time to click "Open Dashboard"
+      action: {
+        label: t("deliveries.cancelOpenDashboard"),
+        onClick: () => {
+          window.open(dashboardUrl, "_blank", "noopener,noreferrer");
+        },
+      },
+    });
+  }
+
   const trackUrl = trackingNumber ? getTrackingUrl(provider, trackingNumber) : null;
 
   return (
@@ -94,6 +135,17 @@ export function DeliveryRowActions({
           <Link href={trackUrl} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="h-4 w-4" />
           </Link>
+        </Button>
+      ) : null}
+      {dashboardUrl ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleCancel}
+          title={t("deliveries.cancel")}
+          aria-label={t("deliveries.cancel")}
+        >
+          <Ban className="h-4 w-4" />
         </Button>
       ) : null}
       <Button variant="ghost" size="icon-sm" asChild title={t("common.view")} aria-label={t("common.view")}>

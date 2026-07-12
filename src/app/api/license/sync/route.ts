@@ -14,6 +14,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 import { setCachedLicenseResult, validateLicense } from "@/lib/license/license-server";
 // getMachineId no longer imported — server uses client-supplied machineId (AUDIT-3 S1 fix)
 import { env } from "@/lib/env";
@@ -94,6 +95,21 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   // Update the in-memory cache
   setCachedLicenseResult(result);
+
+  // W2-5: audit license sync — security-relevant (license status changes gate app features).
+  // Don't log the full license blob (contains machine IDs); log the validation result.
+  void logAudit({
+    action: "license.synced",
+    entity: "license",
+    entityId: license.payload.id,
+    actor: "user",
+    after: { status: result.status, message: result.message ?? null, type: license.payload.type },
+    metadata: {
+      machineId: input.machineId,
+      clientStatus: input.clientStatus ?? null,
+      expiresAt: license.payload.expiresAt ?? null,
+    },
+  });
 
   return NextResponse.json({ success: true, status: result.status });
 }, "POST /api/license/sync");

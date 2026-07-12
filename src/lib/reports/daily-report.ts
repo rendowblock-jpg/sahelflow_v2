@@ -49,9 +49,15 @@ const LOCALE_TAG: Record<Locale, string> = {
   en: "en-GB",
 };
 
-/** Format a date with weekday + day + month + year in the given locale. */
+/** Format a date with weekday + day + month + year in the given locale.
+ *  W2-9 (TZ fix): the date is rendered in the Africa/Algiers timezone so the
+ *  displayed calendar date matches the report's Algiers-local date range
+ *  (regardless of the server's local TZ). Without this, a UTC-server would
+ *  display "10 juillet" for the Algiers-midnight UTC instant 2026-07-10T23:00Z
+ *  (which is "11 juillet" in Algiers). */
 function formatDateLocalized(date: Date, locale: Locale): string {
   return date.toLocaleDateString(LOCALE_TAG[locale], {
+    timeZone: "Africa/Algiers",
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -74,18 +80,51 @@ function makeT(locale: Locale) {
 }
 
 /**
+ * Compute yesterday's date range in the Africa/Algiers timezone.
+ *
+ * Returns UTC Date objects representing [startOfYesterdayAlgiers,
+ * endOfYesterdayAlgiers] where end is exclusive (startOfTodayAlgiers).
+ * The range covers 24 hours of Algerian local time.
+ *
+ * Uses `Intl.DateTimeFormat` with `en-CA` (which produces ISO-8601
+ * "YYYY-MM-DD") to get the Algiers-local calendar date, then constructs
+ * UTC Date objects at the corresponding UTC instants (Algiers is UTC+1,
+ * so Algiers-midnight = previous-day-23:00 UTC).
+ */
+function getAlgiersYesterdayRange(d: Date = new Date()): { start: Date; end: Date } {
+  const algiersFmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Algiers",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = algiersFmt.format(d); // "YYYY-MM-DD" in Algiers
+  // Construct the UTC instant for "midnight Algiers on today's date" using
+  // an ISO-8601 string with explicit +01:00 offset. This correctly accounts
+  // for the UTC+1 offset (Algiers has had no DST since 1981, but using the
+  // explicit offset is more robust than hardcoding `-1 hour` and is also
+  // self-documenting).
+  //   todayStr = "2026-07-12" → "2026-07-12T00:00:00+01:00"
+  //            → UTC instant 2026-07-11T23:00:00Z (= start of today in Algiers)
+  const startTodayAlgiersUtc = new Date(`${todayStr}T00:00:00+01:00`);
+  const startYesterdayAlgiersUtc = new Date(startTodayAlgiersUtc.getTime() - 24 * 60 * 60 * 1000);
+  // end = startOfTodayAlgiers (exclusive upper bound)
+  return { start: startYesterdayAlgiersUtc, end: startTodayAlgiersUtc };
+}
+
+/**
  * Generate the daily report for yesterday.
  * Returns null if there were no orders yesterday (nothing to report).
  */
 export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyReport | null> {
   const t = makeT(locale);
-  // yesterday (local midnight boundaries)
-  const now = new Date();
-  const startOfYesterday = new Date(now);
-  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-  startOfYesterday.setHours(0, 0, 0, 0);
-  const endOfYesterday = new Date(startOfYesterday);
-  endOfYesterday.setHours(23, 59, 59, 999);
+  // W2-9 (TZ fix): compute "yesterday" in Africa/Algiers, NOT the server's
+  // local timezone. The cron may run on a server in UTC/Europe, but the
+  // seller's business day is defined by Algerian local time. Without this,
+  // a UTC-server cron firing at 23:30 UTC would report "yesterday UTC"
+  // (which is "today" in Algiers until 23:00 UTC) — under-counting the
+  // day's orders by ~1 hour.
+  const { start: startOfYesterday, end: endOfYesterday } = getAlgiersYesterdayRange();
 
   // Fetch all the data in parallel
   const [
@@ -96,21 +135,21 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     lowStockProducts,
   ] = await Promise.all([
     db.order.findMany({
-      where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null },
+      // W2-9: half-open [startOfYesterday, endOfYesterday) — end is now
+      // exclusive (startOfTodayAlgiers) instead of inclusive (23:59:59.999).
+      where: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null },
       select: { id: true, status: true, totalPrice: true },
     }),
     // Phase 4: canonical gross revenue for yesterday -- excludes
     // cancelled + draft (matches dashboard + analytics). Half-open
-    // period [startOfYesterday, endOfYesterday+1ms) matches the
-    // inclusive [startOfYesterday, endOfYesterday] window used by the
-    // orders query above (endOfYesterday is 23:59:59.999, so +1ms
-    // reaches the next midnight without including it).
-    grossRevenue(db, { from: startOfYesterday, to: new Date(endOfYesterday.getTime() + 1) }),
+    // period [startOfYesterday, endOfYesterday) now matches the orders
+    // query above (W2-9 TZ fix).
+    grossRevenue(db, { from: startOfYesterday, to: endOfYesterday }),
     db.customer.count({
-      where: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null },
+      where: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null },
     }),
     db.orderItem.findMany({
-      where: { order: { createdAt: { gte: startOfYesterday, lte: endOfYesterday }, deletedAt: null } },
+      where: { order: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null } },
       select: { productName: true, quantity: true, total: true },
     }),
     db.product.findMany({

@@ -171,10 +171,45 @@ try {
 hdr("4. Building installer (5-15 min)");
 
 const privateKey = readFileSync(PRIVATE_KEY_PATH, "utf-8").trim();
+
+// W3-22: Tauri signing key passphrase support.
+//
+// The signing private key at PRIVATE_KEY_PATH may be passphrase-protected.
+// Tauri reads the passphrase at build time from the
+// `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` env var. This script reads it from
+// `TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE` (our convention — slightly clearer
+// name than Tauri's `_PASSWORD`) and forwards it.
+//
+// FOUNDER INSTRUCTIONS (the actual key lives on the founder's PC):
+//   1. Generate a passphrase-protected signing key:
+//        bunx tauri signer generate -w ~/.sahelflow/tauri-updater-private.key
+//      (the CLI will prompt for a passphrase — choose a strong one)
+//   2. Store the passphrase in your OS keychain so it never sits in a file:
+//        macOS:   security add-generic-password -a "$USER" -s "SahelFlow Tauri Signer" -w
+//        Linux:   secret-tool store --label="SahelFlow Tauri Signer" service sahelflow account tauri-signer
+//        Windows: cmdkey /generic:SahelFlowTauriSigner /user:%USERNAME% /pass
+//   3. On release day, retrieve it from the keychain and export it:
+//        macOS:   export TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE="$(security find-generic-password -a "$USER" -s 'SahelFlow Tauri Signer' -w)"
+//        Linux:   export TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE="$(secret-tool lookup service sahelflow account tauri-signer)"
+//        Windows: for /f "tokens=*" %p in ('cmdkey /list:SahelFlowTauriSigner ^| findstr Password') do set TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE=%p
+//   4. Then run: bun run release
+//
+// NEVER hardcode the passphrase in this file or commit it to git.
+// NEVER echo the passphrase to stdout/stderr (it would leak in CI logs).
+const signingPassphrase = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE || "";
+if (!signingPassphrase) {
+  warn(
+    "TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE is not set. If your signing key is " +
+    "passphrase-protected, the Tauri build will fail. If your key has no " +
+    "passphrase, this warning is safe to ignore."
+  );
+}
+
 const buildEnv = {
   ...process.env,
   TAURI_SIGNING_PRIVATE_KEY: privateKey,
-  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "",
+  // W3-22: forward the passphrase (if any) to Tauri. Empty string = no passphrase.
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassphrase,
   NODE_OPTIONS: "--max-old-space-size=4096",
 };
 

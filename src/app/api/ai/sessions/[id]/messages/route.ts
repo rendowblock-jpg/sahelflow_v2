@@ -144,5 +144,9 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
     response: result.response,
     toolCalls: result.toolCalls,
     error: result.error,
+    // W2-3: forward the pending-confirmation signal so the UI can show a
+    // confirm dialog. The next user message — if it contains "oui" /
+    // "yes" / "نعم" / "ok" — will re-enter runAgent and execute the tool.
+    pendingConfirmation: result.pendingConfirmation,
   });
 }, "POST /api/ai/sessions/[id]/messages");

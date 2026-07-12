@@ -21,6 +21,15 @@ export interface ToolDefinition {
     properties: Record<string, unknown>;
     required?: string[];
   };
+  /**
+   * W2-3: If true, the agent loop returns a pending_confirmation event
+   * instead of executing the tool immediately — the user must send an
+   * explicit confirmation message ("oui", "yes", "نعم", "ok", etc.) in
+   * their CURRENT message for the tool to execute. This is a structural
+   * defense against prompt-injection: a malicious WhatsApp message
+   * cannot bypass the gate by impersonating the system prompt.
+   */
+  requiresConfirmation?: boolean;
 }
 
 export interface ToolContext {

@@ -21,7 +21,7 @@ import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -226,6 +226,22 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
               ))}
             </SelectContent>
           </Select>
+          {/* W3-3 (task 2-g): rate-limit warning for destructive actions.
+              `update_status` is the only engine action that can be destructive
+              (when targetStatus is "cancelled" or "failed" — see
+              DESTRUCTIVE_TARGET_STATUSES in engine.ts). Show the warning
+              whenever the seller picks `update_status` so they know that
+              cancelling/failing orders via automation is rate-limited to
+              10/min to prevent a runaway trigger from mass-cancelling. */}
+          {action === "update_status" && (
+            <div
+              role="note"
+              className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-100"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{t("automations.editor.destructiveWarning")}</span>
+            </div>
+          )}
         </div>
 
         {/* Conditions */}

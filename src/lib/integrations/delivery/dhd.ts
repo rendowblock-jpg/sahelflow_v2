@@ -11,6 +11,29 @@ import type {
   DeliveryStatus,
 } from "./types";
 
+// ============================================================================
+// EXPERIMENTAL — W2-10
+// ============================================================================
+// This adapter is EXPERIMENTAL. DHD does not publish public API docs and the
+// founder must email commercialedhd@gmail.com to obtain an API token. The
+// endpoints below (/tarification, /add_colis, /lire, /cancel) are UNVERIFIED
+// GUESSES based on the EcoTrack white-label shipping platform pattern (DHD
+// runs on EcoTrack, which powers 35+ Algerian couriers — the patterns are
+// likely correct, but the exact paths / field names may differ on DHD's
+// deployment).
+//
+// Once a real token is obtained:
+//   1. Open the DHD dashboard's network tab and watch the real API calls.
+//   2. Verify each endpoint below against what the dashboard actually hits.
+//   3. Adjust the paths / field names as needed.
+//   4. Remove the `isExperimental: true` flag and this comment block.
+//
+// Until then, the UI shows an "Experimental" badge on the DHD integration
+// card so sellers know to verify behaviour before relying on it for
+// production shipments.
+// ============================================================================
+export const DHD_EXPERIMENTAL = true;
+
 /**
  * DHD Delivery adapter — DHD runs on the EcoTrack shared shipping platform
  * (white-label SaaS powering 35+ Algerian couriers).
@@ -53,6 +76,52 @@ export const dhdAdapter: DeliveryAdapter = {
   id: "dhd",
   name: "DHD Delivery",
   logo: "dhd",
+  // W2-10: endpoints unverified — see EXPERIMENTAL banner at top of file.
+  isExperimental: true,
+
+  async testConnection(credentials: DeliveryCredentials): Promise<{ ok: boolean; message: string }> {
+    if (!credentials.apiToken) {
+      return { ok: false, message: "DHD API token not configured" };
+    }
+    try {
+      // Reuse the /tarification endpoint with a minimal body — same call
+      // pattern as estimateCost, but we only care about whether the API
+      // accepts the token (any 2xx = ok, 401/403 = bad token, anything
+      // else = transient/network error).
+      const res = await retryFetch(`${DHD_BASE_URL}/tarification`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${credentials.apiToken}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({}),
+      }, 15000);
+      if (res.ok) {
+        return { ok: true, message: "DHD API accepted the token" };
+      }
+      if (res.status === 401 || res.status === 403) {
+        const text = await res.text().catch(() => "");
+        return { ok: false, message: `DHD rejected the token (${res.status})${text ? `: ${text.slice(0, 120)}` : ""}` };
+      }
+      // W2-10: EXPERIMENTAL — the endpoint itself may be wrong. A 404 means
+      // the path doesn't exist (likely an EcoTrack deployment difference),
+      // not that the token is bad. Surface this honestly.
+      if (res.status === 404) {
+        return {
+          ok: false,
+          message: "DHD /tarification endpoint returned 404 — the adapter's guessed endpoints may be wrong (see EXPERIMENTAL note). Verify endpoints in the DHD dashboard network tab.",
+        };
+      }
+      const text = await res.text().catch(() => "");
+      return { ok: false, message: `DHD API error ${res.status}${text ? `: ${text.slice(0, 120)}` : ""}` };
+    } catch (err) {
+      return {
+        ok: false,
+        message: err instanceof Error ? err.message : "Network error reaching DHD API",
+      };
+    }
+  },
 
   async estimateCost(
     params: { wilaya: string; commune?: string; weight: number; codAmount: number },

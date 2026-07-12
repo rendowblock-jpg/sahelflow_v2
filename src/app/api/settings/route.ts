@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getAllSettings, setSetting } from "@/lib/settings";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +36,23 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const input = updateSchema.parse(body);
 
+  // W2-5: capture before-state (all settings before update) for audit.
+  const before = await getAllSettings();
+
   for (const [key, value] of Object.entries(input.settings)) {
     await setSetting(key, value);
   }
 
   const settings = await getAllSettings();
+  // Fire-and-forget audit log — settings mutations are security-sensitive
+  // (license payload, daily_report_phone, profile PII).
+  void logAudit({
+    action: "settings.updated",
+    entity: "settings",
+    actor: "user",
+    before: before as Record<string, unknown>,
+    after: settings as Record<string, unknown>,
+    metadata: { updatedKeys: Object.keys(input.settings) },
+  });
   return NextResponse.json({ settings });
 }, "PUT /api/settings");

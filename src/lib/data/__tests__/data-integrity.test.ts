@@ -928,8 +928,8 @@ describe("Scenario 8 — Stale-queue consistency across bell / page / API", () =
 // Scenario 9 — Low-stock consistency: bell vs products page vs dashboard
 // ============================================================================
 
-describe("Scenario 9 — Low-stock consistency (with documented discrepancy)", () => {
-  it("seed 5 products (2 active+low, 1 inactive+low, 2 active+healthy) → dashboard lowStockProducts=2, bell low-stock list=2, products-page lowStockCount=3 (DOCUMENTED: products page does NOT filter by isActive)", async () => {
+describe("Scenario 9 — Low-stock consistency (bell vs products page vs dashboard)", () => {
+  it("seed 5 products (2 active+low, 1 inactive+low, 2 active+healthy) → dashboard lowStockProducts=2, bell low-stock list=2, products-page lowStockCount=2 (W3-14: products page now filters isActive=true, matching dashboard + bell)", async () => {
     // 2 active + low-stock.
     await seedProductRaw({ name: "Active Low 1", stock: 2, lowStockThreshold: 5, isActive: true });
     await seedProductRaw({ name: "Active Low 2", stock: 5, lowStockThreshold: 5, isActive: true });
@@ -953,28 +953,27 @@ describe("Scenario 9 — Low-stock consistency (with documented discrepancy)", (
     const stockNotifs = notifs.filter((n) => n.type === "stock");
     expect(stockNotifs.length).toBe(2);
 
-    // 3. Products page lowStockCount — DOCUMENTED CURRENT BEHAVIOR:
-    //    The products page fetches ALL products (no isActive filter) and
-    //    counts low-stock rows in JS. So inactive+low products are INCLUDED.
-    //    → 3 (2 active + 1 inactive).
+    // 3. Products page lowStockCount — W3-14 FIX:
+    //    The products page now applies isActive=true to the low-stock query
+    //    (matching the dashboard + bell definitions). Inactive+low products
+    //    are EXCLUDED. → 2 (both active+low).
     //
-    //    The plan notes: "products-page low-stock=2 (after Phase 1 fix to
-    //    exclude inactive — or document the discrepancy)". The Phase 1 fix
-    //    was never applied to the products page; the discrepancy is real.
-    //    Phase 4 will consolidate this with the dashboard + bell definitions.
-    //    For now, we assert the CURRENT behavior (3) and document the gap.
-    const stockRows = await rawDb.product.findMany({
-      where: { deletedAt: null },
-      select: { isActive: true, stock: true, lowStockThreshold: true },
+    //    Previously (pre-W3-14): the products page fetched ALL non-deleted
+    //    products and counted low-stock rows in JS, so inactive+low rows
+    //    were INCLUDED (→ 3). This inflated the alert + alarmed the seller
+    //    about products they'd already retired. The fix aligns all three
+    //    surfaces (dashboard / bell / products-page) on the same definition.
+    const lowStockRows = await rawDb.product.findMany({
+      where: { isActive: true, deletedAt: null },
+      select: { stock: true, lowStockThreshold: true },
     });
-    const productsPageLowStockCount = stockRows.filter(
+    const productsPageLowStockCount = lowStockRows.filter(
       (p) => p.stock <= p.lowStockThreshold,
     ).length;
-    expect(productsPageLowStockCount).toBe(3);
+    expect(productsPageLowStockCount).toBe(2);
 
-    // DISCREPANCY DOCUMENTED: dashboard=2, bell=2, products-page=3.
-    // The products page INCLUDES the inactive+low product. Phase 4 will
-    // consolidate.
+    // All three surfaces now agree: dashboard=2, bell=2, products-page=2.
+    // The documented discrepancy (pre-W3-14: products-page=3) is resolved.
   });
 });
 

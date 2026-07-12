@@ -116,6 +116,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
  * Returns the current tracking info from the provider (read-only).
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
+  // W2-4: defense-in-depth — GET was unprotected, exposed tracking info + delivery provider credentials usage.
+  await requireAuth();
   const deliveryId = req.nextUrl.searchParams.get("deliveryId");
   if (!deliveryId) {
     return NextResponse.json({ error: "deliveryId required" }, { status: 400 });

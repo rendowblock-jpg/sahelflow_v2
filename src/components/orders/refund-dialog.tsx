@@ -63,17 +63,17 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
         <div className="space-y-4 py-2">
           <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Order total</span>
+              <span className="text-muted-foreground">{t("refund.orderTotal")}</span>
               <span className="font-medium">{formatDZD(maxAmount)}</span>
             </div>
             {alreadyRefunded > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Already refunded</span>
+                <span className="text-muted-foreground">{t("refund.alreadyRefunded")}</span>
                 <span className="font-medium text-warning">{formatDZD(alreadyRefunded)}</span>
               </div>
             )}
             <div className="flex justify-between border-t pt-1">
-              <span className="text-muted-foreground">Refundable remaining</span>
+              <span className="text-muted-foreground">{t("refund.refundableRemaining")}</span>
               <span className="font-bold">{formatDZD(remaining)}</span>
             </div>
           </div>
@@ -88,7 +88,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
               onChange={(e) => setAmount(e.target.value)}
             />
             {!isValid && refundAmount > 0 && (
-              <p className="text-xs text-destructive">Amount exceeds refundable remaining</p>
+              <p className="text-xs text-destructive">{t("refund.exceedsRemaining")}</p>
             )}
           </div>
 

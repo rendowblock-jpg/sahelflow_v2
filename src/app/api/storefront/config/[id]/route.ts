@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ type RouteContext = { params: Promise<{ id: string }> };
  *   Seller-only: fetch a storefront config by id (includes inactive storefronts).
  */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
+  // W2-4: defense-in-depth — GET was unprotected, exposed inactive storefront configs to anyone.
+  await requireAuth();
   const { id } = await params;
   const { storefrontService } = await import("@/lib/storefront/service");
   const config = await storefrontService.getById(id);
@@ -78,5 +81,13 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   }
 
   await storefrontService.delete(id);
+  // W2-5: audit the delete (existing captured above).
+  void logAudit({
+    action: "storefront.deleted",
+    entity: "storefront",
+    entityId: id,
+    actor: "user",
+    before: existing as unknown as Record<string, unknown> | null,
+  });
   return NextResponse.json({ ok: true });
 }, "DELETE /api/storefront/config/[id]");

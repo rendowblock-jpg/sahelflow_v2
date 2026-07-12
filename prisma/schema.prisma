@@ -66,6 +66,10 @@ model Product {
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
   @@index([categoryId])
+  // W3-9 (Session 39): composite indexes for product hot paths.
+  @@index([isActive, deletedAt])         // active-products list (excludes soft-deleted)
+  @@index([stock, lowStockThreshold])    // low-stock alerts (WHERE stock <= lowStockThreshold)
+  @@index([categoryId, isActive])        // category-filtered active products
 
 }
 
@@ -123,6 +127,12 @@ model Customer {
   @@index([isBlacklisted])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
+  // W3-9 (Session 39): composite indexes for customer hot paths.
+  // `phone` is already @unique (so it has an implicit index — no composite
+  // needed). These cover the customer-list filters + fraud-analysis views.
+  @@index([wilaya, isBlacklisted])   // region-level blacklist summary (risk page)
+  @@index([isBlacklisted, totalSpent]) // blacklisted top-spenders (fraud impact view)
+  @@index([createdAt, deletedAt])    // recent-customers feed (excluding soft-deleted)
 
 }
 
@@ -181,6 +191,16 @@ model Order {
   @@index([wilaya])
   @@index([deliveredAt])
   @@index([confirmedAt])
+  // W3-9 (Session 39): composite indexes for high-traffic query paths.
+  // These cover the orders-page list filter (status + time window + soft-delete),
+  // the customer-detail order history, and the multi-source isolation filter.
+  // NOTE: there is no `shopId` column — the architecture is one SQLite file
+  // per shop (see header comment lines 5-8). `source` (whatsapp/manual/shopify
+  // /youcan/woocommerce) is the closest equivalent and is already indexed
+  // above; the [source, status] composite below covers source-scoped lists.
+  @@index([status, createdAt, deletedAt])  // orders-page list filter + cursor pagination
+  @@index([customerId, createdAt])          // customer detail order history (newest first)
+  @@index([source, status])                 // multi-source isolation filter
 
 }
 
@@ -226,6 +246,10 @@ model Delivery {
   @@index([createdAt])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
   @@index([deletedAt])
+  // W3-9 (Session 39): composite indexes for delivery hot paths.
+  @@index([status, createdAt])      // deliveries list filtered by status, sorted by date
+  @@index([provider, status])       // provider performance dashboard (per-courier rate)
+  @@index([createdAt, deletedAt])   // recent-shipments feed (excluding soft-deleted)
 
 }
 
@@ -376,6 +400,13 @@ model Automation {
   retryDelayMs Int       @default(500)
   lastError    String?
   nextRunAt    DateTime?
+
+  // W3-3 (task 2-g): dry-run mode. When true, the engine logs what it WOULD
+  // do (to AutomationLog with status="dry_run") but does NOT execute the
+  // action. Lets a seller test an automation against live triggers without
+  // risking side effects (e.g. WhatsApp sends, status updates, customer
+  // tagging). Defaults to false (normal execution).
+  dryRun       Boolean   @default(false)
 
   @@index([isActive])
   @@index([trigger])
@@ -687,9 +718,18 @@ model Refund {
   // Optional: bank transfer ref, courier deduction ref, etc.
   reference       String?
 
+  // W3-2 (Session 39): refund reversal support. A reversed refund is kept in
+  // the table for audit (append-only ledger) but no longer counts toward the
+  // order's `getTotalRefunded` (callers filter `where: { reversed: false }`).
+  // `reversedAt` records when the reversal happened; null = not reversed.
+  reversed        Boolean   @default(false)
+  reversedAt      DateTime?
+
   @@index([orderId, createdAt])
   @@index([returnId])
   @@index([status])
+  // W3-2 (Session 39): index for filtering reversed vs. active refunds.
+  @@index([reversed])
 }
 
 /// Inventory reservation — soft-holds stock between order creation and

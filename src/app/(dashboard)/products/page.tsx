@@ -22,21 +22,33 @@ export default async function ProductsPage() {
   // across ALL products — not just page 1 — so the stat cards are correct
   // regardless of pagination. Low-stock needs stock <= lowStockThreshold
   // (a field-to-field comparison Prisma can't express in where), so we fetch
-  // the three columns once and compute both low-stock count + inventory value
-  // in JS (single round trip, cheap on local SQLite).
-  const [products, categories, totalProducts, activeCount, stockRows] = await Promise.all([
+  // the relevant columns once and compute both low-stock count + inventory
+  // value in JS (single round trip, cheap on local SQLite).
+  //
+  // W3-14: low-stock count now filters isActive=true so retired/archived
+  // products don't inflate the alert — matches the dashboard + notification-
+  // bell definitions (DATA_INTEGRITY_PLAN scenario #9 fix). Inventory value
+  // still spans ALL non-deleted products (capital tied up in inactive stock
+  // is still real). Two separate queries: the low-stock query fetches fewer
+  // rows (perf win) and only the columns it needs; the inventory query
+  // fetches price+stock across everything.
+  const [products, categories, totalProducts, activeCount, lowStockRows, inventoryRows] = await Promise.all([
     productService.list({ prisma: db }, { limit: PAGE_SIZE, offset: 0 }),
     productService.listCategories({ prisma: db }),
     db.product.count({ where: { deletedAt: null } }),
     db.product.count({ where: { isActive: true, deletedAt: null } }),
     db.product.findMany({
+      where: { isActive: true, deletedAt: null },
+      select: { stock: true, lowStockThreshold: true },
+    }),
+    db.product.findMany({
       where: { deletedAt: null },
-      select: { price: true, stock: true, lowStockThreshold: true },
+      select: { price: true, stock: true },
     }),
   ]);
 
-  const lowStockCount = stockRows.filter((p) => p.stock <= p.lowStockThreshold).length;
-  const inventoryValue = stockRows.reduce((sum, p) => sum + p.price * Math.max(0, p.stock), 0);
+  const lowStockCount = lowStockRows.filter((p) => p.stock <= p.lowStockThreshold).length;
+  const inventoryValue = inventoryRows.reduce((sum, p) => sum + p.price * Math.max(0, p.stock), 0);
 
   return (
     <div className="app-content page-sections">

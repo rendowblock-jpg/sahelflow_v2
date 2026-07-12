@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteShop, getShop, getActiveShopId } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,15 @@ export const DELETE = withErrorHandler(
       );
     }
     deleteShop(id);
+    // W2-5: audit shop deletion — destructive (SQLite file is permanently deleted).
+    // `shop` was fetched above (used for the 404 check + active-shop guard).
+    void logAudit({
+      action: "shop.deleted",
+      entity: "shop",
+      entityId: id,
+      actor: "user",
+      before: shop as unknown as Record<string, unknown> | null,
+    });
     return NextResponse.json({ ok: true });
   },
   "DELETE /api/shops/[id]",

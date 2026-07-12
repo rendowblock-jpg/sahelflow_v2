@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -53,8 +54,17 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
+  // W2-5: capture before-state for audit.
+  const existing = await db.automation.findUnique({ where: { id } });
   // Soft-delete (Automation has deletedAt). Hard-deleting would cascade-wipe
   // AutomationLog rows and lose the execution audit trail (C-audit S2-8).
   await db.automation.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+  void logAudit({
+    action: "automation.deleted",
+    entity: "automation",
+    entityId: id,
+    actor: "user",
+    before: existing as Record<string, unknown> | null,
+  });
   return NextResponse.json({ success: true });
 }, "DELETE /api/automations/[id]");

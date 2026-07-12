@@ -112,7 +112,7 @@ export function CodReconciliationClient({
                   <Input
                     value={remittanceRef}
                     onChange={(e) => setRemittanceRef(e.target.value)}
-                    placeholder="e.g. YAL-REM-2024-001"
+                    placeholder={t("codReconciliation.remittanceRefPlaceholder")}
                   />
                 </div>
                 <Button
@@ -144,10 +144,10 @@ export function CodReconciliationClient({
                         aria-label={t("dataTable.selectAll")}
                       />
                     </th>
-                    <th className="px-4 py-3 text-start">Order</th>
-                    <th className="px-4 py-3 text-start">Customer</th>
-                    <th className="px-4 py-3 text-end">Amount</th>
-                    <th className="px-4 py-3 text-start">Collected</th>
+                    <th className="px-4 py-3 text-start">{t("codReconciliation.colOrder")}</th>
+                    <th className="px-4 py-3 text-start">{t("codReconciliation.colCustomer")}</th>
+                    <th className="px-4 py-3 text-end">{t("codReconciliation.colAmount")}</th>
+                    <th className="px-4 py-3 text-start">{t("codReconciliation.collected")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -161,7 +161,7 @@ export function CodReconciliationClient({
                         <Checkbox
                           checked={selected.has(o.id)}
                           onCheckedChange={() => toggleOne(o.id)}
-                          aria-label={`Select ${o.orderNumber}`}
+                          aria-label={t("codReconciliation.selectOrderAria", { orderNumber: o.orderNumber })}
                         />
                       </td>
                       <td className="px-4 py-3 font-mono text-sm font-medium">{o.orderNumber}</td>
@@ -175,7 +175,7 @@ export function CodReconciliationClient({
                 </tbody>
                 <tfoot className="border-t bg-muted/30">
                   <tr className="text-sm font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-end">Total pending:</td>
+                    <td colSpan={3} className="px-4 py-3 text-end">{t("codReconciliation.totalPending")}</td>
                     <td className="px-4 py-3 text-end font-bold tabular-nums">{formatDZD(totalPending)}</td>
                     <td></td>
                   </tr>
@@ -188,7 +188,7 @@ export function CodReconciliationClient({
               <div className="flex gap-4">
                 <span className="text-muted-foreground">{t("codReconciliation.collected")}: <span className="font-medium text-foreground">{formatDZD(totalCollected)}</span></span>
                 <span className="text-muted-foreground">{t("codReconciliation.remitted")}: <span className="font-medium text-success">{formatDZD(totalRemitted)}</span></span>
-                <span className="text-muted-foreground">Pending: <span className="font-medium text-warning">{formatDZD(totalPending)}</span></span>
+                <span className="text-muted-foreground">{t("codReconciliation.pending")}: <span className="font-medium text-warning">{formatDZD(totalPending)}</span></span>
               </div>
             </div>
           </>

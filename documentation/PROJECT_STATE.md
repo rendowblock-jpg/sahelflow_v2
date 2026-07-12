@@ -24,8 +24,8 @@
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1435 pass | 0 skip | 0 fail** (re-verified Session 37 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1435/1435, prisma valid, 7 migrations clean (new: fix_codremitted_null_default)) — +138 tests across Phases 3-7 (−6 dead tests removed in Phase 5) |
-| Test coverage | **82% statements** (re-measured Session 38 — was incorrectly claimed as 88.8% since Session 20) (floor locked at 80%) |
+| Tests | **1435 pass | 0 skip | 0 fail** (re-verified Session 37 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1435/1435, prisma valid, 7 migrations clean (new: fix_codremitted_null_default)) — +138 tests across Phases 3-7 (−6 dead tests removed in Phase 5). **Test count pending re-verification after Session 39 changes** (new tests added by W2-7/W3-8 + sibling audit items; main agent will re-run vitest). |
+| Test coverage | **82.15% statements** (re-measured Session 38 — was incorrectly claimed as 88.8% since Session 20; floor locked at 80%). **Critical files at 0% coverage:** `src/lib/data/analytics-v2.ts`, `src/lib/data/conversation-service.ts`, `src/lib/phone-reputation.ts`, `src/lib/license/machine-id.ts`. `src/lib/automations/conditions.ts` at 1.58%. **Prevention:** `sf-audit` should be added to CI as a coverage-drift gate (see HONEST_ASSESSMENT.md "Coverage gaps" section). |
 | Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
 | i18n keys | 2,560 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) — +24 error-translation keys + 19 notification keys added Session 35 |
@@ -661,7 +661,7 @@ lib/ai/redact.ts, lib/auth/constant-time.ts, scripts/build-sidecar.ts.
 ### Session 20 (the "actually open it" sprint)
 - Method change: "done" = browser-verified with real data
 - 2 P0 fixes (auth, PII leak), 8 P1 fixes, 1 pre-broken test
-- Test coverage 34.5% → 88.8% (+700 tests)
+- Test coverage 34.5% → 88.8% (+700 tests) — _note: this 88.8% figure was later found to be stale; Session 38 re-measured actual coverage at 82.15% (see "Test coverage" row in At a Glance above + HONEST_ASSESSMENT.md "Coverage gaps" section)._
 - Visual: emerald rebrand + blue→teal + deep responsive + Arabic RTL complete
 - 3 new agent tools: sf-browser, sf-seed, sf-audit
 
@@ -688,7 +688,7 @@ lib/ai/redact.ts, lib/auth/constant-time.ts, scripts/build-sidecar.ts.
 
 ### Engineering-ready (agent can do)
 1. ✅ ~~5 skipped tests~~ — RESOLVED (Session 24): all 5 fixed, 1197 pass | 0 skip
-2. **Coverage scope** — 88.8% is on `src/lib/`; pages/components/API routes not in coverage scope
+2. **Coverage scope** — 82.15% is on `src/lib/`; pages/components/API routes not in coverage scope. Critical files at 0% coverage include `analytics-v2.ts`, `conversation-service.ts`, `phone-reputation.ts`, `license/machine-id.ts`; `conditions.ts` at 1.58%. `sf-audit` should be added to CI as a coverage-drift gate (see HONEST_ASSESSMENT.md "Coverage gaps" section).
 3. **Tauri build unverified** — Rust setup hook (migrations + sidecar spawn) never compiled/tested
 4. **Playwright e2e unverified** — config + 4 test files exist, never run
 5. ✅ ~~Inbox 3-pane UI not fully wired~~ — RESOLVED (Session 24) — Phase 5 built the schema + services + components, but the inbox-live.tsx page still uses the old single-thread layout. The new conversation-status-badge + message-status components exist but aren't rendered in the page yet.
@@ -723,6 +723,6 @@ lib/ai/redact.ts, lib/auth/constant-time.ts, scripts/build-sidecar.ts.
 
 | Branch | HEAD | Purpose |
 |---|---|---|
-| `main` | `253cb46` | v4.0.0 + Session 28 (deep wave A+B+C merged linearly). sf-verify green. 1201 tests, 0 skip. 88.8% coverage. |
+| `main` | `253cb46` | v4.0.0 + Session 28 (deep wave A+B+C merged linearly). sf-verify green. 1201 tests, 0 skip. _(Historical coverage claim: 88.8% — this figure was later found stale; Session 38 re-measured actual coverage at 82.15%. See "Test coverage" row in At a Glance above.)_ |
 | `v2-legacy` | `1ffd327` | Old v2 code (reference only, do NOT merge) |
 | `agent-handoff` | (orphan) | Agent metadata: AGENT_HANDOFF.md + bootstrap.sh + toolkit (8 tools) |

@@ -90,11 +90,49 @@ export interface DeliveryCredentials {
   [key: string]: string | undefined;
 }
 
+/**
+ * Result of cancelShipment. The base contract is `{ success, error? }`.
+ *
+ * W3-11 (ZR Express cancel): providers that don't support API-based
+ * cancellation can return a structured result with `action: "open_dashboard"`
+ * + `dashboardUrl` + `message` so the UI can show an "Open Dashboard" button
+ * instead of a bare error toast. The base `error` field is kept for
+ * backward-compat with existing tests/UIs that read `result.error`.
+ */
+export interface CancelShipmentResult {
+  success: boolean;
+  error?: string;
+  /** Whether the shipment was actually cancelled at the provider. */
+  cancelled?: boolean;
+  /** When the provider has no API cancellation, UI shows a dashboard link. */
+  action?: "open_dashboard";
+  /** URL the user can visit to perform the action manually. */
+  dashboardUrl?: string;
+  /** Human-readable explanation of the action result (i18n-translatable). */
+  message?: string;
+}
+
+/**
+ * Result of testConnection — a lightweight credential-validation call.
+ * Used by POST /api/delivery/test-connection + the "Test connection"
+ * button in the integrations panel UI.
+ */
+export interface TestConnectionResult {
+  ok: boolean;
+  message: string;
+}
+
 /** The adapter interface every delivery provider implements. */
 export interface DeliveryAdapter {
   readonly id: string; // "yalidine" | "maystro" | "zrexpress"
   readonly name: string;
   readonly logo: string;
+  /**
+   * W2-10: marks adapters whose endpoints are unverified guesses
+   * (e.g., DHD — no public API docs). The UI shows an "Experimental" badge
+   * and prompts the user to verify endpoints before relying on the adapter.
+   */
+  readonly isExperimental?: boolean;
 
   /** Estimate the delivery cost for a shipment (wilaya + weight). */
   estimateCost(
@@ -118,7 +156,15 @@ export interface DeliveryAdapter {
   cancelShipment?(
     trackingId: string,
     credentials: DeliveryCredentials,
-  ): Promise<{ success: boolean; error?: string }>;
+  ): Promise<CancelShipmentResult>;
+
+  /**
+   * W2-10: lightweight "ping" call to validate credentials without
+   * creating a shipment. Calls a low-cost endpoint (e.g., list wilayas,
+   * get account info). Used by the "Test connection" button in the
+   * integrations panel + POST /api/delivery/test-connection.
+   */
+  testConnection?(credentials: DeliveryCredentials): Promise<TestConnectionResult>;
 }
 
 /** Known provider IDs (convention: lowercase, no spaces). */

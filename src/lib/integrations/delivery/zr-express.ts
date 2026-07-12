@@ -46,6 +46,7 @@ import type {
   TrackingEvent,
   TrackingInfo,
   DeliveryStatus,
+  CancelShipmentResult,
 } from "./types";
 import { retryFetch } from "./retry";
 
@@ -395,14 +396,33 @@ export const zrExpressAdapter: DeliveryAdapter = {
   async cancelShipment(
     _trackingId: string,
     _creds: DeliveryCredentials,
-  ): Promise<{ success: boolean; error?: string }> {
-    // ZR Express does not support cancellation via the legacy/Procolis API.
-    // The seller must cancel from the ZR Express dashboard.
+  ): Promise<CancelShipmentResult> {
+    // W3-11: ZR Express does not support cancellation via the legacy/Procolis
+    // API. The seller must cancel from the ZR Express dashboard.
+    //
+    // Previously this returned a bare { success: false, error: "..." } which
+    // the UI surfaced as a generic error toast — leaving the seller unsure
+    // of what to do next. The new structured result tells the UI to render
+    // an "Open Dashboard" button so the seller has an actionable next step
+    // instead of a dead-end error.
+    //
+    // We keep the `error` field (with the original French "pas supportée"
+    // message) for backward-compat with existing tests/UIs that read
+    // `result.error`. The new `action`/`dashboardUrl`/`message` fields are
+    // the structured contract the UI uses to render the dashboard link.
+    const dashboardUrl = "https://zrexpress.com/ZREXPRESS_WEB/FR/";
+    const message =
+      "L'annulation via l'API n'est pas supportée par ZR Express. " +
+      "Annulez depuis le tableau de bord ZR Express.";
     return {
       success: false,
-      error:
-        "L'annulation via l'API n'est pas supportée par ZR Express. " +
-        "Annulez depuis le tableau de bord ZR Express.",
+      cancelled: false,
+      action: "open_dashboard",
+      dashboardUrl,
+      message,
+      // Backward-compat: keep the original error string so existing tests
+      // + any caller that reads `result.error` still see the familiar text.
+      error: message,
     };
   },
 };

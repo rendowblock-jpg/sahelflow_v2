@@ -4,6 +4,7 @@ import { updateExpenseSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { NotFoundError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +50,18 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   await requireAuth();
   const { id } = await params;
 
-  const existing = await db.expense.findUnique({
-    where: { id },
-    select: { id: true },
-  });
+  // W2-5: fetch full row for audit before-state (was id-only before).
+  const existing = await db.expense.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError("Expense", id);
 
   // Soft-delete (enables undo via /api/expenses/[id]/restore)
   await db.expense.update({ where: { id }, data: { deletedAt: new Date() } });
+  void logAudit({
+    action: "expense.deleted",
+    entity: "expense",
+    entityId: id,
+    actor: "user",
+    before: existing as Record<string, unknown> | null,
+  });
   return NextResponse.json({ success: true });
 }, "DELETE /api/expenses/[id]");

@@ -17,7 +17,7 @@
 #[cfg(not(debug_assertions))]
 use std::net::TcpStream;
 #[cfg(not(debug_assertions))]
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[tauri::command]
 fn get_machine_id() -> String {
@@ -136,6 +136,29 @@ impl Default for SpawnedChildren {
     }
 }
 
+/// W2-2: sidecar respawn backoff state. Stored as a Tauri managed state
+/// (`Mutex<SidecarRespawnState>`). The `last_spawn` timestamp lets us reset the
+/// attempt counter when the sidecar ran successfully for >60s before crashing —
+/// a stable sidecar shouldn't be refused respawn for an occasional crash.
+#[cfg(not(debug_assertions))]
+struct SidecarRespawnState {
+    attempts: u8,
+    last_spawn: Instant,
+}
+
+#[cfg(not(debug_assertions))]
+impl Default for SidecarRespawnState {
+    fn default() -> Self {
+        Self {
+            attempts: 0,
+            last_spawn: Instant::now(),
+        }
+    }
+}
+
+#[cfg(not(debug_assertions))]
+const SIDECAR_NAME: &str = "sahelflow-whatsapp";
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -163,6 +186,9 @@ pub fn run() {
             {
                 use tauri::Manager;
                 _app.manage(SpawnedChildren::default());
+                // W2-2: track sidecar respawn attempts for backoff. Reset on
+                // successful run (>60s alive) — see schedule_sidecar_respawn.
+                _app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
 
                 // Run Prisma migrations BEFORE spawning Next.js.
                 // Ensures the user's SQLite schema is up-to-date on every
@@ -176,6 +202,38 @@ pub fn run() {
                 let migration_script = resource_dir.join("scripts/run-migrations.ts");
                 // T-S5: prefer the bundled Bun runtime so end users don't need Bun installed.
                 let bun_cmd = bundled_bun(&resource_dir).unwrap_or_else(|| "bun".to_string());
+                // W2-1: back up the existing DB before running migrations. A
+                // partially-applied migration leaves the schema in an
+                // inconsistent state — without a backup the user's data is
+                // trapped in a bricked install. The backup lives next to
+                // dev.db as dev.pre-migration-<epoch>.db so multiple attempts
+                // don't clobber each other.
+                let mut backup_made = false;
+                if db_path.exists() {
+                    let ts = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let backup_path =
+                        db_path.with_extension(format!("pre-migration-{}.db", ts));
+                    match std::fs::copy(&db_path, &backup_path) {
+                        Ok(_) => {
+                            backup_made = true;
+                            eprintln!(
+                                "[sahelflow] DB backed up to {} before migration",
+                                backup_path.display()
+                            );
+                        }
+                        Err(e) => {
+                            eprintln!(
+                                "[sahelflow] WARNING: could not back up DB before migration ({}). \
+                                 Continuing with migration — no rollback path exists if it fails.",
+                                e
+                            );
+                        }
+                    }
+                }
+
                 let migration_result = std::process::Command::new(&bun_cmd)
                     .arg(&migration_script)
                     .env("DATABASE_URL", format!("file:{}", db_path.display()))
@@ -186,11 +244,59 @@ pub fn run() {
                         eprintln!("[sahelflow] Migrations applied successfully");
                     }
                     Ok(output) => {
-                        eprintln!("[sahelflow] Migration warning: {}",
-                            String::from_utf8_lossy(&output.stderr));
+                        // W2-1: migration failure is FATAL in release. A
+                        // partially-applied migration leaves the schema
+                        // inconsistent — launching the app anyway would silently
+                        // brick the install and trap the user's data. Exit(1)
+                        // so the founder can restore from the pre-migration
+                        // backup before retrying.
+                        //
+                        // (This whole block is `#[cfg(not(debug_assertions))]`,
+                        // so debug builds keep the old warn-only behavior —
+                        // dev iteration isn't blocked by migration issues.)
+                        eprintln!(
+                            "[sahelflow] FATAL: migration failed (exit code {:?})",
+                            output.status.code()
+                        );
+                        eprintln!(
+                            "[sahelflow] --- stderr ---\n{}",
+                            String::from_utf8_lossy(&output.stderr)
+                        );
+                        eprintln!(
+                            "[sahelflow] --- stdout ---\n{}",
+                            String::from_utf8_lossy(&output.stdout)
+                        );
+                        if backup_made {
+                            eprintln!(
+                                "[sahelflow] A pre-migration backup was saved next to dev.db \
+                                 (dev.pre-migration-*.db). Restore it before retrying, or \
+                                 contact support."
+                            );
+                        } else {
+                            eprintln!(
+                                "[sahelflow] No pre-migration backup was available (this was \
+                                 likely a first launch with no existing DB). Delete \
+                                 shops/dev.db and relaunch to retry, or contact support."
+                            );
+                        }
+                        std::process::exit(1);
                     }
                     Err(e) => {
-                        eprintln!("[sahelflow] Could not run migrations: {}", e);
+                        eprintln!("[sahelflow] FATAL: could not run migration command: {}", e);
+                        if backup_made {
+                            eprintln!(
+                                "[sahelflow] A pre-migration backup was saved next to dev.db \
+                                 (dev.pre-migration-*.db). Restore it before retrying, or \
+                                 contact support."
+                            );
+                        } else {
+                            eprintln!(
+                                "[sahelflow] No pre-migration backup was available (this was \
+                                 likely a first launch with no existing DB). Delete \
+                                 shops/dev.db and relaunch to retry, or contact support."
+                            );
+                        }
+                        std::process::exit(1);
                     }
                 }
 
@@ -270,51 +376,14 @@ fn child_env(app: &tauri::App) -> Vec<(String, String)> {
 fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::Manager;
     use tauri_plugin_shell::ShellExt;
-    use tauri_plugin_shell::process::CommandEvent;
 
     let env = child_env(app);
 
-    // 1. WhatsApp sidecar (compiled externalBin: sahelflow-whatsapp)
-    match app.shell().sidecar("sahelflow-whatsapp") {
-        Ok(cmd) => {
-            // Apply the shared env vars to the sidecar spawn (T-S2).
-            let mut cmd = cmd;
-            for (k, v) in &env {
-                cmd = cmd.env(k, v);
-            }
-            match cmd.spawn() {
-                Ok((mut rx, child)) => {
-                    eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
-                    // Store the child handle so the RunEvent loop can kill it on exit (T-S4).
-                    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-                        if let Ok(mut children) = state.lock() {
-                            children.sidecar = Some(child);
-                        }
-                    }
-                    tauri::async_runtime::spawn(async move {
-                        while let Some(event) = rx.recv().await {
-                            match event {
-                                CommandEvent::Stdout(line) => {
-                                    eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
-                                }
-                                CommandEvent::Stderr(line) => {
-                                    eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
-                                }
-                                CommandEvent::Terminated(payload) => {
-                                    eprintln!("[whatsapp] terminated: {payload:?}");
-                                }
-                                _ => {}
-                            }
-                        }
-                    });
-                }
-                Err(e) => eprintln!("[sahelflow] failed to spawn WhatsApp sidecar: {e}"),
-            }
-        }
-        Err(e) => eprintln!(
-            "[sahelflow] WhatsApp sidecar binary not found (inbox falls back to demo mode): {e}"
-        ),
-    }
+    // 1. WhatsApp sidecar (compiled externalBin: sahelflow-whatsapp).
+    // W2-2: spawn + watch in a separate function so the same logic can be
+    // re-used for respawns after crashes (CommandEvent::Terminated triggers
+    // a backoff respawn — see spawn_sidecar_and_watch / schedule_sidecar_respawn).
+    spawn_sidecar_and_watch(app.handle().clone(), env.clone());
 
     // 2. Next.js standalone server (from bundled resources).
     let resource_dir = app.path().resource_dir()?;
@@ -380,6 +449,146 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+/// W2-2: spawn the WhatsApp sidecar and watch its event stream. On
+/// `CommandEvent::Terminated`, schedule a respawn with backoff (5s, 15s, 60s,
+/// max 3 attempts). Resets the attempt counter if the sidecar ran for >60s
+/// before crashing. Extracted from `spawn_services` so the same logic can be
+/// invoked for the initial spawn AND for respawns.
+#[cfg(not(debug_assertions))]
+fn spawn_sidecar_and_watch(app_handle: tauri::AppHandle, env: Vec<(String, String)>) {
+    use tauri::Manager;
+    use tauri_plugin_shell::ShellExt;
+    use tauri_plugin_shell::process::CommandEvent;
+
+    let mut cmd = match app_handle.shell().sidecar(SIDECAR_NAME) {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            eprintln!(
+                "[sahelflow] WhatsApp sidecar binary not found (inbox falls back to demo mode): {e}"
+            );
+            return;
+        }
+    };
+    // Apply the shared env vars to the sidecar spawn (T-S2).
+    for (k, v) in &env {
+        cmd = cmd.env(k, v);
+    }
+    let (mut rx, child) = match cmd.spawn() {
+        Ok(spawned) => spawned,
+        Err(e) => {
+            eprintln!("[sahelflow] failed to spawn WhatsApp sidecar: {e}");
+            return;
+        }
+    };
+
+    eprintln!("[sahelflow] WhatsApp sidecar spawned on port 3001");
+
+    // Store the child handle so the RunEvent loop can kill it on exit (T-S4).
+    if let Some(state) = app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+        if let Ok(mut children) = state.lock() {
+            children.sidecar = Some(child);
+        }
+    }
+    // Record the spawn time so schedule_sidecar_respawn can reset the backoff
+    // counter if the sidecar runs successfully for >60s before crashing (W2-2).
+    if let Some(state) = app_handle.try_state::<std::sync::Mutex<SidecarRespawnState>>() {
+        if let Ok(mut s) = state.lock() {
+            s.last_spawn = Instant::now();
+        }
+    }
+
+    // Clone env + app_handle for the respawn logic that runs on Terminated.
+    // (The Terminated event fires once, then rx returns None and the loop exits.)
+    let env_for_respawn = env.clone();
+    let app_handle_for_watch = app_handle.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(line) => {
+                    eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
+                }
+                CommandEvent::Stderr(line) => {
+                    eprintln!("[whatsapp] {}", String::from_utf8_lossy(&line));
+                }
+                CommandEvent::Terminated(payload) => {
+                    eprintln!("[whatsapp] terminated: {payload:?}");
+                    // W2-2: schedule a respawn with backoff.
+                    schedule_sidecar_respawn(app_handle_for_watch.clone(), env_for_respawn.clone());
+                }
+                _ => {}
+            }
+        }
+    });
+}
+
+/// W2-2: decide whether to respawn the sidecar after it terminated, and
+/// schedule the respawn with backoff (5s → 15s → 60s, max 3 attempts within a
+/// 60s window). The respawn delay runs on a bare `std::thread` (not tokio)
+/// because the `tokio::time` module isn't a direct dependency — `std::thread`
+/// is always available and the sleep is non-blocking to the rest of the app.
+/// The thread exits immediately after triggering the respawn.
+#[cfg(not(debug_assertions))]
+fn schedule_sidecar_respawn(app_handle: tauri::AppHandle, env: Vec<(String, String)>) {
+    use tauri::Manager;
+
+    const MAX_ATTEMPTS: u8 = 3;
+    const RESET_THRESHOLD_SECS: u64 = 60;
+
+    // Determine how long the sidecar was alive. If >=60s, reset the attempt
+    // counter — a sidecar that ran successfully for a while shouldn't be
+    // penalized for an occasional crash by being refused respawn.
+    let (alive_secs, next_attempt) =
+        if let Some(state) = app_handle.try_state::<std::sync::Mutex<SidecarRespawnState>>() {
+            if let Ok(mut s) = state.lock() {
+                let alive = s.last_spawn.elapsed().as_secs();
+                if alive >= RESET_THRESHOLD_SECS {
+                    s.attempts = 0;
+                }
+                s.attempts = s.attempts.saturating_add(1);
+                (alive, s.attempts)
+            } else {
+                (0u64, 1u8)
+            }
+        } else {
+            (0u64, 1u8)
+        };
+
+    if next_attempt > MAX_ATTEMPTS {
+        eprintln!(
+            "[sahelflow] CRITICAL: WhatsApp sidecar crashed {} times within {}s — giving up. \
+             Inbox will stay offline until the app is restarted.",
+            next_attempt, RESET_THRESHOLD_SECS
+        );
+        return;
+    }
+
+    let delay_secs = match next_attempt {
+        1 => 5u64,
+        2 => 15u64,
+        3 => 60u64,
+        _ => 60u64,
+    };
+    let reset_note = if alive_secs >= RESET_THRESHOLD_SECS {
+        " (counter reset — was alive ≥60s)"
+    } else {
+        ""
+    };
+    eprintln!(
+        "[sahelflow] WhatsApp sidecar crashed (alive for {}s{}) — respawning in {}s \
+         (attempt {}/{})",
+        alive_secs, reset_note, delay_secs, next_attempt, MAX_ATTEMPTS
+    );
+
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(delay_secs));
+        eprintln!(
+            "[sahelflow] respawning WhatsApp sidecar (attempt {}/{})...",
+            next_attempt, MAX_ATTEMPTS
+        );
+        spawn_sidecar_and_watch(app_handle, env);
+    });
 }
 
 #[cfg(not(debug_assertions))]

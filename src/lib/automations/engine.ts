@@ -62,7 +62,21 @@ export interface TriggerPayload {
   [key: string]: unknown;
 }
 
-export type ExecutionStatus = "success" | "failed" | "skipped";
+/**
+ * W3-3 (task 2-g): extended with two new statuses:
+ *   - "dry_run"       — automation.dryRun is true; the engine logged what
+ *                       it WOULD do but did not execute the action.
+ *   - "rate_limited"  — a destructive automation exceeded its per-minute
+ *                       rate limit (DESTRUCTIVE_RATE_LIMIT_PER_MIN) and was
+ *                       skipped to prevent a runaway trigger from causing
+ *                       mass data loss.
+ */
+export type ExecutionStatus =
+  | "success"
+  | "failed"
+  | "skipped"
+  | "dry_run"
+  | "rate_limited";
 
 interface AutomationConfig {
   messageTemplate?: string;
@@ -210,6 +224,131 @@ export async function checkAndDispatchLowStock(
   if (product) dispatchLowStock(product);
 }
 
+// ── Destructive-action detection + rate-limiting (W3-3, task 2-g) ────────────
+
+/**
+ * W3-3: target order statuses that make an `update_status` action
+ * destructive. Cancelling or failing an order is hard to reverse
+ * (stock has been adjusted, customer stats have been updated, automations
+ * may have fired on the cancellation trigger).
+ */
+const DESTRUCTIVE_TARGET_STATUSES = new Set(["cancelled", "failed"]);
+
+/**
+ * W3-3: per-automation per-minute cap on destructive executions. If an
+ * automation's trigger fires more than this many times in 60s AND the
+ * action is destructive, the engine skips execution + logs `rate_limited`.
+ *
+ * 10/min is a deliberate balance: a seller legitimately confirming 30
+ * orders in a minute (bulk import) won't be blocked because `confirmed`
+ * is NOT in DESTRUCTIVE_TARGET_STATUSES. But a runaway trigger that tries
+ * to cancel 100 orders in a minute (e.g. a misconfigured condition that
+ * matches every page load) will be stopped after the 10th cancel.
+ */
+const DESTRUCTIVE_RATE_LIMIT_PER_MIN = 10;
+
+/**
+ * W3-3: an action is destructive if it modifies order state to a terminal/
+ * hard-to-reverse status. Currently only `update_status` with a destructive
+ * targetStatus qualifies.
+ *
+ * Other actions are NOT rate-limited:
+ *   - `send_whatsapp`        — side-effect only (a duplicate WhatsApp is
+ *                              annoying but not data loss; the recipient
+ *                              can ignore it). Rate-limiting here would
+ *                              silently drop delivery confirmations etc.
+ *   - `tag_customer`         — notes are append-only + editable; a runaway
+ *                              trigger duplicates notes (cleanup is a
+ *                              one-liner) but doesn't lose data.
+ *   - `send_notification`    — in-app only, no persistent state change.
+ *
+ * Future: if `update_stock` / `update_price` actions are added (currently
+ * they're AI tools, not automations), add them here.
+ */
+function isDestructiveAction(action: string, config: AutomationConfig): boolean {
+  if (action === "update_status") {
+    const target = config.targetStatus;
+    return typeof target === "string" && DESTRUCTIVE_TARGET_STATUSES.has(target);
+  }
+  return false;
+}
+
+/**
+ * W3-3: count destructive executions (success OR failed — both count,
+ * since an attempt that failed still consumed a turn) for this automation
+ * in the last 60s. Returns true if the rate limit has been exceeded.
+ *
+ * Queries AutomationLog directly. The `status in ["success", "failed"]`
+ * filter excludes `dry_run`, `rate_limited`, and `skipped` rows — those
+ * don't represent real execution attempts.
+ */
+async function isDestructiveRateLimited(automationId: string): Promise<boolean> {
+  const sixtySecondsAgo = new Date(Date.now() - 60_000);
+  const recentCount = await db.automationLog.count({
+    where: {
+      automationId,
+      status: { in: ["success", "failed"] },
+      createdAt: { gte: sixtySecondsAgo },
+    },
+  });
+  return recentCount >= DESTRUCTIVE_RATE_LIMIT_PER_MIN;
+}
+
+/**
+ * W3-3 (task 2-g): produce a human-readable description of what an action
+ * WOULD do, for the `dry_run` AutomationLog message. The description is
+ * intentionally short (one line) so it's scannable in the log table.
+ *
+ * Examples:
+ *   - send_whatsapp   → "send WhatsApp to 0555123456 ('Hello Ahmed...')"
+ *   - update_status   → "update order #CMD-001 status → cancelled"
+ *   - tag_customer    → "tag customer 'Ahmed' with note 'VIP'"
+ *   - send_notification → "send in-app notification"
+ *   - multi-step      → "run 3 steps: [send_whatsapp, update_status, tag_customer]"
+ */
+function describeActionIntent(
+  action: string,
+  config: AutomationConfig,
+  payload: TriggerPayload,
+  stepsRaw?: string | null,
+): string {
+  // Multi-step automation — describe each step (no recursion; steps are
+  // action-name strings, not full action+config tuples).
+  if (stepsRaw) {
+    try {
+      const steps = JSON.parse(stepsRaw);
+      if (Array.isArray(steps) && steps.length > 0) {
+        return `run ${steps.length} steps: [${steps.join(", ")}]`;
+      }
+    } catch {
+      // fall through to single-action description
+    }
+  }
+
+  switch (action) {
+    case "send_whatsapp": {
+      const phone = payload.customerPhone ?? "(no phone)";
+      const tmpl = config.messageTemplate ?? "(default template)";
+      const preview = tmpl.length > 40 ? `${tmpl.slice(0, 40)}...` : tmpl;
+      return `send WhatsApp to ${phone} ('${preview}')`;
+    }
+    case "update_status": {
+      const target = config.targetStatus ?? "(unset)";
+      return `update order ${payload.orderNumber ?? payload.orderId ?? "(no order)"} status → ${target}`;
+    }
+    case "tag_customer": {
+      const note = config.noteText ?? "(default tag)";
+      return `tag customer '${payload.customerName ?? payload.customerId ?? "(unknown)"}' with note '${note}'`;
+    }
+    case "send_notification": {
+      const tmpl = config.messageTemplate ?? "Automation triggered";
+      return `send in-app notification ('${tmpl}')`;
+    }
+    default:
+      return `execute action '${action}'`;
+  }
+}
+
 // ── Single automation execution ──────────────────────────────────────────────
 
 async function executeAutomation(
@@ -220,6 +359,8 @@ async function executeAutomation(
     config: string | null;
     conditions?: string | null;
     steps?: string | null;
+    /** W3-3: when true, log what we WOULD do but don't execute. */
+    dryRun?: boolean | null;
   },
   event: string,
   payload: TriggerPayload,
@@ -248,6 +389,65 @@ async function executeAutomation(
         },
       });
       return;
+    }
+
+    // ── W3-3 (task 2-g): dry-run mode ────────────────────────────────────────
+    // When automation.dryRun is true, log what we WOULD do but do NOT execute
+    // the action. This lets a seller test an automation against live triggers
+    // (e.g. ship a test order, watch the AutomationLog fill up with `dry_run`
+    // entries describing what would have happened) without risking side
+    // effects (WhatsApp sends, status updates, customer tagging).
+    //
+    // Dry-run logs do NOT count toward the destructive rate limit — a
+    // dry-running automation can fire as often as its trigger allows.
+    if (automation.dryRun === true) {
+      const wouldDo = describeActionIntent(automation.action, config, payload, automation.steps);
+      await db.automationLog.create({
+        data: {
+          automationId: automation.id,
+          trigger: event,
+          status: "dry_run",
+          message: `DRY-RUN: would ${wouldDo}`,
+          payload: JSON.stringify(payload).slice(0, 2000),
+        },
+      });
+      // Don't increment runCount — a dry-run isn't a real execution.
+      // (runCount is the seller-facing "how many times has this fired"
+      //  metric; dry-runs would inflate it misleadingly.)
+      logger.info("automation.dryRun", {
+        automationId: automation.id,
+        action: automation.action,
+        wouldDo,
+      });
+      return;
+    }
+
+    // ── W3-3 (task 2-g): destructive-action rate-limit ──────────────────────
+    // For destructive actions (cancel order, mark failed), cap executions at
+    // DESTRUCTIVE_RATE_LIMIT_PER_MIN per automation. Prevents a runaway
+    // trigger (e.g. a misconfigured condition that matches every page load)
+    // from cancelling 100s of orders in a minute. Non-destructive actions
+    // (send_whatsapp, tag_customer, send_notification, update_status to
+    // non-terminal statuses) are NOT rate-limited.
+    if (isDestructiveAction(automation.action, config)) {
+      const rateLimited = await isDestructiveRateLimited(automation.id);
+      if (rateLimited) {
+        await db.automationLog.create({
+          data: {
+            automationId: automation.id,
+            trigger: event,
+            status: "rate_limited",
+            message: `Rate-limited: ${DESTRUCTIVE_RATE_LIMIT_PER_MIN}/min cap for destructive action '${automation.action}' reached`,
+            payload: JSON.stringify(payload).slice(0, 2000),
+          },
+        });
+        // Don't increment runCount — a rate-limited skip isn't an execution.
+        logger.warn("automation.rateLimited", {
+          automationId: automation.id,
+          action: automation.action,
+        });
+        return;
+      }
     }
 
     // Phase 6: multi-step actions — if steps are defined, run each in order
@@ -370,6 +570,19 @@ async function executeSendWhatsapp(
   }
 
   // Replace template variables: {{customerName}}, {{orderNumber}}, {{totalPrice}}, {{wilaya}}
+  // TODO(i18n, W2-8): the default fallback template is hardcoded English. The
+  // proper fix is to either (a) load a locale-aware default via `getI18n()`
+  // (server-side translation function — but it requires a Next.js request
+  // context via `cookies()`, which is NOT available when automations are
+  // dispatched from cron jobs / background services), or (b) move the default
+  // to a Setting row (e.g. `whatsapp_default_template_<locale>`) that the
+  // user can edit in the UI on the Automations page, with locale-aware
+  // defaults pre-seeded in setupAuth. For now, this fallback only fires
+  // when `config.messageTemplate` is unset (i.e. the user created an
+  // automation without specifying a message — an edge case). Most users
+  // set their own template via the Automations UI. Deferred to a follow-up
+  // wave to avoid coupling the automation engine to the Next.js request
+  // context (which would break cron-triggered dispatch).
   const template = config.messageTemplate ?? "Hello {{customerName}}, your order {{orderNumber}} has been updated.";
   const message = template
     .replace(/\{\{customerName\}\}/g, payload.customerName ?? "")

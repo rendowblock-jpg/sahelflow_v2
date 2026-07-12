@@ -18,7 +18,49 @@ import { useRouter } from "next/navigation";
  * - ?: Show keyboard shortcuts cheatsheet
  *
  * Skips when typing in inputs/textareas/contentEditable.
+ * Skips all shortcuts when a dialog/modal/popover/dropdown is open (W3-16),
+ * so typing "n" inside a dialog input can't trigger navigation. Escape is
+ * still allowed to pass through (Radix handles closing the overlay natively).
  */
+
+/**
+ * Detect whether any overlay (dialog, modal, popover, dropdown) is open.
+ * Used to suppress global single-key shortcuts while the user is interacting
+ * with an overlay — otherwise pressing "n" inside a dialog input could
+ * trigger "new order" navigation and lose the user's input.
+ *
+ * Checks (in order):
+ *   1. Native <dialog> elements (open attribute).
+ *   2. Radix dialog / alertdialog overlays (data-state="open").
+ *   3. Radix popper-content wrappers (popovers, dropdown menus, command palettes).
+ *   4. Radix Select content (role="listbox" with data-state="open").
+ *
+ * Returns true if ANY overlay is open.
+ */
+function isOverlayOpen(): boolean {
+  if (typeof document === "undefined") return false;
+  // Native <dialog> elements
+  if (document.querySelector("dialog[open]")) return true;
+  // Radix UI dialogs / alertdialogs / sheets
+  if (
+    document.querySelector(
+      '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]',
+    )
+  ) {
+    return true;
+  }
+  // Radix popovers / dropdown menus / command palettes (popper content wrappers
+  // are empty when no popover is open — :not(:empty) filters them out).
+  if (
+    document.querySelector(
+      '[data-radix-popper-content-wrapper]:not(:empty), [role="listbox"][data-state="open"]',
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function useKeyboardShortcuts() {
   const router = useRouter();
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
@@ -29,6 +71,11 @@ export function useKeyboardShortcuts() {
     const DOUBLE_KEY_DELAY = 500;
 
     const handler = (e: KeyboardEvent) => {
+      // W3-16: Skip all shortcuts while a dialog/modal/popover/dropdown is open.
+      // Radix handles Escape natively (closes the overlay) — let it pass through
+      // by NOT bailing on Escape.
+      if (isOverlayOpen() && e.key !== "Escape") return;
+
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||

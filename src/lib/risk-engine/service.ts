@@ -246,6 +246,167 @@ export async function assessOrderRisk(orderId: string): Promise<RiskAssessment |
   return assessment;
 }
 
+// ── Pre-create assessment (W3-4, task 2-g) ───────────────────────────────────
+
+/**
+ * W3-4 (task 2-g): raw order data submitted to the pre-create risk check.
+ *
+ * This is the "pre-flight" shape — the data the seller has typed into the
+ * order form (or that the storefront has posted) BEFORE the order row is
+ * persisted. The function looks up the customer by phone (if she exists)
+ * to evaluate history-based factors; if the phone is new, the customer
+ * is treated as a first-time buyer (which itself is a risk factor — see
+ * `factorNewCustomer` in scoring.ts).
+ */
+export interface PreCreateOrderData {
+  /** Customer phone (Algerian mobile, 0[5-7]XXXXXXXX). Used to look up existing customer history. */
+  phone: string;
+  /** Delivery wilaya (Arabic name, e.g. "الجزائر" or transliteration "Alger"). Drives wilaya-risk factor. */
+  wilaya: string;
+  commune?: string | null;
+  address?: string | null;
+  /** Order total (items + delivery) in DZD. Drives order-value factor. */
+  totalPrice: number;
+  /** Order source — "manual" (seller-created) or "storefront". Drives source-eq rule. */
+  source?: string;
+  /** Line items (currently unused by the scoring engine — reserved for future item-based factors). */
+  items?: Array<{
+    productId: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
+/**
+ * W3-4 (task 2-g): build a RiskAssessmentInput from raw order-form data
+ * (no order ID — the order hasn't been persisted yet).
+ *
+ * Mirrors `buildAssessmentInputFromOrder` but operates on submitted data
+ * instead of querying an Order row. Loads:
+ *   - The customer's order history (by phone lookup — phone is unique on Customer)
+ *   - The customer's blacklist flag
+ *   - The wilaya risk profile (by wilaya name)
+ *
+ * If the phone doesn't match any existing customer, the customerHistory
+ * is `undefined` — the scoring engine treats this as a first-time buyer
+ * (factorNewCustomer fires, +20 risk points by default).
+ */
+export async function buildAssessmentInputFromOrderData(
+  orderData: PreCreateOrderData,
+): Promise<RiskAssessmentInput> {
+  // Look up existing customer by phone (phone is @@unique on Customer).
+  // We allow soft-deleted customers to be found — if a seller is re-creating
+  // an order for a previously-deleted customer, the risk history is still
+  // relevant. (The deletedAt filter on order lookups below handles
+  // soft-deleted orders separately.)
+  const customer = await db.customer.findFirst({
+    where: { phone: orderData.phone },
+    select: {
+      id: true,
+      isBlacklisted: true,
+      createdAt: true,
+    },
+  });
+
+  let customerHistory: RiskAssessmentInput["customerHistory"] | undefined;
+  if (customer) {
+    // Load the customer's order history (exclude soft-deleted orders).
+    const customerOrders = await db.order.findMany({
+      where: { customerId: customer.id, deletedAt: null },
+      select: { status: true, totalPrice: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const totalOrders = customerOrders.length;
+    const deliveredCount = customerOrders.filter((o) => o.status === "delivered").length;
+    const returnedCount = customerOrders.filter((o) => o.status === "returned").length;
+    const refusedCount = customerOrders.filter((o) => o.status === "refused").length;
+    const cancelledCount = customerOrders.filter((o) => o.status === "cancelled").length;
+    const totalSpent = customerOrders
+      .filter((o) => !["cancelled", "draft"].includes(o.status))
+      .reduce((sum, o) => sum + o.totalPrice, 0);
+
+    customerHistory = {
+      customerId: customer.id,
+      totalOrders,
+      deliveredCount,
+      returnedCount,
+      refusedCount,
+      cancelledCount,
+      totalSpent,
+      firstOrderDate: totalOrders > 0 ? customerOrders[0]!.createdAt : null,
+      lastOrderDate: totalOrders > 0 ? customerOrders[customerOrders.length - 1]!.createdAt : null,
+      isBlacklisted: customer.isBlacklisted,
+    };
+  }
+
+  // Wilaya risk profile (may not exist for all wilayas — that's fine, the
+  // scoring engine treats a missing profile as no wilaya-risk contribution).
+  const wilayaRiskRow = await db.wilayaRiskProfile.findUnique({
+    where: { wilaya: orderData.wilaya },
+  });
+
+  return {
+    order: {
+      totalPrice: orderData.totalPrice,
+      wilaya: orderData.wilaya,
+      commune: orderData.commune ?? null,
+      address: orderData.address ?? null,
+      phone: orderData.phone,
+      source: orderData.source ?? "manual",
+      // The order doesn't exist yet — use "now" so the order-frequency factor
+      // can compute hours-since-last-order against the customer's real history.
+      createdAt: new Date(),
+    },
+    customerHistory,
+    wilayaRisk: wilayaRiskRow
+      ? {
+          riskLevel: wilayaRiskRow.riskLevel,
+          confirmationRate: wilayaRiskRow.confirmationRate ?? 0,
+          returnRate: wilayaRiskRow.returnRate ?? 0,
+        }
+      : null,
+  };
+}
+
+/**
+ * W3-4 (task 2-g): assess order risk BEFORE the order is created.
+ *
+ * Takes the raw order-form data (customer phone, wilaya, items, total) and
+ * returns a full RiskAssessment — same factors, same scoring, same rules as
+ * the post-create `assessOrderRisk`. The difference: this function looks up
+ * the customer by phone (instead of by an order's customerId FK) and uses
+ * `new Date()` as the order's createdAt.
+ *
+ * Use cases:
+ *   - Manual order creation UI: show a confirmation dialog if risk is HIGH
+ *     (score > 70) before saving — "This order has HIGH risk (score: 85/100).
+ *     Reason: phone has 3 previous cancellations. Do you still want to create
+ *     this order?"
+ *   - Storefront: reject high-risk orders at the API boundary (or flag them
+ *     for seller review before they hit the orders table).
+ *
+ * Unlike `assessOrderRisk`, this function does NOT need an order ID — it
+ * operates entirely on the submitted data + the customer's existing history.
+ *
+ * Rule trigger counts ARE persisted (fire-and-forget) — the rule genuinely
+ * fired during a risk evaluation, even if the seller abandons the order
+ * after seeing the warning. This keeps analytics consistent with the
+ * post-create path.
+ */
+export async function assessOrderRiskPreCreate(
+  orderData: PreCreateOrderData,
+): Promise<RiskAssessment> {
+  const input = await buildAssessmentInputFromOrderData(orderData);
+  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+  const assessment = assessRisk(input, config, rules);
+
+  // Persist rule trigger counts (fire-and-forget — matches assessOrderRisk).
+  void incrementRuleTriggers(assessment.triggeredRules);
+
+  return assessment;
+}
+
 /**
  * Assess risk from a raw input (used by the order creation flow before
  * the order is persisted — e.g., to show a live risk preview in the order form).
