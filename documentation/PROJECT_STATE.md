@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-09 (Session 37 COMPLETE — Phases 3-7 of data-integrity plan executed: cross-table data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API integration tests. 1416 tests green, `bun run build` exits 0)
-**Main HEAD:** `a6825a6`
+**Last updated:** 2026-07-12 (Session 38 COMPLETE — full-depth 8-layer audit + Wave 1 (8 S1 ship-blockers fixed). 1435 tests green, `bun run build` exits 0) — Phases 3-7 of data-integrity plan executed: cross-table data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API integration tests. 1416 tests green, `bun run build` exits 0)
+**Main HEAD:** `a9f56aa`
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
@@ -24,8 +24,8 @@
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1416 pass | 0 skip | 0 fail** (re-verified Session 37 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1416/1416, prisma valid, 6 migrations clean) — +138 tests across Phases 3-7 (−6 dead tests removed in Phase 5) |
-| Test coverage | **88.8% statements** (floor locked at 80%) |
+| Tests | **1435 pass | 0 skip | 0 fail** (re-verified Session 37 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1435/1435, prisma valid, 7 migrations clean (new: fix_codremitted_null_default)) — +138 tests across Phases 3-7 (−6 dead tests removed in Phase 5) |
+| Test coverage | **82% statements** (re-measured Session 38 — was incorrectly claimed as 88.8% since Session 20) (floor locked at 80%) |
 | Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
 | i18n keys | 2,560 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) — +24 error-translation keys + 19 notification keys added Session 35 |
@@ -52,11 +52,45 @@ Executed all remaining phases (3-7) of `documentation/DATA_INTEGRITY_PLAN.md` us
 ### Verification gate (re-verified at session end, HEAD `a6825a6`)
 
 | Gate | Result |
+|---|
+## Session 38 — 2026-07-12: Full-depth 8-layer audit + Wave 1 (8 S1 ship-blockers fixed)
+
+Ran 8 parallel deep-dive subagents (Data+Crypto, API+Auth, UI, AI, Integrations, Infra/Tauri, Test, i18n+Domain) to audit every layer with `file:line` evidence. Found 8 S1 ship-blockers + numerous S2/S3/S4 findings. All 8 S1s FIXED and verified. Full findings in `documentation/SESSION38_AUDIT_FINDINGS.md`.
+
+### Verification gate (re-verified at session end, HEAD `a9f56aa`)
+
+| Gate | Result |
 |---|---|
+| `tsc --noEmit` (NODE_OPTIONS=--max-old-space-size=2048) | ✅ 0 errors |
+| `eslint .` | ✅ 0 errors, 926 warnings |
+| `vitest run` | ✅ **1435/1435 pass**, 81 test files (was 1416/80 — +19 new tests) |
+| `bun run build` | ✅ **EXITS 0** |
+| Prisma | ✅ 31 models, 7 migrations (new: `fix_codremitted_null_default`) |
+
+### Wave 1 fixes (8 S1 ship-blockers, all merged linearly to main)
+
+| Fix | Commit | Impact |
+|---|---|---|
+| B1: Pin tw-animate-css@1.3.5 | `1a9e823` | Build was exiting 1 (1.4.0 shipped without dist/) |
+| B2: codRemitted NULL-vs-false | `6203080` | COD reconciliation was silently broken (pending-remittance list empty) |
+| B3: Delivery credentials camelCase | `ddec1be` | UI shipping was broken for all 4 providers (loader found nothing) |
+| B4: Shipment idempotency | `bd97bcc` | Double-shipment on retry (502) + double-click |
+| B5: Shopify/YouCan sync data loss | `5ad19bf` | Cancelled orders not re-fetched (seller ships cancelled orders) |
+| B6: Gemini PII consent gate | `dea76eb` | Raw PII sent to Google without consent |
+| B7: Cron route public | `1a9e823` | Daily WhatsApp report unreachable by external cron |
+| B8: Backup-restore confirm body | `a9f56aa` | Restore button silently 400'd (missing confirm:"RESTORE") |
+
+### What's next (Wave 2 + Wave 3)
+
+See `documentation/SESSION38_AUDIT_FINDINGS.md` for the full roadmap (25 items across Wave 2 operational safety + Wave 3 polish). Key Wave 2 items: migration fail-closed, sidecar respawn, destructive AI tool confirmation gate, coverage honesty, i18n leaks in financial UI.
+
+---
+
+---|
 | `tsc --noEmit` | ✅ 0 errors |
 | `eslint .` | ✅ 0 errors, 738 warnings (unchanged) |
-| `vitest run` | ✅ **1416/1416 pass**, 80 test files (was 1278/71 — +138 tests, +9 files, −6 dead tests removed) |
-| `prisma validate` | ✅ valid, 31 models (was 33 — dropped 2 orphans), 6 migrations clean |
+| `vitest run` | ✅ **1416/1416 pass**, 80 test files (was 1416/80 — +19 new tests from Wave 1, +9 files, −6 dead tests removed) |
+| `prisma validate` | ✅ valid, 31 models (was 33 — dropped 2 orphans), 7 migrations clean (new: fix_codremitted_null_default) |
 | `bun run build` | ✅ **EXITS 0** — standalone output produced |
 | `sf-audit` | ✅ NO DRIFT |
 

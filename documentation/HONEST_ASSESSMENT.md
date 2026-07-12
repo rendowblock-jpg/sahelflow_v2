@@ -1,7 +1,7 @@
 # SahelFlow — Honest Assessment
 
 > **Created:** 2026-06-26 (Session 16)
-> **Updated:** 2026-07-09 (Session 37 — data-integrity plan COMPLETE: 1416 tests, `bun run build` exits 0, all 7 phases executed)
+> **Updated:** 2026-07-09 (Session 37 — data-integrity plan COMPLETE: 1435 tests, `bun run build` exits 0, all 7 phases executed)
 > **Purpose:** Candid evaluation of where the app stands vs a top-tier company product.
 
 ---
@@ -30,8 +30,8 @@
 - ✅ Real command palette (fuzzy searches actual records, not just nav labels)
 - ✅ Keyboard shortcuts + cheatsheet modal
 - ✅ Form validation (RHF+zod with inline errors, phone mask, drafts, dirty-guard)
-- ✅ 1201 tests pass (real green, not false)
-- ✅ 88.8% test coverage (floor locked at 80%)
+- ✅ 1435 tests pass (real green, not false)
+- ✅ 82% test coverage (floor locked at 80%)
 
 **What's still open (honestly):**
 
@@ -46,7 +46,7 @@
 - ✅ Orphan removal (dropped Notification + DailyAnalyticsReport tables, deleted dead code) — Phase 5
 - ✅ 8 e2e golden-path Playwright specs authored (1281 lines) — Phase 6
 - ✅ ~102 API route integration tests across 8 files — Phase 7
-- ✅ 1416 tests (was 1278 — +138 net), 31 Prisma models (was 33 — dropped 2 orphans)
+- ✅ 1435 tests (was 1278 — +138 net), 31 Prisma models (was 33 — dropped 2 orphans)
 
 ✅ Session 30 (2026-07-06) closed the BIG gaps:
 - ✅ All 44 S1 ship-blockers from the Session 29 deep audit addressed
@@ -114,8 +114,8 @@ The research wave found the app had a **beautiful shell but one layer of depth e
 - **RTL complete** (tables, charts, sidebar, icons, settings tabs, Amiri font applied)
 - **Responsive** (mobile/tablet/desktop, touch targets, 100dvh)
 - **Emerald/teal palette** (banned blue removed app-wide, 0 arbitrary values)
-- **1201 tests** (real green, not false)
-- **88.8% coverage** (floor locked at 80%)
+- **1435 tests** (real green, not false)
+- **82% coverage** (floor locked at 80%)
 - **Sentry installed** (env-gated, zero-overhead, global-error only-fires-on-unexpected)
 - **8 agent tools** (sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit)
 - **Commerce engine depth** (order change ledger, refunds, reservations, COD reconciliation, versioning)
@@ -148,6 +148,6 @@ No more self-awarded checkmarks. No more "~95%" theater.
 
 ---
 
-_Last updated: 2026-07-09 — Session 37 complete (data-integrity plan ALL 7 phases executed: 5 data-flow bugs fixed, build unblocked, data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API tests. 1416 tests, `bun run build` exits 0). Remaining: founder browser-verification + e2e on founder machine + real Darija validation + pen test + beta users + macOS release._
+_Last updated: 2026-07-09 — Session 37 complete (data-integrity plan ALL 7 phases executed: 5 data-flow bugs fixed, build unblocked, data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API tests. 1435 tests, `bun run build` exits 0). Remaining: founder browser-verification + e2e on founder machine + real Darija validation + pen test + beta users + macOS release._
 
 <!-- Legacy: _Last updated: 2026-07-06 — Session 30 complete (10-phase deep wave merged to main). main = `564ac9c`. v4.1.0. 1209 tests, 0 skip. All 5 Session-28 commits fast-forward-merged linearly to main: tsc-green baseline (16 errors→0), AI-tool soft-delete guards (3 unguarded writes + 6 service filters), 8 runtime ship-blockers (danger-zone reset, order-change ledger, orders-page counts, 35 i18n keys), inbox workflow UI (5 controls + snooze dialog + activity renderer), automation editor (ConditionBuilder wired), canned-response picker wired, Playwright e2e now RUNS (chromium installed, config fixed). Remaining: Tauri build verification (needs Rust), Playwright full-suite green (founder machine — sandbox OOM), real Darija validation, professional pen test, real beta users, macOS release build._

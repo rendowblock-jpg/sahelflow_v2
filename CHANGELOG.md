@@ -127,6 +127,30 @@ Founder launched the app in Tauri and found 3 critical runtime bugs. Deep invest
 
 ---
 
+## [4.1.1] — 2026-07-12 (Session 38 — Wave 1: 8 S1 ship-blockers fixed)
+
+### Fixed
+- **B1:** `bun run build` was exiting 1 — `tw-animate-css@1.4.0` shipped without `dist/`. Pinned to `1.3.5`.
+- **B2:** COD reconciliation silently broken — `codRemitted` defaulted to NULL, queries filtered `codRemitted: false` (NULL ≠ false). Fixed schema default + migration backfill + `markCodCollected` sets `codRemitted: false` + filters use `{ not: true }`.
+- **B3:** Delivery UI shipping broken for all 4 providers — credentials UI sent snake_case, loader expected camelCase. Migrated to camelCase.
+- **B4:** Double-shipment on retry/re-click — `retryFetch` no longer retries POST; `delivery/create` returns 409 if Delivery row with trackingNumber exists.
+- **B5:** Shopify/YouCan sync data loss — Shopify switched from `since_id` to `updated_at_min` (cancellations now propagate); YouCan removed `created_at <= watermark` short-circuit.
+- **B6:** Raw PII sent to Google Gemini without consent — added consent gate (403 `consent_required`) + privacy notice UI with AR/FR/EN i18n.
+- **B7:** Daily-report cron unreachable — added `/api/reports/daily` to `PUBLIC_API_ROUTES` (route self-protects via `verifyCronSecret`).
+- **B8:** Backup-restore UI broken — panel wasn't sending `confirm: "RESTORE"` body. Fixed + e2e updated to test UI path.
+
+### Added
+- `documentation/SESSION38_AUDIT_FINDINGS.md` — full 8-layer audit report with file:line evidence + Wave 2/3 roadmap.
+- New Prisma migration: `20260712120919_fix_codremitted_null_default`.
+- New tests: `ai-consent-gate.test.ts`, +97 lines in `delivery.test.ts`, +73 in `retry.test.ts`, +110 in `shopify.test.ts`, +136 in `youcan.test.ts`.
+- New i18n keys: `aiKey.consent.*` in AR/FR/EN.
+
+### Changed
+- Coverage re-measured: 82% statements (was incorrectly claimed as 88.8% since Session 20).
+- Tests: 1416 → 1435 (+19 from Wave 1).
+- Migrations: 6 → 7.
+- eslint warnings: 738 → 926 (from new code).
+
 ## [4.1.0] — 2026-07-06
 
 ### Session 30 — 10-Phase Deep Wave

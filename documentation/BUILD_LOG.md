@@ -5,6 +5,37 @@
 
 ---
 ---
+## Session 38 — 2026-07-12: Full-depth 8-layer audit + Wave 1 (8 S1 ship-blockers fixed)
+
+**Goal:** Determine if the app is REALLY ready for client + heavy continuous work.
+
+**Method:** 8 parallel deep-dive subagents, one per layer, each required to cite `file:line` evidence. Every claim verified by reading code.
+
+**Audit findings (8 layers):**
+- Data+Crypto: 7.5/10 — codRemitted NULL≠false (S1)
+- API+Auth: 7.5/10 — cron unreachable (S1)
+- UI: 8/10 — hardcoded English in financial dialogs (S2)
+- AI: 5.5/10 — raw PII to Gemini (S1)
+- Integrations: 4/10 — UI shipping broken + double-shipment + sync loss (3×S1)
+- Infra/Tauri: 6.5/10 — build exits 1 (S1) + migration safety (S2)
+- Test: 7/10 — coverage overstated (82% not 88.8%); conditions.ts 1.58%
+- i18n+Domain: 7/10 — COD math broken (S1); state machine bulletproof
+
+**Wave 1 executed (8 S1 fixes, 8 commits linearly on main):**
+1. `1a9e823` — B1+B7: pin tw-animate-css@1.3.5 (build exit-0) + expose /api/reports/daily for cron
+2. `6203080` — B2: codRemitted NULL-vs-false (schema @default + migration backfill + service fix + test workaround removed)
+3. `ddec1be` — B3: delivery credentials camelCase (UI + routes aligned to loader)
+4. `bd97bcc` — B4: shipment idempotency (no POST retry + 409 on re-create)
+5. `5ad19bf` — B5: Shopify updated_at_min + YouCan full-scan (cancellations propagate)
+6. `dea76eb` — B6: Gemini consent gate (403 + privacy notice UI + i18n)
+7. `a9f56aa` — B8: backup-restore confirm:"RESTORE" body + e2e UI path
+
+**Verification:** tsc 0 err (NODE_OPTIONS=--max-old-space-size=2048), eslint 0 err / 926 warn, vitest 1435/1435, `bun run build` EXIT 0.
+
+**Docs:** Full findings in `SESSION38_AUDIT_FINDINGS.md`. Handoff updated to v29.0.
+
+---
+
 ## Session 37 — 2026-07-09: Data-integrity plan Phases 3-7 COMPLETE
 
 Founder instruction: "continue the rest of the plan phases here fully and professionally."
