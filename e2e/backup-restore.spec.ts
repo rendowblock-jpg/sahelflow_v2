@@ -7,16 +7,15 @@
  * Pattern: page.request fast-seeds a sentinel customer, creates a backup via
  * POST /api/backup/create, deletes the sentinel (soft-delete via
  * /api/customers/[id]), verifies the sentinel is gone from the customer list,
- * then restores the backup via POST /api/backup/restore (with the required
- * `confirm: "RESTORE"` literal — the UI panel doesn't send this so the
- * browser flow is currently broken; the API path is the correct one).
- * After restore, the sentinel should reappear because the backup snapshot
- * was taken BEFORE the delete.
+ * then restores the backup through the real UI on /settings (click the row's
+ * Restore button, then click the confirm action in the AlertDialog). After
+ * restore, the sentinel should reappear because the backup snapshot was
+ * taken BEFORE the delete.
  *
  * The /settings page is visited before + after to verify the backup-restore
- * panel renders (UI smoke). The actual create/restore goes through the API
- * for reliability (the panel's restore button doesn't send the required
- * `confirm` field — see api/backup/restore/route.ts zod schema).
+ * panel renders. The create goes through the API for reliability; the restore
+ * goes through the UI to exercise the actual user path (the panel sends the
+ * required `confirm: "RESTORE"` literal — see api/backup/restore/route.ts).
  *
  * DESTRUCTIVE: this test overwrites the active shop's SQLite file during
  * restore. It MUST run against a dev/test DB, never production.
@@ -94,20 +93,50 @@ test.describe("Backup + restore round-trip", () => {
     const sentinelStillThere = custListAfterDelete.customers.find((c) => c.id === sentinel.id);
     expect(sentinelStillThere).toBeUndefined();
 
-    // ── 6. Restore the backup via API (requires confirm:"RESTORE") ─────────
-    // The restore route's zod schema enforces `confirm: z.literal("RESTORE")`.
-    // The UI panel currently doesn't send this field, so the API path is the
-    // correct one. The restore overwrites the active shop's SQLite file.
-    const restoreRes = await page.request.post("/api/backup/restore", {
-      data: {
-        filename: backup.filename,
-        confirm: "RESTORE",
-      },
-    });
-    expect(restoreRes.ok()).toBeTruthy();
+    // ── 6. Restore the backup via the UI (exercises the real user path) ────
+    // The /settings page was loaded before the backup was created, so the
+    // panel's list is stale. Reload to pick up the new backup row.
+    await page.goto("/settings");
+    await page.waitForLoadState("networkidle");
 
-    // The restore disconnects + reconnects Prisma. Brief wait so the next
-    // request hits a fresh connection.
+    // Find the row for our backup file and click its Restore button.
+    const backupRow = page.locator("tr", { hasText: backup.filename }).first();
+    await expect(backupRow).toBeVisible({ timeout: 10_000 });
+    await backupRow
+      .getByRole("button", { name: /Restore|Restaurer|استعادة/ })
+      .click();
+
+    // The ConfirmDialog (AlertDialog) opens — its confirm action triggers
+    // the restore API call. Race the click against waitForResponse so we
+    // know the request landed and returned.
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
+
+    // Mark the current page so we can detect the post-restore reload (the
+    // panel calls window.location.reload() ~800ms after the success toast).
+    await page.evaluate(() => {
+      (window as unknown as { __preRestore?: boolean }).__preRestore = true;
+    });
+
+    const restoreResponsePromise = page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/backup/restore") &&
+        resp.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await dialog
+      .getByRole("button", { name: /Restore|Restaurer|استعادة/ })
+      .click();
+    const restoreResponse = await restoreResponsePromise;
+    expect(restoreResponse.ok()).toBeTruthy();
+
+    // Wait for the panel's post-success window.location.reload() to fire +
+    // settle, then give Prisma time to reconnect before querying the API.
+    await page.waitForFunction(
+      () => !(window as unknown as { __preRestore?: boolean }).__preRestore,
+      { timeout: 15_000 },
+    );
+    await page.waitForLoadState("networkidle", { timeout: 15_000 });
     await page.waitForTimeout(1500);
 
     // ── 7. Verify the sentinel is back (restore brought it back) ───────────

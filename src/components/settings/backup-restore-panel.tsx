@@ -102,10 +102,17 @@ export function BackupRestorePanel() {
     if (!restoreTarget) return;
     setActionInProgress(restoreTarget.filename);
     try {
+      // The restore route's zod schema enforces confirm: z.literal("RESTORE")
+      // as an API-level safety net (separate from the AlertDialog the user
+      // already clicked to get here). Without this field the API returns 400
+      // and the restore silently fails.
       const res = await fetch("/api/backup/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: restoreTarget.filename }),
+        body: JSON.stringify({
+          filename: restoreTarget.filename,
+          confirm: "RESTORE",
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
