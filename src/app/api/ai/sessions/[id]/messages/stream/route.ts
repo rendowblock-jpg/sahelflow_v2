@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { runAgentStream, type AgentMessage, type AgentStreamEvent, type AgentResult } from "@/lib/ai/chat/agent";
 import { isAuthenticated, getCurrentUserKey } from "@/lib/auth/server";
 import { redactPii } from "@/lib/redact-pii";
+import { getBool, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,24 @@ export async function POST(
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // fix-B6: Informed-consent gate. The streaming AI chat forwards the
+  // seller's question + conversation history (which may reference customer
+  // PII via tool results) to Google Gemini. Without explicit consent,
+  // refuse the request — same gate as /api/extraction and the non-streaming
+  // messages route. (Checked before the license + rate-limit gates so the
+  // seller sees the consent_required error first.)
+  const consent = await getBool(SETTING_KEYS.geminiConsentAccepted, false);
+  if (!consent) {
+    return new Response(
+      JSON.stringify({
+        error: "consent_required",
+        message:
+          "AI assistant consent not given. Visit Settings → AI to enable.",
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   // Session 30 (AUDIT-7 AI5): license gate on message stream (not just session create)

@@ -136,4 +136,12 @@ export const SETTING_KEYS = {
   dailyReportEnabled: "daily_report_enabled",
   dailyReportPhone: "daily_report_phone",
   dailyReportTime: "daily_report_time",
+  /**
+   * fix-B6: Seller's informed consent to send WhatsApp message bodies
+   * (containing customer phone, name, address) to Google Gemini's API
+   * for AI order extraction. Defaults to false (no consent) — the
+   * extraction + AI chat routes return 403 consent_required until the
+   * seller explicitly opts in via Settings → AI.
+   */
+  geminiConsentAccepted: "gemini_consent_accepted",
 } as const;

@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -23,7 +27,11 @@ import {
   Trash2,
   XCircle,
   Sparkles,
+  ShieldAlert,
 } from "lucide-react";
+
+/** DB key for the Gemini consent setting — must match SETTING_KEYS.geminiConsentAccepted. */
+const GEMINI_CONSENT_KEY = "gemini_consent_accepted";
 
 type Status = "loading" | "configured" | "not-configured" | "editing" | "error";
 
@@ -43,6 +51,11 @@ export function AiKeyPanel() {
   const [deleting, setDeleting] = useState(false);
   const [result, setResult] = useState<SaveResult | null>(null);
   const [activeModel, setActiveModel] = useState<string | null>(null);
+  // fix-B6: consent state (separate from API key — it's a preference, not a secret).
+  // Defaults to false; loaded from /api/settings on mount.
+  const [consent, setConsent] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(true);
+  const [consentSaving, setConsentSaving] = useState(false);
 
   // Fetch current status on mount
   useEffect(() => {
@@ -58,11 +71,52 @@ export function AiKeyPanel() {
         if (!cancelled) setStatus("not-configured");
       }
     }
+    async function loadConsent() {
+      // fix-B6: load the seller's prior consent decision so the checkbox
+      // reflects the persisted state across page reloads.
+      try {
+        const res = await fetch("/api/settings", { method: "GET" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { settings: Record<string, string> };
+        if (cancelled) return;
+        setConsent(data.settings?.[GEMINI_CONSENT_KEY] === "true");
+      } catch {
+        // leave default false
+      } finally {
+        if (!cancelled) setConsentLoading(false);
+      }
+    }
     load();
+    loadConsent();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  /** fix-B6: persist the consent decision via PUT /api/settings. */
+  async function handleConsentChange(checked: boolean) {
+    setConsent(checked);
+    setConsentSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { [GEMINI_CONSENT_KEY]: String(checked) } }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      if (checked) {
+        toast.success(t("aiKey.consent.saved"));
+      } else {
+        toast.warning(t("aiKey.consent.revoked"));
+      }
+    } catch {
+      // Revert the checkbox on failure so the UI reflects the persisted state.
+      setConsent(!checked);
+      toast.error(t("aiKey.consent.saveFailed"));
+    } finally {
+      setConsentSaving(false);
+    }
+  }
 
   async function handleSave() {
     const trimmed = keyInput.trim();
@@ -256,6 +310,43 @@ export function AiKeyPanel() {
             <span>{result.ok ? result.message ?? t("aiKey.saved") : result.error ?? t("aiKey.error")}</span>
           </div>
         )}
+
+        {/* fix-B6: AI extraction privacy notice + consent checkbox.
+            The seller MUST explicitly opt in here before any WhatsApp
+            message body (containing customer PII) is sent to Google Gemini.
+            Extraction + AI chat routes return 403 consent_required until
+            this is checked. */}
+        <Separator />
+        <Alert>
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>{t("aiKey.consent.title")}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("aiKey.consent.description")}
+            </p>
+            <label
+              htmlFor="gemini-consent"
+              className="flex items-start gap-2.5 cursor-pointer text-sm font-medium select-none"
+            >
+              <Checkbox
+                id="gemini-consent"
+                checked={consent}
+                onCheckedChange={(v) => handleConsentChange(v === true)}
+                disabled={consentLoading || consentSaving}
+                className="mt-0.5"
+              />
+              <span className="text-foreground/90">
+                {t("aiKey.consent.checkboxLabel")}
+              </span>
+            </label>
+            {consentLoading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {t("common.loading")}
+              </p>
+            )}
+          </AlertDescription>
+        </Alert>
       </CardContent>
     </Card>
       <ConfirmDialog

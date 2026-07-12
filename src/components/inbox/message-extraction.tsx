@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle2, AlertCircle, ArrowRight, ShieldAlert } from "lucide-react";
 import type { ExtractedOrder } from "@/lib/ai/extraction";
 import { dzPhone } from "@/lib/validation";
 import { useI18n } from "@/hooks/use-i18n";
+import { toast } from "@/lib/toast";
 
 interface MessageExtractionProps {
   messageId: string;
@@ -49,6 +50,24 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
         body: JSON.stringify({ body: messageBody, knownPhone }),
       });
       if (!res.ok) {
+        // fix-B6: detect the consent_required error code returned by the
+        // extraction route when the seller hasn't consented to sending
+        // WhatsApp message bodies to Google Gemini. Show a targeted toast
+        // with a "Go to Settings → AI" action instead of a generic error.
+        let errData: { error?: string; message?: string } = {};
+        try { errData = await res.json(); } catch { /* ignore parse error */ }
+        if (res.status === 403 && errData.error === "consent_required") {
+          toast.error(t("inbox.extractionConsentRequired"), {
+            duration: 9000,
+            action: {
+              label: t("inbox.extractionConsentGoToSettings"),
+              onClick: () => router.push("/settings"),
+            },
+          });
+          // Also surface a compact inline message with a direct link.
+          setError(t("inbox.extractionConsentRequired"));
+          return;
+        }
         throw new Error(t("inbox.extractionFailed"));
       }
       const data = await res.json();
@@ -168,7 +187,24 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
       )}
 
       {error && (
-        <p className="text-sm text-destructive" role="alert">{error}</p>
+        <div className="space-y-2" role="alert">
+          <p className="text-sm text-destructive flex items-start gap-1.5">
+            <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </p>
+          {/* fix-B6: direct link to the AI settings page when the
+              extraction failed because consent hasn't been given. */}
+          {error === t("inbox.extractionConsentRequired") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/settings")}
+            >
+              {t("inbox.extractionConsentGoToSettings")}
+              <ArrowRight className="h-3.5 w-3.5 ms-1.5 rtl:rotate-180" />
+            </Button>
+          )}
+        </div>
       )}
 
       {result && (

@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { redactPii } from "@/lib/redact-pii";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
+import { getBool, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,23 @@ const sendSchema = z.object({
 /** POST /api/ai/sessions/[id]/messages — send a message + get AI response. */
 export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
+
+  // fix-B6: Informed-consent gate. The AI chat assistant forwards the
+  // seller's question + conversation history (which may reference customer
+  // PII via tool results) to Google Gemini. Without explicit consent,
+  // refuse the request — same gate as /api/extraction.
+  const consent = await getBool(SETTING_KEYS.geminiConsentAccepted, false);
+  if (!consent) {
+    return NextResponse.json(
+      {
+        error: "consent_required",
+        message:
+          "AI assistant consent not given. Visit Settings → AI to enable.",
+      },
+      { status: 403 },
+    );
+  }
+
   // Session 30 (AUDIT-7 AI5): license gate on message send (not just session create)
   await requireLicense();
   const { id } = await params;

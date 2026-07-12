@@ -5,6 +5,7 @@ import { extractOrder, recordExtractionMetric } from "@/lib/ai/extraction";
 // called outside tests → extraction analytics dashboard was permanently empty.
 // Now called fire-and-forget after every extraction.
 import { getSecret } from "@/lib/secrets";
+import { getBool, SETTING_KEYS } from "@/lib/settings";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
@@ -38,6 +39,27 @@ const extractionSchema = z.object({
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
+
+  // fix-B6: Informed-consent gate. The extraction pipeline sends raw WhatsApp
+  // message bodies (containing customer phone, name, address) to Google
+  // Gemini's free-tier API — Google's free-tier terms may use inputs for
+  // model training. The seller MUST explicitly consent (Settings → AI →
+  // consent checkbox) before any message leaves their device. Without
+  // consent, return 403 with a specific error code the UI can catch.
+  // (Wave 1: gate the entire route. Wave 2 may allow regex-only without
+  // consent since regex extraction is fully local.)
+  const consent = await getBool(SETTING_KEYS.geminiConsentAccepted, false);
+  if (!consent) {
+    return NextResponse.json(
+      {
+        error: "consent_required",
+        message:
+          "AI extraction consent not given. Visit Settings → AI to enable.",
+      },
+      { status: 403 },
+    );
+  }
+
   const body = await req.json();
   const input = extractionSchema.parse(body);
 
