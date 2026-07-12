@@ -1136,13 +1136,12 @@ describe("Scenario 11 — COD reconciliation arithmetic", () => {
     await orderService.updateStatus({ prisma: rawDb as never }, o2.id, "shipped");
     await orderService.updateStatus({ prisma: rawDb as never }, o2.id, "delivered");
     await markCodCollected(o2.id, "user");
-    // NOTE: markCodCollected sets codCollected=true but does NOT touch
-    // codRemitted (it stays NULL). getCodReconciliationSummary queries
-    // `where: { codRemitted: false }` — NULL does NOT match `false` in
-    // Prisma. So we explicitly set codRemitted=false here to verify the
-    // arithmetic works when the data is in the expected state. The NULL
-    // case is a separate (real) bug to be filed for Phase 4/5.
-    await rawDb.order.update({ where: { id: o2.id }, data: { codRemitted: false } });
+    // Bug B2 FIXED: markCodCollected now explicitly sets codRemitted=false
+    // (and the schema defaults codRemitted Boolean @default(false)).
+    // Previously codRemitted was left NULL — getCodReconciliationSummary
+    // filtered `codRemitted: false` which never matched NULL in Prisma/SQLite,
+    // so the pending-remittance list was silently empty. No workaround needed
+    // here anymore; the test passing without it proves the bug is fixed.
 
     // 3. Shipped + COD collected (NOT delivered yet, but collected — the
     //    COD_COLLECTIBLE_STATUSES in cod-service allows "shipped").
@@ -1154,7 +1153,7 @@ describe("Scenario 11 — COD reconciliation arithmetic", () => {
     await orderService.updateStatus({ prisma: rawDb as never }, o3.id, "confirmed");
     await orderService.updateStatus({ prisma: rawDb as never }, o3.id, "shipped");
     await markCodCollected(o3.id, "user");
-    await rawDb.order.update({ where: { id: o3.id }, data: { codRemitted: false } });
+    // (B2 fix: codRemitted now set to false by markCodCollected itself.)
 
     // ── getCodReconciliationSummary ─────────────────────────────────────────
     const summary = await getCodReconciliationSummary();

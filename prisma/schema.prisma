@@ -168,7 +168,7 @@ model Order {
   // Phase 4: COD reconciliation fields (the killer feature for Algerian COD)
   codCollected      Boolean?   // did the courier collect the cash?
   codCollectedAt    DateTime?
-  codRemitted       Boolean?   // has the courier remitted the cash to the seller?
+  codRemitted       Boolean    @default(false) // has the courier remitted the cash to the seller? (NULL-vs-false S1 bug fix — see migration fix_codremitted_null_default)
   codRemittedAt     DateTime?
   codRemittanceRef  String?    // courier remittance reference number
   // Phase 4: order versioning (admin edits increment version)

@@ -75,6 +75,13 @@ export async function markCodCollected(orderId: string, actor = "user") {
       data: {
         codCollected: true,
         codCollectedAt: new Date(),
+        // Fix B2 (S1): explicitly set codRemitted=false here so the order
+        // shows up in pendingRemittance queries. Previously codRemitted was
+        // left NULL (Boolean? with no default), and NULL !== false in
+        // Prisma/SQLite — so collected orders silently dropped out of the
+        // pending-remittance list. The schema also defaults to false now,
+        // but we set it explicitly as belt-and-suspenders for pre-migration rows.
+        codRemitted: false,
       },
       select: { id: true, orderNumber: true, totalPrice: true, codCollected: true, codCollectedAt: true },
     });
@@ -181,7 +188,7 @@ export async function bulkMarkCodRemitted(orderIds: string[], remittanceRef: str
   // fired for every input id, including ones skipped by the updateMany filter
   // → phantom ledger entries.
   const candidates = await db.order.findMany({
-    where: { id: { in: orderIds }, codCollected: true, codRemitted: false, deletedAt: null },
+    where: { id: { in: orderIds }, codCollected: true, codRemitted: { not: true }, deletedAt: null },
     select: { id: true },
   });
   const affectedIds = candidates.map((o) => o.id);
@@ -247,7 +254,7 @@ export async function getCodReconciliationSummary() {
 
   const [collectedNotRemitted, totalCollectedAmount, totalRemittedAmount] = await Promise.all([
     db.order.findMany({
-      where: { codCollected: true, codRemitted: false, deletedAt: null },
+      where: { codCollected: true, codRemitted: { not: true }, deletedAt: null },
       select: { id: true, orderNumber: true, totalPrice: true, codCollectedAt: true, customer: { select: { name: true } } },
       orderBy: { codCollectedAt: "asc" },
       // Raised from 200 to 500 (S2-5). Totals are separate aggregates (always
