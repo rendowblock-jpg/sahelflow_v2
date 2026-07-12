@@ -2,8 +2,10 @@
  * Shopify Admin REST API adapter tests (T-INTEGRATIONS).
  *
  * Covers: invalid creds, empty result, single page, multi-page (cursor
- * pagination via Link header), since_id watermark, 429 retry, HTTP error,
- * normalization (customer name/phone/address/items), maxPages cap.
+ * pagination via Link header), updated_at_min watermark (fix-B5), legacy
+ * numeric-watermark migration (fix-B5), 429 retry, HTTP error, normalization
+ * (customer name/phone/address/items), maxPages cap, re-fetch of updated
+ * orders (cancellations) via updated_at_min.
  *
  * Mock-fetch pattern: vi.stubGlobal("fetch", mockFn). Headers are stubbed
  * with a simple { get } object so Link/Retry-After lookups work.
@@ -110,7 +112,8 @@ describe("Shopify adapter", () => {
       const result = await shopifyAdapter.listOrdersSince(creds, "");
       expect(result.orders).toHaveLength(2);
       expect(result.hasMore).toBe(false);
-      expect(result.nextWatermark).toBe("1002"); // max order id
+      // Watermark is now the max updated_at (ISO 8601), not the max id
+      expect(result.nextWatermark).toBe("2026-01-02T11:00:00Z");
     });
 
     it("sends X-Shopify-Access-Token header", async () => {
@@ -132,11 +135,42 @@ describe("Shopify adapter", () => {
       expect(url).toContain("limit=250");
     });
 
-    it("appends since_id when watermark is provided", async () => {
+    it("does NOT append updated_at_min on first sync (empty watermark)", async () => {
       mockFetch.mockResolvedValueOnce(res({ orders: [] }));
-      await shopifyAdapter.listOrdersSince(creds, "1000");
+      await shopifyAdapter.listOrdersSince(creds, "");
       const url = String(mockFetch.mock.calls[0]![0]);
-      expect(url).toContain("since_id=1000");
+      expect(url).not.toContain("updated_at_min=");
+      expect(url).not.toContain("since_id=");
+    });
+
+    it("appends updated_at_min when an ISO 8601 watermark is provided (fix-B5)", async () => {
+      mockFetch.mockResolvedValueOnce(res({ orders: [] }));
+      const wm = "2026-01-01T00:00:00Z";
+      await shopifyAdapter.listOrdersSince(creds, wm);
+      const url = String(mockFetch.mock.calls[0]![0]);
+      expect(url).toContain(`updated_at_min=${encodeURIComponent(wm)}`);
+      // The old since_id approach must NOT be present
+      expect(url).not.toContain("since_id=");
+    });
+
+    it("ignores legacy numeric watermark and does a full scan (fix-B5 migration)", async () => {
+      // Pre-fix-B5 the watermark was a numeric order ID (since_id era). The new
+      // updated_at_min approach can't use that, so the adapter must detect it
+      // and treat it as missing — first call after upgrade is a one-time full
+      // scan, then the new ISO 8601 watermark gets persisted.
+      mockFetch.mockResolvedValueOnce(res({ orders: [] }));
+      await shopifyAdapter.listOrdersSince(creds, "9999");
+      const url = String(mockFetch.mock.calls[0]![0]);
+      expect(url).not.toContain("updated_at_min=");
+      expect(url).not.toContain("since_id=");
+    });
+
+    it("does not persist a legacy numeric watermark when zero orders are fetched (fix-B5)", async () => {
+      // Edge case: legacy numeric watermark + empty result. We must NOT
+      // re-persist the legacy value (would re-trigger the migration next sync).
+      mockFetch.mockResolvedValueOnce(res({ orders: [] }));
+      const result = await shopifyAdapter.listOrdersSince(creds, "9999");
+      expect(result.nextWatermark).toBe("");
     });
 
     it("follows cursor pagination via Link header (page_info)", async () => {
@@ -159,12 +193,13 @@ describe("Shopify adapter", () => {
       const result = await shopifyAdapter.listOrdersSince(creds, "");
       expect(result.orders).toHaveLength(2);
       expect(result.hasMore).toBe(false);
-      expect(result.nextWatermark).toBe("1002");
+      expect(result.nextWatermark).toBe("2026-01-02T11:00:00Z");
 
-      // Verify the second URL uses page_info (not since_id)
+      // Verify the second URL uses page_info (not since_id / updated_at_min)
       const secondUrl = String(mockFetch.mock.calls[1]![0]);
       expect(secondUrl).toContain("page_info=CURSOR123");
       expect(secondUrl).not.toContain("since_id=");
+      expect(secondUrl).not.toContain("updated_at_min=");
     });
 
     it("sets hasMore=true when maxPages is hit before pagination ends", async () => {
@@ -201,7 +236,7 @@ describe("Shopify adapter", () => {
       const result = await shopifyAdapter.listOrdersSince(creds, "", 1);
       expect(result.orders).toHaveLength(1);
       expect(result.orders[0]!.sourceOrderId).toBe("1001");
-      expect(result.nextWatermark).toBe("1001");
+      expect(result.nextWatermark).toBe("2026-01-02T11:00:00Z");
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
@@ -223,7 +258,7 @@ describe("Shopify adapter", () => {
       const result = await shopifyAdapter.listOrdersSince(creds, "", 2);
       expect(result.orders).toHaveLength(2);
       expect(result.orders.map((o) => o.sourceOrderId)).toEqual(["1001", "1002"]);
-      expect(result.nextWatermark).toBe("1002");
+      expect(result.nextWatermark).toBe("2026-01-02T11:00:00Z");
       expect(mockFetch).toHaveBeenCalledTimes(4);
     });
 
@@ -248,13 +283,54 @@ describe("Shopify adapter", () => {
       await expect(shopifyAdapter.listOrdersSince(creds, "")).rejects.toThrow("401");
     });
 
-    it("advances watermark to the highest order id seen", async () => {
-      // Out-of-order ids to verify max() not last()
+    it("advances watermark to the latest updated_at seen (fix-B5)", async () => {
+      // Three orders with different updated_at values — the watermark should
+      // be the max updated_at, NOT the max id (the old behaviour).
       mockFetch.mockResolvedValueOnce(
-        res({ orders: [sampleOrder({ id: 5000 }), sampleOrder({ id: 100 }), sampleOrder({ id: 9999 })] }),
+        res({
+          orders: [
+            sampleOrder({ id: 5000, updated_at: "2026-01-02T09:00:00Z" }),
+            sampleOrder({ id: 100, updated_at: "2026-03-15T12:00:00Z" }),
+            sampleOrder({ id: 9999, updated_at: "2026-02-10T00:00:00Z" }),
+          ],
+        }),
       );
-      const result = await shopifyAdapter.listOrdersSince(creds, "100");
-      expect(result.nextWatermark).toBe("9999");
+      const result = await shopifyAdapter.listOrdersSince(creds, "2026-01-01T00:00:00Z");
+      expect(result.nextWatermark).toBe("2026-03-15T12:00:00Z");
+    });
+
+    it("re-fetches updated orders (cancellation) when updated_at moves past the watermark (fix-B5)", async () => {
+      // The core fix-B5 regression: an existing order whose platform-side
+      // state changed (cancellation, fulfillment change) MUST be re-fetched
+      // so the sync-engine's I-M3 update path can propagate it. With the old
+      // since_id approach, an order with id=1001 was never re-fetched after
+      // the first sync (since_id=1002 → only orders with id > 1002 returned).
+      // With updated_at_min, any order whose updated_at moved past the
+      // watermark is returned — including cancellations on old orders.
+      mockFetch.mockResolvedValueOnce(
+        res({
+          orders: [
+            sampleOrder({
+              id: 1001, // OLD id — would never be returned by since_id=1002
+              updated_at: "2026-02-15T14:00:00Z", // moved past the watermark
+              cancel_reason: "customer", // platform cancelled it
+              financial_status: "voided",
+              fulfillment_status: null,
+            }),
+          ],
+        }),
+      );
+
+      const result = await shopifyAdapter.listOrdersSince(creds, "2026-02-15T00:00:00Z");
+      expect(result.orders).toHaveLength(1);
+      expect(result.orders[0]!.sourceOrderId).toBe("1001");
+      expect(result.orders[0]!.sourceMetadata.cancelReason).toBe("customer");
+      // Watermark advances to the re-fetched order's updated_at
+      expect(result.nextWatermark).toBe("2026-02-15T14:00:00Z");
+
+      // Verify the request used updated_at_min (would be impossible with since_id)
+      const url = String(mockFetch.mock.calls[0]![0]);
+      expect(url).toContain("updated_at_min=2026-02-15T00%3A00%3A00Z");
     });
   });
 
@@ -420,7 +496,9 @@ describe("Shopify adapter", () => {
       );
       const result = await shopifyAdapter.listOrdersSince(creds, "");
       expect(result.orders.map((o: NormalizedOrder) => o.orderNumber)).toEqual(["#1", "#2", "#3"]);
-      expect(result.nextWatermark).toBe("3");
+      // Watermark is max(updated_at) — all sample orders share the default
+      // updated_at, so the watermark is that timestamp.
+      expect(result.nextWatermark).toBe("2026-01-02T11:00:00Z");
     });
   });
 });

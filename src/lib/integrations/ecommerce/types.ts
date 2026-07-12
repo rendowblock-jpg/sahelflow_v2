@@ -82,9 +82,14 @@ export interface EcommerceAdapter {
   /**
    * Fetch orders since the given watermark.
    * - watermark format is platform-specific:
-   *   - Shopify: last order ID (integer as string), or "" for first sync
-   *   - WooCommerce: last modified_at ISO 8601 UTC, or "" for first sync
-   *   - YouCan: "" (always scans from newest, dedup by sourceOrderId)
+   *   - Shopify: last max(updated_at) ISO 8601 UTC, or "" for first sync
+   *     (fix-B5: was numeric order ID in the since_id era — legacy values
+   *     are detected + ignored, see shopify.ts:isIso8601Watermark)
+   *   - WooCommerce: last max(date_modified_gmt) ISO 8601 UTC, or "" for first sync
+   *   - YouCan: "" for first sync, else max(updated_at) ISO 8601 UTC
+   *     (note: YouCan has no updated_at_min server-side filter, so the
+   *     watermark is informational — every sync re-fetches all orders and
+   *     the sync-engine dedup handles duplicates)
    * @param credentials - loaded from the Secret store
    * @param watermark - the last sync's nextWatermark, or "" for initial sync
    * @param maxPages - safety cap on pagination (default 10)

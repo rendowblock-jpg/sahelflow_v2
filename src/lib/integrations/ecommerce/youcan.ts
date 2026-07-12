@@ -4,10 +4,21 @@
  * Docs: https://developer.youcan.shop
  *
  * Auth: OAuth2 Bearer token.
- * Polling: no API-level created_at_min filter — scan newest-first + dedup by id,
- *   and short-circuit per-page when an order older than the watermark is hit
- *   (I-M2: avoids re-fetching the entire catalog every sync). Must pass
- *   ?include=shipping,customer to get the address + phone (empty by default).
+ * Polling: YouCan's order list endpoint does NOT support an updated_at_min
+ *   filter (unlike Shopify/WooCommerce). The previous implementation
+ *   short-circuited per-page on `created_at <= watermark` (I-M2), which
+ *   silently dropped platform-side updates to old orders — a cancellation
+ *   on the YouCan dashboard would never propagate to SahelFlow, and the
+ *   seller would ship an already-cancelled order (fix-B5 / dive-5).
+ *   We now fetch ALL orders every sync and rely on the sync-engine's dedup
+ *   (unique constraint on [source, sourceOrderId] + P2002 fallback) + I-M3
+ *   update path to propagate cancellations.
+ *   NOTE: YouCan does not support updated_at_min filtering. We fetch all
+ *   orders and rely on sync-engine dedup. For stores with >1000 orders,
+ *   this should be replaced with a periodic full-scan (daily) +
+ *   incremental created_at scan (hourly).
+ *   Must pass ?include=shipping,customer to get the address + phone
+ *   (empty by default).
  * Pagination: page-based (?page=N, ?limit=100) with meta.pagination.links.next.
  * Rate limit: undocumented — be conservative.
  *
@@ -142,7 +153,7 @@ export const youcanAdapter: EcommerceAdapter = {
 
   async listOrdersSince(
     credentials: EcommerceCredentials,
-    watermark: string, // I-M2: now used as a short-circuit threshold (orders older than this are skipped)
+    watermark: string, // retained for interface compatibility — no longer used as a filter (see file header).
     maxPages = 10,
   ): Promise<SyncFetchResult> {
     if (!isYouCanCreds(credentials)) {
@@ -153,7 +164,13 @@ export const youcanAdapter: EcommerceAdapter = {
     let allOrders: NormalizedOrder[] = [];
     let page = 1;
     let hasMore = false;
-    let latestCreatedAt = watermark; // watermark is the floor; only newer orders raise it
+    // Track the latest updated_at across all fetched orders. This becomes the
+    // persisted watermark for diagnostics / future optimization, but we no
+    // longer use it as a server-side filter (fix-B5: YouCan has no
+    // updated_at_min, so filtering on created_at silently dropped updates to
+    // old orders — including cancellations). The sync-engine's dedup handles
+    // the resulting duplicate fetches.
+    let nextWatermark = watermark;
 
     while (page <= maxPages) {
       const params = new URLSearchParams({
@@ -195,30 +212,23 @@ export const youcanAdapter: EcommerceAdapter = {
         break;
       }
 
-      // I-M2: short-circuit on watermark. Orders are sorted DESC by created_at,
-      // so once we encounter an order whose created_at is <= the watermark,
-      // every subsequent order on this page (and all later pages) is also
-      // older — stop fetching, drop the rest of this page, and exit the loop.
-      // Previously every sync re-fetched up to maxPages*PAGE_SIZE orders
-      // (1000 by default) even when the catalog hadn't changed.
-      let shortCircuited = false;
-      const normalized: NormalizedOrder[] = [];
-      for (const o of data.data) {
-        if (watermark && o.created_at <= watermark) {
-          shortCircuited = true;
-          break;
-        }
-        normalized.push(normalizeOrder(o));
-        if (!latestCreatedAt || o.created_at > latestCreatedAt) {
-          latestCreatedAt = o.created_at;
-        }
-      }
+      // fix-B5: previously this loop short-circuited on
+      // `created_at <= watermark` (the I-M2 optimisation) and DROPPED every
+      // older order on the page + skipped all subsequent pages. That optimisation
+      // was incorrect: YouCan has no updated_at_min filter, so the only way to
+      // catch cancellations / fulfillment changes on existing orders is to
+      // re-fetch them every sync and let the sync-engine dedup + I-M3 update
+      // path handle them. We now normalise every fetched order unconditionally.
+      const normalized = data.data.map(normalizeOrder);
       allOrders = allOrders.concat(normalized);
 
-      if (shortCircuited) {
-        // We've reached orders we've already seen — no more pages to fetch.
-        hasMore = false;
-        break;
+      // Track the latest updated_at for the persisted watermark (diagnostics
+      // + future optimisation). ISO 8601 strings compare lexicographically in
+      // chronological order with consistent timezone suffixes.
+      for (const o of data.data) {
+        if (!nextWatermark || o.updated_at > nextWatermark) {
+          nextWatermark = o.updated_at;
+        }
       }
 
       // Check for next page
@@ -236,6 +246,6 @@ export const youcanAdapter: EcommerceAdapter = {
       hasMore = true;
     }
 
-    return { orders: allOrders, nextWatermark: latestCreatedAt, hasMore };
+    return { orders: allOrders, nextWatermark, hasMore };
   },
 };

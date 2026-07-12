@@ -4,7 +4,12 @@
  * Docs: https://shopify.dev/docs/api/admin-rest/latest/resources/order
  *
  * Auth: X-Shopify-Access-Token header (shpat_xxx).
- * Polling: since_id (integer, monotonically increasing) + status=any.
+ * Polling: updated_at_min (ISO 8601 UTC) + status=any. This catches BOTH new
+ *   orders AND platform-side updates to existing orders (cancellations,
+ *   fulfillment changes, edits). Previously used since_id=<last_id>, which
+ *   only returns orders with id > last_id — updates to existing orders were
+ *   NEVER re-fetched, so platform cancellations silently never propagated
+ *   (fix-B5 / dive-5 data-loss bug).
  * Pagination: cursor-based via Link header (page_info param).
  * Rate limit: 40-request bucket, 2 req/sec. Handle 429 with Retry-After.
  * Page size: limit=250 (max).
@@ -117,6 +122,18 @@ function normalizeOrder(order: ShopifyOrder): NormalizedOrder {
   };
 }
 
+/**
+ * Detects whether the stored watermark is an ISO 8601 timestamp (the new
+ * format post-fix-B5) or a legacy numeric Shopify order ID (the pre-fix-B5
+ * format from the since_id era). The legacy format is incompatible with
+ * updated_at_min, so we treat it as missing and do a one-time full scan —
+ * the new ISO 8601 watermark then gets persisted, completing the migration.
+ */
+function isIso8601Watermark(watermark: string): boolean {
+  // ISO 8601 starts with YYYY-MM-DDTHH:...:ssZ (Shopify returns Z-suffixed UTC).
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(watermark);
+}
+
 export const shopifyAdapter: EcommerceAdapter = {
   platform: "shopify",
   displayName: "Shopify",
@@ -133,7 +150,6 @@ export const shopifyAdapter: EcommerceAdapter = {
     const { shop, accessToken } = credentials;
     const baseHost = `${shop}.myshopify.com`;
     let allOrders: NormalizedOrder[] = [];
-    let nextWatermark = watermark;
     let page = 0;
     let hasMore = false;
     // I-M1: 429 retries must NOT burn a maxPages slot — otherwise under heavy
@@ -145,10 +161,28 @@ export const shopifyAdapter: EcommerceAdapter = {
     const MAX_429_RETRIES = 3;
     let retriesThisUrl = 0;
 
-    // First page: use since_id if we have a watermark
+    // Watermark migration: pre-fix-B5 the watermark was a numeric order ID
+    // (since_id approach). That value is incompatible with updated_at_min, so
+    // if we detect a legacy numeric watermark we treat it as missing (one-time
+    // full scan), then the new ISO 8601 watermark gets persisted by the
+    // sync-engine on the next sync. This is safe — the sync-engine's dedup
+    // (unique constraint on [source, sourceOrderId] + P2002 fallback) handles
+    // the resulting duplicate fetches.
+    const watermarkIsIso = isIso8601Watermark(watermark);
+    // nextWatermark starts empty when migrating from a legacy numeric ID —
+    // only validated ISO timestamps are forwarded so a stale numeric value
+    // can't accidentally get re-persisted when zero orders are returned.
+    let nextWatermark = watermarkIsIso ? watermark : "";
+
+    // First page: use updated_at_min if we have an ISO 8601 watermark.
+    // (fix-B5: was `since_id=<numeric_id>` — only fetched NEW orders, never
+    // updates to existing ones. Platform cancellations silently never
+    // propagated. Now `updated_at_min=<ISO8601>` re-fetches any order whose
+    // updated_at moved past the watermark — including cancellations + fulfillment
+    // changes — and the sync-engine's I-M3 update path propagates them.)
     let url = `https://${baseHost}/admin/api/${API_VERSION}/orders.json?status=any&limit=${PAGE_SIZE}`;
-    if (watermark) {
-      url += `&since_id=${encodeURIComponent(watermark)}`;
+    if (watermarkIsIso) {
+      url += `&updated_at_min=${encodeURIComponent(watermark)}`;
     }
 
     while (url && page < maxPages) {
@@ -191,10 +225,16 @@ export const shopifyAdapter: EcommerceAdapter = {
       const normalized = data.orders.map(normalizeOrder);
       allOrders = allOrders.concat(normalized);
 
-      // Advance watermark to the highest order ID seen
+      // Advance watermark to the latest updated_at seen (ISO 8601 timestamp).
+      // fix-B5: previously advanced to max(order.id) — incompatible with
+      // updated_at_min. Now we track the max updated_at so the next sync only
+      // re-fetches orders whose updated_at moved past this point. ISO 8601
+      // strings compare lexicographically in chronological order (with
+      // consistent timezone suffixes), so a simple `>` works for Shopify's
+      // Z-suffixed UTC timestamps.
       for (const o of data.orders) {
-        if (!nextWatermark || o.id > parseInt(nextWatermark, 10)) {
-          nextWatermark = String(o.id);
+        if (!nextWatermark || o.updated_at > nextWatermark) {
+          nextWatermark = o.updated_at;
         }
       }
 
