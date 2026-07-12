@@ -192,6 +192,103 @@ describe("POST /api/delivery/create — create shipment", () => {
     expect(res.status).toBe(400);
   });
 
+  it("B4b: returns 409 when a Delivery row with trackingNumber already exists (double-click on confirmed order)", async () => {
+    const { order } = await seedOrderAtStatus("confirmed");
+    // Simulate a prior successful create: a Delivery row with a trackingNumber.
+    await rawDb.delivery.create({
+      data: {
+        orderId: order.id,
+        provider: "yalidine",
+        trackingNumber: "PRIOR-TRACK-001",
+        cost: 600,
+        status: "created",
+        estimatedDelivery: null,
+      },
+    });
+
+    const res = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(res.status).toBe(409);
+    const body = await getJson(res);
+    expect(body.error).toMatch(/already exists/i);
+    expect(body.trackingNumber).toBe("PRIOR-TRACK-001");
+
+    // CRITICAL: the provider adapter must NOT have been called — we never
+    // touch the provider API when a shipment already exists locally.
+    expect(mockAdapter.createShipment).not.toHaveBeenCalled();
+
+    // The existing trackingNumber must NOT have been overwritten.
+    const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
+    expect(delivery!.trackingNumber).toBe("PRIOR-TRACK-001");
+  });
+
+  it("B4b: returns 409 when a shipped order already has a delivery (double-click on shipped order)", async () => {
+    const { order } = await seedOrderAtStatus("shipped");
+    await rawDb.delivery.create({
+      data: {
+        orderId: order.id,
+        provider: "yalidine",
+        trackingNumber: "YAL-EXISTING-999",
+        cost: 600,
+        status: "in_transit",
+        estimatedDelivery: null,
+      },
+    });
+
+    const res = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(res.status).toBe(409);
+    expect(mockAdapter.createShipment).not.toHaveBeenCalled();
+  });
+
+  it("B4b: recovery path — shipped order with NO delivery row is allowed through (data inconsistency repair)", async () => {
+    // Order was flipped to "shipped" somehow but no Delivery row exists
+    // (e.g. manual DB edit, partial migration). We must NOT block the
+    // create — there's no parcel to orphan. The adapter runs and a new
+    // delivery row is created.
+    const { order } = await seedOrderAtStatus("shipped");
+
+    const res = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+
+    const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
+    expect(delivery).toBeTruthy();
+    expect(delivery!.trackingNumber).toBe("YAL-TRACK-XYZ");
+  });
+
+  it("B4b: a Delivery row with NULL trackingNumber does NOT trigger 409 (allows adapter to populate it)", async () => {
+    // Edge case: a prior create attempt created a Delivery row but never
+    // populated trackingNumber (e.g. an old code path or a manual insert).
+    // We must NOT 409 — the row has no real parcel reference, so re-running
+    // the adapter is safe. The upsert's update branch will populate the
+    // trackingNumber.
+    const { order } = await seedOrderAtStatus("confirmed");
+    await rawDb.delivery.create({
+      data: {
+        orderId: order.id,
+        provider: "yalidine",
+        trackingNumber: null, // no tracking — no parcel to orphan
+        cost: 0,
+        status: "pending",
+        estimatedDelivery: null,
+      },
+    });
+
+    const res = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+
+    const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
+    expect(delivery!.trackingNumber).toBe("YAL-TRACK-XYZ");
+  });
+
   it("returns 401 when auth is set up but no session cookie is present", async () => {
     await rawDb.authSecret.create({
       data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },

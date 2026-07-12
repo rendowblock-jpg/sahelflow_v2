@@ -1,5 +1,10 @@
 /**
  * retryFetch tests — retry logic for delivery provider API calls.
+ *
+ * B4a: POST requests are NEVER retried automatically. A 502 on POST /parcels/
+ * may mean the provider created the parcel but the response was lost — retrying
+ * creates a duplicate (orphaned parcel, double COD fee). The same applies to
+ * network errors on POST. Only GET/PATCH/DELETE/PUT are safe to retry.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { retryFetch } from "../retry";
@@ -104,5 +109,73 @@ describe("retryFetch", () => {
         signal: expect.any(AbortSignal),
       }),
     );
+  });
+
+  // ── B4a: POST must not be retried (shipment idempotency) ──────────────
+
+  it("B4a: does NOT retry on 502 for POST requests (502 may mean server succeeded, response lost)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("err", { status: 502 }));
+
+    const res = await retryFetch("https://api.example.com/parcels/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber: "ORD-1" }),
+    });
+    expect(res.status).toBe(502);
+    expect(fetchSpy).toHaveBeenCalledTimes(1); // no retry — return immediately
+  });
+
+  it("B4a: does NOT retry on 503 for POST requests", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("err", { status: 503 }));
+
+    const res = await retryFetch("https://api.example.com/parcels/", {
+      method: "POST",
+      body: JSON.stringify({ orderNumber: "ORD-1" }),
+    });
+    expect(res.status).toBe(503);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("B4a: throws immediately on network error for POST (no retry — server may have processed body)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network error"));
+
+    await expect(
+      retryFetch("https://api.example.com/parcels/", {
+        method: "POST",
+        body: JSON.stringify({ orderNumber: "ORD-1" }),
+      }),
+    ).rejects.toThrow("network error");
+    expect(fetchSpy).toHaveBeenCalledTimes(1); // no retry
+  });
+
+  it("B4a: lower-case 'post' method is also treated as POST (case-insensitive)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("err", { status: 502 }));
+
+    const res = await retryFetch("https://api.example.com/parcels/", {
+      method: "post",
+      body: "{}",
+    });
+    expect(res.status).toBe(502);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("B4a: PATCH (non-POST) still retries on 502 — only POST is special-cased", async () => {
+    const okRes = new Response("{}", { status: 200 });
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("err", { status: 502 }))
+      .mockResolvedValueOnce(okRes);
+
+    const promise = retryFetch("https://api.example.com/parcels/TRK-1", {
+      method: "PATCH",
+      body: JSON.stringify({ status: "in_transit" }),
+    });
+    await vi.advanceTimersByTimeAsync(2000);
+    const res = await promise;
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(2); // retried — PATCH is idempotent-ish
   });
 });

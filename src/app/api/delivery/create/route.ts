@@ -21,6 +21,21 @@ const createSchema = z.object({
  *
  * Reads the order + customer from the DB, calls the provider's API, and
  * updates the Delivery record with the tracking number + cost.
+ *
+ * B4b (shipment idempotency): BEFORE calling the adapter, we check for an
+ * existing Delivery row with a non-null trackingNumber. If one exists, we
+ * return 409 immediately. This prevents two double-shipment paths:
+ *   1. Double-click on "Create shipment" — the second request sees the row
+ *      inserted by the first and bails with 409.
+ *   2. Retry after partial failure where the FIRST attempt succeeded at the
+ *      provider AND committed the Delivery row, then a later step failed —
+ *      the retry sees the existing row and bails with 409.
+ * The recovery path (order.status === "shipped" but NO Delivery row — a data
+ * inconsistency) is still allowed through: in that case there is no parcel to
+ * orphan, so we let the adapter run. The transaction's delivery.upsert below
+ * is the second line of defense: by the time it runs, our pre-check has
+ * guaranteed that any pre-existing Delivery row for this orderId has a NULL
+ * trackingNumber (so the update branch cannot overwrite a real trackingNumber).
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
@@ -44,6 +59,23 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json(
       { error: `Order must be confirmed before shipping avant l'expédition (statut actuel: ${order.status})` },
       { status: 400 },
+    );
+  }
+
+  // B4b: idempotency gate — refuse to create a second shipment for an order
+  // that already has a Delivery row with a trackingNumber. See the file-level
+  // comment for the full rationale. Checked BEFORE the adapter call so we
+  // never even touch the provider API when a shipment already exists.
+  const existingDelivery = await db.delivery.findFirst({
+    where: { orderId: order.id, trackingNumber: { not: null } },
+  });
+  if (existingDelivery) {
+    return NextResponse.json(
+      {
+        error: "Shipment already exists for this order",
+        trackingNumber: existingDelivery.trackingNumber,
+      },
+      { status: 409 },
     );
   }
 
