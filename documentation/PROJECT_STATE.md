@@ -3,8 +3,8 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-12 (Session 38 COMPLETE — full-depth 8-layer audit + Wave 1 (8 S1 ship-blockers fixed). 1435 tests green, `bun run build` exits 0) — Phases 3-7 of data-integrity plan executed: cross-table data-integrity suite, metrics consolidation, orphan removal, 8 e2e specs, API integration tests. 1416 tests green, `bun run build` exits 0)
-**Main HEAD:** `a9f56aa`
+**Last updated:** 2026-07-12 (Session 39 COMPLETE — Wave 2 + Wave 3 of full-depth audit executed to completion. 35 items across 8 layers, 1502 tests green, `bun run build` exits 0, 1 new migration)
+**Main HEAD:** `9804bbb` (session-39 branch — Wave 2+3 complete; pending push to main)
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
@@ -24,11 +24,11 @@
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |
-| Tests | **1435 pass | 0 skip | 0 fail** (re-verified Session 37 end: tsc 0 err, eslint 0 err / 738 warn, vitest 1435/1435, prisma valid, 7 migrations clean (new: fix_codremitted_null_default)) — +138 tests across Phases 3-7 (−6 dead tests removed in Phase 5). **Test count pending re-verification after Session 39 changes** (new tests added by W2-7/W3-8 + sibling audit items; main agent will re-run vitest). |
+| Tests | **1502 pass | 0 skip | 0 fail** (Session 39: +67 new tests from Wave 2+3. tsc 0 err, eslint 0 err, vitest 1502/1502, prisma valid, 8 migrations) |
 | Test coverage | **82.15% statements** (re-measured Session 38 — was incorrectly claimed as 88.8% since Session 20; floor locked at 80%). **Critical files at 0% coverage:** `src/lib/data/analytics-v2.ts`, `src/lib/data/conversation-service.ts`, `src/lib/phone-reputation.ts`, `src/lib/license/machine-id.ts`. `src/lib/automations/conditions.ts` at 1.58%. **Prevention:** `sf-audit` should be added to CI as a coverage-drift gate (see HONEST_ASSESSMENT.md "Coverage gaps" section). |
-| Prisma models | 33 (re-verified Session 35 via `grep -c '^model ' schema.prisma`; 5 migrations apply clean to a fresh DB) |
+| Prisma models | 31 (re-verified Session 39; 8 migrations apply clean — new: w2w3_data_safety_indexes with Refund.reversed + Automation.dryRun + 12 composite indexes) |
 | Automations | ✅ v2 engine: trigger dispatcher + conditions (JSON-logic, 14 operators) + multi-step + retry + 5 actions + execution log |
-| i18n keys | 2,560 × 3 locales (AR/FR/EN + RTL complete + locale-aware formatting) — +24 error-translation keys + 19 notification keys added Session 35 |
+| i18n keys | 2,617 × 3 locales (AR/FR/EN + RTL complete) — +57 new keys in Session 39 (refund dialog, COD reconciliation, integrations, AI confirmation, wilaya risk, automations) |
 | AI tools | 30 (6 core + 12 extended + 12 advanced) |
 | Delivery adapters | 4 (Yalidine + Maystro + ZR Express + DHD) |
 | E-commerce adapters | 3 (Shopify + WooCommerce + YouCan) |
