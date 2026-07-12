@@ -38,31 +38,38 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: "yalidine",
     name: "Yalidine",
     logo: "📦",
+    // CRITICAL: field keys MUST be camelCase (apiId, apiToken, apiKey) to match
+    // the canonical loader shape returned by deliverySecretKeys() in
+    // src/lib/integrations/delivery/types.ts. The POST route stores each value
+    // as `delivery_${provider}_${field}` — so a snake_case key here would be
+    // stored as `delivery_yalidine_api_id` while the loader looks up
+    // `delivery_yalidine_apiId` (camelCase) → loader finds nothing → every
+    // adapter call fails with "Identifiants manquants". Bug B3 / dive-5.
     fields: [
-      { key: "api_id", label: "API ID" },
-      { key: "api_token", label: "API Token" },
+      { key: "apiId", label: "API ID" },
+      { key: "apiToken", label: "API Token" },
     ],
   },
   {
     id: "maystro",
     name: "Maystro Delivery",
     logo: "🚚",
-    fields: [{ key: "api_token", label: "API Token" }],
+    fields: [{ key: "apiToken", label: "API Token" }],
   },
   {
     id: "zrexpress",
     name: "ZR Express",
     logo: "📦",
     fields: [
-      { key: "api_id", label: "API ID" },
-      { key: "api_key", label: "API Key" },
+      { key: "apiId", label: "API ID" },
+      { key: "apiKey", label: "API Key" },
     ],
   },
   {
     id: "dhd",
     name: "DHD",
     logo: "📦",
-    fields: [{ key: "api_token", label: "API Token" }],
+    fields: [{ key: "apiToken", label: "API Token" }],
   },
 ];
 

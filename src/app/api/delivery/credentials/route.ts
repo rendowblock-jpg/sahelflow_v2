@@ -22,9 +22,14 @@ export const GET = withErrorHandler(async () => {
     const keys = deliverySecretKeys(provider);
     const fieldStatus: Record<string, boolean> = {};
     for (const key of keys) {
-      // Extract field name: delivery_yalidine_api_id → api_id
-      const fieldMatch = key.match(/^delivery_\w+_(.+)$/);
-      const field = fieldMatch ? fieldMatch[1]! : key;
+      // Extract field name from the canonical camelCase loader key:
+      //   delivery_yalidine_apiId → "apiId"
+      //   delivery_zrexpress_apiKey → "apiKey"
+      // The keys come from deliverySecretKeys() which is the canonical
+      // camelCase shape — UI + POST route must use the same camelCase field
+      // names or the loader finds nothing (bug B3 / dive-5).
+      const fieldMatch = key.match(/^delivery_(\w+)_(.+)$/);
+      const field = fieldMatch ? fieldMatch[2]! : key;
       fieldStatus[field] = await hasSecret(key);
     }
     status[provider] = fieldStatus;
@@ -39,7 +44,15 @@ const saveSchema = z.object({
 
 /**
  * POST /api/delivery/credentials — save credentials for a provider (encrypted).
- * Body: { provider: "yalidine", credentials: { api_id: "...", api_token: "..." } }
+ * Body: { provider: "yalidine", credentials: { apiId: "...", apiToken: "..." } }
+ *
+ * CRITICAL: field names in `credentials` MUST be camelCase (apiId, apiToken,
+ * apiKey) to match deliverySecretKeys() in src/lib/integrations/delivery/types.ts.
+ * Each value is stored as `delivery_${provider}_${field}` — so camelCase here
+ * becomes `delivery_yalidine_apiId`, which is exactly what the loader looks up.
+ * Sending snake_case (api_id) would store `delivery_yalidine_api_id` → loader
+ * finds nothing → every adapter call fails with "Identifiants manquants"
+ * (bug B3 / dive-5). Tests bypass the loader with mocks so CI stays green.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
