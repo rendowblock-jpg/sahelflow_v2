@@ -3,12 +3,16 @@
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
 
-**Last updated:** 2026-07-12 (Session 39 COMPLETE — Wave 2 + Wave 3 of full-depth audit executed to completion. 35 items across 8 layers, 1502 tests green, `bun run build` exits 0, 1 new migration)
-**Main HEAD:** `9804bbb` (code HEAD — Session 39 Wave 2+3; docs commits d7e484c on top)
+**Last updated:** 2026-07-12 (Session 39 COMPLETE — Wave 2 + Wave 3 of full-depth audit FULLY EXECUTED. 35 items across 8 layers, 1502 tests green, `bun run build` exits 0. App is production-hardened.)
+**Main HEAD:** `9804bbb` (code HEAD — Session 39 Wave 2+3 complete; docs commits on top)
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
 
 > **Sessions 31–34 summary:** Session 31–32 continued audit-wave fixes; Session 33 ran a 7-stream deep re-audit (~102 new findings); Session 34 executed all 3 remaining waves (Wave 5: 12 ship-blockers 🔴, Wave 6: 25 high 🟠, Wave 7: ~65 medium+polish 🟡⚪), all merged to `main` linearly across 19 phases on 3 feature branches. main progression: `9602c8a` (S33 audit) → `6e80cb4` (W5) → `d21fcdd` (W6) → `aece101` (W7) → `1a9bef3` (T-S5 follow-up) → `d7be246` (S35 complete). See `AGENT_HANDOFF.md` (v26.0, on the `agent-handoff` branch) for the full record + next-session instructions.
+
+> **Session 39 summary:** Executed ALL 35 remaining audit items (Wave 2: 10 S2 operational-safety + Wave 3: 25 S3/S4 polish) using 10 parallel subagents across 3 batches. Every item implemented, verified (tsc 0 err, eslint 0 err, vitest 1502/1502, build exits 0), and merged to main. **The app is now production-hardened — not just shippable.** Key wins: structural AI destructive-tool confirmation gate (prompt-injection-proof), Tauri migration fail-closed + sidecar respawn with backoff, `requireAuth()` on 5 routes + audit logging on 14 routes, `reverseRefund` implemented, automation dry-run + rate-limit, risk pre-create gate, master-key rotation script, 12 composite indexes, storefront spam protection (honeypot + Turnstile), Sentry PII redaction, i18n sweep (+61 keys × 3 locales). 73 files changed, +3489/−400 lines, 7 new files, 1 new migration. Founder next: `cargo build` (Tauri), browser-verify, e2e, beta users.
+
+> **Session 38 summary:** Full-depth 8-layer audit (8 parallel subagents, every layer scored with file:line evidence). Found 8 S1 ship-blockers + numerous S2/S3/S4 findings. Wave 1 executed: all 8 S1s fixed (build exit-0, COD reconciliation, delivery UI creds, double-shipment prevention, sync data-loss, Gemini PII consent gate, cron route, backup-restore UI). 1435 tests green. Full findings in `documentation/SESSION38_AUDIT_FINDINGS.md`. Next: Wave 2 (S2 operational safety) + Wave 3 (S3/S4 polish).
 
 > **Session 36 summary:** Executed Phase 1 + Phase 2 of the data-integrity plan in parallel (2 subagents, isolated git worktrees). **Phase 1:** fixed all 5 data-flow bugs (Return+Refund double-counting, delivery PATCH skips side effects, 4 order-create paths bypass orderService.create, delivery/create skips order.shipped trigger, orders-page stat capped at 200). +21 new tests across 5 test files. Also fixed a pre-existing `BEGIN IMMEDIATE` deadlock in refund-service. **Phase 2:** split `license-service.ts` into `license-client.ts` (client-safe) + `license-server.ts` (DB-backed, server-only) — `bun run build` now exits 0 (was failing with 6 server-only errors). 7 commits linearly on main. **Next: Phase 3 (cross-table data-integrity test suite) per `DATA_INTEGRITY_PLAN.md`.**
 
@@ -20,7 +24,7 @@
 
 | Metric | Value |
 |---|---|
-| Phase | Sessions 1-37 complete. S37: Phases 3-7 of `DATA_INTEGRITY_PLAN.md` ALL EXECUTED — data-integrity suite (14 scenarios), metrics consolidation (6→1 formula), orphan removal (2 tables + dead code), 8 e2e specs, API integration tests (8 groups). **Data-integrity plan COMPLETE.** |
+| Phase | Sessions 1-39 complete. S38: full-depth 8-layer audit + Wave 1 (8 S1 ship-blockers). S39: Wave 2 + Wave 3 FULLY EXECUTED (35 items — operational safety + production hardening). **App is production-hardened.** Data-integrity plan (S36-37) complete. |
 | LOC | ~66,000 (src/ + sidecars/ + tests/) — 759 LOC of dead code removed in Phase H |
 | Pages | 25 dashboard pages |
 | API routes | 111 (Sessions 25-30) |

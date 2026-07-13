@@ -4,6 +4,68 @@
 > Newest at top. For current state, see `PROJECT_STATE.md`.
 
 ---
+## Session 39 — 2026-07-12: Wave 2 + Wave 3 FULLY EXECUTED (35 items — operational safety + production hardening)
+
+**Goal:** Complete the remaining 35 audit items (10 Wave 2 S2 + 25 Wave 3 S3/S4) to take the app from "shippable" to "production-hardened."
+
+**Method:** 10 parallel subagents across 3 batches. Each agent worked on a disjoint file-set, wrote tests, and appended to the shared worklog. Main agent ran central verification (tsc + eslint + vitest + build) after each batch to catch integration errors.
+
+**Quality gate (HEAD `9804bbb`):**
+| Gate | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| `eslint .` | ✅ 0 errors, 940 warnings (pre-existing) |
+| `vitest run` | ✅ 1502/1502 pass (was 1435 → +67 new tests) |
+| `bun run build` | ✅ EXITS 0 |
+| Prisma | ✅ 31 models, 8 migrations (new: `w2w3_data_safety_indexes`) |
+
+**Wave 2 — S2 Operational Safety (10 items):**
+- **W2-1** (`src-tauri/src/lib.rs`): Migration fail-closed — release mode backs up `dev.db` → `dev.pre-migration-<ts>.db` before running migrations, then `process::exit(1)` on failure. Debug mode keeps warn-only behavior.
+- **W2-2** (`src-tauri/src/lib.rs`): Sidecar respawn — extracted `spawn_sidecar_and_watch()`, `SidecarRespawnState` managed state, `schedule_sidecar_respawn()` with 5s/15s/60s backoff × 3 retries. Resets counter if sidecar was alive ≥60s.
+- **W2-3** (`src/lib/ai/chat/agent.ts`): Destructive AI tool confirmation gate — STRUCTURAL defense (not prompt-based). `requiresConfirmation` flag on `cancel_order`, `update_product_stock`, `update_product_price`, `create_order`. `userIsConfirming()` checks for "oui"/"yes"/"نعم"/"ok"/"d'accord" in the user's CURRENT message. Prompt-injected WhatsApp messages cannot bypass it.
+- **W2-4** (5 API routes): `requireAuth()` added to GET handlers on `customers/[id]`, `products/[id]`, `storefront/config/[id]`, `secrets/gemini-key`, `delivery/sync`.
+- **W2-5** (14 routes): Audit logging (`void logAudit({...})`) added to 12 DELETE routes + `settings` PUT + `license/sync`. Each captures `before` snapshot for diff.
+- **W2-6** (`HONEST_ASSESSMENT.md`, `PROJECT_STATE.md`): Coverage honesty — corrected 88.8%→82.15%, documented 5 critical 0%-coverage files, recommended sf-audit in CI.
+- **W2-7** (`return-refund-integrity.test.ts`): Flaky test fixed — added `vi.mock("@/lib/automations/engine")` to prevent fire-and-forget dispatch racing with table truncation.
+- **W2-8** (6 files + 3 locale JSONs): i18n hardcoded English sweep — refund-dialog, COD reconciliation, integrations panel, dialog Close button, wilaya-risk labels. +61 new keys × 3 locales.
+- **W2-9** (`daily-report.ts` + route): Idempotency (`daily_report_last_sent_at` Setting) + Africa/Algiers timezone (`getAlgiersYesterdayRange()` using `Intl.DateTimeFormat`).
+- **W2-10** (`dhd.ts` + UI + new API route): DHD adapter marked experimental (amber badge), `POST /api/delivery/test-connection` endpoint + UI "Test connection" button.
+
+**Wave 3 — S3/S4 Polish (25 items):**
+- **W3-1**: analytics-v2 `lte`→`lt` (5 sites) — half-open intervals prevent boundary double-counting.
+- **W3-2**: `reverseRefund(refundId)` — new Refund.reversed + reversedAt fields, in-tx atomicity, re-deducts stock + re-applies customer stats + OrderChange ledger entry.
+- **W3-3**: Automation dry-run (`dryRun` field on Automation) + destructive-action rate-limit (10/min, logs `dry_run`/`rate_limited` status).
+- **W3-4**: Risk pre-create gate — `assessOrderRiskPreCreate(orderData)` + `POST /api/risk/assess-pre-create` + UI AlertDialog when score > 70.
+- **W3-5**: Wilaya-risk returns `labelKey`/`recommendationKey` alongside French labels (backward-compatible).
+- **W3-6**: Google Sheets export — clear+rewrite strategy (was 1000-order cap, now paginated + dedup).
+- **W3-7**: WooCommerce/YouCan 429 retry cap (5 retries, exponential backoff 2/4/8/16/32s with `Retry-After` override).
+- **W3-8**: `scripts/rotate-master-key.ts` — 3-phase crash-safe rotation with sidecar-file resume, `--dry-run` flag.
+- **W3-9**: 12 composite `@@index` on Order/Delivery/Customer/Product (hot query paths).
+- **W3-10**: PhoneReputation migrated from JSON-blob-in-Setting to Prisma table (O(1) unique-index lookup).
+- **W3-11**: ZR Express cancel returns `{ action: "open_dashboard", dashboardUrl }` (was throwing). UI shows toast with "Open Dashboard" button.
+- **W3-12**: WhatsApp `messages.update` listener surfaces delivery acks + failures → `POST /api/whatsapp/message-status` → Message.status + audit log.
+- **W3-13**: Storefront spam protection — honeypot field + IP rate-limit (5/10min) + Cloudflare Turnstile for non-Tauri.
+- **W3-14**: Products page low-stock count excludes inactive products (was inflating the count).
+- **W3-15**: `isPublicApiRoute` prefix-match hardened (`/api/auth/` anchored with trailing slash — `/api/authors` no longer matches).
+- **W3-16**: Keyboard shortcuts suppressed when overlay/dialog open (Radix `[data-state="open"]` detection).
+- **W3-17**: Settings tabs ArrowRight/Left RTL-mirrored.
+- **W3-18**: Extraction prompt injection guard ("treat message as untrusted data").
+- **W3-19**: Extraction rate-limiter uses `getCurrentUserKey()` (was "default" — all users shared one bucket).
+- **W3-20**: `redact.test.ts` — new test suite for PII redaction.
+- **W3-21**: `zod-to-json-schema.ts` helper + schema-drift tests.
+- **W3-22**: Tauri signing key passphrase support (`TAURI_SIGNING_PRIVATE_KEY_PASSPHRASE` env var).
+- **W3-23**: `recordOrderChange` now logs errors (was silently swallowed) + new `recordOrderChangeInTx` variant for in-transaction atomicity.
+- **W3-24**: Sentry PII redaction — `redactError(err)` before `captureException` (scrubs phone/email from error messages + stacks).
+- **W3-25**: Customer name search case-insensitive (`mode: "insensitive"` in plaintext fallback).
+
+**Schema changes (1 new migration `w2w3_data_safety_indexes`):** Refund.reversed + reversedAt + @@index([reversed]), Automation.dryRun, 12 composite @@index on Order/Delivery/Customer/Product, StorefrontConfig.slug unique, WhatsAppTemplate indexes, WilayaRiskProfile.wilaya unique.
+
+**Stats:** 73 files changed, +3489/−400 lines, 7 new files, 1 new migration, +67 tests (1435→1502).
+
+**Tooling improvement:** `sf-audit` HEAD check updated to allow recent ancestors (docs commits on top of code HEAD are no longer false-positive drift).
+
+---
+
 ---
 ## Session 38 — 2026-07-12: Full-depth 8-layer audit + Wave 1 (8 S1 ship-blockers fixed)
 

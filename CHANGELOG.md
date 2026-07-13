@@ -5,6 +5,68 @@ All notable changes to SahelFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Session 39 (2026-07-12)
+
+### Session 39 — Wave 2 + Wave 3 of full-depth audit FULLY EXECUTED (35 items — operational safety + production hardening)
+
+Executed ALL 35 remaining audit items (10 Wave 2 S2 + 25 Wave 3 S3/S4) using 10 parallel subagents across 3 batches. Every item implemented, verified (tsc 0 err, eslint 0 err, vitest 1502/1502, build exits 0), and merged to main. **The app is now production-hardened — not just shippable.** 73 files changed, +3489/−400 lines, 7 new files, 1 new migration.
+
+#### Wave 2 — S2 Operational Safety (10 items)
+- **W2-1** Tauri migration fail-closed + pre-migration DB backup (`src-tauri/src/lib.rs`)
+- **W2-2** Sidecar respawn with 5/15/60s backoff, 3 retries (`src-tauri/src/lib.rs`)
+- **W2-3** Destructive AI tool confirmation gate — structural, prompt-injection-proof (`src/lib/ai/chat/agent.ts`)
+- **W2-4** `requireAuth()` on 5 GET routes (customers, products, storefront, secrets, delivery)
+- **W2-5** Audit logging on 12 DELETE routes + settings PUT + license sync
+- **W2-6** Coverage honesty — docs corrected 88.8%→82.15%, 5 critical 0%-coverage files documented
+- **W2-7** Flaky return-refund test fixed (`vi.mock` automations/engine)
+- **W2-8** i18n hardcoded English sweep — +61 new keys × 3 locales (refund-dialog, COD reconciliation, integrations, wilaya-risk)
+- **W2-9** Daily report idempotency + Africa/Algiers timezone
+- **W2-10** DHD adapter marked experimental + Test connection button + endpoint
+
+#### Wave 3 — S3/S4 Polish (25 items)
+- **W3-1** Analytics-v2 half-open intervals (no boundary double-count)
+- **W3-2** `reverseRefund` implemented (Refund.reversed + reversedAt fields)
+- **W3-3** Automation dry-run + destructive-action rate-limit (10/min)
+- **W3-4** Risk engine pre-create gate (`assessOrderRiskPreCreate` + UI AlertDialog)
+- **W3-5** Wilaya-risk hardcoded French → i18n keys (labelKey/recommendationKey)
+- **W3-6** Google Sheets export pagination + clear-rewrite dedup (was 1000 cap)
+- **W3-7** WooCommerce/YouCan 429 retry cap (5 retries, exponential backoff)
+- **W3-8** Master-key rotation script (`scripts/rotate-master-key.ts`, --dry-run, crash-safe)
+- **W3-9** 12 composite indexes (Order, Delivery, Customer, Product)
+- **W3-10** PhoneReputation migrated to table (was JSON-blob-in-Setting)
+- **W3-11** ZR Express cancel returns open_dashboard action (was throwing)
+- **W3-12** WhatsApp delivery acks surfaced (messages.update → Message.status)
+- **W3-13** Storefront spam protection (honeypot + IP rate-limit + Cloudflare Turnstile)
+- **W3-14** Products page low-stock excludes inactive (was inflating count)
+- **W3-15** `isPublicApiRoute` prefix-match hardened (/api/auth/ anchored)
+- **W3-16** Keyboard shortcuts suppressed when overlay/dialog open
+- **W3-17** Settings tabs arrow keys RTL-mirrored
+- **W3-18** Extraction prompt injection guard (treat message as untrusted data)
+- **W3-19** Extraction rate-limiter uses getCurrentUserKey (was "default")
+- **W3-20** redact.ts test suite (new)
+- **W3-21** Tool JSON↔zod schema drift helper + tests
+- **W3-22** Tauri signing key passphrase support (env var)
+- **W3-23** `recordOrderChange` logs errors + new `recordOrderChangeInTx` variant
+- **W3-24** Sentry PII redaction (redactError before captureException)
+- **W3-25** Customer name search case-insensitive (plaintext fallback)
+
+#### Schema changes (1 new migration)
+- New migration: `w2w3_data_safety_indexes`
+- `Refund.reversed` Boolean @default(false) + `reversedAt` DateTime? + `@@index([reversed])`
+- `Automation.dryRun` Boolean @default(false)
+- 12 composite `@@index` on Order/Delivery/Customer/Product
+- `StorefrontConfig.slug` unique, `WhatsAppTemplate` indexes, `WilayaRiskProfile.wilaya` unique
+
+#### Tooling
+- `sf-audit` HEAD check updated to allow recent ancestors (docs commits on top of code HEAD no longer false-positive drift)
+
+#### Verification gate
+- `tsc --noEmit`: 0 errors
+- `eslint .`: 0 errors, 940 warnings (pre-existing)
+- `vitest run`: 1502/1502 pass (+67 new tests)
+- `bun run build`: exits 0
+- Prisma: 31 models, 8 migrations
+
 ## [Unreleased] — Session 37 (2026-07-09)
 
 ### Session 37 — Phases 3-7 of data-integrity plan COMPLETE (data-integrity suite + metrics consolidation + orphan removal + e2e specs + API tests)

@@ -30,7 +30,7 @@
 - ✅ Real command palette (fuzzy searches actual records, not just nav labels)
 - ✅ Keyboard shortcuts + cheatsheet modal
 - ✅ Form validation (RHF+zod with inline errors, phone mask, drafts, dirty-guard)
-- ✅ 1435 tests pass (real green, not false) — test count pending re-verification after Session 39 changes
+- ✅ 1502 tests pass (real green, verified Session 39 end — was 1435, +67 new tests from Wave 2+3)
 - ✅ 82.15% test coverage (re-measured Session 38 — was incorrectly claimed as 88.8% since Session 20; floor locked at 80%)
 
 **What's still open (honestly):**
@@ -114,7 +114,7 @@ The research wave found the app had a **beautiful shell but one layer of depth e
 - **RTL complete** (tables, charts, sidebar, icons, settings tabs, Amiri font applied)
 - **Responsive** (mobile/tablet/desktop, touch targets, 100dvh)
 - **Emerald/teal palette** (banned blue removed app-wide, 0 arbitrary values)
-- **1435 tests** (real green, not false) — test count pending re-verification after Session 39 changes
+- **1502 tests** (real green, verified Session 39 end — was 1435, +67 new tests from Wave 2+3)
 - **82.15% coverage** (re-measured Session 38 — was incorrectly claimed as 88.8% since Session 20; floor locked at 80%)
 - **Sentry installed** (env-gated, zero-overhead, global-error only-fires-on-unexpected)
 - **8 agent tools** (sf-verify, sf-db, sf-license, sf-port, sb-db, sf-browser, sf-seed, sf-audit)
