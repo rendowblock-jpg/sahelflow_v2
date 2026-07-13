@@ -196,7 +196,10 @@ function checkHeadDrift(psContent: string): void {
     // commits), it's NOT drift — the docs are current, just referencing the
     // last code commit rather than the docs commit on top.
     const recent = gitRecentHeads(50);
-    if (recent.has(docHead)) {
+    // git %h returns variable-length SHAs (7-9+ chars depending on repo size);
+    // docHead is sliced to 7 chars. Use prefix matching for robust comparison.
+    const isAncestor = [...recent].some(h => h.startsWith(docHead) || docHead.startsWith(h));
+    if (isAncestor) {
       console.log(`  ${GREEN}✅ HEAD is recent ancestor: docs=${docHead}, actual=${actualHead} (docs commits on top — OK)${NC}`);
     } else {
       recordDrift({
