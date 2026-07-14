@@ -2,8 +2,10 @@
 
 > **Living document.** Updated after every session. This is the "where are we right now" file.
 > For the plan, see `full_build.md`. For history, see `BUILD_LOG.md`. For honest evaluation, see `HONEST_ASSESSMENT.md`.
+>
+> **🚨 NEW (Session 40+):** The plan is now governed by the **Maze Map** at `documentation/engineering/MAZE_MAP.md` (on `engineering/maze-map` branch). The audit-driven era is over. Sessions 40+ are spec-driven, page-complete, with founder sign-off. See the maze map for the full constitution (15 parts, 48 locked decisions, 23-session arc to ship).
 
-**Last updated:** 2026-07-12 (Session 39 COMPLETE — Wave 2 + Wave 3 of full-depth audit FULLY EXECUTED. 35 items across 8 layers, 1502 tests green, `bun run build` exits 0. App is production-hardened.)
+**Last updated:** 2026-07-14 (Session 39 system design complete. Maze Map v4 produced. The "production-hardened" claim below is legacy — the maze map honestly re-assesses as ~20% perceived quality. Next: Session 40 = THE MASTER SESSION — research + validation + tooling, no coding.)
 **Main HEAD:** `9804bbb` (code HEAD — Session 39 Wave 2+3 complete; docs commits on top)
 **Version:** `4.1.0`
 **Design system version:** v3.0 (emerald/teal palette, RTL-complete, responsive, token-consistent)
