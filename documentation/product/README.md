@@ -18,7 +18,7 @@ When product documents conflict, use this order:
 6. [`NEXT_SESSION_HANDOFF.md`](NEXT_SESSION_HANDOFF.md) — current implementation-phase starting instructions.
 7. [`ARCHITECTURE_RESET_BRIEF.md`](ARCHITECTURE_RESET_BRIEF.md) — completed architecture-phase acceptance brief, retained for traceability.
 
-The complete founder-approved product is translated into surfaces, functions, journeys and experience requirements by [`../vision/README.md`](../vision/README.md). Engineering details are governed by [`../architecture/README.md`](../architecture/README.md), the final Engineering Specification and active superseding ADRs. Implementation status is governed by the commit-linked Evidence Ledger.
+The complete founder-approved product is translated into surfaces, functions, journeys and experience requirements by [`../vision/README.md`](../vision/README.md). [`../vision/SCOPE_GOVERNANCE.md`](../vision/SCOPE_GOVERNANCE.md) prevents recovered historical richness from silently expanding the frozen launch scope. Engineering details are governed by [`../architecture/README.md`](../architecture/README.md), the final Engineering Specification and active superseding ADRs. Implementation status is governed by the commit-linked Evidence Ledger.
 
 All older documents are historical reference only unless explicitly revalidated and linked by a current authoritative document.
 
@@ -29,6 +29,7 @@ Before feature coding:
 1. Read this entire product directory.
 2. Read [`../vision/README.md`](../vision/README.md) and its full read order:
    - [`../vision/UNIFIED_PRODUCT_VISION.md`](../vision/UNIFIED_PRODUCT_VISION.md)
+   - [`../vision/SCOPE_GOVERNANCE.md`](../vision/SCOPE_GOVERNANCE.md)
    - [`../vision/FUNCTIONAL_CAPABILITY_ATLAS.md`](../vision/FUNCTIONAL_CAPABILITY_ATLAS.md)
    - [`../vision/EXPERIENCE_FRONTEND_CONSTITUTION.md`](../vision/EXPERIENCE_FRONTEND_CONSTITUTION.md)
    - [`../vision/JOURNEY_STATE_ATLAS.md`](../vision/JOURNEY_STATE_ATLAS.md)
@@ -44,7 +45,7 @@ Before feature coding:
 
 - A feature is not complete because a screen, schema, adapter, test or document exists.
 - Claims such as `secure`, `hardened`, `AAA`, `real-time`, `offline`, `zero data loss`, `supported`, `Stable` or `best` require evidence linked to an exact commit/artifact and acceptance gate.
-- Founder decisions define the product contract. The vision package defines the complete product and experience coverage. Engineering specifications and ADRs define how it is implemented. Evidence records define what is proven.
+- Founder decisions define the product contract. The vision package defines complete coverage. Scope Governance classifies recovered detail. Engineering specifications and ADRs define how it is implemented. Evidence records define what is proven.
 - Historical labels such as v3, v4.1, v4.2, session numbers, design-system generations and Maze Map phases are not public product versions.
 - The first public stable product is **SahelFlow 1.0**.
 - Founder choices may be reopened only for a proven critical impossibility, security/legal issue or unsustainable economics, through a superseding evidence-backed decision.
