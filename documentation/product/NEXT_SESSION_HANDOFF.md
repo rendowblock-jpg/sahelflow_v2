@@ -18,6 +18,7 @@ The founder-level product contract is preserved and the planning authority now c
 ### Unified vision authority
 
 - one Unified Product Vision;
+- explicit Scope Governance;
 - complete Functional Capability Atlas;
 - Experience and Frontend Constitution;
 - Journey and State Atlas;
@@ -63,21 +64,22 @@ The history recovery inspected branch-only Maze Map, Session 40 research/validat
 5. `documentation/product/CONTRADICTION_REGISTER.md`
 6. `documentation/vision/README.md`
 7. `documentation/vision/UNIFIED_PRODUCT_VISION.md`
-8. `documentation/vision/FUNCTIONAL_CAPABILITY_ATLAS.md`
-9. `documentation/vision/EXPERIENCE_FRONTEND_CONSTITUTION.md`
-10. `documentation/vision/JOURNEY_STATE_ATLAS.md`
-11. `documentation/vision/MASTER_EXECUTION_PLAN.md`
-12. `documentation/vision/TRACEABILITY_MATRIX.md`
-13. `documentation/vision/HISTORICAL_RECONCILIATION.md`
-14. `documentation/architecture/ENGINEERING_SPECIFICATION.md`
-15. `documentation/architecture/ADR_INDEX.md`
-16. `documentation/architecture/SUPERSEDING_ADRS.md`
-17. `documentation/architecture/EVIDENCE_LEDGER.md`
-18. `documentation/architecture/REUSE_MIGRATION_DELETION_PLAN.md`
-19. `documentation/architecture/IMPLEMENTATION_ROADMAP.md`
-20. `documentation/architecture/CODING_WORKFLOW.md`
-21. `documentation/architecture/PROVIDER_CONTRACT_REGISTRY.md`
-22. `documentation/architecture/RUNBOOK_INDEX.md`
+8. `documentation/vision/SCOPE_GOVERNANCE.md`
+9. `documentation/vision/FUNCTIONAL_CAPABILITY_ATLAS.md`
+10. `documentation/vision/EXPERIENCE_FRONTEND_CONSTITUTION.md`
+11. `documentation/vision/JOURNEY_STATE_ATLAS.md`
+12. `documentation/vision/MASTER_EXECUTION_PLAN.md`
+13. `documentation/vision/TRACEABILITY_MATRIX.md`
+14. `documentation/vision/HISTORICAL_RECONCILIATION.md`
+15. `documentation/architecture/ENGINEERING_SPECIFICATION.md`
+16. `documentation/architecture/ADR_INDEX.md`
+17. `documentation/architecture/SUPERSEDING_ADRS.md`
+18. `documentation/architecture/EVIDENCE_LEDGER.md`
+19. `documentation/architecture/REUSE_MIGRATION_DELETION_PLAN.md`
+20. `documentation/architecture/IMPLEMENTATION_ROADMAP.md`
+21. `documentation/architecture/CODING_WORKFLOW.md`
+22. `documentation/architecture/PROVIDER_CONTRACT_REGISTRY.md`
+23. `documentation/architecture/RUNBOOK_INDEX.md`
 
 Do not use historical v3/v4, Maze Map, session-number or old project-state documents as current authority. Their durable value and superseded assumptions are recorded in `documentation/vision/HISTORICAL_RECONCILIATION.md`.
 
@@ -95,6 +97,7 @@ Completed by the unified vision package. Before merge, review that:
 - durable historical requirements are preserved;
 - obsolete assumptions are clearly superseded;
 - all capability groups map to milestones;
+- scope classes prevent recovered richness from silently expanding launch;
 - UI/UX is a horizontal track rather than hidden only in M13.
 
 ### M0-1 — Operational CI diagnosis and repair
@@ -113,7 +116,7 @@ Completed by the unified vision package. Before merge, review that:
 ### M0-3 — Branch protection and workflow templates
 
 - Required checks, risk reviewers, issue/PR templates and merge policy from the Coding Workflow.
-- Issue template must include capability, journey, surface, role, states, experience dimensions, founder decision, milestone/invariant and evidence.
+- Issue template must include scope class, capability, journey, surface, role, states, experience dimensions, founder decision, milestone/invariant and evidence.
 - No direct push or release publication from local scripts.
 
 ### M0-4 — Generated repository/evidence inventory
@@ -129,7 +132,7 @@ Completed by the unified vision package. Before merge, review that:
 - Define immutable evidence-record schema and candidate artifact retention.
 - Make Evidence Ledger and traceability updates part of implementation completion.
 
-Each issue must satisfy the issue-readiness template and risk rules in `CODING_WORKFLOW.md` before code begins.
+Each issue must satisfy the issue-readiness template, Scope Governance and risk rules in `CODING_WORKFLOW.md` before code begins.
 
 ## 5. Product and experience obligations that must not be lost
 
@@ -169,9 +172,9 @@ Reopen one only through an evidence-backed superseding decision proving critical
 
 **Resume SahelFlow 1.0 implementation at Milestone M0.**
 
-Use repository `rendowblock-jpg/sahelflow_v2` and current protected `main`. Read product, vision and architecture authorities in the order listed here. Do not rely on old v3/v4, Maze Map, session-number, project-state or readiness documents.
+Use repository `rendowblock-jpg/sahelflow_v2` and current protected `main`. Read product, vision/scope and architecture authorities in the order listed here. Do not rely on old v3/v4, Maze Map, session-number, project-state or readiness documents.
 
-First verify the exact `main` commit and open PR/check status. Complete only dependency-correct M0 issues: repair GitHub Actions, create the version/evidence manifest, establish branch protection/templates, generate repository/page/evidence inventories and bind documentation/evidence gates. Follow `documentation/architecture/CODING_WORKFLOW.md` and `documentation/vision/MASTER_EXECUTION_PLAN.md`.
+First verify the exact `main` commit and open PR/check status. Complete only dependency-correct M0 issues: repair GitHub Actions, create the version/evidence manifest, establish branch protection/templates, generate repository/page/evidence inventories and bind documentation/evidence gates. Follow `documentation/architecture/CODING_WORKFLOW.md`, `documentation/vision/SCOPE_GOVERNANCE.md` and `documentation/vision/MASTER_EXECUTION_PLAN.md`.
 
 Do not begin visible product features or later milestones until M0 exit criteria are met. Preserve all founder choices. Update Evidence Ledger, Contradiction Register and traceability with exact commit/artifact evidence after each completed issue.
 
@@ -181,10 +184,11 @@ M0 is complete only when:
 
 - the unified vision package is merged and linked from active authority;
 - every launch capability and founder decision maps to delivery/evidence;
+- recovered ideas are classified and cannot silently expand Stable scope;
 - PR workflows execute from a clean checkout;
 - required type/lint/test/migration/dependency checks are binding;
 - the exact source commit/version manifest is present in evidence;
 - protected `main` prevents unsafe direct merge/release;
 - current route/model/migration/test/provider/page inventories are generated;
 - former v3/v4/manual-count claims cannot re-enter active authority;
-- implementation can proceed to M1/M2 without guessing repository, product, experience or release truth.
+- implementation can proceed to M1/M2 without guessing repository, product, experience, scope or release truth.
