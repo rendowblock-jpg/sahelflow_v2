@@ -1,0 +1,39 @@
+name: Architecture audit export
+
+on:
+  push:
+    branches:
+      - agent/architecture-reset-audit
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record exact repository state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit-export
+          git rev-parse HEAD > audit-export/COMMIT_SHA.txt
+          git status --short > audit-export/GIT_STATUS.txt
+          git ls-files -s > audit-export/TRACKED_TREE.txt
+          git log -1 --format='%H%n%aI%n%cI%n%s' > audit-export/HEAD_COMMIT.txt
+          git branch -a > audit-export/BRANCHES.txt
+          git tag --sort=-creatordate > audit-export/TAGS.txt
+          git ls-files -z | tar --null -czf audit-export/repository.tar.gz --files-from=-
+
+      - name: Upload exact tracked repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-audit-repository
+          path: audit-export/
+          if-no-files-found: error
+          retention-days: 1
