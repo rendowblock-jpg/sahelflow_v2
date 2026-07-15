@@ -2,19 +2,20 @@
 
 SahelFlow is a Windows-first, desktop-authoritative operations platform for Algerian COD sellers.
 
-> **Repository status:** Architecture reset and implementation planning are complete. The current source contains substantial reusable product work, but it is **not yet a Stable SahelFlow 1.0 release**. Launch readiness is governed by commit-linked evidence, not historical version labels, feature counts or test counts.
+> **Repository status:** Product, architecture and unified-vision planning are complete. The current source contains substantial reusable product work, but it is **not yet a Stable SahelFlow 1.0 release**. Launch readiness is governed by commit-linked evidence, not historical version labels, feature counts or test counts.
 
 ## Authoritative documentation
 
 Read in this order:
 
-1. [`documentation/product/README.md`](documentation/product/README.md) — product authority and founder-approved choices.
-2. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority and architecture package.
-3. [`documentation/architecture/EVIDENCE_LEDGER.md`](documentation/architecture/EVIDENCE_LEDGER.md) — current launch-system status at the audited commit.
-4. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — dependency-correct M0–M14 implementation order.
-5. [`documentation/architecture/CODING_WORKFLOW.md`](documentation/architecture/CODING_WORKFLOW.md) — binding issue, branch, PR, review, test, merge, rollback and release rules.
+1. [`documentation/product/README.md`](documentation/product/README.md) — founder-approved product contract and choices.
+2. [`documentation/vision/README.md`](documentation/vision/README.md) — complete product, functional, journey, experience and execution vision.
+3. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority, invariants and architecture package.
+4. [`documentation/architecture/EVIDENCE_LEDGER.md`](documentation/architecture/EVIDENCE_LEDGER.md) — current launch-system status at the audited commit.
+5. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — dependency-correct M0–M14 implementation order.
+6. [`documentation/architecture/CODING_WORKFLOW.md`](documentation/architecture/CODING_WORKFLOW.md) — binding issue, branch, PR, review, test, merge, rollback and release rules.
 
-The product Constitution and founder decisions are preserved. Former v3/v4 architecture, project-state, build-plan and readiness documents are historical only; their disposition is recorded in [`documentation/architecture/DOCUMENTATION_INVENTORY.md`](documentation/architecture/DOCUMENTATION_INVENTORY.md).
+The product Constitution and founder decisions are preserved. The unified vision package restores durable Maze Map, UX, function, journey and launch depth while explicitly rejecting superseded assumptions. Former v3/v4 architecture, project-state, build-plan and readiness documents are historical only; their disposition is recorded in [`documentation/architecture/DOCUMENTATION_INVENTORY.md`](documentation/architecture/DOCUMENTATION_INVENTORY.md).
 
 ## Approved launch shape
 
@@ -25,13 +26,14 @@ The product Constitution and founder decisions are preserved. Former v3/v4 archi
 - **Trial:** one signed online machine-bound seven-day trial with complete lockout after expiry and preserved data.
 - **AI:** seller-owned Google AI Studio key; typed/privacy-controlled Gemini workflows with explicit approval for destructive actions.
 - **Synchronization:** durable hybrid webhook plus scheduled reconciliation; checkpoints never pass untracked failure.
+- **Experience:** AR/FR/EN, RTL-native, accessible, page-complete, low-end-first and explicit about offline/degraded/recovery states.
 - **Release:** signed Windows artifacts promoted through internal, beta and stable channels only after the required evidence exists.
 
 ## Current implementation conclusion
 
 The existing Next.js/Tauri/Prisma/domain/UI work is a valuable migration base. The architecture audit found that launch identity/version, process supervision, explicit shop context, migrations, key recovery, licensing, team identity, durable inbox/outbox, Cloudflare protocols, backup, remote PWA, hosted storefront, provider certification and release authority require replacement or foundational hardening before feature expansion.
 
-No feature implementation should bypass the roadmap dependency order.
+The vision recovery also established that UI/UX, onboarding, support, founder administration, marketing, page depth and real-user validation are horizontal product tracks—not late cosmetic work. No feature implementation should bypass the roadmap dependency order or the capability/journey traceability requirements.
 
 ## Development baseline
 
@@ -47,4 +49,4 @@ Packaged Windows, migration, recovery, provider and low-end verification must fo
 
 ## Evidence rule
 
-A claim such as “verified,” “supported,” “production-ready,” or “Stable” must identify the exact source commit, artifact digest, environment/provider/device, procedure, result and reviewer. The current authority is the Evidence Ledger and future signed release evidence manifest.
+A claim such as “verified,” “supported,” “production-ready,” “AAA” or “Stable” must identify the exact source commit, artifact digest, environment/provider/device, procedure, result and reviewer. The current authority is the Evidence Ledger and future signed release evidence manifest.
