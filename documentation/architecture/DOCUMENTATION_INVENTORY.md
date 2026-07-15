@@ -29,7 +29,8 @@ This layer restores the complete product, functional, journey and experience cov
 |---|---|---|
 | `documentation/vision/README.md` | Vision authority index and anti-context-loss rules | Active |
 | `documentation/vision/UNIFIED_PRODUCT_VISION.md` | North star, seller promise, surfaces and success definition | Active |
-| `documentation/vision/FUNCTIONAL_CAPABILITY_ATLAS.md` | Complete launch functions and product surfaces | Active |
+| `documentation/vision/SCOPE_GOVERNANCE.md` | Launch/depth/candidate/post-1.0 scope classification | Active |
+| `documentation/vision/FUNCTIONAL_CAPABILITY_ATLAS.md` | Complete recovered function and surface map | Active; items require scope classification before implementation |
 | `documentation/vision/EXPERIENCE_FRONTEND_CONSTITUTION.md` | UX/UI/frontend/RTL/a11y/low-end authority | Active |
 | `documentation/vision/JOURNEY_STATE_ATLAS.md` | End-to-end journeys and operational states | Active |
 | `documentation/vision/MASTER_EXECUTION_PLAN.md` | Horizontal product tracks over M0–M14 dependencies | Active |
@@ -145,14 +146,14 @@ These do not become Ready until exercised:
 - A current claim must link to the Evidence Ledger or a release/provider evidence record at an exact commit/artifact.
 - Research facts that may have changed must be revalidated before product, legal, provider or economic decisions.
 - New documents must declare owner, status, product major, date and authority relationship.
-- Historical ideas must pass the recovery controls in `documentation/vision/HISTORICAL_RECONCILIATION.md` before implementation.
+- Historical ideas must pass both `documentation/vision/HISTORICAL_RECONCILIATION.md` and `documentation/vision/SCOPE_GOVERNANCE.md` before implementation.
 
 ## Cleanup completion
 
 The repository now has four explicit documentation roles:
 
 1. product contract;
-2. unified product/experience vision;
+2. unified product/experience vision and scope control;
 3. engineering architecture and delivery;
 4. historical evidence.
 
