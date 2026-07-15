@@ -1,104 +1,50 @@
-# SahelFlow v3.0
+# SahelFlow 1.0
 
-> AI-powered back-office for Algerian COD sellers. Local-first desktop app.
+SahelFlow is a Windows-first, desktop-authoritative operations platform for Algerian COD sellers.
 
-## Architecture (v3.0 — greenfield, Phase 0 ~99% done)
+> **Repository status:** Architecture reset and implementation planning are complete. The current source contains substantial reusable product work, but it is **not yet a Stable SahelFlow 1.0 release**. Launch readiness is governed by commit-linked evidence, not historical version labels, feature counts or test counts.
 
-- **Desktop:** Tauri (wraps Next.js webview) + auto-updater (signed GitHub Releases)
-- **Mobile:** PWA (Android, installable — manifest + service worker)
-- **Database:** Local SQLite, one file per shop (max 10). Encryption is application-layer field-level AES-256-GCM (ADR-003), NOT SQLCipher (Prisma's `?key=` is silently ignored).
-- **Master key:** Tauri Stronghold vault (production, ADR-004) with keyfile fallback for browser dev
-- **WhatsApp:** Baileys sidecar (Bun + Hono + WS, port 3001)
-- **AI:** Gemini 3.5 Flash (seller's free-tier key) + local regex fallback + 30-tool agentic chat with SSE streaming
-- **Delivery:** Yalidine + Maystro + ZR Express (all fully implemented)
-- **E-commerce sync:** Shopify + WooCommerce + YouCan (polling-based)
-- **Multi-shop:** Registry + UI selector + DB routing (db calls follow the active shop)
-- **Integrations:** Polling (not webhooks — local-first apps have no public endpoint)
-- **Cost:** $0/month to run, at any scale, forever
+## Authoritative documentation
 
-## What's built (sessions 1-10)
+Read in this order:
 
-- **20 pages**, **46 API routes**, **22 Prisma models**, **93 tests**, **~36,000 LOC**
-- **30 AI tools** (spec target reached): product/customer/order CRUD, delivery, analytics, conversations
-- **3 delivery adapters** full (Yalidine, Maystro, ZR Express)
-- **3 e-commerce adapters** full (Shopify, WooCommerce, YouCan)
-- **PII encryption** on Customer + Order + Conversation (transparent Prisma extension)
-- **Storefront builder** (COD landing pages with product picker + themes)
-- **Daily WhatsApp reports** (cron-triggered)
-- **PWA installable** on Android
-- **Auto-updater** (Ed25519-signed)
-- **Stronghold** master key storage (production)
+1. [`documentation/product/README.md`](documentation/product/README.md) — product authority and founder-approved choices.
+2. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority and architecture package.
+3. [`documentation/architecture/EVIDENCE_LEDGER.md`](documentation/architecture/EVIDENCE_LEDGER.md) — current launch-system status at the audited commit.
+4. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — dependency-correct M0–M14 implementation order.
+5. [`documentation/architecture/CODING_WORKFLOW.md`](documentation/architecture/CODING_WORKFLOW.md) — binding issue, branch, PR, review, test, merge, rollback and release rules.
 
-See `documentation/PROJECT_STATE.md` for the full current state.
+The product Constitution and founder decisions are preserved. Former v3/v4 architecture, project-state, build-plan and readiness documents are historical only; their disposition is recorded in [`documentation/architecture/DOCUMENTATION_INVENTORY.md`](documentation/architecture/DOCUMENTATION_INVENTORY.md).
 
-## Quick start (development — web mode)
+## Approved launch shape
 
-```bash
-bun install
-cp .env.example .env     # Create the .env file (Windows: copy .env.example .env)
-bun run db:generate       # Generate Prisma client
-bun run db:push           # Create SQLite schema
-bun run dev               # Start Next.js dev server (port 3000)
-```
+- **Platform:** Windows x64 desktop; 4 GB dual-core floor and ThinkPad T470 reference.
+- **Authority:** one canonical desktop installation; one SQLite database per shop; desktop remains final business-write authority.
+- **Connected plane:** bounded Cloudflare control plane, encrypted relay/projections, zero-knowledge backups and hosted storefronts.
+- **Commercial model:** 35,000 DZD one-time complete edition; five included shops; up to five extra shop packs; owner plus ten active members under the approved device limits.
+- **Trial:** one signed online machine-bound seven-day trial with complete lockout after expiry and preserved data.
+- **AI:** seller-owned Google AI Studio key; typed/privacy-controlled Gemini workflows with explicit approval for destructive actions.
+- **Synchronization:** durable hybrid webhook plus scheduled reconciliation; checkpoints never pass untracked failure.
+- **Release:** signed Windows artifacts promoted through internal, beta and stable channels only after the required evidence exists.
 
-Then open `http://localhost:3000` in your browser. This runs the web version (no Tauri, no WhatsApp sidecar).
+## Current implementation conclusion
 
-**Optional — WhatsApp sidecar** (for live WhatsApp inbox):
-```bash
-bun run sidecar        # Baileys sidecar on port 3001 (separate terminal)
-```
+The existing Next.js/Tauri/Prisma/domain/UI work is a valuable migration base. The architecture audit found that launch identity/version, process supervision, explicit shop context, migrations, key recovery, licensing, team identity, durable inbox/outbox, Cloudflare protocols, backup, remote PWA, hosted storefront, provider certification and release authority require replacement or foundational hardening before feature expansion.
 
-## Desktop app (Tauri — full experience)
+No feature implementation should bypass the roadmap dependency order.
 
-Requires Rust toolchain + Tauri CLI. See `documentation/DESKTOP_BUILD.md` for full instructions.
+## Development baseline
+
+This remains a Bun/Next.js/Tauri/Prisma repository. Development commands are implementation details, not release evidence:
 
 ```bash
-bun run tauri:dev:fast # ⚡ Fast review (pre-built frontend, instant page loads)
-bun run tauri:dev     # Full dev mode (hot reload, slower page loads)
-bun run release       # One-command release (builds + signs + publishes + auto-updates all installed apps)
-bun run build:installer # Manual build (fallback — produces signed .msi/.dmg/.AppImage)
+bun install --frozen-lockfile
+bun run db:generate
+bun run sf-verify
 ```
 
-**Production build also needs:**
-- `TAURI_SIGNING_PRIVATE_KEY` env var (for auto-updater signatures)
-- The WhatsApp sidecar compiled (`bun run sidecar:build` first)
+Packaged Windows, migration, recovery, provider and low-end verification must follow the active Coding Workflow and runbooks. `prisma db push` is not a production migration mechanism.
 
-See `documentation/UPDATES.md` for how to publish signed updates.
+## Evidence rule
 
-## Engineering standards
-
-- **TypeScript:** strict mode, zero `any` in production code
-- **Validation:** Zod on all input boundaries
-- **i18n:** Full AR/FR/EN + RTL (no hardcoded strings)
-- **Tests:** Vitest (unit/integration) — 93 tests, C100-AAA coverage on Magic Moment surface
-- **Quality gate:** `sf-verify` runs prisma generate + tsc + eslint + vitest
-
-```bash
-sf-verify              # full verification (all 4 steps)
-sf-verify --fast       # tsc + eslint only (quickest)
-sf-verify --skip-tests # skip vitest
-bun run release        # one-command release (builds + signs + publishes)
-```
-
-## Documentation
-
-| Document | Purpose |
-|---|---|
-| `documentation/PROJECT_STATE.md` | Where are we right now (living doc) |
-| `documentation/BUILD_LOG.md` | Session-by-session history |
-| `documentation/ultimate-design-system.md` | The spec (locked decisions, principles, roadmap) |
-| `documentation/full_build.md` | The execution plan (Phase -1 → Phase 4) |
-| `documentation/DECISIONS.md` | Architectural Decision Records (12 ADRs) |
-| `documentation/ARCHITECTURE.md` | Technical blueprint (data flow, security, AI routing) |
-| `documentation/DESKTOP_BUILD.md` | How to build/run the desktop app |
-| `documentation/UPDATES.md` | How to publish signed auto-updates |
-| `documentation/PRE_FLIGHT_CHECKLIST.md` | v2 mistakes to not repeat |
-| `documentation/NEXT_SESSION_PREP.md` | Brief for the next session (A/B/C items) |
-
-## Founder decisions (2026-06-21)
-
-- ❌ **TikTok DM integration** — killed. WhatsApp-first.
-- ❌ **Meta business verification** — killed. No Instagram integration. Market capped at ~50-60% of Algerian COD sellers.
-
-These are final decisions, not "maybe later."
-`bun run seed:expanded     # Populate dev DB with realistic demo data (20 customers, 50 orders, etc.)`
+A claim such as “verified,” “supported,” “production-ready,” or “Stable” must identify the exact source commit, artifact digest, environment/provider/device, procedure, result and reviewer. The current authority is the Evidence Ledger and future signed release evidence manifest.
