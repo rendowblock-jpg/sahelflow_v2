@@ -1,171 +1,152 @@
-# SahelFlow 1.0 — Next Session Handoff
+# SahelFlow 1.0 — Implementation Session Handoff
 
 > **Prepared:** 2026-07-15  
-> **Next phase:** Full codebase read, documentation consolidation, Architecture Reset, and coding-workflow design  
-> **Do not begin feature coding in that session.**
+> **Completed phase:** Architecture and Coding Workflow Reset  
+> **Next phase:** Milestone M0 — authority, CI and reproducible verification
 
-## 1. What this session completed
+## 1. What is complete
 
-The founder and assistant completed the product-level Excellence Reset and approved the full SahelFlow 1.0 product contract.
+The founder-level product contract is preserved and the architecture/planning phase produced:
 
-Authoritative outcomes include:
+- one final Engineering Specification with explicit system invariants;
+- sixteen active superseding ADRs;
+- a commit-linked Evidence Ledger covering every launch system;
+- a repository/runtime/data/provider/trust/release map;
+- keep/harden/migrate/replace/delete decisions;
+- a dependency-correct M0–M14 roadmap;
+- a binding coding/review/migration/testing/merge/rollback/release workflow;
+- a provider contract and certification registry;
+- an operational runbook index;
+- a documentation inventory and cleanup of former competing authorities;
+- an updated contradiction register.
 
-- SahelFlow 1.0 public identity;
-- 35,000 DZD one-time complete edition;
-- five-year guaranteed same-major maintenance and SahelFlow-controlled connected-service continuity;
-- five included shops;
-- up to five additional shops at 5,000 DZD one-time each;
-- one owner, ten active members, two devices/member, three owner remote devices;
-- professional roles, permissions, workgroups, assignments, approvals, revocation, and trusted audit;
-- full operational Android/browser companion with limited administration;
-- low-end-first Windows performance, including 4 GB/dual-core floor and founder T470 reference device;
-- hybrid Cloudflare control plane while Windows remains canonical;
-- shared hosted multi-tenant COD storefront platform with three distinct templates;
-- zero-knowledge backup and clean-install disaster recovery;
-- hybrid commerce synchronization using webhooks plus reconciliation;
-- professional manual BaridiMob/CCP payment verification;
-- seller-owned Google AI Studio key with certified default `gemini-3.5-flash` and privacy-safe free-tier mode;
-- legitimate machine transfer and business ownership recovery;
-- explicit launch scope, exclusions, fair-use boundaries, performance targets, and evidence gates.
+No founder-approved product choice was reopened. No feature code was implemented during the architecture phase.
 
-## 2. Authoritative files to read completely
+## 2. Evidence baseline and audit limitation
 
-Read these files in order before doing anything else:
+The implementation audit is tied to `main` commit:
+
+`03f0d48436b42788e463bbd1d74a388b2da22294`
+
+The audit read the required product package in order and inspected the repository tree/history comparison plus the launch-critical runtime, schema, migration, database-routing, security, licensing, backup, synchronization, automation, storefront, PWA, WhatsApp, AI, provider, test, CI and release surfaces.
+
+GitHub Actions jobs failed before executing any step during the audit, including an audit-only export workflow. Therefore the architecture package does **not** claim a new green test/build/package/provider result. Runtime claims remain conservatively classified in the Evidence Ledger until reproducible evidence is attached.
+
+## 3. Required read order before implementation
 
 1. `documentation/product/README.md`
 2. `documentation/product/LAUNCH_CONSTITUTION.md`
 3. `documentation/product/FOUNDER_DECISIONS.md`
 4. `documentation/product/LAUNCH_SCOPE_AND_ENTITLEMENTS.md`
-5. `documentation/product/VERIFIED_CURRENT_STATE.md`
-6. `documentation/product/CONTRADICTION_REGISTER.md`
-7. `documentation/product/ARCHITECTURE_RESET_BRIEF.md`
-8. this file
+5. `documentation/product/CONTRADICTION_REGISTER.md`
+6. `documentation/architecture/ENGINEERING_SPECIFICATION.md`
+7. `documentation/architecture/ADR_INDEX.md`
+8. `documentation/architecture/SUPERSEDING_ADRS.md`
+9. `documentation/architecture/EVIDENCE_LEDGER.md`
+10. `documentation/architecture/REUSE_MIGRATION_DELETION_PLAN.md`
+11. `documentation/architecture/IMPLEMENTATION_ROADMAP.md`
+12. `documentation/architecture/CODING_WORKFLOW.md`
+13. `documentation/architecture/PROVIDER_CONTRACT_REGISTRY.md`
+14. `documentation/architecture/RUNBOOK_INDEX.md`
 
-Do not rely on conversation memory as a substitute for reading them.
+Do not use `documentation/PROJECT_STATE.md`, `DECISIONS.md`, `ARCHITECTURE.md`, `full_build.md`, `ultimate-design-system.md` or `HONEST_ASSESSMENT.md` as current authority; they are redirect stubs to preserved history.
 
-## 3. Important repository context
+## 4. First implementation milestone: M0 only
 
-The previous working branch `excellence-reset` was based on `session-40/master` and inherited unrelated research/tooling changes and empty placeholders. It must **not** be merged wholesale.
+Start with **Milestone M0 — Authority, branch protection and reproducible verification**. Do not jump to cloud, PWA, storefront, teams, licensing UI or feature polish.
 
-A clean documentation branch was created from `main` and contains only the consolidated authoritative product package. The intended merge target is `main`.
+The first implementation issues should be prepared in this order:
 
-The older scattered FD-001 through FD-018 addenda remain historical branch material; their approved content is consolidated in `documentation/product/FOUNDER_DECISIONS.md`.
+### M0-1 — Operational CI diagnosis and repair
 
-## 4. Known current-code risks to preserve
+- Determine why GitHub Actions jobs fail before any step.
+- Restore a clean-checkout PR workflow.
+- Keep the failure itself as incident/evidence.
+- Do not weaken checks to make them green.
 
-Do not lose these findings during the new audit:
+### M0-2 — Single version/evidence manifest
 
-- synchronization can advance its watermark after individual order failure;
-- current schema and services assume one user and lack trusted team authorization;
-- master-key/secret-storage implementation conflicts with Stronghold/OS-protected claims;
-- trial self-issuance/localStorage license state is unsafe and resettable;
-- backup is not approved zero-knowledge disaster recovery;
-- migration may proceed after backup failure;
-- audit/automation/side effects lack complete transactional durability;
-- dangerous undefined database filters are not fully guarded;
-- refund reversal uses heuristic compensation;
-- AI result and confirmation UX are incomplete;
-- storefront templates and hosted tenant platform are incomplete;
-- current PWA is a shell rather than the approved companion/team product;
-- automatic sync and provider certifications are not proven;
-- several CI/security/performance gates historically did not block;
-- low-end packaged performance has not been proven.
+- Define the generated authority for app `1.x.y`, product major, commit, build/channel, schema/protocol/projection/backup/storefront versions, compatibility ranges, signing key IDs and artifact digests.
+- Make package.json, Cargo, Tauri, About/updater/release metadata derive from or validate against it.
+- Plan the safe migration from internal 4.1 labels to first public SahelFlow 1.0.0.
 
-Revalidate all of them against the exact current `main` commit.
+### M0-3 — Branch protection and workflow templates
 
-## 5. Required next-session outcome
+- Required checks, CODEOWNERS/risk reviewers, issue/PR templates and merge policy from the Coding Workflow.
+- No direct push or release publication from local scripts.
 
-The next session must:
+### M0-4 — Generated repository/evidence inventory
 
-1. Read all authoritative product files.
-2. Inspect the complete repository tree and current default-branch commit.
-3. Read the full current codebase and relevant history/branches.
-4. Build an exact process/data/module/provider map.
-5. Create a commit-linked evidence ledger for every launch system.
-6. Compare every current subsystem against the approved product contract.
-7. Decide keep/refactor/migrate/replace/delete for current implementation areas.
-8. Consolidate the final Engineering Specification.
-9. Create superseding ADRs for all foundational systems.
-10. Finish the repo-wide documentation cleanup: rewrite, archive, redirect, or delete outdated and redundant documents.
-11. Update the contradiction register after evidence review.
-12. Create the dependency graph and implementation roadmap.
-13. Design the exact coding workflow, issue hierarchy, PR gates, testing policy, performance lab, provider-certification process, merge policy, and release gates.
-14. Commit and merge the resulting analysis/architecture package.
-15. Do not begin feature coding until the implementation plan is complete.
+- Generate tracked route/API/model/migration/test/provider/version inventories from a clean checkout.
+- Store exact commit and scope.
+- Add claim-drift checks so manual counts/readiness claims cannot become authority.
 
-## 6. Decisions that should not be reopened casually
+### M0-5 — Documentation/evidence gates
 
-Do not spend the next session re-debating approved founder choices unless the full codebase audit discovers a genuine impossibility, critical legal/security issue, or materially unsustainable cost.
+- Validate links/authority/status headers.
+- Define immutable evidence-record schema and candidate artifact retention.
+- Make Evidence Ledger updates part of implementation completion.
 
-Locked product decisions include:
+Each issue must satisfy the issue-readiness template and risk rules in `CODING_WORKFLOW.md` before code begins.
 
-- commercial price and one-edition model;
-- five-year guarantee and perpetual local use;
-- shops, teams, devices, backup/media boundaries;
-- extra-shop price;
-- single canonical Windows authority;
-- Cloudflare hybrid role;
-- professional teams;
-- zero-knowledge backup;
-- hybrid sync;
-- manual payment verification;
-- low-end-first performance;
-- seller-owned Gemini key and privacy-safe free-tier behavior;
-- SahelFlow 1.0 identity.
+## 5. Foundation findings that must not be lost
 
-Engineering details remain open, but they must satisfy these contracts.
+- The packaged runtime is a Tauri host plus local Next server and WhatsApp sidecar on fixed ports; supervision and failure UX are incomplete.
+- Production startup/migrations point at `shops/dev.db` rather than an all-shop coordinator.
+- Migration can continue after backup failure.
+- Database routing can silently fall back to a default DB and depends on global active-shop state.
+- The master key is a plaintext keyfile authority and lacks a recovery-safe purpose-separated hierarchy.
+- The trial is self-issued in the browser and resettable through local state deletion.
+- The schema is structurally single-user and lacks trusted member/device/session/field-permission identities.
+- Audit, automations and provider callbacks are not universally transactionally durable.
+- Commerce polling can advance its watermark after individual failure.
+- The PWA is only a local app-shell cache.
+- Storefront checkout writes directly to the active local DB and is not a durable hosted tenant receipt.
+- Backups are local best-effort byte copies rather than verified zero-knowledge recovery sets.
+- Providers are candidates, not live-certified launch capabilities.
+- The local release script publishes source/tag before build, and the release workflow targets unsupported launch platforms.
+
+The detailed classifications and dispositions are in the Evidence Ledger and Reuse/Migration Plan.
+
+## 6. Decisions not to reopen casually
+
+Preserve:
+
+- SahelFlow 1.0 identity;
+- 35,000 DZD one-time complete edition;
+- five-year same-major commitment and perpetual local use;
+- five included shops plus five purchasable extra slots;
+- owner plus ten members and approved device limits;
+- canonical Windows desktop authority;
+- bounded Cloudflare role;
+- operational PWA with limited administration;
+- zero-knowledge backup and recovery kit;
+- shared hosted storefront and three distinct templates;
+- hybrid webhook plus reconciliation;
+- manual BaridiMob/CCP payment verification;
+- low-end-first requirements;
+- seller-owned Gemini key and privacy/approval rules.
+
+Reopen one only through an evidence-backed superseding ADR proving critical impossibility, security/legal conflict or unsustainable economics.
 
 ## 7. Resume prompt
 
-Copy the prompt below into the next chat session:
+**Resume SahelFlow 1.0 implementation at Milestone M0.**
 
----
+Use repository `rendowblock-jpg/sahelflow_v2` and current protected `main`. Read the product and architecture authorities in the order listed in `documentation/product/NEXT_SESSION_HANDOFF.md`. Do not rely on the old v3/v4 project-state, architecture, build-plan or readiness documents.
 
-**Resume SahelFlow Excellence Reset — Architecture and Coding Workflow Phase**
+First verify the exact `main` commit and inspect open PR/check status. Prepare and execute only the dependency-correct M0 issues: diagnose and repair GitHub Actions, create the single version/evidence manifest, establish branch protection/templates, generate repository/evidence inventories and bind documentation/evidence gates. Follow `documentation/architecture/CODING_WORKFLOW.md` for risk class, issue readiness, branch naming, PR size, reviewers, tests, merge gates and rollback.
 
-We completed the founder-level product decisions for repository `rendowblock-jpg/sahelflow_v2`. The clean authoritative product documentation has been merged into `main` under `documentation/product/`.
+Do not begin visible product features or later milestones until M0 exit criteria are met. Preserve all founder-approved choices. Update the Evidence Ledger and Contradiction Register with exact commit/artifact evidence after each completed issue.
 
-Start by reading every file below completely and in order:
+## 8. M0 completion gate
 
-1. `documentation/product/README.md`
-2. `documentation/product/LAUNCH_CONSTITUTION.md`
-3. `documentation/product/FOUNDER_DECISIONS.md`
-4. `documentation/product/LAUNCH_SCOPE_AND_ENTITLEMENTS.md`
-5. `documentation/product/VERIFIED_CURRENT_STATE.md`
-6. `documentation/product/CONTRADICTION_REGISTER.md`
-7. `documentation/product/ARCHITECTURE_RESET_BRIEF.md`
-8. `documentation/product/NEXT_SESSION_HANDOFF.md`
+M0 is complete only when:
 
-Then inspect and read the complete current `main` codebase and documentation set. I want full awareness of the actual implementation before finalizing any plan. Do not assume historical claims or previous summaries are still correct. Tie findings to the exact commit.
-
-This session is for analysis and preparation, not feature coding. Complete the following:
-
-- map the full repository, processes, data stores, modules, providers, trust boundaries, and release tooling;
-- build a commit-linked evidence ledger for every launch system using Verified / Implemented but unvalidated / Partial / Unsafe / Missing / Obsolete;
-- compare the current implementation against the approved SahelFlow 1.0 constitution and all founder decisions;
-- determine what can be kept, hardened, migrated, replaced, or deleted;
-- create the final Engineering Specification with explicit system invariants;
-- create all required superseding ADRs;
-- finish and organize all documentation, removing or archiving obsolete, duplicate, drifted, empty, and misleading docs only after their useful information is preserved;
-- update the contradiction register;
-- create the dependency-correct implementation roadmap;
-- design the full coding workflow: milestones, epics, issues, branch strategy, PR size/rules, database migration rules, security-sensitive review, tests by risk class, packaged-app checks, low-end performance checks, provider live certification, documentation/evidence requirements, merge gates, rollback, and release process;
-- commit and merge the completed architecture/planning package;
-- do not start feature coding until this phase is complete.
-
-Preserve the founder-approved product choices. Reopen one only if the codebase audit proves a critical impossibility, security/legal issue, or unsustainable economics, and explain the evidence precisely.
-
----
-
-## 8. Definition of readiness for the implementation session
-
-The implementation session may begin only when:
-
-- the authoritative documentation set is coherent;
-- the entire codebase has been inspected;
-- the evidence ledger is complete;
-- all foundational ADRs and invariants exist;
-- dependencies and migration risks are understood;
-- documentation drift is removed;
-- roadmap and coding workflow are approved;
-- `main` is clean and protected by the new gates.
+- PR workflows execute from a clean checkout;
+- required type/lint/test/migration/dependency checks are binding;
+- the exact source commit/version manifest is present in evidence;
+- protected `main` prevents unsafe direct merge/release;
+- current route/model/migration/test/provider inventories are generated;
+- former v3/v4/manual-count claims cannot re-enter active authority;
+- implementation work can proceed to M1/M2 without guessing repository or release truth.
