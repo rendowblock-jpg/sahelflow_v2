@@ -1,5 +1,8 @@
 # 🤖 SahelFlow Agent — Handoff Document (v8.0)
 
+> **HISTORICAL CONTEXT ONLY.** Current work starts at repository-root `AGENTS.md`
+> and `documentation/operations/WORKING_MEMORY.md`.
+
 > **⚠️ CRITICAL: The sandbox does NOT persist across chats.**
 > Each new chat gets a fresh filesystem. The ONLY things that survive are:
 > 1. Data on external services (GitHub)
