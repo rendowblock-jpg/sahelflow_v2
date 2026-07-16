@@ -119,42 +119,19 @@ they must not assume access to the local desktop, unpublished files, running
 application, local database, or desktop-only evidence. When a claim depends on
 those things, Codex Desktop performs or verifies the local execution.
 
-### Kimi K3 — GitHub-native co-engineering agent
-
-Kimi K3 is a powerful web-based engineering agent with plugins, including
-GitHub. It works alongside Codex as the primary GitHub-native co-engineer.
-
-Kimi K3 is well suited to:
-
-- reconstructing the active wave directly from GitHub;
-- deep product, architecture, UX, and code reasoning;
-- repository-wide code and documentation investigation;
-- authoring GitHub-native implementation branches and pull requests;
-- reviewing Codex or other agent work;
-- running checks supported by its web environment and plugins;
-- designing multi-phase plans and challenging the current approach;
-- taking an independent parallel workstream whose code and findings are visible
-  in GitHub;
-- maintaining wave documents when it owns the current GitHub-native work.
-
-Kimi K3 has equal standing as an engineering thinker and contributor. The
-capability difference is environment access: Kimi is assumed to see the remote
-GitHub workspace, while Codex alone is assumed to see and execute the full local
-desktop workspace.
-
-Codex and Kimi may divide a wave naturally. For example, Kimi can perform a
-repository-wide design and implementation pass while Codex runs the application,
-validates local behavior, integrates the result, and handles desktop-specific
-work.
-
 ### ChatGPT — product, architecture, and engineering partner
 
 ChatGPT provides deep product reasoning, user-journey analysis, architecture,
-UX design, implementation ideas, test design, and independent challenge. It may
-implement or review when its connected tools make that effective.
+UX design, implementation ideas, test design, and independent challenge. When
+its connected tools make that effective, it may also inspect the GitHub
+repository, implement changes, author or review pull requests, and update shared
+memory.
 
 ChatGPT is useful when the wave needs another strong mental model, a coherent
-design, critical review, or a reframing of product and technical assumptions.
+design, critical review, a reframing of product and technical assumptions, or a
+GitHub-connected engineering contribution. It must not claim local desktop,
+running-application, packaged-build, database, or unpublished-workspace evidence
+unless its own tools actually provide that access.
 
 ### GLM — research and discovery specialist
 
@@ -171,16 +148,14 @@ repository operation. It is useful for:
   that the effective choice.
 
 This is a specialization, not a restriction. GLM may contribute to any part of
-a wave when useful, but Kimi K3 is the default web-based GitHub engineering
-partner.
+a wave when useful.
 
 ## Capability map
 
 | Surface | Default contribution | GitHub repository | Local desktop and runtime |
 |---|---|---|---|
 | Codex Desktop | Continuity, implementation, integration, local verification | Full through connected tools and Git | Full Founder-authorized workspace access |
-| Kimi K3 | GitHub-native co-engineering, implementation, review, parallel work | Through GitHub plugins | Not assumed |
-| ChatGPT | Product, architecture, UX, engineering challenge, review | When connected tools provide it | Not assumed |
+| ChatGPT | Product, architecture, UX, engineering challenge, implementation and review when connected | When connected tools provide it | Not assumed |
 | GLM | External research, discovery, localization, alternatives, adversarial analysis | When available and useful | Not assumed |
 
 The map describes current environments and useful defaults. It does not prevent
@@ -209,8 +184,8 @@ investigation.
 
 ### 4. Choose collaborators naturally
 
-The lead agent brings in Kimi, ChatGPT, GLM, or another agent when a second
-perspective or parallel workstream will materially improve the outcome.
+The lead agent brings in ChatGPT, GLM, or another Founder-approved agent when a
+second perspective or parallel workstream will materially improve the outcome.
 
 A simple collaboration brief is enough:
 
@@ -233,11 +208,12 @@ independent workstream genuinely benefits from them.
 
 Material discoveries are added to the wave. Routine thinking remains in chat.
 
-### 6. Integrate GitHub-native and desktop work
+### 6. Integrate connected-agent and desktop work
 
-Kimi or another web agent may produce branches, pull requests, reviews, or
-structured findings in GitHub. Codex pulls together the current remote state and
-the local desktop state.
+ChatGPT, GLM, or another connected agent may produce branches, pull requests,
+reviews, research, or structured findings through the tools available to it.
+Codex Desktop pulls together the current remote state and the local desktop
+state.
 
 Codex runs or verifies behavior that depends on the local application, desktop
 files, database, processes, packaging, or unpublished workspace state.

@@ -10,17 +10,22 @@ checkpoints and link deeper material rather than turning it into a transcript.
 Use a lightweight multi-agent system built from agent prompts and GitHub-backed
 shared memory. Work through deep-dive waves and multi-phase plans. Do not impose
 task-by-task bureaucracy, certification, state machines, or unnecessary limits
-on how agents investigate and execute. Add Kimi K3 as the primary GitHub-native
-co-engineering agent alongside Codex Desktop. Codex Desktop remains the only
-agent assumed to have full local desktop, filesystem, codebase, and runtime
-execution access. GLM defaults to external research and discovery.
+on how agents investigate and execute. The current named MAWS roles are Codex
+Desktop, ChatGPT, and GLM. Codex Desktop remains the only agent assumed to have
+full local desktop, filesystem, codebase, and runtime execution access. ChatGPT
+provides deep product, architecture, UX, and engineering partnership and may
+work through GitHub when connected tools permit. GLM defaults to external
+research and discovery.
+
+Kimi K3 has been removed from the active SahelFlow agent system by Founder
+direction. Do not assign work to it, include it in the role map, or treat it as
+an active MAWS participant.
 
 ## Active wave
 
-No application wave has been selected yet. The lean MAWS replacement was merged
-to `main` through PR #92 at `9c9060bf7fb99db2021cafae0b1e8eb3511fe712`.
-The immediate coordination update documents Kimi K3, Codex Desktop's unique
-local execution capability, GLM's research role, and the complete MAWS workflow.
+No application wave has been selected yet. The lightweight MAWS operating model
+is integrated on `main`; the current agent map is Codex Desktop, ChatGPT, and
+GLM. Application code was not changed by this coordination decision.
 
 ## Confirmed decisions
 
@@ -30,18 +35,21 @@ local execution capability, GLM's research role, and the complete MAWS workflow.
 - Phases are shaped by the work; they are not a mandatory state machine.
 - Issues, extra agents, and independent reviews are used when useful.
 - Validator automation and live interface certification are not required.
-- Kimi K3 is the primary GitHub-native co-engineering agent alongside Codex.
-- Codex Desktop is the only agent assumed to have full local desktop and runtime
-  access.
+- Kimi K3 is not part of the active SahelFlow agent system.
+- Codex Desktop is the primary builder and continuity lead and the only agent
+  assumed to have full local desktop and runtime access.
+- ChatGPT is the deep product, architecture, UX, and engineering partner and may
+  inspect, implement, or review through available connected tools.
 - GLM defaults to research, provider/API investigation, competitive and UX
   discovery, localization, and adversarial analysis.
 
 ## Current checkpoint
 
-- Current focus: publish the expanded MAWS structure, workflow, and agent map.
-- Application code: unchanged by this coordination reset.
-- Next move: choose the first application deep-dive wave with the Founder after
-  this documentation update is integrated.
+- Current focus: no application wave is active; MAWS now uses Codex Desktop,
+  ChatGPT, and GLM as its named roles.
+- Application code: unchanged by this coordination update.
+- Next move: choose the first application deep-dive wave with the Founder when
+  the Founder wants to resume SahelFlow product work.
 
 ## Open questions
 
