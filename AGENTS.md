@@ -9,11 +9,13 @@ pull requests preserve code history.
 
 1. Read `documentation/operations/WORKING_MEMORY.md`.
 2. Open the active wave document linked there, when one exists.
-3. Read only the product, vision, architecture, current-state, source, and test
+3. If you are new to the project or your collaboration role is unclear, read
+   `documentation/operations/MAWS_STRUCTURE_AND_WORKFLOW.md`.
+4. Read only the product, vision, architecture, current-state, source, and test
    material needed for the current wave.
-4. Use the relevant starting prompt in
+5. Use the relevant starting prompt in
    `documentation/operations/AGENT_PROMPTS.md`.
-5. Inspect the repository and verify important claims before acting.
+6. Inspect the repository and verify important claims before acting.
 
 If the Founder gives a newer direction, record it in working memory or the
 active wave instead of forcing it through an old plan.
@@ -27,6 +29,9 @@ active wave instead of forcing it through an old plan.
 - Agent prompts describe useful strengths, not permission boundaries.
 - Use additional agents or parallel workstreams when they materially help and
   keep their conclusions visible in the active wave.
+- Treat Codex Desktop as the only agent currently assumed to have full local
+  desktop, filesystem, codebase, and runtime execution access. Other agents may
+  work through GitHub or their own connected tools.
 - Keep durable facts, important decisions, open questions, and the exact next
   move in GitHub. Routine reasoning can remain in chat.
 - Update shared memory at meaningful checkpoints, not after every small action.
