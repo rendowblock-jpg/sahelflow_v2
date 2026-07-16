@@ -54,7 +54,7 @@ The first frontend pass is source-verified only. It does not claim pixel-perfect
 | WP7 | Cloudflare, relay, PWA, storefront and backup | Connected-plane atlas | Pending |
 | WP8 | Tests, CI, release, diagnostics and operations | Delivery/readiness atlas | Pending |
 | WP9 | Consolidated gap and distance model | Whole-product transformation map | Pending |
-| WP10 | Codex operating system and project skills | Implementation playbook/skills | Pending |
+| WP10 | Codex operating system and project skills | `documentation/operations/` | In progress — core protocol drafted |
 
 ## WP1 documents
 
@@ -76,6 +76,6 @@ At the end of each audit session, update:
 - the transformation ledger;
 - unresolved questions;
 - exact next file/surface;
-- the session handoff.
+- a versioned `HANDOFF` delta in the assigned issue or pull request.
 
 The conversation is where reasoning happens. This directory is where verified project memory lives.
