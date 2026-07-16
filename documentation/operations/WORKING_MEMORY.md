@@ -14,9 +14,10 @@ on how agents investigate and execute.
 
 ## Active wave
 
-No application wave has been selected yet. The immediate checkpoint is to
-publish the lean MAWS replacement, retire the unmerged over-engineered candidate
-stack, and then begin the application discussion with the Founder.
+No application wave has been selected yet. The lean MAWS replacement is
+published in PR #92. The over-engineered PR stack (#89-#91) is closed as
+superseded, and its validator/certification work (#87-#88) is closed as not
+planned. Application discussion can now begin with the Founder.
 
 ## Confirmed decisions
 
@@ -29,10 +30,10 @@ stack, and then begin the application discussion with the Founder.
 
 ## Current checkpoint
 
-- Current focus: lean MAWS replacement.
+- Current focus: review and eventual merge of PR #92 without blocking product
+  discovery.
 - Application code: unchanged by this coordination reset.
-- Next move: after the replacement PR is published, choose the first app
-  deep-dive wave with the Founder.
+- Next move: choose the first application deep-dive wave with the Founder.
 
 ## Open questions
 
