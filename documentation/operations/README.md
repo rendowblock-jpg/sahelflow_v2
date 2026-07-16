@@ -19,8 +19,8 @@ Its purpose is simple:
 - Repository-root `AGENTS.md` is the common entry point.
 - `MAWS_STRUCTURE_AND_WORKFLOW.md` explains the complete system, agent topology,
   capability boundaries, and operating loop.
-- `AGENT_PROMPTS.md` contains flexible starting prompts for Codex Desktop, Kimi
-  K3, ChatGPT, and GLM surfaces.
+- `AGENT_PROMPTS.md` contains flexible starting prompts for Codex Desktop,
+  ChatGPT, and GLM surfaces.
 - `WORKING_MEMORY.md` points to the active wave and current checkpoint.
 - `WAVE_TEMPLATE.md` is copied when a new deep-dive wave begins.
 - Normal branches, commits, and pull requests carry implementation and review.
@@ -84,12 +84,13 @@ Give another interface the repository, active wave, relevant prompt, and the
 specific question or workstream. It may choose its own method. Its useful output
 is returned as code, review, findings, or an update to shared memory.
 
-Codex Desktop is the only agent currently assumed to have full access to the
-local desktop workspace and runtime. Kimi K3 is the primary GitHub-native
-co-engineer. ChatGPT supplies deep product, architecture, UX, and engineering
-challenge. GLM defaults to external research, discovery, localization, provider
-investigation, and adversarial analysis. These are useful specializations rather
-than restrictions on contribution.
+Codex Desktop is the primary builder and continuity lead and the only agent
+currently assumed to have full access to the local desktop workspace and
+runtime. ChatGPT supplies deep product, architecture, UX, and engineering
+partnership and may perform repository implementation or review when connected
+tools permit. GLM defaults to external research, discovery, localization,
+provider investigation, and adversarial analysis. These are useful
+specializations rather than restrictions on contribution.
 
 The Founder should be needed for product judgment, priority, and consequential
 tradeoffs—not for relaying routine protocol messages between agents.
