@@ -1,0 +1,74 @@
+# Declarative MAWS label manifest. Apply through an authenticated, reviewed
+# repository-administration task; this file alone does not change GitHub labels.
+- name: agent:codex-desktop
+  color: "0969da"
+  description: Owned or authored through Codex desktop
+- name: agent:chatgpt-chat
+  color: "8250df"
+  description: Owned or authored through ChatGPT chat
+- name: agent:glm-web
+  color: "1a7f37"
+  description: Owned or authored through the GLM web agent
+- name: role:orchestrator
+  color: "0550ae"
+  description: Lead orchestration and integration duty
+- name: role:principal-engineering
+  color: "6639ba"
+  description: Architecture, critical implementation, and challenge duty
+- name: role:operations
+  color: "116329"
+  description: Bounded heavy implementation and evidence duty
+- name: state:draft
+  color: "d0d7de"
+  description: Task contract is incomplete
+- name: state:ready
+  color: "bf8700"
+  description: Task contract is ready to claim
+- name: state:claimed
+  color: "d4c5f9"
+  description: Assigned agent acknowledged the current packet
+- name: state:active
+  color: "54aeff"
+  description: Mission orchestration is active
+- name: state:in-progress
+  color: "fbca04"
+  description: Assigned work is active
+- name: state:blocked
+  color: "cf222e"
+  description: Work stopped pending a named resolution
+- name: state:review
+  color: "1f6feb"
+  description: Recoverable handoff awaits independent review
+- name: state:changes-required
+  color: "d1242f"
+  description: Review findings require author changes
+- name: state:verified
+  color: "2da44e"
+  description: Independent review passed for the recorded head
+- name: state:merged
+  color: "6f42c1"
+  description: Reviewed task work is integrated
+- name: state:evidenced
+  color: "26a641"
+  description: Integrated result has the required evidence
+- name: state:accepted
+  color: "0e8a16"
+  description: Founder or named authority accepted the mission result
+- name: state:cancelled
+  color: "6e7781"
+  description: Orchestrator cancelled the task or mission with a reason
+- name: risk:R0
+  color: "f6f8fa"
+  description: Documentation or non-executable metadata risk
+- name: risk:R1
+  color: "ddf4ff"
+  description: Presentation, read-only, refactor, or ordinary tooling risk
+- name: risk:R2
+  color: "fff8c5"
+  description: Local business write or ordinary domain-logic risk
+- name: risk:R3
+  color: "ffebe9"
+  description: Security-sensitive or externally consequential risk
+- name: risk:R4
+  color: "b60205"
+  description: Data survivability, tenant boundary, or release-authority risk

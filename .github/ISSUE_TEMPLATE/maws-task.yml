@@ -1,0 +1,200 @@
+name: MAWS task packet
+description: Create one bounded SahelFlow implementation, research, or evidence task.
+title: "[MAWS] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is the durable task contract. Do not include credentials, PII,
+        private chat transcripts, or unsupported completion claims.
+
+  - type: input
+    id: task_packet
+    attributes:
+      label: Task-packet version
+      description: Increment when scope, owner, baseline, or acceptance changes.
+      placeholder: MAWS-M0-001-v1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: state
+    attributes:
+      label: Initial-State
+      description: New implementation-ready packets enter READY; durable envelopes perform every later transition.
+      options: [READY]
+    validations:
+      required: true
+
+  - type: input
+    id: hierarchy
+    attributes:
+      label: Milestone and epic
+      placeholder: M0 / WP10 — multi-agent operating system
+    validations:
+      required: true
+
+  - type: input
+    id: mission_issue
+    attributes:
+      label: Mission-control issue
+      placeholder: "#84"
+    validations:
+      required: true
+
+  - type: input
+    id: agent_surface
+    attributes:
+      label: Agent-Surface
+      placeholder: codex-desktop
+    validations:
+      required: true
+
+  - type: input
+    id: agent_role
+    attributes:
+      label: Agent-Role
+      placeholder: Lead Orchestrator
+    validations:
+      required: true
+
+  - type: input
+    id: reviewer_surface
+    attributes:
+      label: Reviewer-Surface
+      placeholder: chatgpt-chat
+    validations:
+      required: true
+
+  - type: input
+    id: reviewer_role
+    attributes:
+      label: Reviewer-Role
+      placeholder: Principal Engineering Agent
+    validations:
+      required: true
+
+  - type: input
+    id: orchestrator_surface
+    attributes:
+      label: Orchestrator-Surface
+      placeholder: codex-desktop
+    validations:
+      required: true
+
+  - type: input
+    id: acceptance_authority
+    attributes:
+      label: Acceptance-Authority
+      description: Name Founder or the authority allowed to move EVIDENCED to ACCEPTED; write None when EVIDENCED is terminal.
+      placeholder: Founder
+    validations:
+      required: true
+
+  - type: input
+    id: baseline
+    attributes:
+      label: Base branch and exact SHA
+      placeholder: main @ 0123456789abcdef...
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Objective and independently reviewable deliverable
+      description: State the user/system outcome, not a list of activity.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Explicit non-goals
+      description: Name tempting adjacent work that is excluded.
+    validations:
+      required: true
+
+  - type: textarea
+    id: authority
+    attributes:
+      label: Founder decisions, authorities, ADRs, and invariants preserved
+      description: Link only the references required for this bounded task.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_evidence
+    attributes:
+      label: Current evidence and exact baseline
+      description: Separate verified observation from inference.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies, blockers, and path ownership
+      description: Include owned paths and any explicit overlap/merge strategy.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk class
+      options: [R0, R1, R2, R3, R4]
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Data classification and trust boundaries
+      description: Name principals, sensitive data, secrets, and external effects.
+    validations:
+      required: true
+
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Schema, protocol, or version impact
+      description: Write None when genuinely unaffected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance tests and required evidence
+      description: Use observable pass/fail criteria and artifact locations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: recovery
+    attributes:
+      label: Migration, compatibility, rollback, and deletion plan
+      description: Write additive/removable when this is an R0-only change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: operations
+    attributes:
+      label: Documentation, observability, and support behavior
+      description: Name updated authorities/runbooks and visible failure behavior.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Ready-for-claim acknowledgement
+      options:
+        - label: Scope, owner, reviewer, baseline, acceptance, and owned paths are unambiguous.
+          required: true
+        - label: No credential, PII, private transcript, or unsupported evidence claim is included.
+          required: true
+        - label: The assigned agent must post an ACK before implementation starts.
+          required: true

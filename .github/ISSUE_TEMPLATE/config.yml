@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SahelFlow operating protocol
+    url: https://github.com/rendowblock-jpg/sahelflow_v2/blob/main/documentation/operations/README.md
+    about: Read the authority and session protocol before proposing work.

@@ -1,5 +1,7 @@
 # 🤖 SahelFlow Agent — Handoff Document (v8.0)
 
+> **HISTORICAL — DO NOT RESUME FROM THIS FILE.** This document predates the current product and architecture reset. Start at repository-root `AGENTS.md`, `documentation/operations/README.md`, and the assigned GitHub issue. Preserve this file only as historical evidence until an approved archival change replaces it.
+
 > **⚠️ CRITICAL: The sandbox does NOT persist across chats.**
 > Each new chat gets a fresh filesystem. The ONLY things that survive are:
 > 1. Data on external services (GitHub)
