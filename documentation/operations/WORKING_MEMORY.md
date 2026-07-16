@@ -10,14 +10,17 @@ checkpoints and link deeper material rather than turning it into a transcript.
 Use a lightweight multi-agent system built from agent prompts and GitHub-backed
 shared memory. Work through deep-dive waves and multi-phase plans. Do not impose
 task-by-task bureaucracy, certification, state machines, or unnecessary limits
-on how agents investigate and execute.
+on how agents investigate and execute. Add Kimi K3 as the primary GitHub-native
+co-engineering agent alongside Codex Desktop. Codex Desktop remains the only
+agent assumed to have full local desktop, filesystem, codebase, and runtime
+execution access. GLM defaults to external research and discovery.
 
 ## Active wave
 
-No application wave has been selected yet. The lean MAWS replacement is
-published in PR #92. The over-engineered PR stack (#89-#91) is closed as
-superseded, and its validator/certification work (#87-#88) is closed as not
-planned. Application discussion can now begin with the Founder.
+No application wave has been selected yet. The lean MAWS replacement was merged
+to `main` through PR #92 at `9c9060bf7fb99db2021cafae0b1e8eb3511fe712`.
+The immediate coordination update documents Kimi K3, Codex Desktop's unique
+local execution capability, GLM's research role, and the complete MAWS workflow.
 
 ## Confirmed decisions
 
@@ -27,13 +30,18 @@ planned. Application discussion can now begin with the Founder.
 - Phases are shaped by the work; they are not a mandatory state machine.
 - Issues, extra agents, and independent reviews are used when useful.
 - Validator automation and live interface certification are not required.
+- Kimi K3 is the primary GitHub-native co-engineering agent alongside Codex.
+- Codex Desktop is the only agent assumed to have full local desktop and runtime
+  access.
+- GLM defaults to research, provider/API investigation, competitive and UX
+  discovery, localization, and adversarial analysis.
 
 ## Current checkpoint
 
-- Current focus: review and eventual merge of PR #92 without blocking product
-  discovery.
+- Current focus: publish the expanded MAWS structure, workflow, and agent map.
 - Application code: unchanged by this coordination reset.
-- Next move: choose the first application deep-dive wave with the Founder.
+- Next move: choose the first application deep-dive wave with the Founder after
+  this documentation update is integrated.
 
 ## Open questions
 
