@@ -414,7 +414,7 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let runtime_arg = runtime_path.as_deref().unwrap_or(runtime);
-    let mut cmd = app.shell().command(runtime_arg, &[server_path.clone()]);
+    let mut cmd = app.shell().command(runtime_arg).arg(server_path.clone());
     for (key, value) in &env {
         cmd = cmd.env(key, value);
     }
