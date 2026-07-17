@@ -7,11 +7,12 @@ SahelFlow uses GitHub as durable memory across agents and sessions. The system i
 1. Read `documentation/operations/WORKING_MEMORY.md`.
 2. Open the active wave or primary artifact linked there.
 3. If the collaboration model is unfamiliar, read `documentation/operations/MAWS_STRUCTURE_AND_WORKFLOW.md`.
-4. Read `documentation/product/README.md` whenever scope, entitlement, pricing, support or a Founder choice matters.
-5. Read `documentation/experience/README.md` whenever work touches a product capability, user journey, state vocabulary, UI/UX, frontend architecture, Arabic/RTL, accessibility, responsive behavior or page completeness.
-6. Read `documentation/architecture/README.md` whenever architecture, migration, implementation, provider boundaries, release or evidence matters.
-7. Use the relevant starting prompt in `documentation/operations/AGENT_PROMPTS.md`.
-8. Inspect the repository and verify important claims before acting.
+4. GLM sessions using the `agent-handoff` continuity ref also read `documentation/operations/GLM_CONTINUITY_PROTOCOL.md`; the orphan handoff is a resume checkpoint, not authority.
+5. Read `documentation/product/README.md` whenever scope, entitlement, pricing, support or a Founder choice matters.
+6. Read `documentation/experience/README.md` whenever work touches a product capability, user journey, state vocabulary, UI/UX, frontend architecture, Arabic/RTL, accessibility, responsive behavior or page completeness.
+7. Read `documentation/architecture/README.md` whenever architecture, migration, implementation, provider boundaries, release or evidence matters.
+8. Use the relevant starting prompt in `documentation/operations/AGENT_PROMPTS.md`.
+9. Inspect the repository and verify important claims before acting.
 
 A newer explicit Founder decision supersedes an older choice only when it states what changes. Record it in the product authority and working memory rather than creating another competing plan.
 
@@ -26,6 +27,18 @@ A newer explicit Founder decision supersedes an older choice only when it states
 - Update shared memory at meaningful checkpoints, not after every small action.
 - Update an existing authority instead of creating a new status, gap, handoff, experience, capability, journey or planning document.
 - Before implementation, identify the governing product clause, scope class, capability, journey/states, experience dimensions, architecture invariants and evidence level.
+- GLM implementation or research changes use a normal `agent/<outcome>` branch based on current `main`; never implement product work on `agent-handoff`.
+
+## Shared commands
+
+```bash
+bun run sf-audit
+bun run sf-verify
+bun run sf-verify --fast
+bun run glm:bootstrap
+```
+
+The source for shared verification and bootstrap commands lives on `main`. Independent copies on continuity or historical refs are obsolete.
 
 ## Durable truth and precedence
 
@@ -36,6 +49,7 @@ A newer explicit Founder decision supersedes an older choice only when it states
 - The Current-to-Target Analysis defines the latest source-grounded implementation model.
 - The roadmap defines dependency order; the workflow defines review and evidence.
 - The active wave and working memory hold current progress.
+- The `agent-handoff` ref holds GLM continuity only and cannot override any integrated authority.
 - `main` is integrated code; branches and pull requests are proposed work.
 - Tests and observed behavior are stronger evidence than summaries or claims.
 - Historical documents, research and git history are context only unless a current authority explicitly adopts a conclusion.

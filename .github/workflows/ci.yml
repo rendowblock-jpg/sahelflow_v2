@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   ci:
-    name: Quality Gate (sf-verify + coverage + audit)
+    name: Quality Gate (authority + sf-verify + coverage + audit)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -71,7 +71,10 @@ jobs:
           print("OK: versions in sync.")
           PYEOF
 
-      # PROD-026: Run the project's own quality gate (replaces separate lint + tsc + vitest steps)
+      - name: Documentation authority and relative-link audit
+        run: bun run sf-audit
+
+      # PROD-026: Run the project's shared quality gate.
       - name: Quality gate (tsc + eslint + vitest + prisma)
         run: bun run sf-verify
 
@@ -136,4 +139,5 @@ jobs:
   # sidecar and takes 8-12 min, which is too slow for the per-PR quality gate.
   # Plan: add a separate `e2e` job (or nightly schedule) that runs on
   # `workflow_dispatch` + on tag pushes, gates merges to main. Track in
-  # Wave 8. For now, devs run `bun run test:e2e` locally before tagging.
+  # the active implementation wave. For now, run `bun run test:e2e` locally
+  # against the appropriate candidate before release-impacting work.

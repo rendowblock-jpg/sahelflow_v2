@@ -12,6 +12,7 @@ This is the compact entry point for current work. Update it at meaningful checkp
 - Preserve the durable Maze Map richness about capabilities, journeys, UI/UX, frontend behavior, Arabic/RTL and accessibility.
 - Ground product and architecture work in actual source and evidence.
 - Maintain one non-conflicting authority flow before implementation begins.
+- Preserve GLM's one-ref cross-session continuity without maintaining a second product, roadmap or tool source.
 - Active roles are Codex Desktop, ChatGPT and GLM.
 - Codex Desktop is the only agent assumed to have full local desktop/runtime access.
 
@@ -22,8 +23,9 @@ The documentation reset, experience recovery and semantic consistency audit are 
 - PR #95 — current-to-target program: `dee78e9c6085b367fb7a533b50624f4389a4cb8d`.
 - PR #96 — Maze Map experience authority: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
 - PR #97 — documentation authority/consistency audit: `7a138695d4075998165cee362436f5201febe4ea`.
+- PR #98 — post-audit checkpoint: `7a5e21d94f577db3946ac347fad49533b8625687`.
 
-No application behavior or executable source changed in these documentation waves.
+No application behavior or executable product source changed in those documentation waves.
 
 ### Canonical read order
 
@@ -56,40 +58,47 @@ A lower layer cannot silently weaken a higher layer. Apparent conflicts are reco
 
 Ambiguous scope defaults to Candidate.
 
-## Consistency audit result
+## GLM continuity state
 
-The semantic audit reconciled:
+The old `agent-handoff` orphan ref remains useful, but its current role is narrow:
 
-- product → experience → engineering → current-state → roadmap/workflow flow;
-- storefront durable-receipt success versus desktop-committed operational-command success;
-- Founder performance thresholds and Windows compatibility language;
-- trial/permanent signing, payment/issuance separation and entitlement authority;
-- backup key separation, trial retention, independent recovery and two-share assisted recovery;
-- team work depth and trusted approvals;
-- Law 18-07 and continuity reserve/coverage/service-exit obligations;
-- provider candidate scope versus live certification and Founder launch-set decisions;
-- MAWS wave/PR governing-contract fields;
-- current changelog versus preserved historical session/v3/v4 chronology;
-- research/history as reference rather than active authority.
+- compact GLM resume checkpoint;
+- thin bootstrap into current `main`;
+- no product, experience, engineering, roadmap, source or tool authority;
+- no application work directly on the orphan ref.
 
-## Active checkpoint — pre-implementation validation
+The current protocol is [`GLM_CONTINUITY_PROTOCOL.md`](GLM_CONTINUITY_PROTOCOL.md). Shared commands and their source live on `main`:
 
-The active documentation is semantically coherent and ready to guide implementation. Before executable application work begins, Codex Desktop must perform the remaining mechanical/source inventory from a clean checkout:
+```bash
+bun run sf-audit
+bun run sf-verify
+bun run sf-verify --fast
+bun run glm:bootstrap
+```
 
-1. complete Markdown link/reference validation;
+Historical Session-40 handoff/tool content remains in orphan-branch Git history only. GLM reads current `AGENTS.md`, Working Memory, active wave and governing authorities at every resume.
+
+## Pre-implementation readiness checkpoint
+
+The active documentation is semantically coherent and the cross-agent continuity model is unified. Shared bootstrap and verification tooling are now owned by `main`, including the previously missing `sf-verify` package command.
+
+The first executable wave must still perform real local evidence from a clean checkout:
+
+1. run `bun run sf-audit` and repair any mechanical link/reference findings;
 2. generate current file/route/API/command/model/migration/test/provider inventories;
 3. generate page/component/design-token inventory;
 4. inspect component-local READMEs and sidecar notes for conflicts with active authority;
-5. record the report in the first wave rather than creating another permanent authority;
-6. repair GitHub Actions startup and implement or remove the undefined `sf-verify` command.
+5. run `bun run sf-verify --fast`, then the full gate when the environment permits;
+6. repair GitHub Actions startup if jobs still fail before steps execute;
+7. record results inside the first implementation wave rather than creating another permanent planning authority.
 
-GitHub Actions currently fails before either job executes a step, so CI has not validated the documentation or application.
+GitHub Actions has previously failed before either job executed a step. The new shared command removes the latent missing-script defect, but CI execution remains unproven until a runner actually starts.
 
 ## Next wave
 
 Create **Proven Canonical Windows Desktop** from [`WAVE_TEMPLATE.md`](WAVE_TEMPLATE.md).
 
-Its first phase is documentation/reference inventory plus Phase 0 repository and packaged truth. It then performs only the minimum Phase 1 runtime/shop/migration design needed to prove a reliable installed Windows candidate.
+Its first phase is local documentation/reference and repository inventory plus Phase 0 repository and packaged truth. It then performs only the minimum Phase 1 runtime/shop/migration design needed to prove a reliable installed Windows candidate.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 

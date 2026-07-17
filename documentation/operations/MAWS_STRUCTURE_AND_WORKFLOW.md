@@ -80,13 +80,27 @@ Copy `WAVE_TEMPLATE.md` when a new wave begins. Phase names/counts may change as
 
 ### Git and GitHub — integration and evidence truth
 
-- `main` contains integrated code/documents.
-- Branches/PRs contain proposed work.
+- `main` contains integrated code/documents and shared executable tooling.
+- Normal `agent/<outcome>` branches and PRs contain proposed work.
 - Commits/artifact IDs identify exact evidence when precision matters.
 - PRs carry governing contract, implementation, validation, review, limitations and next move.
 - Issues are optional and used when independent ownership/visibility helps.
 
 Chat is where live reasoning happens. GitHub stores understanding that must survive.
+
+### `agent-handoff` — GLM continuity only
+
+The orphan `agent-handoff` ref preserves GLM's cross-session checkpoint and thin bootstrap. It is deliberately outside `main` so a disposable GLM environment can resume from one stable ref, but it is not a parallel authority or implementation branch.
+
+Its current allowed files are:
+
+- `README.md` — branch role and precedence;
+- `AGENT_HANDOFF.md` — compact current GLM checkpoint;
+- `bootstrap.sh` — delegates to shared tooling on current `main`.
+
+All product, experience, engineering, wave and executable tool source remains on `main`. GLM follows `documentation/operations/GLM_CONTINUITY_PROTOCOL.md`, and all proposed work uses a normal branch from current `main`.
+
+Historical files that remain in orphan-branch history are provenance only. They are not read or executed by the current protocol.
 
 ### Research and history
 
@@ -112,7 +126,7 @@ Builds precise cross-layer models, traces journeys/states, challenges assumption
 
 ### GLM — external research and discovery specialist
 
-Defaults to provider/API/platform, competitor/workflow/UX, Arabic/French/regional research, alternatives and adversarial discovery. Findings are sourced and returned to the active wave; research does not become authority until adopted.
+Defaults to provider/API/platform, competitor/workflow/UX, Arabic/French/regional research, alternatives and adversarial discovery. GLM preserves disposable-session continuity through `agent-handoff`, but always bootstraps and works against current `main`. Findings are sourced and returned to the active wave; research does not become authority until adopted.
 
 These are specializations, not contribution restrictions.
 
@@ -169,11 +183,12 @@ Material discoveries update the document that owns them:
 - current reality → Current-to-Target Analysis;
 - sequence → roadmap;
 - provider scope/certification → registry;
-- progress → wave/Working Memory.
+- progress → wave/Working Memory;
+- GLM resume checkpoint → `agent-handoff/AGENT_HANDOFF.md` only.
 
 ### Step 7 — Integrate connected and local work
 
-Connected agents may produce branches/PRs/reviews/research. Codex Desktop integrates remote and local state and runs/verifies local-only behavior.
+Connected agents may produce branches/PRs/reviews/research. GLM work branches from current `main`; the orphan ref is never a product-code branch. Codex Desktop integrates remote and local state and runs/verifies local-only behavior.
 
 ### Step 8 — Publish coherent checkpoints
 
@@ -200,7 +215,7 @@ Current blocker or uncertainty:
 Exact next move:
 ```
 
-A new agent resumes from repository documents rather than a narrative dump.
+A new agent resumes from repository documents rather than a narrative dump. GLM additionally updates its compact orphan checkpoint when it needs disposable-session continuity.
 
 ### Step 10 — Finish, park or replace
 
@@ -215,6 +230,7 @@ A wave finishes when its coherent outcome and required evidence are demonstrated
 - fixed phase names;
 - exact SHAs in ordinary conversation;
 - mandatory external review for routine low-risk work;
-- Founder relay of routine messages.
+- Founder relay of routine messages;
+- separate product or architecture truth for GLM.
 
 MAWS succeeds when another strong agent can understand authority, current outcome, evidence, plan and next move from GitHub and contribute without coordination theater.
