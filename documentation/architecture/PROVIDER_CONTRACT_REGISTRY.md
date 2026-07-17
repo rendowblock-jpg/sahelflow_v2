@@ -1,70 +1,73 @@
-# Provider Contract and Certification Registry
+# SahelFlow — Provider Contract and Certification Registry
 
-**Status:** Active claim authority for external integrations  
-**Baseline:** `03f0d48436b42788e463bbd1d74a388b2da22294`
+> **Status:** Active claim authority for external integrations  
+> **Source baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e`  
+> **Rule:** Source files, mocks and unit tests do not make a provider publicly supported. Only a current live certification record can promote a provider capability to `Certified`.
 
-Source files, mocks and unit tests do not make a provider publicly supported. Only a current live certification record can promote a provider/capability to `Certified`.
+## 1. Statuses
 
-## Statuses
-
-- **Planned** — founder-approved launch scope, no launch-safe adapter evidence.
-- **Candidate** — adapter exists and contract tests pass; live certification incomplete.
+- **Planned** — Founder-approved launch scope; no launch-safe implementation evidence.
+- **Candidate** — meaningful adapter/implementation exists; live certification is incomplete.
 - **Certified** — current live certification passed for the listed capabilities.
-- **Degraded** — previously certified but provider drift/incident limits capability.
-- **Disabled** — blocked by policy, security, outage or unresolved correctness issue.
-- **Experimental** — code/research may exist but it is not a public product capability.
+- **Degraded** — previously certified, but provider drift or an incident limits capability.
+- **Disabled** — blocked by policy, security, outage or unresolved correctness risk.
+- **Experimental** — code or research may exist, but it is not a public product capability.
 
-## Current registry
+Certification is capability-specific. A provider can be certified for tracking while edit or cancellation remains unsupported.
 
-| Provider | Domain | Founder scope | Baseline implementation | Registry status | Public capability allowed now | Certification blockers |
-|---|---|---:|---|---|---|---|
-| WhatsApp via Baileys | Messaging/inbox | Yes | Loopback sidecar, QR, send, events, in-memory store | Candidate | No launch claim | Durable ingress/egress, credential recovery/protection, real session/reconnect/history/duplicate/policy tests |
-| Google AI Studio / Gemini | AI extraction/chat | Yes, seller-owned key | Extraction/chat/tools, typed validation, heuristic redaction | Candidate | No launch claim | Approved model registry, privacy corpus, action approval service, quota/outage/live Darija evidence |
-| Yalidine | Courier | Yes | Adapter/test code exists | Candidate | No launch claim | Live auth/create/fee/label/status/cancel/idempotency/rate-limit/reconciliation certification |
-| ZR Express | Courier | Yes | Adapter/test code exists | Candidate | No launch claim | Same capability certification with provider-specific mappings/limits |
-| Maystro | Courier | Yes | Adapter/test code exists | Candidate | No launch claim | Same capability certification with provider-specific mappings/limits |
-| Procolis | Courier | Optional after validation | Adapter/config references exist | Experimental | No | Founder go/no-go plus full live certification |
-| DHD and other courier code | Courier | No current approval | Historical/experimental code may exist | Experimental | No | Founder scope decision, legal/economic review and certification |
-| Shopify | E-commerce | Yes | Polling adapter/sync tests exist | Candidate | No launch claim | Durable inbox, webhook/reconciliation convergence, paging/edit/cancel/rate-limit/live certification |
-| WooCommerce | E-commerce | Yes | Polling adapter/sync tests exist | Candidate | No launch claim | Durable inbox, webhook/reconciliation convergence, plugin/API-version matrix and live certification |
-| YouCan | E-commerce | Yes | Polling adapter/sync tests exist | Candidate | No launch claim | Durable inbox, provider event/version semantics, reconciliation and live certification |
-| Google Sheets | Export | Yes | Export implementation/tests exist | Candidate | No launch claim | OAuth/key scope, privacy schema, idempotency, quota/error and live export evidence |
-| Cloudflare | Control plane/relay/backup/storefront | Yes | No implementation at baseline | Planned | No | Architecture milestones M7/M8/M11, cost/security/disaster evidence |
-| Sentry | Diagnostics | Optional | Env-gated integration/redaction hooks | Candidate | Internal diagnostics only | Consent, minimization, retention, redaction canary, outage and deletion evidence |
-| GitHub Releases/Tauri updater | Distribution | Yes | Updater and release workflows exist | Candidate | Internal only | Windows candidate pipeline, version manifest, signing, staged rollout, rollback and update drill |
+## 2. Current registry
 
-## Contract requirements common to every provider
+| Provider | Domain | Founder scope | Current implementation | Status | Public capability now | Main blockers |
+|---|---|:---:|---|---|---|---|
+| WhatsApp via Baileys | Messaging/inbox | Yes | Loopback sidecar, QR, chats, send, WS events, delivery updates, volatile store | Candidate | No launch support claim | Durable ingress/egress and history, credential recovery/protection, replay, real reconnect/logout/duplicate/policy tests |
+| Google AI Studio / Gemini | AI | Yes; seller-owned key | Regex fallback, extraction/chat/tools, typed schemas, heuristic redaction | Candidate | No launch support claim | Central model registry, allowlisted privacy payloads, bound approvals, quota/outage health, real multilingual privacy evidence |
+| Yalidine | Courier | Yes | Adapter, fee/create/tracking/cancel code and tests | Candidate | No launch support claim | Live auth/create/fee/label/status/cancel/idempotency/rate-limit/reconciliation certification |
+| ZR Express | Courier | Yes | Adapter and tests | Candidate | No launch support claim | Provider-specific live capability and limitation certification |
+| Maystro | Courier | Yes | Adapter and tests | Candidate | No launch support claim | Provider-specific live capability and limitation certification |
+| Procolis | Courier | Optional after validation | References/implementation knowledge exist | Experimental | No | Founder go/no-go plus full certification |
+| DHD and other courier code | Courier | No current approval | Explicitly guessed/experimental endpoints may exist | Experimental | No | Founder scope decision, terms/economics review and full certification |
+| Shopify | E-commerce | Yes | REST polling, pagination, updated-order handling and dedup | Candidate | No launch support claim | Durable inbox, webhook/reconciliation convergence, contiguous checkpoints, live edit/cancel/rate-limit certification |
+| WooCommerce | E-commerce | Yes | REST polling, pagination, modified-order handling and URL controls | Candidate | No launch support claim | Durable ingress/checkpoints, host/plugin/version matrix and live certification |
+| YouCan | E-commerce | Yes | Full-scan polling, pagination, normalization and dedup | Candidate | No launch support claim | Durable ingress, efficient reconciliation strategy, event/version semantics and live certification |
+| Google Sheets | Export | Yes | Service-account export, clear/rewrite and batching | Candidate | No launch support claim | Identity/shop/field scope, privacy policy, idempotency, quota/error and live evidence |
+| Cloudflare | Control/relay/backup/storefront | Yes | No bounded platform implementation | Planned | No | Roadmap Phase 4–5 implementation, cost, security, tenant and disaster evidence |
+| Sentry | Diagnostics | Optional | Environment-gated integration and redaction hooks | Candidate | Internal diagnostics only | Consent, minimization, retention, canary proof, outage and deletion evidence |
+| GitHub Releases/Tauri updater | Distribution | Yes | Signed updater mechanism and release workflows | Candidate | Internal only | Windows-only candidate pipeline, version manifest, staged rollout, update/tamper/hold/recovery drills |
 
-Every adapter declares:
+## 3. Common provider contract
 
-- provider/API/version and environment;
+Every adapter or provider worker declares:
+
+- provider, API/version and environment;
 - authentication method and minimum permissions;
-- credential scope and secret handle;
-- capabilities and unsupported operations;
-- normalized request/response/event schemas;
+- credential purpose, tenant/shop scope and secret handle;
+- supported and unsupported capabilities;
+- normalized request, response and event schemas;
 - provider resource/event/version identifiers;
-- idempotency behavior and dedup key;
-- pagination/cursor/order semantics;
-- webhook signature/replay semantics where applicable;
-- rate limits, quotas and retry classes;
-- timeout/network/5xx/4xx behavior;
-- clock/time-zone/currency/locale assumptions;
-- status/error mapping;
-- PII/data classes transmitted;
-- reconciliation strategy and checkpoint rule;
+- idempotency and deduplication behavior;
+- pagination, ordering, overlap and cursor semantics;
+- webhook signature/replay behavior where applicable;
+- rate limits, quotas, retry classes and backoff;
+- timeout, network, 4xx, 5xx and ambiguous-success behavior;
+- clock, time-zone, currency and locale assumptions;
+- status and error mapping;
+- transmitted PII/data classes and retention;
+- reconciliation strategy and contiguous-checkpoint rule;
 - observability and health state;
-- provider kill switch/degradation UX;
+- degradation/kill-switch behavior and seller UX;
 - terms/policy/legal review date;
 - recertification triggers.
 
-## Courier capability matrix template
+Provider code executes through durable inbox/outbox/effect records once Roadmap Phase 3 is available. New integrations must not expand direct request-to-provider coupling.
 
-| Capability | Supported | Contract method | Idempotency | Evidence |
+## 4. Courier capability matrix
+
+| Capability | Supported | Contract method | Idempotency/recovery | Evidence |
 |---|:---:|---|---|---|
 | Authenticate/test credentials |  |  | N/A |  |
 | Create home-delivery shipment |  |  |  |  |
 | Create desk/office shipment |  |  |  |  |
-| Fee lookup |  |  |  |  |
+| Fee lookup |  |  | N/A |  |
 | Wilaya/commune mapping |  |  | N/A |  |
 | Label retrieval/format |  |  |  |  |
 | Tracking/status polling |  |  |  |  |
@@ -74,12 +77,12 @@ Every adapter declares:
 | Bulk create |  |  |  |  |
 | Reconciliation/list since |  |  |  |  |
 
-## Commerce capability matrix template
+## 5. Commerce capability matrix
 
 | Capability | Supported | Identity/version model | Checkpoint/reconciliation | Evidence |
 |---|:---:|---|---|---|
 | Credential validation |  |  |  |  |
-| List orders incrementally |  |  |  |  |
+| Incremental listing |  |  |  |  |
 | Webhook receive/signature |  |  |  |  |
 | New order |  |  |  |  |
 | Order edit |  |  |  |  |
@@ -90,7 +93,7 @@ Every adapter declares:
 | Rate-limit recovery |  |  |  |  |
 | Full reconciliation |  |  |  |  |
 
-## Certification record template
+## 6. Certification record
 
 ```markdown
 # <Provider> Certification — <date>
@@ -117,14 +120,15 @@ Every adapter declares:
 - Approval:
 ```
 
-## Certification rules
+## 7. Certification rules
 
-1. Use a real provider environment/account and a signed packaged candidate where the integration is desktop-bound.
-2. Retain sanitized request/response/event IDs sufficient to reproduce the result.
-3. Never commit tokens, customer PII or WhatsApp credentials.
-4. Test at least one duplicate, timeout-after-provider-success and provider-partial-failure case.
-5. For ingress providers, prove no checkpoint advances past an untracked failure.
-6. For effects, prove idempotent retry or a safe reconciliation/compensation path.
-7. A provider contract/version or material behavior change invalidates affected certification.
-8. Incidents can downgrade a provider immediately without waiting for a release.
-9. UI, sales and documentation read this registry and cannot imply unsupported capabilities.
+1. Use a real provider environment/account and a signed installed candidate when the integration is desktop-bound.
+2. Retain sanitized request/response/event identifiers sufficient to reproduce the result.
+3. Never commit tokens, customer PII, WhatsApp credentials or private keys.
+4. Test invalid credentials, duplicate/replay, timeout-after-provider-success, network loss, rate limit, malformed/partial response and provider outage.
+5. Inbound events must be durable before acknowledgement; no checkpoint passes an untracked failure.
+6. Outbound effects require provider idempotency or a demonstrated reconciliation/compensation path.
+7. Unsupported capabilities remain hidden or return an explicit supported-error.
+8. A provider contract/version or material behavior change invalidates the affected certification.
+9. Incidents can downgrade or disable a capability immediately.
+10. UI, sales and documentation cannot imply more than the certified matrix.
