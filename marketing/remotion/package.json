@@ -1,0 +1,29 @@
+{
+  "name": "@sahelflow/marketing-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SahelFlow marketing and product-demonstration videos built with Remotion.",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "render:launch": "mkdir -p renders && remotion render src/index.ts SahelFlow-Launch-60 renders/sahelflow-launch-60.mp4 --codec=h264 --crf=18 --overwrite",
+    "render:social": "mkdir -p renders && remotion render src/index.ts SahelFlow-Social-30 renders/sahelflow-social-30.mp4 --codec=h264 --crf=18 --overwrite",
+    "render:vertical": "mkdir -p renders && remotion render src/index.ts SahelFlow-Vertical-15 renders/sahelflow-vertical-15.mp4 --codec=h264 --crf=18 --overwrite",
+    "render:demo": "mkdir -p renders && remotion render src/index.ts SahelFlow-Demo-90 renders/sahelflow-demo-90.mp4 --codec=h264 --crf=18 --overwrite"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.489",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.489"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.8",
+    "@types/react-dom": "19.0.3",
+    "typescript": "5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
