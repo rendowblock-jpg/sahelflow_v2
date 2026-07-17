@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "sf-verify": "bun run scripts/sf-verify.ts",
     "sf-audit": "bun run scripts/sf-audit.ts",
+    "sf-inventory": "bun run scripts/sf-inventory.ts",
     "sf-browser": "bun run sf-browser/index.ts",
     "sf-seed": "bun run sf-seed/index.ts",
     "glm:bootstrap": "bash scripts/agents/bootstrap-glm.sh",
