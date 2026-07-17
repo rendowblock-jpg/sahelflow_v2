@@ -25,7 +25,9 @@ A seller can install one Windows candidate, start it reliably, open only the int
 Verified from `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`:
 
 - `package.json` defines `sf-audit` and `sf-verify`; the earlier missing-package-script defect is no longer present.
-- `.github/workflows/ci.yml` defines an Ubuntu quality-gate job and a Tauri Rust smoke job, but current runner execution and startup behavior remain unproven in this session.
+- `.github/workflows/ci.yml` defines an Ubuntu quality-gate job and a Tauri Rust smoke job.
+- Pull-request workflow run `29592496180` for branch head `4baf3a36c37f4d17593c98cad153d82b600bd139` created both jobs, but both concluded failure with zero steps and no retained job-log blob.
+- Because no checkout/setup/command step was created, that run does not implicate `sf-audit`, `sf-verify`, Bun, Prisma, Rust or repository source. The failure boundary is GitHub Actions runner/account/repository startup before workflow execution.
 - The current source model still uses a Tauri host around a fixed-loopback Next.js runtime and WhatsApp sidecar, with per-shop SQLite selection routed through process-global metadata/proxy behavior.
 - The architecture baseline identifies fixed endpoints, incomplete readiness/supervision, silent shop fallback risk, production `db push`/unsafe migration assumptions and missing all-shop migration coordination.
 - No packaged Windows, provider, recovery, performance, T470 or 4 GB result is claimed by this wave until executed and retained.
@@ -49,7 +51,9 @@ The internal installed candidate must expose one deterministic startup state mac
 
 - The active `main` baseline equals the expected integrated commit: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 - Open PR #83 is a stale stacked documentation draft based on an older authority model; PR #74 is an older non-mergeable documentation/master-plan PR. Neither is a valid implementation base for this wave.
-- The current CI workflow already calls the shared commands. CI startup diagnosis must use actual Actions run/job evidence; workflow text alone is insufficient to claim a root cause.
+- `scripts/sf-audit.ts` performs a repository-wide active-Markdown relative-link scan, required-authority checks, shared-script drift checks and entrypoint authority checks. Its correctness still requires clean-checkout execution.
+- `scripts/sf-verify.ts` runs TypeScript and ESLint in fast mode, and adds Prisma generation plus Vitest in full mode. Its command wiring is coherent by source inspection but remains unexecuted in a clean checkout.
+- GitHub Actions run `29592496180` proves the current CI failure occurs before any workflow step. Editing workflow commands would not be evidence-based until repository/account runner startup is restored or GitHub provides a concrete startup annotation.
 - The branch must first generate observed inventories and command reports before selecting runtime/shop/migration patches.
 
 ## Multi-phase plan
@@ -64,9 +68,9 @@ The internal installed candidate must expose one deterministic startup state mac
 ### Phase: 0B — CI startup and shared-command repair
 
 - Purpose: make pull-request checks actually start and bind to the same commands used locally.
-- Work and questions: inspect the latest Actions run/job conclusions and startup messages; repair workflow/repository configuration or command portability based only on observed failure; verify `sf-audit` and `sf-verify` from a second clean checkout; retain logs/results.
+- Work and questions: inspect repository/account Actions availability, billing/minute/spending restrictions, Actions policy and runner availability; retrieve any run-level startup annotation GitHub exposes; repair repository/account configuration first if blocked; change workflow source only for an observed workflow defect; verify `sf-audit` and `sf-verify` from a second clean checkout; retain logs/results.
 - Capability/journey/experience impact: none directly; enables trustworthy implementation evidence.
-- Evidence or completion signal: a pull-request run starts steps and completes the intended gates from a clean checkout.
+- Evidence or completion signal: a pull-request run creates and executes checkout/setup/verification steps and completes the intended gates from a clean checkout.
 
 ### Phase: 0C — Installed Windows candidate baseline
 
@@ -102,28 +106,29 @@ The internal installed candidate must expose one deterministic startup state mac
 |---|---|---|---|
 | Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It is the actual latest default-branch commit observed at wave start and includes the integrated documentation/tool baseline. | GitHub repository and commit inspection. | 2026-07-17 |
 | Use `agent/proven-canonical-windows-desktop`. | Normal outcome branch required by the coding workflow. | Coding Workflow. | 2026-07-17 |
-| Do not infer the CI startup root cause from workflow source alone. | Jobs-before-steps failures require run/job evidence; configuration text is not execution evidence. | Evidence rules. | 2026-07-17 |
+| Treat CI run `29592496180` as a pre-step Actions startup failure, not a repository-command failure. | Both jobs have zero steps and no log blob, so no workflow command executed. | GitHub Actions run/job metadata. | 2026-07-17 |
+| Do not edit CI YAML until a concrete workflow defect is observed. | Repository/account runner startup must be repaired before command-level workflow changes can be validated. | Evidence rules and current run metadata. | 2026-07-17 |
 | Do not claim local command, package, Windows or hardware results in this checkpoint. | The current session has no executable checkout or Windows runtime. | Observed environment limitation. | 2026-07-17 |
 
 ## Working notes and open questions
 
-- Obtain an executable clean checkout with Bun/Rust and access to GitHub Actions run metadata/logs.
-- Determine the exact Actions startup failure from the latest relevant run before editing workflow configuration.
+- Obtain an executable clean checkout with Bun/Rust.
+- Inspect repository/account Actions settings for disabled Actions, policy restrictions, billing/minute/spending limits or runner unavailability; capture the exact GitHub startup annotation if visible in the web UI.
 - Generate inventories mechanically; do not convert them into a competing permanent repository authority.
 - Select exact registry and `ShopContext` interfaces only after current call-site inventory and tests are observed.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices, not product changes.
 
 ## Implementation and evidence
 
-- Branches or pull requests: `agent/proven-canonical-windows-desktop`; no pull request yet at this checkpoint.
-- Tests, demonstrations or measurements: none executed in this session; GitHub source inspection only.
+- Branches or pull requests: `agent/proven-canonical-windows-desktop`; draft PR #100.
+- Tests, demonstrations or measurements: no repository commands executed in this session. GitHub Actions run `29592496180` inspected; both jobs failed before steps, with no job log blob.
 - Visual/RTL/accessibility evidence where applicable: none yet.
 - Packaged/provider/recovery evidence where applicable: none yet.
-- Known limitations: no mounted checkout, no outbound clone, no local Bun/Rust/Windows environment, and no observed Actions job log in this session.
+- Known limitations: no mounted checkout, no outbound clone, no local Bun/Rust/Windows environment, and no run-level startup annotation exposed by the available GitHub API response.
 
 ## Current checkpoint
 
-- What is now true: the wave is active on a normal branch at the exact current `main` baseline; the governing contract, phases, evidence boundaries and non-goals are explicit; shared commands are confirmed present in `package.json`; CI execution remains unproven.
-- What changed in the plan: no authority reset was performed. Work is constrained to observed implementation evidence and the existing roadmap.
-- Current blocker or uncertainty: this session cannot execute a clean checkout or Windows candidate, and no concrete Actions startup message has yet been observed.
-- Exact next move: in a mounted clean checkout at `5fe00b5cb85505e5df27499fe46d0fa6050c0788`, run `bun install --frozen-lockfile`, `bun run sf-audit`, generate the required inventories, then run `bun run sf-verify --fast`; in parallel inspect the latest Actions run/job startup message and record the exact root cause before applying a CI patch.
+- What is now true: the wave is active on a normal branch and draft PR at the exact current `main` baseline; shared command source is coherent by inspection; GitHub Actions is proven to fail before workflow steps rather than inside repository commands.
+- What changed in the plan: CI repair now begins with repository/account Actions startup availability and policy, not speculative YAML edits. No authority reset was performed.
+- Current blocker or uncertainty: this session cannot execute a clean checkout or Windows candidate, and the available API does not expose the human-readable run-level startup annotation.
+- Exact next move: restore/verify GitHub Actions availability for the repository/account until run `CI` creates checkout/setup steps; then, from a mounted clean checkout of this branch, run `bun install --frozen-lockfile`, `bun run sf-audit`, generate the required inventories, and run `bun run sf-verify --fast` before selecting implementation patches.
