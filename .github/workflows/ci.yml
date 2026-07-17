@@ -165,14 +165,14 @@ jobs:
           cargo check --release 2>&1 | tee ../.sf-tauri-release-check.log
 
       - name: Upload release-path Rust diagnostics
-        if: failure()
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-release-check-diagnostics
+          name: tauri-release-check-diagnostics-${{ github.run_id }}
           path: .sf-tauri-release-check.log
           if-no-files-found: error
           include-hidden-files: true
-          retention-days: 1
+          retention-days: 2
 
   # T-M9 (TODO): E2E (Playwright) is NOT wired into per-push CI on purpose —
   # a full `bun run test:e2e` boots Next.js + a SQLite DB + the WhatsApp
