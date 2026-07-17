@@ -12,9 +12,9 @@ permissions:
 
 jobs:
   typecheck-and-render:
-    name: Typecheck and render preview cuts
+    name: Typecheck and render complete video set
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: marketing/remotion
@@ -34,7 +34,7 @@ jobs:
       - name: Typecheck compositions
         run: npm run typecheck
 
-      - name: Render vertical preview
+      - name: Render vertical cut
         shell: bash
         run: |
           set +e
@@ -43,13 +43,31 @@ jobs:
           tail -120 vertical-render.log
           exit $status
 
-      - name: Render social preview
+      - name: Render social cut
         shell: bash
         run: |
           set +e
           npm run render:social > social-render.log 2>&1
           status=$?
           tail -120 social-render.log
+          exit $status
+
+      - name: Render launch film
+        shell: bash
+        run: |
+          set +e
+          npm run render:launch > launch-render.log 2>&1
+          status=$?
+          tail -120 launch-render.log
+          exit $status
+
+      - name: Render guided demo
+        shell: bash
+        run: |
+          set +e
+          npm run render:demo > demo-render.log 2>&1
+          status=$?
+          tail -120 demo-render.log
           exit $status
 
       - name: Upload render diagnostics
@@ -61,13 +79,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Upload MP4 previews
+      - name: Upload complete MP4 set
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-remotion-previews
+          name: sahelflow-remotion-videos
           path: |
             marketing/remotion/renders/sahelflow-vertical-15.mp4
             marketing/remotion/renders/sahelflow-social-30.mp4
+            marketing/remotion/renders/sahelflow-launch-60.mp4
+            marketing/remotion/renders/sahelflow-demo-90.mp4
           if-no-files-found: error
           retention-days: 14
