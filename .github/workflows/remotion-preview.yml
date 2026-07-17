@@ -26,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Remotion workspace
         run: npm install --no-audit --no-fund
@@ -35,12 +35,34 @@ jobs:
         run: npm run typecheck
 
       - name: Render vertical preview
-        run: npm run render:vertical
+        shell: bash
+        run: |
+          set +e
+          npm run render:vertical > vertical-render.log 2>&1
+          status=$?
+          tail -120 vertical-render.log
+          exit $status
 
       - name: Render social preview
-        run: npm run render:social
+        shell: bash
+        run: |
+          set +e
+          npm run render:social > social-render.log 2>&1
+          status=$?
+          tail -120 social-render.log
+          exit $status
+
+      - name: Upload render diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-remotion-render-diagnostics
+          path: marketing/remotion/*-render.log
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Upload MP4 previews
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: sahelflow-remotion-previews
