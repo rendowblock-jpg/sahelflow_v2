@@ -76,6 +76,7 @@
     "sf-db",
     "sf-license",
     "sf-port",
-    "sb-db"
+    "sb-db",
+    "marketing/remotion"
   ]
 }
