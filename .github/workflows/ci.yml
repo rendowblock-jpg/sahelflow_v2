@@ -75,17 +75,22 @@ jobs:
       - name: Documentation authority and relative-link audit
         run: bun run sf-audit
 
-      # PROD-026: Run the project's shared quality gate.
+      # PROD-026: Run the project's shared quality gate. Tee preserves a complete
+      # machine-readable log even when the Actions connector truncates job output.
       - name: Quality gate (tsc + eslint + vitest + prisma)
-        run: bun run sf-verify
+        run: |
+          set -o pipefail
+          bun run sf-verify 2>&1 | tee .sf-verify.log
 
-      - name: Upload first Vitest failure
+      - name: Upload quality gate diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-first-failure
-          path: .sf-vitest-first-failure.txt
-          if-no-files-found: ignore
+          name: quality-gate-diagnostics
+          path: |
+            .sf-verify.log
+            .sf-vitest-first-failure.txt
+          if-no-files-found: error
           retention-days: 1
 
       # TEST-001: Enforce coverage threshold (60% floor configured in vitest.config.ts)
