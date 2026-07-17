@@ -100,8 +100,8 @@ Current checkpoint:
 Exact next executable action:
 
 1. use the retained inventory to enumerate all desktop startup/readiness and shop-routing authority call sites;
-2. add a seller-visible blocked/recovery startup surface and structured diagnostic state without allowing the main shell to appear ready;
-3. define the minimum per-launch endpoint/authentication boundary needed to remove fixed unauthenticated runtime assumptions;
+2. add a structured seller-visible blocked/recovery startup surface without allowing the main shell to appear ready;
+3. converge fixed endpoint replacement and per-launch authentication behind that startup state machine;
 4. then begin the explicit `ShopContext` and atomic registry boundary, preserving one SQLite file per shop while removing silent fallback;
 5. validate each bounded change through the full clean-checkout Quality Gate and release-path Rust smoke before installed Windows evidence.
 
