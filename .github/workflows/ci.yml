@@ -75,6 +75,18 @@ jobs:
       - name: Documentation authority and relative-link audit
         run: bun run sf-audit
 
+      - name: Generate clean-checkout repository inventory
+        run: bun run sf-inventory
+
+      - name: Upload Phase 0 repository inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-repository-inventory
+          path: .sf-inventory
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
       # PROD-026: Run the project's shared quality gate. Tee preserves a complete
       # machine-readable log even when the Actions connector truncates job output.
       - name: Quality gate (tsc + eslint + vitest + prisma)
