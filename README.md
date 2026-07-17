@@ -2,49 +2,50 @@
 
 SahelFlow is a Windows-first, desktop-authoritative operations platform for Algerian COD sellers.
 
-> **Repository status:** Architecture reset and implementation planning are complete. The current source contains substantial reusable product work, but it is **not yet a Stable SahelFlow 1.0 release**. Launch readiness is governed by commit-linked evidence, not historical version labels, feature counts or test counts.
+> **Repository status:** The current codebase contains a broad, valuable operational application, but it is not yet a Stable SahelFlow 1.0 release. The active work is a controlled migration from the current local single-owner foundations to the Founder-approved identity, durability, recovery and connected-system architecture.
 
-## Authoritative documentation
+## Start here
 
-Read in this order:
-
-1. [`documentation/product/README.md`](documentation/product/README.md) — product authority and founder-approved choices.
-2. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority and architecture package.
-3. [`documentation/architecture/EVIDENCE_LEDGER.md`](documentation/architecture/EVIDENCE_LEDGER.md) — current launch-system status at the audited commit.
-4. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — dependency-correct M0–M14 implementation order.
-5. [`documentation/architecture/CODING_WORKFLOW.md`](documentation/architecture/CODING_WORKFLOW.md) — binding issue, branch, PR, review, test, merge, rollback and release rules.
-
-The product Constitution and founder decisions are preserved. Former v3/v4 architecture, project-state, build-plan and readiness documents are historical only; their disposition is recorded in [`documentation/architecture/DOCUMENTATION_INVENTORY.md`](documentation/architecture/DOCUMENTATION_INVENTORY.md).
+1. [`documentation/product/README.md`](documentation/product/README.md) — Founder-approved product contract.
+2. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority and read order.
+3. [`documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md`](documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md) — source-grounded current state, full gap matrix, metrics and migration disposition.
+4. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — the single work path to Stable.
+5. [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md) — current wave and next move.
 
 ## Approved launch shape
 
 - **Platform:** Windows x64 desktop; 4 GB dual-core floor and ThinkPad T470 reference.
-- **Authority:** one canonical desktop installation; one SQLite database per shop; desktop remains final business-write authority.
-- **Connected plane:** bounded Cloudflare control plane, encrypted relay/projections, zero-knowledge backups and hosted storefronts.
-- **Commercial model:** 35,000 DZD one-time complete edition; five included shops; up to five extra shop packs; owner plus ten active members under the approved device limits.
+- **Authority:** one canonical desktop installation; one operational SQLite database per shop; desktop remains final business-write authority.
+- **Connected plane:** bounded Cloudflare control plane, encrypted relay/projections, zero-knowledge backup and hosted storefronts.
+- **Commercial model:** 35,000 DZD one-time complete edition; five included shops; up to five paid extra shops; owner plus ten active members under the approved device limits.
 - **Trial:** one signed online machine-bound seven-day trial with complete lockout after expiry and preserved data.
-- **AI:** seller-owned Google AI Studio key; typed/privacy-controlled Gemini workflows with explicit approval for destructive actions.
+- **AI:** seller-owned Google AI Studio key; typed, privacy-controlled workflows and explicit bound approval for consequential actions.
 - **Synchronization:** durable hybrid webhook plus scheduled reconciliation; checkpoints never pass untracked failure.
-- **Release:** signed Windows artifacts promoted through internal, beta and stable channels only after the required evidence exists.
+- **Release:** signed Windows artifacts promoted through internal, beta and stable channels only after evidence exists.
 
 ## Current implementation conclusion
 
-The existing Next.js/Tauri/Prisma/domain/UI work is a valuable migration base. The architecture audit found that launch identity/version, process supervision, explicit shop context, migrations, key recovery, licensing, team identity, durable inbox/outbox, Cloudflare protocols, backup, remote PWA, hosted storefront, provider certification and release authority require replacement or foundational hardening before feature expansion.
+The existing Tauri, Next.js, Prisma, SQLite, domain, UI, WhatsApp, provider, AI and test work is a strong migration base. The main gaps are trusted shop/member/device/entitlement authority, safe migrations and key recovery, durable audit/inbox/outbox/compensation, real connected-system boundaries, provider certification, packaged low-end evidence and artifact-first release authority.
 
-No feature implementation should bypass the roadmap dependency order.
+Do not add visible connected features around those missing foundations. Preserve useful code and migrate it through the active roadmap.
 
-## Development baseline
+## Development commands
 
-This remains a Bun/Next.js/Tauri/Prisma repository. Development commands are implementation details, not release evidence:
+The package scripts currently available include:
 
 ```bash
 bun install --frozen-lockfile
 bun run db:generate
-bun run sf-verify
+bun run typecheck
+bun run lint
+bun run test
+bun run build
 ```
 
-Packaged Windows, migration, recovery, provider and low-end verification must follow the active Coding Workflow and runbooks. `prisma db push` is not a production migration mechanism.
+These are development checks, not release evidence. The current CI command drift and packaged-candidate gaps are tracked in the current-to-target analysis and Phase 0 roadmap.
+
+`prisma db push` is development-only and is not a production migration mechanism.
 
 ## Evidence rule
 
-A claim such as “verified,” “supported,” “production-ready,” or “Stable” must identify the exact source commit, artifact digest, environment/provider/device, procedure, result and reviewer. The current authority is the Evidence Ledger and future signed release evidence manifest.
+A claim such as “verified,” “supported,” “production-ready,” or “Stable” must identify the exact source commit, artifact, environment/provider/device, procedure and result. Source code, mocks, historical test counts and version labels are not substitutes.
