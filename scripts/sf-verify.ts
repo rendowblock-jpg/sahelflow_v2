@@ -41,8 +41,10 @@ const steps: Step[] = [
 ];
 
 function printOutput(output: string): void {
-  const lines = output.trim().split("\n");
-  for (const line of lines.slice(-40)) {
+  const trimmed = output.trim();
+  if (!trimmed) return;
+
+  for (const line of trimmed.split("\n")) {
     console.error(`    ${line}`);
   }
 }
