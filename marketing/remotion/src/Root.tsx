@@ -6,7 +6,7 @@ const FPS = 30;
 
 export const RemotionRoot: React.FC = () => (
   <>
-    <Folder name="SahelFlow Launch">
+    <Folder name="SahelFlow-Launch">
       <Composition
         id="SahelFlow-Launch-60"
         component={LaunchFilm60}
@@ -32,7 +32,7 @@ export const RemotionRoot: React.FC = () => (
         height={1920}
       />
     </Folder>
-    <Folder name="SahelFlow Product Demo">
+    <Folder name="SahelFlow-Product-Demo">
       <Composition
         id="SahelFlow-Demo-90"
         component={DemoFilm90}
