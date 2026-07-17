@@ -54,103 +54,83 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ## Deep-dive findings
 
-- The active baseline equals the expected integrated `main` commit: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 - `sf-audit`, `sf-verify` and `sf-inventory` now execute from clean Actions checkouts and are retained through visible steps or artifacts.
 - Source inventory confirms the runtime/shop migration surface is broad enough that call-site enumeration must precede a `ShopContext` rewrite.
 - The current Tauri host still uses fixed ports 3000/3001, a default `shops/dev.db` migration target and process-global child environment.
 - The mandatory Next.js runtime is now fail-closed at source level, but the failure is still primarily diagnostic/log-facing; the dedicated seller-visible blocked/recovery shell remains missing.
 - WhatsApp remains a degradable capability with backoff respawn and demo/offline behavior. Its exact required/degraded policy must be represented in the startup state model rather than inferred from logs.
 - The current database path and migration runner still assume one default shop. This must not be expanded by ad hoc path changes; Phase 1B requires explicit registry/context and all-shop migration coordination.
-- Fixed endpoint removal and per-launch credentials must converge with readiness rather than being patched independently.
+- Fixed endpoint removal, per-launch credentials and readiness must converge inside one supervisor boundary.
 
 ## Multi-phase plan
 
 ### Phase: 0A — Clean-checkout authority and repository truth
 
 - Status: source-level command and inventory evidence complete for the current branch; refresh after material source changes.
-- Purpose: prove the repository can be checked out and its governing commands execute.
-- Work and questions: run complete Markdown link/reference validation; run `bun run sf-audit`; generate inventories for files, routes, API endpoints, commands, pages, components, design tokens, Prisma models, migrations, tests and providers; inspect component-local READMEs and sidecars; run `bun run sf-verify --fast`, then relevant full checks.
-- Capability/journey/experience impact: establishes traceability and prevents stale local notes from weakening active product/experience authority.
-- Evidence or completion signal: runs #371, #374 and #378 plus the retained `phase0-repository-inventory` artifact.
+- Evidence: runs #371, #374 and #378 plus the retained `phase0-repository-inventory` artifact.
 
 ### Phase: 0B — CI startup and shared-command repair
 
 - Status: complete for current branch.
-- Purpose: make pull-request checks actually start and bind to the same commands used locally.
-- Work and questions: preserve complete diagnostic output, compile release-only Rust code, and keep the clean-checkout commands visible and reproducible.
-- Capability/journey/experience impact: none directly; enables trustworthy implementation evidence.
-- Evidence or completion signal: run #378 passed every configured Quality Gate and release-path Rust step.
+- Evidence: run #378 passed every configured Quality Gate and release-path Rust step.
 
 ### Phase: 0C — Installed Windows candidate baseline
 
 - Status: not executed; requires Windows implementation lab.
-- Purpose: produce one internal Windows-only candidate and establish runtime/readiness truth.
-- Work and questions: build without external Node/Bun/Rust on the test machine; verify resources and manifest; exercise clean install, occupied endpoint, missing resource, child failure and shutdown/restart; capture source/artifact digests and machine/Windows profile.
-- Capability/journey/experience impact: startup, blocked/degraded/recovery states and support diagnostics.
-- Evidence or completion signal: installed-candidate report with exact artifact identity and observed failure behavior.
+- Purpose: produce one internal Windows-only candidate and establish runtime/readiness truth through clean install, missing resource, occupied endpoint, child failure and shutdown/restart evidence.
 
 ### Phase: 1A — Supervised authenticated local runtime
 
 - Status: started.
-- Purpose: prevent partial-ready startup and ambiguous fixed-endpoint behavior.
 - Completed bounded work: mandatory application-server resource/runtime/spawn/readiness failures now abort setup; timeout kills the server child; optional sidecar startup occurs only after application-server readiness; release-only code is compiled in CI.
-- Next work and questions: introduce a structured startup state and seller-visible blocked/recovery window; select per-launch endpoints; generate per-launch credentials; define readiness protocol, restart budget, crash-loop/safe-mode behavior and support-readable diagnostics; then failure-inject each named state.
-- Capability/journey/experience impact: startup, degraded, blocked, retry, support and recovery journeys.
-- Evidence or completion signal: release compile is green; installed-candidate failure-injection proof remains required before completion.
+- Next work: introduce a structured startup state and seller-visible blocked/recovery window; select per-launch endpoints; generate per-launch credentials; define readiness protocol, restart budget, crash-loop/safe-mode behavior and support-readable diagnostics; then failure-inject each named state.
+- Evidence: release compile is green; installed-candidate failure-injection proof remains required before completion.
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
 - Status: call-site inventory next; implementation not started.
-- Purpose: guarantee every operation targets the intended shop and every supported upgrade is recoverable.
-- Work and questions: define `ShopContext`; design atomic versioned registry; enumerate all call sites and background scopes; remove silent fallback through bounded adapters; replace production `db push`; implement all-shop preflight, compatibility report, external journal, verified snapshots, interruption/rerun/low-disk/corrupt-registry handling.
-- Capability/journey/experience impact: open/switch shop, missing/corrupt shop, maintenance, migration and recovery journeys.
-- Evidence or completion signal: no write without explicit context; corrupt/missing registry never opens another shop; interrupted migrations resume or enter clear maintenance/recovery; every supported shop has verified backup and result report.
+- Work: define `ShopContext`; design atomic versioned registry; enumerate all call sites and background scopes; remove silent fallback through bounded adapters; replace production `db push`; implement all-shop preflight, compatibility report, external journal, verified snapshots, interruption/rerun/low-disk/corrupt-registry handling.
 
 ### Phase: 0D — Reference baseline
 
 - Status: not executed.
-- Purpose: capture no-optimization startup, memory and representative operation measurements.
-- Work and questions: run exact candidate and datasets on ThinkPad T470 and an agreed 4 GB floor-reference environment when available.
-- Capability/journey/experience impact: low-end responsiveness and guidance.
-- Evidence or completion signal: retained traces identifying artifact, Windows build, hardware, dataset, cold/warm runs and limitations.
+- Work: run the exact candidate and datasets on ThinkPad T470 and an agreed 4 GB floor-reference environment.
 
 ## Decisions
 
 | Decision | Why | Decided by or evidence | Date |
 |---|---|---|---|
-| Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It is the actual integrated default-branch commit observed at wave start. | GitHub repository and commit inspection. | 2026-07-17 |
-| Use `agent/proven-canonical-windows-desktop`. | Normal outcome branch required by the coding workflow. | Coding Workflow. | 2026-07-17 |
-| Treat run `29592496180` as a billing-lock startup failure, not repository evidence. | Both jobs had zero steps and GitHub exposed the account-lock annotation. | GitHub Actions metadata and annotation. | 2026-07-17 |
-| Use a valid deterministic 256-bit hexadecimal fallback key in CI. | The earlier placeholder violated the encryption key contract and caused broad test failure. | Retained Quality Gate diagnostics; run #371. | 2026-07-17 |
-| Create the target-suffixed Linux sidecar placeholder inside CI only. | Tauri configuration validation needs the path for Linux cargo checking; committing a fake packaged sidecar would weaken artifact truth. | Release build-script error and subsequent green smoke. | 2026-07-17 |
-| Retain diagnostic artifacts for truncated Quality Gate and Rust logs. | Connector log responses can omit the failure tail; artifacts provide exact bounded evidence without user intervention. | Runs #370 and #377 diagnostic artifacts. | 2026-07-17 |
-| Add `sf-inventory` as a mechanical evidence command. | Phase 0 requires repeatable inventories, but generated evidence must not become a second authority. | Run #374 artifact. | 2026-07-17 |
-| Compile Tauri with `cargo check --release` in CI. | The packaged startup supervisor is behind `cfg(not(debug_assertions))`; debug checking did not compile shipping code. | Run #376 exposed the latent API failure; run #378 passed after repair. | 2026-07-17 |
-| Fail closed when the mandatory application server is unavailable. | Returning success after missing resources/runtime, spawn failure or readiness timeout allowed a blank or partial-ready shell. | Source inspection, target invariant and run #378 release compile. | 2026-07-17 |
-| Start the degradable WhatsApp sidecar only after mandatory server readiness. | A failed shell launch must not leave a sidecar child running or imply partial readiness. | Source inspection and release-path compile. | 2026-07-17 |
+| Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It is the integrated default-branch commit observed at wave start. | GitHub repository inspection. | 2026-07-17 |
+| Use a valid deterministic 256-bit hexadecimal fallback key in CI. | The earlier placeholder violated the encryption key contract and caused broad test failure. | Retained diagnostics; run #371. | 2026-07-17 |
+| Create the target-suffixed Linux sidecar placeholder inside CI only. | Tauri validation needs the path for Linux checking; committing a fake packaged sidecar would weaken artifact truth. | Build-script error and green smoke. | 2026-07-17 |
+| Retain diagnostic artifacts for truncated Quality Gate and Rust logs. | Connector responses can omit the failure tail; artifacts provide exact bounded evidence. | Runs #370 and #377. | 2026-07-17 |
+| Add `sf-inventory` as a mechanical evidence command. | Phase 0 requires repeatable inventories without creating a second authority. | Run #374. | 2026-07-17 |
+| Compile Tauri with `cargo check --release` in CI. | Packaged startup code is behind `cfg(not(debug_assertions))`; debug checking excluded it. | Runs #376 and #378. | 2026-07-17 |
+| Fail closed when the mandatory application server is unavailable. | Returning success allowed a blank or partial-ready shell. | Source inspection and run #378. | 2026-07-17 |
+| Start the degradable WhatsApp sidecar only after mandatory server readiness. | A failed shell launch must not leave an orphan sidecar or imply partial readiness. | Source inspection and release compile. | 2026-07-17 |
 
 ## Working notes and open questions
 
-- Use the inventory to enumerate startup/readiness and shop-routing call sites; do not infer completeness from filename counts alone.
+- Enumerate startup/readiness and shop-routing call sites from the inventory; filename counts alone are not completeness proof.
 - The next Phase 1A patch must produce a structured blocked/recovery state visible to the seller, not only a panic or stderr message.
-- Endpoint allocation, per-launch credentials and readiness must be designed and implemented as one bounded supervisor protocol.
-- Select exact registry and `ShopContext` interfaces only after current call sites and background scopes are observed.
-- Exact T470 and 4 GB reference datasets remain implementation-lab choices, not product changes.
+- Endpoint allocation, per-launch credentials and readiness must be one bounded supervisor protocol.
+- Select registry and `ShopContext` interfaces only after current call sites and background scopes are observed.
+- Exact T470 and 4 GB reference datasets remain implementation-lab choices.
 
 ## Implementation and evidence
 
-- Branches or pull requests: `agent/proven-canonical-windows-desktop`; draft PR #100.
+- Branch and PR: `agent/proven-canonical-windows-desktop`; draft PR #100.
 - Green clean-checkout CI: run #371 (`29603869888`) and run #374 (`29604264999`).
-- Final green runtime checkpoint: run #378 (`29605285748`) passed authority audit, inventory, Prisma generation/deploy/status, TypeScript, ESLint, Vitest, coverage, security audit and `cargo check --release`.
+- Green runtime checkpoint: run #378 (`29605285748`) passed authority audit, inventory, Prisma generation/deploy/status, TypeScript, ESLint, Vitest, coverage, security audit and `cargo check --release`.
 - Inventory artifact: `phase0-repository-inventory`, artifact `8416217843`, digest `sha256:545f9ebbf1b9857bc7f44561c0f28832c5421bcf452bdd0036492380f3fd376c`.
-- Runtime source: Tauri setup now rejects mandatory local-server startup failures and does not start the sidecar before server readiness.
-- Visual/RTL/accessibility evidence where applicable: none yet for the blocked/recovery startup state.
-- Packaged/provider/recovery evidence where applicable: none yet.
-- Known limitations: no mounted checkout or Windows runtime in this chat; CI proves clean Linux checkout and release compilation, not an installed Windows candidate.
+- Runtime source: Tauri setup rejects mandatory local-server startup failures and does not start the sidecar before server readiness.
+- Visual/RTL/accessibility evidence: none yet for the blocked/recovery startup state.
+- Packaged/provider/recovery evidence: none yet.
+- Known limitation: CI proves clean Linux checkout and release compilation, not an installed Windows candidate.
 
 ## Current checkpoint
 
 - What is now true: CI is fully green and binds clean-checkout authority, inventory, JS/Prisma verification and release-only Rust compilation; mandatory local-server failure no longer returns success at source level.
-- What changed in the plan: Phase 0A/0B source evidence is complete enough to proceed; Phase 1A has begun before installed-candidate proof because the first defect was source-provable and release-compile-verifiable.
-- Current blocker or uncertainty: seller-visible blocked/recovery presentation, fixed endpoints, per-launch authentication and installed Windows behavior remain unproven.
-- Exact next move: enumerate startup/readiness call sites from the retained inventory and implement one structured blocked/recovery startup state that cannot expose the main shell as ready, while designing endpoint allocation and per-launch authentication as part of the same supervisor boundary.
+- What changed in the plan: Phase 0A/0B source evidence is complete enough to proceed, and Phase 1A is active.
+- Current uncertainty: seller-visible blocked/recovery presentation, fixed endpoints, per-launch authentication and installed Windows behavior remain unproven.
+- Exact next move: enumerate startup/readiness call sites and implement one structured blocked/recovery startup state that cannot expose the main shell as ready, while designing endpoint allocation and per-launch authentication inside the same supervisor boundary.
