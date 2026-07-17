@@ -1,18 +1,32 @@
 # SahelFlow — Coding, Review and Evidence Workflow
 
 > **Status:** Active lightweight implementation workflow  
+> **Product authority:** `../product/`  
+> **Experience authority:** `../experience/`  
 > **Coordination model:** `../operations/MAWS_STRUCTURE_AND_WORKFLOW.md`  
 > **Execution path:** `IMPLEMENTATION_ROADMAP.md`
 
 ## 1. Purpose
 
-This workflow keeps implementation safe without turning SahelFlow into a task-management bureaucracy.
+This workflow keeps implementation safe and coherent without turning SahelFlow into a ticket bureaucracy.
 
 The normal unit of continuity is a **wave**: one meaningful product/system outcome pursued through as many investigation, design, implementation, migration, test and review phases as necessary.
 
-Issues are optional. Use one when work is independently owned, independently deliverable, blocked, externally visible, or needs a durable discussion. Do not create an issue merely to satisfy process.
+Issues are optional. Use one when work is independently owned, independently deliverable, blocked, externally visible or needs a durable discussion. Do not create an issue merely to satisfy process.
 
-## 2. Core rules
+## 2. Authority and core rules
+
+Apply the repository precedence before coding:
+
+1. newer explicit numbered Founder decision for the choice it expressly changes;
+2. Founder-approved product contract and Stable scope;
+3. experience/capability/journey authority for included scope;
+4. Engineering Specification and accepted superseding ADRs;
+5. Current-to-Target Analysis;
+6. Implementation Roadmap, this workflow and provider registry;
+7. active wave and Working Memory.
+
+Core rules:
 
 - `main` is integrated truth; branches and pull requests are proposed work.
 - Start from current `main` unless a deliberate stacked dependency is documented.
@@ -20,12 +34,30 @@ Issues are optional. Use one when work is independently owned, independently del
 - Inspect and test the real source/runtime boundary affected by the change.
 - A document, schema, screen, test count or merged PR is not evidence of launch readiness by itself.
 - Preserve seller data and compatibility before deleting legacy authority.
-- Product choices come from the Founder-approved product package.
-- Architecture changes update the Engineering Specification or a superseding ADR only when a real decision changes.
-- Durable findings, decisions, blockers and next moves go into working memory or the active wave—not an endless handoff log.
+- A lower document or current code path cannot silently weaken a higher product or experience requirement.
+- A Candidate capability needs Founder classification before it becomes a public commitment.
+- Architecture changes update the Engineering Specification or a superseding ADR only when the target decision changes.
+- Durable findings, decisions, blockers and next moves go into the owning authority, Working Memory or the active wave—not an endless handoff log.
 - Credentials, signing material and seller data never belong in GitHub artifacts.
 
-## 3. Branch and pull-request practice
+## 3. Governing contract for a wave or pull request
+
+Before implementation begins, identify:
+
+- controlling product clause or Founder decision;
+- scope class: Required, Conditional, Depth requirement, Candidate or Excluded;
+- capability atlas section;
+- journey and affected operational states;
+- applicable experience dimensions and page-completion obligations;
+- engineering invariants and ADRs;
+- roadmap phase and prerequisite gates;
+- risk class and required evidence layers;
+- migration, compatibility, rollback/forward-repair impact;
+- explicit non-goals.
+
+Not every pull request needs every field, but omission must be intentional. A user-facing PR cannot omit journey and experience impact. A data/security/provider/release PR cannot omit invariants and evidence.
+
+## 4. Branch and pull-request practice
 
 Use short-lived descriptive branches, normally:
 
@@ -41,57 +73,62 @@ agent/explicit-shop-context
 agent/transactional-outbox
 ```
 
-Pull requests should explain:
+Pull requests explain:
 
 - the outcome and why it matters;
-- the current behavior/root cause;
-- the target behavior and affected invariant;
+- the governing contract described above;
+- current behavior and root cause;
+- target behavior and affected invariant;
 - important tradeoffs and non-goals;
-- migration/compatibility/rollback impact;
-- validation performed and evidence produced;
+- migration/compatibility/recovery impact;
+- validation performed and exact evidence produced;
 - remaining limitations or follow-up.
 
 Use draft pull requests while the change is still being shaped. Stacked pull requests are acceptable when each layer is understandable and safe on its stated base.
 
-Do not push directly to `main`, create release tags, or publish Stable artifacts from an unreviewed local script.
+Do not push directly to `main`, create release tags or publish Stable artifacts from an unreviewed local script.
 
-## 4. Risk classes
+## 5. Risk classes
 
 Use the highest applicable class.
 
 ### R0 — Documentation and non-executable metadata
 
-Examples: current-state analysis, link cleanup, prompts, evidence descriptions.
+Examples: authority correction, current-state analysis, link cleanup, prompts and evidence descriptions.
 
 Minimum evidence:
 
-- technical consistency and link review;
-- no product/architecture claim beyond source evidence;
-- review by the relevant product/engineering owner when authority changes.
+- authority/precedence and technical consistency review;
+- link/reference review;
+- no product, experience or architecture claim beyond its controlling evidence;
+- relevant Founder/product/engineering review when authority changes.
 
 ### R1 — Presentation and read-only behavior
 
-Examples: styles, accessibility, read-only views, non-sensitive diagnostics.
+Examples: styles, accessibility, read-only views and non-sensitive diagnostics.
 
 Minimum evidence:
 
-- type/lint/unit or component checks as relevant;
-- visual, RTL and accessibility evidence for affected journeys;
-- no authorization/data-class regression.
+- relevant type/lint/unit or component checks;
+- visual evidence for affected states and viewports;
+- Arabic/French/English and RTL/LTR behavior as applicable;
+- keyboard, focus, reduced-motion and accessibility evidence;
+- no authorization or data-class regression.
 
 ### R2 — Ordinary local business writes
 
-Examples: order status, product/customer mutation, expense, automation condition.
+Examples: order status, product/customer mutation, expense and automation condition.
 
 Minimum evidence:
 
 - transaction/service integration tests;
-- idempotency or concurrency tests when the operation can retry/race;
+- valid/invalid transition and permission checks;
+- idempotency or concurrency tests when retry/race is possible;
 - audit/event/outbox assertions once that foundation exists;
 - migration compatibility where data shape changes;
 - packaged journey evidence when user-facing.
 
-### R3 — Security, identity, money or external effects
+### R3 — Identity, money, secrets or external effects
 
 Examples: authentication, permissions, licensing, keys, secrets, AI approvals, provider effects, refunds and remote commands.
 
@@ -99,11 +136,12 @@ Minimum evidence:
 
 - threat-model delta;
 - negative/adversarial tests;
-- replay/concurrency/failure injection;
-- exact actor/shop/tenant/permission assertions;
-- secret/PII safety checks;
-- independent review when available;
-- recovery or compensation behavior.
+- replay, concurrency, timeout and failure injection;
+- exact actor/shop/tenant/member/device/permission assertions;
+- secret and data-class safety checks;
+- independent review where available;
+- recovery or compensation behavior;
+- provider live evidence when a public capability is affected.
 
 ### R4 — Data survivability and release authority
 
@@ -114,73 +152,93 @@ Minimum evidence:
 - all R3 controls;
 - compatibility matrix;
 - interruption and recovery drill;
-- artifact hashes/signature verification;
-- rollback/forward-fix rehearsal;
+- artifact hashes and signature verification;
+- rollback-compatible hold or forward-fix rehearsal;
 - Founder/maintainer approval before release impact.
 
-## 5. Review focus
+## 6. Review focus
 
-Reviewers prioritize correctness over style:
+Reviewers prioritize correctness and whole-product coherence:
 
-- Does the change preserve the product contract?
-- Is shop/tenant/member/device/actor context trusted and explicit?
+- Does the change preserve the product contract and its scope class?
+- Does it satisfy the relevant capability and complete journey states rather than only the happy path?
+- Does it satisfy applicable experience dimensions, Arabic/RTL, accessibility and low-end behavior?
+- Is shop/tenant/member/device/session/actor context trusted and explicit?
 - Can a crash, retry, timeout or duplicate lose or repeat a business effect?
 - Are money, stock and status changes exact and compensatable?
-- Can a legacy fallback or setup path bypass security?
+- Can a legacy fallback or setup path bypass authority?
 - Can seller data be stranded by migration, key loss or restore failure?
-- Can secrets or PII enter browser storage, logs, cloud payloads, diagnostics or fixtures?
-- Are provider capability claims narrower than or equal to evidence?
-- Is failure visible and recoverable to the seller/support operator?
-- Do tests exercise the dangerous path, not only the happy path?
-- Is obsolete code removed only after migration and parity?
+- Can secrets or private data enter browser storage, logs, cloud payloads, diagnostics or fixtures?
+- Are provider capability claims narrower than or equal to both Founder scope and evidence?
+- Is failure visible, understandable and recoverable to the seller or support operator?
+- Do tests exercise dangerous and degraded paths?
+- Is obsolete code removed only after migration, parity and recovery proof?
 
-Resolve high-severity review findings before merge. Lower-severity work can be recorded in the active wave when deferral is intentional and bounded.
+Resolve high-severity findings before merge. Lower-severity work can be recorded in the active wave when deferral is intentional, bounded and does not violate a launch gate.
 
-## 6. Validation layers
+## 7. Validation layers
 
-Choose layers based on risk. More layers are required as risk increases.
+Choose layers based on risk:
 
 1. static/type/lint checks;
 2. unit tests;
 3. database/service integration tests;
 4. property, replay, concurrency and failure-injection tests;
-5. component/visual/RTL/accessibility checks;
-6. migration compatibility tests;
-7. installed Windows candidate tests;
-8. low-end measurements;
-9. provider sandbox/live certification;
-10. backup/recovery and incident drills;
-11. independent security/privacy review;
-12. controlled seller beta.
+5. component and visual state checks;
+6. Arabic/French/English, RTL/LTR, keyboard, zoom and accessibility checks;
+7. migration compatibility tests;
+8. installed Windows candidate tests;
+9. approved Windows compatibility-matrix tests;
+10. low-end/T470 measurements;
+11. provider sandbox/live certification;
+12. backup/recovery and incident drills;
+13. independent security/privacy/legal review;
+14. controlled seller beta.
 
 Coverage is useful for regression detection, not proof of an invariant.
 
-## 7. Database and migration rules
+## 8. Experience and page-completion rules
+
+A user-facing page or workflow is complete only when the applicable Experience Constitution contract is addressed, including:
+
+- named user/job and role/permission behavior;
+- data source, authority and freshness;
+- primary/secondary actions;
+- first-use, empty, filtered-empty and successful-empty states where relevant;
+- loading, pending, queued, committed, rejected, conflict, error, degraded, offline, stale and recovery states as applicable;
+- responsive, Arabic/RTL, keyboard and screen-reader behavior;
+- low-end budget and reduced-motion behavior;
+- connected-record behavior and trustworthy money/stock/status definitions;
+- visual evidence in required languages, modes, states and viewports.
+
+A page-specific pattern may not diverge from shared primitives or interaction patterns without explaining why.
+
+## 9. Database and migration rules
 
 - Production schema evolution uses append-only migrations, not `prisma db push`.
 - Do not rewrite an applied migration.
 - Enumerate every affected shop.
 - Declare compatibility and free-disk/runtime expectations.
 - Separate schema expansion, data migration and contraction when safer.
-- Destructive/data-transforming migration requires a verified compatible backup.
+- Destructive or data-transforming migration requires a verified compatible backup for every affected shop.
 - Backup failure blocks the migration.
 - Migration work is resumable and idempotent.
 - Journal progress outside the mutable step being recorded.
 - Never swallow or broadly reinterpret migration failures.
-- Test fresh install, each supported prior schema, mixed multi-shop state, interruption, rerun, low disk, corrupt data and backup failure.
+- Test fresh install, every supported prior schema, mixed multi-shop state, interruption, rerun, low disk, corrupt data and backup failure.
 - Rollback normally means compatible hold or forward repair, not blind down-migration.
 - Produce a seller/support-readable result.
 
-## 8. Business transaction and provider rules
+## 10. Business transaction and provider rules
 
-For launch-critical writes, the target transaction contains:
+For launch-critical writes, the target transaction contains as applicable:
 
 - domain mutation;
 - trusted audit;
 - domain event;
 - required outbox/projection intent;
 - idempotency/effect identity;
-- compensation facts where relevant.
+- compensation facts.
 
 External providers are never called inside the database transaction.
 
@@ -194,25 +252,29 @@ Provider workers:
 - reconcile independently;
 - never advance a checkpoint past untracked failure.
 
-Until the durable framework exists, new provider effects should not expand the current direct-call pattern.
+Until the durable framework exists, new provider effects must not expand the current direct-call pattern.
 
-## 9. Security-sensitive work
+Provider certification proves capability behavior; it does not by itself turn an Architecture candidate into Founder-approved scope.
 
-- Use reviewed cryptographic libraries and canonical formats.
-- Signed/encrypted formats require versioning and test vectors.
+## 11. Security, privacy and legal-sensitive work
+
+- Use reviewed cryptographic libraries and canonical versioned formats.
+- Signed/encrypted formats require explicit key purpose and test vectors.
+- Trial and permanent signing keys are separated; permanent private signing material remains offline.
 - Security defaults fail closed; recovery is explicit, not a bypass.
 - Client-supplied actor, role, tenant, member, device, shop or permission is not authoritative.
 - UI confirmation is not authorization.
 - Approval binds exact action, arguments, actor, state version, time and expiry.
 - Never log or attach full secrets, recovery material or signed entitlement payloads.
+- New or changed data classes require ownership, encryption, projection, retention, deletion and Law 18-07 review.
 - Dependency changes include provenance, license and vulnerability review.
 - Diagnostics are opt-in, previewable and redacted.
 
-## 10. Packaged Windows evidence
+## 12. Packaged Windows evidence
 
 Source and dev-server tests are not enough for runtime, migration, recovery or release work.
 
-Relevant changes must be tested against an installed candidate as appropriate:
+Relevant changes are tested against an installed candidate as appropriate:
 
 - clean standard-user install;
 - first-run identity/license/shop/recovery setup;
@@ -227,15 +289,17 @@ Relevant changes must be tested against an installed candidate as appropriate:
 - backup/restore and replacement installation;
 - uninstall/reinstall data choices;
 - firewall/antivirus/SmartScreen behavior;
-- 1366×768, zoom, keyboard, screen-reader and RTL smoke;
-- secret/PII/log/cache inspection.
+- Windows 10 22H2, supported and unsupported-CPU Windows 11, modified Windows/VM capability cases according to the product matrix;
+- 1366×768, 100–200% zoom, keyboard, screen-reader and RTL smoke;
+- secret/data/log/cache inspection.
 
-Record source commit, artifact digest, signature result, Windows build and machine profile.
+Record source commit, artifact digest, signature result, Windows build, machine profile and runtime capabilities. Functional compatibility and security-equivalence claims remain separate.
 
-## 11. Provider certification
+## 13. Provider certification
 
 A capability becomes public only when the provider registry contains current live evidence for:
 
+- scope class and controlling authority;
 - provider/API/version/environment/date;
 - adapter commit/artifact;
 - credential permissions;
@@ -246,61 +310,68 @@ A capability becomes public only when the provider registry contains current liv
 - webhook signature/replay where applicable;
 - status/error mapping;
 - known limitations and recertification trigger;
-- reviewer approval.
+- reviewer approval;
+- Founder launch-set decision where the provider is only an Architecture candidate.
 
 Mocks and source files are implementation evidence, not provider certification.
 
-## 12. Documentation updates
+## 14. Documentation updates
 
 Update the smallest durable set:
 
-- product documents only for Founder-approved product changes;
+- product documents only for explicit Founder-approved product changes;
+- Experience Constitution for a changed cross-product UX/frontend rule;
+- Capability Atlas for changed durable capability depth;
+- Journey Atlas for changed shared state vocabulary or end-to-end behavior;
 - Engineering Specification for target invariant/protocol changes;
 - superseding ADRs for a reopened architecture decision and rationale;
-- current-to-target analysis when source reality or disposition materially changes;
+- Current-to-Target Analysis when source reality or disposition materially changes;
 - roadmap when dependencies or phase outcomes change;
-- provider registry for capability/certification changes;
+- provider registry for scope/capability/certification changes;
 - a concrete runbook for a newly implemented operational recovery path;
-- working memory for active progress and next move.
+- Working Memory and the active wave for progress and next move;
+- current changelog for integrated SahelFlow 1.0 work, not historical readiness theater.
 
-Do not create a new status document when an existing authority can be updated. Historical reasoning belongs in Git history and pull requests.
+Do not create a new status document when an existing authority can be updated. Historical reasoning belongs in Git history, pull requests, research or the legacy changelog.
 
-## 13. Merge gate
+## 15. Merge gate
 
 A pull request is mergeable when:
 
-- its outcome and risk are clear;
+- its governing contract, outcome and risk are clear;
 - relevant checks actually execute;
 - required review is complete;
 - dangerous failure and migration paths are tested;
+- applicable capability, journey and experience obligations are addressed;
 - compatibility and recovery are credible;
-- documentation and claims agree with the implementation;
+- documentation and claims agree with implementation;
 - no unresolved high-severity finding remains;
 - the result is safe on its target base.
 
-If CI fails before executing, high-risk implementation is blocked. Emergency incident containment or documentation correction may merge only with explicit maintainer/Founder judgment and a recorded follow-up.
+If CI fails before executing, high-risk implementation is blocked. Emergency containment or documentation correction may merge only with explicit maintainer/Founder judgment and a recorded follow-up.
 
 Prefer squash merge for one coherent outcome. Preserve migration/evidence provenance in the pull-request body and committed artifacts where needed.
 
-## 14. Release gate
+## 16. Release gate
 
 A release candidate is built and signed before publication. Stable requires:
 
 - exact version/evidence manifest;
 - required CI and installed-candidate evidence;
 - compatible migrations and verified recovery;
-- current provider certifications;
-- security/privacy and accessibility evidence;
-- reference-device results;
+- current Founder-approved provider certifications;
+- security/privacy/Law 18-07 and accessibility evidence;
+- reference-device and compatibility-matrix results;
+- continuity-economics validation;
 - beta exit;
-- accurate known limitations;
+- accurate known limitations and public claims;
 - Founder approval.
 
-The application updater and public release never depend on a tag that was pushed before the candidate was proven.
+The updater and public release never depend on a tag pushed before the candidate was proven.
 
-## 15. Required operational drills
+## 17. Required operational drills
 
-Create a separate runbook only when implementation makes the procedure concrete. Until then, the roadmap owns the requirement. A runbook becomes ready only after it is exercised against the relevant packaged/cloud/provider system.
+Create a separate runbook only when implementation makes the procedure concrete. A runbook becomes ready only after it is exercised against the relevant packaged/cloud/provider system.
 
 ### Phase 0–1
 
@@ -315,8 +386,9 @@ Create a separate runbook only when implementation makes the procedure concrete.
 
 - Key migration, rotation and loss.
 - Provider credential compromise.
-- Trial issuance, expiry and activation.
+- Trial issuance, expiry, activation and trial-backup retention.
 - Canonical desktop transfer and replacement-machine recovery.
+- Independent and assisted recovery-share ceremonies.
 - Member, device and session revocation.
 
 ### Phase 3
@@ -329,10 +401,11 @@ Create a separate runbook only when implementation makes the procedure concrete.
 ### Phase 4
 
 - Control-plane outage and ordered reconnect.
-- Tenant-boundary/security incident.
+- Tenant-boundary incident.
 - Backup upload, retention and object corruption.
 - Full disaster recovery on a replacement PC.
 - Diagnostic bundle creation, redaction and support transfer.
+- Cost/continuity threshold and service-exit exercise.
 
 ### Phase 5
 
