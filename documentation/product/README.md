@@ -1,42 +1,30 @@
-# SahelFlow 1.0 — Authoritative Product Documentation
+# SahelFlow 1.0 — Product Authority
 
 > **Status:** Founder-approved product baseline  
-> **Prepared:** 2026-07-15  
-> **Applies to:** SahelFlow 1.0 / major release 1
+> **Applies to:** SahelFlow major release 1
 
-This directory is the authoritative product package produced by the Excellence Reset. It prevents historical visions, internal version labels, provisional ADRs and implementation claims from being treated as equally valid.
+This directory contains the complete product contract. It intentionally excludes temporary current-state reports, implementation handoffs and architecture-phase records.
 
-## Product authority order
+## Authority order
 
-When product documents conflict, use this order:
+1. [`LAUNCH_CONSTITUTION.md`](LAUNCH_CONSTITUTION.md) — product identity, market, commercial contract and non-negotiable standards.
+2. [`FOUNDER_DECISIONS.md`](FOUNDER_DECISIONS.md) — explicit Founder-approved choices.
+3. [`LAUNCH_SCOPE_AND_ENTITLEMENTS.md`](LAUNCH_SCOPE_AND_ENTITLEMENTS.md) — launch systems, exclusions, limits, resource entitlements, performance targets and evidence gates.
 
-1. [`LAUNCH_CONSTITUTION.md`](LAUNCH_CONSTITUTION.md) — identity, commercial contract and non-negotiable launch standards.
-2. [`FOUNDER_DECISIONS.md`](FOUNDER_DECISIONS.md) — founder-approved policies and choices.
-3. [`LAUNCH_SCOPE_AND_ENTITLEMENTS.md`](LAUNCH_SCOPE_AND_ENTITLEMENTS.md) — included systems, exclusions, limits, expansion rights and launch gates.
-4. [`CONTRADICTION_REGISTER.md`](CONTRADICTION_REGISTER.md) — implementation/evidence/documentation drift against those choices.
-5. [`VERIFIED_CURRENT_STATE.md`](VERIFIED_CURRENT_STATE.md) — the pre-architecture source-audit baseline at its stated commit.
-6. [`NEXT_SESSION_HANDOFF.md`](NEXT_SESSION_HANDOFF.md) — current implementation-phase starting instructions.
-7. [`ARCHITECTURE_RESET_BRIEF.md`](ARCHITECTURE_RESET_BRIEF.md) — completed architecture-phase acceptance brief, retained for traceability.
+When those documents conflict, the earlier item in this list wins unless the Founder records a newer explicit decision.
 
-Engineering details are governed by [`../architecture/README.md`](../architecture/README.md), the final Engineering Specification and active superseding ADRs. Implementation status is governed by the commit-linked Evidence Ledger.
+## Engineering relationship
 
-All older documents are historical reference only unless explicitly revalidated and linked by a current authoritative document.
-
-## Required implementation read order
-
-Before feature coding:
-
-1. Read this entire product directory.
-2. Read [`../architecture/ENGINEERING_SPECIFICATION.md`](../architecture/ENGINEERING_SPECIFICATION.md).
-3. Read [`../architecture/ADR_INDEX.md`](../architecture/ADR_INDEX.md) and [`../architecture/SUPERSEDING_ADRS.md`](../architecture/SUPERSEDING_ADRS.md).
-4. Read [`../architecture/EVIDENCE_LEDGER.md`](../architecture/EVIDENCE_LEDGER.md), [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md) and [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md).
-5. Start with roadmap Milestone M0. Do not bypass authority, migration, security or durability dependencies to build visible features early.
+- [`../architecture/ENGINEERING_SPECIFICATION.md`](../architecture/ENGINEERING_SPECIFICATION.md) translates the product contract into target system boundaries and invariants.
+- [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md) compares the real codebase with the finished product.
+- [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md) defines the work path.
+- Evidence proves implementation; it does not redefine the product contract.
 
 ## Rules
 
-- A feature is not complete because a screen, schema, adapter, test or document exists.
-- Claims such as `secure`, `hardened`, `AAA`, `real-time`, `offline`, `zero data loss`, `supported`, `Stable` or `best` require evidence linked to an exact commit/artifact and acceptance gate.
-- Founder decisions define the product contract. Engineering specifications and ADRs define how it is implemented. Evidence records define what is proven.
-- Historical labels such as v3, v4.1, v4.2, session numbers, design-system generations and Maze Map phases are not public product versions.
-- The first public stable product is **SahelFlow 1.0**.
-- Founder choices may be reopened only for a proven critical impossibility, security/legal issue or unsustainable economics, through a superseding evidence-backed decision.
+- A feature is not complete because a page, schema, adapter, test or document exists.
+- Founder choices are not silently reduced to fit current code.
+- Historical v3/v4 labels, session numbers, percentages, test counts and “production hardened” claims are not public product versions or readiness evidence.
+- The first public Stable product is **SahelFlow 1.0**.
+- Product choices may be reopened only through an explicit Founder decision after a proven critical impossibility, security/legal issue or unsustainable economics.
+- Current-state and implementation progress belong in the architecture analysis, roadmap, pull requests and working memory—not new product-status documents.
