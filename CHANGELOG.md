@@ -19,18 +19,27 @@ The format follows Keep a Changelog. Public semantic version authority will be g
 - Reconciled storefront durable-receipt success with canonical desktop command and order commitment.
 - Aligned performance, Windows compatibility, licensing, backup/recovery, teams, legal, continuity and release requirements across the active documents.
 - Moved session/v3/v4 chronology to the legacy history record.
+- Realigned the `agent-handoff` orphan ref as GLM continuity only and centralized bootstrap, verification and authority auditing on `main`.
+
+### Shared agent tooling
+
+- Added `bun run glm:bootstrap` as the current GLM environment bootstrap.
+- Added the shared `bun run sf-verify` gate, including `--fast` and `--skip-tests` modes.
+- Added `bun run sf-audit` for required-authority and relative-link validation.
+- Exposed the retained `sf-seed` and `sf-browser` development helpers through package scripts.
+- Retired orphan-only copies of the old database CLI, license signer, v2→v3 porter and Supabase mutation CLI.
+- Added the authority audit to CI before the shared verification gate.
 
 ### Current implementation status
 
 - The repository contains substantial reusable application and frontend work.
 - The application is not a Stable SahelFlow 1.0 release.
-- No application code is changed by the documentation consolidation and consistency audit.
-- The next implementation wave is **Proven Canonical Windows Desktop** after local documentation link/reference validation.
+- The documentation waves did not change application behavior; the GLM realignment changes coordination tooling and CI commands only.
+- The next implementation wave is **Proven Canonical Windows Desktop** after the first clean-checkout audit and inventory.
 
 ### Known blockers before implementation evidence can advance
 
-- GitHub Actions currently fails before executing workflow steps.
-- The workflow references an undefined `sf-verify` command.
+- GitHub Actions has previously failed before executing workflow steps; successful runner execution remains unproven.
 - No current installed Windows candidate, compatibility matrix, provider certification, recovery drill, low-end report, independent review or seller beta evidence exists.
 
 ## Historical implementation chronology
