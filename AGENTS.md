@@ -1,49 +1,39 @@
 # SahelFlow agent entry point
 
-SahelFlow uses GitHub as durable memory for work that may continue across agents
-and sessions. The coordination system is intentionally lightweight: prompts
-guide each agent, shared documents preserve context, and normal branches and
-pull requests preserve code history.
+SahelFlow uses GitHub as durable memory across agents and sessions. The system is intentionally lightweight: prompts guide specializations, working memory preserves the current wave, and normal branches and pull requests preserve implementation history.
 
 ## Start here
 
 1. Read `documentation/operations/WORKING_MEMORY.md`.
-2. Open the active wave document linked there, when one exists.
-3. If you are new to the project or your collaboration role is unclear, read
-   `documentation/operations/MAWS_STRUCTURE_AND_WORKFLOW.md`.
-4. Read only the product, vision, architecture, current-state, source, and test
-   material needed for the current wave.
-5. Use the relevant starting prompt in
-   `documentation/operations/AGENT_PROMPTS.md`.
-6. Inspect the repository and verify important claims before acting.
+2. Open the active wave or primary artifact linked there.
+3. If the collaboration model is unfamiliar, read `documentation/operations/MAWS_STRUCTURE_AND_WORKFLOW.md`.
+4. Read `documentation/product/README.md` when product scope or Founder choices matter.
+5. Read `documentation/architecture/README.md` when architecture, migration, implementation or evidence matters.
+6. Use the relevant starting prompt in `documentation/operations/AGENT_PROMPTS.md`.
+7. Inspect the repository and verify important claims before acting.
 
-If the Founder gives a newer direction, record it in working memory or the
-active wave instead of forcing it through an old plan.
+A newer Founder direction supersedes an old plan. Record the new direction in working memory or the active wave rather than creating another competing authority.
 
 ## How to work
 
-- Work in deep-dive waves and multi-phase plans rather than manufacturing an
-  issue for every action.
-- Use your best judgment to investigate, challenge, design, implement, test,
-  and revise the approach as evidence changes.
-- Agent prompts describe useful strengths, not permission boundaries.
-- Use additional agents or parallel workstreams when they materially help and
-  keep their conclusions visible in the active wave.
-- Treat Codex Desktop as the only agent currently assumed to have full local
-  desktop, filesystem, codebase, and runtime execution access. Other agents may
-  work through GitHub or their own connected tools.
-- Keep durable facts, important decisions, open questions, and the exact next
-  move in GitHub. Routine reasoning can remain in chat.
+- Work in deep-dive waves and multi-phase plans rather than manufacturing an issue for every action.
+- Use the best available method to investigate, challenge, design, implement, test and revise.
+- Agent prompts describe strengths, not permission boundaries.
+- Use additional agents or parallel workstreams when they materially help.
+- Treat Codex Desktop as the only agent currently assumed to have full local desktop, filesystem and runtime access. Other agents may work through GitHub or connected tools.
+- Keep durable facts, decisions, blockers and the exact next move in GitHub. Routine reasoning can remain in chat.
 - Update shared memory at meaningful checkpoints, not after every small action.
+- Update an existing authority instead of creating a new status, gap, handoff or planning document.
 
 ## Durable truth
 
-- Product and architecture documents hold long-lived intent and decisions.
-- The active wave holds the current outcome, investigation, plan, and progress.
+- The product package holds long-lived Founder-approved intent.
+- The Engineering Specification defines the target system.
+- The current-to-target analysis defines the latest source-grounded implementation model.
+- The roadmap defines the dependency-correct work path.
+- The active wave and working memory hold current progress.
 - `main` is integrated code; branches and pull requests are proposed work.
 - Tests and observed behavior are stronger evidence than summaries or claims.
-- Historical `AGENT_HANDOFF.md` content is context only, not current direction.
+- Historical documents and git history are context only unless a current authority links them.
 
-Do not put credentials, private data, or secret values in prompts, documents,
-commits, issues, or pull requests. Apart from real product, data, security, and
-repository constraints, MAWS does not prescribe how an agent must do its work.
+Do not put credentials, private seller data, signing material or secret values in prompts, documents, commits, issues or pull requests. Apart from real product, data, security and repository constraints, MAWS does not prescribe how an agent must do its work.

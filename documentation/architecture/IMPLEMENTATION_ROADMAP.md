@@ -1,359 +1,466 @@
-# Dependency-Correct Implementation Roadmap
+# SahelFlow 1.0 — Implementation Roadmap
 
-**Status:** Approved planning baseline; no feature implementation is authorized by this document alone.  
-**Baseline commit:** `03f0d48436b42788e463bbd1d74a388b2da22294`
+> **Status:** Active execution path  
+> **Current-state source:** `CURRENT_TO_TARGET_ANALYSIS.md`  
+> **Target authority:** `ENGINEERING_SPECIFICATION.md` and the Founder-approved product package  
+> **Planning model:** Outcome-driven phases and waves; issues are optional implementation aids, not the unit of product continuity.
 
-## Sequencing principle
+## 1. Purpose
 
-The roadmap is ordered by authority and risk, not by visible feature appeal. Cloud, mobile, storefront and provider expansion cannot be made safe before local identity, keys, explicit shop context, transactional events and release evidence exist.
+This roadmap is the single work path from the current application to the finished SahelFlow 1.0. It replaces the former M0–M14 planning ladder with a smaller dependency model tied directly to the codebase gaps.
 
-## Dependency graph
+A phase is complete only when its outcome is demonstrated. A screen, schema, branch, test count or merged PR does not by itself close a phase.
+
+## 2. Sequencing principles
+
+1. Preserve useful product behavior while replacing unsafe authority underneath it.
+2. Prove the packaged Windows system early; do not postpone runtime reality until release.
+3. Do not build connected customer-facing features before explicit identity, shop context, keys and durable events exist.
+4. Migrate one domain/effect/provider class at a time behind compatibility layers.
+5. Remove legacy paths only after data migration, parity, evidence and rollback review.
+6. Keep documentation and shared memory concise; implementation evidence belongs with the change that creates it.
+7. Performance, accessibility, security and recovery are continuous constraints, not final cleanup.
+8. Founder involvement is reserved for product choices, consequential tradeoffs, public claims and Stable approval.
+
+## 3. Dependency map
 
 ```text
-M0 Authority + CI
- ├─> M1 Windows runtime + version manifest + performance harness
- ├─> M2 Explicit shop context + registry + migration/backup preflight
- │    └─> M3 Key hierarchy + secret migration + recovery kit
- │         └─> M4 Licensing/entitlements/payment/transfer
- └─> M5 Tenant/member/device/session/authorization
-
-M2 + M5 ─> M6 Transactional audit + inbox/outbox + compensation
-M3 + M4 + M5 + M6 ─> M7 Cloud control plane + encrypted relay foundation
-M2 + M3 + M6 ─> M8 Verified zero-knowledge backup
-M6 ─> M9 Provider worker framework
-M7 + M9 ─> M10 Remote PWA projections/commands
-M7 + M9 ─> M11 Hosted storefront/releases/checkout
-M9 ─> M12 Commerce/courier/WhatsApp/Sheets/Gemini certification
-M1..M12 ─> M13 Domain/UI convergence, accessibility and low-end hardening
-M1..M13 ─> M14 Beta, incident drills and stable release
+Phase 0 — Repository and packaged truth
+        │
+        ├───────────────┐
+        ▼               ▼
+Phase 1A — Runtime   Phase 1B — Shop/data authority
+        └───────┬───────┘
+                ▼
+Phase 2 — Identity, entitlement, keys and recoverability
+                ▼
+Phase 3 — Durable operational core
+                ▼
+Phase 4 — Bounded connected platform
+          ├──────────────┬───────────────┐
+          ▼              ▼               ▼
+      Backup        Provider framework   Remote protocol
+          └──────────────┬───────────────┘
+                         ▼
+Phase 5 — Provider, PWA and storefront convergence
+                         ▼
+Phase 6 — Whole-product hardening, beta and Stable
 ```
 
-## Milestone M0 — Authority, branch protection and reproducible verification
+Phase 1A and 1B may run in parallel after Phase 0. Design research and UI prototypes may occur early, but production authority cannot bypass the graph.
 
-**Goal:** Make repository truth and merge evidence reliable before architecture changes.
+## 4. Phase 0 — Repository and packaged truth
 
-### Epics
+### Outcome
 
-- M0-E1: Generate single version/evidence manifest skeleton and reset authority to SahelFlow 1.0.
-- M0-E2: Repair GitHub Actions startup/execution; retain logs/artifacts.
-- M0-E3: Add branch protection, required checks, CODEOWNERS/risk reviewers and PR templates.
-- M0-E4: Inventory tracked files, routes, models, migrations, tests, provider claims and dependencies automatically.
-- M0-E5: Convert historical active docs to redirects/archive index and add claim-drift checks.
-- M0-E6: Establish evidence-record schema and release candidate directory/storage.
+A clean checkout can execute binding checks and produce an internal Windows candidate whose exact source, versions and artifacts are known.
 
-### Exit criteria
+### Workstreams
 
-- CI executes from a clean checkout on PRs.
-- Type, lint, unit/integration, migration status and dependency checks are binding.
-- The exact source commit and generated manifest appear in build/test evidence.
-- No v3/v4/unsupported-platform/readiness claim remains active.
-- Documentation-only changes prove the workflow before feature code starts.
+- repair CI startup and the undefined `sf-verify` command;
+- establish required type, lint, test, migration and dependency checks;
+- generate one version/build/schema/protocol/evidence manifest;
+- remove active version, platform and readiness drift;
+- make release candidate creation Windows-only and artifact-first;
+- retain logs, machine-readable test results and artifact hashes;
+- create generated inventories for routes, models, migrations, tests and provider claims;
+- establish a minimal evidence-record format;
+- capture a no-optimization T470 and 4 GB baseline;
+- keep the candidate internal; no Stable publication.
 
-## Milestone M1 — Windows runtime, process supervision and low-end harness
+### Exit gate
 
-**Goal:** Establish a supportable packaged runtime before changing business authority.
+- clean-checkout CI executes on a pull request;
+- required checks are binding and reproducible;
+- a Windows candidate is produced without external Node/Bun/Rust on the test machine;
+- source commit, build ID, versions and artifact digests agree;
+- missing runtime/resource/startup failures are visible;
+- baseline device and memory/startup evidence exists;
+- no active documentation points to invalid commands or unsupported Stable platforms.
 
-### Epics
+### Enables
 
-- M1-E1: Windows-only Tauri bundle configuration and candidate workflow.
-- M1-E2: Dynamic authenticated local endpoint/service manifest.
-- M1-E3: Process supervisor, health state machine, crash/restart budget and visible recovery UI.
-- M1-E4: Bundled runtime/server/sidecar integrity checks and artifact hashes.
-- M1-E5: Structured startup diagnostics and support bundle seed.
-- M1-E6: T470 and 4 GB dual-core HDD/SSD performance harness and datasets.
+Runtime supervision, shop authority, migration work and all later evidence.
 
-### Exit criteria
+## 5. Phase 1 — Trusted local foundation
 
-- Signed candidate installs and launches on clean Windows without Node/Bun/Rust.
-- Child crash, occupied endpoint, missing resource and corrupt install scenarios are visible and recoverable.
-- Process memory/CPU/startup budgets are measured and published.
-- No macOS/Linux stable artifact is produced.
+Phase 1 has two parallel workstreams that converge before Phase 2.
 
-## Milestone M2 — Explicit shop authority, atomic registry and safe migrations
+### 5.1 Phase 1A — Windows runtime and supervision
 
-**Goal:** Eliminate ambiguous database routing and make all-shop upgrades recoverable.
+#### Outcome
 
-### Epics
+The desktop owns a deterministic authenticated service lifecycle with explicit readiness and recovery.
 
-- M2-E1: Versioned atomic application/shop registry and recovery state.
-- M2-E2: Trusted `ShopContext`, context-aware repository interfaces and background-job scoping.
-- M2-E3: Remove silent fallback-to-dev behavior.
-- M2-E4: Recursive safe filter/query constructors and mutation guard tests.
-- M2-E5: All-shop migration coordinator, journal, compatibility manifest and maintenance UI.
-- M2-E6: Verified local snapshot primitive used by migrations.
-- M2-E7: Incremental domain migration from global `db` proxy.
+#### Workstreams
 
-### Exit criteria
+- introduce the local service supervisor abstraction;
+- reserve dynamic loopback endpoints or an equivalent OS-native channel;
+- generate per-launch service credentials and endpoint manifest;
+- supervise Next.js and WhatsApp processes with restart budgets;
+- validate bundled runtime, server, sidecar and resource hashes;
+- make startup a visible state machine;
+- implement clean shutdown, crash-loop and support diagnostics;
+- test sleep/resume, reboot, occupied endpoint, missing resource and child crash;
+- measure and reduce low-end cost without weakening correctness.
 
-- Every write is provably shop-scoped.
-- Corrupt/missing registry never opens another shop DB.
-- Migration enumerates all shops, blocks on backup failure and resumes after interruption.
-- Existing seller data migrates with an auditable report.
+#### Exit gate
 
-## Milestone M3 — Key hierarchy, secrets and recovery kit
+- clean Windows install launches consistently;
+- the app never presents ready state while required services are unavailable;
+- service endpoints are loopback-only and per-launch authenticated;
+- restart/recovery behavior is bounded and visible;
+- total process memory/startup budgets have measured evidence.
 
-**Goal:** Replace the plaintext master-key authority without losing current data.
+### 5.2 Phase 1B — Explicit shop authority and safe migrations
 
-### Epics
+#### Outcome
 
-- M3-E1: Threat model and Windows protected root-key design.
-- M3-E2: Versioned ciphertext/key envelope and per-shop/secret/backup key separation.
-- M3-E3: Resumable legacy key wrapping/re-encryption migration.
-- M3-E4: Scoped secret-service backend and provider credential migration.
-- M3-E5: Recovery-kit format, UX, storage warnings and restore ceremony.
-- M3-E6: Rotation/revocation journal and failure recovery.
-- M3-E7: Secret/PII canary scanner for logs, DB, browser caches, diagnostics and cloud payload fixtures.
+Every local operation is tied to the intended shop, and every supported upgrade is recoverable across all registered shops.
 
-### Exit criteria
+#### Workstreams
 
-- No plaintext root/provider secret is stored in ordinary files/DB/browser/cloud.
-- Current encrypted data survives migration, restart, rotation and replacement-machine recovery drill.
-- Losing one subkey does not expose unrelated shops/purposes.
-- Independent security review accepts the hierarchy or records blocking findings.
+- design and migrate to an atomic versioned registry;
+- introduce trusted `ShopContext`;
+- build context-aware repositories and background-job scopes;
+- remove silent database fallback;
+- replace production `db push`;
+- implement all-shop migration preflight, compatibility checks and journal;
+- require verified local snapshots for risky migrations;
+- make migration error classification exact and fail closed;
+- produce seller/support-readable migration reports;
+- add multi-shop, corrupt-registry, missing-file, interrupted-migration and rerun tests.
 
-## Milestone M4 — Signed trial, entitlements, payment verification and transfer
+#### Exit gate
 
-**Goal:** Implement the founder-approved commercial contract exactly.
+- no write can execute without explicit shop context;
+- missing/corrupt registry never opens another shop;
+- every registered shop is enumerated and version-checked;
+- backup failure blocks risky migration;
+- interrupted migration resumes or enters a clear recovery state;
+- current seller data has a tested migration path.
 
-### Epics
+### Enables
 
-- M4-E1: Signed entitlement format, verifier vectors, key rotation and revocation epoch.
-- M4-E2: Online one-per-machine seven-day trial issuer and anti-replay records.
-- M4-E3: Unified complete-lockout enforcement matrix.
-- M4-E4: Manual BaridiMob/CCP verification and immutable founder approval record.
-- M4-E5: Offline permanent-license signing ceremony/tooling.
-- M4-E6: Included/extra shop, member/device and five-year same-major claims/enforcement.
-- M4-E7: Canonical installation transfer/recovery state machine.
-- M4-E8: Legacy license migration and deletion of self-issued/local trusted-status paths.
+Keys, identity, licensing, durable events, backup and cloud protocols.
 
-### Exit criteria
+## 6. Phase 2 — Identity, entitlement, keys and recoverability
 
-- Clearing/reinstalling local state does not create another trial.
-- Expired trial blocks UI/API/background/remote operations and preserves data.
-- Permanent major-version local use works through a prolonged control-plane outage.
-- Founder can verify payment, issue, transfer and revoke with immutable audit.
+### Outcome
 
-## Milestone M5 — Tenant, team, device, session and field authorization
+The installation has trusted owner/member/device/shop authority, executable commercial entitlements and a recovery design that does not depend on unsafe local/browser state.
 
-**Goal:** Establish trusted human/device identity before remote/team features.
+### Workstreams
 
-### Epics
+#### Keys and secrets
 
-- M5-E1: Tenant/member/role/field-policy/device/session/invitation/approval schemas.
-- M5-E2: Owner migration from current PIN/bootstrap state.
-- M5-E3: Local unlock and remote session authentication.
-- M5-E4: Device enrollment, two-device/three-owner-device limits and revocation.
-- M5-E5: Server/desktop policy engine and trusted request context.
-- M5-E6: Owner re-auth/approval flows for high-risk actions.
-- M5-E7: Audit actor migration from free-form strings.
+- threat-model the Windows root-key and recovery design;
+- add versioned key/ciphertext envelopes;
+- separate per-shop, secret, backup and relay keys;
+- migrate the plaintext keyfile through a resumable journal;
+- move provider credential access to scoped handles;
+- create secret/PII canary scans;
+- implement rotation and revocation.
 
-### Exit criteria
+#### Identity and authorization
 
-- Forged client actor/role/shop/tenant claims fail.
-- Field permissions are enforced in queries/projections/mutations.
-- Revoked devices/sessions lose access and cached data is purged according to policy.
-- Owner plus ten active members and device limits are enforced under concurrency.
+- create tenant/member/role/field-policy/device/session/invitation/approval models;
+- migrate the current owner PIN into the owner principal;
+- replace broad setup bypass with a narrow one-time bootstrap capability;
+- create trusted request/command context;
+- enforce shop and field permissions at query/mutation boundaries;
+- enroll and revoke devices;
+- bind audit actors to principals and sessions;
+- implement owner re-authentication and approval policy.
 
-## Milestone M6 — Transactional audit, domain events, inbox/outbox and compensation
+#### Licensing and commercial entitlements
 
-**Goal:** Create the durability foundation for all connected and automated behavior.
+- define signed entitlement format and verifier vectors;
+- build one-per-policy online seven-day trial issuance;
+- enforce complete lockout across UI, API, background and remote surfaces;
+- build manual BaridiMob/CCP review and immutable approval;
+- build offline permanent signing tooling;
+- encode product major, shops, extra slots, members, devices and support horizon;
+- implement transfer/recovery and revocation;
+- migrate/delete browser self-issuance and trusted status branches.
 
-### Epics
+#### Recovery foundation
 
-- M6-E1: Event, audit, inbox, outbox, effect, receipt, dead-letter and checkpoint schema.
-- M6-E2: Transaction helper enforcing domain + audit + event + outbox atomicity.
-- M6-E3: Idempotency/effect-key service and replay semantics.
-- M6-E4: Worker scheduler, backpressure, retry classes and health.
-- M6-E5: Explicit money/inventory/status compensation ledgers.
-- M6-E6: Migrate automation dispatch and low-stock notifications.
-- M6-E7: Migrate sidecar callbacks and current provider effects.
-- M6-E8: Reconciliation UI/runbook and operator controls.
+- define recovery-kit format and ceremony;
+- implement verified all-shop local snapshot format;
+- prove key and entitlement recovery on a replacement installation;
+- require recovery setup in first-run onboarding.
 
-### Exit criteria
+### Exit gate
 
-- Crash-at-every-step tests show no acknowledged event loss or duplicate effect.
-- Audit actor and outbox intent are in the same transaction as every high-risk mutation.
-- Checkpoints block on poison events until tracked resolution.
-- Refund/cancel/return/reversal scenarios reconcile money and stock through explicit facts.
+- clearing browser/local display state cannot reset a trial;
+- trial expiry locks operations without deleting data;
+- permanent purchased-major local use survives prolonged cloud outage;
+- forged actor/member/shop/device claims fail;
+- field policy is enforced outside the UI;
+- provider/root keys do not appear in ordinary files, DB plaintext, browser storage, logs or diagnostics;
+- replacement-machine local recovery succeeds using the recovery kit;
+- Founder can issue, transfer and revoke through auditable records.
 
-## Milestone M7 — Cloud control plane and encrypted relay foundation
+### Enables
 
-**Goal:** Build the bounded connected plane without moving operational authority to cloud.
+Durable operational actors, cloud identity, backup and remote clients.
 
-### Epics
+## 7. Phase 3 — Durable operational core
 
-- M7-E1: Cloud workspace, IaC, environment separation and data-class enforcement.
-- M7-E2: Tenant/license/member/device/session/control-plane APIs.
-- M7-E3: Envelope protocol, signing/encryption, sequence, expiry and replay defense.
-- M7-E4: Durable relay queues/storage and desktop connector worker.
-- M7-E5: Cost quotas, rate limits, retention and outage modes.
-- M7-E6: Founder admin/support minimum viable plane.
-- M7-E7: Cloud threat model, security tests and disaster recovery.
+### Outcome
 
-### Exit criteria
+Every launch-critical business change and external effect can survive crashes, retries, concurrency and partial failure without silent loss or duplication.
 
-- Packet/object inspection confirms no prohibited operational plaintext.
-- Cross-tenant, replay, expiry and revocation tests pass.
-- Desktop operates locally through prolonged cloud outage and reconciles safely.
-- Cost alarms and per-tenant quotas are demonstrated.
+### Workstreams
 
-## Milestone M8 — Zero-knowledge cloud backup
+#### Transaction kernel
 
-**Goal:** Deliver mandatory recoverability before beta data is trusted.
+- add domain-event, inbox, outbox, effect-attempt, receipt, dead-letter, checkpoint and reconciliation records;
+- add a transaction helper for domain state + trusted audit + event + intent + idempotency + compensation;
+- add worker scheduler, backpressure, retries and operator controls;
+- create correlation and health views.
 
-### Epics
+#### Domain convergence
 
-- M8-E1: Consistent all-shop snapshot and integrity checks.
-- M8-E2: Versioned encrypted chunk/manifest format.
-- M8-E3: Resumable upload/download and remote verification.
-- M8-E4: 7/4/6 + 3 pinned retention scheduler.
-- M8-E5: Replacement-install recovery using recovery kit and entitlement transfer.
-- M8-E6: Periodic isolated restore certification and support UX.
+Migrate one business slice at a time:
 
-### Exit criteria
+1. order creation and status;
+2. stock reservation/adjustment;
+3. delivery creation/tracking;
+4. return/exchange;
+5. refund/reversal;
+6. COD collected/remitted/discrepancy;
+7. accounting correction/export;
+8. customer statistics and risk;
+9. automation actions and notifications.
 
-- SahelFlow/cloud operator cannot decrypt backup objects.
-- Interrupted, duplicate, corrupt and missing-object scenarios are handled.
-- A replacement Windows installation restores every shop and passes application checks.
-- Migration coordinator consumes only verified backups.
+For each slice:
 
-## Milestone M9 — Provider contract and worker framework
+- preserve existing UI where practical;
+- dual-write only under a bounded parity plan;
+- prove replay, concurrency, failure and compensation;
+- remove direct writes only after parity;
+- retain historical rows with source/version markers.
 
-**Goal:** Make integrations durable and certifiable before expanding them.
+#### Automation and AI approval foundation
 
-### Epics
+- migrate automation conditions/editor to durable intents;
+- classify actions by risk;
+- bind approval to exact action, arguments, actor, state version and expiry;
+- replace generic “yes/ok in current message” confirmation authority;
+- expose retry/dead-letter/recovery states.
 
-- M9-E1: Common provider capability/error/idempotency/rate-limit contract.
-- M9-E2: Credential handles and scoped worker execution.
-- M9-E3: Provider inbox/outbox adapters, checkpoints and reconciliation records.
-- M9-E4: Certification harness and evidence format.
-- M9-E5: Provider health/degradation/kill switches and UI capability flags.
+#### Provider boundary preparation
 
-### Exit criteria
+- migrate WhatsApp callbacks and current provider side effects into inbox/outbox records;
+- wrap current polling as a reconciliation producer;
+- stop checkpoints from passing unresolved failures.
 
-- Provider mocks and fault injection prove worker invariants.
-- Unsupported/uncertified capabilities are hidden or explicit.
-- One pilot provider passes a complete live certification before broader migration.
+### Exit gate
 
-## Milestone M10 — Operational PWA projections and commands
+- crash-at-every-step tests show no acknowledged event loss;
+- one effect key cannot execute twice;
+- audit and outbox intent commit with high-risk business writes;
+- poison events block or enter governed dead-letter state;
+- return/refund/COD/stock/accounting scenarios reconcile exactly;
+- automation/AI destructive actions require bound current approval;
+- operator recovery is visible and tested.
 
-**Goal:** Deliver bounded team operations without creating cloud multi-master.
+### Enables
 
-### Epics
+Safe cloud relay, provider migration, storefront import and remote commands.
 
-- M10-E1: Device pairing/enrollment and remote session UX.
-- M10-E2: Role/field-filtered encrypted projection generation.
-- M10-E3: Partitioned encrypted PWA cache and revocation purge.
-- M10-E4: Read-only operational views with stale/offline state.
-- M10-E5: Low-risk commands, queued/commit/result UX and conflicts.
-- M10-E6: Higher-risk permitted commands with approvals; exclude prohibited admin.
-- M10-E7: Accessibility/RTL/mobile performance certification.
+## 8. Phase 4 — Bounded connected platform
 
-### Exit criteria
+### Outcome
 
-- Remote success appears only after desktop commit.
-- Cross-member/tenant/shop cache and command attacks fail.
-- Revoked device loses session and cached sensitive projections.
-- Offline/stale/conflict behavior is understandable and tested.
+SahelFlow gains the connected services required by the product contract without moving operational authority or prohibited plaintext out of the desktop.
 
-## Milestone M11 — Hosted multi-tenant storefront
+### Workstreams
 
-**Goal:** Publish durable seller storefronts and checkout.
+#### Cloud control plane
 
-### Epics
+- create isolated Cloudflare workspace, infrastructure and environment separation;
+- implement tenant/license/member/device/session/payment/support metadata;
+- enforce data classes and retention;
+- add rate limits, quotas, cost alarms and incident controls;
+- build minimal Founder administration.
 
-- M11-E1: Tenant/storefront/domain/media/allocation data model.
-- M11-E2: Draft builder to immutable release pipeline.
-- M11-E3: Hosted render runtime and first template.
-- M11-E4: Durable server-authoritative checkout receipt and anti-abuse controls.
-- M11-E5: Encrypted relay/import/ack/reconciliation to desktop.
-- M11-E6: Domain verification/TLS and content-addressed media.
-- M11-E7: Two additional materially distinct templates.
-- M11-E8: Release rollback and seller-visible receipt/import status.
+#### Encrypted relay and command protocol
 
-### Exit criteria
+- define signed/encrypted envelope and projection schemas;
+- add sequence, replay, expiry, revocation and compatibility rules;
+- implement durable relay and desktop connector;
+- distinguish queued, committed, rejected, expired and conflict states;
+- re-authorize commands on desktop execution;
+- create outage/reconnect reconciliation.
 
-- Tampered price/shop/allocation requests fail.
-- Desktop offline at checkout does not lose an accepted order.
-- Duplicate/replay/partial relay scenarios reconcile.
-- Three templates pass visual, accessibility, RTL, mobile and checkout evidence.
+#### Zero-knowledge backup
 
-## Milestone M12 — Provider migrations and live certification
+- implement client-side encrypted chunk/manifests;
+- add resumable upload/download and remote object verification;
+- enforce 7 daily, 4 weekly, 6 monthly and pinned retention;
+- add isolated periodic restore certification;
+- integrate transfer and recovery kit;
+- make migration coordinator consume verified snapshots.
 
-**Goal:** Certify all launch integrations against the durable framework.
+### Exit gate
 
-### Epics
+- packet/object inspection finds no prohibited operational plaintext;
+- cross-tenant, replay, expiry and revocation attacks fail;
+- desktop continues local purchased-major operation during cloud outage;
+- queued work reconciles safely after outage;
+- cloud operator cannot decrypt backup data;
+- replacement installation restores every shop from remote backup;
+- cost and fair-use envelopes are measured.
 
-- M12-E1: WhatsApp/Baileys lifecycle, durable events and policy certification.
-- M12-E2: Shopify hybrid webhook/reconciliation certification.
-- M12-E3: WooCommerce hybrid webhook/reconciliation certification.
-- M12-E4: YouCan hybrid webhook/reconciliation certification.
-- M12-E5: Yalidine certification.
-- M12-E6: ZR Express certification.
-- M12-E7: Maystro certification.
-- M12-E8: Optional Procolis certification decision.
-- M12-E9: Google Sheets export certification.
-- M12-E10: Gemini privacy/typed extraction/action certification with real Darija corpus.
+### Enables
 
-### Exit criteria
+Operational PWA, hosted storefront, provider webhooks and connected support.
 
-- Each public capability has current live evidence and known limitations.
-- Provider outage/rate-limit/credential-expiry/status-drift drills pass.
-- Uncertified DHD/other providers remain experimental and hidden.
+## 9. Phase 5 — Provider, PWA and storefront convergence
 
-## Milestone M13 — Domain/UI convergence, accessibility, security and low-end hardening
+### Outcome
 
-**Goal:** Complete product behavior on the new authorities and prove whole-system quality.
+All connected product surfaces operate on the new identity, durability and cloud foundations and expose only certified capabilities.
 
-### Epics
+### 5.1 Provider framework and certifications
 
-- M13-E1: Migrate remaining direct DB writes/global shop assumptions.
-- M13-E2: Reconcile catalog, order, stock, COD, refund, return and accounting UI with ledgers.
-- M13-E3: Automation/AI approval UX and operator recovery tools.
-- M13-E4: Full i18n/RTL/a11y audit across desktop, PWA and storefront.
-- M13-E5: Low-resource scheduling, pagination, cache and rendering optimization.
-- M13-E6: Threat model closure, dependency/SBOM, pen test and privacy review.
-- M13-E7: Documentation, support and incident runbooks.
+Build the shared capability/error/idempotency/checkpoint framework, then migrate and certify:
 
-### Exit criteria
+- WhatsApp/Baileys;
+- Shopify;
+- WooCommerce;
+- YouCan;
+- Yalidine;
+- ZR Express;
+- Maystro;
+- Google Sheets;
+- Gemini extraction/chat/actions.
 
-- All launch invariants have automated or drill evidence.
-- Reference devices meet budgets without correctness/security reduction.
-- No critical/high security finding remains open without founder acceptance and bounded mitigation.
-- Documentation/evidence ledger matches implementation.
+Procolis remains optional. DHD and any unverified provider remain experimental and hidden until Founder scope and live certification.
 
-## Milestone M14 — Beta and stable release
+Each public capability requires dated environment/account/API evidence, failure cases, reconciliation proof, known limitations and recertification triggers.
 
-**Goal:** Prove operations with real sellers and publish a recoverable Windows stable release.
+### 5.2 Operational PWA/browser companion
 
-### Epics
+- pair/enroll remote devices;
+- generate role/field-filtered encrypted projections;
+- partition and purge caches by tenant/member/device/shop/version;
+- implement read-only operational views first;
+- add low-risk commands, then permitted higher-risk commands;
+- show stale, offline, queued, committed, rejected and conflict states;
+- exclude prohibited administration;
+- certify mobile performance, accessibility and revocation.
 
-- M14-E1: Internal dogfood and full disaster/rollback drills.
-- M14-E2: Controlled beta cohort, onboarding and support.
-- M14-E3: Provider/control-plane/storefront/PWA incident exercises.
-- M14-E4: Beta data recovery and replacement-install drills.
-- M14-E5: Stable release candidate, signed evidence manifest and founder approval.
-- M14-E6: Staged updater rollout, monitoring and post-release review.
+### 5.3 Hosted storefront
 
-### Exit criteria
+- add tenant/storefront/shop/domain/media/allocation models;
+- separate drafts from immutable releases;
+- migrate the builder to release schemas;
+- build hosted render path and first template;
+- implement server-authoritative durable checkout receipt;
+- relay/import/reconcile with the canonical desktop;
+- add domains, TLS, content-addressed media and rollback;
+- deliver three materially distinct certified templates;
+- retire local direct checkout after parity.
 
-- Beta exit criteria in the Constitution are met.
-- Signed installer/updater, release manifest and all evidence are immutable and reviewed.
-- Rollback/hold/forward-fix procedures are exercised.
-- Known limitations are accurate, public claims are evidence-linked and support is ready.
+### 5.4 AI privacy and action convergence
 
-## Parallelism rules
+- centralize provider/model registry;
+- build allowlisted privacy-classified payloads;
+- test Darija/Arabic/French/mixed-format canary corpora;
+- retain typed result validation;
+- record safe request metadata and quota health;
+- use the bound approval service for mutations;
+- preserve non-AI fallbacks.
 
-Permitted parallel work is bounded by dependencies:
+### Exit gate
 
-- M1 can run alongside M2 after M0.
-- M3 and M5 can overlap after their prerequisites, but licensing M4 depends on M3.
-- UI design prototypes for PWA/storefront may occur early in isolated branches, but no production data protocol or feature claim can merge before M7/M6 foundations.
-- Provider contract research can begin during M6; live adapter migration waits for M9.
-- Security, documentation and performance evidence are continuous work, not end-stage cleanup.
+- every public provider action has current live certification;
+- no accepted provider/storefront event is lost;
+- remote success appears only after desktop commit;
+- revoked devices lose sessions and sensitive caches;
+- storefront accepted checkout always has a durable tenant/shop receipt;
+- price/allocation/replay attacks fail;
+- three templates meet performance, mobile, RTL and accessibility targets;
+- uncertified capabilities remain hidden or explicit.
 
-## Critical path
+## 10. Phase 6 — Whole-product hardening, beta and Stable
 
-`M0 → M2 → M3 → M4 → M5/M6 → M7 → M8/M9 → M10/M11/M12 → M13 → M14`
+### Outcome
 
-Any issue that bypasses this path must state why it does not depend on the missing authority and how it avoids creating migration debt.
+All launch systems converge into a coherent, accessible, recoverable and supportable SahelFlow 1.0 proven with representative sellers.
+
+### Workstreams
+
+#### Product and UX convergence
+
+- rebuild onboarding around installation preflight, owner, trial/license, shop, recovery, provider and first-order outcomes;
+- remove remaining direct DB/global context paths;
+- unify inbox persisted/live data;
+- expose permission, queue, retry, conflict, degradation, backup and recovery states consistently;
+- complete AR/FR/EN and RTL/LTR review across desktop, PWA and storefront;
+- complete keyboard, screen-reader, zoom and 1366×768 testing.
+
+#### Performance and scale
+
+- exercise the certified data profiles;
+- optimize query/page boundaries from traces;
+- bound RSC loading, background work, caches and provider concurrency;
+- implement low-resource scheduling that never weakens correctness;
+- validate T470 and 4 GB HDD/SSD budgets;
+- run long-session memory and outage tests.
+
+#### Security and privacy
+
+- close full threat model;
+- produce SBOM and dependency policy;
+- run secret/PII scans and penetration testing;
+- conduct independent review of identity, crypto, tenant, backup, command, storefront and release boundaries;
+- rehearse incident containment, key/session/provider revocation and diagnostic consent.
+
+#### Beta and release
+
+- internal dogfood and disaster drills;
+- controlled beta with 3–5 representative Algerian COD businesses;
+- five representative live storefronts;
+- real provider and restore incidents recorded;
+- beta exit review;
+- signed Windows Stable candidate and immutable evidence manifest;
+- staged updater rollout, hold/rollback/forward-fix rehearsal;
+- accurate public claims and support readiness.
+
+### Exit gate
+
+- all Founder launch gates are met;
+- no unresolved P0/P1 defect;
+- every public capability is evidence-linked;
+- reference devices meet budgets;
+- replacement-install restore succeeds;
+- beta exit is approved;
+- signed Windows artifact is promoted only after final Founder approval.
+
+## 11. Continuous workstreams
+
+The following run through every phase:
+
+- documentation and claim accuracy;
+- migration and compatibility planning;
+- threat modeling and privacy classification;
+- accessibility, RTL and localization;
+- performance measurement;
+- evidence capture;
+- support and recovery UX;
+- deletion of obsolete paths only after replacement proof.
+
+## 12. First implementation wave
+
+After this documentation reset merges, start one application wave:
+
+### `Proven Canonical Windows Desktop`
+
+The wave combines Phase 0 with the minimum Phase 1 design needed to prove a reliable installed candidate. Its exact outcome, scope, non-goals and evidence are defined in `CURRENT_TO_TARGET_ANALYSIS.md`.
+
+Do not start Cloudflare, hosted storefront, remote PWA or provider expansion before this wave establishes repository truth, packaged runtime evidence and the shop/migration migration boundary.

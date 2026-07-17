@@ -1,58 +1,67 @@
 # SahelFlow working memory
 
-> Last updated: 2026-07-16
+> Last updated: 2026-07-17
 
-This is the compact entry point for current work. Update it at meaningful
-checkpoints and link deeper material rather than turning it into a transcript.
+This is the compact entry point for current work. Update it at meaningful checkpoints and link deeper material rather than turning it into a transcript.
 
 ## Founder direction
 
-Use a lightweight multi-agent system built from agent prompts and GitHub-backed
-shared memory. Work through deep-dive waves and multi-phase plans. Do not impose
-task-by-task bureaucracy, certification, state machines, or unnecessary limits
-on how agents investigate and execute. The current named MAWS roles are Codex
-Desktop, ChatGPT, and GLM. Codex Desktop remains the only agent assumed to have
-full local desktop, filesystem, codebase, and runtime execution access. ChatGPT
-provides deep product, architecture, UX, and engineering partnership and may
-work through GitHub when connected tools permit. GLM defaults to external
-research and discovery.
-
-Kimi K3 has been removed from the active SahelFlow agent system by Founder
-direction. Do not assign work to it, include it in the role map, or treat it as
-an active MAWS participant.
+- Use a lightweight multi-agent system built from agent prompts and GitHub-backed shared memory.
+- Work through deep-dive waves and multi-phase plans without task-by-task bureaucracy.
+- Preserve the full Founder-approved product contract.
+- Ground product and architecture work in the actual application source.
+- Consolidate documentation instead of adding parallel status, gap, handoff or roadmap files.
+- Remove stale redirects, session records and duplicated authorities after their durable value is preserved.
+- The active named roles are Codex Desktop, ChatGPT and GLM. Kimi K3 is not an active participant.
+- Codex Desktop is the only agent assumed to have full local desktop/runtime execution access.
+- ChatGPT is the deep product, architecture, UX and engineering partner and may work through GitHub.
+- GLM defaults to external research and adversarial discovery.
 
 ## Active wave
 
-No application wave has been selected yet. The lightweight MAWS operating model
-is integrated on `main`; the current agent map is Codex Desktop, ChatGPT, and
-GLM. Application code was not changed by this coordination decision.
+**Documentation reset and current-to-target program model**
+
+- Branch: `agent/documentation-reset-gap-roadmap`
+- Draft pull request: [#95 — consolidate current-to-target program](https://github.com/rendowblock-jpg/sahelflow_v2/pull/95)
+- Primary artifact: [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
+- Work path: [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md)
+- Engineering workflow: [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md)
+
+Outcome:
+
+- one source-grounded model of the current app and finished target;
+- one full gap/disposition analysis across product, runtime, data, security, domain, providers, cloud, UX, performance, evidence and operations;
+- one dependency-correct work path;
+- a smaller authoritative documentation set with stale transition records removed.
+
+Application code is unchanged by this wave.
 
 ## Confirmed decisions
 
-- GitHub documents provide shared memory and communication across sessions.
-- Prompts describe agent strengths without restricting tactics or authority.
+- GitHub documents provide shared memory across sessions.
 - A wave, not an individual task, is the normal unit of planning and continuity.
-- Phases are shaped by the work; they are not a mandatory state machine.
-- Issues, extra agents, and independent reviews are used when useful.
-- Validator automation and live interface certification are not required.
-- Kimi K3 is not part of the active SahelFlow agent system.
-- Codex Desktop is the primary builder and continuity lead and the only agent
-  assumed to have full local desktop and runtime access.
-- ChatGPT is the deep product, architecture, UX, and engineering partner and may
-  inspect, implement, or review through available connected tools.
-- GLM defaults to research, provider/API investigation, competitive and UX
-  discovery, localization, and adversarial analysis.
+- Issues and extra review are used when useful, not as mandatory ceremony.
+- Product authority is limited to the Constitution, Founder Decisions and Launch Scope/Entitlements.
+- Engineering authority is the Engineering Specification, current-to-target analysis, roadmap and relevant specialized records.
+- Historical session documents remain recoverable in git history and do not need redirect files in the active tree.
+- The current application is a strong migration base, not a Stable product and not a total rewrite candidate.
+- Reusable UI/domain/provider knowledge should be preserved while unsafe authority and protocols are replaced.
+- The first implementation wave should prove a canonical Windows desktop before Cloudflare, remote PWA, hosted storefront or provider expansion.
 
 ## Current checkpoint
 
-- Current focus: no application wave is active; MAWS now uses Codex Desktop,
-  ChatGPT, and GLM as its named roles.
-- Application code: unchanged by this coordination update.
-- Next move: choose the first application deep-dive wave with the Founder when
-  the Founder wants to resume SahelFlow product work.
+- Deep source exploration is complete across runtime, data, security, licensing, domain services, providers, UI, PWA, backup, testing, CI and release.
+- Draft PR #95 contains the current-to-target analysis, simplified seven-phase roadmap, lightweight risk-based workflow and documentation cleanup.
+- The branch changes documentation only: one new analysis, core authority updates and removal of duplicated/session-era material.
+- The first PR CI attempt failed before either job executed any step; GitHub returned no job log blob. The undefined `sf-verify` command remains a separate latent workflow defect.
+- GitHub reports that this repository is not code-search indexed, so Codex Desktop must run local Markdown/link/reference checks before merge.
+- No application behavior or executable source has been changed.
+- Next move: Founder review of PR #95, local reference validation, then squash merge if accepted.
+- After merge: open the **Proven Canonical Windows Desktop** implementation wave.
 
 ## Open questions
 
-- What end-to-end merchant outcome should define the first application wave?
-- Which existing product surfaces are authoritative prototypes versus material
-  that should be redesigned or removed?
+- Whether the Founder wants any product-contract amendment before implementation begins.
+- Whether any removed file contains unique durable content that should remain active rather than only in git history.
+- Which local runtime environment Codex Desktop should use for the first installed-candidate baseline.
+- Which Windows 4 GB reference machine and T470 dataset should be treated as the first repeatable performance lab.
