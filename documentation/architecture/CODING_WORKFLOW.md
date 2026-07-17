@@ -1,372 +1,353 @@
-# SahelFlow Coding, Review, Merge and Release Workflow
+# SahelFlow — Coding, Review and Evidence Workflow
 
-**Status:** Binding for implementation work after this architecture package is merged.
+> **Status:** Active lightweight implementation workflow  
+> **Coordination model:** `../operations/MAWS_STRUCTURE_AND_WORKFLOW.md`  
+> **Execution path:** `IMPLEMENTATION_ROADMAP.md`
 
-## 1. Work hierarchy
+## 1. Purpose
 
-Every change belongs to:
+This workflow keeps implementation safe without turning SahelFlow into a task-management bureaucracy.
 
-1. **Milestone** — one roadmap stage (`M0`–`M14`).
-2. **Epic** — a coherent capability with named dependencies and exit criteria.
-3. **Issue** — one reviewable outcome that can be accepted independently.
-4. **Pull request** — the smallest safe implementation/evidence increment for the issue.
-5. **Evidence record** — proof tied to the merged commit/artifact/environment.
+The normal unit of continuity is a **wave**: one meaningful product/system outcome pursued through as many investigation, design, implementation, migration, test and review phases as necessary.
 
-### Issue template requirements
+Issues are optional. Use one when work is independently owned, independently deliverable, blocked, externally visible, or needs a durable discussion. Do not create an issue merely to satisfy process.
 
-Each implementation issue states:
+## 2. Core rules
 
-- roadmap milestone/epic;
-- founder decision/Constitution clauses preserved;
-- active ADRs and invariants affected;
-- user/system outcome and explicit non-goals;
-- current evidence and exact baseline commit;
-- dependencies and blockers;
-- data classification and trust boundaries;
-- risk class (`R0`–`R4`);
-- schema/protocol/version impact;
-- acceptance tests and evidence artifacts;
-- migration/compatibility/rollback plan;
-- documentation and runbooks to update;
-- observability and support behavior;
-- deletion/deprecation work, if any.
+- `main` is integrated truth; branches and pull requests are proposed work.
+- Start from current `main` unless a deliberate stacked dependency is documented.
+- Keep one coherent outcome per pull request.
+- Inspect and test the real source/runtime boundary affected by the change.
+- A document, schema, screen, test count or merged PR is not evidence of launch readiness by itself.
+- Preserve seller data and compatibility before deleting legacy authority.
+- Product choices come from the Founder-approved product package.
+- Architecture changes update the Engineering Specification or a superseding ADR only when a real decision changes.
+- Durable findings, decisions, blockers and next moves go into working memory or the active wave—not an endless handoff log.
+- Credentials, signing material and seller data never belong in GitHub artifacts.
 
-An issue that cannot state these items is research/spike work, not implementation-ready.
+## 3. Branch and pull-request practice
 
-## 2. Branch strategy
+Use short-lived descriptive branches, normally:
 
-Use short-lived branches from current protected `main`:
+```text
+agent/<outcome>
+```
 
-- `agent/M2-123-explicit-shop-context`
-- `agent/M6-245-transactional-outbox`
-- `agent/R3-311-license-verifier-v2`
+Examples:
 
-Rules:
+```text
+agent/windows-runtime-readiness
+agent/explicit-shop-context
+agent/transactional-outbox
+```
 
-- No long-lived integration/develop branch.
-- Rebase or update from `main` before final review when dependencies changed.
-- One issue or tightly coupled issue slice per branch.
-- Feature flags/protocol compatibility are preferred over branches that stay open for weeks.
-- Stacked PRs are allowed only when dependencies are explicit and each PR is independently safe to merge; dependent PRs target the parent branch until the parent merges.
-- Generated files, migrations and evidence artifacts are committed with the code that produces them.
-- No direct push to `main`, release tags or stable artifacts.
+Pull requests should explain:
 
-## 3. Pull-request sizing
+- the outcome and why it matters;
+- the current behavior/root cause;
+- the target behavior and affected invariant;
+- important tradeoffs and non-goals;
+- migration/compatibility/rollback impact;
+- validation performed and evidence produced;
+- remaining limitations or follow-up.
 
-Default limits exclude generated lockfiles, snapshots and machine-generated evidence, but reviewers still inspect them:
+Use draft pull requests while the change is still being shaped. Stacked pull requests are acceptable when each layer is understandable and safe on its stated base.
 
-| Risk | Normal target | Hard review threshold | Required split strategy |
-|---|---:|---:|---|
-| R0 docs/tooling metadata | ≤ 500 net lines, ≤ 12 files | 1,000 lines | Split authority/content from mechanical link cleanup |
-| R1 UI/read-only/refactor | ≤ 400 net lines, ≤ 10 files | 700 lines | Separate primitives, migration and page adoption |
-| R2 domain write/local workflow | ≤ 300 net lines, ≤ 8 files | 500 lines | Schema/transaction/service/UI/evidence slices |
-| R3 security, identity, license, crypto, money, provider, remote command | ≤ 250 net lines, ≤ 7 files | 400 lines | Contract/test vectors first; implementation; migration; integration |
-| R4 migration, backup/restore, tenant boundary, release/update | ≤ 200 net lines, ≤ 6 files | 350 lines | Preflight/format; executor; recovery; rollout |
-
-A PR above the hard threshold requires a written reason and two reviewers before review begins. Large generated migrations may exceed limits but the hand-written migration logic and proof stay small.
+Do not push directly to `main`, create release tags, or publish Stable artifacts from an unreviewed local script.
 
 ## 4. Risk classes
 
+Use the highest applicable class.
+
 ### R0 — Documentation and non-executable metadata
 
-Examples: ADR clarification, evidence record, link cleanup.  
-Required: link/claim checks, technical owner review when authority changes.
+Examples: current-state analysis, link cleanup, prompts, evidence descriptions.
+
+Minimum evidence:
+
+- technical consistency and link review;
+- no product/architecture claim beyond source evidence;
+- review by the relevant product/engineering owner when authority changes.
 
 ### R1 — Presentation and read-only behavior
 
-Examples: styles, accessibility fixes, read-only projection rendering, non-sensitive diagnostics.  
-Required: unit/component tests, visual/RTL/a11y evidence, no authorization/data-class regression.
+Examples: styles, accessibility, read-only views, non-sensitive diagnostics.
 
-### R2 — Local business writes and ordinary domain logic
+Minimum evidence:
 
-Examples: order status, catalog update, automation condition, expense entry.  
-Required: transaction/integration tests, audit/outbox checks, idempotency where retried, migration compatibility, packaged golden path when user-facing.
+- type/lint/unit or component checks as relevant;
+- visual, RTL and accessibility evidence for affected journeys;
+- no authorization/data-class regression.
 
-### R3 — Security-sensitive or externally consequential
+### R2 — Ordinary local business writes
 
-Examples: auth, sessions, permissions, licensing, key/secret code, AI approval, provider effects, refunds, remote commands.  
-Required: threat-model delta, negative/adversarial tests, property/replay/failure injection, two reviewers, security owner approval, evidence record.
+Examples: order status, product/customer mutation, expense, automation condition.
+
+Minimum evidence:
+
+- transaction/service integration tests;
+- idempotency or concurrency tests when the operation can retry/race;
+- audit/event/outbox assertions once that foundation exists;
+- migration compatibility where data shape changes;
+- packaged journey evidence when user-facing.
+
+### R3 — Security, identity, money or external effects
+
+Examples: authentication, permissions, licensing, keys, secrets, AI approvals, provider effects, refunds and remote commands.
+
+Minimum evidence:
+
+- threat-model delta;
+- negative/adversarial tests;
+- replay/concurrency/failure injection;
+- exact actor/shop/tenant/permission assertions;
+- secret/PII safety checks;
+- independent review when available;
+- recovery or compensation behavior.
 
 ### R4 — Data survivability and release authority
 
-Examples: DB migrations, backup/restore, recovery kit, tenant isolation, updater/signing, release pipeline.  
-Required: all R3 controls plus recovery drill, compatibility matrix, artifact evidence, founder/maintainer approval and rollback rehearsal.
+Examples: migrations, backup/restore, recovery kit, tenant isolation, updater/signing and release.
 
-When classes differ, the highest class applies.
+Minimum evidence:
 
-## 5. Review roles
+- all R3 controls;
+- compatibility matrix;
+- interruption and recovery drill;
+- artifact hashes/signature verification;
+- rollback/forward-fix rehearsal;
+- Founder/maintainer approval before release impact.
 
-- **Author** — implementation, self-review, evidence and migration/rollback notes.
-- **Domain reviewer** — business invariant and data model correctness.
-- **Security reviewer** — required for R3/R4; reviews trust boundary, crypto/auth/privacy/tenant behavior.
-- **Data/release reviewer** — required for migrations, backup, updater and release work.
-- **Founder/product authority** — required when founder decision interpretation, commercial entitlement, public claim, provider support or stable release changes.
+## 5. Review focus
 
-The author cannot be the sole approver. R3/R4 require at least two approvals from distinct people/roles when the team permits; until then, one independent reviewer plus founder approval is mandatory.
+Reviewers prioritize correctness over style:
 
-## 6. Review checklist
+- Does the change preserve the product contract?
+- Is shop/tenant/member/device/actor context trusted and explicit?
+- Can a crash, retry, timeout or duplicate lose or repeat a business effect?
+- Are money, stock and status changes exact and compensatable?
+- Can a legacy fallback or setup path bypass security?
+- Can seller data be stranded by migration, key loss or restore failure?
+- Can secrets or PII enter browser storage, logs, cloud payloads, diagnostics or fixtures?
+- Are provider capability claims narrower than or equal to evidence?
+- Is failure visible and recoverable to the seller/support operator?
+- Do tests exercise the dangerous path, not only the happy path?
+- Is obsolete code removed only after migration and parity?
 
-Every reviewer verifies:
+Resolve high-severity review findings before merge. Lower-severity work can be recorded in the active wave when deferral is intentional and bounded.
 
-- issue/PR scope matches roadmap dependency order;
-- no founder decision was silently reopened;
-- affected invariants are named and enforced, not merely documented;
-- authorization uses trusted context;
-- tenant/shop/member/device/data-class boundaries are explicit;
-- transaction/audit/outbox/idempotency are correct;
-- failures are visible, retryable and recoverable;
-- no secret/PII enters logs, browser storage, cloud payloads or fixtures;
-- migration/compatibility and rollback are credible;
-- observability and support UX exist;
-- tests target failure and adversarial cases, not only success;
-- evidence/docs/provider claims are updated;
-- obsolete authority/code is removed only after migration.
+## 6. Validation layers
 
-## 7. Database migration rules
+Choose layers based on risk. More layers are required as risk increases.
 
-1. Migrations are append-only and uniquely ordered.
-2. `prisma db push` is development-only and never a release/migration mechanism.
-3. The schema change and data migration are separated when either is non-trivial.
-4. Every migration declares:
-   - affected models/tables/shops;
-   - estimated runtime/disk overhead;
-   - minimum free disk;
-   - app/schema compatibility window;
-   - whether desktop/provider/relay work must pause;
-   - backup requirement;
-   - resumability/idempotency key;
-   - verification queries/application checks;
-   - failure and recovery path.
-5. Destructive changes use expand–migrate–verify–contract across releases unless a proven atomic path is safer.
-6. Migration preflight enumerates every registered shop and rejects unknown/corrupt versions.
-7. A verified backup is mandatory before destructive/data-transforming work; backup failure blocks migration.
-8. The migration journal is outside the mutable step it records and survives process restart.
-9. No swallowed migration errors or best-effort continuation.
-10. Tests cover fresh install, every supported previous schema, multi-shop mixed state, interruption after each step, low disk, corrupt data, backup failure and rerun.
-11. Down migrations are not the default rollback. The release must remain compatible or ship a forward repair.
-12. Applied migration files and hashes are immutable.
+1. static/type/lint checks;
+2. unit tests;
+3. database/service integration tests;
+4. property, replay, concurrency and failure-injection tests;
+5. component/visual/RTL/accessibility checks;
+6. migration compatibility tests;
+7. installed Windows candidate tests;
+8. low-end measurements;
+9. provider sandbox/live certification;
+10. backup/recovery and incident drills;
+11. independent security/privacy review;
+12. controlled seller beta.
 
-## 8. Security-sensitive development
+Coverage is useful for regression detection, not proof of an invariant.
 
-R3/R4 changes include a short threat-model delta:
+## 7. Database and migration rules
 
-- assets and prohibited outcomes;
-- principals/trust boundaries;
-- attacker capabilities;
-- entry points and data flow;
-- abuse/replay/rollback/clock/side-channel cases;
-- controls and residual risk;
-- incident containment and key/session revocation.
+- Production schema evolution uses append-only migrations, not `prisma db push`.
+- Do not rewrite an applied migration.
+- Enumerate every affected shop.
+- Declare compatibility and free-disk/runtime expectations.
+- Separate schema expansion, data migration and contraction when safer.
+- Destructive/data-transforming migration requires a verified compatible backup.
+- Backup failure blocks the migration.
+- Migration work is resumable and idempotent.
+- Journal progress outside the mutable step being recorded.
+- Never swallow or broadly reinterpret migration failures.
+- Test fresh install, each supported prior schema, mixed multi-shop state, interruption, rerun, low disk, corrupt data and backup failure.
+- Rollback normally means compatible hold or forward repair, not blind down-migration.
+- Produce a seller/support-readable result.
 
-Additional rules:
+## 8. Business transaction and provider rules
 
-- Use reviewed cryptographic libraries and published algorithms; no custom crypto.
-- New signed/encrypted formats require canonical serialization and test vectors.
-- Compare secrets/tokens in constant time using standard primitives.
-- Never log secrets or full signed entitlements.
+For launch-critical writes, the target transaction contains:
+
+- domain mutation;
+- trusted audit;
+- domain event;
+- required outbox/projection intent;
+- idempotency/effect identity;
+- compensation facts where relevant.
+
+External providers are never called inside the database transaction.
+
+Provider workers:
+
+- consume committed intents/events;
+- use stable provider/source keys;
+- record attempts and receipts;
+- retry only according to operation safety;
+- expose dead letters and repair;
+- reconcile independently;
+- never advance a checkpoint past untracked failure.
+
+Until the durable framework exists, new provider effects should not expand the current direct-call pattern.
+
+## 9. Security-sensitive work
+
+- Use reviewed cryptographic libraries and canonical formats.
+- Signed/encrypted formats require versioning and test vectors.
 - Security defaults fail closed; recovery is explicit, not a bypass.
+- Client-supplied actor, role, tenant, member, device, shop or permission is not authoritative.
+- UI confirmation is not authorization.
+- Approval binds exact action, arguments, actor, state version, time and expiry.
+- Never log or attach full secrets, recovery material or signed entitlement payloads.
 - Dependency changes include provenance, license and vulnerability review.
-- Secrets in test fixtures are canaries and scanners prove they do not escape.
-- High-risk UI confirmation is not a substitute for server/desktop enforcement.
+- Diagnostics are opt-in, previewable and redacted.
 
-## 9. Test requirements by risk
+## 10. Packaged Windows evidence
 
-| Test/evidence layer | R0 | R1 | R2 | R3 | R4 |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Formatting/link/claim checks | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Unit tests | as needed | ✓ | ✓ | ✓ | ✓ |
-| Component/visual/RTL/a11y | — | ✓ | when UI | when UI | when UI |
-| DB/service integration | — | read paths | ✓ | ✓ | ✓ |
-| Property/invariant tests | — | — | relevant | ✓ | ✓ |
-| Idempotency/replay/concurrency | — | — | retried writes | ✓ | ✓ |
-| Failure injection | — | — | critical paths | ✓ | ✓ |
-| Security/adversarial/privacy | — | boundary check | relevant | ✓ | ✓ |
-| Migration matrix | — | — | schema impact | schema impact | ✓ |
-| Packaged Windows E2E | — | user path | changed workflow | ✓ | ✓ |
-| Low-end measurement | — | rendering impact | hot path | hot path | ✓ |
-| Provider sandbox/live | — | — | adapter effect | ✓ | relevant |
-| Recovery/rollback drill | — | — | if stateful | relevant | ✓ |
-| Independent review | — | — | — | ✓ | ✓ |
+Source and dev-server tests are not enough for runtime, migration, recovery or release work.
 
-Coverage is a regression signal, not proof. Critical invariant files receive explicit tests even if global coverage is high.
+Relevant changes must be tested against an installed candidate as appropriate:
 
-## 10. Packaged-app checks
-
-Run against the signed Windows candidate, not only `next dev`/browser:
-
-- clean install under standard user;
-- first-run owner/recovery/license flows;
+- clean standard-user install;
+- first-run identity/license/shop/recovery setup;
 - no external Node/Bun/Rust dependency;
 - cold/warm launch and visible startup failures;
-- process ownership, crash/restart and clean shutdown;
-- database path/registry/shop switching;
-- offline launch and cloud/provider outage states;
-- Windows sleep/resume, reboot and clock/time-zone changes;
-- update from every supported prior candidate;
-- failed/corrupt/tampered update;
+- process crash/restart/shutdown;
+- database registry and shop switching;
+- offline/cloud/provider outage;
+- sleep/resume, reboot and clock/time-zone change;
+- update, hold and tamper rejection;
 - migration interruption and recovery;
-- backup/restore and replacement-install recovery;
-- uninstall/reinstall with preserve/delete-data choices;
-- firewall/antivirus/smart-screen behavior;
-- 1366×768, RTL, zoom, keyboard and screen-reader smoke;
-- secret/PII/log/cache inspection after scenarios.
+- backup/restore and replacement installation;
+- uninstall/reinstall data choices;
+- firewall/antivirus/SmartScreen behavior;
+- 1366×768, zoom, keyboard, screen-reader and RTL smoke;
+- secret/PII/log/cache inspection.
 
-Candidate evidence records installer/updater hashes, signature verification, Windows build, machine profile and exact commit.
+Record source commit, artifact digest, signature result, Windows build and machine profile.
 
-## 11. Low-end performance checks
+## 11. Provider certification
 
-Reference profiles:
+A capability becomes public only when the provider registry contains current live evidence for:
 
-- required floor: Windows x64, dual-core, 4 GB RAM, HDD and SSD variants, 1366×768;
-- founder reference: ThinkPad T470;
-- representative datasets: empty, small, target-normal and stress size.
-
-Measure:
-
-- cold/warm launch;
-- total/per-process memory and idle CPU;
-- navigation/query p50/p95;
-- search, order creation/status, shop switch, import and backup impact;
-- provider/background backpressure;
-- PWA/storefront mobile performance;
-- migration time/disk peak;
-- accessibility/RTL rendering stability.
-
-The report includes traces and bottleneck ownership. Low-resource mode may reduce animation, prefetch, background frequency and cached rows, but never correctness, encryption, authorization, audit, retention or backup verification.
-
-## 12. Provider live certification
-
-A provider becomes publicly supported only after a certification record contains:
-
-- provider, API/version, environment/account and date;
-- exact adapter commit/artifact;
-- credential setup and permission scopes;
-- supported capability matrix;
-- live successful cases;
-- invalid credentials, timeout, network loss, rate limit, duplicate, partial page, malformed response and provider outage cases;
-- idempotency/replay behavior;
-- provider status/error mapping;
-- webhook signature/replay behavior when applicable;
-- reconciliation and checkpoint proof;
-- redacted request/response evidence;
-- known limitations, terms/policy review and recertification trigger;
+- provider/API/version/environment/date;
+- adapter commit/artifact;
+- credential permissions;
+- capability matrix;
+- successful live paths;
+- invalid credentials, timeout, network loss, rate limit, duplicate, malformed/partial response and outage;
+- idempotency and reconciliation;
+- webhook signature/replay where applicable;
+- status/error mapping;
+- known limitations and recertification trigger;
 - reviewer approval.
 
-Certification expires or becomes `degraded` after provider contract/version changes, unexplained production drift or a defined time interval. UI reads the registry; documentation cannot claim more than the certified matrix.
+Mocks and source files are implementation evidence, not provider certification.
 
-## 13. Documentation and evidence requirements
+## 12. Documentation updates
 
-Every PR updates the smallest authoritative set:
+Update the smallest durable set:
 
-- ADR only when architecture decision changes;
-- Engineering Specification when invariant/protocol changes;
-- Evidence Ledger when status/evidence changes;
-- Provider Registry for provider capability/certification;
-- runbook for new failure/recovery/incident path;
-- roadmap/issue dependencies when sequencing changes;
-- user/support docs for behavior/limitations;
-- version/protocol/schema manifest for compatibility changes.
+- product documents only for Founder-approved product changes;
+- Engineering Specification for target invariant/protocol changes;
+- superseding ADRs for a reopened architecture decision and rationale;
+- current-to-target analysis when source reality or disposition materially changes;
+- roadmap when dependencies or phase outcomes change;
+- provider registry for capability/certification changes;
+- a concrete runbook for a newly implemented operational recovery path;
+- working memory for active progress and next move.
 
-Evidence records use immutable commit/artifact references and sanitized attachments. “Tests pass,” “implemented,” “production ready” and percentages are forbidden without linked current evidence.
+Do not create a new status document when an existing authority can be updated. Historical reasoning belongs in Git history and pull requests.
 
-## 14. Merge gates
+## 13. Merge gate
 
-A PR cannot merge until:
+A pull request is mergeable when:
 
-1. branch is current enough to validate dependency compatibility;
-2. required reviews for risk class are approved;
-3. operational CI executes all required jobs;
-4. type/lint/build/unit/integration gates pass;
-5. required invariant, migration, security, packaged, performance or provider gates pass;
-6. dependency/security/SBOM policy passes;
-7. generated version/schema/protocol artifacts are consistent;
-8. documentation/evidence/runbook changes are complete;
-9. no unresolved high-severity review thread remains;
-10. rollback/recovery is credible and tested for R3/R4;
-11. PR does not introduce a product claim beyond evidence;
-12. branch protection records the merge commit and checks.
+- its outcome and risk are clear;
+- relevant checks actually execute;
+- required review is complete;
+- dangerous failure and migration paths are tested;
+- compatibility and recovery are credible;
+- documentation and claims agree with the implementation;
+- no unresolved high-severity finding remains;
+- the result is safe on its target base.
 
-If CI infrastructure fails before running, the PR is blocked. An administrator may merge only emergency documentation or incident containment, with written founder approval and a follow-up issue; never a stable release or R3/R4 implementation.
+If CI fails before executing, high-risk implementation is blocked. Emergency incident containment or documentation correction may merge only with explicit maintainer/Founder judgment and a recorded follow-up.
 
-## 15. Merge method
+Prefer squash merge for one coherent outcome. Preserve migration/evidence provenance in the pull-request body and committed artifacts where needed.
 
-- Prefer squash merge for one issue/slice so `main` history states outcomes.
-- The squash title follows `type(scope): outcome` and references the issue in the body.
-- Preserve authored migration/evidence provenance in PR metadata and files.
-- Merge commits are allowed for intentionally coordinated release trains only.
-- Delete branch after merge.
+## 14. Release gate
 
-## 16. Rollback and incident containment
+A release candidate is built and signed before publication. Stable requires:
 
-### Code rollback
+- exact version/evidence manifest;
+- required CI and installed-candidate evidence;
+- compatible migrations and verified recovery;
+- current provider certifications;
+- security/privacy and accessibility evidence;
+- reference-device results;
+- beta exit;
+- accurate known limitations;
+- Founder approval.
 
-- Hold/disable release channel or feature/protocol path first.
-- Revert only when schema/protocol compatibility permits.
-- Prefer a forward fix for already-migrated data.
-- Never overwrite seller data as a routine code rollback.
+The application updater and public release never depend on a tag that was pushed before the candidate was proven.
 
-### Data recovery
+## 15. Required operational drills
 
-- Stop affected workers/writes.
-- Preserve diagnostics and current files.
-- Determine affected shops/events/effects.
-- Use verified backup plus migration/effect replay according to runbook.
-- Reconcile providers/storefront/control plane before reopening writes.
+Create a separate runbook only when implementation makes the procedure concrete. Until then, the roadmap owns the requirement. A runbook becomes ready only after it is exercised against the relevant packaged/cloud/provider system.
 
-### Security containment
+### Phase 0–1
 
-- Revoke affected sessions/devices/keys/tokens/provider credentials.
-- Disable capability/provider/update channel.
-- Preserve redacted forensic evidence.
-- Notify affected users according to legal/product policy.
-- Rotate and migrate through tested procedures.
+- Windows clean install and first-run recovery.
+- Child process, endpoint and runtime failure.
+- Shop registry corruption or missing database.
+- Migration preflight, failure and resume.
+- CI, signing and candidate infrastructure failure.
+- Signed update failure, tamper rejection and compatible recovery.
 
-### Release rollback
+### Phase 2
 
-- Stable manifest can be held/withdrawn.
-- Installed clients are not forced to unsafe downgrades.
-- Publish a signed compatible forward-fix or approved rollback artifact.
-- Control-plane/protocol compatibility supports at least the declared window.
+- Key migration, rotation and loss.
+- Provider credential compromise.
+- Trial issuance, expiry and activation.
+- Canonical desktop transfer and replacement-machine recovery.
+- Member, device and session revocation.
 
-## 17. Release process
+### Phase 3
 
-### 17.1 Candidate creation
+- Outbox backlog, poison event, dead letter and reconciliation.
+- Financial, inventory and COD discrepancy.
+- Return/refund/compensation recovery.
+- Automation or AI approval incident.
 
-1. Select immutable commit from protected `main`.
-2. Generate version/evidence manifest.
-3. Build signed Windows x64 candidate in controlled CI.
-4. Produce SBOM, dependency/security reports and artifact hashes.
-5. Run required automated and packaged suites.
-6. Attach migration, backup/restore, performance, provider, a11y/RTL and beta evidence according to channel.
-7. Create draft candidate; do not update public stable manifest.
+### Phase 4
 
-### 17.2 Channel promotion
+- Control-plane outage and ordered reconnect.
+- Tenant-boundary/security incident.
+- Backup upload, retention and object corruption.
+- Full disaster recovery on a replacement PC.
+- Diagnostic bundle creation, redaction and support transfer.
 
-- **Internal:** engineering/founder devices; incomplete provider/beta evidence allowed if clearly gated.
-- **Beta:** all R3/R4 foundations, backup recovery and supported provider certification required; controlled tenants/devices only.
-- **Stable:** every Constitution and Engineering Specification gate passes; founder signs promotion record.
+### Phase 5
 
-Promotion reuses the exact tested artifacts; no rebuild after approval.
+- WhatsApp disconnect, logout, credential corruption and history reconciliation.
+- Courier outage, status drift and duplicate/ambiguous shipment.
+- Commerce missed webhook, partial page, poison order and overlap reconciliation.
+- Gemini quota, model or privacy incident.
+- Storefront receipt/import backlog, allocation failure and duplicate checkout.
+- Domain, TLS and media failure.
+- PWA stale projection, revocation and command conflict.
 
-### 17.3 Publication
+### Phase 6
 
-- Publish release notes with accurate limitations and compatibility.
-- Update signed channel manifest atomically.
-- Stage rollout by percentage/cohort where supported.
-- Monitor startup, update, migration, provider, backup, storefront and command health.
-- Maintain a hold/kill switch without invalidating perpetual local use.
+- Stable-release incident, rollout hold, support response and forward fix.
+- Full seller-data recovery and service-exit portability drill.
+- Provider/control-plane/storefront/PWA incident exercise.
 
-### 17.4 Post-release
-
-- Verify representative successful installs/updates and backups.
-- Review incidents and drift within the defined observation window.
-- Update evidence ledger and provider status.
-- Close release milestone only after support/rollback readiness is confirmed.
-
-## 18. Emergency changes
-
-An emergency PR must be smaller than normal, state incident ID, containment goal, risk of delay, rollback and evidence. It cannot silently reopen founder decisions. Follow-up tests/docs/root-cause work are filed before merge. Emergency access is audited and time-limited.
-
-## 19. Definition of done
-
-A change is done when its code, migrations, tests, observability, recovery, evidence and authoritative documentation agree at the merged commit. A UI checkmark, source presence, test count or historical claim is not completion.
+Each exercised procedure records the exact source/artifact/provider/environment, participants, result, evidence, residual risk and next recertification date.
