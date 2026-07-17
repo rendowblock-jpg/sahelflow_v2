@@ -15,6 +15,8 @@
 //   webview can use the plugin's commands for other secure storage needs.
 
 #[cfg(not(debug_assertions))]
+use std::io::{Error as IoError, ErrorKind};
+#[cfg(not(debug_assertions))]
 use std::net::TcpStream;
 #[cfg(not(debug_assertions))]
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -300,8 +302,9 @@ pub fn run() {
                     }
                 }
 
-                if let Err(e) = spawn_services(_app) {
-                    eprintln!("[sahelflow] service spawn error: {e}");
+                if let Err(error) = spawn_services(_app) {
+                    eprintln!("[sahelflow] FATAL: mandatory local service startup failed: {error}");
+                    return Err(error);
                 }
             }
             Ok(())
@@ -367,10 +370,12 @@ fn child_env(app: &tauri::App) -> Vec<(String, String)> {
     ]
 }
 
-/// In production: spawn the WhatsApp sidecar + the Next.js standalone server,
-/// then wait for the server port to open before the webview loads.
+/// In production: validate and start the mandatory Next.js standalone server,
+/// prove it is reachable, and only then start the optional WhatsApp sidecar.
+/// A missing resource, missing runtime, spawn failure, or readiness timeout is
+/// returned to Tauri setup so the desktop cannot enter a partial-ready state.
 ///
-/// T-S2: every spawn now receives the shared `child_env` so DATABASE_URL,
+/// T-S2: every spawn receives the shared `child_env` so DATABASE_URL,
 /// SF_DATA_DIR, SIDECAR_TOKEN, etc. resolve correctly inside the children.
 #[cfg(not(debug_assertions))]
 fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -378,75 +383,96 @@ fn spawn_services(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     use tauri_plugin_shell::ShellExt;
 
     let env = child_env(app);
-
-    // 1. WhatsApp sidecar (compiled externalBin: sahelflow-whatsapp).
-    // W2-2: spawn + watch in a separate function so the same logic can be
-    // re-used for respawns after crashes (CommandEvent::Terminated triggers
-    // a backoff respawn — see spawn_sidecar_and_watch / schedule_sidecar_respawn).
-    spawn_sidecar_and_watch(app.handle().clone(), env.clone());
-
-    // 2. Next.js standalone server (from bundled resources).
     let resource_dir = app.path().resource_dir()?;
     let server_js = resource_dir.join("standalone").join("server.js");
 
     if !server_js.exists() {
-        eprintln!(
-            "[sahelflow] Next.js standalone server not found at {}. Run `bun run build` first.",
-            server_js.display()
-        );
-        return Ok(());
+        return Err(IoError::new(
+            ErrorKind::NotFound,
+            format!(
+                "Next.js standalone server is missing at {}. Reinstall SahelFlow or rebuild the candidate.",
+                server_js.display()
+            ),
+        )
+        .into());
     }
 
     let server_path = server_js.to_string_lossy().into_owned();
     // T-S5: prefer the bundled Bun runtime (resource_dir/runtime/bun), then
     // PATH `bun`, then PATH `node`. End users are Algerian COD sellers who
     // will NOT have Bun/Node installed — the installer must bundle it.
-    let resource_dir_for_bun = app.path().resource_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let (runtime, runtime_path) = match bundled_bun(&resource_dir_for_bun) {
+    let (runtime, runtime_path) = match bundled_bun(&resource_dir) {
         Some(path) => ("bundled-bun", Some(path)),
         None if which_exists("bun") => ("bun", None),
         None if which_exists("node") => ("node", None),
         None => {
-            eprintln!(
-                "[sahelflow] No runtime found: neither bundled bun, PATH bun, nor PATH node. \
-                 Run `bun run scripts/prepare-runtime.ts` before `bun run tauri:build` to bundle the runtime."
-            );
-            return Ok(());
+            return Err(IoError::new(
+                ErrorKind::NotFound,
+                "No JavaScript runtime is available: bundled Bun, PATH Bun, and PATH Node are all missing. Reinstall SahelFlow.",
+            )
+            .into());
         }
     };
     let runtime_arg = runtime_path.as_deref().unwrap_or(runtime);
     let mut cmd = app.shell().command(runtime_arg, &[server_path.clone()]);
-    for (k, v) in &env {
-        cmd = cmd.env(k, v);
+    for (key, value) in &env {
+        cmd = cmd.env(key, value);
     }
-    let spawn_result = cmd.spawn();
 
-    match spawn_result {
-        Ok((_rx, child)) => {
-            eprintln!("[sahelflow] Next.js server spawned → http://localhost:3000");
-            // Store the child handle so the RunEvent loop can kill it on exit (T-S4).
-            if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-                if let Ok(mut children) = state.lock() {
-                    children.server = Some(child);
-                }
-            }
-        }
-        Err(e) => eprintln!("[sahelflow] failed to spawn Next.js server: {e}"),
-    }
+    let (_rx, server_child) = cmd.spawn().map_err(|error| {
+        IoError::new(
+            ErrorKind::Other,
+            format!("failed to spawn the Next.js standalone server: {error}"),
+        )
+    })?;
+    eprintln!(
+        "[sahelflow] Next.js server spawned with {runtime} → http://localhost:3000"
+    );
 
     // Wait for the server port to open (max ~60s).
     // T-M8: bumped from 15s to 60s — cold starts can spend 30-45s downloading
     // the Prisma query engine binary on first launch, which exceeded the old
     // 15s budget and caused false-negative "server failed" fallbacks.
-    // T-H1: if the server fails to start, log the fallback HTML so the
-    // founder sees a clear diagnostic (blank webview is the symptom; this
-    // turns it into an actionable error). A future improvement: navigate the
-    // webview to a bundled error.html resource on timeout.
     let reachable = wait_for_port("127.0.0.1", 3000, Duration::from_secs(60));
     if !reachable {
-        eprintln!("[sahelflow] SERVER FAILED TO START. Fallback page:
-{}", SERVER_FAILED_HTML);
+        let _ = server_child.kill();
+        eprintln!("[sahelflow] SERVER FAILED TO START. Diagnostic page:\n{}", SERVER_FAILED_HTML);
+        return Err(IoError::new(
+            ErrorKind::TimedOut,
+            "the mandatory local server did not become ready within 60 seconds",
+        )
+        .into());
     }
+
+    // Store the proven-ready server handle so the RunEvent loop can kill it on exit.
+    match app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+        Some(state) => match state.lock() {
+            Ok(mut children) => {
+                children.server = Some(server_child);
+            }
+            Err(_) => {
+                let _ = server_child.kill();
+                return Err(IoError::new(
+                    ErrorKind::Other,
+                    "the desktop could not acquire its child-process supervisor state",
+                )
+                .into());
+            }
+        },
+        None => {
+            let _ = server_child.kill();
+            return Err(IoError::new(
+                ErrorKind::Other,
+                "the desktop child-process supervisor state was not registered",
+            )
+            .into());
+        }
+    }
+
+    // WhatsApp is currently a degradable capability. Start it only after the
+    // mandatory application server has proven ready, so a failed shell launch
+    // cannot leave an orphan sidecar behind.
+    spawn_sidecar_and_watch(app.handle().clone(), env);
 
     Ok(())
 }
@@ -631,10 +657,10 @@ fn wait_for_port(host: &str, port: u16, timeout: Duration) -> bool {
     false
 }
 
-/// T-H1: fallback HTML shown in the webview if the Next.js server fails to
-/// start. Without this, a server-startup failure (T-S2/T-S3/T-S5) shows a
-/// blank webview with no diagnostic. The fallback tells the user to reinstall
-/// or contact support — much better than a silent blank window.
+/// Diagnostic HTML retained in startup logs when the mandatory Next.js server
+/// fails readiness. The desktop now fails closed instead of opening a blank or
+/// partial-ready shell; a later wave will surface the same state in a dedicated
+/// seller-visible recovery window.
 #[cfg(not(debug_assertions))]
 const SERVER_FAILED_HTML: &str = r#"<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>SahelFlow — Server Failed</title>
