@@ -24,8 +24,9 @@ The documentation reset, experience recovery and semantic consistency audit are 
 - PR #96 — Maze Map experience authority: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
 - PR #97 — documentation authority/consistency audit: `7a138695d4075998165cee362436f5201febe4ea`.
 - PR #98 — post-audit checkpoint: `7a5e21d94f577db3946ac347fad49533b8625687`.
+- Integrated baseline used to start the first implementation wave: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 
-No application behavior or executable product source changed in those documentation waves.
+No application behavior or executable product source changed in the documentation waves above.
 
 ### Canonical read order
 
@@ -78,27 +79,30 @@ bun run glm:bootstrap
 
 Historical Session-40 handoff/tool content remains in orphan-branch Git history only. GLM reads current `AGENTS.md`, Working Memory, active wave and governing authorities at every resume.
 
-## Pre-implementation readiness checkpoint
+## Active wave
 
-The active documentation is semantically coherent and the cross-agent continuity model is unified. Shared bootstrap and verification tooling are now owned by `main`, including the previously missing `sf-verify` package command.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active on `agent/proven-canonical-windows-desktop`, based on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 
-The first executable wave must still perform real local evidence from a clean checkout:
+Required outcome:
 
-1. run `bun run sf-audit` and repair any mechanical link/reference findings;
-2. generate current file/route/API/command/model/migration/test/provider inventories;
-3. generate page/component/design-token inventory;
-4. inspect component-local READMEs and sidecar notes for conflicts with active authority;
-5. run `bun run sf-verify --fast`, then the full gate when the environment permits;
-6. repair GitHub Actions startup if jobs still fail before steps execute;
-7. record results inside the first implementation wave rather than creating another permanent planning authority.
+> A seller can install one Windows candidate, start it reliably, open only the intended shop, and receive a clear recoverable failure instead of silent fallback or partial startup. The repository can prove this from a clean checkout.
 
-GitHub Actions has previously failed before either job executed a step. The new shared command removes the latent missing-script defect, but CI execution remains unproven until a runner actually starts.
+Current checkpoint:
 
-## Next wave
+- the governing contract, risk/evidence layers, phases and explicit non-goals are recorded in the active wave;
+- `package.json` on the baseline contains both `sf-audit` and `sf-verify` scripts;
+- `.github/workflows/ci.yml` invokes those shared commands, but actual runner startup remains unproven;
+- no local command, packaged Windows, migration, recovery, performance, T470 or 4 GB result has been claimed;
+- the current chat environment has GitHub read/write access but no mounted checkout, cannot resolve `github.com` for `git clone`, and therefore cannot execute Bun/Rust/Windows evidence.
 
-Create **Proven Canonical Windows Desktop** from [`WAVE_TEMPLATE.md`](WAVE_TEMPLATE.md).
+Exact next executable action:
 
-Its first phase is local documentation/reference and repository inventory plus Phase 0 repository and packaged truth. It then performs only the minimum Phase 1 runtime/shop/migration design needed to prove a reliable installed Windows candidate.
+1. open a clean mounted checkout at `5fe00b5cb85505e5df27499fe46d0fa6050c0788` on `agent/proven-canonical-windows-desktop`;
+2. run `bun install --frozen-lockfile` and `bun run sf-audit`;
+3. generate the required file/route/API/command/page/component/token/model/migration/test/provider inventories and inspect local READMEs/sidecars;
+4. run `bun run sf-verify --fast`, then the relevant full checks;
+5. inspect the latest GitHub Actions run/job startup message before applying any CI repair;
+6. update the active wave with observed results and begin only the minimum runtime/shop/migration implementation supported by that evidence.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 
