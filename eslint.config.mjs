@@ -42,6 +42,8 @@ const eslintConfig = [
       "data/**",
       "scripts/**",
       "sidecars/**",
+      // The isolated video workspace has its own TypeScript/render gate.
+      "marketing/remotion/**",
       // Agent tooling (standalone bun scripts, not app code)
       "sf-audit/**",
       "sf-browser/**",
