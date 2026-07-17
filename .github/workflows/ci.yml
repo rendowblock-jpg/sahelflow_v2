@@ -79,6 +79,15 @@ jobs:
       - name: Quality gate (tsc + eslint + vitest + prisma)
         run: bun run sf-verify
 
+      - name: Upload first Vitest failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-first-failure
+          path: .sf-vitest-first-failure.txt
+          if-no-files-found: ignore
+          retention-days: 1
+
       # TEST-001: Enforce coverage threshold (60% floor configured in vitest.config.ts)
       # Runs separately so the coverage report is visible in CI output.
       - name: Coverage check
