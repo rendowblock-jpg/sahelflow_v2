@@ -22,6 +22,13 @@ const steps: Step[] = [
     args: ["run", "db:generate"],
     skipInFast: true,
   },
+  {
+    name: "Database migration deployment",
+    command: "bunx",
+    args: ["prisma", "migrate", "deploy"],
+    skipInFast: true,
+    skipWhenTestsSkipped: true,
+  },
   { name: "TypeScript", command: "bun", args: ["run", "typecheck"] },
   { name: "ESLint", command: "bun", args: ["run", "lint"] },
   {
