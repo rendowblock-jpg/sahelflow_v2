@@ -78,7 +78,7 @@ function normalizeLink(rawTarget: string): string | null {
 
   // Drop an optional Markdown title after the path.
   const titleMatch = target.match(/^(\S+)(?:\s+["'].*["'])$/);
-  if (titleMatch) target = titleMatch[1];
+  if (titleMatch?.[1]) target = titleMatch[1];
 
   if (
     !target ||
@@ -88,7 +88,8 @@ function normalizeLink(rawTarget: string): string | null {
     return null;
   }
 
-  target = target.split("#", 1)[0].split("?", 1)[0];
+  target = target.split("#", 1)[0] ?? "";
+  target = target.split("?", 1)[0] ?? "";
   if (!target) return null;
 
   try {
@@ -107,7 +108,10 @@ for (const absoluteFile of markdownFiles) {
   let match: RegExpExecArray | null;
 
   while ((match = markdownLinkPattern.exec(content)) !== null) {
-    const target = normalizeLink(match[1]);
+    const rawTarget = match[1];
+    if (!rawTarget) continue;
+
+    const target = normalizeLink(rawTarget);
     if (!target) continue;
 
     const absoluteTarget = isAbsolute(target)
@@ -118,7 +122,7 @@ for (const absoluteFile of markdownFiles) {
       findings.push({
         kind: "link",
         file: relativeFile,
-        detail: `broken relative link: ${match[1]}`,
+        detail: `broken relative link: ${rawTarget}`,
       });
     }
   }

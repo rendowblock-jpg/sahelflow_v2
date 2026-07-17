@@ -41,7 +41,8 @@ export async function createTestPrisma(): Promise<PrismaClient> {
   return db;
 }
 
-export async function disconnectTestPrisma(db: PrismaClient): Promise<void> {
+export async function disconnectTestPrisma(db?: PrismaClient): Promise<void> {
+  if (!db) return;
   await db.$disconnect();
 }
 
@@ -241,4 +242,3 @@ export async function seedTestOrder(
     include: { items: true },
   });
 }
-

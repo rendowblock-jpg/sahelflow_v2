@@ -24,8 +24,9 @@ The documentation reset, experience recovery and semantic consistency audit are 
 - PR #96 — Maze Map experience authority: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
 - PR #97 — documentation authority/consistency audit: `7a138695d4075998165cee362436f5201febe4ea`.
 - PR #98 — post-audit checkpoint: `7a5e21d94f577db3946ac347fad49533b8625687`.
+- Integrated baseline used to start the first implementation wave: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 
-No application behavior or executable product source changed in those documentation waves.
+No application behavior or executable product source changed in the documentation waves above.
 
 ### Canonical read order
 
@@ -71,6 +72,7 @@ The current protocol is [`GLM_CONTINUITY_PROTOCOL.md`](GLM_CONTINUITY_PROTOCOL.m
 
 ```bash
 bun run sf-audit
+bun run sf-inventory
 bun run sf-verify
 bun run sf-verify --fast
 bun run glm:bootstrap
@@ -78,27 +80,30 @@ bun run glm:bootstrap
 
 Historical Session-40 handoff/tool content remains in orphan-branch Git history only. GLM reads current `AGENTS.md`, Working Memory, active wave and governing authorities at every resume.
 
-## Pre-implementation readiness checkpoint
+## Active wave
 
-The active documentation is semantically coherent and the cross-agent continuity model is unified. Shared bootstrap and verification tooling are now owned by `main`, including the previously missing `sf-verify` package command.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active on `agent/proven-canonical-windows-desktop`, based on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 
-The first executable wave must still perform real local evidence from a clean checkout:
+Required outcome:
 
-1. run `bun run sf-audit` and repair any mechanical link/reference findings;
-2. generate current file/route/API/command/model/migration/test/provider inventories;
-3. generate page/component/design-token inventory;
-4. inspect component-local READMEs and sidecar notes for conflicts with active authority;
-5. run `bun run sf-verify --fast`, then the full gate when the environment permits;
-6. repair GitHub Actions startup if jobs still fail before steps execute;
-7. record results inside the first implementation wave rather than creating another permanent planning authority.
+> A seller can install one Windows candidate, start it reliably, open only the intended shop, and receive a clear recoverable failure instead of silent fallback or partial startup. The repository can prove this from a clean checkout.
 
-GitHub Actions has previously failed before either job executed a step. The new shared command removes the latent missing-script defect, but CI execution remains unproven until a runner actually starts.
+Current checkpoint:
 
-## Next wave
+- GitHub Actions infrastructure is operational; run #371 passed the complete Quality Gate and Tauri smoke after the CI fallback key was corrected to a valid 256-bit hex key and the Linux cargo-check sidecar placeholder was created inside CI only.
+- `sf-inventory` now generates machine-readable clean-checkout evidence. Run #374 passed and retained an inventory for 691 files, 31 pages, 114 API routes, 125 components, 142 CSS custom-property tokens, 31 Prisma models and 97 test files.
+- The Tauri smoke now runs `cargo check --release`, so release-only startup code is compiled instead of being silently excluded by `cfg(not(debug_assertions))`.
+- The first Phase 1A runtime patch is implemented: the mandatory Next.js resource/runtime/spawn/readiness path fails closed, kills a timed-out child, and starts the degradable WhatsApp sidecar only after the application server is proven ready.
+- Run #378 passed authority audit, inventory, TypeScript, ESLint, Vitest, coverage, security audit, migration status and `cargo check --release` for that patch.
+- No installed Windows artifact, failure-injection run, migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
 
-Create **Proven Canonical Windows Desktop** from [`WAVE_TEMPLATE.md`](WAVE_TEMPLATE.md).
+Exact next executable action:
 
-Its first phase is local documentation/reference and repository inventory plus Phase 0 repository and packaged truth. It then performs only the minimum Phase 1 runtime/shop/migration design needed to prove a reliable installed Windows candidate.
+1. enumerate desktop startup/readiness call sites from the retained inventory;
+2. implement one structured seller-visible blocked/recovery startup state that cannot expose the main shell as ready;
+3. design endpoint allocation, per-launch credentials and readiness as one bounded supervisor protocol;
+4. then begin the explicit `ShopContext` and atomic registry boundary, preserving one SQLite file per shop while removing silent fallback;
+5. validate each bounded change through the full clean-checkout Quality Gate and release-path Rust smoke before installed Windows evidence.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 

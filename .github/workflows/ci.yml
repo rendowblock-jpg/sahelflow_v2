@@ -22,7 +22,8 @@ jobs:
 
     env:
       DATABASE_URL: "file:/tmp/ci-test.db"
-      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || 'dev-ci-key-rotate-me' }}
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+      SF_TEST_FAIL_FAST: "1"
 
     steps:
       - name: Checkout repository
@@ -74,9 +75,36 @@ jobs:
       - name: Documentation authority and relative-link audit
         run: bun run sf-audit
 
-      # PROD-026: Run the project's shared quality gate.
+      - name: Generate clean-checkout repository inventory
+        run: bun run sf-inventory
+
+      - name: Upload Phase 0 repository inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-repository-inventory
+          path: .sf-inventory
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
+      # PROD-026: Run the project's shared quality gate. Tee preserves a complete
+      # machine-readable log even when the Actions connector truncates job output.
       - name: Quality gate (tsc + eslint + vitest + prisma)
-        run: bun run sf-verify
+        run: |
+          set -o pipefail
+          bun run sf-verify 2>&1 | tee .sf-verify.log
+
+      - name: Upload quality gate diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-diagnostics
+          path: |
+            .sf-verify.log
+            .sf-vitest-first-failure.txt
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
 
       # TEST-001: Enforce coverage threshold (60% floor configured in vitest.config.ts)
       # Runs separately so the coverage report is visible in CI output.
@@ -93,13 +121,11 @@ jobs:
         run: bunx prisma migrate status
         # Migrations are now fully wired (phase4_drift_capture)
 
-  # T-M9: Tauri build smoke — catches Rust compile errors + Cargo.toml drift
-  # that the JS-only `ci` job can't see. Runs `cargo check` (not a full
-  # `tauri build`, which would take 20+ min and need platform SDKs). This is
-  # cheap insurance against a broken release.yml run that only fails after
-  # every platform has spent 30+ min compiling.
+  # T-M9: Tauri release-path smoke — catches Rust compile errors + Cargo.toml
+  # drift in the code that actually ships. The desktop startup supervisor is
+  # guarded by cfg(not(debug_assertions)), so a debug cargo check is insufficient.
   tauri-build-smoke:
-    name: Tauri Rust smoke (cargo check)
+    name: Tauri Rust smoke (cargo check --release)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -121,18 +147,32 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-check-
+          key: ${{ runner.os }}-cargo-release-check-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-release-check-
 
-      - name: cargo check (src-tauri)
+      - name: Create Linux sidecar stub for cargo check
+        run: |
+          mkdir -p src-tauri/binaries
+          touch src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
+
+      - name: cargo check --release (src-tauri)
         working-directory: src-tauri
         # NOTE: not using --locked here because branches that add/remove a
-        # Rust dep (e.g. T-M1 added `which`) would have an out-of-date
-        # Cargo.lock until a dev runs `cargo build` locally and commits it.
-        # The smoke job's goal is to catch compile errors, not to enforce
-        # lockfile immutability. The release build (tauri-action) regenerates
-        # the lockfile the same way.
-        run: cargo check
+        # Rust dep would otherwise fail before the release-path compile check.
+        run: |
+          set -o pipefail
+          cargo check --release 2>&1 | tee ../.sf-tauri-release-check.log
+
+      - name: Upload release-path Rust diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-release-check-diagnostics-${{ github.run_id }}
+          path: .sf-tauri-release-check.log
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 2
 
   # T-M9 (TODO): E2E (Playwright) is NOT wired into per-push CI on purpose —
   # a full `bun run test:e2e` boots Next.js + a SQLite DB + the WhatsApp
