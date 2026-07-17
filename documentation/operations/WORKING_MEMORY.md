@@ -24,9 +24,7 @@ The documentation reset, experience recovery and semantic consistency audit are 
 - PR #96 — Maze Map experience authority: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
 - PR #97 — documentation authority/consistency audit: `7a138695d4075998165cee362436f5201febe4ea`.
 - PR #98 — post-audit checkpoint: `7a5e21d94f577db3946ac347fad49533b8625687`.
-- Integrated baseline used to start the first implementation wave: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
-
-No application behavior or executable product source changed in the documentation waves above.
+- PR #100 — first Proven Canonical Windows Desktop implementation checkpoint, merged as `2a6233e1e0e090b7d963f217240b013071a9b90c`.
 
 ### Canonical read order
 
@@ -47,28 +45,11 @@ No application behavior or executable product source changed in the documentatio
 6. Roadmap, Workflow and Provider Registry control sequence, review/evidence and integration claims.
 7. Working Memory and the active wave control current progress only.
 
-A lower layer cannot silently weaken a higher layer. Apparent conflicts are reconciled in the owning documents before coding continues.
-
-## Scope classes
-
-- **Required** — explicit Founder/Launch Scope commitment.
-- **Conditional** — named capability public only after certification.
-- **Depth requirement** — behavior/state/UX needed to make required scope complete.
-- **Candidate** — useful recovered or planned item needing Founder classification before commitment.
-- **Excluded** — prohibited for SahelFlow 1.0.
-
-Ambiguous scope defaults to Candidate.
+A lower layer cannot silently weaken a higher layer. Ambiguous scope defaults to Candidate.
 
 ## GLM continuity state
 
-The old `agent-handoff` orphan ref remains useful, but its current role is narrow:
-
-- compact GLM resume checkpoint;
-- thin bootstrap into current `main`;
-- no product, experience, engineering, roadmap, source or tool authority;
-- no application work directly on the orphan ref.
-
-The current protocol is [`GLM_CONTINUITY_PROTOCOL.md`](GLM_CONTINUITY_PROTOCOL.md). Shared commands and their source live on `main`:
+The old `agent-handoff` orphan ref remains a compact GLM resume checkpoint only. Shared commands and their source live on `main`:
 
 ```bash
 bun run sf-audit
@@ -78,11 +59,11 @@ bun run sf-verify --fast
 bun run glm:bootstrap
 ```
 
-Historical Session-40 handoff/tool content remains in orphan-branch Git history only. GLM reads current `AGENTS.md`, Working Memory, active wave and governing authorities at every resume.
+GLM reads current `AGENTS.md`, Working Memory, active wave and governing authorities at every resume.
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active on `agent/proven-canonical-windows-desktop`, based on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) remains active.
 
 Required outcome:
 
@@ -90,19 +71,20 @@ Required outcome:
 
 Current checkpoint:
 
-- GitHub Actions infrastructure is operational; run #371 passed the complete Quality Gate and Tauri smoke after the CI fallback key was corrected to a valid 256-bit hex key and the Linux cargo-check sidecar placeholder was created inside CI only.
-- `sf-inventory` now generates machine-readable clean-checkout evidence. Run #374 passed and retained an inventory for 691 files, 31 pages, 114 API routes, 125 components, 142 CSS custom-property tokens, 31 Prisma models and 97 test files.
-- The Tauri smoke now runs `cargo check --release`, so release-only startup code is compiled instead of being silently excluded by `cfg(not(debug_assertions))`.
-- The first Phase 1A runtime patch is implemented: the mandatory Next.js resource/runtime/spawn/readiness path fails closed, kills a timed-out child, and starts the degradable WhatsApp sidecar only after the application server is proven ready.
-- Run #378 passed authority audit, inventory, TypeScript, ESLint, Vitest, coverage, security audit, migration status and `cargo check --release` for that patch.
-- No installed Windows artifact, failure-injection run, migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
+- PR #100 is merged to `main`.
+- GitHub Actions is fully operational and binds dependency installation, Prisma generation/deployment/status, documentation audit, inventory, TypeScript, ESLint, Vitest, coverage, production audit and `cargo check --release`.
+- `sf-inventory` retains machine-readable clean-checkout evidence. The retained Phase 0 checkpoint reported 691 files, 31 pages, 114 API routes, 125 components, 142 CSS custom-property tokens, 31 Prisma models and 97 test files.
+- Mandatory Next.js resource/runtime/spawn/readiness failures no longer permit a blank or partial-ready shell. Timed-out children are killed, and the degradable WhatsApp sidecar starts only after mandatory application-server readiness.
+- The configured desktop window starts hidden. Successful startup reveals the normal shell; migration or mandatory runtime failure navigates the same window to a French/English/Arabic blocked-state page with a diagnostic code, safe-retry guidance and a persisted JSON report path.
+- Follow-up PR #101 fixes Windows diagnostic replacement behavior by writing unique timestamped reports. Run #394 passed the complete Quality Gate and `cargo check --release`.
+- No installed Windows artifact, packaged failure-injection result, all-shop migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
 
 Exact next executable action:
 
-1. enumerate desktop startup/readiness call sites from the retained inventory;
-2. implement one structured seller-visible blocked/recovery startup state that cannot expose the main shell as ready;
-3. design endpoint allocation, per-launch credentials and readiness as one bounded supervisor protocol;
-4. then begin the explicit `ShopContext` and atomic registry boundary, preserving one SQLite file per shop while removing silent fallback;
+1. enumerate every fixed-port, sidecar URL, health/readiness and local-runtime authentication call site;
+2. define one supervisor-owned per-launch runtime context containing allocated endpoints, credentials and readiness state;
+3. migrate the Tauri host, Next.js server and WhatsApp sidecar behind that boundary without exposing the normal shell early;
+4. then begin explicit `ShopContext` and atomic registry work, preserving one SQLite file per shop while removing silent fallback;
 5. validate each bounded change through the full clean-checkout Quality Gate and release-path Rust smoke before installed Windows evidence.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
@@ -111,5 +93,6 @@ Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion bef
 
 - Exact local Windows environment for the first installed candidate.
 - Exact 4 GB floor-reference machine/dataset and T470 dataset.
+- Exact failure-injection harness for occupied endpoint, missing resource, migration failure and child termination.
 - Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.
 - Which courier candidates the Founder selects for the public launch set after live certification evidence.
