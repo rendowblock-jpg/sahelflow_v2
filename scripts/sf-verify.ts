@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -34,6 +34,10 @@ const skipTests = fast || cliArgs.includes("--skip-tests");
 const repoDir = process.env.SF_REPO_DIR || process.cwd();
 const failFastTests = process.env.SF_TEST_FAIL_FAST === "1";
 const vitestResultsPath = resolve(repoDir, ".sf-vitest-results.json");
+const vitestFailurePath = resolve(repoDir, ".sf-vitest-first-failure.txt");
+
+rmSync(vitestResultsPath, { force: true });
+rmSync(vitestFailurePath, { force: true });
 
 const steps: Step[] = [
   {
@@ -77,6 +81,10 @@ function printOutput(output: string): void {
   }
 }
 
+function persistVitestFailure(lines: string[]): void {
+  writeFileSync(vitestFailurePath, `${lines.join("\n").trim()}\n`, "utf8");
+}
+
 function printFirstVitestFailure(): boolean {
   if (!existsSync(vitestResultsPath)) return false;
 
@@ -89,18 +97,20 @@ function printFirstVitestFailure(): boolean {
         const title = [...(assertion.ancestorTitles ?? []), assertion.title]
           .filter(Boolean)
           .join(" > ");
-        console.error(`    test file: ${file.name ?? "unknown"}`);
-        console.error(`    test: ${title || "unknown"}`);
-        for (const message of assertion.failureMessages ?? []) {
-          printOutput(message);
-        }
+        const lines = [
+          `test file: ${file.name ?? "unknown"}`,
+          `test: ${title || "unknown"}`,
+          ...(assertion.failureMessages ?? []),
+        ];
+        persistVitestFailure(lines);
+        printOutput(lines.join("\n"));
         return true;
       }
     }
   } catch (error) {
-    console.error(
-      `    unable to parse Vitest JSON report: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    const message = `unable to parse Vitest JSON report: ${error instanceof Error ? error.message : String(error)}`;
+    persistVitestFailure([message]);
+    console.error(`    ${message}`);
   } finally {
     rmSync(vitestResultsPath, { force: true });
   }
@@ -136,10 +146,14 @@ for (const step of steps) {
 
   failures += 1;
   console.error(`FAIL ${step.name} (${elapsed} ms)`);
+  const combinedOutput = `${result.stdout || ""}\n${result.stderr || ""}`;
   const printedStructuredFailure =
     step.name === "Vitest" && failFastTests && printFirstVitestFailure();
   if (!printedStructuredFailure) {
-    printOutput(`${result.stdout || ""}\n${result.stderr || ""}`);
+    if (step.name === "Vitest" && failFastTests && !existsSync(vitestFailurePath)) {
+      persistVitestFailure(combinedOutput.trim().split("\n").slice(-120));
+    }
+    printOutput(combinedOutput);
   }
 }
 
