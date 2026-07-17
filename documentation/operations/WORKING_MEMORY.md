@@ -12,36 +12,27 @@ This is the compact entry point for current work. Update it at meaningful checkp
 - Preserve the durable Maze Map richness about capabilities, journeys, UI/UX, frontend behavior, Arabic/RTL and accessibility.
 - Ground product and architecture work in actual source and evidence.
 - Maintain one non-conflicting authority flow before implementation begins.
-- Reclassify or move stale/duplicate/history material only after unique durable value is active elsewhere.
 - Active roles are Codex Desktop, ChatGPT and GLM.
 - Codex Desktop is the only agent assumed to have full local desktop/runtime access.
 
-## Active wave
+## Canonical documentation state
 
-**Documentation consistency and execution-flow audit before implementation**
+The documentation reset, experience recovery and semantic consistency audit are integrated into `main`:
 
-- Documentation reset merged in PR #95: `dee78e9c6085b367fb7a533b50624f4389a4cb8d`.
-- Maze Map experience recovery merged in PR #96: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
-- Audit branch: `agent/documentation-consistency-audit`.
-- Product authority: [`../product/README.md`](../product/README.md)
-- Experience authority: [`../experience/README.md`](../experience/README.md)
-- Engineering authority: [`../architecture/README.md`](../architecture/README.md)
-- Current-state model: [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
-- Work path: [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md)
-- Workflow: [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md)
+- PR #95 — current-to-target program: `dee78e9c6085b367fb7a533b50624f4389a4cb8d`.
+- PR #96 — Maze Map experience authority: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
+- PR #97 — documentation authority/consistency audit: `7a138695d4075998165cee362436f5201febe4ea`.
 
-### Outcome
+No application behavior or executable source changed in these documentation waves.
 
-Before application implementation begins:
+### Canonical read order
 
-- every active document follows one precedence and read order;
-- product promises, experience requirements, engineering invariants, current status and sequencing agree;
-- ambiguous recovered capabilities cannot silently expand Stable scope;
-- provider code or certification cannot create a Founder promise;
-- historical, research and component documents cannot act as current readiness authority;
-- the first implementation wave has one governing-contract template and exact evidence expectations.
-
-No application behavior or executable source changes in this wave.
+1. [`../product/README.md`](../product/README.md)
+2. [`../experience/README.md`](../experience/README.md)
+3. [`../architecture/README.md`](../architecture/README.md)
+4. [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
+5. [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md)
+6. [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md)
 
 ## Confirmed authority model
 
@@ -65,37 +56,46 @@ A lower layer cannot silently weaken a higher layer. Apparent conflicts are reco
 
 Ambiguous scope defaults to Candidate.
 
-## Corrections on the audit branch
+## Consistency audit result
 
-- Added one repository-wide precedence/read-order model.
-- Bound waves and pull requests to product clause, scope, capability, journey/states, experience dimensions, invariants, roadmap and evidence.
-- Reconciled storefront durable-receipt success with desktop-committed operational-command success.
-- Aligned Founder performance thresholds and Windows compatibility language.
-- Added missing trial/permanent signing separation, payment-versus-issuance states, backup key separation, trial backup retention and independent/two-share recovery.
-- Added missing team work depth, Law 18-07 review and continuity reserve/coverage/service-exit obligations.
-- Reclassified specific couriers and Google Sheets as architecture candidates rather than automatic Founder scope.
-- Replaced the active root changelog with current SahelFlow 1.0 truth while preserving the former session/v3/v4 chronology under `documentation/history/`.
-- Added explicit non-authority indexes for research and history.
+The semantic audit reconciled:
 
-## Current limitations and validation
+- product → experience → engineering → current-state → roadmap/workflow flow;
+- storefront durable-receipt success versus desktop-committed operational-command success;
+- Founder performance thresholds and Windows compatibility language;
+- trial/permanent signing, payment/issuance separation and entitlement authority;
+- backup key separation, trial retention, independent recovery and two-share assisted recovery;
+- team work depth and trusted approvals;
+- Law 18-07 and continuity reserve/coverage/service-exit obligations;
+- provider candidate scope versus live certification and Founder launch-set decisions;
+- MAWS wave/PR governing-contract fields;
+- current changelog versus preserved historical session/v3/v4 chronology;
+- research/history as reference rather than active authority.
 
-- GitHub code search is unavailable for this repository.
-- This connected environment has no local checkout/runtime.
-- Semantic review of the active product, experience, architecture, provider, operations, changelog/history and research entrypoints is complete.
-- Codex Desktop must run the Phase 0 local Markdown/link/reference scan and generated file/page/component/token inventories before implementation code begins.
-- GitHub Actions currently fails before either job executes; the undefined `sf-verify` command remains a Phase 0 blocker.
+## Active checkpoint — pre-implementation validation
 
-## Next move
+The active documentation is semantically coherent and ready to guide implementation. Before executable application work begins, Codex Desktop must perform the remaining mechanical/source inventory from a clean checkout:
 
-1. Open and review the documentation consistency pull request.
-2. Confirm the documentation-only diff and merge it.
-3. Codex Desktop runs local link/reference and repository inventory validation from clean `main`.
-4. Create the **Proven Canonical Windows Desktop** wave from `WAVE_TEMPLATE.md`.
-5. Begin only Phase 0 and minimum Phase 1 foundation work; do not start Cloudflare, hosted storefront, remote PWA or provider expansion.
+1. complete Markdown link/reference validation;
+2. generate current file/route/API/command/model/migration/test/provider inventories;
+3. generate page/component/design-token inventory;
+4. inspect component-local READMEs and sidecar notes for conflicts with active authority;
+5. record the report in the first wave rather than creating another permanent authority;
+6. repair GitHub Actions startup and implement or remove the undefined `sf-verify` command.
+
+GitHub Actions currently fails before either job executes a step, so CI has not validated the documentation or application.
+
+## Next wave
+
+Create **Proven Canonical Windows Desktop** from [`WAVE_TEMPLATE.md`](WAVE_TEMPLATE.md).
+
+Its first phase is documentation/reference inventory plus Phase 0 repository and packaged truth. It then performs only the minimum Phase 1 runtime/shop/migration design needed to prove a reliable installed Windows candidate.
+
+Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 
 ## Open implementation-lab decisions
 
 - Exact local Windows environment for the first installed candidate.
 - Exact 4 GB floor-reference machine/dataset and T470 dataset.
-- Which implemented design tokens are retained or changed after the first packaged frontend/design-system audit.
+- Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.
 - Which courier candidates the Founder selects for the public launch set after live certification evidence.
