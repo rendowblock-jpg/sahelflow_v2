@@ -1,7 +1,7 @@
 # Wave: Proven Canonical Windows Desktop
 
 > Started: 2026-07-17  
-> Current focus: Phase 0 clean-checkout truth, CI startup, repository inventories and Windows candidate readiness  
+> Current focus: Phase 1A fail-closed desktop startup, structured recovery state and authenticated runtime boundaries  
 > Lead: Codex Desktop / ChatGPT continuity
 
 ## Founder intent and outcome
@@ -22,20 +22,22 @@ A seller can install one Windows candidate, start it reliably, open only the int
 
 ## Current reality
 
-Verified from `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`:
+Verified from branch `agent/proven-canonical-windows-desktop`, based on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`:
 
-- `package.json` defines `sf-audit` and `sf-verify`; the earlier missing-package-script defect is no longer present.
-- `.github/workflows/ci.yml` defines an Ubuntu quality-gate job and a Tauri Rust smoke job.
-- Pull-request workflow run `29592496180` for branch head `4baf3a36c37f4d17593c98cad153d82b600bd139` created both jobs, but both concluded failure with zero steps and no retained job-log blob.
-- The GitHub web annotation exposed the exact startup cause: `The job was not started because your account is locked due to a billing issue.`
-- Repository Actions policy was verified as `Allow all actions and reusable workflows`, with full-length action-SHA pinning disabled; workflow policy was not the blocker.
-- The failed payment method reported `Invalid payment method - authorization hold failed.` The Founder replaced it with a Moneco Visa, and GitHub confirmed `Your credit card has been successfully updated.`
-- Because no checkout/setup/command step was created in the failed runs, those runs do not implicate `sf-audit`, `sf-verify`, Bun, Prisma, Rust or repository source. A fresh post-billing commit is required to verify that Actions startup is now restored.
-- The current source model still uses a Tauri host around a fixed-loopback Next.js runtime and WhatsApp sidecar, with per-shop SQLite selection routed through process-global metadata/proxy behavior.
-- The architecture baseline identifies fixed endpoints, incomplete readiness/supervision, silent shop fallback risk, production `db push`/unsafe migration assumptions and missing all-shop migration coordination.
-- No packaged Windows, provider, recovery, performance, T470 or 4 GB result is claimed by this wave until executed and retained.
+- GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
+- CI now binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
+- The CI fallback `SF_MASTER_KEY` was invalid for the encryption contract. It is now a deterministic 64-character hexadecimal test key; run #371 passed the full Quality Gate after this repair.
+- Tauri `externalBin` resolution requires a target-suffixed binary even for Linux cargo checking. CI now creates only a temporary Linux placeholder; packaged Windows sidecar contents are unchanged.
+- `sf-verify` retains complete failure output and CI uploads bounded diagnostic artifacts when Actions logs are truncated.
+- `sf-inventory` generates machine-readable clean-checkout inventories without becoming a competing permanent authority. Run #374 retained a seven-day artifact.
+- The retained inventory at commit `bf369cd5f091dd0d74bcbdac12f07ba00c8b2238` reports 691 tracked files, 38 Markdown files, 9 READMEs, 31 pages, 114 API routes, 33 commands, 125 components, 2 design-token source files, 142 CSS custom-property tokens, 31 Prisma models, 9 migration files, 97 test files, 35 provider/integration files and 13 sidecar/desktop resource files.
+- The earlier Rust smoke used debug `cargo check`, which excluded the actual packaged startup code behind `cfg(not(debug_assertions))`. CI now runs `cargo check --release` and retains the release compile log on failure.
+- Release-path compilation exposed a latent `tauri-plugin-shell` API misuse in the existing standalone-server command construction. The program and server argument are now passed through `.command(runtime).arg(server_path)`.
+- The first Phase 1A runtime patch is implemented: missing standalone resources, missing runtime, server spawn failure, supervisor-state failure and readiness timeout now abort Tauri setup; a timed-out server child is killed; the WhatsApp sidecar starts only after the mandatory application server is proven ready.
+- Run #378 passed the full Quality Gate and `cargo check --release` for the runtime patch.
+- No packaged Windows, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
 
-Session environment limitation observed on 2026-07-17: GitHub repository access is available through the connected GitHub app, but no repository checkout is mounted and outbound `git clone` cannot resolve `github.com`. Therefore local `bun`, Rust, packaging, Windows, migration and hardware commands have not been executed in this checkpoint.
+Session environment limitation observed on 2026-07-17: GitHub repository access and Actions execution are available, but this chat environment has no mounted checkout, cannot resolve `github.com` for `git clone`, and has no Windows runtime. Clean-checkout Linux evidence is therefore provided by retained Actions runs; installed Windows evidence still requires the implementation lab.
 
 ## Target experience or system
 
@@ -52,32 +54,36 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ## Deep-dive findings
 
-- The active `main` baseline equals the expected integrated commit: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
-- Open PR #83 is a stale stacked documentation draft based on an older authority model; PR #74 is an older non-mergeable documentation/master-plan PR. Neither is a valid implementation base for this wave.
-- `scripts/sf-audit.ts` performs a repository-wide active-Markdown relative-link scan, required-authority checks, shared-script drift checks and entrypoint authority checks. Its correctness still requires clean-checkout execution.
-- `scripts/sf-verify.ts` runs TypeScript and ESLint in fast mode, and adds Prisma generation plus Vitest in full mode. Its command wiring is coherent by source inspection but remains unexecuted in a clean checkout.
-- GitHub Actions run `29592496180` proves the previous CI failure occurred before any workflow step; the web annotation identifies account billing lock as the exact cause.
-- The billing method has now been successfully updated. This commit intentionally creates a fresh pull-request run to verify that checkout/setup steps can start.
-- The branch must first generate observed inventories and command reports before selecting runtime/shop/migration patches.
+- The active baseline equals the expected integrated `main` commit: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
+- `sf-audit`, `sf-verify` and `sf-inventory` now execute from clean Actions checkouts and are retained through visible steps or artifacts.
+- Source inventory confirms the runtime/shop migration surface is broad enough that call-site enumeration must precede a `ShopContext` rewrite.
+- The current Tauri host still uses fixed ports 3000/3001, a default `shops/dev.db` migration target and process-global child environment.
+- The mandatory Next.js runtime is now fail-closed at source level, but the failure is still primarily diagnostic/log-facing; the dedicated seller-visible blocked/recovery shell remains missing.
+- WhatsApp remains a degradable capability with backoff respawn and demo/offline behavior. Its exact required/degraded policy must be represented in the startup state model rather than inferred from logs.
+- The current database path and migration runner still assume one default shop. This must not be expanded by ad hoc path changes; Phase 1B requires explicit registry/context and all-shop migration coordination.
+- Fixed endpoint removal and per-launch credentials must converge with readiness rather than being patched independently.
 
 ## Multi-phase plan
 
 ### Phase: 0A — Clean-checkout authority and repository truth
 
+- Status: source-level command and inventory evidence complete for the current branch; refresh after material source changes.
 - Purpose: prove the repository can be checked out and its governing commands execute.
 - Work and questions: run complete Markdown link/reference validation; run `bun run sf-audit`; generate inventories for files, routes, API endpoints, commands, pages, components, design tokens, Prisma models, migrations, tests and providers; inspect component-local READMEs and sidecars; run `bun run sf-verify --fast`, then relevant full checks.
 - Capability/journey/experience impact: establishes traceability and prevents stale local notes from weakening active product/experience authority.
-- Evidence or completion signal: retained machine-readable reports from a clean checkout at the exact commit.
+- Evidence or completion signal: runs #371, #374 and #378 plus the retained `phase0-repository-inventory` artifact.
 
 ### Phase: 0B — CI startup and shared-command repair
 
+- Status: complete for current branch.
 - Purpose: make pull-request checks actually start and bind to the same commands used locally.
-- Work and questions: verify the fresh post-billing run creates checkout/setup steps; if startup still fails, inspect the new run annotation and payment/account status; after startup succeeds, diagnose command-level failures from retained job logs; verify `sf-audit` and `sf-verify` from a second clean checkout; retain logs/results.
+- Work and questions: preserve complete diagnostic output, compile release-only Rust code, and keep the clean-checkout commands visible and reproducible.
 - Capability/journey/experience impact: none directly; enables trustworthy implementation evidence.
-- Evidence or completion signal: a pull-request run creates and executes checkout/setup/verification steps and completes the intended gates from a clean checkout.
+- Evidence or completion signal: run #378 passed every configured Quality Gate and release-path Rust step.
 
 ### Phase: 0C — Installed Windows candidate baseline
 
+- Status: not executed; requires Windows implementation lab.
 - Purpose: produce one internal Windows-only candidate and establish runtime/readiness truth.
 - Work and questions: build without external Node/Bun/Rust on the test machine; verify resources and manifest; exercise clean install, occupied endpoint, missing resource, child failure and shutdown/restart; capture source/artifact digests and machine/Windows profile.
 - Capability/journey/experience impact: startup, blocked/degraded/recovery states and support diagnostics.
@@ -85,13 +91,16 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ### Phase: 1A — Supervised authenticated local runtime
 
+- Status: started.
 - Purpose: prevent partial-ready startup and ambiguous fixed-endpoint behavior.
-- Work and questions: design service supervisor, endpoint allocation, per-launch credentials, readiness protocol, restart budget, crash-loop/safe-mode behavior and seller-visible diagnostics; migrate incrementally behind compatibility boundaries.
+- Completed bounded work: mandatory application-server resource/runtime/spawn/readiness failures now abort setup; timeout kills the server child; optional sidecar startup occurs only after application-server readiness; release-only code is compiled in CI.
+- Next work and questions: introduce a structured startup state and seller-visible blocked/recovery window; select per-launch endpoints; generate per-launch credentials; define readiness protocol, restart budget, crash-loop/safe-mode behavior and support-readable diagnostics; then failure-inject each named state.
 - Capability/journey/experience impact: startup, degraded, blocked, retry, support and recovery journeys.
-- Evidence or completion signal: failure-injection tests plus installed-candidate proof that ready is impossible while required services are unavailable.
+- Evidence or completion signal: release compile is green; installed-candidate failure-injection proof remains required before completion.
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
+- Status: call-site inventory next; implementation not started.
 - Purpose: guarantee every operation targets the intended shop and every supported upgrade is recoverable.
 - Work and questions: define `ShopContext`; design atomic versioned registry; enumerate all call sites and background scopes; remove silent fallback through bounded adapters; replace production `db push`; implement all-shop preflight, compatibility report, external journal, verified snapshots, interruption/rerun/low-disk/corrupt-registry handling.
 - Capability/journey/experience impact: open/switch shop, missing/corrupt shop, maintenance, migration and recovery journeys.
@@ -99,6 +108,7 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ### Phase: 0D — Reference baseline
 
+- Status: not executed.
 - Purpose: capture no-optimization startup, memory and representative operation measurements.
 - Work and questions: run exact candidate and datasets on ThinkPad T470 and an agreed 4 GB floor-reference environment when available.
 - Capability/journey/experience impact: low-end responsiveness and guidance.
@@ -108,32 +118,39 @@ The internal installed candidate must expose one deterministic startup state mac
 
 | Decision | Why | Decided by or evidence | Date |
 |---|---|---|---|
-| Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It is the actual latest default-branch commit observed at wave start and includes the integrated documentation/tool baseline. | GitHub repository and commit inspection. | 2026-07-17 |
+| Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It is the actual integrated default-branch commit observed at wave start. | GitHub repository and commit inspection. | 2026-07-17 |
 | Use `agent/proven-canonical-windows-desktop`. | Normal outcome branch required by the coding workflow. | Coding Workflow. | 2026-07-17 |
-| Treat CI run `29592496180` as a pre-step Actions startup failure caused by account billing lock. | Both jobs had zero steps/no log blob, and the GitHub web annotation stated the exact billing-lock cause. | GitHub Actions metadata and web annotation. | 2026-07-17 |
-| Do not edit CI YAML for the billing-lock failure. | Repository commands and workflow steps never ran; account billing was the controlling defect. | Evidence rules and exact annotation. | 2026-07-17 |
-| Trigger a fresh run with a legitimate wave checkpoint after GitHub accepted the replacement payment method. | A new run is the minimum evidence that account startup has recovered. | GitHub payment confirmation and CI trigger behavior. | 2026-07-17 |
-| Do not claim local command, package, Windows or hardware results in this checkpoint. | The current session has no executable checkout or Windows runtime. | Observed environment limitation. | 2026-07-17 |
+| Treat run `29592496180` as a billing-lock startup failure, not repository evidence. | Both jobs had zero steps and GitHub exposed the account-lock annotation. | GitHub Actions metadata and annotation. | 2026-07-17 |
+| Use a valid deterministic 256-bit hexadecimal fallback key in CI. | The earlier placeholder violated the encryption key contract and caused broad test failure. | Retained Quality Gate diagnostics; run #371. | 2026-07-17 |
+| Create the target-suffixed Linux sidecar placeholder inside CI only. | Tauri configuration validation needs the path for Linux cargo checking; committing a fake packaged sidecar would weaken artifact truth. | Release build-script error and subsequent green smoke. | 2026-07-17 |
+| Retain diagnostic artifacts for truncated Quality Gate and Rust logs. | Connector log responses can omit the failure tail; artifacts provide exact bounded evidence without user intervention. | Runs #370 and #377 diagnostic artifacts. | 2026-07-17 |
+| Add `sf-inventory` as a mechanical evidence command. | Phase 0 requires repeatable inventories, but generated evidence must not become a second authority. | Run #374 artifact. | 2026-07-17 |
+| Compile Tauri with `cargo check --release` in CI. | The packaged startup supervisor is behind `cfg(not(debug_assertions))`; debug checking did not compile shipping code. | Run #376 exposed the latent API failure; run #378 passed after repair. | 2026-07-17 |
+| Fail closed when the mandatory application server is unavailable. | Returning success after missing resources/runtime, spawn failure or readiness timeout allowed a blank or partial-ready shell. | Source inspection, target invariant and run #378 release compile. | 2026-07-17 |
+| Start the degradable WhatsApp sidecar only after mandatory server readiness. | A failed shell launch must not leave a sidecar child running or imply partial readiness. | Source inspection and release-path compile. | 2026-07-17 |
 
 ## Working notes and open questions
 
-- Inspect the fresh workflow run created by this commit and confirm whether checkout/setup steps now exist.
-- Obtain an executable clean checkout with Bun/Rust.
-- Generate inventories mechanically; do not convert them into a competing permanent repository authority.
-- Select exact registry and `ShopContext` interfaces only after current call-site inventory and tests are observed.
+- Use the inventory to enumerate startup/readiness and shop-routing call sites; do not infer completeness from filename counts alone.
+- The next Phase 1A patch must produce a structured blocked/recovery state visible to the seller, not only a panic or stderr message.
+- Decide the per-launch endpoint/authentication mechanism only inside the supervised startup protocol.
+- Select exact registry and `ShopContext` interfaces only after current call sites and background scopes are observed.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices, not product changes.
 
 ## Implementation and evidence
 
 - Branches or pull requests: `agent/proven-canonical-windows-desktop`; draft PR #100.
-- Tests, demonstrations or measurements: no repository commands executed in this session. GitHub Actions run `29592496180` inspected; both jobs failed before steps because the account was locked due to a billing issue. Repository Actions policy was verified permissive, and GitHub confirmed successful replacement-card update.
-- Visual/RTL/accessibility evidence where applicable: none yet.
+- Green clean-checkout CI: run #371 (`29603869888`) and run #374 (`29604264999`).
+- Final green runtime checkpoint: run #378 (`29605285748`) passed authority audit, inventory, Prisma generation/deploy/status, TypeScript, ESLint, Vitest, coverage, security audit and `cargo check --release`.
+- Inventory artifact: `phase0-repository-inventory`, artifact `8416217843`, digest `sha256:545f9ebbf1b9857bc7f44561c0f28832c5421bcf452bdd0036492380f3fd376c`.
+- Runtime source: Tauri setup now rejects mandatory local-server startup failures and does not start the sidecar before server readiness.
+- Visual/RTL/accessibility evidence where applicable: none yet for the blocked/recovery startup state.
 - Packaged/provider/recovery evidence where applicable: none yet.
-- Known limitations: no mounted checkout, no outbound clone and no local Bun/Rust/Windows environment. Billing acceptance is observed, but runner recovery remains unproven until the new run starts steps.
+- Known limitations: no mounted checkout or Windows runtime in this chat; CI proves clean Linux checkout and release compilation, not an installed Windows candidate.
 
 ## Current checkpoint
 
-- What is now true: the exact CI startup root cause is known and was account billing lock, not repository workflow code; Actions policy is valid; GitHub accepted the replacement payment method; this legitimate checkpoint commit triggers a fresh verification run.
-- What changed in the plan: speculative YAML repair is removed from the immediate path. First verify post-billing runner startup, then diagnose any real command-level failures from logs.
-- Current blocker or uncertainty: whether GitHub has fully cleared the account lock and will create workflow steps for this new commit; local clean-checkout and Windows execution remain unavailable in this session.
-- Exact next move: inspect the fresh CI run for this commit. If checkout/setup steps appear, retrieve the first failing command and repair it; if jobs still have zero steps, inspect the new run-level annotation and billing/account state before touching repository code.
+- What is now true: CI is fully green and binds clean-checkout authority, inventory, JS/Prisma verification and release-only Rust compilation; mandatory local-server failure no longer returns success at source level.
+- What changed in the plan: Phase 0A/0B source evidence is complete enough to proceed; Phase 1A has begun before installed-candidate proof because the first defect was source-provable and release-compile-verifiable.
+- Current blocker or uncertainty: seller-visible blocked/recovery presentation, fixed endpoints, per-launch authentication and installed Windows behavior remain unproven.
+- Exact next move: enumerate startup/readiness call sites from the retained inventory and implement a structured seller-visible blocked/recovery startup surface that cannot expose the main shell as ready; then converge endpoint allocation and per-launch credentials behind that state machine.
