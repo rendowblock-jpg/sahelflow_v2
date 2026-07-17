@@ -133,7 +133,7 @@ The internal installed candidate must expose one deterministic startup state mac
 
 - Use the inventory to enumerate startup/readiness and shop-routing call sites; do not infer completeness from filename counts alone.
 - The next Phase 1A patch must produce a structured blocked/recovery state visible to the seller, not only a panic or stderr message.
-- Decide the per-launch endpoint/authentication mechanism only inside the supervised startup protocol.
+- Endpoint allocation, per-launch credentials and readiness must be designed and implemented as one bounded supervisor protocol.
 - Select exact registry and `ShopContext` interfaces only after current call sites and background scopes are observed.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices, not product changes.
 
@@ -153,4 +153,4 @@ The internal installed candidate must expose one deterministic startup state mac
 - What is now true: CI is fully green and binds clean-checkout authority, inventory, JS/Prisma verification and release-only Rust compilation; mandatory local-server failure no longer returns success at source level.
 - What changed in the plan: Phase 0A/0B source evidence is complete enough to proceed; Phase 1A has begun before installed-candidate proof because the first defect was source-provable and release-compile-verifiable.
 - Current blocker or uncertainty: seller-visible blocked/recovery presentation, fixed endpoints, per-launch authentication and installed Windows behavior remain unproven.
-- Exact next move: enumerate startup/readiness call sites from the retained inventory and implement a structured seller-visible blocked/recovery startup surface that cannot expose the main shell as ready; then converge endpoint allocation and per-launch credentials behind that state machine.
+- Exact next move: enumerate startup/readiness call sites from the retained inventory and implement one structured blocked/recovery startup state that cannot expose the main shell as ready, while designing endpoint allocation and per-launch authentication as part of the same supervisor boundary.
