@@ -98,16 +98,27 @@ Do not copy entire authority documents, source audits or narrative session histo
 
 ## Shared tooling ownership
 
-The executable source for `sf-verify`, `sf-audit`, GLM bootstrap and other repository checks belongs on `main`. The orphan ref must not carry independent tool implementations.
+The executable source for repository checks and development helpers belongs on `main`. The orphan ref carries no independent tool implementations.
 
-Current commands:
+Current shared commands:
 
 ```bash
-bun run sf-verify
-bun run sf-verify -- --fast
-bun run sf-audit
 bun run glm:bootstrap
+bun run sf-audit
+bun run sf-verify --fast
+bun run sf-verify
+bun run sf-seed
+bun run sf-browser
 ```
+
+The following old orphan-only commands are retired rather than migrated:
+
+- `sf-db` — depended on the old implicit development-database model;
+- `sf-license` — encoded the superseded local signer/trial model and must not be used for SahelFlow 1.0 licensing;
+- `sf-port` — v2-to-v3 transition utility from an obsolete migration era;
+- `sb-db` — legacy Supabase mutation access, outside the current local-first authority and safety model.
+
+Reintroduce any equivalent capability only as reviewed `main` tooling under the current architecture and active wave.
 
 ## Safety and cleanup rules
 
