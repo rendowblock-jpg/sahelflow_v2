@@ -23,7 +23,6 @@ import {
   Wordmark,
   rise,
   scaleIn,
-  sceneOpacity,
 } from './components';
 import {colors, fonts, rounded, shadows} from './theme';
 
@@ -32,14 +31,11 @@ const Scene: React.FC<{
   children: ReactNode;
   glow?: 'emerald' | 'blue' | 'magenta' | 'amber';
   style?: CSSProperties;
-}> = ({duration, children, glow, style}) => {
-  const frame = useCurrentFrame();
-  return (
-    <SceneCanvas glow={glow} style={{opacity: sceneOpacity(frame, duration), ...style}}>
-      {children}
-    </SceneCanvas>
-  );
-};
+}> = ({children, glow, style}) => (
+  <SceneCanvas glow={glow} style={style}>
+    {children}
+  </SceneCanvas>
+);
 
 const FloatingOrder: React.FC<{
   delay: number;
