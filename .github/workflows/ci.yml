@@ -91,6 +91,7 @@ jobs:
             .sf-verify.log
             .sf-vitest-first-failure.txt
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 1
 
       # TEST-001: Enforce coverage threshold (60% floor configured in vitest.config.ts)
