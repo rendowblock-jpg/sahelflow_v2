@@ -160,7 +160,19 @@ jobs:
         working-directory: src-tauri
         # NOTE: not using --locked here because branches that add/remove a
         # Rust dep would otherwise fail before the release-path compile check.
-        run: cargo check --release
+        run: |
+          set -o pipefail
+          cargo check --release 2>&1 | tee ../.sf-tauri-release-check.log
+
+      - name: Upload release-path Rust diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-release-check-diagnostics
+          path: .sf-tauri-release-check.log
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
 
   # T-M9 (TODO): E2E (Playwright) is NOT wired into per-push CI on purpose —
   # a full `bun run test:e2e` boots Next.js + a SQLite DB + the WhatsApp
