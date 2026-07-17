@@ -21,16 +21,11 @@ This is the compact entry point for current work. Update it at meaningful checkp
 
 **Documentation reset and current-to-target program model**
 
-Branch: `agent/documentation-reset-gap-roadmap`
-
-Primary artifact:
-
-- [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
-
-Supporting authorities:
-
-- [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md)
-- [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md)
+- Branch: `agent/documentation-reset-gap-roadmap`
+- Draft pull request: [#95 — consolidate current-to-target program](https://github.com/rendowblock-jpg/sahelflow_v2/pull/95)
+- Primary artifact: [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
+- Work path: [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md)
+- Engineering workflow: [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md)
 
 Outcome:
 
@@ -56,13 +51,17 @@ Application code is unchanged by this wave.
 ## Current checkpoint
 
 - Deep source exploration is complete across runtime, data, security, licensing, domain services, providers, UI, PWA, backup, testing, CI and release.
-- The current-to-target analysis and simplified roadmap are being published as a reviewable documentation reset.
-- Duplicate current-state, contradiction, evidence, repository, reuse, inventory and session-handoff documents are being consolidated or removed.
-- No application behavior or source code has been changed.
-- Next move after Founder review: merge the documentation reset, then open the **Proven Canonical Windows Desktop** implementation wave.
+- Draft PR #95 contains the current-to-target analysis, simplified seven-phase roadmap, lightweight risk-based workflow and documentation cleanup.
+- The branch changes documentation only: one new analysis, core authority updates and removal of duplicated/session-era material.
+- The first PR CI attempt failed before either job executed any step; GitHub returned no job log blob. The undefined `sf-verify` command remains a separate latent workflow defect.
+- GitHub reports that this repository is not code-search indexed, so Codex Desktop must run local Markdown/link/reference checks before merge.
+- No application behavior or executable source has been changed.
+- Next move: Founder review of PR #95, local reference validation, then squash merge if accepted.
+- After merge: open the **Proven Canonical Windows Desktop** implementation wave.
 
 ## Open questions
 
 - Whether the Founder wants any product-contract amendment before implementation begins.
+- Whether any removed file contains unique durable content that should remain active rather than only in git history.
 - Which local runtime environment Codex Desktop should use for the first installed-candidate baseline.
 - Which Windows 4 GB reference machine and T470 dataset should be treated as the first repeatable performance lab.
