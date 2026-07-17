@@ -2,7 +2,7 @@
   "name": "sahelflow",
   "version": "4.1.0",
   "private": true,
-  "description": "SahelFlow \u2014 AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
+  "description": "SahelFlow — AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
@@ -13,6 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "sf-verify": "bun run scripts/sf-verify.ts",
+    "sf-audit": "bun run scripts/sf-audit.ts",
+    "glm:bootstrap": "bash scripts/agents/bootstrap-glm.sh",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
