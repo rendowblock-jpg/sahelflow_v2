@@ -11,7 +11,7 @@ This workspace contains SahelFlow's isolated marketing and product-demonstration
 | `SahelFlow-Vertical-15` | 1080×1920 | 15s | Reels, TikTok, and Shorts cut |
 | `SahelFlow-Demo-90` | 1920×1080 | 90s | Guided product-demonstration film |
 
-All compositions run at 30 FPS and share the same motion design system, interface components, status language, product positioning, and visual tokens.
+All compositions run at 30 FPS and share the same motion design system, interface components, status language, product positioning, and visual tokens. Scene changes preserve a continuous branded canvas instead of dipping to a blank frame.
 
 ## Current creative direction
 
