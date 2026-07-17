@@ -1,0 +1,51 @@
+name: Remotion Preview
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "marketing/remotion/**"
+      - ".github/workflows/remotion-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-and-render:
+    name: Typecheck and render preview cuts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: marketing/remotion
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Remotion workspace
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck compositions
+        run: npm run typecheck
+
+      - name: Render vertical preview
+        run: npm run render:vertical
+
+      - name: Render social preview
+        run: npm run render:social
+
+      - name: Upload MP4 previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-remotion-previews
+          path: |
+            marketing/remotion/renders/sahelflow-vertical-15.mp4
+            marketing/remotion/renders/sahelflow-social-30.mp4
+          if-no-files-found: error
+          retention-days: 14
