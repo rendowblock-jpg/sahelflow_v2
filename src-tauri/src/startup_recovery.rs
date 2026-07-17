@@ -35,20 +35,21 @@ pub fn show_blocked(
     let app_data_dir = app.path().app_data_dir()?;
     fs::create_dir_all(&app_data_dir)?;
 
-    let report_path = app_data_dir.join("startup-diagnostic.json");
-    let temp_report_path = app_data_dir.join("startup-diagnostic.json.tmp");
+    let created_at_unix_seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    let report_path = app_data_dir.join(format!(
+        "startup-diagnostic-{created_at_unix_seconds}.json"
+    ));
     let diagnostic = StartupDiagnostic {
         state: "blocked",
         code,
         detail,
         app_version: env!("CARGO_PKG_VERSION"),
-        created_at_unix_seconds: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_secs())
-            .unwrap_or(0),
+        created_at_unix_seconds,
     };
-    fs::write(&temp_report_path, serde_json::to_vec_pretty(&diagnostic)?)?;
-    fs::rename(&temp_report_path, &report_path)?;
+    fs::write(&report_path, serde_json::to_vec_pretty(&diagnostic)?)?;
 
     let html = recovery_html(code, detail, &report_path.to_string_lossy());
     let data_url = format!(
