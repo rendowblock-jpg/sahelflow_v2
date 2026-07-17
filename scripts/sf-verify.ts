@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 interface Step {
@@ -10,11 +12,28 @@ interface Step {
   skipWhenTestsSkipped?: boolean;
 }
 
+interface VitestAssertionResult {
+  ancestorTitles?: string[];
+  title?: string;
+  status?: string;
+  failureMessages?: string[];
+}
+
+interface VitestFileResult {
+  name?: string;
+  assertionResults?: VitestAssertionResult[];
+}
+
+interface VitestJsonResult {
+  testResults?: VitestFileResult[];
+}
+
 const cliArgs = process.argv.slice(2);
 const fast = cliArgs.includes("--fast");
 const skipTests = fast || cliArgs.includes("--skip-tests");
 const repoDir = process.env.SF_REPO_DIR || process.cwd();
 const failFastTests = process.env.SF_TEST_FAIL_FAST === "1";
+const vitestResultsPath = resolve(repoDir, ".sf-vitest-results.json");
 
 const steps: Step[] = [
   {
@@ -35,7 +54,15 @@ const steps: Step[] = [
   {
     name: "Vitest",
     command: "bunx",
-    args: ["vitest", "run", ...(failFastTests ? ["--bail=1"] : [])],
+    args: failFastTests
+      ? [
+          "vitest",
+          "run",
+          "--bail=1",
+          "--reporter=json",
+          `--outputFile=${vitestResultsPath}`,
+        ]
+      : ["vitest", "run"],
     skipInFast: true,
     skipWhenTestsSkipped: true,
   },
@@ -45,9 +72,40 @@ function printOutput(output: string): void {
   const trimmed = output.trim();
   if (!trimmed) return;
 
-  for (const line of trimmed.split("\n")) {
+  for (const line of trimmed.split("\n").slice(-120)) {
     console.error(`    ${line}`);
   }
+}
+
+function printFirstVitestFailure(): boolean {
+  if (!existsSync(vitestResultsPath)) return false;
+
+  try {
+    const report = JSON.parse(readFileSync(vitestResultsPath, "utf8")) as VitestJsonResult;
+    for (const file of report.testResults ?? []) {
+      for (const assertion of file.assertionResults ?? []) {
+        if (assertion.status !== "failed") continue;
+
+        const title = [...(assertion.ancestorTitles ?? []), assertion.title]
+          .filter(Boolean)
+          .join(" > ");
+        console.error(`    test file: ${file.name ?? "unknown"}`);
+        console.error(`    test: ${title || "unknown"}`);
+        for (const message of assertion.failureMessages ?? []) {
+          printOutput(message);
+        }
+        return true;
+      }
+    }
+  } catch (error) {
+    console.error(
+      `    unable to parse Vitest JSON report: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    rmSync(vitestResultsPath, { force: true });
+  }
+
+  return false;
 }
 
 console.log("SahelFlow verification gate");
@@ -78,7 +136,11 @@ for (const step of steps) {
 
   failures += 1;
   console.error(`FAIL ${step.name} (${elapsed} ms)`);
-  printOutput(`${result.stdout || ""}\n${result.stderr || ""}`);
+  const printedStructuredFailure =
+    step.name === "Vitest" && failFastTests && printFirstVitestFailure();
+  if (!printedStructuredFailure) {
+    printOutput(`${result.stdout || ""}\n${result.stderr || ""}`);
+  }
 }
 
 if (failures > 0) {
