@@ -1,231 +1,343 @@
-# SahelFlow 1.0 Engineering Specification
+# SahelFlow 1.0 — Engineering Specification
 
-**Status:** Active  
-**Product baseline:** `documentation/product/`  
-**Implementation audit baseline:** `03f0d48436b42788e463bbd1d74a388b2da22294`
+> **Status:** Active target engineering authority  
+> **Product authority:** `../product/`  
+> **Experience authority:** `../experience/`  
+> **Current source-code audit baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e`
 
-## 1. Purpose
+The audit baseline identifies the executable code studied by the Current-to-Target Analysis. Later documentation-only commits do not change that source assessment. Refresh the baseline after executable source changes materially alter the model.
 
-This specification converts the founder-approved SahelFlow 1.0 product contract into engineering boundaries, protocols, data ownership, invariants, evidence requirements and release gates. It is intentionally stricter than the current implementation. When current code conflicts with this specification, the code is migrated or replaced.
+## 1. Purpose and precedence
+
+This specification converts the Founder-approved SahelFlow 1.0 product contract and the active experience package into engineering boundaries, protocols, data ownership, invariants, evidence requirements and release gates. It is intentionally stricter than the current implementation. When current code conflicts with this specification, the code is migrated or replaced.
+
+This document cannot silently amend product scope, pricing, entitlements, support, exclusions or experience requirements. A newer numbered Founder decision governs only the choice it explicitly changes. Accepted ADRs refine or supersede engineering decisions; they do not weaken the product contract.
 
 ## 2. System shape
 
 SahelFlow 1.0 is a **desktop-authoritative, selectively connected system**.
 
-### 2.1 Components
+### 2.1 Canonical Windows desktop installation
 
-1. **Canonical Windows desktop installation**
-   - Sole authority for business writes and full operational records.
-   - Hosts one encrypted operational database per shop.
-   - Executes domain transactions, provider workers, local projections, audit and outbox.
-   - Remains useful offline according to the Constitution.
+- Sole authority for canonical operational business mutations and full private operational records.
+- Hosts one encrypted operational SQLite database per shop.
+- Executes domain transactions, trusted audit, inbox/outbox workers, provider effects and local projections.
+- Maintains explicit tenant/member/device/session/shop/entitlement context.
+- Remains useful offline for the purchased major release according to the product contract.
+- Owns migration, key, recovery and local diagnostic coordination.
 
-2. **Cloudflare control plane**
-   - Holds only licensing, entitlement, tenant/member/device/session, routing, support, release, payment-verification and bounded operational metadata.
-   - Does not become the seller's operational database.
+A cloud receipt, queue acknowledgement or projection is not a canonical desktop business mutation.
 
-3. **Encrypted relay and projection plane**
-   - Moves versioned, tenant/shop/member-scoped envelopes.
-   - Carries bounded projections and commands.
-   - Treats the desktop as final business-write authority.
+### 2.2 Cloudflare control plane
 
-4. **Zero-knowledge backup plane**
-   - Stores only client-encrypted backup objects and authenticated manifests.
-   - Supports required retention and pinned versions.
-   - Cannot decrypt seller data.
+- Holds only licensing, entitlement, tenant/member/device/session, routing, payment/support/release and bounded operational metadata.
+- Uses Workers, D1, Queues, hibernating Durable Objects, R2 and approved custom-hostname infrastructure according to measured need.
+- Does not become the seller's operational business database.
+- Enforces environment separation, migrations, quotas, cost alarms, incident controls and data classification.
 
-5. **Hosted storefront plane**
-   - Serves immutable multi-tenant storefront releases.
-   - Accepts durable public checkout receipts.
-   - Relays orders to the allocated canonical desktop/shop.
+### 2.3 Encrypted relay and projection plane
 
-6. **PWA/browser clients**
-   - Authenticate as tenant members/devices.
-   - Read permitted encrypted projections and submit limited commands.
-   - Never become a second authoritative database.
+- Moves versioned tenant/shop/member/device-scoped encrypted envelopes.
+- Carries bounded projections, operational commands and results.
+- Treats cloud command acceptance as `Queued`, never `Committed`.
+- Treats the desktop as final authority for operational commands.
 
-7. **Provider workers**
-   - WhatsApp, Gemini, couriers, e-commerce and Google Sheets integrations.
-   - Consume durable intents/events with idempotency, retry, reconciliation and certification.
+### 2.4 Zero-knowledge backup plane
 
-## 3. Data ownership classes
+- Stores only client-encrypted backup objects and authenticated manifests.
+- Supports required retention, pinned points, trial retention and recovery ceremonies.
+- Cannot decrypt seller data with SahelFlow/Cloudflare access alone.
 
-| Class | Examples | Canonical owner | Cloud plaintext allowed? | Backup policy |
+### 2.5 Hosted storefront plane
+
+- Serves immutable multi-tenant storefront releases.
+- Owns public catalog/release data and delegated cloud stock allocation only.
+- Accepts durable public checkout receipts while the desktop may be offline.
+- Relays/imports receipts to the allocated canonical desktop/shop.
+- Distinguishes receipt acceptance from canonical order commitment.
+
+### 2.6 PWA/browser clients
+
+- Authenticate as tenant members/devices.
+- Read permitted encrypted projections and submit limited signed commands.
+- Never become a second authoritative database.
+- Exclude licensing, key recovery, backup restore, secrets, destructive shop administration and other high-risk desktop-only administration unless separately certified.
+
+### 2.7 Provider workers
+
+- WhatsApp, Gemini, courier, commerce and any approved export integrations.
+- Consume durable intents/events with idempotency, retry, reconciliation and capability-specific certification.
+- Expose only Founder-approved and currently certified capabilities.
+
+### 2.8 Founder administration and public/support surfaces
+
+- Founder administration handles payment verification, offline signing workflow, entitlement expansion, transfer/recovery, incidents, provider state, release holds and support metadata without seller operational plaintext.
+- Marketing/help/download surfaces are multilingual, accessible, evidence-honest and consistent with the product and experience authorities.
+
+## 3. Data ownership, privacy and legal classes
+
+| Class | Examples | Canonical owner | Cloud plaintext allowed? | Retention/backup rule |
 |---|---|---|---|---|
-| A — Operational secret | customer PII, orders, messages, products, stock, accounting, automation payloads | Desktop shop DB | No | Client-encrypted only |
-| B — Operational projection | order queue summary, masked customer identity, delivery status, permitted metrics | Desktop; derived | Only if explicitly classified non-sensitive; default encrypted envelope | Regenerable, not authoritative |
-| C — Identity/control | tenant ID, member identity, role, device/session, entitlement, license state | Control plane | Yes, minimized | Control-plane managed |
-| D — Routing/protocol | envelope IDs, sequence, expiry, ciphertext size, relay routing, acknowledgements | Control plane/relay | Yes, minimized | Protocol retention only |
-| E — Public storefront | published product copy, public price, public media, template release | Hosted storefront release | Yes | Immutable release retention |
-| F — Support/diagnostic | build version, health state, redacted logs, consented diagnostic bundle metadata | Desktop/support plane | Only redacted/consented | Time-bounded |
+| A — Operational private | customer data, orders, messages, products, stock, accounting, automation payloads | Desktop shop DB | No | Client-encrypted backup only |
+| B — Operational projection | queue summary, masked identity, delivery state, permitted metrics | Desktop; derived | Only if explicitly classified non-sensitive; default encrypted | Regenerable, not authoritative |
+| C — Identity/control | tenant, member, role, device/session, entitlement, license, payment/support state | Control plane | Yes, minimized | Policy-managed and auditable |
+| D — Routing/protocol | envelope IDs, sequence, expiry, ciphertext size, relay routing, acknowledgements | Control/relay | Yes, minimized | Protocol-bounded retention |
+| E — Public storefront | published copy, public price/media, template/release data | Hosted release | Yes | Immutable/versioned release retention |
+| F — Support/diagnostic | build, health, redacted logs, consented bundle metadata | Desktop/support | Only redacted and consented | Time-bounded |
+| G — Evidence/compliance | artifact hashes, certification result, legal review date, non-sensitive evidence metadata | Release/evidence authority | Yes, minimized | Release/recertification policy |
 
-Data classification is deny-by-default. A new field must name its class, owner, encryption, retention, projection rules and deletion behavior before implementation.
+Data classification is deny-by-default. Before a new field/payload is implemented, record:
 
-## 4. Identity and authorization model
+- class and canonical owner;
+- encryption and associated-data binding;
+- projection/public rules;
+- retention/deletion/export behavior;
+- diagnostic/support exposure;
+- applicable Law 18-07 review and residual risk.
+
+No secret or prohibited operational plaintext belongs in browser storage, source code, logs, D1, R2 metadata, Queue payloads or diagnostic bundles.
+
+## 4. Identity, authorization, devices and team work
 
 ### 4.1 Principals
 
-- Tenant
+- Tenant/license holder
 - Owner member
 - Team member
 - Device
 - Session
 - Canonical desktop installation
 - Shop
-- Service worker/provider worker
+- Service/provider worker
 - Founder support/admin principal
 
-### 4.2 Required claims
+### 4.2 Authenticated context
 
-Every authenticated request or command carries, through a signed server-created context:
+Every authenticated local or remote request/command derives from signed/server-created context containing as applicable:
 
-- tenant ID;
-- member ID and role version;
+- tenant/license ID;
+- member ID and role/policy version;
 - device ID;
 - session ID;
-- allowed shop IDs;
-- field-permission policy version;
-- entitlement/version claims;
-- issued/expiry times;
-- nonce or request ID.
+- canonical installation ID;
+- allowed shop IDs and exact active `ShopContext`;
+- field/action permission policy version;
+- entitlement/product/support claims;
+- issued/expiry/revocation epoch;
+- nonce/request/correlation ID.
 
-Client-supplied actor, role, tenant, shop or permission fields are never authoritative.
+Client-supplied actor, role, tenant, shop, member, device or permission fields are never authoritative.
 
-### 4.3 Roles
+### 4.3 Roles and permissions
 
-The exact role names may evolve, but launch must support:
+Launch supports safe presets and custom permissions:
 
-- **Owner** — full business authority and high-risk approvals.
-- **Manager** — broad operations without entitlement/license/founder-only authority.
+- **Owner** — full business authority and high-risk approval.
+- **Manager** — broad operations without license/founder-only authority.
 - **Operator** — assigned operational workflows.
-- **Viewer/analyst** — read-only permitted projections.
+- **Viewer/analyst** — read-only permitted data/projections.
 
-Field permissions are explicit, versioned and evaluated server-side/desktop-side. Masking in the UI is not authorization.
+Field and action permissions are explicit, versioned and enforced in local queries, projection generation, commands and mutations. UI masking is not authorization.
 
-### 4.4 High-risk actions
+### 4.4 Team/work model
 
-The following require owner authority, re-authentication or explicit owner approval according to policy:
+The target includes:
 
-- license transfer and recovery;
-- key/recovery-kit operations;
+- per-shop membership;
+- workgroups and queues;
+- assignments and reassignment;
+- internal comments distinct from customer messages;
+- mentions and handovers;
+- local and remote profiles;
+- optional configured two-person approval for high-risk actions;
+- immediate member/device/session revocation;
+- trusted actor attribution and complete audit.
+
+Shared staff accounts, surveillance, payroll and attendance are prohibited for 1.0. Architecture is load-tested for at least 25 active members even though the entitlement is owner plus ten active team members.
+
+### 4.5 High-risk actions
+
+Require owner authority, re-authentication and/or explicit bound approval according to policy:
+
+- license transfer/recovery and entitlement amendments;
+- key/recovery-kit/assisted-recovery operations;
 - member/device administration;
 - backup restore;
 - provider credential changes;
 - bulk destructive mutations;
-- refund reversal or accounting adjustment;
+- refund reversal/accounting adjustment;
 - storefront domain/allocation changes;
 - remote destructive AI/automation actions;
-- stable release/update channel changes.
+- release/update channel changes.
 
-## 5. Local data architecture
+A proposal is revalidated against current state at execution. Stale or changed proposals cannot execute.
 
-### 5.1 Files
+## 5. Local data architecture and migrations
+
+### 5.1 Local files and stores
 
 - One operational SQLite database per shop.
-- One versioned application registry for shop metadata, schema versions, wrapped keys and active shop preference.
-- A separate local control cache for signed entitlement/member/device/session state.
-- A local durable protocol store for relay cursors, inbox/outbox and diagnostic health.
+- One atomic versioned application registry for shop metadata, schema versions, wrapped references and active UI preference.
+- A protected local control cache for signed entitlement/member/device/session state.
+- A local durable protocol store for relay cursors, inbox/outbox and health.
+- No production dependency on `prisma db push`.
 
-The registry is written atomically and validated before use. A missing/corrupt registry or shop file fails closed with an explicit recovery state. It never silently routes to a fallback shop database.
+The registry is atomically written and validated before use. Missing/corrupt registry or shop file fails closed with explicit recovery. It never silently routes to a fallback shop.
 
 ### 5.2 Shop context
 
-Every repository/service call receives an explicit trusted `ShopContext`. Global mutable active-shop state may exist only as UI preference; it cannot determine background, API or remote-command write authority.
+Every repository/service/background/remote execution receives an explicit trusted `ShopContext`. Global mutable active-shop state may exist only as presentation preference; it cannot select background, public-storefront, provider, API or remote-command write authority.
 
 ### 5.3 Transaction boundary
 
-A business mutation transaction includes, as applicable:
+A launch-critical mutation transaction includes as applicable:
 
 1. domain state change;
-2. immutable audit event;
+2. immutable trusted audit;
 3. domain event;
 4. external-effect outbox intent;
 5. projection invalidation/update marker;
 6. idempotency/effect record;
-7. compensation facts.
+7. exact compensation facts;
+8. approval/correlation receipt.
 
-No external effect is executed inside the database transaction. Workers execute committed outbox intents after commit.
+No external provider call executes inside the database transaction. Workers execute only committed intents.
 
 ### 5.4 Migrations
 
-- Append-only numbered migrations; no production `db push`.
-- Migration preflight enumerates every registered shop.
-- A verified pre-migration backup is mandatory for any destructive or data-transforming migration.
+- Append-only numbered migrations; never rewrite an applied migration.
+- Migration preflight enumerates every registered shop and compatibility range.
+- A verified compatible backup is mandatory for every affected shop before destructive/data-transforming migration.
 - Backup failure blocks migration.
-- Each shop records schema version, migration journal and outcome.
-- Data migrations are resumable and idempotent.
-- A release declares minimum/maximum compatible schema and protocol versions.
-- Rollback normally rolls application code forward to a compatible fix; data is not blindly down-migrated.
+- Each shop records schema version, journal and outcome.
+- Expansion, data migration and contraction are separated when safer.
+- Data migration is resumable and idempotent.
+- Release manifest declares compatible schema/protocol versions.
+- Failure is classified exactly and remains visible.
+- Rollback normally means release hold or compatible forward repair; no blind down-migration.
+- Existing installation/data remains unchanged after failed restore and protected according to the migration design.
+
+Test fresh install, every supported prior version, mixed multi-shop state, interruption, rerun, low disk, corrupt data and backup failure.
 
 ## 6. Key, secret and recovery architecture
 
-### 6.1 Key hierarchy
+### 6.1 Purpose-separated key hierarchy
 
-- Installation root key: generated locally and protected by Windows OS-backed secure storage or an equivalent reviewed mechanism.
-- Per-shop data keys: randomly generated and wrapped by the installation root.
-- Secret-store key: separate derived/wrapped key with context separation.
-- Backup encryption keys: versioned and recoverable through the recovery kit; never equal to runtime data keys.
-- Relay/projection session keys: scoped, rotating and revocable.
+- **Installation root key** — generated locally and protected through Windows OS-backed secure storage or an independently reviewed equivalent.
+- **Per-shop data keys** — random and wrapped by the installation root.
+- **Secret-store key** — separate purpose/context from shop data.
+- **Per-license Backup Root Key** — recoverable through the seller recovery design, never equal to runtime data keys.
+- **Per-backup data-encryption key** — unique for every backup and wrapped by the Backup Root Key.
+- **Relay/projection session keys** — scoped, rotating and revocable.
+- **Trial signing key** — dedicated to trial/extension claims and separate from permanent signing authority.
+- **Permanent signing key** — Founder-controlled and offline.
 
-Keys use explicit key IDs, algorithms, versions and authenticated context. Ciphertexts include version and associated-data binding to tenant/shop/record/field where appropriate.
+Keys/ciphertexts use explicit IDs, purpose, algorithm, version and authenticated context. Ciphertexts bind tenant/shop/record/field or protocol context as applicable.
 
-### 6.2 Recovery kit
+### 6.2 Recovery modes
 
-The recovery kit enables a legitimate owner to recover backups and re-establish a canonical desktop without giving SahelFlow operational plaintext. It must include:
+#### Independent seller recovery
 
-- human-verifiable version and ownership metadata;
+The seller-controlled recovery kit includes:
+
+- human-verifiable version/ownership metadata;
 - wrapped recovery material;
 - checksum/authentication;
-- clear storage and loss warnings;
-- a tested restore ceremony;
+- clear storage/loss warnings;
+- tested replacement-install restore ceremony;
 - rotation/revocation semantics.
+
+#### Optional assisted recovery
+
+Assisted recovery requires both:
+
+- a protected enrolled-device share; and
+- a separate Founder offline share.
+
+Neither SahelFlow, Cloudflare, the Founder share nor the enrolled-device share alone can decrypt operational backups. The ceremony is explicit, authenticated, audited and revocable.
 
 ### 6.3 Secrets
 
-Provider credentials are never stored in browser storage, logs, diagnostic bundles, cloud projections or ordinary exports. Access is through a narrow secret service with audit, purpose and shop/tenant scope. Credential reads return handles or scoped values only to the executing provider worker.
+Provider credentials never enter browser storage, logs, diagnostics, cloud projections or ordinary exports. Access uses a narrow audited service with purpose/tenant/shop scope. Provider workers receive handles or scoped values only for execution.
 
-## 7. Licensing, trial and entitlement architecture
+### 6.4 Key migration and incident response
 
-### 7.1 Signed claims
+Legacy key material is wrapped/re-encrypted through a resumable journal and deleted only after verification/recovery proof. Rotation, compromise, lost-device, transfer and canonical-install replacement are explicit state machines.
 
-A signed entitlement document includes at least:
+## 7. Licensing, payment, entitlements and continuity
+
+### 7.1 Signed entitlement claims
+
+A signed entitlement includes at least:
 
 - license/tenant ID;
-- product major version;
-- permanent/trial state;
-- issue/expiry and maintenance-support horizon;
-- included shops and purchased extra shops;
-- active member/device limits;
+- product major;
+- trial/permanent state;
+- issue/expiry and exact support horizon;
+- included and purchased extra shops;
+- member/device limits;
+- backup/media resource entitlements;
 - canonical desktop installation ID;
 - transfer/recovery state;
-- minimum revocation epoch;
+- revocation epoch;
 - signing key ID and format version.
 
 ### 7.2 Trial
 
-- Issued online by the control plane.
+- Issued online by the licensing service.
 - Exactly seven days.
-- Machine-bound and one-per-policy subject.
-- Signed; never self-issued by the client.
-- Complete lockout after expiry across UI, API, background workers, cached data mutations and remote surfaces.
-- Trial expiry never deletes seller data.
+- One per recognized machine under privacy-preserving policy.
+- Signed by the dedicated trial-only key; never client-self-issued.
+- Reinstall/local-state deletion restores original issue/expiry rather than creates another trial.
+- Complete lockout after expiry across UI, API, background workers, PWA/cache and integrations.
+- Only licensing/payment/extension/support/minimal diagnostics remain.
+- Data remains intact but unavailable for viewing/export/operation until activation.
+- Trial receives one rolling encrypted cloud backup point retained for 30 days after expiry.
+- Clock rollback, key rotation, service outage and false machine mismatch have tested recovery.
 
-### 7.3 Permanent activation
+### 7.3 Payment verification and permanent issuance
 
-- Founder verifies BaridiMob/CCP payment manually.
-- Verification produces an immutable payment/approval record and signed activation.
-- Permanent activation can be signed offline using founder-held signing material.
-- Local permanent use continues offline for the purchased major version.
+Payment verification and license issuance are separate durable state machines.
 
-### 7.4 Maintenance and connected continuity
+- Payment request is versioned, authoritative-price based and machine/license bound.
+- Customer screenshot/reference is supporting evidence only.
+- Founder verifies the actual receiving-account transaction.
+- Controls cover fraud, duplicate/reused evidence, amount mismatch, repeated approval, interrupted issuance and stale Founder session.
+- Immutable approval authorizes a separate offline signing ceremony.
+- Permanent license and extra-shop amendments are signed offline.
+- The permanent private key never enters the online control plane.
 
-The five-year same-major commitment controls access to connected services, compatible updates and support metadata without converting the purchase into a subscription. Enforcement must distinguish perpetual local use from bounded connected-service continuity.
+### 7.4 Transfer and ownership recovery
 
-### 7.5 Transfer and recovery
+- One canonical Windows installation is active at a time.
+- Legitimate replacement, loss, theft, upgrade or reinstall carries no activation fee.
+- Planned transfer verifies backup, pairs old/new, approves cutover, activates new, revokes old and checks health.
+- Emergency recovery does not require the old device online.
+- Business ownership transfer requires protected Founder review, evidence, recovery reset and complete old-owner revocation.
 
-Machine transfer is an explicit state machine: request, identity/payment evidence if needed, old installation revocation or bounded exception, new installation activation, audit and replay protection.
+### 7.5 Commercial and resource limits
 
-## 8. Durable event and effect architecture
+Executable entitlement enforcement represents the Founder matrix:
+
+- 35,000 DZD one-time complete edition;
+- purchased major 1;
+- five-year same-major maintenance/connected continuity from Stable launch;
+- one owner plus ten active team members;
+- two personal devices per member and three owner remote devices;
+- five included shops plus up to five extra at 5,000 DZD each;
+- storefront/subdomain/custom-domain, backup and media allowances from Launch Scope;
+- no hidden recurring fee, feature tier or local lockout for fair-use crossing.
+
+### 7.6 Continuity economics and service exit
+
+- 20% of every base/extra-shop sale enters continuity planning (7,000 DZD base; 1,000 DZD extra shop under current prices).
+- At least 24 months of forecast infrastructure coverage is validated before public payment.
+- Provider/platform pricing is revalidated quarterly.
+- Exact support-end date is shown before payment and recorded in payment/license metadata.
+- Planned material SahelFlow-controlled discontinuation after the guarantee normally provides at least 12 months' notice and applicable export/migration tooling.
+- Permanent local use of the purchased major does not expire merely to force an upgrade.
+
+## 8. Durable event, effect and compensation architecture
 
 ### 8.1 Required records
 
@@ -239,240 +351,371 @@ Machine transfer is an explicit state machine: request, identity/payment evidenc
 - Checkpoint/cursor
 - Command request/result
 - Projection sequence
+- Approval receipt
+- Compensation/adjustment fact
 
-### 8.2 Idempotency
+### 8.2 Inbound durability
 
-Every inbound event and outbound effect has a stable source/provider key and internal ID. Uniqueness is enforced in storage. Retries return the original committed result or safely resume work.
+Authenticate and persist an inbound provider/cloud/storefront event before acknowledgement. Normalize through an idempotent processor. A failed item remains tracked and visible.
 
-### 8.3 Checkpoints
+### 8.3 Outbound effects
 
-A checkpoint advances only after all earlier events in its ordering domain have committed or been explicitly dead-lettered under policy. A failed item remains visible, retryable and correlated. The system never skips untracked failures to advance a watermark.
+Committed intents are executed by bounded workers. Each effect has a stable key, attempt/receipt history, retry safety class, ambiguous-result handling, dead letter and reconciliation.
 
-### 8.4 Compensation
+### 8.4 Idempotency and checkpoints
 
-Money, stock, status and external effects are reversed through explicit append-only compensation records. Boolean reversal flags alone are insufficient for launch-critical accounting.
+- Uniqueness is enforced in storage.
+- Retries return the original committed result or safely resume.
+- A checkpoint advances only after earlier work has committed or entered explicit governed dead-letter state.
+- No watermark passes an untracked failure.
 
-## 9. Cloud relay and PWA protocol
+### 8.5 Compensation
+
+Money, stock, status and external effects reverse through explicit append-only facts. Boolean reversal flags or heuristic reconstruction alone are insufficient.
+
+## 9. Encrypted relay and PWA command protocol
 
 ### 9.1 Envelope
 
-Every envelope has:
+Every envelope includes:
 
-- protocol version;
-- tenant/shop ID;
-- sender principal/device;
-- recipient scope;
+- protocol/version compatibility;
+- tenant/shop/member/device/installation scope;
+- sender and recipient;
 - message type;
-- unique ID and idempotency key;
+- unique ID/idempotency key;
 - sequence/cursor;
-- issued/expiry time;
-- ciphertext and algorithm/key ID;
+- issue/expiry/revocation epoch;
+- ciphertext/algorithm/key ID;
 - authenticated metadata;
 - signature/MAC.
 
-### 9.2 Projections
+### 9.2 Projections and caches
 
-Desktop produces minimal role- and field-filtered projections. Projection schemas are versioned. PWA caches are encrypted where they contain sensitive data, purged on revocation, and partitioned by tenant/member/device/shop/schema version.
+Desktop creates minimal role/field-filtered versioned projections. Sensitive caches are encrypted, tenant/member/device/shop/version partitioned and purgeable on revocation. Projection data is not authoritative.
 
-### 9.3 Commands
+### 9.3 Operational commands
 
-- Commands are permission-checked at submission and again at desktop execution.
-- Cloud acceptance means only “durably queued,” not “business committed.”
-- Success is shown only after a desktop commit result is returned.
-- Commands expire and cannot execute after revocation or policy-version mismatch.
-- Conflicts return explicit current state and resolution options; last-write-wins is prohibited for money, stock, permissions and order state.
+- Permission check occurs at submission and again at desktop execution.
+- Cloud acceptance means `Queued`, not `Committed`.
+- Operational command success is shown only after desktop commit result.
+- Commands expire and fail after revocation/policy/version mismatch.
+- Conflict returns explicit current state/resolution options.
+- Last-write-wins is prohibited for money, stock, permissions and order state.
 
-### 9.4 Offline/outage behavior
+### 9.4 Outage behavior
 
-- Desktop local operations continue according to entitlement grace rules.
-- PWA clearly indicates stale/read-only/queued states.
-- Cloud outage cannot corrupt local authority.
-- Reconnection performs sequence verification and reconciliation before applying commands.
+- Purchased-major desktop operations continue locally.
+- PWA explicitly displays stale, offline, read-only, queued and conflict states.
+- Cloud outage cannot corrupt local authority or erase durable queued work.
+- Reconnection verifies sequences and reconciles before execution.
 
-## 10. Zero-knowledge backups
+## 10. Zero-knowledge backup and restore
 
 ### 10.1 Backup unit
 
-A backup set includes application registry metadata required for recovery plus one or more shop snapshots, all encrypted client-side. The cloud sees tenant/object IDs, size, time, retention class and ciphertext only.
+A backup set contains the recovery-required registry metadata plus one or more shop snapshots, all encrypted client-side. The cloud sees minimized tenant/object IDs, size, time, retention class and ciphertext only.
 
-### 10.2 Snapshot procedure
+### 10.2 Backup procedure
 
-1. Quiesce or obtain a SQLite-consistent snapshot using the supported SQLite backup API/checkpoint discipline.
-2. Run integrity checks.
+1. Quiesce or create a SQLite-consistent snapshot using supported backup/checkpoint discipline.
+2. Run integrity/application checks.
 3. Produce versioned manifest and hashes.
-4. Encrypt chunks/objects with backup key and authenticated metadata.
-5. Upload with resumable idempotency.
-6. Verify remote object hashes and manifest authentication.
-7. Mark backup `verified` only after verification.
-8. Periodically restore into an isolated environment and run application-level checks.
+4. Generate a unique per-backup DEK and wrap it under the per-license Backup Root Key.
+5. Encrypt chunks/objects with authenticated metadata.
+6. Upload resumably/idempotently.
+7. Verify remote object hashes and manifest authentication.
+8. Mark `Verified` only after verification.
+9. Periodically restore into isolation and run application-level checks.
 
 ### 10.3 Retention
 
-Enforce 7 daily, 4 weekly, 6 monthly and up to 3 pinned backups per the product contract. Deletion is policy-driven, audited and safe under partial upload/failure.
+- Permanent license: 7 daily, 4 weekly, 6 monthly and up to 3 pinned points per shop, bounded by quota.
+- Trial: one rolling encrypted cloud point retained 30 days after expiry.
+- Deletion/retention is audited and safe under partial upload/failure.
 
-## 11. Commerce integration protocol
+### 10.4 Restore
 
-- Provider adapters normalize immutable source event IDs and mutable resource versions.
-- Webhooks are accepted into durable encrypted ingress where provider support and deployment permit.
-- Scheduled reconciliation independently lists resources since a stable cursor/time overlap.
-- Webhook and reconciliation paths converge on the same idempotent inbox processor.
-- Provider checkpoint advancement follows the contiguous-commit invariant.
-- Edits, cancellations, fulfillment/status changes and partial pages are handled explicitly.
-- Credentials, quotas, backoff, clock skew and provider outages are observable.
+- Authenticate entitlement and recovery material.
+- Download/decrypt into isolated staging.
+- Verify manifest, snapshot integrity, schema compatibility and application health.
+- Preserve current installation/data throughout staging.
+- Cut over atomically only after success.
+- Failure leaves current installation unchanged.
 
-## 12. Courier contract
+## 11. Provider, commerce and courier contracts
 
-Each courier adapter declares capabilities rather than implying a universal interface:
+### 11.1 Scope and certification
 
-- create shipment;
-- calculate/lookup fee;
-- label format and retrieval;
-- tracking/status polling;
-- cancel/edit;
-- pickup/office/desk options;
+A provider is public only when:
+
+- its capability is permitted by Founder scope;
+- its exact action is currently live-certified;
+- its limitations/degraded state are visible;
+- its contract/policy/economics remain acceptable.
+
+Adapter source and mocks are not certification. Architecture candidates require a Founder launch-set decision after evidence.
+
+### 11.2 Commerce protocol
+
+- Shopify, WooCommerce and YouCan are named conditional providers.
+- Webhooks/REST hooks provide notification where certified; scheduled reconciliation provides correctness.
+- Both paths converge on one durable encrypted inbox.
+- Resource/event IDs, mutable versions, pagination, rate limits, overlap and conflicts are explicit.
+- Shopify/WooCommerce use full hybrid only after certification.
+- YouCan uses conservative new-order hooks plus polling/wider reconciliation until update/cancellation behavior is proven.
+- Target normal online event-to-desktop import p95 is 5 seconds under the approved test envelope.
+- Reconciliation repairs intentionally dropped events.
+
+### 11.3 Courier contract
+
+Each courier declares independently:
+
+- credential test;
+- home/desk/office creation;
+- fee/service area;
 - wilaya/commune mapping;
-- idempotency behavior;
-- webhook availability;
-- rate limits and retry classes;
-- sandbox/live environments.
+- label retrieval/format;
+- tracking/status;
+- edit/cancel/return/pickup;
+- bulk behavior;
+- provider idempotency and ambiguous success;
+- webhook/list-since/reconciliation;
+- rate limits and sandbox/live environment.
 
-Unsupported capabilities are hidden or return an explicit supported-error. No public claim is made until live certification is current.
+No specific courier is a locked Founder promise merely because current code or an ADR names it. Current candidates are certified first and the Founder confirms the public launch set.
 
-## 13. Storefront architecture
+## 12. Storefront architecture and success semantics
 
-### 13.1 Tenancy and releases
+### 12.1 Tenancy, allocation and releases
 
 - Shared multi-tenant runtime with explicit tenant/storefront/shop IDs.
-- Draft builder data is separate from immutable published release artifacts.
-- Each publish creates a signed/versioned release with template version, catalog snapshot references, media manifest, domain config and rollback parent.
-- Three materially distinct templates must pass independent visual, accessibility and checkout evidence.
+- One storefront per entitled shop.
+- Draft builder data is separate from immutable release artifacts.
+- Each publish creates versioned release data with template, catalog/allocation, media, domain and rollback parent.
+- Desktop owns physical stock; cloud consumes only delegated allocation.
+- Three materially distinct templates pass independent visual, mobile, performance, RTL, accessibility and checkout evidence.
 
-### 13.2 Checkout
+### 12.2 Checkout
 
 - Customer input is untrusted.
-- The runtime resolves tenant/storefront/shop allocation server-side.
-- Prices, availability, quantity limits and delivery rules are server-controlled.
-- A unique checkout idempotency key prevents duplicate orders.
-- The response reports success only after a durable encrypted receipt exists.
-- Relay/import retries until the canonical desktop commits and acknowledges the order.
-- Seller-visible status distinguishes received, queued, imported, rejected and reconciled.
+- Runtime resolves tenant/storefront/shop allocation server-side.
+- Price, availability, quantity and delivery rules are server-controlled.
+- Unique idempotency prevents duplicate receipt/canonical effects.
+- Customer success is returned only after a durable tenant/shop-scoped encrypted receipt exists.
+- Receipt acceptance may occur while desktop is offline and means `Received/Queued for import`, not `Canonical order committed`.
+- Relay/import retries until desktop commits or explicitly rejects.
+- Customer/seller status distinguishes received, queued, imported/committed, rejected and reconciled.
 
-### 13.3 Domains and media
+### 12.3 Domains, media and public safety
 
-Domain ownership and TLS state are verified. Media is content-addressed/versioned, size-limited, scanned and tenant-isolated. Arbitrary seller JavaScript is forbidden.
+Domain ownership/TLS are verified. Media is content-addressed, versioned, scanned, bounded and tenant-isolated. Arbitrary seller JavaScript/unrestricted HTML is forbidden. Custom domains remain conditional on certification.
 
-## 14. AI architecture
+## 13. AI architecture
 
-- The provider/model registry is centrally versioned; `gemini-3.5-flash` is the current approved model, not an immutable code assumption.
-- The seller supplies the Google AI Studio key.
-- No key means AI features are unavailable without breaking non-AI workflows.
-- Payload builders are allowlisted and privacy-classified; raw operational objects are never serialized by convenience.
-- Redaction is tested against Darija, Arabic, French and mixed-format real-world corpora.
-- Typed schemas validate every response.
-- Suggested mutations are plans, not effects. A server/desktop approval service verifies identity, permission, current state and signed approval immediately before transaction commit.
-- AI request/response metadata is audited without storing prohibited plaintext.
-- Quota, timeout, model drift and provider outage have explicit UX and fallbacks.
+- Seller owns and supplies the Google AI Studio key.
+- Provider/model registry is centrally versioned; `gemini-3.5-flash` is the current approved default, not an immutable scattered code assumption.
+- No key or provider outage never breaks core non-AI operation.
+- Professional AR/FR/EN wizard covers key creation, restrictions, safe test, privacy acknowledgement, secure storage, quota/error diagnosis, rotation and disconnection.
+- Deterministic local extraction, tokenization/redaction, schema validation and manual fallback are mandatory.
+- Default privacy-safe mode never silently sends raw customer data, confidential records, credentials, sensitive finance data or complete WhatsApp histories.
+- Payload builders are allowlisted and data-classified; raw objects are never serialized by convenience.
+- Real Darija/Arabic/French/mixed corpora validate extraction, redaction and error behavior.
+- Typed schemas validate responses.
+- Suggestions are drafts/action plans. Mutations require authenticated permission/current-state check and explicit bound approval where policy requires.
+- Safe request metadata is auditable without prohibited plaintext.
 
-## 15. Observability and diagnostics
+## 14. Experience and frontend engineering contract
 
-Required signals:
+The Experience and Frontend Constitution, Capability Atlas and Journey Atlas are binding for included scope.
 
-- process health and restarts;
-- DB/migration/backup status per shop;
+### 14.1 Frontend state authority
+
+Separate:
+
+- canonical domain state;
+- server/desktop mutation state;
+- remote command state;
+- query/cache state;
+- local ephemeral UI state;
+- persisted user preference;
+- draft form state.
+
+React/local state cannot masquerade as committed business truth.
+
+### 14.2 Design-system and interaction architecture
+
+Implementation uses shared foundation tokens, primitives, operational composites and converged interaction patterns. Raw color/spacing/motion values and page-specific CRUD patterns require explicit justification.
+
+### 14.3 Arabic/RTL/localization
+
+- correct `lang`/`dir` root and logical CSS;
+- bidi-safe mixed content with technical values LTR as appropriate;
+- intentional directional icons, charts, legends and sticky columns;
+- Western digits/Gregorian calendar for `ar-DZ` unless Founder policy changes;
+- consistent DZD formatting and Arabic pluralization;
+- no hardcoded user-facing English or raw enum fallback;
+- no letter spacing that breaks Arabic joining;
+- Arabic and Latin typography tested in packaged performance.
+
+### 14.4 Page-completion and accessibility
+
+Required pages/journeys cover applicable empty/loading/pending/queued/committed/rejected/conflict/degraded/offline/stale/recovery states, permission behavior, responsive design, 1366×768, 100–200% zoom, keyboard, visible focus, screen-reader, reduced motion, mobile 44px touch targets and WCAG 2.2 AA.
+
+## 15. Windows compatibility and performance authority
+
+### 15.1 Capability matrix
+
+Target functional compatibility where required components exist:
+
+- Windows 10 22H2;
+- supported and unsupported-CPU Windows 11;
+- Tiny11/modified Windows builds;
+- HDD and SSD systems;
+- virtual machines;
+- systems without TPM/Secure Boot.
+
+Functional compatibility is distinct from security equivalence. Missing components are diagnosed precisely.
+
+### 15.2 Founder-approved launch thresholds
+
+On the 4 GB dual-core floor device with representative data:
+
+- cold usable shell ≤ 15 s p95 on entry SSD and ≤ 25 s on HDD;
+- ordinary interaction visible response ≤ 100 ms and usable page ≤ 1.5 s p95;
+- indexed order/customer search ≤ 750 ms p95;
+- normal local order mutation ≤ 1 s p95 excluding provider latency;
+- no ordinary interaction freeze > 200 ms;
+- steady-state working set ≤ 750 MB with WhatsApp connected/no heavy job;
+- no sustained memory growth over eight hours.
+
+On Founder T470 class:
+
+- cold launch ≤ 8 s p95;
+- navigation ≤ 700 ms p95;
+- indexed search ≤ 350 ms p95;
+- ordinary local mutation ≤ 500 ms p95.
+
+Engineering may maintain stricter unpublished internal goals, but they must be labeled as optimization goals and cannot create a competing acceptance authority. Architecture changes when the approved envelope cannot be met.
+
+Low-resource mode may reduce animation, prefetch, freshness or heavy concurrency; it never weakens feature ownership, correctness, security, durability, backup retention or audit.
+
+## 16. Observability, diagnostics, support and Founder operations
+
+Required signals include:
+
+- process/startup/restart health;
+- shop DB/migration/backup state;
 - inbox/outbox lag, retries, dead letters and checkpoints;
-- control-plane/relay/PWA session health;
-- provider latency, quota and error class;
+- control/relay/PWA sessions;
+- provider quota/latency/error/degraded state;
 - storefront receipt/import lag;
-- license/entitlement state without sensitive claims;
-- release/build/protocol/schema versions;
-- low-resource metrics.
+- entitlement/support state without sensitive payloads;
+- app/schema/protocol/release versions;
+- low-resource metrics;
+- cost/continuity thresholds.
 
-Diagnostic bundles are generated locally, previewable, redacted, consented, encrypted in transit, time-limited and never include keys, tokens, raw customer PII or WhatsApp credentials.
+Diagnostic bundles are generated locally, previewable, redacted, consented, encrypted in transit and time-limited. They never include keys, tokens, raw customer data or WhatsApp credentials.
 
-## 16. Version and release authority
+Founder operations are sparse and security-first. Every action identifies scope, evidence, reason, approval, reversibility and audit. Founder access does not include seller operational plaintext.
 
-A generated version manifest is the single authority for:
+## 17. Version, update and release authority
 
-- app semantic version (`1.x.y` for this major);
+A generated manifest is the single authority for:
+
+- app semantic version (`1.x.y`);
 - product major;
-- git commit;
-- build ID/channel;
-- schema/protocol/projection/backup/storefront release versions;
-- minimum compatible versions;
+- git commit/build ID/channel;
+- schema/protocol/projection/backup/storefront versions;
+- compatible ranges;
 - signing key IDs;
-- artifact digests.
+- artifact digests;
+- support horizon.
 
-`package.json`, Cargo, Tauri config, updater manifest, About UI and release notes are generated or checked against it.
+Package, Cargo, Tauri, updater, About UI, payment/support surfaces and release notes are derived or checked against it.
 
-Release channels: `internal`, `beta`, `stable`. Stable is Windows x64 only at launch.
+Release channels are `internal`, `beta`, `stable`. Stable is Windows x64 only at launch. Candidate build/sign/test/evidence occurs before publication. Updater accepts only signed compatible artifacts and supports staged rollout/hold. Data rollback is normally compatible forward repair, not destructive down-migration.
 
-## 17. System invariants
+## 18. System invariants
 
-| ID | Invariant | Enforced by | Required tests/evidence | Observability/recovery |
-|---|---|---|---|---|
-| INV-001 | The canonical desktop is the sole authority for business writes. | Desktop command handler and DB repositories | Remote-command and partition tests | Command state/desktop commit receipt; reconcile on reconnect |
-| INV-002 | Tenant, member, device, shop, role and actor come only from authenticated context. | Control plane, desktop session verifier, repositories | Forged-claim and cross-tenant tests | Audit denied attempts; revoke session/device |
-| INV-003 | No shop operation silently falls back to another DB. | Explicit `ShopContext`, registry validator | Missing/corrupt registry and concurrent shop tests | Recovery state; registry restore/rebind |
-| INV-004 | Domain mutation, trusted audit, domain event and outbox intent commit atomically. | Transactional service layer | Failure-injection/property tests | Transaction correlation; retry uncommitted request |
-| INV-005 | No acknowledged inbound event is lost. | Durable inbox before acknowledgement | Crash-at-every-step tests | Replay/dead letter/reconciliation |
-| INV-006 | No external effect executes more than once for one effect key. | Outbox/effect uniqueness and provider idempotency | Duplicate/retry/timeout tests | Effect receipts; manual reconcile |
-| INV-007 | Checkpoints never advance past an untracked failure. | Ordered inbox/reconciliation engine | Poison-event and partial-page tests | Blocked cursor alert; retry/dead letter |
-| INV-008 | Remote success is shown only after desktop commit. | Command protocol/result state machine | Offline/reconnect/conflict tests | Queued/committed/rejected states |
-| INV-009 | Local permanent use for the purchased major does not depend on continuous cloud availability. | Signed local entitlement cache | Long outage and clock tests | Explicit grace/connected-service status |
-| INV-010 | Trial issuance is online, signed, machine-bound and cannot be reset by clearing local state. | Control-plane trial issuer and local verifier | reinstall/storage deletion/replay/clock tests | Trial issuance audit; support exception path |
-| INV-011 | Trial expiry locks all product operations without deleting data. | Unified entitlement gate | UI/API/background/direct-route tests | Lock reason; activation recovery |
-| INV-012 | Shop/member/device limits use signed entitlements and are enforced at mutation boundaries. | Entitlement service | boundary/concurrency/offline-cache tests | Limit events; purchase/disable workflow |
-| INV-013 | Provider credentials and root keys never appear in DB plaintext, browser storage, logs, diagnostics or cloud payloads. | Secret service and scanners | secret canary and diagnostic tests | Key rotation/revocation; incident runbook |
-| INV-014 | Backup upload never contains plaintext seller operational data or decryption keys. | Client encryption and protocol schema | packet/object inspection and key-separation tests | Quarantine/delete compromised object; rotate keys |
-| INV-015 | A backup is called verified only after snapshot integrity and remote object authentication pass. | Backup state machine | corrupt/WAL/interrupted upload/restore drills | Keep prior verified set; alert and retry |
-| INV-016 | Migration starts only after a verified compatible backup for every affected shop. | Migration coordinator | backup failure and multi-shop matrix | Fail-closed maintenance UI; restore |
-| INV-017 | Money is integer DZD and financial changes are append-only events/compensations. | Schema/domain types | property and reconciliation tests | Financial ledger and discrepancy report |
-| INV-018 | Inventory cannot go negative or double-adjust under concurrent/replayed operations. | Reservation/stock ledger transactions | concurrency/replay/cancel/return tests | Stock reconciliation and compensation |
-| INV-019 | Storefront success means a durable tenant/shop-scoped checkout receipt exists. | Hosted checkout service | duplicate, crash, allocation and replay tests | Receipt/import states; reconciliation |
-| INV-020 | Storefront price, shipping and availability are never trusted from customer input. | Hosted server release/catalog rules | tampered-request tests | Rejection reason; release rollback |
-| INV-021 | PWA caches/projections are tenant/member/device/shop/version partitioned and revocable. | Projection protocol and service worker | cross-account/revocation/offline tests | Cache purge and device revoke |
-| INV-022 | Field permissions are enforced in projection generation and command execution, not only UI. | Policy engine | hidden-field and crafted-command tests | Denial audit; policy version rollback |
-| INV-023 | Destructive AI/automation actions require current server-side permission and explicit approval where policy requires. | Approval service | stale/replayed/forged approval tests | Approval receipt; compensate/disable worker |
-| INV-024 | Low-resource mode may reduce freshness/visual work, never correctness, security, durability or retention. | Runtime scheduler and feature policy | reference-device parity tests | Resource health and adaptive-mode log |
-| INV-025 | A public provider capability exists only with current live certification. | Provider registry and UI capability flags | certification suite | Auto-disable/incident state |
-| INV-026 | A release cannot be published before its signed artifacts and evidence manifest exist. | Candidate pipeline and branch protection | release dry run, tamper test | Withdraw channel/revoke manifest |
-| INV-027 | Installed clients accept only signed compatible updates from their channel. | Tauri updater and release manifest | downgrade/tamper/channel tests | Hold update; rollback-compatible fix |
-| INV-028 | Diagnostics are opt-in, previewable and PII/secret safe. | Bundle builder and upload service | seeded canary corpus | Delete upload; incident response |
-| INV-029 | Cloud/control-plane outage cannot corrupt desktop authority or erase queued work. | Local durable protocol state | prolonged outage/reconnect tests | Reconcile sequences and dead letters |
-| INV-030 | Every product/readiness claim is linked to current evidence at an exact commit/artifact. | Documentation/release checks | claim-lint and evidence-manifest check | Retract claim; mark ledger status down |
+| ID | Invariant |
+|---|---|
+| INV-001 | The canonical desktop is the sole authority for canonical operational business mutations. |
+| INV-002 | Tenant, member, device, session, shop, role and actor come only from authenticated context. |
+| INV-003 | No shop operation silently falls back to another database. |
+| INV-004 | Domain mutation, trusted audit, event and required intent commit atomically. |
+| INV-005 | No acknowledged inbound event is lost. |
+| INV-006 | One effect key cannot create duplicate external/domain effects. |
+| INV-007 | Checkpoints never pass an untracked failure. |
+| INV-008 | Operational remote-command success is shown only after desktop commit. |
+| INV-009 | Storefront customer success means a durable tenant/shop receipt exists and does not misclaim desktop commitment. |
+| INV-010 | Purchased-major local use does not depend on continuous cloud availability. |
+| INV-011 | Trial is online, signed with the trial-only key, machine-bound and non-resettable by local clearing. |
+| INV-012 | Trial expiry locks all product operations without deleting data. |
+| INV-013 | Permanent and extra-shop claims are signed offline with separate permanent authority. |
+| INV-014 | Payment verification and license issuance are separate durable state machines. |
+| INV-015 | Shop/member/device/storage limits use signed claims and mutation-boundary enforcement. |
+| INV-016 | Provider credentials, root keys and signing material never enter prohibited plaintext locations. |
+| INV-017 | Backup upload contains neither plaintext seller operations nor decryption keys. |
+| INV-018 | Every backup has a unique DEK wrapped under the per-license Backup Root Key. |
+| INV-019 | Assisted recovery requires both enrolled-device and Founder offline shares. |
+| INV-020 | A backup is `Verified` only after snapshot and remote authentication pass. |
+| INV-021 | Failed restore leaves the existing installation unchanged. |
+| INV-022 | Migration starts only after verified compatible backup for every affected shop. |
+| INV-023 | Money is integer DZD and corrections/reversals are append-only facts. |
+| INV-024 | Inventory cannot go negative or double-adjust under concurrency/replay. |
+| INV-025 | Storefront price, allocation, shipping and availability are never trusted from customer input. |
+| INV-026 | PWA projections/caches are tenant/member/device/shop/version partitioned and revocable. |
+| INV-027 | Field permissions are enforced in reads/projections/commands/mutations, not only UI. |
+| INV-028 | Destructive AI/automation actions require current permission and bound approval. |
+| INV-029 | Low-resource mode never reduces correctness, security, durability, retention or feature ownership. |
+| INV-030 | A public provider capability exists only with Founder scope and current live certification. |
+| INV-031 | Cloud outage cannot corrupt desktop authority or erase durable queued work. |
+| INV-032 | Law 18-07 review exists for every applicable data class before Stable. |
+| INV-033 | A release cannot publish before signed artifacts and evidence manifest exist. |
+| INV-034 | Installed clients accept only signed compatible updates from their channel. |
+| INV-035 | Diagnostics are opt-in, previewable and secret/private-data safe. |
+| INV-036 | Continuity reserve/coverage and support-horizon promises are validated before public payment. |
+| INV-037 | Every product/readiness claim links to exact current evidence. |
+| INV-038 | Included pages and journeys satisfy their experience/page-completion contract. |
 
-## 18. Performance budgets
-
-Measured on the required low-end floor and T470 reference:
-
-- cold launch to usable local shell: target ≤ 12 s HDD, ≤ 7 s SSD;
-- warm launch: target ≤ 5 s HDD, ≤ 3 s SSD;
-- common local navigation feedback: ≤ 150 ms; completed query/render p95 ≤ 1.5 s for reference dataset;
-- order/customer search p95 ≤ 750 ms;
-- memory steady-state target ≤ 650 MB total across processes on 4 GB device, with documented exception budget during one-time migration;
-- idle CPU target < 3% average after settling;
-- background provider work is bounded and backpressured;
-- UI remains operable at 1366×768, 100–200% zoom and RTL.
-
-Budgets can be refined only by an ADR with measured evidence. Missing a correctness/security invariant is never accepted to hit a budget; architecture must change instead.
+Every invariant maps to automated tests, packaged/provider/device/recovery evidence and observable recovery in the implementation wave that introduces it.
 
 ## 19. Evidence and launch gates
 
-Stable release requires all Constitution gates plus:
+Stable requires all Founder gates plus:
 
 - operational CI and protected branch;
-- signed Windows installer and updater candidate;
-- clean-install/upgrade/rollback/migration/restore evidence;
+- signed Windows installer/updater candidate and exact evidence manifest;
+- clean-install, upgrade, migration, hold/forward-repair and restore evidence;
 - all-shop migration matrix;
-- 4 GB reference-device report;
-- provider certifications current;
-- threat model and independent security/privacy review;
-- encrypted-backup restore drill on a replacement installation;
-- PWA tenant/member/device revocation and conflict tests;
-- storefront durability/allocation/replay tests;
-- accessibility/RTL report;
-- beta exit report with unresolved defects explicitly accepted or fixed.
+- approved Windows compatibility matrix;
+- 4 GB/T470 performance reports using Founder thresholds;
+- Founder-selected provider launch set and current live certifications;
+- threat model, independent security/privacy review and Law 18-07 report;
+- independent and assisted zero-knowledge recovery drills;
+- PWA authorization/revocation/conflict tests;
+- storefront receipt/allocation/replay/durability tests;
+- complete capability/journey/page-completion accessibility/RTL report;
+- continuity economics and support/service-exit readiness;
+- beta exit with 3–5 representative businesses and five representative live storefronts;
+- no unresolved P0/P1 defect;
+- final Founder approval.
 
 ## 20. Explicit non-goals
 
-This specification does not authorize native Android, macOS/Linux launch, cloud multi-master business writes, enterprise SSO/AD, Meta/TikTok inbox, arbitrary storefront JavaScript, automated payment monitoring, unlimited included usage or product-funded Gemini.
+This specification does not authorize:
+
+- subscription or feature tiers;
+- native Android application;
+- macOS/native Linux Stable release;
+- multiple canonical Windows installations under a standard license;
+- cloud multi-master operational database;
+- enterprise SSO/AD, payroll, attendance or surveillance;
+- TikTok/Meta inbox integrations;
+- arbitrary storefront JavaScript/unrestricted HTML;
+- automated BaridiMob/CCP monitoring or approval;
+- unlimited included resources;
+- product-funded general Gemini inference;
+- provider scope merely because adapter code exists;
+- security-equivalence claims for modified Windows without evidence.

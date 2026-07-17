@@ -1,502 +1,393 @@
 # SahelFlow 1.0 — Current-to-Target Analysis
 
-> **Status:** Active engineering truth for planning and migration  
-> **Code baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e` (`main`, 2026-07-16)  
-> **Target authority:** `../product/LAUNCH_CONSTITUTION.md`, `../product/FOUNDER_DECISIONS.md`, `../product/LAUNCH_SCOPE_AND_ENTITLEMENTS.md`, `ENGINEERING_SPECIFICATION.md`  
-> **Evidence rule:** Source inspection proves implementation shape, not packaged, provider, performance, security-review, recovery, or seller readiness.
+> **Status:** Active source-grounded engineering truth for planning and migration  
+> **Executable source baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e` (`main`, 2026-07-16)  
+> **Product target:** `../product/`  
+> **Experience target:** `../experience/`  
+> **Engineering target:** `ENGINEERING_SPECIFICATION.md` and `SUPERSEDING_ADRS.md`  
+> **Evidence rule:** Source inspection proves implementation shape. Packaged, provider, performance, security/legal, recovery, accessibility and seller readiness require their own evidence.
+
+Later commits through the documentation consistency audit are documentation-only and do not alter the executable-source assessment. Refresh this baseline after implementation changes materially change current reality.
 
 ## 1. Executive conclusion
 
-SahelFlow is already a broad operational application, not an empty prototype. The repository contains substantial Windows/Tauri, Next.js, Prisma, SQLite, order-management, inventory, customer, delivery, return, refund, accounting, COD, risk, automation, WhatsApp, AI, integration, storefront, localization, accessibility, and test work.
+SahelFlow is already a broad operational application, not an empty prototype. It contains substantial Windows/Tauri, Next.js, Prisma, SQLite, order, inventory, customer, delivery, return, refund, COD, accounting, risk, automation, WhatsApp, AI, integration, storefront, multilingual UI, RTL, accessibility and test work.
 
-The finished SahelFlow 1.0 described by the Founder is nevertheless **not a hardening-only continuation** of the current application. The current implementation was built around several assumptions that the final product explicitly replaces:
+The finished SahelFlow 1.0 is nevertheless **not a hardening-only continuation**. Current implementation grew around assumptions the Founder-approved target replaces:
 
-1. one local owner and a global active shop;
-2. browser/local state as part of license authority;
+1. one local owner and process-global active shop;
+2. browser/local state as part of trial/license authority;
 3. best-effort callbacks and fire-and-forget effects;
-4. localhost as the boundary for PWA, storefront, WhatsApp, and connected workflows;
-5. local file copies as backup;
-6. source/dev-server tests as the main proof of readiness;
-7. three-platform packaging despite a Windows-only launch contract.
+4. localhost as the boundary for PWA, storefront and connected work;
+5. a readable general-purpose root key and local byte-copy backup;
+6. adapter code/tests as provider support evidence;
+7. source/dev-server checks as readiness proof;
+8. session/v3/v4 labels and three-OS packaging as product/release truth;
+9. strong visual primitives without complete state/journey depth across every surface.
 
-The correct path is therefore neither “rewrite everything” nor “keep adding features.” It is a controlled migration:
+The correct path is a controlled migration:
 
-- **preserve** the product surfaces and domain knowledge that already create value;
-- **harden** code whose authority is already correct;
-- **migrate** reusable behavior behind new trusted boundaries;
-- **replace** unsafe authorities and protocols;
-- **retire** obsolete implementation and documentation only after its durable value is preserved.
+- **Keep** useful architecture and product behavior whose authority remains correct.
+- **Harden** bounded implementation where the target direction is already valid.
+- **Migrate** reusable behavior/UI/data behind new trusted boundaries.
+- **Replace** authorities/protocols that cannot satisfy the contract.
+- **Retire** obsolete code and claims only after migration, parity, references, recovery and evidence are complete.
 
-The four structural discontinuities are:
+The five structural discontinuities are:
 
-- **trusted context:** shop, tenant, member, device, session, actor, permission, and entitlement must be explicit and authenticated;
-- **durable effects:** business writes, audit, domain events, provider intents, receipts, retries, checkpoints, and compensations must be recorded durably;
-- **connected product boundaries:** cloud control, relay, backup, PWA, and storefront must become real bounded systems rather than extensions of localhost;
-- **release evidence:** a signed installed Windows candidate, migration/recovery drills, provider certification, low-end measurements, and real beta evidence must govern claims.
+- **trusted context** — tenant, member, device, session, shop, actor, permission and entitlement become explicit and authenticated;
+- **durable effects** — audit, events, provider intents, receipts, retries, checkpoints and compensations become first-class data;
+- **recovery-safe authority** — keys, trial/permanent signing, migrations, backups and replacement-machine recovery use purpose separation and tested ceremonies;
+- **real connected boundaries** — cloud control, relay, PWA and storefront are bounded systems rather than localhost extensions;
+- **artifact and journey evidence** — a signed installed Windows candidate, full operational states, provider certification, reference-device measurements and beta evidence govern claims.
 
-## 2. Assessment method and status language
+## 2. Authority and status language
 
-This analysis combines the current product contract, active architecture, and a source-level inspection of the application layers. It does not claim that the application was launched, packaged, installed, connected to real providers, or exercised on the Founder’s machine during this documentation wave.
+When documents overlap, use repository precedence:
 
-Status terms:
+1. newer explicit numbered Founder decision for the choice it expressly changes;
+2. product package and Stable scope;
+3. experience/capability/journey authority;
+4. Engineering Specification and accepted ADRs;
+5. this current-state analysis;
+6. roadmap/workflow/provider registry;
+7. working memory and active wave.
 
-- **Implemented and reusable** — coherent code exists and the direction remains valid, but launch evidence may still be missing.
-- **Partial** — useful implementation exists, but a required authority, protocol, workflow, or proof is incomplete.
-- **Unsafe** — implementation exists but can violate a launch invariant under failure, tampering, ambiguity, concurrency, recovery, or cross-context use.
-- **Missing** — the target system is not meaningfully implemented.
-- **Obsolete** — the implementation or claim encodes a superseded product decision.
-- **Unverified** — source exists, but the required packaged, provider, device, recovery, security, or user evidence does not.
+### Implementation status
 
-Disposition terms:
+- **Implemented and reusable** — coherent code exists and target direction remains valid; launch evidence may still be missing.
+- **Partial** — useful implementation exists but required authority, state depth, recovery or proof is incomplete.
+- **Unsafe** — implementation can violate a target invariant under failure, tampering, ambiguity, concurrency, recovery or cross-context use.
+- **Missing** — target system is not meaningfully implemented.
+- **Obsolete** — implementation/claim encodes a superseded product decision.
+- **Unverified** — source exists but required packaged/provider/device/recovery/security/user evidence does not.
 
-- **Keep** — preserve the architecture and implementation direction.
-- **Harden** — preserve the implementation and close bounded safety/evidence gaps.
-- **Migrate** — preserve behavior or UI behind a new authority/interface/data model.
-- **Replace** — the current authority or protocol cannot satisfy the product contract.
-- **Retire** — remove after replacement, migration, references, and rollback implications are complete.
+### Disposition
 
-## 3. Finished-product system shape
+- **Keep** — preserve direction and implementation.
+- **Harden** — keep implementation and close bounded safety/evidence gaps.
+- **Migrate** — preserve behavior/UI/data behind a new authority/interface/model.
+- **Replace** — current authority/protocol cannot satisfy the target.
+- **Retire** — remove only after replacement/migration/evidence/recovery review.
 
-The target SahelFlow 1.0 is a desktop-authoritative, selectively connected system:
+### Experience scope classes
+
+- **Required** — explicit Founder/Launch Scope commitment.
+- **Conditional** — named but public only after certification.
+- **Depth requirement** — state/interaction/recovery quality needed to complete required scope.
+- **Candidate** — useful but not yet Founder commitment.
+- **Excluded** — prohibited for SahelFlow 1.0.
+
+Ambiguous capability defaults to Candidate, not Required.
+
+## 3. Finished-system map
 
 ```text
 Canonical Windows desktop
-├── explicit installation / tenant / member / device / shop context
+├── explicit installation / tenant / member / device / session / shop context
 ├── one encrypted operational SQLite database per shop
-├── domain transactions + trusted audit + event/outbox records
-├── provider workers + reconciliation
-├── local entitlement and identity cache
-├── verified backup and migration coordinator
+├── domain transactions + trusted audit + event/inbox/outbox/compensation
+├── supervised local runtime and provider workers
+├── protected purpose-separated keys and entitlement cache
+├── all-shop migration / verified snapshot / recovery coordinator
 └── encrypted relay connector
         │
         ├── bounded Cloudflare control plane
-        ├── encrypted projection / command relay
-        ├── zero-knowledge backup object store
-        ├── hosted multi-tenant storefront runtime
+        ├── encrypted projection / operational-command relay
+        ├── zero-knowledge backup object plane
+        ├── hosted multi-tenant storefront and durable receipt plane
         └── operational PWA/browser companion
 ```
 
-The desktop remains final business-write authority. Cloud services hold only approved control, routing, encrypted projection, backup, and public storefront data. Remote acceptance never equals business commitment until the canonical desktop commits and acknowledges the result.
+The desktop remains final authority for canonical operational business mutations. Two success models are intentionally different:
+
+- PWA/remote **operational command success** requires desktop commit.
+- Storefront **customer checkout success** requires a durable tenant/shop receipt; it remains queued/pending import until desktop canonical commit.
 
 ## 4. Current implementation map
-
-The current application is approximately:
 
 ```text
 Tauri host
 ├── fixed localhost Next.js standalone server
-│   ├── React / App Router UI
+│   ├── React/App Router product UI
 │   ├── Server Components and API routes
 │   ├── Prisma service/domain code
-│   ├── per-shop SQLite files selected through app-meta.json
-│   ├── encrypted PII and encrypted Secret rows
-│   ├── provider clients
-│   └── local storefront and PWA shell
-└── Bun / Baileys WhatsApp sidecar on fixed localhost port
+│   ├── per-shop SQLite selected through app-meta.json/global proxy
+│   ├── selected PII encryption and encrypted Secret rows
+│   ├── direct provider clients/callbacks
+│   └── local storefront checkout + PWA shell
+└── Bun/Baileys WhatsApp sidecar on fixed localhost endpoint
 ```
 
-Important reusable foundations already exist:
+Reusable foundations include:
 
-- a mature multilingual UI and broad daily-operational surface;
-- integer DZD money fields and centralized revenue formulas;
-- order state transitions, inventory effects, COD tracking, returns, refunds, expenses, risk, and analytics;
-- per-shop SQLite files and a Prisma model with meaningful indexes;
-- AES-GCM helpers, blind indexes, Ed25519 verification, PIN hashing, signed updater support, and loopback sidecar authentication;
-- adapter patterns for couriers and commerce platforms;
-- typed Gemini extraction and tool schemas;
-- transaction-focused unit/integration regression coverage;
-- Tauri packaging, bundled server/runtime/sidecar preparation, and updater integration.
+- broad seller workflows and mature multilingual/RTL component work;
+- Tauri packaging, updater and bundled runtime preparation;
+- Prisma schema, one SQLite file per shop and meaningful indexes;
+- integer DZD and centralized metric helpers;
+- order lifecycle, inventory, delivery, return/refund, COD, accounting and risk logic;
+- AES-GCM, blind indexes, Ed25519 verification, PIN hashing and loopback auth primitives;
+- courier/commerce adapter knowledge;
+- deterministic/Gemini extraction, typed tools and non-AI fallback concepts;
+- large regression suites, route boundaries, loading/error primitives and command/keyboard foundations.
 
-The main risk is not the absence of code. It is that visible features are built on uneven authorities and failure guarantees.
+The primary risk is not absence of code. It is visible functionality resting on uneven authority, state semantics, failure guarantees and evidence.
 
 ## 5. Comprehensive gap matrix
 
 | Area | Current state | Finished SahelFlow 1.0 | Gap / disposition | Closure phase |
 |---|---|---|---|---|
-| Product identity and version | Product docs say 1.0; package, Cargo and Tauri say 4.1.0 | One generated version/build/schema/protocol authority | **Unsafe — replace version authority** | Phase 0 |
-| Repository verification | Workflows exist, current head has no recorded run, CI invokes an undefined `sf-verify` script | Clean-checkout required checks with retained evidence | **Unsafe — repair and prove** | Phase 0 |
-| Release | Local script pushes/tags before build; CI targets Windows, Linux and macOS | Artifact-first, signed Windows-only candidate promotion | **Unsafe — replace** | Phase 0–1 |
-| Desktop runtime | Tauri packages Next.js and WhatsApp child processes on fixed ports with partial supervision | Authenticated dynamic endpoints, readiness state, crash recovery and support diagnostics | **Partial/unsafe — migrate** | Phase 1 |
-| Shop isolation | Separate SQLite files and registry exist | Explicit trusted `ShopContext`; no silent fallback | **Partial/unsafe — keep files, replace routing** | Phase 1 |
-| Shop registry | Plain JSON, synchronous reads, global active shop, fallback behavior | Atomic, versioned, validated registry with recovery state | **Unsafe — replace** | Phase 1 |
-| Migrations | Startup targets `dev.db`; broad failure is treated as baseline; all shops are not coordinated | Append-only, all-shop, journaled, resumable, backup-gated migration | **Unsafe — replace** | Phase 1 |
-| PII encryption | Useful AES-GCM/blind-index extensions cover selected fields | Versioned key hierarchy, complete field inventory, context binding and recoverability | **Partial — harden/migrate** | Phase 1–2 |
-| Root and secret keys | One plaintext key file unlocks PII and provider secrets | OS-protected installation root and wrapped purpose/shop keys | **Unsafe — replace** | Phase 2 |
-| Local auth | One PIN, HMAC sessions and setup-mode bypass | Owner/member/device/session identity with fail-closed bootstrap and revocation | **Unsafe/partial — migrate** | Phase 2 |
-| Teams and field permissions | Assignee/team fields are free-form; no trusted member model | Owner + 10 members, roles, field policy, assignments, approvals and devices | **Missing** | Phase 2 |
-| Trial and licensing | Browser self-issues trial; local storage and legacy status paths remain; enforcement is not universal | Signed online one-per-machine trial, full lockout, permanent offline use, transfer and resource entitlements | **Unsafe/missing — replace around reusable Ed25519** | Phase 2 |
-| Payment/founder administration | No professional payment verification, issuance, transfer, incident or support plane | Manual BaridiMob/CCP review, immutable approval, offline signing and support controls | **Missing** | Phase 2 and 4 |
-| Order/catalog/customer core | Broad services and UI exist; many operations are transactional | Same features under explicit shop/actor/permission/event authority | **Implemented and reusable — migrate/harden** | Phase 3 |
-| Inventory | Product and variant stock exist; order transitions adjust stock | Reservation/adjustment ledger, replay safety and exact compensation | **Partial — migrate** | Phase 3 |
-| Returns/refunds | Rich flows exist, but related state transitions can commit separately; reversal re-derives side effects heuristically | Exact append-only money, stock, status and accounting compensation facts | **Unsafe — redesign while preserving UI/history** | Phase 3 |
-| COD/accounting | Collected/remitted fields, references, metrics and UI exist | Durable remittance/discrepancy ledger with permissioned corrections and reconciliation | **Partial — keep/migrate** | Phase 3 |
-| Audit | AuditLog and OrderChange exist; actors are strings; many writes are best-effort | Trusted actor/session/device and atomic audit with the business transaction | **Partial/unsafe — migrate** | Phase 3 |
-| Automation | Conditions, steps, dry-run, retries and UI exist; dispatch is fire-and-forget | Transactional outbox intents, idempotent workers, receipts, dead letters, approvals and recovery | **Unsafe — preserve authoring, replace execution** | Phase 3 |
-| WhatsApp | Real Baileys sidecar, QR, chats, send, WS events and receipts; message store is volatile | Durable encrypted ingress/egress, replay, history, identity, recovery and live certification | **Partial/unsafe — migrate** | Phase 3 and 5 |
-| Commerce sync | Shopify/Woo/YouCan adapters, paging and update polling exist | Durable hybrid webhook + reconciliation inbox with contiguous checkpoints | **Unsafe — preserve adapters, replace sync authority** | Phase 3 and 5 |
-| Couriers | Capability-like adapter code and several provider implementations exist; some endpoints are experimental | Capability registry and dated live certification per action/provider | **Partial/unverified — migrate/certify** | Phase 5 |
-| AI | Regex fallback, Gemini extraction/chat, schemas, tools and partial redaction exist | Central provider/model policy, allowlisted payloads, request receipts and bound approval records | **Partial/unsafe — keep UX/schemas, migrate authority** | Phase 5 |
-| Google Sheets | Functional service-account export path exists | Shop/member/field permission, privacy scope, idempotency and live evidence | **Partial/unverified — harden/certify** | Phase 5 |
-| Local storefront | Builder/view/checkout exist and derive price server-side | Hosted tenant/shop allocation, immutable releases and durable receipt relay | **Unsafe for target — migrate builder, replace checkout/runtime** | Phase 5 |
-| PWA | Service worker caches shell and requires the local Next.js server for data | Authenticated remote operational companion with encrypted projections/commands/conflicts | **Obsolete as architecture — retire and rebuild boundary** | Phase 4–5 |
-| Cloud control and relay | No implementation | Bounded control plane, identity/entitlement services and encrypted command/projection relay | **Missing** | Phase 4 |
-| Backup/recovery | Active-shop local byte copy; checkpoint/disconnect/integrity are best-effort | All-shop verified snapshots, zero-knowledge cloud retention, recovery kit and replacement-machine drills | **Unsafe/missing — replace** | Phase 2 and 4 |
-| Onboarding | Optional skippable business/provider/AI/product wizard | Installation preflight, owner/license/shop/recovery setup and guided first operational outcome | **Partial — redesign after authorities exist** | Phase 2 and 6 |
-| UX/i18n/RTL | Strong AR/FR/EN, RTL, responsive shell, modern tables and workflows | Complete accessible desktop/PWA/storefront journeys under real permissions and failures | **Implemented but unverified — keep/harden** | Continuous; gate in Phase 6 |
-| Performance | Query/index optimizations exist; heavy RSC loads and three-process runtime remain | Target dataset, 4 GB floor and T470 packaged budgets | **Unverified — measure before claiming, then optimize** | Phase 0–1 and 6 |
-| Observability/support | Structured logs, optional Sentry and best-effort audit exist | Correlated health, process/provider/queue/migration/backup diagnostics and consented support bundles | **Partial — migrate** | Phase 1–4 |
-| Testing | Large Vitest and Playwright suites exist; multi-shop and provider behavior are mocked or bypassed; E2E uses dev server | Risk-based CI plus signed installed-candidate, provider, recovery, security and low-end evidence | **Implemented but insufficient — preserve and expand** | Phase 0 onward |
-| Documentation | Rich contract and architecture exist beside transition records, duplicated ledgers and historical redirects | Small durable authority set with current source truth and one execution path | **Drifted — consolidate in this reset** | This documentation wave |
+| Product/version authority | Product docs say 1.0; package/Cargo/Tauri and history use 4.x/session labels | Generated product/app/build/schema/protocol authority | **Unsafe — replace** | 0 |
+| Documentation flow | Rich active docs plus stale historical/read-order drift | Explicit precedence, scope classes, current changelog and validated links | **Corrected semantically; local link scan pending** | 0 |
+| CI/repository verification | Workflow exists; Actions fails before steps; undefined `sf-verify` | Clean-checkout binding checks and retained results | **Unsafe/unverified — repair** | 0 |
+| Release | Push/tag-before-proof and unsupported OS targets | Artifact-first signed Windows candidate promotion | **Unsafe — replace** | 0–1 |
+| Windows runtime | Packaged child processes on fixed endpoints with partial supervision | Authenticated dynamic lifecycle, readiness, crash recovery, compatibility guidance | **Partial/unsafe — migrate** | 1A |
+| Shop isolation | Separate files; global active-shop proxy/fallback | Explicit trusted `ShopContext`, atomic registry, no fallback | **Partial/unsafe — keep files, replace routing** | 1B |
+| Migrations | `db push`, default-path assumptions, broad error baselining, no all-shop coordinator | Append-only all-shop journaled backup-gated migration | **Unsafe — replace** | 1B |
+| PII/data encryption | Useful field AES-GCM and blind indexes | Complete classified inventory, context/version binding and recoverability | **Partial — harden/migrate** | 1–2 |
+| Root/secrets | Readable general keyfile; Secret rows | OS-protected root and wrapped purpose/shop keys | **Unsafe — replace** | 2 |
+| Backup/recovery keys | No per-license Backup Root Key/per-backup DEK or assisted shares | Independent recovery + two-share assisted recovery | **Missing** | 2–4 |
+| Local auth | PIN/session and setup bypass | Tenant/member/device/session identity and fail-closed bootstrap | **Partial/unsafe — migrate** | 2 |
+| Teams/work | Free-form assignee/team strings | Roles/fields, workgroups, queues, assignments, comments, mentions, handovers, approvals | **Missing** | 2–3 |
+| Trial/licensing | Browser self-issuance/local authority; scattered gates | Online trial-only signing, complete lockout, offline permanent signing, entitlements | **Unsafe/missing — replace around reusable Ed25519** | 2 |
+| Payment/founder admin | No professional payment/issuance/transfer/admin state machines | Manual actual-account verification separated from offline issuance | **Missing** | 2–4 |
+| Order/catalog/customer core | Broad services/UI and meaningful transaction logic | Same capabilities under explicit actor/shop/permission/event authority | **Reusable — migrate/harden** | 3 |
+| Inventory | Direct stock with useful lifecycle effects | Reservation/adjustment ledger, replay safety, exact compensation | **Partial — migrate** | 3 |
+| Return/refund | Rich UI/logic; related facts can commit separately; reversal partly heuristic | Exact append-only money/stock/status/accounting compensation | **Unsafe — redesign preserving UI/history** | 3 |
+| COD/accounting | Collected/remitted fields, metrics and UI | Remittance/discrepancy ledger with governed corrections | **Partial — keep/migrate** | 3 |
+| Audit | AuditLog/OrderChange; free-form actors; best-effort writes | Trusted actor/session/device and atomic business audit | **Partial/unsafe — migrate** | 3 |
+| Automation | Conditions/steps/dry-run/retries; direct dispatch | Durable outbox, idempotent workers, approvals, receipts, failure queue | **Unsafe — preserve authoring, replace execution** | 3 |
+| WhatsApp | Real sidecar/QR/chats/send/events; volatile/incomplete history/recovery | Durable encrypted ingress/egress/history/replay and certified lifecycle | **Partial/unsafe — migrate** | 3/5 |
+| Commerce | Polling/paging/dedup/update knowledge | Hybrid durable inbox + reconciliation + contiguous checkpoints | **Unsafe — preserve adapters, replace authority** | 3/5 |
+| Couriers | Candidate adapters/tests | Founder-selected public launch set with capability-specific live certification | **Candidate/unverified — certify then decide** | 5 |
+| AI | Regex/Gemini/schemas/tools and partial redaction | Central policy, allowlisted data, real corpus, request receipts, bound approval | **Partial/unsafe — migrate** | 3/5 |
+| Google Sheets | Functional export knowledge | Only if Founder classifies scope; then permission/privacy/idempotency/live proof | **Candidate/unverified** | 5 or later |
+| PWA | Cached local shell dependent on desktop server | Authenticated remote companion with projections/commands/revocation/states | **Obsolete boundary — rebuild** | 4–5 |
+| Storefront | Local builder/view/checkout tied to active DB | Hosted tenant release/allocation/durable receipt/import/reconciliation | **Useful prototype, unsafe target boundary — migrate/replace** | 4–5 |
+| Cloud control/relay | Missing | Bounded encrypted identity/control/relay plane | **Missing** | 4 |
+| Backup | Active-shop local byte copy/best-effort checkpoint | All-shop zero-knowledge retention, trial point, recovery drills | **Unsafe/missing — replace** | 2/4 |
+| Onboarding | Optional skippable wizard | Capability preflight, owner/trial/shop/recovery and guided first valid order | **Partial — redesign after authorities** | 2/6 |
+| Experience system | Strong tokens/primitives/RTL/responsive patterns; incomplete second-order state depth | Binding page-complete journeys, shared patterns, exact authority/failure/trust states | **Strong base, incomplete/unverified — keep/harden** | Continuous/6 |
+| Performance | Query/index work; heavy server loads and multi-process runtime | Founder dataset and 4 GB/T470 packaged thresholds | **Unverified — measure then optimize** | 0 onward |
+| Windows compatibility | No repeatable capability matrix | Win10 22H2/Win11/modified/VM/HDD capability evidence | **Unverified** | 0–6 |
+| Security/privacy/legal | Useful crypto/auth/Sentry/redaction pieces | Complete threat models, key/tenant boundaries, Law 18-07 and independent review | **Partial/unverified** | Continuous/6 |
+| Continuity economics | Product decisions documented, no executable cost/reserve process | 20% reserve planning, 24-month coverage, quarterly review, service-exit readiness | **Missing** | 4/6 |
+| Testing/evidence | Large Vitest/Playwright source suites; E2E dev-server and mocked boundaries | Risk-based CI + installed/provider/recovery/security/experience/beta evidence | **Substantial but insufficient — preserve/expand** | 0 onward |
 
-## 6. Gap analysis by engineering level
+## 6. Gap analysis by system level
 
-### 6.1 Product and commercial contract
+### 6.1 Product, scope and experience
 
-#### What is already strong
+The Founder package is unusually specific and internally aligned: product identity, one-time price, support, entitlements, teams, PWA, storefront, backup, trial, AI, providers, low-end and launch evidence are explicit.
 
-The Founder-approved product package is unusually specific. It defines Algeria/COD/WhatsApp focus, Windows and low-end constraints, one-time pricing, included shops, teams, remote access, storefronts, backup, AI ownership, provider certification, trial behavior, update support, and evidence gates. These are not vague ambitions.
+The restored experience package adds the missing depth:
 
-#### Main gap
+- quiet-power design thesis;
+- 4px spacing, typography/density/motion/color/focus foundations;
+- Arabic/RTL and accessibility requirements;
+- data-table/forms/empty/error/degraded/command interaction patterns;
+- complete capability atlas;
+- universal state vocabulary and 27 journeys;
+- page-completion and visual-review contracts.
 
-The application does not yet have a single entitlement or identity model capable of enforcing the contract. Existing `features:["all"]` licensing cannot express:
+Remaining implementation risk is not vague vision. It is failure to trace each wave to its scope class, capability, journey, experience dimensions and target invariants. The revised Wave Template and Coding Workflow now enforce that mapping.
 
-- five included shops and five paid expansion slots;
-- owner plus ten active members;
-- personal/owner device limits;
-- canonical installation state;
-- purchased product major;
-- five-year connected-support horizon;
-- transfer/recovery state;
-- backup/media resource entitlements.
+### 6.2 Runtime, packaging and Windows capability
 
-The commercial contract is therefore documented but not yet represented as executable claims.
+**Exists:** Tauri packages Next.js, Prisma resources, runtime and WhatsApp sidecar; updater verification concepts exist.
 
-#### Required migration
+**Gaps:** fixed endpoints; incomplete per-launch auth/readiness; missing blocking recovery; default migration paths; unsupported OS release targets; publish-before-proof script; no installed compatibility matrix.
 
-Preserve Ed25519 primitives and current activation UI concepts. Replace self-issued trials, browser authority, trusted status rows, arbitrary feature gating, and incomplete API enforcement with one signed entitlement service used by UI, API, background workers, provider workers, PWA, storefront allocation, and founder administration.
-
-### 6.2 Runtime, packaging and release
-
-#### What exists
-
-Tauri packages a Next.js standalone server, Prisma resources, migration scripts, a bundled runtime and a compiled WhatsApp sidecar. The updater verifies signed manifests. The Rust host tracks child handles and includes sidecar restart logic.
-
-#### Structural gaps
-
-- fixed ports remain part of readiness;
-- service authentication and token bootstrap are not one coherent per-launch protocol;
-- a missing server/runtime can log and return rather than enter a blocking recovery state;
-- startup migrations and service readiness are coupled to one default path;
-- Windows, Linux and macOS targets remain in release configuration despite the Windows-only launch contract;
-- the local release script changes and pushes source before candidate proof;
-- clean installed-candidate tests are absent.
-
-#### Target
-
-A Windows-only candidate pipeline produces immutable signed artifacts first. A local supervisor owns endpoint reservation, per-launch authentication, migrations, health, restart budgets, logs and failure UI. Publication follows evidence and Founder approval, never precedes build/test/signing.
+**Target:** artifact-first Windows candidate, supervised authenticated local services, precise readiness/failure UX and capability-based compatibility evidence.
 
 ### 6.3 Data authority, shops and migrations
 
-#### What exists
+**Exists:** useful one-file-per-shop model and indexed schema.
 
-The one-file-per-shop model is aligned with the target. The Prisma schema is broad and indexed. The active-shop proxy makes existing code easy to reuse.
+**Gaps:** implicit shop routing, fallback, public/background active-shop coupling, `db push`, default `dev.db` migration, broad failure classification and no all-shop verified backup gate.
 
-#### Structural gaps
+**Target:** explicit `ShopContext`, atomic registry, all-shop preflight/journal/backup/recovery and readable reports.
 
-The same proxy hides the most important authority:
+### 6.4 Keys, licensing and recovery
 
-- API/background code does not receive explicit shop context;
-- registry failure can fall back to another database;
-- global active shop can affect public storefront and background work;
-- tests intentionally bypass real multi-shop routing;
-- new shops use `prisma db push --accept-data-loss`;
-- packaged migration targets `shops/dev.db`;
-- migration failures can be misclassified as baseline and still exit successfully;
-- backup is not a verified all-shop prerequisite.
+**Exists:** AES-GCM, blind index, Ed25519 verification, PIN hashing and encrypted Secret foundations.
 
-#### Target
+**Gaps:** one readable root, no purpose separation, no per-license backup root/per-backup DEK, no independent/assisted recovery, self-issued trial, no separate trial/permanent keys, no professional payment/issuance state machines.
 
-Every write receives a trusted `ShopContext`. The registry is atomic, versioned and recoverable. Migrations enumerate every shop, validate compatibility, obtain verified snapshots where required, journal progress, stop on failure and produce a readable report.
+**Target:** protected installation root, wrapped purpose keys, trial-only online signing, offline permanent signing, independent kit, two-share assisted recovery and replacement-machine proof.
 
-### 6.4 Cryptography, secrets and recovery
+### 6.5 Identity, teams and authority
 
-#### What exists
+**Exists:** local owner PIN/session checks, free-form workflow fields and broad UI.
 
-AES-256-GCM field encryption, blind-index search, race-safe initial key generation and encrypted `Secret` rows are useful foundations.
+**Gaps:** no tenant/member/device/shop policy context, field authorization, invitation, workgroup, queue, comments, mentions, handovers or bound approval authority.
 
-#### Structural gaps
+**Target:** trusted principals/policy plus full team-work depth and immediate revocation. UI hiding is never authorization.
 
-One readable key file is the root for multiple purposes. There is no protected installation root, per-shop key separation, backup key separation, authenticated recovery kit, versioned key registry, or tested replacement-machine ceremony. File permissions are not a complete Windows security and recovery design.
+### 6.6 Domain/financial correctness
 
-#### Target
+**Exists:** deep order, stock, delivery, return, refund, COD, expense, risk and metric code.
 
-Use a protected installation root and wrapped subkeys with explicit identifiers, versions and context. Existing ciphertext is migrated through a resumable journal. Recovery material is user-controlled; SahelFlow/cloud cannot decrypt seller operational data.
+**Gaps:** related writes/effects/audits can cross transaction boundaries; best-effort dispatch; heuristic reversal; uneven derived definitions.
 
-### 6.5 Identity, authorization and trusted actor
+**Target:** one transaction kernel and exact append-only facts, migrated slice by slice while preserving valuable UI/history.
 
-#### What exists
+### 6.7 Providers and connected effects
 
-PIN hashing, session cookies, revocation rows, route middleware, and defense-in-depth API checks exist.
+**Exists:** substantial WhatsApp, commerce, courier, Sheets and Gemini knowledge.
 
-#### Structural gaps
+**Gaps:** direct calls, volatile callbacks, ambiguous provider POST success, unsafe cursor advancement, no universal attempts/receipts/dead letters and no live certifications.
 
-The setup bypass is broad, identity is not associated with a tenant/member/device/shop policy, and many audit or workflow fields use free-form strings. There is no field authorization, device enrollment, invitation, workgroup, owner approval or remote revocation model.
-
-#### Target
-
-Migrate the current owner into first-class tenant/member/device/session records. Build trusted request context and policy enforcement before team/PWA behavior. UI hiding is not authorization. High-risk actions require current permission and re-authentication or an approval receipt.
-
-### 6.6 Domain correctness and financial integrity
-
-#### What exists
-
-The order lifecycle, stock side effects, customer statistics, returns, refunds, reversal, COD collection/remittance, expenses and canonical revenue metrics show deep domain work.
-
-#### Structural gaps
-
-Correctness is still spread across several services and transaction boundaries:
-
-- order update, provider update, return completion, refund, customer statistics, stock, audit and automation may not share one atomic record;
-- related second-stage transitions can fail after the first state is committed;
-- audit failures are swallowed;
-- automation and low-stock effects are dispatched after commit without durable intent;
-- refund reversal reconstructs what happened from timing and ledger heuristics;
-- some derived customer statistics use different definitions across services.
-
-#### Target
-
-Introduce one transaction kernel that records domain state, trusted audit, domain event, outbox/projection intent, idempotency and explicit compensation facts together. Migrate business flows incrementally. Existing UI and historical rows can remain while new ledgers become canonical.
-
-### 6.7 Connected effects and providers
-
-#### What exists
-
-There is meaningful provider-specific knowledge: WhatsApp lifecycle, Shopify update polling, WooCommerce pagination, YouCan limitations, courier status mapping, rate-limit handling, Google Sheets batching, and Gemini fallback behavior.
-
-#### Structural gaps
-
-Adapters are called directly from request/business code. Provider acknowledgement, retry, dead-letter, reconciliation, cursor advancement and local commit are not one durable protocol. Commerce watermarks can advance after per-order failures. WhatsApp history and delivery callback persistence can be lost during process outages. Courier POST ambiguity can create an external parcel without a local receipt.
-
-#### Target
-
-Current adapters become producers/consumers of a shared durable provider framework:
-
-- inbox event before acknowledgement;
-- stable source identity and resource version;
-- transactional normalization/domain commit;
-- outbox effect with idempotency key;
-- effect attempts and receipts;
-- dead-letter and operator repair;
-- contiguous checkpoints;
-- scheduled reconciliation;
-- live capability certification.
+**Target:** durable inbox/outbox framework and scope/certification registry. Named commerce providers are conditional; couriers and Sheets remain candidates until Founder classification.
 
 ### 6.8 Cloud, PWA, storefront and backup
 
-#### What exists
+**Exists:** responsive UI, local PWA shell, local builder/checkout and backup controls.
 
-The application has responsive UI, a service worker, local storefront authoring/checkout and local backup controls. Those are useful prototypes and UX assets.
+**Gaps:** no bounded cloud identity/control, encrypted relay, remote identity/commands, hosted tenancy/releases/allocation, durable public receipt or zero-knowledge remote backup.
 
-#### Structural gap
+**Target:** build Phase 4 foundations, then migrate PWA and storefront assets. Preserve the semantic distinction between operational command commit and public receipt acceptance.
 
-All four target connected systems are effectively missing as system boundaries:
+### 6.9 UX, accessibility and low-end
 
-- no Cloudflare control plane;
-- no encrypted relay/projection/command protocol;
-- no zero-knowledge object backup;
-- no hosted tenant/storefront/shop allocation;
-- no immutable storefront release;
-- no durable hosted checkout receipt;
-- no remote device/member identity or command result state.
+**Exists:** meaningful design system, translations, RTL, responsive components, command palette, keyboard patterns, loading/error primitives and broad workflows.
 
-The current storefront and PWA are coupled to whichever local shop/server is active, so they cannot be safely expanded in place.
+**Gaps:** not every page uses shared patterns; inconsistent state depth; live/persisted data realities; incomplete educational states/trust signals; no packaged Arabic/FR/accessibility/low-end proof.
 
-#### Target
+**Target:** use the Experience Constitution continuously, not as final redesign. Complete states/journeys while foundations migrate, and measure on packaged Windows.
 
-Build identity, entitlement, key and durable-event foundations first. Then implement the bounded control plane and relay. Migrate responsive views into the PWA boundary and storefront builder data into versioned hosted releases. Retire local direct checkout after import parity and reconciliation are proven.
+### 6.10 Verification, legal, operations and continuity
 
-### 6.9 UX, onboarding, accessibility and performance
+**Exists:** large source tests, logging, optional Sentry, updater and historical execution records.
 
-#### What exists
+**Gaps:** Actions startup failure; undefined command; no binding packaged/provider/recovery/compatibility gates; no independent review/Law 18-07 report; no cost reserve/coverage operational proof; no representative beta.
 
-The UI has modern navigation, tables, SWR data fetching, optimistic updates, undo, dashboards, AR/FR/EN, RTL, keyboard/accessibility work, responsive layouts, rich settings, and broad workflows.
+**Target:** exact commit/artifact evidence, current changelog, certification records, drills, legal/security reports, continuity validation and seller beta.
 
-#### Gaps
+## 7. Target metrics and current proof
 
-- loading many customers/products/orders/risk assessments in Server Components can undermine large-shop and low-end targets;
-- live inbox and persisted workflow views represent different data realities;
-- onboarding is optional and does not establish the required identity/license/recovery state;
-- product surfaces do not yet express queued, stale, committed, rejected, degraded, dead-letter, recovery, permission, or lockout states consistently;
-- no installed Windows, 4 GB, T470, screen-reader, zoom, or real mobile evidence currently proves the experience.
-
-#### Target
-
-Keep the design system and components, but rework journeys around the new authorities. Performance changes follow traces and target datasets, not premature rewrites. The final experience must make authority and failure visible without exposing technical complexity.
-
-### 6.10 Verification, operations and support
-
-#### What exists
-
-The repository includes a broad test suite, cross-table scenarios, E2E paths, structured logging, optional Sentry, updater code and release workflows.
-
-#### Gaps
-
-- current main has no attached workflow run result;
-- CI references an undefined `sf-verify` package script;
-- dependency audit is non-blocking;
-- E2E is not a pull-request gate and exercises `next dev`;
-- providers, multi-shop routing, Windows startup, signed MSI, migration, updater, backup restore, low-end performance and beta are not proven;
-- support diagnostics and founder administration are incomplete.
-
-#### Target
-
-Evidence is produced continuously at the risk-appropriate layer. “Implemented” and “tested” remain distinct from “verified.” Stable requires a signed installed candidate, exact artifact manifest, provider certification, recovery drills, low-end report, security review, accessibility report and beta exit evidence.
-
-## 7. Target metrics and current proof status
-
-These are product acceptance metrics, not current claims.
-
-### 7.1 Commercial and entitlement metrics
+### 7.1 Commercial and entitlements
 
 | Metric | Target | Current proof |
 |---|---:|---|
-| One-time complete-edition price | 35,000 DZD | Documented; no executable payment/entitlement workflow |
-| Included shops | 5 | App allows up to 10 through local count, without signed slots |
-| Extra shops | Up to 5 at 5,000 DZD each | Missing purchase/slot accounting |
-| Active team members | 10 + owner | Missing trusted team implementation |
-| Personal devices per member | 2 | Missing |
-| Owner remote devices | 3 | Missing |
-| Same-major connected continuity | 5 years | Documented; missing entitlement/service enforcement |
-| Storefronts | 1 per entitled shop | Local config exists; entitlement and hosted allocation missing |
-| Base backup storage | 20 GB shared | Missing cloud backup |
-| Pinned recovery points | Up to 3 per shop | Missing |
+| One-time complete price | 35,000 DZD | Documented; executable payment/entitlement missing |
+| Included/extra shops | 5 + up to 5 at 5,000 DZD | Local count only; signed slot accounting missing |
+| Team | 1 owner + 10 active members | Trusted team missing |
+| Devices | 2/member; 3 owner remote | Missing |
+| Same-major continuity | 5 years from Stable | Documented; enforcement/economics missing |
+| Storefront | 1 per entitled shop | Local config; hosted entitlement/allocation missing |
+| Backup | 20 GB base + 4 GB/extra shop; 3 pinned/shop | Cloud/recovery missing |
+| Continuity reserve | 20% of sale; 24-month forecast | Process/evidence missing |
 
-### 7.2 Certified data profiles
+### 7.2 Data profiles
 
 | Profile | Target per active shop | Current proof |
 |---|---|---|
-| Low-end | 50k orders, 250k items, 50k customers, 5k products, 25k variants, 50k conversations, 250k messages, ~2 GB DB | Schema/index work exists; no packaged reference-device certification |
-| High-volume recommended hardware | 100k orders, 500k items, 75k customers, 10k products, 50k variants, 100k conversations, 1m messages, 2m history/effect records, ~5 GB DB | Not certified |
+| 4 GB floor | 50k orders, 250k items, 50k customers, 5k products, 25k variants, 50k conversations, 250k messages, ~2 GB DB | Schema/index work; no packaged certification |
+| Recommended high volume | 100k orders, 500k items, 75k customers, 10k products, 50k variants, 100k conversations, 1m messages, 2m history/effect records, ~5 GB DB | Not certified |
 
-### 7.3 Desktop experience metrics
+### 7.3 Desktop thresholds
+
+| Metric | Founder target | Current proof |
+|---|---:|---|
+| Cold usable shell, floor SSD/HDD | ≤15 s / ≤25 s p95 | Missing packaged measurement |
+| T470 cold launch | ≤8 s p95 | Missing |
+| Visible interaction response | ≤100 ms | Source work only |
+| Usable page | ≤1.5 s p95 | Missing target-dataset trace |
+| Indexed search floor/T470 | ≤750 ms / ≤350 ms p95 | Missing |
+| Ordinary local mutation floor/T470 | ≤1 s / ≤500 ms p95 | Missing |
+| Working set | ≤750 MB with WhatsApp/no heavy job | Missing |
+| Eight-hour growth | No sustained growth | Missing |
+
+The Founder thresholds are the launch acceptance authority. Stricter engineering goals may exist only as clearly labeled internal optimization goals.
+
+### 7.4 Storefront/connected thresholds
 
 | Metric | Target | Current proof |
 |---|---:|---|
-| Cold usable shell, low-end SSD | ≤ 15 s p95 | Missing packaged measurement |
-| Cold usable shell, HDD | ≤ 25 s p95 | Missing |
-| T470 cold launch | ≤ 8 s p95 | Missing |
-| Common navigation | visible response ≤ 100 ms; usable page ≤ 1.5 s p95 | Source optimizations only |
-| Indexed search, low-end | ≤ 750 ms p95 | Missing target-dataset measurement |
-| Ordinary local mutation | ≤ 1 s p95 excluding provider latency | Missing packaged measurement |
-| Steady working set | ≤ 750 MB with WhatsApp connected | Missing |
-| Eight-hour memory growth | No sustained growth | Missing |
+| LCP/INP/CLS | ≤1.8 s p75 / ≤150 ms p75 / ≤0.05 | No hosted storefront |
+| Checkout API | ≤500 ms p95 approved regional tests | Missing |
+| Availability objective | ≥99.95% | Missing |
+| Durable receipt before customer success | 100% | Current local boundary insufficient |
+| Duplicate canonical effect | 0 | No durable protocol |
+| Cross-tenant leakage | 0 | No tenant system |
+| Price mismatch | 0 | Hosted proof missing |
+| Event-to-desktop import | 5 s p95 normal online target | No durable relay |
+| Fair-use validation | 250k commands, 100k notifications, 250k sessions, 25k durable COD submissions/license/month | No cloud platform |
 
-The Engineering Specification has slightly tighter internal budgets for some runtime metrics. Until measured evidence selects one approved threshold, the stricter threshold governs engineering and the product-scope threshold governs the public acceptance minimum.
+### 7.5 Stable evidence
 
-### 7.4 Storefront and connected metrics
+- zero unresolved P0/P1;
+- binding clean-checkout CI;
+- signed Windows artifact and exact manifest;
+- supported Windows capability matrix;
+- all-shop migration/restore and independent/assisted recovery;
+- Founder-approved current provider certifications;
+- independent security/privacy and Law 18-07 review;
+- complete capability/journey/page accessibility/RTL evidence;
+- T470/4 GB thresholds;
+- 3–5 representative businesses and five live storefronts;
+- continuity economics/support/service-exit readiness.
 
-| Metric | Target | Current proof |
-|---|---:|---|
-| Mobile LCP p75 | ≤ 1.8 s | No hosted storefront |
-| Mobile INP p75 | ≤ 150 ms | No hosted storefront |
-| CLS p75 | ≤ 0.05 | No hosted storefront |
-| Checkout API p95 | ≤ 500 ms in approved regional tests | No hosted checkout |
-| Storefront availability objective | ≥ 99.95% | No hosted service |
-| Durable receipt before success | 100% | Current local checkout does not meet target boundary |
-| Duplicate canonical effect on retry | 0 | No durable receipt/import protocol |
-| Cross-tenant leakage | 0 | No tenant implementation |
-| Public price mismatch | 0 | Current route derives local price server-side; hosted proof missing |
-| Remote commands/month/license | Validate at least 250,000 | No relay |
-| Operational notifications/month/license | Validate at least 100,000 | No relay |
-| Storefront sessions/month/license | Validate at least 250,000 | No hosted storefront |
-| Durable COD submissions/month/license | Validate at least 25,000 | No hosted checkout |
-
-### 7.5 Quality and evidence metrics
-
-| Gate | Target | Current proof |
-|---|---|---|
-| Unresolved P0/P1 defects | 0 at Stable | Not established |
-| Binding CI | Clean checkout, required checks | Not currently proven |
-| Signed Windows installer/updater | Exact candidate and hashes | Source support exists; no current evidence |
-| All-shop migration/restore | Proven | Missing |
-| Provider live certification | Every public capability | Missing |
-| Independent security/privacy review | Required | Missing |
-| AR/FR/EN + RTL/LTR + accessibility | Launch-critical journeys | Implemented broadly; unverified |
-| Representative seller beta | 3–5 businesses | Missing |
-| Representative live storefronts | 5 | Missing |
+None is currently proven at Stable level.
 
 ## 8. Root-cause map
 
-Most gaps are consequences of six architectural roots:
-
-1. **Implicit global context**  
-   Active shop, single owner and process-global caches made early development simple but cannot support background jobs, teams, remote commands, storefront tenancy or reliable multi-shop operations.
-
-2. **Business state without durable effect state**  
-   Local transactions are often good, but the intent to send, synchronize, notify, audit or compensate is not always committed with the business change.
-
-3. **One application boundary serving incompatible trust zones**  
-   Seller UI, public storefront, PWA shell, provider APIs and local background work share the same Next.js/database authority.
-
-4. **Recovery added after storage decisions**  
-   Encryption, secrets, migration and backup were implemented as local protections without a complete replacement-machine and zero-knowledge recovery model.
-
-5. **Provider code treated as support evidence**  
-   Adapter source and mocks capture useful knowledge but cannot prove live capability, status semantics, idempotency or provider drift.
-
-6. **Session-era completion claims**  
-   Historical documents recorded large amounts of useful work but mixed implementation, test count, readiness and product authority. The documentation reset separates those concepts.
+1. **Implicit global context** — early convenience cannot support background jobs, teams, remote commands or tenancy.
+2. **Business state without durable effect state** — correct local transactions still lose/audit/retry external consequences unevenly.
+3. **One app boundary across incompatible trust zones** — seller UI, public checkout, PWA, providers and background work share local authority.
+4. **Recovery added after storage/security choices** — encryption, trial, migration and backup lack a unified replacement-machine design.
+5. **Provider code treated as scope/certification** — source/mocks capture knowledge but not Founder permission or live behavior.
+6. **Strong visual shell without universal operational states** — quality primitives exist, but complete failure/recovery/trust behavior is inconsistent.
+7. **Session-era completion language** — historical implementation/test progress was misread as product/release readiness.
 
 ## 9. Preservation and replacement strategy
 
 ### Keep and harden
 
-- Next.js/React UI and shared components;
-- Tauri Windows host and signed updater mechanism;
-- Prisma and one SQLite file per shop;
-- integer DZD representation and canonical metrics;
-- order/catalog/customer/delivery/COD/accounting product workflows;
-- AR/FR/EN, RTL and responsive components;
-- test suites that protect current behavior;
-- AES-GCM, blind-index and Ed25519 primitives after format/context review.
+- Next.js/React UI, design tokens and shared components;
+- Tauri Windows host and signed-updater mechanism;
+- Prisma and independent shop SQLite files;
+- integer DZD and canonical metric helpers;
+- broad domain workflows and translations/RTL/responsive foundations;
+- regression suites that protect current behavior;
+- AES-GCM, blind-index and Ed25519 primitives after purpose/context review.
 
 ### Migrate
 
-- standalone server and WhatsApp sidecar behind supervised authenticated runtime;
-- domain services behind explicit shop/actor/permission context;
+- server/sidecar behind supervised authenticated runtime;
+- services behind explicit shop/actor/permission context;
 - AuditLog/OrderChange into universal trusted transaction records;
-- automation authoring into durable worker execution;
-- current courier/commerce/Sheets/Gemini adapters into the provider framework;
-- local storefront builder into versioned hosted drafts/releases;
-- local owner PIN into tenant/member/device identity;
-- current secret service API onto the protected key hierarchy;
-- current backup UI onto the new verified recovery engine;
-- current Playwright paths onto signed installed-candidate testing.
+- automation authoring into durable workers;
+- candidate adapters into the provider framework;
+- local builder into hosted draft/release schemas;
+- owner PIN into tenant/member/device identity;
+- secrets into protected key hierarchy;
+- backup UI into verified recovery engine;
+- existing E2E paths into installed-candidate/journey evidence.
 
 ### Replace
 
-- global active-shop database proxy as write authority;
-- plain JSON registry and silent fallback;
-- production `db push` and the current migration runner;
-- plaintext master-key authority;
-- self-issued browser trial and trusted license status;
-- fire-and-forget business effects;
-- heuristic refund reversal authority;
-- polling watermark as synchronization authority;
-- local direct storefront checkout;
-- shell-only PWA architecture;
-- local byte-copy backup engine;
-- push/tag-before-build release flow and multi-platform Stable workflow.
+- global active-shop write authority and silent fallback;
+- production `db push`/current migration runner;
+- plaintext general root key;
+- browser self-issued trial/trusted license state;
+- shared/online permanent signing authority;
+- fire-and-forget effects and heuristic reversal;
+- polling watermark as sync authority;
+- local direct public checkout and shell-only PWA boundary;
+- active-shop byte-copy backup;
+- push/tag-before-build and multi-platform Stable workflow.
 
-### Retire after migration
+### Retire after proof
 
-- unsupported provider claims and experimental public capabilities;
-- v3/v4 public/readiness/version claims;
-- transition ledgers and session handoffs replaced by this analysis and the roadmap;
-- redirect-only historical documents whose full content remains in git history;
-- legacy APIs/models only after data migration, reference removal, replacement evidence and rollback review.
+- unsupported/unapproved provider claims;
+- v3/v4/session readiness/version claims;
+- duplicate transition ledgers/handoffs;
+- direct legacy APIs/models only after data/reference/recovery review;
+- one-off UI patterns only after compatible shared-pattern migration.
 
-## 10. Documentation system after this reset
+## 10. Active documentation system
 
 ### Product authority
 
@@ -504,82 +395,77 @@ Most gaps are consequences of six architectural roots:
 2. `product/FOUNDER_DECISIONS.md`
 3. `product/LAUNCH_SCOPE_AND_ENTITLEMENTS.md`
 
-These preserve the full Founder-approved product contract. Product intent is not mixed with temporary current-state or session handoff documents.
+### Experience authority
+
+1. `experience/EXPERIENCE_FRONTEND_CONSTITUTION.md`
+2. `experience/FUNCTIONAL_CAPABILITY_ATLAS.md`
+3. `experience/JOURNEY_STATE_ATLAS.md`
 
 ### Engineering authority
 
-1. `architecture/ENGINEERING_SPECIFICATION.md` — target boundaries and invariants.
-2. `architecture/SUPERSEDING_ADRS.md` — accepted rationale and rejected alternatives.
-3. `architecture/CURRENT_TO_TARGET_ANALYSIS.md` — current code, full gap, disposition and metrics.
-4. `architecture/IMPLEMENTATION_ROADMAP.md` — one dependency-correct execution path.
-5. `architecture/CODING_WORKFLOW.md` — lightweight work and risk gates.
-6. `architecture/PROVIDER_CONTRACT_REGISTRY.md` — provider claims/certification.
-7. Operational drills are indexed in `architecture/CODING_WORKFLOW.md`; create an individual runbook only when its implementation and exercise procedure are concrete.
+1. `architecture/ENGINEERING_SPECIFICATION.md`
+2. `architecture/SUPERSEDING_ADRS.md`
+3. `architecture/CURRENT_TO_TARGET_ANALYSIS.md`
+4. `architecture/IMPLEMENTATION_ROADMAP.md`
+5. `architecture/CODING_WORKFLOW.md`
+6. `architecture/PROVIDER_CONTRACT_REGISTRY.md`
 
-### Operations and shared memory
+### Operations, research and history
 
-`operations/` remains the lightweight MAWS coordination layer. `WORKING_MEMORY.md` points to current work; it does not duplicate architecture or become a permanent transcript.
+- `operations/` coordinates current work and cannot redefine product/experience/engineering authority.
+- `research/` is reference material requiring revalidation and explicit adoption.
+- `CHANGELOG.md` records the current SahelFlow 1.0 migration; session/v3/v4 chronology is legacy history.
+- Component-local notes describe their boundary only and cannot make broader scope/readiness claims.
 
-### Removed documentation categories
-
-- completed architecture-reset acceptance records;
-- pre-reset current-state and contradiction ledgers now absorbed here;
-- repository/reuse/documentation inventories now absorbed here;
-- session handoff documents;
-- redirect-only files for former v3/v4 authorities;
-- stale historical work logs and plans that are already preserved in git history.
-
-Detailed research remains useful only when explicitly linked from current work and revalidated where time-sensitive.
+Do not create parallel product vision, capability, journey, contradiction, status, repository-map, reuse-plan or session-handoff authorities.
 
 ## 11. Solid work path
 
-The implementation path is defined in `IMPLEMENTATION_ROADMAP.md`. In summary:
+1. Prove repository, documentation and packaged truth.
+2. Establish trusted runtime, shop and migration authority.
+3. Establish identity, entitlement, key and local recovery authority.
+4. Make business writes, team work and connected effects durable.
+5. Build bounded control, relay and zero-knowledge backup with legal/economic controls.
+6. Migrate/certify Founder-approved providers, PWA and storefront.
+7. Complete every required capability/journey/experience and prove compatibility, performance, security, recovery and support.
+8. Complete controlled beta and publish Stable only from evidence.
 
-1. **Prove repository and packaged truth.**
-2. **Establish trusted local runtime, shop and migration authority.**
-3. **Establish identity, entitlement, key and recovery authority.**
-4. **Make every business write and connected effect durable.**
-5. **Build the bounded cloud, relay and backup platform.**
-6. **Migrate and certify providers, PWA and storefronts.**
-7. **Converge UX, accessibility, performance, security and operations.**
-8. **Complete controlled beta and publish Stable only from evidence.**
-
-Work may be parallelized inside those dependencies, but visible connected features must not outrun the authority they depend on.
-
-## 12. Recommended first implementation wave
+## 12. First implementation wave — Proven Canonical Windows Desktop
 
 ### Outcome
 
-**A seller can install one Windows candidate, start it reliably, open the intended shop only, and receive a clear recoverable failure instead of silent fallback or partial startup. The repository can prove that result from a clean checkout.**
+**A seller can install one internal Windows candidate, start it reliably, open only the intended shop and receive a clear recoverable failure instead of silent fallback or partial startup. A clean checkout and exact artifact manifest prove the result.**
 
 ### Scope
 
-- repair executable CI and remove the undefined `sf-verify` dependency from the workflow or implement the script;
-- introduce one generated version/evidence manifest and eliminate active 4.1/1.0 drift;
-- produce a Windows-only internal candidate path without publishing it;
-- create startup/readiness evidence for server, sidecar, runtime and migration resources;
-- define and begin the explicit shop-context/atomic-registry migration;
-- replace broad migration failure baselining with exact error handling and fail-closed behavior;
-- add the first installed-candidate and corrupt/missing-registry/migration-failure tests;
-- capture T470 and 4 GB baseline measurements before optimization.
+- repair executable CI and the undefined `sf-verify` path;
+- generate one version/evidence manifest and remove active 4.x/1.0 drift;
+- produce Windows-only internal candidate without publication;
+- validate runtime/server/sidecar/resource startup and readiness;
+- define/start explicit shop-context and atomic-registry migration;
+- replace broad migration failure baselining with exact fail-closed behavior;
+- run local Markdown/link/reference checks and generated repository/page/component/token inventories;
+- add clean-install, missing-resource, occupied-endpoint, corrupt/missing-registry and migration-failure tests;
+- capture T470 and 4 GB no-optimization baseline;
+- identify governing capability/journey/experience requirements in the active wave.
 
-### Explicit non-goals
+### Non-goals
 
 - no Cloudflare implementation;
-- no hosted storefront;
-- no remote PWA;
+- no hosted storefront or remote PWA;
 - no provider expansion;
-- no redesign of working product pages;
-- no deletion of runtime authorities before compatible migration exists.
+- no broad product-page redesign;
+- no deletion of runtime/data authorities before compatible migration exists.
 
 ### Exit evidence
 
 - current protected branch and clean-checkout CI;
-- exact candidate/source/version manifest;
-- signed or internally signed Windows candidate artifact;
-- clean-install startup report;
-- failure-mode report for missing runtime/server/sidecar, occupied endpoint, corrupt registry and migration failure;
-- first low-end/T470 trace;
+- exact candidate/source/version/artifact manifest;
+- installed/internal-signed Windows artifact;
+- clean-install startup/readiness report;
+- failure-mode report for missing resources, endpoint, registry and migration;
+- local documentation link/reference report;
+- first T470/4 GB trace;
 - reviewed next-wave design for explicit shop authority and all-shop migration.
 
-This wave converts the repository from “substantial source code” into a system whose next foundational changes can be measured and recovered safely.
+This wave converts the repository from substantial source code into a measured, recoverable platform for the foundational migration.

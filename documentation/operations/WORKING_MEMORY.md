@@ -1,74 +1,101 @@
 # SahelFlow working memory
 
-> Last updated: 2026-07-17
+> **Last updated:** 2026-07-17
 
 This is the compact entry point for current work. Update it at meaningful checkpoints and link deeper material rather than turning it into a transcript.
 
 ## Founder direction
 
-- Use a lightweight multi-agent system built from agent prompts and GitHub-backed shared memory.
+- Use a lightweight multi-agent system with GitHub-backed shared memory.
 - Work through deep-dive waves and multi-phase plans without task-by-task bureaucracy.
-- Preserve the full Founder-approved product contract.
-- Preserve the durable Maze Map richness about the finished product, page-complete journeys, UI/UX, frontend behavior, Arabic/RTL, accessibility and capability depth.
-- Ground product and architecture work in the actual application source.
-- Consolidate documentation instead of adding parallel status, gap, handoff or roadmap files.
-- Remove stale redirects, session records and duplicated authorities only after their unique durable value is active elsewhere.
-- The active named roles are Codex Desktop, ChatGPT and GLM. Kimi K3 is not an active participant.
-- Codex Desktop is the only agent assumed to have full local desktop/runtime execution access.
-- ChatGPT is the deep product, architecture, UX and engineering partner and may work through GitHub.
-- GLM defaults to external research and adversarial discovery.
+- Preserve the complete Founder-approved product contract.
+- Preserve the durable Maze Map richness about capabilities, journeys, UI/UX, frontend behavior, Arabic/RTL and accessibility.
+- Ground product and architecture work in actual source and evidence.
+- Maintain one non-conflicting authority flow before implementation begins.
+- Reclassify or move stale/duplicate/history material only after unique durable value is active elsewhere.
+- Active roles are Codex Desktop, ChatGPT and GLM.
+- Codex Desktop is the only agent assumed to have full local desktop/runtime access.
 
 ## Active wave
 
-**Restore Maze Map experience authority after the documentation reset**
+**Documentation consistency and execution-flow audit before implementation**
 
-- Integrated baseline: PR #95 / merge commit `dee78e9c6085b367fb7a533b50624f4389a4cb8d`.
-- Correction branch: `agent/restore-maze-map-experience-authority`.
-- Restored authorities:
-  - [`../experience/EXPERIENCE_FRONTEND_CONSTITUTION.md`](../experience/EXPERIENCE_FRONTEND_CONSTITUTION.md)
-  - [`../experience/FUNCTIONAL_CAPABILITY_ATLAS.md`](../experience/FUNCTIONAL_CAPABILITY_ATLAS.md)
-  - [`../experience/JOURNEY_STATE_ATLAS.md`](../experience/JOURNEY_STATE_ATLAS.md)
-- Experience index: [`../experience/README.md`](../experience/README.md)
-- Current-state artifact: [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
+- Documentation reset merged in PR #95: `dee78e9c6085b367fb7a533b50624f4389a4cb8d`.
+- Maze Map experience recovery merged in PR #96: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
+- Audit branch: `agent/documentation-consistency-audit`.
+- Product authority: [`../product/README.md`](../product/README.md)
+- Experience authority: [`../experience/README.md`](../experience/README.md)
+- Engineering authority: [`../architecture/README.md`](../architecture/README.md)
+- Current-state model: [`../architecture/CURRENT_TO_TARGET_ANALYSIS.md`](../architecture/CURRENT_TO_TARGET_ANALYSIS.md)
 - Work path: [`../architecture/IMPLEMENTATION_ROADMAP.md`](../architecture/IMPLEMENTATION_ROADMAP.md)
+- Workflow: [`../architecture/CODING_WORKFLOW.md`](../architecture/CODING_WORKFLOW.md)
 
-Outcome:
+### Outcome
 
-- preserve the clean product/engineering/current-state structure from PR #95;
-- restore the unique detailed experience, capability and journey authority recovered from the Maze Map;
-- avoid restoring the duplicate unified vision, scope, traceability, historical-reconciliation and old execution documents from draft PR #82;
-- make UI/UX and page-complete behavior first-class throughout implementation rather than end-stage polish.
+Before application implementation begins:
 
-Application code is unchanged by this correction.
+- every active document follows one precedence and read order;
+- product promises, experience requirements, engineering invariants, current status and sequencing agree;
+- ambiguous recovered capabilities cannot silently expand Stable scope;
+- provider code or certification cannot create a Founder promise;
+- historical, research and component documents cannot act as current readiness authority;
+- the first implementation wave has one governing-contract template and exact evidence expectations.
 
-## Confirmed decisions
+No application behavior or executable source changes in this wave.
 
-- GitHub documents provide shared memory across sessions.
-- A wave, not an individual task, is the normal unit of planning and continuity.
-- Issues and extra review are used when useful, not as mandatory ceremony.
-- Product authority is the Constitution, Founder Decisions and Launch Scope/Entitlements.
-- Experience authority is the Experience and Frontend Constitution, Functional Capability Atlas and Journey and State Atlas.
-- Engineering authority is the Engineering Specification, current-to-target analysis, roadmap and relevant specialized records.
-- Launch Scope controls mandatory inclusion; the Capability Atlas cannot silently expand Stable or restore superseded Maze Map assumptions.
-- Historical session documents remain recoverable in git history and do not need redirect files in the active tree.
-- The current application is a strong migration base, not a Stable product and not a total rewrite candidate.
-- Reusable UI/domain/provider knowledge should be preserved while unsafe authority and protocols are replaced.
-- The first implementation wave should prove a canonical Windows desktop before Cloudflare, remote PWA, hosted storefront or provider expansion.
-- Every implementation wave must identify the relevant capability, journey states and experience dimensions in addition to architecture and evidence.
+## Confirmed authority model
 
-## Current checkpoint
+1. A newer numbered Founder decision governs only the choice it explicitly changes.
+2. Product package controls promises, Stable scope, entitlements, exclusions and public truth.
+3. Experience package controls required capability depth, journeys/states and frontend/UI/UX quality for included scope.
+4. Engineering Specification and accepted ADRs control target system boundaries and invariants.
+5. Current-to-Target Analysis controls the source-grounded implementation model.
+6. Roadmap, Workflow and Provider Registry control sequence, review/evidence and integration claims.
+7. Working Memory and the active wave control current progress only.
 
-- PR #95 is merged and established the clean current-to-target program model.
-- Founder review identified that the unique Maze Map experience layer had existed only in unmerged draft PR #82.
-- The three unique documents have been copied exactly from PR #82 onto the correction branch using their original Git blobs.
-- Root, product, engineering and agent entrypoints now include the experience authority.
-- No application behavior or executable source has been changed.
-- Next move: review the correction diff, open a focused pull request and merge it before implementation begins.
-- After correction merge: open the **Proven Canonical Windows Desktop** implementation wave.
+A lower layer cannot silently weaken a higher layer. Apparent conflicts are reconciled in the owning documents before coding continues.
 
-## Open questions
+## Scope classes
 
-- Whether any individual capability in the atlas needs explicit Founder classification as required for Stable, conditional, or later; Launch Scope remains the default authority meanwhile.
-- Which local runtime environment Codex Desktop should use for the first installed-candidate baseline.
-- Which Windows 4 GB reference machine and T470 dataset should be treated as the first repeatable performance lab.
-- Which exact implemented design tokens should be retained or changed after the first packaged frontend/design-system audit.
+- **Required** — explicit Founder/Launch Scope commitment.
+- **Conditional** — named capability public only after certification.
+- **Depth requirement** — behavior/state/UX needed to make required scope complete.
+- **Candidate** — useful recovered or planned item needing Founder classification before commitment.
+- **Excluded** — prohibited for SahelFlow 1.0.
+
+Ambiguous scope defaults to Candidate.
+
+## Corrections on the audit branch
+
+- Added one repository-wide precedence/read-order model.
+- Bound waves and pull requests to product clause, scope, capability, journey/states, experience dimensions, invariants, roadmap and evidence.
+- Reconciled storefront durable-receipt success with desktop-committed operational-command success.
+- Aligned Founder performance thresholds and Windows compatibility language.
+- Added missing trial/permanent signing separation, payment-versus-issuance states, backup key separation, trial backup retention and independent/two-share recovery.
+- Added missing team work depth, Law 18-07 review and continuity reserve/coverage/service-exit obligations.
+- Reclassified specific couriers and Google Sheets as architecture candidates rather than automatic Founder scope.
+- Replaced the active root changelog with current SahelFlow 1.0 truth while preserving the former session/v3/v4 chronology under `documentation/history/`.
+- Added explicit non-authority indexes for research and history.
+
+## Current limitations and validation
+
+- GitHub code search is unavailable for this repository.
+- This connected environment has no local checkout/runtime.
+- Semantic review of the active product, experience, architecture, provider, operations, changelog/history and research entrypoints is complete.
+- Codex Desktop must run the Phase 0 local Markdown/link/reference scan and generated file/page/component/token inventories before implementation code begins.
+- GitHub Actions currently fails before either job executes; the undefined `sf-verify` command remains a Phase 0 blocker.
+
+## Next move
+
+1. Open and review the documentation consistency pull request.
+2. Confirm the documentation-only diff and merge it.
+3. Codex Desktop runs local link/reference and repository inventory validation from clean `main`.
+4. Create the **Proven Canonical Windows Desktop** wave from `WAVE_TEMPLATE.md`.
+5. Begin only Phase 0 and minimum Phase 1 foundation work; do not start Cloudflare, hosted storefront, remote PWA or provider expansion.
+
+## Open implementation-lab decisions
+
+- Exact local Windows environment for the first installed candidate.
+- Exact 4 GB floor-reference machine/dataset and T470 dataset.
+- Which implemented design tokens are retained or changed after the first packaged frontend/design-system audit.
+- Which courier candidates the Founder selects for the public launch set after live certification evidence.

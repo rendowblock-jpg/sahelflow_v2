@@ -1,166 +1,180 @@
-# Superseding Architecture Decision Records
+# SahelFlow 1.0 — Superseding Architecture Decision Records
 
-**Status:** Accepted as the SahelFlow 1.0 architecture baseline  
-**Accepted:** 2026-07-15  
-**Evidence baseline:** `03f0d48436b42788e463bbd1d74a388b2da22294`
+> **Status:** Accepted engineering baseline  
+> **Accepted:** 2026-07-15; reconciled with product/experience authority in the documentation consistency audit  
+> **Product authority:** `../product/`  
+> **Experience authority:** `../experience/`  
+> **Source-code evidence baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e`
+
+These ADRs record accepted engineering choices and rejected alternatives. They are subordinate to explicit Founder product decisions and cannot silently expand scope or weaken the experience contract. Reopen an ADR only through evidence and update the Engineering Specification in the same change.
 
 ---
 
 ## ADR-001 — Windows runtime and process supervision
 
-**Decision.** SahelFlow 1.0 ships one supported Windows x64 desktop package. Tauri remains the host, but child services are supervised through an explicit local service manager. Endpoints are dynamically reserved or OS-native, authenticated per launch and never exposed beyond loopback. Startup is a state machine with user-visible recovery. A missing runtime, failed migration, occupied endpoint or failed child process blocks readiness rather than returning success.
+**Decision.** SahelFlow 1.0 ships one supported Windows x64 package. Tauri remains the host, with child services supervised through an explicit local service manager. Endpoints are dynamically reserved or OS-native, authenticated per launch and never exposed beyond loopback. Startup is a user-visible state machine; missing runtime, failed migration, occupied endpoint or failed child blocks readiness.
 
-The packaged process set may continue to include the Next.js server and WhatsApp worker initially, but their lifecycle, health, resource limits and shutdown are first-class. Consolidation is permitted only when measured low-end evidence shows a simpler runtime is safer.
+The packaged process set may initially include the Next.js server and WhatsApp worker. Consolidation is permitted only when measured low-end evidence proves a safer simpler runtime.
 
-**Why.** The baseline uses fixed ports, a three-process runtime and incomplete startup failure handling. The Constitution requires Windows and 4 GB support, not macOS/Linux parity.
+Target functional compatibility covers the product-approved Windows capability matrix where required components exist. Functional compatibility is distinct from security equivalence for modified systems.
 
-**Consequences.** Linux/macOS release jobs and bundle targets are removed from the launch channel. Process correlation IDs, health endpoints, crash loops, restart budgets and resource metrics are required. The browser/webview is not trusted merely because it is local.
+**Why.** The baseline uses fixed ports, a multi-process runtime and incomplete startup failure handling. The product requires Windows/4 GB capability, not three-desktop-OS launch parity.
 
-**Migration.** Introduce a supervisor abstraction, authenticated per-launch endpoint manifest and packaged startup tests before changing business features.
+**Consequences.** Linux/macOS launch jobs and claims are removed. Process correlation, health, restart budgets, shutdown, precise missing-component guidance and packaged compatibility evidence are required.
 
-**Rejected.** Static export/Tauri-command rewrite now; continuing fixed-port best-effort startup; launch support for three desktop OSes.
+**Migration.** Introduce supervisor, per-launch endpoint manifest and installed-candidate tests before changing connected business features.
 
-**Reopen only if.** Packaged measurements prove the process model cannot meet the 4 GB floor after bounded optimization.
+**Rejected.** Immediate full Tauri-command rewrite; continuing fixed-port best effort; macOS/Linux Stable launch; vague hardware rejection.
 
----
-
-## ADR-002 — Desktop data authority, shop context and migrations
-
-**Decision.** The canonical desktop remains the sole operational write authority. Each shop keeps an independent SQLite database. Every repository/service/background/remote operation receives an explicit trusted `ShopContext`; global active-shop state is presentation preference only. Registry corruption or a missing shop fails closed and never falls back to another database.
-
-Migrations enumerate all registered shops, require a verified pre-migration backup when data can change, journal progress, are resumable/idempotent and block launch on failure. Production `db push` is forbidden.
-
-**Why.** The baseline has valuable per-shop isolation but production startup targets `dev.db`, registry errors silently fall back, and backup failure does not stop migration.
-
-**Consequences.** Data access APIs change. All current direct `db` imports are inventoried and migrated behind context-aware repositories. Schema/protocol compatibility is declared by releases.
-
-**Migration.** Build the atomic registry and migration coordinator first; add compatibility adapters; migrate call sites by domain; remove fallback proxy last.
-
-**Rejected.** One shared local multi-tenant DB; cloud-authoritative database; preserving implicit global routing.
-
-**Reopen only if.** A proven SQLite/platform defect makes independent shop files unsupportable without violating canonical-desktop authority.
+**Reopen only if.** Packaged measurements prove the process model cannot meet Founder thresholds after bounded optimization.
 
 ---
 
-## ADR-003 — Key, secret and recovery hierarchy
+## ADR-002 — Desktop data authority, explicit shop context and all-shop migrations
 
-**Decision.** Replace the plaintext master keyfile with a protected installation root key and wrapped, versioned subkeys: per-shop data keys, secret-store key, backup keys and relay/session keys. Windows OS-backed protection is the launch default. Ciphertexts carry algorithm/key/version and authenticated context. Recovery material is delivered through a user-controlled recovery kit; SahelFlow cannot decrypt seller operational data.
+**Decision.** The canonical desktop is the sole authority for canonical operational business mutations. Each shop keeps an independent SQLite database. Every repository, service, worker and remote command receives a trusted explicit `ShopContext`; global active-shop state is presentation preference only. Registry or shop-file failure is explicit and fail-closed, never fallback.
 
-**Why.** One readable file currently unlocks selected PII and all provider credentials. Stronghold registration does not make it the server key authority, and the current hierarchy has no recovery-safe separation.
+Migrations enumerate all shops, declare compatibility, require verified backup where data may change, journal progress and are resumable/idempotent. Production `db push` is forbidden.
 
-**Consequences.** Key loss, rotation, transfer, backup recovery and canonical-desktop replacement become explicit state machines. Diagnostics and exports must prove no key/secret leakage.
+**Why.** The useful one-file-per-shop design is undermined by implicit global routing, fallback behavior and a migration path that does not govern every shop.
 
-**Migration.** Add versioned crypto envelopes and key registry; wrap existing key under the new root; re-encrypt by resumable journal; verify before deleting legacy material.
+**Consequences.** Data APIs change. Direct database imports are inventoried and migrated behind context-aware repositories. Release manifests carry schema/protocol compatibility.
 
-**Rejected.** Cloud escrow of plaintext keys; one key for all purposes; relying only on file permissions; claiming SQLCipher when Prisma does not use it.
+**Migration.** Atomic registry and migration coordinator first; compatibility adapters; domain-by-domain call-site migration; fallback proxy removed last.
 
-**Reopen only if.** Independent security review proves the selected Windows protection/recovery design cannot meet recovery and zero-knowledge requirements.
+**Rejected.** Shared local multi-tenant DB; cloud-authoritative operational DB; preserving implicit routing.
 
----
-
-## ADR-004 — Licensing, entitlements, trial, transfer and lockout
-
-**Decision.** Licensing is signed-claim based. The control plane issues the one-time, machine-bound, seven-day trial online. Clients cannot self-issue or reset it. Permanent activation is signed after manual BaridiMob/CCP verification and can be produced through an offline founder signing ceremony. Entitlements encode product major, included/extra shops, member/device limits, canonical installation, support/connected horizon, key/version and revocation epoch.
-
-Trial expiry creates complete product lockout across UI, API, background workers, caches and remote surfaces without deleting data. Permanent local use for the purchased major continues offline. Transfer/recovery is an audited signed state machine.
-
-**Why.** The baseline browser issues unsigned trials and stores them in localStorage; clearing it grants another trial. Current feature claims do not model founder-approved entitlements.
-
-**Consequences.** One entitlement service becomes the only gate. Legacy trusted status rows, local trial creation and scattered feature flags are deleted.
-
-**Migration.** Define signed format and verifier vectors; build issuer/payment/admin records; implement lockout matrix; migrate permanent beta licenses; then remove legacy branches.
-
-**Rejected.** Subscription licensing; product-funded AI entitlement; always-online permanent license; silent grace that bypasses signed policy.
-
-**Reopen only if.** Legal or cryptographic review identifies a blocking flaw, or verified control-plane economics exceed the approved bounded model.
+**Reopen only if.** A proven platform defect makes independent shop files unsupportable without violating desktop authority.
 
 ---
 
-## ADR-005 — Tenant/team identity, authorization, devices and approvals
+## ADR-003 — Purpose-separated keys, secrets and recovery
 
-**Decision.** Add first-class tenant, member, role, field-policy, device, session, invitation and approval identities. The control plane is authoritative for remote identity/session state; the desktop maintains a signed bounded cache for offline enforcement. Owner plus ten active members, two personal devices per member and three owner remote devices are explicit entitlement limits.
+**Decision.** Replace the plaintext master keyfile with a protected installation root and purpose-separated versioned keys: per-shop data, secret store, per-license Backup Root Key, unique per-backup DEKs, relay/session keys, dedicated trial signing key and offline permanent signing key.
 
-Authorization uses server-created context. Client-supplied actor, role, tenant or shop is never trusted. High-risk actions require owner permission plus re-authentication or explicit approval according to policy.
+Independent recovery uses the seller recovery kit. Optional assisted recovery requires both a protected enrolled-device share and a separate Founder offline share. No single SahelFlow/Cloudflare/Founder/device party can decrypt seller backups alone.
 
-**Why.** The baseline is a single-owner PIN application. Free-form actor/assignee/team strings cannot enforce team behavior or produce trusted audit.
+**Why.** One readable file currently unlocks multiple purposes and cannot support zero-knowledge replacement-machine recovery. Signing-purpose separation and assisted recovery are explicit Founder requirements.
 
-**Consequences.** Existing local auth is migrated to an owner principal. Field permission applies in query/projection generation and mutations, not only UI masking.
+**Consequences.** Key loss, rotation, compromise, transfer and replacement become state machines. Ciphertexts include key/purpose/version and authenticated context. Diagnostics/exports prove no leakage.
 
-**Migration.** Build identity schema and policy engine, map local owner, add device enrollment/session revocation, then enable remote/team features.
+**Migration.** Add key registry/envelopes; wrap/migrate existing material through resumable journal; prove independent and assisted recovery before deleting legacy material.
 
-**Rejected.** Shared PINs, UI-only roles, cloud operational ownership, enterprise SSO for launch.
+**Rejected.** Cloud plaintext escrow; one key for all purposes; file permissions alone; shared trial/permanent signing key; one-share assisted recovery.
 
-**Reopen only if.** A founder decision changes explicit team/device entitlements or a legal identity requirement intervenes.
-
----
-
-## ADR-006 — Transactional audit, inbox/outbox, automation and compensation
-
-**Decision.** Every business mutation atomically records trusted audit, domain event and required outbox/projection intents. Inbound provider/cloud/storefront events enter a durable inbox before acknowledgement. Effects are executed by idempotent workers with attempt/receipt/dead-letter records. Financial, inventory and status reversals use append-only compensation facts.
-
-Automation conditions/editor code may be reused, but fire-and-forget dispatch is replaced by durable intents. AI and remote approvals produce signed/current-state-checked approval receipts.
-
-**Why.** The baseline explicitly dispatches automation and some sidecar updates best-effort after commits. Free-form actors and reversal booleans cannot prove business integrity.
-
-**Consequences.** Domain service APIs and provider workers share one effect protocol. Checkpoints cannot advance past untracked failures.
-
-**Migration.** Add records and transaction helper; dual-write audit/outbox; move workers one effect class at a time; reconcile legacy rows; remove fire-and-forget paths.
-
-**Rejected.** In-process event emitter as authority; distributed transaction with external providers; silent retry without idempotency.
-
-**Reopen only if.** A storage limitation prevents atomic local recording, in which case the desktop data architecture must be reconsidered as a whole.
+**Reopen only if.** Independent review proves the selected Windows protection/recovery design cannot meet both security and recovery promises.
 
 ---
 
-## ADR-007 — Bounded Cloudflare control plane and data classes
+## ADR-004 — Signed trial, payment verification, permanent issuance and entitlements
 
-**Decision.** Use Cloudflare for a bounded control plane, encrypted relay/projections, zero-knowledge backup objects and hosted storefront runtime. Cloud services store only the data classes permitted by the Engineering Specification. Seller operational plaintext remains on the canonical desktop except deliberately public storefront data and explicitly classified minimal metadata.
+**Decision.** Licensing is signed-claim based. The online control plane issues one seven-day machine-bound trial using a dedicated trial-only signing key. Clients cannot self-issue/reset it. Trial expiry locks all operational surfaces without deleting data and leaves only the approved licensing/payment/extension/support/minimal-diagnostic shell.
 
-Budgets, quotas, retention and outage modes are product behavior. The cloud cannot become a hidden subscription dependency for purchased local use.
+Payment verification and license issuance are separate durable state machines. Founder verifies the actual BaridiMob/CCP receiving-account transaction; immutable approval authorizes a separate offline permanent-signing ceremony. Permanent licenses and extra-shop amendments use the offline permanent key.
 
-**Why.** Founder decisions require connected team/PWA/storefront/backup/licensing capabilities that cannot be delivered by localhost polling or static Pages alone.
+Entitlements encode product major, shops/expansion slots, members/devices, storage/media, canonical installation, support horizon and revocation. Legitimate machine replacement is included without activation fee.
 
-**Consequences.** Introduce an isolated cloud workspace with environment separation, migrations, IaC, secrets, cost alerts and data-class review. No cloud work starts before identity/key/protocol foundations.
+**Why.** Browser/local trial authority is resettable and current feature flags cannot represent the product contract. Payment evidence alone cannot safely issue a permanent license.
 
-**Migration.** Build tenant/entitlement identity first, then relay, backup and storefront services as separate bounded modules.
+**Consequences.** One entitlement verifier gates UI/API/workers/PWA/integrations. Fraud, duplicate/reused evidence, amount mismatch, repeated approval, interrupted issuance and stale Founder session become explicit cases.
 
-**Rejected.** Supabase restoration, generic cloud database of all seller data, arbitrary serverless sprawl, no-cloud architecture.
+**Migration.** Define signed formats/vectors; build trial issuer and payment/approval/issuance records; implement lockout matrix; migrate legitimate existing licenses; delete legacy branches.
 
-**Reopen only if.** Measured Cloudflare cost/limits or law make the approved bounded design unsustainable; evidence must compare equivalent alternatives.
+**Rejected.** Subscription licensing; client self-issued trial; always-online permanent license; automatic payment monitoring; online permanent private key.
 
----
-
-## ADR-008 — Encrypted projections, relay and remote command protocol
-
-**Decision.** The PWA receives minimal role/field-filtered projections and submits versioned commands through encrypted tenant/shop/member/device envelopes. Cloud acceptance means queued, not committed. A command succeeds only after canonical desktop commit. Commands expire, are idempotent, are re-authorized on desktop and return explicit conflict results.
-
-Caches are tenant/member/device/shop/schema partitioned, encrypted when sensitive and purgeable on revocation. The PWA never exposes high-risk administration prohibited by the founder scope.
-
-**Why.** The baseline service worker only caches a local app shell and has no identity, pairing, projection, command or revocation protocol.
-
-**Consequences.** The current PWA is not evolved in place. Responsive components may be reused within a new authenticated remote application boundary.
-
-**Migration.** Define protocol and projection schemas; implement desktop durable relay state; add pairing and read-only projections; add commands by risk class.
-
-**Rejected.** Remote direct SQL/API access to desktop DB; cloud multi-master; last-write-wins for business state; browser localStorage authority.
-
-**Reopen only if.** End-to-end performance/cost evidence proves the relay protocol cannot serve the approved bounded scale.
+**Reopen only if.** Legal/cryptographic review identifies a blocking flaw or Founder changes the product contract.
 
 ---
 
-## ADR-009 — Zero-knowledge backup and recovery
+## ADR-005 — Tenant/team identity, authorization, devices and work management
 
-**Decision.** Backups are consistent client-side snapshots, chunked/versioned, encrypted before upload, authenticated by manifests and restorable without SahelFlow-held decryption keys. Retention is 7 daily, 4 weekly, 6 monthly and up to 3 pinned. A backup is `verified` only after snapshot integrity, remote object verification and periodic isolated restore evidence.
+**Decision.** Add tenant, member, role, field-policy, device, session, invitation and approval identities. Remote identity/session state is controlled by the bounded plane; desktop holds a signed offline cache. Owner plus ten active members and device limits are explicit entitlements; architecture is tested for at least 25 active members.
 
-The recovery kit restores keys and tenant/license binding through an audited ceremony.
+Per-shop roles/custom permissions, workgroups, assignments, queues, comments, mentions, handovers and optional configured two-person approvals are first-class. Authorization uses server/desktop-created context, never client claims.
 
-**Why.** The baseline copies only the active DB locally after best-effort checkpoint and disconnect. It has no cloud format, retention, key separation or restore proof.
+**Why.** Single-owner PIN and free-form actors cannot enforce team behavior, field privacy or trusted audit.
 
-**Consequences.** Backup/migration/recovery share one engine. Backup failure blocks destructive migration. Cloud metadata is minimal and cannot decrypt data.
+**Consequences.** Existing owner auth migrates to an owner principal. Permission applies in reads/projections/mutations. Revocation purges sessions and sensitive caches.
 
-**Migration.** Implement local verified snapshots, manifest/crypto format and restore first; then remote resumable objects and retention; finally disaster recovery drills.
+**Migration.** Identity schema/policy engine; map owner; device/session lifecycle; work management and approvals; then remote team surfaces.
 
-**Rejected.** Plain DB uploads; cloud-managed encryption keys; “copy succeeded” as verification; active-shop-only backup sets.
+**Rejected.** Shared staff PINs, UI-only roles, silent last-write-wins, surveillance/payroll/attendance, enterprise SSO at launch.
+
+**Reopen only if.** A Founder decision changes team/device entitlements or a legal requirement intervenes.
+
+---
+
+## ADR-006 — Transactional audit, durable inbox/outbox and exact compensation
+
+**Decision.** Every launch-critical mutation atomically records trusted audit, domain event and required outbox/projection intent. Inbound provider/cloud/storefront events enter a durable inbox before acknowledgement. Effects use idempotent workers with attempts, receipts, dead letters and reconciliation. Money, inventory and status reversals use append-only exact compensation facts.
+
+Automation authoring may be reused, but execution moves from fire-and-forget to durable intents. AI/remote approvals bind actor, arguments, current state/version and expiry.
+
+**Why.** Best-effort callbacks, swallowed audits and heuristic reversals cannot prove integrity under crash/retry/partial failure.
+
+**Consequences.** Domain services and provider workers share one effect protocol; checkpoints cannot pass untracked failures; operators see recovery states.
+
+**Migration.** Add records/transaction helper; dual-write under bounded parity; move one domain/effect class at a time; reconcile legacy rows; remove direct dispatch last.
+
+**Rejected.** In-process emitter as authority; external call inside DB transaction; silent retry without idempotency; boolean-only reversal.
+
+**Reopen only if.** Local storage cannot atomically record the required facts, in which case desktop data authority must be reconsidered as a whole.
+
+---
+
+## ADR-007 — Bounded Cloudflare control plane, data classes and continuity economics
+
+**Decision.** Use Cloudflare for bounded control, encrypted relay/projection, zero-knowledge backup objects and hosted storefront runtime. Operational plaintext stays on desktop except intentionally public release data and explicitly classified minimal metadata.
+
+Every applicable data class receives Law 18-07 review. Private projections/commands/results/notifications/backups use application-layer encryption.
+
+Continuity is product behavior: 20% sale reserve planning, at least 24 months forecast coverage before public payment, quarterly provider/platform price review, explicit quotas/alarms and service-exit/export planning. Cloud cannot become a hidden subscription dependency for permanent local use.
+
+**Why.** Connected team/PWA/storefront/backup/licensing promises cannot be delivered by localhost/static Pages, while uncontrolled cloud replication would violate authority/privacy/economics.
+
+**Consequences.** Isolated environments, IaC, migrations, retention, incidents, cost controls and legal review are required. No cloud implementation outruns identity/key/durable protocols.
+
+**Migration.** Identity/entitlement first, then relay, backup and storefront as bounded modules; validate cost/continuity at each stage.
+
+**Rejected.** Full operational cloud DB, no-cloud architecture, arbitrary serverless sprawl, hidden unlimited usage.
+
+**Reopen only if.** Measured cost, law or platform limits make the approved bounded design unsustainable and equivalent alternatives are compared.
+
+---
+
+## ADR-008 — Encrypted projections and operational remote-command protocol
+
+**Decision.** PWA/browser receives minimal role/field-filtered projections and submits versioned encrypted signed commands. Cloud acceptance means `Queued`, not committed. An **operational command** succeeds only after canonical desktop commit. Commands expire, are idempotent, are reauthorized on desktop and return explicit conflicts.
+
+Caches are tenant/member/device/shop/version partitioned, encrypted when sensitive and purged on revocation. High-risk desktop-only administration remains excluded.
+
+**Why.** The baseline service worker is a local shell without identity, projection, command or revocation semantics.
+
+**Consequences.** Current responsive components may be reused within a new authenticated boundary, but the current PWA architecture is replaced.
+
+**Migration.** Protocol/projection schemas; desktop durable relay state; pairing/read-only projections; commands added by risk.
+
+**Rejected.** Remote direct DB/API, cloud multi-master, last-write-wins for business state, browser storage authority.
+
+**Reopen only if.** End-to-end evidence proves the protocol cannot serve approved scale without weakening authority.
+
+---
+
+## ADR-009 — Zero-knowledge backup, trial retention and disaster recovery
+
+**Decision.** Backups are consistent snapshots, chunked/versioned and encrypted before upload. Each license has a Backup Root Key and each backup has a unique DEK. Authenticated manifests, remote verification and isolated restore certification govern `Verified` status.
+
+Permanent retention is 7 daily, 4 weekly, 6 monthly and up to 3 pinned points per shop. Trial receives one rolling encrypted cloud point retained 30 days after expiry. Failed restore leaves current installation unchanged.
+
+Independent recovery kit and optional two-share assisted recovery restore legitimate ownership without SahelFlow-held plaintext keys.
+
+**Why.** Active-shop byte copy is not all-shop, zero-knowledge, retention-safe or recovery-proven.
+
+**Consequences.** Backup, migration, transfer and recovery share one engine. Backup failure blocks risky migration. Recovery ceremonies and trial retention become testable product behavior.
+
+**Migration.** Verified local snapshot/manifest/crypto/restore; independent recovery; remote resumable objects/retention; assisted recovery; disaster drills.
+
+**Rejected.** Plain uploads; cloud-managed decryption key; copy-success verification; active-shop-only sets; one-share support recovery.
 
 **Reopen only if.** Independent cryptographic/recovery review finds a blocking defect.
 
@@ -168,124 +182,128 @@ The recovery kit restores keys and tenant/license binding through an audited cer
 
 ## ADR-010 — Hybrid commerce ingress and reconciliation
 
-**Decision.** E-commerce integrations use durable provider inbox processing fed by webhooks where feasible and scheduled reconciliation for completeness. Both paths converge on identical idempotent normalization and domain transactions. Cursors advance only across committed contiguous work or explicitly governed dead letters. Overlap windows handle provider clock/update behavior.
+**Decision.** Shopify, WooCommerce and YouCan use durable provider inbox processing fed by certified webhooks/REST hooks for speed and scheduled overlap reconciliation for correctness. Both converge on identical idempotent normalization/domain transactions. Checkpoints advance only across committed contiguous work or governed dead letters.
 
-**Why.** The historical polling-only ADR conflicts with founder decisions. The baseline engine advances its watermark after a batch even when individual orders fail.
+Shopify/WooCommerce become full hybrid after certification. YouCan uses conservative new-order hooks plus polling/wider reconciliation until update/cancellation behavior is proven. Target normal event-to-desktop import p95 is five seconds under approved tests.
 
-**Consequences.** Adapter interfaces expose event identity, resource version, pagination, rate-limit and reconciliation semantics. Provider errors are durable records, not result strings only.
+**Why.** Polling-only and watermark-on-partial-failure conflict with Founder decisions and can silently miss updates.
 
-**Migration.** Add inbox/checkpoints; wrap current polling as reconciliation producer; certify adapters; add webhooks per provider; remove old watermark authority.
+**Consequences.** Adapters expose event identity, mutable resource version, pagination, overlap, rate limit and reconciliation semantics. Provider failures become durable work.
 
-**Rejected.** Webhook-only delivery; polling-only architecture; checkpoint advancement on partial failure.
+**Migration.** Add inbox/checkpoints; wrap polling as reconciliation; certify hooks/action set; remove old watermark authority.
 
-**Reopen only if.** A provider contract legally/technically forbids webhooks; that provider still uses the same durable reconciliation path.
+**Rejected.** Webhook-only; polling-only; checkpoint advancement on untracked partial failure.
 
----
-
-## ADR-011 — Courier capability contract and live certification
-
-**Decision.** Couriers implement a capability-declared adapter contract. UI and automation expose only certified supported operations. Each provider/environment receives a dated live certification record covering auth, create, fees, labels, tracking/status mapping, edit/cancel, idempotency, retries, rate limits, partial failures and reconciliation.
-
-Yalidine, ZR Express and Maystro are planned launch providers; Procolis is optional only after certification. DHD or any other experimental adapter is not public support without a founder scope decision and certification.
-
-**Why.** Source files and mocks do not prove provider behavior. Broad “fully implemented” claims are unsafe.
-
-**Consequences.** Provider drift can automatically mark a capability degraded/disabled. Credentials remain shop-scoped and protected.
-
-**Migration.** Create registry/contract test kit; map existing adapters; hide uncertified capabilities; execute live certification.
-
-**Rejected.** One universal lowest-common-denominator interface; public claims based on mock tests.
-
-**Reopen only if.** Provider legal terms prohibit the planned integration or certification reveals unsustainable economics.
+**Reopen only if.** A provider forbids hooks; it still uses the same durable reconciliation path.
 
 ---
 
-## ADR-012 — Hosted storefront tenancy, releases and durable checkout
+## ADR-011 — Courier candidate contract and Founder-selected launch set
 
-**Decision.** Storefronts run on a shared multi-tenant hosted runtime with explicit tenant/storefront/shop allocation. Builder drafts publish immutable versioned release artifacts. Launch includes three materially distinct templates. Domains and media are verified and tenant-isolated. Arbitrary seller JavaScript is forbidden.
+**Decision.** Couriers implement a capability-declared contract. UI/automation exposes only certified supported operations. Each provider/action receives dated live evidence covering auth, create, fees, labels, tracking, edit/cancel/return where available, idempotency, ambiguous success, limits and reconciliation.
 
-Checkout derives product price, availability, quantity and shipping server-side; creates a durable encrypted receipt before returning success; and retries relay/import until the canonical desktop commits or explicitly rejects. Receipt status is visible and reconcilable.
+Current code makes Yalidine, ZR Express and Maystro **architecture candidates**, not automatic Founder promises. Certify first; Founder then confirms the public launch set. Procolis is optional. DHD/unapproved providers remain hidden/experimental.
 
-**Why.** The baseline storefront writes into whichever local DB is active, uses process-memory rate limiting and assumes future static Pages deployment. That cannot provide durable public checkout or tenancy.
+**Why.** The Founder scope requires certified courier capability but does not lock these provider names. Source/mocks cannot prove provider behavior.
 
-**Consequences.** Existing builder/view components are migrated to release schemas; local direct checkout is retired. Cloud outage and allocation behavior are explicit.
+**Consequences.** Provider registry separates scope from certification. Drift/incidents can downgrade/disable capability. Certification cannot expand product scope by itself.
 
-**Migration.** Define tenant/release/receipt schemas; build hosted read path and one template; durable checkout/relay/import; domains/media; remaining templates and rollback.
+**Migration.** Create registry/contract suite; map adapters; hide unsupported actions; live certify/economic review; obtain launch-set decision.
 
-**Rejected.** Static export with direct local API; customer-trusted price; synchronous desktop availability requirement; arbitrary scripts.
+**Rejected.** Universal lowest-common-denominator interface; public claim from source; treating candidate names as Founder commitments.
 
-**Reopen only if.** Verified hosted cost at approved scale is unsustainable or a legal constraint requires a different tenancy model.
-
----
-
-## ADR-013 — Seller-owned Gemini, privacy and action approval
-
-**Decision.** Gemini remains seller-keyed through Google AI Studio. The approved provider/model registry currently selects `gemini-3.5-flash` and can change through reviewed configuration/evidence. No key means AI features are unavailable while core workflows continue.
-
-Provider payloads are built from allowlisted privacy-classified fields, validated by adversarial multilingual tests, and recorded through redacted request receipts. Responses are typed. Mutations remain proposals until a server/desktop approval service verifies authenticated actor, permission, current state and required explicit approval.
-
-**Why.** Existing typed schemas/redaction are useful, but heuristic redaction and client approval UI alone cannot prove privacy or prevent stale/forged destructive actions.
-
-**Consequences.** Direct tool writes are migrated behind approval/action plans. Provider quota/model drift has a kill switch and observable fallback.
-
-**Migration.** Centralize registry/payload builders; build privacy corpus; introduce action plan/approval receipts; migrate tools by risk.
-
-**Rejected.** Product-funded key at launch; raw-object serialization; model name scattered through code; autonomous destructive actions.
-
-**Reopen only if.** Google policy/legal changes block seller-owned usage or verified free-tier economics fail the approved usage model.
+**Reopen only if.** Founder explicitly changes the launch set or provider terms/economics block inclusion.
 
 ---
 
-## ADR-014 — Observability, diagnostics, incidents and cost controls
+## ADR-012 — Hosted storefront releases and durable receipt semantics
 
-**Decision.** Implement structured local and cloud health with correlation across transaction, event, effect, command, provider and release IDs. Diagnostic bundles are generated locally, previewable, consented, redacted, encrypted in transit and time-limited. Sentry is optional and cannot be the only support path.
+**Decision.** Storefronts run on a shared multi-tenant hosted runtime with explicit tenant/storefront/shop allocation. Drafts publish immutable versioned releases. Three distinct templates, domains/media and delegated allocation are certified.
 
-Cloud/provider usage has per-tenant and global quotas, alerts and graceful degradation. Incidents have severity, owner, timeline, affected versions/providers, containment, recovery and postmortem.
+Checkout derives price/availability/shipping server-side and creates a durable encrypted receipt before customer success. This success means **receipt accepted/queued**, not canonical order committed. Relay/import retries until desktop commits or rejects; statuses remain visible/reconcilable.
 
-**Why.** Baseline logging/Sentry hooks do not provide system-level durability, privacy or cost evidence.
+**Why.** Local active-DB checkout cannot provide tenancy, offline desktop acceptance, immutable release or durable public success.
 
-**Consequences.** Every new worker/protocol declares metrics and alert thresholds. Secret/PII canary tests gate diagnostics.
+**Consequences.** Builder/view assets migrate to release schemas; local direct checkout retires after parity. Storefront success and operational remote-command success remain intentionally different semantics.
 
-**Migration.** Standardize logger/correlation and local health first; add cloud dashboards/cost controls with each service; add support bundle and incident runbooks before beta.
+**Migration.** Tenant/release/receipt schemas; hosted read path/template; durable checkout/import; domains/media; remaining templates/rollback.
 
-**Rejected.** Upload-all logs; always-on remote access; hidden unlimited cloud/provider use.
+**Rejected.** Static export with local API; customer-trusted price; synchronous desktop availability; calling receipt acceptance a committed order; arbitrary scripts.
 
-**Reopen only if.** Privacy/legal review requires stronger local-only defaults; changes may only reduce collection.
-
----
-
-## ADR-015 — Version authority, release channels, updater, rollback and support
-
-**Decision.** A generated version manifest is the single authority for app `1.x.y`, product major, commit, build/channel, schema/protocol/projection/backup/storefront versions, compatibility ranges, signing key IDs and artifact digests. Package/Cargo/Tauri/About/updater/release notes are derived or checked.
-
-Release is artifact-first: build and test a signed candidate from an immutable commit, attach an evidence manifest, approve, then publish. Channels are internal, beta and stable. Stable launch is Windows x64 only. The updater accepts signed compatible artifacts and supports staged rollout/hold.
-
-Rollback favors a compatible forward-fix; destructive schema down-migration is prohibited. Support/connected continuity follows the signed five-year same-major policy while local permanent use remains.
-
-**Why.** The baseline contains 1.0/v3/v4 drift; a local script pushes/tag before build; CI targets unsupported OSes.
-
-**Consequences.** Direct release pushes to main are retired. Branch protection and release approval become mandatory.
-
-**Migration.** Add manifest/generator/check; reset next public version to 1.0.0 under founder-approved migration plan; create Windows candidate workflow; prove updater/rollback.
-
-**Rejected.** Three independent version files; publish-before-build; public stable from an untested tag; macOS/Linux launch.
-
-**Reopen only if.** Platform signing/distribution constraints require another Windows packaging channel, without weakening artifact/evidence authority.
+**Reopen only if.** Verified hosted cost or law requires a different tenancy model without weakening receipt durability.
 
 ---
 
-## ADR-016 — Risk-based testing, evidence and low-end certification
+## ADR-013 — Seller-owned Gemini, privacy and bound action approval
 
-**Decision.** Verification is risk-class based, not test-count based. Required layers include unit, integration, property/invariant, migration, replay/idempotency, failure injection, security/privacy, packaged E2E, accessibility/RTL, low-end performance, provider live certification, backup/restore and beta evidence. A claim is valid only at an exact commit/artifact and environment.
+**Decision.** Gemini remains seller-keyed. Versioned provider/model policy currently selects `gemini-3.5-flash`. No key/outage never breaks non-AI workflows.
 
-GitHub checks are binding after CI is repaired. Dependency/security findings are triaged by severity with production-impact findings blocking. Evidence is retained with release candidates.
+Payloads use allowlisted data-classified fields and local deterministic parsing/redaction, validated against real Darija/Arabic/French/mixed corpora. Responses are typed. Mutations remain proposals until authenticated current permission/state and required explicit approval are verified immediately before commit.
 
-**Why.** The repository has substantial tests, but packaged E2E is not a PR gate, providers are uncertified, reference hardware is unmeasured and Actions failed before steps during this audit.
+Professional multilingual setup covers restrictions, secure storage, safe test, privacy, quota/error, rotation and disconnection.
 
-**Consequences.** PR templates, issue acceptance criteria and merge gates cite invariants and evidence. Historical counts/percentages are not readiness claims.
+**Why.** Typed schemas are useful but heuristic redaction and client confirmation alone cannot prove privacy or prevent stale/forged actions.
 
-**Migration.** Repair CI; establish risk classes and evidence format; make core gates binding; add packaged/reference/provider suites in roadmap order.
+**Consequences.** Direct tool writes migrate behind action plans/receipts. Model/quota drift has observable fallback/kill switch.
 
-**Rejected.** Browser screenshots alone; unit coverage alone; non-blocking security audit; “works in source” as launch proof.
+**Migration.** Central registry/payload builders; privacy corpus; approval receipts; tools migrated by risk.
 
-**Reopen only if.** A test method is technically impossible; the replacement must provide equal or stronger evidence.
+**Rejected.** Product-funded key; raw-object serialization; scattered model names; autonomous destructive action.
+
+**Reopen only if.** Provider policy/legal/economic changes block seller-owned use and Founder changes policy.
+
+---
+
+## ADR-014 — Observability, diagnostics, legal review and incident controls
+
+**Decision.** Implement correlated local/cloud health across transaction, event, effect, command, provider, backup and release IDs. Diagnostic bundles are local, previewable, consented, redacted, encrypted in transit and time-limited. Sentry is optional and never the sole support path.
+
+Every cloud/private data class includes Law 18-07 review. Provider/cloud usage has quotas, alarms and graceful degradation. Incidents record severity, scope, versions/providers, containment, recovery and postmortem.
+
+**Why.** Baseline logs/hooks do not provide system durability, legal/privacy evidence or cost control.
+
+**Consequences.** Each worker/protocol declares metrics and alert thresholds. Secret/private-data canaries gate diagnostics. Founder admin sees bounded metadata, not seller plaintext.
+
+**Migration.** Standardize local logger/correlation/health; add cloud/cost/legal controls with each service; support bundles and incident drills before beta.
+
+**Rejected.** Upload-all logs; always-on remote access; hidden unlimited use; unsupported privacy claims.
+
+**Reopen only if.** Legal/privacy review requires stricter collection; changes may only reduce exposure unless Founder changes product policy.
+
+---
+
+## ADR-015 — Version authority, release, updater and continuity/support
+
+**Decision.** A generated manifest is the single authority for app `1.x.y`, product major, commit/build/channel, schema/protocol/projection/backup/storefront versions, compatibility, signing IDs, artifact digests and support horizon.
+
+Release is artifact-first: build/sign/test candidate, attach evidence, approve, then publish. Channels are internal/beta/stable; Stable launch is Windows x64. Updater accepts signed compatible artifacts with staged rollout/hold. Data recovery favors compatible forward repair, not blind down-migration.
+
+Five-year same-major maintenance/connected continuity and perpetual local purchased-major use are represented in payment/license/support metadata. Continuity economics and service-exit notice/export obligations are validated before public payment.
+
+**Why.** Baseline has 1.0/4.x drift, publish-before-proof and unsupported OS targets.
+
+**Consequences.** Direct release pushes retire. Branch protection, evidence, exact support dates, reserve/coverage review and public claim control are mandatory.
+
+**Migration.** Manifest/generator/check; reset public version authority; Windows candidate workflow; updater/hold/forward-repair; continuity/support metadata and procedures.
+
+**Rejected.** Independent version files; publish-before-build; untested tag; forced major upgrade; macOS/Linux Stable launch.
+
+**Reopen only if.** Windows signing/distribution constraints require another compatible channel without weakening artifact/evidence authority.
+
+---
+
+## ADR-016 — Risk-based whole-product evidence and experience completion
+
+**Decision.** Verification is risk-class based, not test-count based. Required layers include unit/integration/property/invariant, migration, replay/idempotency, failure injection, security/privacy/legal, packaged E2E, page-state/Arabic/RTL/accessibility, low-end/compatibility, provider live certification, backup/recovery and seller beta evidence.
+
+Each wave/PR identifies product clause, scope class, capability, journey/states, experience dimensions, invariants and evidence. A page or adapter is not complete until its full governing contract is addressed. A claim is valid only for an exact commit/artifact/environment.
+
+**Why.** The repository has substantial code/tests and strong UI foundations, but no current installed-candidate/provider/recovery/low-end/beta proof. Historical counts and “production hardened” labels mixed implementation with readiness.
+
+**Consequences.** Wave/PR templates and merge gates trace the whole contract. GitHub checks become binding after CI repair. Evidence stays with release candidates.
+
+**Migration.** Repair CI; establish evidence format; bind core checks; add packaged/compatibility/provider/recovery/experience suites in roadmap order.
+
+**Rejected.** Browser screenshot alone; coverage alone; source existence as certification; happy-path page as journey completion; historical label as readiness.
+
+**Reopen only if.** A verification method is technically impossible and an equal-or-stronger replacement is demonstrated.

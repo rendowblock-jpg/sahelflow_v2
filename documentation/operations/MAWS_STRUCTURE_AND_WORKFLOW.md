@@ -1,241 +1,197 @@
 # MAWS structure and workflow
 
-MAWS is SahelFlow's lightweight way of coordinating capable AI agents across
-different interfaces and sessions. GitHub holds the shared memory. Agent prompts
-provide useful starting roles. Deep-dive waves hold the evolving investigation,
-plan, implementation, and evidence.
+MAWS is SahelFlow's lightweight way of coordinating capable AI agents across interfaces and sessions. GitHub holds shared memory, prompts provide useful starting roles, and deep-dive waves hold the evolving investigation, plan, implementation and evidence.
 
-MAWS is not an autonomous runtime, a ticket factory, or a permission system. It
-does not prescribe how an agent must reason or execute.
+MAWS is not an autonomous runtime, ticket factory, permission system or parallel product/experience/engineering authority.
 
-## Core model
+## 1. Authority-aware core model
 
 ```text
-Founder direction
-       ↓
+Founder direction / explicit decision
+        ↓
+Product authority and Stable scope
+        ↓
+Experience / capability / journey authority
+        ↓
+Engineering specification / ADRs
+        ↓
+Current-to-target model / roadmap / workflow
+        ↓
 WORKING_MEMORY.md
-       ↓
-Active wave document
-       ↓
-Agent prompt + relevant repository context
-       ↓
-Inspect ↔ reason ↔ design ↔ build ↔ test
-       ↕
+        ↓
+Active wave governing contract
+        ↓
+Inspect ↔ reason ↔ design ↔ build ↔ test ↔ recover
+        ↕
 Other agents contribute when useful
-       ↓
-Update the wave checkpoint
-       ↓
-Coherent pull request and merge
-       ↓
-Continue, finish, or replace the wave
+        ↓
+Coherent pull request + exact evidence
+        ↓
+Merge, continue, finish or replace wave
 ```
 
-The normal unit of continuity is a wave, not an individual task. A wave may be
-an end-to-end user outcome, a product area, a technical domain, a redesign, or a
-large investigation followed by implementation.
+The normal unit of continuity is a wave, not an individual task. A wave may cover an end-to-end outcome, product area, technical domain, redesign or large investigation followed by implementation.
 
-## Durable memory map
+A wave is flexible in method but not free to drift from authority. It records the controlling product clause, scope class, capability, journey/states, experience dimensions, engineering invariants, roadmap dependencies, risk/evidence and non-goals.
 
-### `AGENTS.md` — common entry point
+## 2. Durable memory map
 
-Every agent starts at repository-root `AGENTS.md`. It points to current memory,
-the active wave, agent prompts, and the smallest relevant authority and source
-material.
+### `AGENTS.md` — common entry point and precedence
 
-### `WORKING_MEMORY.md` — current shared checkpoint
+Every agent starts at repository-root `AGENTS.md`. It points to current memory and states the authority/read-order rules.
 
-Working memory answers:
+### Product, experience and engineering packages — durable target truth
+
+- `documentation/product/` controls Founder-approved promises, scope, entitlements and exclusions.
+- `documentation/experience/` controls capability depth, journey/state completeness and frontend/UI/UX quality for included scope.
+- `documentation/architecture/` controls target system invariants, current source reality, dependency order, review/evidence and provider claims.
+
+A lower layer cannot silently weaken a higher layer. Apparent conflicts are reconciled in the owning documents before implementation continues.
+
+### `WORKING_MEMORY.md` — current checkpoint
+
+Working Memory answers:
 
 - what the Founder currently wants;
 - which wave is active;
-- which decisions are already settled;
-- what is true at the current checkpoint;
-- which branches or pull requests matter;
+- which decisions are settled;
+- what is true now;
+- which branch/PR matters;
 - what remains unknown;
-- what should happen next.
+- what happens next.
 
-It stays concise. It changes at meaningful checkpoints rather than after every
-command or small edit.
+It stays concise and changes at meaningful checkpoints.
 
-### Active wave document — deep-dive notebook
+### Active wave — coherent work model
 
-The active wave contains the complete current model of one coherent body of
-work:
+The active wave contains:
 
-- Founder intent and desired outcome;
+- Founder intent/outcome;
+- governing contract and scope class;
 - verified current reality;
-- target experience or system;
+- target experience/system;
 - deep-dive discoveries;
-- a flexible multi-phase plan;
-- decisions and their reasons;
-- working questions;
-- implementation and evidence;
-- the current checkpoint and next move.
+- flexible multi-phase plan;
+- decisions/reasons;
+- implementation/evidence;
+- checkpoint/next move.
 
-Copy `WAVE_TEMPLATE.md` when a new wave begins. Phase names and counts are chosen
-for the work and may change as evidence changes.
+Copy `WAVE_TEMPLATE.md` when a new wave begins. Phase names/counts may change as evidence changes.
 
-### Git and GitHub — implementation truth and communication
+### Git and GitHub — integration and evidence truth
 
-- `main` contains integrated code and documents.
-- Branches and pull requests contain proposed work.
-- Commits identify exact versions when that precision matters.
-- Pull requests carry implementation, observed verification, review, and the
-  next move.
-- Issues are optional and used when a separate workstream benefits from durable
-  ownership or visibility.
+- `main` contains integrated code/documents.
+- Branches/PRs contain proposed work.
+- Commits/artifact IDs identify exact evidence when precision matters.
+- PRs carry governing contract, implementation, validation, review, limitations and next move.
+- Issues are optional and used when independent ownership/visibility helps.
 
-Chat is where live reasoning happens. GitHub is where the understanding that
-must survive a session is recorded.
+Chat is where live reasoning happens. GitHub stores understanding that must survive.
 
-## People and agents
+### Research and history
+
+- `documentation/research/` is non-authoritative reference requiring revalidation/adoption.
+- `documentation/history/` preserves chronology without current product/readiness authority.
+- The root changelog records current SahelFlow 1.0 migration truth.
+
+## 3. People and agents
 
 ### Founder
 
-The Founder supplies product direction, priority, value judgment, and important
-tradeoffs. Agents should bring the Founder decisions that require product
-authority, not routine protocol relay.
+Supplies product direction, priority, value judgment, provider launch-set choices, important tradeoffs and Stable approval. Agents bring decisions requiring product authority, not routine coordination.
 
 ### Codex Desktop — primary builder and continuity lead
 
-Codex Desktop is the default lead for keeping the whole active wave coherent
-and moving it through investigation, implementation, local verification, and
-integration.
+Currently the only MAWS agent assumed to have broad direct access to the Founder-authorized local workspace/runtime. It can inspect/edit local code, run product/tests/build/package/database, inspect artifacts/processes/logs/browser/desktop behavior, publish GitHub work and integrate other agents' findings.
 
-Codex Desktop is currently the only MAWS agent assumed to have broad direct
-access to the Founder-authorized desktop workspace and local checkout. It can:
+Claims depending on local unpublished files, running app, packaged candidate, database or machine evidence require Codex Desktop or another tool with actual access.
 
-- read and edit desktop files and the complete local codebase;
-- run the application, development servers, tests, scripts, databases, and
-  build or packaging tools available in the workspace;
-- inspect local artifacts, processes, logs, browser behavior, and desktop
-  runtime behavior;
-- perform repository operations and publish GitHub branches and pull requests;
-- integrate findings from every other agent into the working implementation;
-- keep working memory and the active wave accurate.
+### ChatGPT — product, experience, architecture and engineering partner
 
-Other agents may read and modify the GitHub repository through their tools, but
-they must not assume access to the local desktop, unpublished files, running
-application, local database, or desktop-only evidence. When a claim depends on
-those things, Codex Desktop performs or verifies the local execution.
+Builds precise cross-layer models, traces journeys/states, challenges assumptions, designs solutions, reviews/implements through available GitHub tools and keeps durable memory accurate. It does not claim local desktop/runtime evidence without access.
 
-### ChatGPT — product, architecture, and engineering partner
+### GLM — external research and discovery specialist
 
-ChatGPT provides deep product reasoning, user-journey analysis, architecture,
-UX design, implementation ideas, test design, and independent challenge. When
-its connected tools make that effective, it may also inspect the GitHub
-repository, implement changes, author or review pull requests, and update shared
-memory.
+Defaults to provider/API/platform, competitor/workflow/UX, Arabic/French/regional research, alternatives and adversarial discovery. Findings are sourced and returned to the active wave; research does not become authority until adopted.
 
-ChatGPT is useful when the wave needs another strong mental model, a coherent
-design, critical review, a reframing of product and technical assumptions, or a
-GitHub-connected engineering contribution. It must not claim local desktop,
-running-application, packaged-build, database, or unpublished-workspace evidence
-unless its own tools actually provide that access.
+These are specializations, not contribution restrictions.
 
-### GLM — research and discovery specialist
+## 4. Full operating workflow
 
-GLM's default role is broad web research and discovery rather than primary
-repository operation. It is useful for:
+### Step 1 — Discuss the outcome
 
-- provider, API, platform, and external documentation investigation;
-- competitor, market, workflow, and UX research;
-- Arabic, French, regional, and localization research;
-- collecting alternatives, examples, risks, and failure cases;
-- adversarially challenging assumptions and identifying missing questions;
-- producing structured findings for the active wave;
-- bounded repository analysis or implementation when its available tools make
-  that the effective choice.
+Founder and lead agent establish what should become true, for whom and why. Early discussion may be exploratory.
 
-This is a specialization, not a restriction. GLM may contribute to any part of
-a wave when useful.
+### Step 2 — Resolve governing authority
 
-## Capability map
+Before planning implementation:
 
-| Surface | Default contribution | GitHub repository | Local desktop and runtime |
-|---|---|---|---|
-| Codex Desktop | Continuity, implementation, integration, local verification | Full through connected tools and Git | Full Founder-authorized workspace access |
-| ChatGPT | Product, architecture, UX, engineering challenge, implementation and review when connected | When connected tools provide it | Not assumed |
-| GLM | External research, discovery, localization, alternatives, adversarial analysis | When available and useful | Not assumed |
+- identify controlling Founder/product clause;
+- classify scope as Required, Conditional, Depth, Candidate or Excluded;
+- identify relevant capability/journey/states/experience rules;
+- identify target invariants/ADRs and roadmap prerequisites;
+- identify evidence risk.
 
-The map describes current environments and useful defaults. It does not prevent
-an agent from contributing outside its default role.
+Ambiguous scope defaults to Candidate. Excluded work stops unless Founder changes scope.
 
-## Full operating workflow
+### Step 3 — Establish current reality
 
-### 1. Discuss the outcome
+Inspect relevant documents, source, tests, behavior, data, infrastructure and history. Separate observed fact from inference. Another agent may independently challenge the model.
 
-The Founder and lead agent discuss what SahelFlow should achieve next. Early
-discussion may be exploratory. No issue or formal packet is required.
+### Step 4 — Create or update the wave
 
-### 2. Establish current reality
+Use `WAVE_TEMPLATE.md`, link from Working Memory and fill the governing contract. The plan is a working model, not a ritual contract.
 
-The lead agent inspects relevant documents, application behavior, source, tests,
-data, infrastructure, and historical work. Claims are separated from verified
-behavior. Another agent may run an independent deep dive in parallel.
+### Step 5 — Choose collaborators naturally
 
-### 3. Create or update the wave
-
-Once the direction is coherent enough, the lead agent creates a wave document
-from `WAVE_TEMPLATE.md` and links it from `WORKING_MEMORY.md`.
-
-The first plan is a working model, not a contract. It may change after deeper
-investigation.
-
-### 4. Choose collaborators naturally
-
-The lead agent brings in ChatGPT, GLM, or another Founder-approved agent when a
-second perspective or parallel workstream will materially improve the outcome.
-
-A simple collaboration brief is enough:
+Use another agent when a second perspective/parallel workstream improves the outcome. A concise brief includes:
 
 ```text
 Active wave:
+Governing contract:
 Current understanding:
 Question or outcome:
 Relevant areas:
-What would be useful back:
+Useful output:
 ```
 
-The receiving agent may challenge the framing, inspect adjacent context, or
-recommend a different approach.
+The receiving agent may challenge framing or inspect adjacent context.
 
-### 5. Execute the phases
+### Step 6 — Execute phases
 
-Agents investigate, design, implement, run checks, and revise the plan. Small
-actions remain inside the phase plan. Separate issues are created only when an
-independent workstream genuinely benefits from them.
+Investigate, design, implement, migrate, test and revise. Small actions remain in the wave. Separate issues only when useful.
 
-Material discoveries are added to the wave. Routine thinking remains in chat.
+Material discoveries update the document that owns them:
 
-### 6. Integrate connected-agent and desktop work
+- product change → numbered Founder decision/product package;
+- experience rule → experience package;
+- engineering decision → specification/ADR;
+- current reality → Current-to-Target Analysis;
+- sequence → roadmap;
+- provider scope/certification → registry;
+- progress → wave/Working Memory.
 
-ChatGPT, GLM, or another connected agent may produce branches, pull requests,
-reviews, research, or structured findings through the tools available to it.
-Codex Desktop pulls together the current remote state and the local desktop
-state.
+### Step 7 — Integrate connected and local work
 
-Codex runs or verifies behavior that depends on the local application, desktop
-files, database, processes, packaging, or unpublished workspace state.
+Connected agents may produce branches/PRs/reviews/research. Codex Desktop integrates remote and local state and runs/verifies local-only behavior.
 
-### 7. Publish coherent checkpoints
+### Step 8 — Publish coherent checkpoints
 
-Code is published when there is a coherent result worth inspecting. The pull
-request records:
+A PR records:
 
-- the outcome;
-- the active wave;
-- what changed;
-- what was actually verified;
-- important decisions, risks, and limitations;
-- the next move.
+- outcome and active wave;
+- governing product/scope/capability/journey/experience/invariants;
+- current root cause and target behavior;
+- changes/non-goals;
+- migration/recovery implications;
+- exact validation/evidence;
+- limitations/next move.
 
-The size and depth of review are proportional to the change. MAWS does not
-require a different interface for every routine edit.
+Review depth is proportional to risk, not ceremony.
 
-### 8. Hand off or resume
+### Step 9 — Hand off or resume
 
-Before a meaningful session or agent switch, update the active wave checkpoint:
+Before meaningful switch, update:
 
 ```text
 What is now true:
@@ -244,34 +200,21 @@ Current blocker or uncertainty:
 Exact next move:
 ```
 
-Update working memory when the active wave, direction, branch, pull request, or
-next move changes. A new agent resumes from the documents and repository rather
-than a pasted narrative history.
+A new agent resumes from repository documents rather than a narrative dump.
 
-### 9. Finish, park, or replace the wave
+### Step 10 — Finish, park or replace
 
-A wave finishes when its coherent outcome is demonstrated. Record what works,
-what was verified, known limitations, parked work, and the integrated commits or
-artifacts.
+A wave finishes when its coherent outcome and required evidence are demonstrated. Record limitations and integrated commits/artifacts. If Founder changes direction, update or replace the wave; Git history preserves the old model.
 
-If the Founder changes direction, update or replace the wave. Git history
-preserves the older plan without requiring packet versions or state transitions.
-
-## What MAWS deliberately does not require
-
-MAWS does not require:
+## 5. What MAWS deliberately does not require
 
 - one issue per task;
 - task packets or packet versions;
-- acknowledgement or status envelopes;
+- acknowledgement/status envelopes;
 - agent certification;
-- role, risk, or state label taxonomies;
-- a protocol validator or CI hook;
 - fixed phase names;
 - exact SHAs in ordinary conversation;
-- mandatory external review for routine changes;
-- the Founder to relay routine messages between agents.
+- mandatory external review for routine low-risk work;
+- Founder relay of routine messages.
 
-The system succeeds when a capable new agent can understand the current outcome,
-evidence, plan, and next move from GitHub and then contribute effectively without
-being trapped by coordination ceremony.
+MAWS succeeds when another strong agent can understand authority, current outcome, evidence, plan and next move from GitHub and contribute without coordination theater.
