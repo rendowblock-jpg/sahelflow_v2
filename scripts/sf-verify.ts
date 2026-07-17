@@ -14,6 +14,7 @@ const cliArgs = process.argv.slice(2);
 const fast = cliArgs.includes("--fast");
 const skipTests = fast || cliArgs.includes("--skip-tests");
 const repoDir = process.env.SF_REPO_DIR || process.cwd();
+const failFastTests = process.env.SF_TEST_FAIL_FAST === "1";
 
 const steps: Step[] = [
   {
@@ -33,8 +34,8 @@ const steps: Step[] = [
   { name: "ESLint", command: "bun", args: ["run", "lint"] },
   {
     name: "Vitest",
-    command: "bun",
-    args: ["run", "test"],
+    command: "bunx",
+    args: ["vitest", "run", ...(failFastTests ? ["--bail=1"] : [])],
     skipInFast: true,
     skipWhenTestsSkipped: true,
   },
@@ -52,6 +53,7 @@ function printOutput(output: string): void {
 console.log("SahelFlow verification gate");
 console.log(`repo: ${repoDir}`);
 console.log(`mode: ${fast ? "fast" : skipTests ? "skip-tests" : "full"}`);
+console.log(`test failure mode: ${failFastTests ? "first failure" : "complete suite"}`);
 
 let failures = 0;
 
