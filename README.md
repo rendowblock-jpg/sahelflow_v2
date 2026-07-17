@@ -7,10 +7,11 @@ SahelFlow is a Windows-first, desktop-authoritative operations platform for Alge
 ## Start here
 
 1. [`documentation/product/README.md`](documentation/product/README.md) — Founder-approved product contract.
-2. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority and read order.
-3. [`documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md`](documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md) — source-grounded current state, full gap matrix, metrics and migration disposition.
-4. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — the single work path to Stable.
-5. [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md) — current wave and next move.
+2. [`documentation/experience/README.md`](documentation/experience/README.md) — complete experience, frontend, capability and end-to-end journey authority recovered from the Maze Map.
+3. [`documentation/architecture/README.md`](documentation/architecture/README.md) — engineering authority and read order.
+4. [`documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md`](documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md) — source-grounded current state, full gap matrix, metrics and migration disposition.
+5. [`documentation/architecture/IMPLEMENTATION_ROADMAP.md`](documentation/architecture/IMPLEMENTATION_ROADMAP.md) — the single work path to Stable.
+6. [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md) — current wave and next move.
 
 ## Approved launch shape
 
@@ -21,13 +22,14 @@ SahelFlow is a Windows-first, desktop-authoritative operations platform for Alge
 - **Trial:** one signed online machine-bound seven-day trial with complete lockout after expiry and preserved data.
 - **AI:** seller-owned Google AI Studio key; typed, privacy-controlled workflows and explicit bound approval for consequential actions.
 - **Synchronization:** durable hybrid webhook plus scheduled reconciliation; checkpoints never pass untracked failure.
+- **Experience:** quiet-power operational UX, page-complete behavior, Arabic/French/English parity, rigorous RTL, WCAG 2.2 AA, keyboard fluency and low-end responsiveness.
 - **Release:** signed Windows artifacts promoted through internal, beta and stable channels only after evidence exists.
 
 ## Current implementation conclusion
 
-The existing Tauri, Next.js, Prisma, SQLite, domain, UI, WhatsApp, provider, AI and test work is a strong migration base. The main gaps are trusted shop/member/device/entitlement authority, safe migrations and key recovery, durable audit/inbox/outbox/compensation, real connected-system boundaries, provider certification, packaged low-end evidence and artifact-first release authority.
+The existing Tauri, Next.js, Prisma, SQLite, domain, UI, WhatsApp, provider, AI and test work is a strong migration base. The main gaps are trusted shop/member/device/entitlement authority, safe migrations and key recovery, durable audit/inbox/outbox/compensation, real connected-system boundaries, provider certification, complete journey/state depth, packaged low-end evidence and artifact-first release authority.
 
-Do not add visible connected features around those missing foundations. Preserve useful code and migrate it through the active roadmap.
+Do not add visible connected features around those missing foundations. Preserve useful code and migrate it through the active roadmap. Product work must also satisfy the relevant capability, journey and experience requirements rather than only the happy-path screen.
 
 ## Development commands
 
