@@ -6,6 +6,8 @@
 
 This directory preserves the unique durable product-experience content recovered from the Session 40 Maze Map and its later vision-recovery work. It sits between the Founder-approved product contract and the engineering architecture.
 
+This package is the focused correction to the documentation structure merged in PR #95. Where the documentation-system description in `../architecture/CURRENT_TO_TARGET_ANALYSIS.md` omits a separate experience layer, this later package and the current root/product/architecture indexes govern the read order.
+
 It answers three different questions:
 
 1. **How must SahelFlow feel and behave?** — the Experience and Frontend Constitution.
