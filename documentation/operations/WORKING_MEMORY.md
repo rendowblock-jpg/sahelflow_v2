@@ -72,6 +72,7 @@ The current protocol is [`GLM_CONTINUITY_PROTOCOL.md`](GLM_CONTINUITY_PROTOCOL.m
 
 ```bash
 bun run sf-audit
+bun run sf-inventory
 bun run sf-verify
 bun run sf-verify --fast
 bun run glm:bootstrap
@@ -89,20 +90,20 @@ Required outcome:
 
 Current checkpoint:
 
-- the governing contract, risk/evidence layers, phases and explicit non-goals are recorded in the active wave;
-- `package.json` on the baseline contains both `sf-audit` and `sf-verify` scripts;
-- `.github/workflows/ci.yml` invokes those shared commands, but actual runner startup remains unproven;
-- no local command, packaged Windows, migration, recovery, performance, T470 or 4 GB result has been claimed;
-- the current chat environment has GitHub read/write access but no mounted checkout, cannot resolve `github.com` for `git clone`, and therefore cannot execute Bun/Rust/Windows evidence.
+- GitHub Actions infrastructure is operational; run #371 passed the complete Quality Gate and Tauri smoke after the CI fallback key was corrected to a valid 256-bit hex key and the Linux cargo-check sidecar placeholder was created inside CI only.
+- `sf-inventory` now generates machine-readable clean-checkout evidence. Run #374 passed and retained an inventory for 691 files, 31 pages, 114 API routes, 125 components, 142 CSS custom-property tokens, 31 Prisma models and 97 test files.
+- The Tauri smoke now runs `cargo check --release`, so release-only startup code is compiled instead of being silently excluded by `cfg(not(debug_assertions))`.
+- The first Phase 1A runtime patch is implemented: the mandatory Next.js resource/runtime/spawn/readiness path fails closed, kills a timed-out child, and starts the degradable WhatsApp sidecar only after the application server is proven ready.
+- Run #378 passed authority audit, inventory, TypeScript, ESLint, Vitest, coverage, security audit, migration status and `cargo check --release` for that patch.
+- No installed Windows artifact, failure-injection run, migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
 
 Exact next executable action:
 
-1. open a clean mounted checkout at `5fe00b5cb85505e5df27499fe46d0fa6050c0788` on `agent/proven-canonical-windows-desktop`;
-2. run `bun install --frozen-lockfile` and `bun run sf-audit`;
-3. generate the required file/route/API/command/page/component/token/model/migration/test/provider inventories and inspect local READMEs/sidecars;
-4. run `bun run sf-verify --fast`, then the relevant full checks;
-5. inspect the latest GitHub Actions run/job startup message before applying any CI repair;
-6. update the active wave with observed results and begin only the minimum runtime/shop/migration implementation supported by that evidence.
+1. use the retained inventory to enumerate all desktop startup/readiness and shop-routing authority call sites;
+2. add a seller-visible blocked/recovery startup surface and structured diagnostic state without allowing the main shell to appear ready;
+3. define the minimum per-launch endpoint/authentication boundary needed to remove fixed unauthenticated runtime assumptions;
+4. then begin the explicit `ShopContext` and atomic registry boundary, preserving one SQLite file per shop while removing silent fallback;
+5. validate each bounded change through the full clean-checkout Quality Gate and release-path Rust smoke before installed Windows evidence.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 
