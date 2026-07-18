@@ -23,120 +23,48 @@ import {
   V3Social30,
   V3Vertical15,
 } from './v3/compositions';
+import {
+  V4_DEMO,
+  V4_HERO,
+  V4_LOOP,
+  V4_SOCIAL,
+  V4_VERTICAL,
+  V4Demo75,
+  V4Hero48,
+  V4LandingLoop8,
+  V4Social20,
+  V4Vertical12,
+} from './v4/compositions';
 
 const FPS = 30;
 
 export const RemotionRoot: React.FC = () => (
   <>
+    <Folder name="SahelFlow-V4-Director-Cut">
+      <Composition id="SahelFlow-V4-Hero-48" component={V4Hero48} durationInFrames={V4_HERO} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-V4-Social-20" component={V4Social20} durationInFrames={V4_SOCIAL} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-V4-Vertical-12" component={V4Vertical12} durationInFrames={V4_VERTICAL} fps={FPS} width={1080} height={1920} />
+      <Composition id="SahelFlow-V4-Demo-75" component={V4Demo75} durationInFrames={V4_DEMO} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-V4-Landing-Loop-8" component={V4LandingLoop8} durationInFrames={V4_LOOP} fps={FPS} width={1920} height={1080} />
+    </Folder>
     <Folder name="SahelFlow-V3-Production">
-      <Composition
-        id="SahelFlow-V3-Hero-65"
-        component={V3Hero65}
-        durationInFrames={V3_HERO_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-V3-Social-30"
-        component={V3Social30}
-        durationInFrames={V3_SOCIAL_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-V3-Vertical-15"
-        component={V3Vertical15}
-        durationInFrames={V3_VERTICAL_DURATION}
-        fps={FPS}
-        width={1080}
-        height={1920}
-      />
-      <Composition
-        id="SahelFlow-V3-Demo-120"
-        component={V3Demo120}
-        durationInFrames={V3_DEMO_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-V3-Landing-Loop-12"
-        component={V3LandingLoop12}
-        durationInFrames={V3_LOOP_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
+      <Composition id="SahelFlow-V3-Hero-65" component={V3Hero65} durationInFrames={V3_HERO_DURATION} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-V3-Social-30" component={V3Social30} durationInFrames={V3_SOCIAL_DURATION} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-V3-Vertical-15" component={V3Vertical15} durationInFrames={V3_VERTICAL_DURATION} fps={FPS} width={1080} height={1920} />
+      <Composition id="SahelFlow-V3-Demo-120" component={V3Demo120} durationInFrames={V3_DEMO_DURATION} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-V3-Landing-Loop-12" component={V3LandingLoop12} durationInFrames={V3_LOOP_DURATION} fps={FPS} width={1920} height={1080} />
     </Folder>
     <Folder name="SahelFlow-Premium-V2">
-      <Composition
-        id="SahelFlow-Premium-Launch-60"
-        component={PremiumLaunch60}
-        durationInFrames={PREMIUM_LAUNCH_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-Premium-Social-30"
-        component={PremiumSocial30}
-        durationInFrames={PREMIUM_SOCIAL_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-Premium-Vertical-15"
-        component={PremiumVertical15}
-        durationInFrames={PREMIUM_VERTICAL_DURATION}
-        fps={FPS}
-        width={1080}
-        height={1920}
-      />
-      <Composition
-        id="SahelFlow-Premium-Demo-90"
-        component={PremiumDemo90}
-        durationInFrames={PREMIUM_DEMO_DURATION}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
+      <Composition id="SahelFlow-Premium-Launch-60" component={PremiumLaunch60} durationInFrames={PREMIUM_LAUNCH_DURATION} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-Premium-Social-30" component={PremiumSocial30} durationInFrames={PREMIUM_SOCIAL_DURATION} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-Premium-Vertical-15" component={PremiumVertical15} durationInFrames={PREMIUM_VERTICAL_DURATION} fps={FPS} width={1080} height={1920} />
+      <Composition id="SahelFlow-Premium-Demo-90" component={PremiumDemo90} durationInFrames={PREMIUM_DEMO_DURATION} fps={FPS} width={1920} height={1080} />
     </Folder>
     <Folder name="SahelFlow-Legacy-V1">
-      <Composition
-        id="SahelFlow-Launch-60"
-        component={LaunchFilm60}
-        durationInFrames={60 * FPS}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-Social-30"
-        component={SocialCut30}
-        durationInFrames={30 * FPS}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
-      <Composition
-        id="SahelFlow-Vertical-15"
-        component={VerticalCut15}
-        durationInFrames={15 * FPS}
-        fps={FPS}
-        width={1080}
-        height={1920}
-      />
-      <Composition
-        id="SahelFlow-Demo-90"
-        component={DemoFilm90}
-        durationInFrames={90 * FPS}
-        fps={FPS}
-        width={1920}
-        height={1080}
-      />
+      <Composition id="SahelFlow-Launch-60" component={LaunchFilm60} durationInFrames={60 * FPS} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-Social-30" component={SocialCut30} durationInFrames={30 * FPS} fps={FPS} width={1920} height={1080} />
+      <Composition id="SahelFlow-Vertical-15" component={VerticalCut15} durationInFrames={15 * FPS} fps={FPS} width={1080} height={1920} />
+      <Composition id="SahelFlow-Demo-90" component={DemoFilm90} durationInFrames={90 * FPS} fps={FPS} width={1920} height={1080} />
     </Folder>
   </>
 );
