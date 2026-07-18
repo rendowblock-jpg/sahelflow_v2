@@ -90,6 +90,14 @@ export const SceneCopy: React.FC<{
   );
 };
 
+const captureTrimFrames: Record<string, number> = {
+  'dashboard-fr.webm': 170,
+  'orders-fr.webm': 110,
+  'deliveries-fr.webm': 105,
+  'automations-en.webm': 55,
+  'inbox-ar.webm': 190,
+};
+
 type CaptureFrameProps = {
   asset: string;
   video?: boolean;
@@ -112,8 +120,9 @@ export const CaptureFrame: React.FC<CaptureFrameProps> = ({asset, video = false,
   const enter = springEnter(frame, fps, entrance, 20);
   const driftX = Math.sin((frame + asset.length * 3) * 0.012) * 5;
   const driftY = Math.cos((frame + asset.length * 7) * 0.009) * 4;
+  const effectiveStartFrom = video ? Math.max(startFrom, captureTrimFrames[asset] ?? 0) : startFrom;
   const content = video ? (
-    <OffthreadVideo src={staticFile(`captures/${asset}`)} startFrom={startFrom} muted={muted} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+    <OffthreadVideo src={staticFile(`captures/${asset}`)} startFrom={effectiveStartFrom} muted={muted} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
   ) : (
     <Img src={staticFile(`captures/${asset}`)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
   );
