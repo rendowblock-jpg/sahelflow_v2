@@ -1,0 +1,108 @@
+name: Remotion V3 Production
+
+on:
+  pull_request:
+    paths:
+      - "marketing/remotion/**"
+      - ".github/workflows/remotion-v3-production.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture-and-render:
+    name: Capture real product and render V3 campaign
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATABASE_URL: file:${{ github.workspace }}/data/shops/dev.db
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      TZ: Africa/Algiers
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install SahelFlow dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Prepare campaign database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/shops
+          bunx prisma migrate deploy
+          bun run seed:rich
+
+      - name: Install Chromium for product capture
+        run: bunx playwright install --with-deps chromium
+
+      - name: Start SahelFlow capture server
+        shell: bash
+        run: |
+          set -euo pipefail
+          (bun run dev:web > /tmp/sahelflow-v3-server.log 2>&1 & echo $! > /tmp/sahelflow-v3-server.pid)
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/sahelflow-v3-server.log
+          exit 1
+
+      - name: Capture authentic SahelFlow product surfaces
+        run: bun marketing/remotion/scripts/capture-product.ts
+
+      - name: Upload product capture evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v3-product-captures
+          path: marketing/remotion/public/captures
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Install V3 Remotion workspace
+        working-directory: marketing/remotion
+        run: npm install --no-audit --no-fund
+
+      - name: Validate V3 campaign source
+        working-directory: marketing/remotion
+        run: npm run typecheck
+
+      - name: Render V3 campaign masters
+        working-directory: marketing/remotion
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run render:v3:all 2>&1 | tee v3-render.log
+
+      - name: Upload V3 render diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v3-render-diagnostics
+          path: |
+            marketing/remotion/v3-render.log
+            /tmp/sahelflow-v3-server.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Upload V3 campaign masters
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v3-campaign-masters
+          path: marketing/remotion/renders/v3/*.mp4
+          if-no-files-found: error
+          retention-days: 14
