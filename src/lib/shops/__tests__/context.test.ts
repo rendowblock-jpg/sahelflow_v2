@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolve } from "node:path";
 import { processShopContext } from "../context";
 
 describe("process ShopContext", () => {
@@ -21,7 +22,7 @@ describe("process ShopContext", () => {
     process.env.SF_ACTIVE_SHOP_ID = "shop-a";
     process.env.SF_REGISTRY_REVISION = "12";
     process.env.SF_MIGRATION_SET_SHA256 = "a".repeat(64);
-    process.env.DATABASE_URL = "file:C:\\data\\shops\\shop-a.db";
+    process.env.DATABASE_URL = `file:${resolve("shop-context", "shop-a.db")}`;
 
     const context = processShopContext();
 
