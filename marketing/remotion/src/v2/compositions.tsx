@@ -30,17 +30,20 @@ const Transition: React.FC<{
   type: 'fade' | 'slide-left' | 'slide-right' | 'wipe-left' | 'wipe-bottom';
   duration?: number;
 }> = ({type, duration = 18}) => {
-  const presentation =
-    type === 'fade'
-      ? fade()
-      : type === 'slide-left'
-        ? slide({direction: 'from-right'})
-        : type === 'slide-right'
-          ? slide({direction: 'from-left'})
-          : type === 'wipe-bottom'
-            ? wipe({direction: 'from-bottom'})
-            : wipe({direction: 'from-right'});
-  return <TransitionSeries.Transition presentation={presentation} timing={linearTiming({durationInFrames: duration})} />;
+  const timing = linearTiming({durationInFrames: duration});
+  if (type === 'fade') {
+    return <TransitionSeries.Transition presentation={fade()} timing={timing} />;
+  }
+  if (type === 'slide-left') {
+    return <TransitionSeries.Transition presentation={slide({direction: 'from-right'})} timing={timing} />;
+  }
+  if (type === 'slide-right') {
+    return <TransitionSeries.Transition presentation={slide({direction: 'from-left'})} timing={timing} />;
+  }
+  if (type === 'wipe-bottom') {
+    return <TransitionSeries.Transition presentation={wipe({direction: 'from-bottom'})} timing={timing} />;
+  }
+  return <TransitionSeries.Transition presentation={wipe({direction: 'from-right'})} timing={timing} />;
 };
 
 const PremiumAudio: React.FC<{src: string; volume?: number}> = ({src, volume = 0.56}) => (
