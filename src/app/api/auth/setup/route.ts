@@ -30,19 +30,24 @@ export const POST = withErrorHandler(async (req: Request) => {
   const { secret } = await setupAuth(parsed.data.pin);
   process.env.AUTH_SECRET = secret;
 
-  try {
-    const { writeFile, readFile, mkdir } = await import("node:fs/promises");
-    const { existsSync } = await import("node:fs");
-    const { join } = await import("node:path");
-    const envPath = join(process.cwd(), ".env.local");
-    const existing = existsSync(envPath) ? await readFile(envPath, "utf-8") : "";
-    const cleaned = existing.replace(/^AUTH_SECRET=.*$/gm, "").trim();
-    const newContent = (cleaned ? cleaned + "\n" : "") + `AUTH_SECRET=${secret}\n`;
-    await writeFile(envPath, newContent, { encoding: "utf-8" });
-    const dataDir = join(process.cwd(), "data");
-    await mkdir(dataDir, { recursive: true });
-    await writeFile(join(dataDir, "auth-secret"), secret, { mode: 0o600, encoding: "utf-8" });
-  } catch { /* non-critical */ }
+  const persistDevelopmentSecret =
+    process.env.NODE_ENV === "development" &&
+    process.env.VITEST !== "true" &&
+    !process.env.SF_TEST_ROOT;
+  if (persistDevelopmentSecret) {
+    try {
+      const { writeFile, readFile } = await import("node:fs/promises");
+      const { existsSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const envPath = join(process.cwd(), ".env.local");
+      const existing = existsSync(envPath) ? await readFile(envPath, "utf-8") : "";
+      const cleaned = existing.replace(/^AUTH_SECRET=.*$/gm, "").trim();
+      const newContent = (cleaned ? cleaned + "\n" : "") + `AUTH_SECRET=${secret}\n`;
+      await writeFile(envPath, newContent, { encoding: "utf-8" });
+    } catch {
+      // The database remains canonical if the development convenience file cannot be written.
+    }
+  }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   await createSession(ip);
