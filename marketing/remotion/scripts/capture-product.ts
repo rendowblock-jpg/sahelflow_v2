@@ -1,5 +1,5 @@
 import {chromium, type Browser, type BrowserContext, type Page} from '@playwright/test';
-import {mkdir, rm, copyFile, writeFile} from 'node:fs/promises';
+import {copyFile, mkdir, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
 const baseURL = process.env.SAHELFLOW_CAPTURE_BASE_URL ?? 'http://127.0.0.1:3000';
@@ -18,6 +18,12 @@ type CaptureSpec = {
   viewport?: {width: number; height: number};
   video?: boolean;
   dwellMs?: number;
+};
+
+type ConversationProbe = {
+  status: number;
+  count: number;
+  firstName: string | null;
 };
 
 const captures: CaptureSpec[] = [
@@ -74,6 +80,7 @@ async function animateProduct(page: Page, durationMs: number) {
   const main = page.locator('#main-content');
   const maxScroll = await main.evaluate((element) => Math.max(0, element.scrollHeight - element.clientHeight));
   const target = Math.min(maxScroll, 520);
+
   if (target > 0) {
     for (let i = 0; i <= 36; i++) {
       const eased = 1 - Math.pow(1 - i / 36, 3);
@@ -102,6 +109,7 @@ async function authenticate(browser: Browser) {
   await setCaptureState(context, 'fr');
   const page = await context.newPage();
   await page.goto(`${baseURL}/login`, {waitUntil: 'domcontentloaded', timeout: 60_000});
+
   const result = await page.evaluate(async () => {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
@@ -110,36 +118,90 @@ async function authenticate(browser: Browser) {
     });
     return {ok: response.ok, status: response.status, body: await response.text()};
   });
+
   if (!result.ok) {
     throw new Error(`SahelFlow capture login failed (${result.status}): ${result.body}`);
   }
+
   await context.storageState({path: authStatePath});
   await context.close();
 }
 
-async function prepareProductState(page: Page, spec: CaptureSpec) {
-  if (spec.name !== 'inbox-ar') return;
+async function forceSeededInbox(page: Page) {
+  await page.route('**/api/whatsapp/ws-token', async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({token: null, error: 'Capture mode: seeded fallback'}),
+    });
+  });
+  await page.route('**/api/whatsapp/chats**', async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({chats: []}),
+    });
+  });
+}
 
-  const probe = await page.evaluate(async () => {
+async function prepareInbox(page: Page) {
+  const probe = await page.evaluate(async (): Promise<ConversationProbe> => {
     const response = await fetch('/api/conversations');
-    const payload = await response.json().catch(() => null) as {
-      conversations?: Array<{contactName?: string | null}>;
+    const payload = (await response.json().catch(() => null)) as {
+      conversations?: Array<{contactName?: string}>;
     } | null;
-    const firstName = payload?.conversations?.find((conversation) => conversation.contactName)?.contactName ?? null;
     return {
       status: response.status,
       count: payload?.conversations?.length ?? 0,
-      firstName,
+      firstName: payload?.conversations?.[0]?.contactName ?? null,
     };
   });
-  console.log(`Inbox seeded conversation probe: status=${probe.status} count=${probe.count} first=${probe.firstName ?? 'none'}`);
 
-  if (probe.count > 0 && probe.firstName) {
-    const firstConversation = page.locator('button').filter({hasText: probe.firstName}).first();
-    await firstConversation.waitFor({state: 'visible', timeout: 20_000});
-    await firstConversation.click();
-    await page.waitForTimeout(1800);
+  console.log(
+    `Inbox seeded conversation probe: status=${probe.status} count=${probe.count} first=${probe.firstName ?? 'none'}`,
+  );
+
+  if (probe.count === 0 || !probe.firstName) {
+    throw new Error('Inbox capture requires at least one seeded conversation.');
   }
+
+  await page.waitForFunction(
+    (name) => document.body.innerText.includes(String(name)),
+    probe.firstName,
+    {timeout: 25_000},
+  );
+
+  const clickResult = await page.evaluate((name) => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const target = buttons.find((button) => normalize(button.textContent ?? '').includes(String(name)));
+
+    if (!target) {
+      return {
+        clicked: false,
+        candidates: buttons
+          .map((button) => normalize(button.textContent ?? ''))
+          .filter(Boolean)
+          .slice(0, 24),
+      };
+    }
+
+    target.click();
+    return {clicked: true, text: normalize(target.textContent ?? ''), candidates: []};
+  }, probe.firstName);
+
+  console.log(`Inbox conversation click result: ${JSON.stringify(clickResult)}`);
+
+  if (!clickResult.clicked) {
+    throw new Error(`Could not select seeded inbox conversation. Candidates: ${clickResult.candidates.join(' | ')}`);
+  }
+
+  await page.waitForFunction(
+    (name) => Array.from(document.querySelectorAll('h2')).some((heading) => heading.textContent?.includes(String(name))),
+    probe.firstName,
+    {timeout: 20_000},
+  );
+  await page.waitForTimeout(2200);
 }
 
 async function captureOne(browser: Browser, spec: CaptureSpec) {
@@ -156,11 +218,14 @@ async function captureOne(browser: Browser, spec: CaptureSpec) {
     reducedMotion: 'no-preference',
     recordVideo: spec.video ? {dir: videoDir, size: viewport} : undefined,
   });
+
   await setCaptureState(context, spec.locale);
   const page = await context.newPage();
+  if (spec.name === 'inbox-ar') await forceSeededInbox(page);
+
   await page.goto(`${baseURL}${spec.route}`, {waitUntil: 'domcontentloaded', timeout: 60_000});
   await waitForProduct(page);
-  await prepareProductState(page, spec);
+  if (spec.name === 'inbox-ar') await prepareInbox(page);
 
   await page.screenshot({
     path: path.join(outputDir, `${spec.name}.png`),
@@ -170,9 +235,7 @@ async function captureOne(browser: Browser, spec: CaptureSpec) {
     scale: 'css',
   });
 
-  if (spec.video) {
-    await animateProduct(page, spec.dwellMs ?? 4800);
-  }
+  if (spec.video) await animateProduct(page, spec.dwellMs ?? 4800);
 
   const recording = page.video();
   await context.close();
@@ -204,18 +267,22 @@ async function main() {
 
   await writeFile(
     path.join(outputDir, 'manifest.json'),
-    JSON.stringify({
-      capturedAt: new Date().toISOString(),
-      baseURL,
-      captures: captures.map(({name, route, locale, viewport, video}) => ({
-        name,
-        route,
-        locale,
-        viewport: viewport ?? desktop,
-        screenshot: `${name}.png`,
-        video: video ? `${name}.webm` : null,
-      })),
-    }, null, 2),
+    JSON.stringify(
+      {
+        capturedAt: new Date().toISOString(),
+        baseURL,
+        captures: captures.map(({name, route, locale, viewport, video}) => ({
+          name,
+          route,
+          locale,
+          viewport: viewport ?? desktop,
+          screenshot: `${name}.png`,
+          video: video ? `${name}.webm` : null,
+        })),
+      },
+      null,
+      2,
+    ),
   );
 
   await rm(authStatePath, {force: true});
