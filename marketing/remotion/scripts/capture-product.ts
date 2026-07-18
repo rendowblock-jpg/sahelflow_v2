@@ -48,7 +48,6 @@ async function setCaptureState(context: BrowserContext, locale: Locale) {
       name: 'sahelflow-locale',
       value: locale,
       url: baseURL,
-      path: '/',
       sameSite: 'Lax',
     },
   ]);
