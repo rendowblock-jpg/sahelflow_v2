@@ -18,6 +18,7 @@ jobs:
     env:
       DATABASE_URL: file:${{ github.workspace }}/data/shops/dev.db
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SAHELFLOW_CAPTURE_BASE_URL: http://localhost:3000
       TZ: Africa/Algiers
     steps:
       - name: Checkout repository
