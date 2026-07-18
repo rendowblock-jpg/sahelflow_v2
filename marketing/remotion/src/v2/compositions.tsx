@@ -26,25 +26,13 @@ export const PREMIUM_SOCIAL_DURATION = 900;
 export const PREMIUM_VERTICAL_DURATION = 450;
 export const PREMIUM_DEMO_DURATION = 2700;
 
-const Transition: React.FC<{
-  type: 'fade' | 'slide-left' | 'slide-right' | 'wipe-left' | 'wipe-bottom';
-  duration?: number;
-}> = ({type, duration = 18}) => {
-  const timing = linearTiming({durationInFrames: duration});
-  if (type === 'fade') {
-    return <TransitionSeries.Transition presentation={fade()} timing={timing} />;
-  }
-  if (type === 'slide-left') {
-    return <TransitionSeries.Transition presentation={slide({direction: 'from-right'})} timing={timing} />;
-  }
-  if (type === 'slide-right') {
-    return <TransitionSeries.Transition presentation={slide({direction: 'from-left'})} timing={timing} />;
-  }
-  if (type === 'wipe-bottom') {
-    return <TransitionSeries.Transition presentation={wipe({direction: 'from-bottom'})} timing={timing} />;
-  }
-  return <TransitionSeries.Transition presentation={wipe({direction: 'from-right'})} timing={timing} />;
-};
+const premiumTiming = linearTiming({durationInFrames: 18});
+const socialTiming = linearTiming({durationInFrames: 15});
+const fadePresentation = fade();
+const slideFromRight = slide({direction: 'from-right'});
+const slideFromLeft = slide({direction: 'from-left'});
+const wipeFromRight = wipe({direction: 'from-right'});
+const wipeFromBottom = wipe({direction: 'from-bottom'});
 
 const PremiumAudio: React.FC<{src: string; volume?: number}> = ({src, volume = 0.56}) => (
   <Audio src={staticFile(`audio/${src}`)} volume={volume} />
@@ -55,21 +43,21 @@ export const PremiumLaunch60: React.FC = () => (
     <PremiumAudio src="premium-launch-60.wav" volume={0.58} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={150}><PremiumColdOpen /></TransitionSeries.Sequence>
-      <Transition type="wipe-left" />
+      <TransitionSeries.Transition presentation={wipeFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={190}><PremiumBrandReveal /></TransitionSeries.Sequence>
-      <Transition type="fade" />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={270}><PremiumCommandCenter /></TransitionSeries.Sequence>
-      <Transition type="slide-left" />
+      <TransitionSeries.Transition presentation={slideFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={260}><PremiumOrders /></TransitionSeries.Sequence>
-      <Transition type="wipe-bottom" />
+      <TransitionSeries.Transition presentation={wipeFromBottom} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={240}><PremiumInbox /></TransitionSeries.Sequence>
-      <Transition type="slide-right" />
+      <TransitionSeries.Transition presentation={slideFromLeft} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={230}><PremiumDelivery /></TransitionSeries.Sequence>
-      <Transition type="wipe-left" />
+      <TransitionSeries.Transition presentation={wipeFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={220}><PremiumAutomation /></TransitionSeries.Sequence>
-      <Transition type="fade" />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={220}><PremiumLocalFirst /></TransitionSeries.Sequence>
-      <Transition type="slide-left" />
+      <TransitionSeries.Transition presentation={slideFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={164}><PremiumFinale /></TransitionSeries.Sequence>
     </TransitionSeries>
   </AbsoluteFill>
@@ -80,17 +68,17 @@ export const PremiumSocial30: React.FC = () => (
     <PremiumAudio src="premium-social-30.wav" volume={0.6} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={90}><PremiumColdOpen /></TransitionSeries.Sequence>
-      <Transition type="wipe-left" duration={15} />
+      <TransitionSeries.Transition presentation={wipeFromRight} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={110}><PremiumBrandReveal /></TransitionSeries.Sequence>
-      <Transition type="fade" duration={15} />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={160}><PremiumCommandCenter /></TransitionSeries.Sequence>
-      <Transition type="slide-left" duration={15} />
+      <TransitionSeries.Transition presentation={slideFromRight} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={160}><PremiumOrders /></TransitionSeries.Sequence>
-      <Transition type="wipe-bottom" duration={15} />
+      <TransitionSeries.Transition presentation={wipeFromBottom} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={150}><PremiumInbox /></TransitionSeries.Sequence>
-      <Transition type="slide-right" duration={15} />
+      <TransitionSeries.Transition presentation={slideFromLeft} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={150}><PremiumAutomation /></TransitionSeries.Sequence>
-      <Transition type="fade" duration={15} />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={170}><PremiumFinale /></TransitionSeries.Sequence>
     </TransitionSeries>
   </AbsoluteFill>
@@ -101,13 +89,13 @@ export const PremiumVertical15: React.FC = () => (
     <PremiumAudio src="premium-vertical-15.wav" volume={0.62} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={75}><VerticalHook /></TransitionSeries.Sequence>
-      <Transition type="wipe-bottom" duration={15} />
+      <TransitionSeries.Transition presentation={wipeFromBottom} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={100}><VerticalDashboard /></TransitionSeries.Sequence>
-      <Transition type="slide-left" duration={15} />
+      <TransitionSeries.Transition presentation={slideFromRight} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={110}><VerticalOrderMove /></TransitionSeries.Sequence>
-      <Transition type="fade" duration={15} />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={100}><VerticalLanguageFinale /></TransitionSeries.Sequence>
-      <Transition type="wipe-left" duration={15} />
+      <TransitionSeries.Transition presentation={wipeFromRight} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={125}><PremiumFinale compact /></TransitionSeries.Sequence>
     </TransitionSeries>
   </AbsoluteFill>
@@ -118,25 +106,25 @@ export const PremiumDemo90: React.FC = () => (
     <PremiumAudio src="premium-demo-90.wav" volume={0.52} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={180}><PremiumColdOpen /></TransitionSeries.Sequence>
-      <Transition type="wipe-left" />
+      <TransitionSeries.Transition presentation={wipeFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={220}><PremiumBrandReveal /></TransitionSeries.Sequence>
-      <Transition type="fade" />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={330}><PremiumCommandCenter demo /></TransitionSeries.Sequence>
-      <Transition type="slide-left" />
+      <TransitionSeries.Transition presentation={slideFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={330}><PremiumOrders demo /></TransitionSeries.Sequence>
-      <Transition type="wipe-bottom" />
+      <TransitionSeries.Transition presentation={wipeFromBottom} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={300}><PremiumInbox /></TransitionSeries.Sequence>
-      <Transition type="slide-right" />
+      <TransitionSeries.Transition presentation={slideFromLeft} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={300}><PremiumDelivery /></TransitionSeries.Sequence>
-      <Transition type="wipe-left" />
+      <TransitionSeries.Transition presentation={wipeFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={300}><PremiumAutomation /></TransitionSeries.Sequence>
-      <Transition type="fade" />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={260}><PremiumLocalFirst /></TransitionSeries.Sequence>
-      <Transition type="slide-left" />
+      <TransitionSeries.Transition presentation={slideFromRight} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={240}><PremiumLanguage /></TransitionSeries.Sequence>
-      <Transition type="wipe-bottom" />
+      <TransitionSeries.Transition presentation={wipeFromBottom} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={220}><PremiumCommandCenter demo /></TransitionSeries.Sequence>
-      <Transition type="fade" />
+      <TransitionSeries.Transition presentation={fadePresentation} timing={premiumTiming} />
       <TransitionSeries.Sequence durationInFrames={200}><PremiumFinale /></TransitionSeries.Sequence>
     </TransitionSeries>
   </AbsoluteFill>
