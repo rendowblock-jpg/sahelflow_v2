@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "marketing/remotion/**"
+      - "marketing/remotion/src/v2/**"
+      - "marketing/remotion/src/components.tsx"
+      - "marketing/remotion/src/compositions.tsx"
+      - "marketing/remotion/src/theme.ts"
+      - "marketing/remotion/scripts/generate-score.mjs"
       - ".github/workflows/remotion-preview.yml"
 
 permissions:
