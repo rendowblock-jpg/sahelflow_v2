@@ -1,0 +1,107 @@
+name: Remotion V4 Director Cut
+
+on:
+  pull_request:
+    paths:
+      - "marketing/remotion/src/v4/**"
+      - "marketing/remotion/scripts/generate-v4-score.mjs"
+      - "marketing/remotion/src/Root.tsx"
+      - "marketing/remotion/package.json"
+      - ".github/workflows/remotion-v4-director.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: file:${{ github.workspace }}/data/shops/dev.db
+  SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  SAHELFLOW_CAPTURE_BASE_URL: http://localhost:3000
+  TZ: Africa/Algiers
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: |
+          mkdir -p data/shops
+          bunx prisma migrate deploy
+          bun run seed:rich
+      - run: bunx playwright install --with-deps chromium
+      - run: |
+          (bun run dev:web > /tmp/sahelflow-v4-server.log 2>&1 &)
+          for attempt in $(seq 1 90); do
+            curl -fsS http://127.0.0.1:3000/api/health >/dev/null && exit 0
+            sleep 2
+          done
+          cat /tmp/sahelflow-v4-server.log
+          exit 1
+      - run: bun marketing/remotion/scripts/capture-product.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v4-captures
+          path: marketing/remotion/public/captures
+          retention-days: 14
+
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing/remotion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+
+  render:
+    needs: [capture, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: vertical
+            script: render:v4:vertical
+            output: renders/v4/sahelflow-v4-vertical-12.mp4
+          - key: social
+            script: render:v4:social
+            output: renders/v4/sahelflow-v4-social-20.mp4
+          - key: hero
+            script: render:v4:hero
+            output: renders/v4/sahelflow-v4-hero-48.mp4
+          - key: demo
+            script: render:v4:demo
+            output: renders/v4/sahelflow-v4-demo-75.mp4
+          - key: loop
+            script: render:v4:loop
+            output: renders/v4/sahelflow-v4-landing-loop-8.mp4
+    defaults:
+      run:
+        working-directory: marketing/remotion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: sahelflow-v4-captures
+          path: marketing/remotion/public/captures
+      - run: npm run "${{ matrix.script }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v4-${{ matrix.key }}
+          path: marketing/remotion/${{ matrix.output }}
+          retention-days: 14
