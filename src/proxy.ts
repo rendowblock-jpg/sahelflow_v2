@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { verifySessionToken } from "@/lib/auth/crypto";
+import { constantTimeEqual } from "@/lib/auth/constant-time";
+import {
+  RUNTIME_BOOTSTRAP_PATH,
+  RUNTIME_COOKIE,
+  RUNTIME_READY_PATH,
+} from "@/lib/runtime-auth";
 
 /**
  * Auth proxy (Next 16 middleware entry) — protects all /api/* (except the
@@ -25,6 +31,43 @@ import { verifySessionToken } from "@/lib/auth/crypto";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const secret = process.env.AUTH_SECRET;
+
+  // The desktop supervisor probes this before a user session exists. It has
+  // its own independent per-launch bearer credential and is validated again
+  // inside the route. Keep this before setup mode so a missing AUTH_SECRET
+  // never turns runtime readiness into an unauthenticated endpoint.
+  if (pathname === RUNTIME_READY_PATH) {
+    const expected = process.env.SF_RUNTIME_TOKEN;
+    const authorization = request.headers.get("authorization") ?? "";
+    const supplied = /^Bearer\s+([0-9a-f]{64})$/i.exec(authorization)?.[1];
+    if (!expected || !supplied || !constantTimeEqual(supplied, expected)) {
+      return NextResponse.json(
+        { status: "rejected", code: "RUNTIME_CREDENTIAL_REJECTED" },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // The bootstrap route exchanges the one-time URL credential for an
+  // HttpOnly launch cookie and performs its own constant-time validation.
+  if (pathname === RUNTIME_BOOTSTRAP_PATH) {
+    return NextResponse.next();
+  }
+
+  // In a packaged launch, runtime authentication precedes setup mode, public
+  // routes, and user authentication. Development remains unchanged when the
+  // desktop did not inject a launch token.
+  const runtimeAppToken = process.env.SF_RUNTIME_APP_TOKEN;
+  if (runtimeAppToken) {
+    const supplied = request.cookies.get(RUNTIME_COOKIE)?.value;
+    if (!supplied || !constantTimeEqual(supplied, runtimeAppToken)) {
+      return NextResponse.json(
+        { status: "rejected", code: "RUNTIME_SESSION_REQUIRED" },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  }
 
   // Setup mode — no secret yet, allow everything
   if (!secret) {

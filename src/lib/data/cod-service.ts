@@ -10,7 +10,7 @@
  * orders (reconciled), and uncollected orders (delivery failed/returned).
  */
 import "server-only";
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { recordOrderChange } from "./order-change-service";
 import { logAudit } from "@/lib/audit";
 
@@ -25,7 +25,12 @@ import { logAudit } from "@/lib/audit";
 const COD_COLLECTIBLE_STATUSES = ["shipped", "delivered"] as const;
 
 /** Mark an order's COD as collected (courier picked up the cash). */
-export async function markCodCollected(orderId: string, actor = "user") {
+export async function markCodCollected(
+  context: ServiceContext,
+  orderId: string,
+  actor = "user",
+) {
+  const db = context.prisma;
   // SV-M4: wrap the read + check + update + ledger in a $transaction so
   // two concurrent calls (e.g. double-click from the UI + a webhook) don't
   // both pass the idempotency check and both write a duplicate ledger entry.
@@ -88,7 +93,7 @@ export async function markCodCollected(orderId: string, actor = "user") {
 
     // Record the ledger entry INSIDE the tx (F-H2 pattern: if the tx rolls
     // back, the ledger entry rolls back too — no orphan rows).
-    await recordOrderChange({
+    await recordOrderChange(context, {
       orderId,
       actionType: "cod_collected",
       actor,
@@ -99,7 +104,7 @@ export async function markCodCollected(orderId: string, actor = "user") {
     return order;
   });
 
-  void logAudit({
+  void logAudit(context, {
     action: "order.cod.collected",
     entity: "order",
     entityId: orderId,
@@ -111,7 +116,13 @@ export async function markCodCollected(orderId: string, actor = "user") {
 }
 
 /** Mark an order's COD as remitted (courier paid the seller). */
-export async function markCodRemitted(orderId: string, remittanceRef: string, actor = "user") {
+export async function markCodRemitted(
+  context: ServiceContext,
+  orderId: string,
+  remittanceRef: string,
+  actor = "user",
+) {
+  const db = context.prisma;
   // SV-M4: same transactional pattern as markCodCollected — serialize the
   // idempotency check + update + ledger so concurrent calls don't produce
   // phantom duplicate ledger rows.
@@ -159,7 +170,7 @@ export async function markCodRemitted(orderId: string, remittanceRef: string, ac
       select: { id: true, orderNumber: true, totalPrice: true, codRemitted: true, codRemittedAt: true, codRemittanceRef: true },
     });
 
-    await recordOrderChange({
+    await recordOrderChange(context, {
       orderId,
       actionType: "cod_remitted",
       actor,
@@ -170,7 +181,7 @@ export async function markCodRemitted(orderId: string, remittanceRef: string, ac
     return order;
   });
 
-  void logAudit({
+  void logAudit(context, {
     action: "order.cod.remitted",
     entity: "order",
     entityId: orderId,
@@ -182,7 +193,13 @@ export async function markCodRemitted(orderId: string, remittanceRef: string, ac
 }
 
 /** Bulk-mark COD as remitted (for the reconciliation page). */
-export async function bulkMarkCodRemitted(orderIds: string[], remittanceRef: string, actor = "user") {
+export async function bulkMarkCodRemitted(
+  context: ServiceContext,
+  orderIds: string[],
+  remittanceRef: string,
+  actor = "user",
+) {
+  const db = context.prisma;
   // Session 30 (AUDIT-2 A2): only update + ledger the orders that actually
   // need it (collected=true, remitted=false). Previously the ledger loop
   // fired for every input id, including ones skipped by the updateMany filter
@@ -219,7 +236,7 @@ export async function bulkMarkCodRemitted(orderIds: string[], remittanceRef: str
   // batch dispatch completing.
   const ledgerResults = await Promise.allSettled(
     affectedIds.map((id) =>
-      recordOrderChange({
+      recordOrderChange(context, {
         orderId: id,
         actionType: "cod_remitted",
         actor,
@@ -244,7 +261,8 @@ export async function bulkMarkCodRemitted(orderIds: string[], remittanceRef: str
 }
 
 /** Get COD reconciliation summary (for the accounting page). */
-export async function getCodReconciliationSummary() {
+export async function getCodReconciliationSummary(context: ServiceContext) {
+  const db = context.prisma;
   const [delivered, collected, remitted, uncollected] = await Promise.all([
     db.order.count({ where: { status: "delivered", deletedAt: null } }),
     db.order.count({ where: { codCollected: true, deletedAt: null } }),

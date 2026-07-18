@@ -1,13 +1,36 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { PrismaClient } from "@prisma/client";
-import { setSetting, getSetting, getAllSettings, deleteSetting } from "../index";
+import {
+  setSetting as setSettingForShop,
+  getSetting as getSettingForShop,
+  getAllSettings as getAllSettingsForShop,
+  deleteSetting as deleteSettingForShop,
+} from "../index";
 import { SahelFlowError } from "@/types/errors";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 
 // Use the same test DB as the service-layer tests. Set the master key for PII
 // encryption (required by db.ts).
 process.env.SF_MASTER_KEY = "test-master-key-for-pii-encryption-32bytes!";
 
 const db = new PrismaClient();
+const context = { prisma: db as never, shop: TEST_SHOP_CONTEXT };
+
+function setSetting(key: string, value: string | number | boolean) {
+  return setSettingForShop(context, key, value);
+}
+
+function getSetting(key: string) {
+  return getSettingForShop(context, key);
+}
+
+function getAllSettings() {
+  return getAllSettingsForShop(context);
+}
+
+function deleteSetting(key: string) {
+  return deleteSettingForShop(context, key);
+}
 
 async function cleanSettings() {
   await db.setting.deleteMany({});

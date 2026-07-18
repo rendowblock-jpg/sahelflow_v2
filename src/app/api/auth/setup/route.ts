@@ -3,6 +3,7 @@ import { z } from "zod";
 import { isAuthSetup, setupAuth, createSession, auditLog } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { seedWilayaRiskProfiles } from "@/lib/wilaya-risk/engine";
+import { db, shopContext } from "@/lib/db";
 
 const SetupSchema = z.object({
   pin: z.string().min(8, "PIN must be at least 8 characters").max(32, "PIN too long"),
@@ -51,7 +52,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   // immediately on a fresh install (was: silently disabled until manual
   // ?seed=true was called from the risk page).
   try {
-    const result = await seedWilayaRiskProfiles();
+    const result = await seedWilayaRiskProfiles({ prisma: db, shop: shopContext });
     void auditLog("risk.wilaya.seeded", { seeded: result.seeded, skipped: result.skipped }, ip);
   } catch {
     // Non-critical — the risk engine works without wilaya profiles (just

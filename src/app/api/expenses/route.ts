@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { createExpenseSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
@@ -60,8 +60,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const data = createExpenseSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
-  const expense = await db.expense.create({
+  const expense = await context.prisma.expense.create({
     data: {
       category: data.category,
       amount: data.amount,

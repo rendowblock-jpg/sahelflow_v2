@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { NotFoundError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
@@ -55,6 +55,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = createReturnSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   // Verify the order exists
   const order = await db.order.findUnique({
@@ -76,7 +77,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     notesParts.push(input.notes);
   }
 
-  const record = await db.return.create({
+  const record = await context.prisma.return.create({
     data: {
       orderId: input.orderId,
       reason: input.reason,

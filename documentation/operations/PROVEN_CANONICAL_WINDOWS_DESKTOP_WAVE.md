@@ -1,7 +1,7 @@
 # Wave: Proven Canonical Windows Desktop
 
 > Started: 2026-07-17  
-> Current focus: Phase 1A fail-closed desktop startup, structured recovery state and authenticated runtime boundaries  
+> Current focus: Phase 1A/1B source completion for authenticated runtime, explicit shop authority and recoverable all-shop migration
 > Lead: Codex Desktop / ChatGPT continuity
 
 ## Founder intent and outcome
@@ -22,7 +22,7 @@ A seller can install one Windows candidate, start it reliably, open only the int
 
 ## Current reality
 
-Verified from branch `agent/proven-canonical-windows-desktop`, based on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`:
+The integrated evidence below remains tied to the original wave branch and Actions runs. The current local Windows implementation checkpoint is on `agent/authenticated-runtime-protocol` and is uncommitted, so its source/test observations do not yet constitute clean-checkout or artifact evidence:
 
 - GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
 - CI now binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
@@ -31,13 +31,27 @@ Verified from branch `agent/proven-canonical-windows-desktop`, based on `main` c
 - `sf-verify` retains complete failure output and CI uploads bounded diagnostic artifacts when Actions logs are truncated.
 - `sf-inventory` generates machine-readable clean-checkout inventories without becoming a competing permanent authority. Run #374 retained a seven-day artifact.
 - The retained inventory at commit `bf369cd5f091dd0d74bcbdac12f07ba00c8b2238` reports 691 tracked files, 38 Markdown files, 9 READMEs, 31 pages, 114 API routes, 33 commands, 125 components, 2 design-token source files, 142 CSS custom-property tokens, 31 Prisma models, 9 migration files, 97 test files, 35 provider/integration files and 13 sidecar/desktop resource files.
+- A 2026-07-18 dirty-tree diagnostic refresh reports 692 files, 36 commands and 14 sidecar/desktop resource files, with the other headline counts unchanged. Because it used `--allow-dirty`, it is drift information rather than retained clean-checkout evidence.
 - The earlier Rust smoke used debug `cargo check`, which excluded the actual packaged startup code behind `cfg(not(debug_assertions))`. CI now runs `cargo check --release` and retains the release compile log on failure.
 - Release-path compilation exposed a latent `tauri-plugin-shell` API misuse in the existing standalone-server command construction. The program and server argument are now passed through `.command(runtime).arg(server_path)`.
 - The first Phase 1A runtime patch is implemented: missing standalone resources, missing runtime, server spawn failure, supervisor-state failure and readiness timeout now abort Tauri setup; a timed-out server child is killed; the WhatsApp sidecar starts only after the mandatory application server is proven ready.
 - Run #378 passed the full Quality Gate and `cargo check --release` for the runtime patch.
+- The local source checkpoint replaces fixed packaged endpoints with OS-allocated loopback ports and independent per-launch runtime, application and sidecar credentials. Readiness verifies the exact process identity, instance header, app version, port, shop ID, positive registry revision, migration-set digest and required checks.
+- A hidden main window now navigates to either an authenticated bootstrap URL after readiness or a seller-visible blocked-startup document with redacted support diagnostics. One explicit supervisor state machine gives post-ready crashes and failed restart attempts a shared three-attempt 2/5/15-second budget, resets after 60 stable seconds, enters persistent-diagnostic crash-loop safe mode on exhaustion, and rejects restart/child registration after shutdown begins.
+- The local source checkpoint introduces process-bound `ShopContext`, an atomic versioned registry, exact database-file authority, all-shop migration planning, an external journal, verified snapshots, OS-backed installation locking, interrupted-run restoration and a migrated shop template.
+- The coordinator now writes `migration-journal/compatibility.json` atomically with per-shop current/migration-required/blocked state, applied and pending counts, inferred-legacy status, snapshot-space requirements and bounded failure detail. Blocked startup errors include the report path for support.
+- Legacy registry imports now start at revision 1 and non-empty revision-0 registries fail closed, matching the runtime readiness contract.
+- Domain `ServiceContext` and AI `ToolContext` carry explicit shop authority; the AI agent, storefront/import transactions and service-routed production writes pass the process-bound context. Audit, auth persistence, refunds, COD, phone reputation, conversations, extraction metrics, canned responses and the order-change ledger now use the same authority boundary. A test-only raw-Prisma escape remains explicit through `never`.
+- E-commerce sync now receives caller-supplied `ServiceContext`; its direct customer, order and integration mutations no longer select authority through a global database import.
+- Automation dispatch now carries the originating `ServiceContext` through trigger lookup, low-stock dispatch, logging, retries, customer tagging and automated order-status transitions.
+- The secret repository and e-commerce, delivery, Google Sheets, Gemini and extraction credential loaders now require explicit `ServiceContext`; packaged Google Sheets loading cannot fall back to a process working-directory credential file.
+- Route-local import, delivery, return, storefront, settings-reset, profile, expense, automation, license and AI-session mutations now root transactions and writes through an explicit `{ prisma, shop }` tuple. Production routes contain no direct global-`db` mutation or global-`db.$transaction` root. The 23 remaining raw-name mutation matches across eight service/tool files are verified aliases of `ServiceContext.prisma` or `ToolContext.db`.
+- Local verification on 2026-07-18: the full shared gate passed Prisma generation, migration deployment, TypeScript, ESLint and the complete Vitest suite in a fresh disposable sandbox; the consolidated write-path regression wave passed 198/198 tests across 13 suites, including delivery, returns/refunds, storefront/import creation, orders/COD, AI tools/consent, auth and cross-table integrity. `cargo test --all-features` passed all 20 tests, `cargo clippy --lib --all-features -- -D warnings` passed and `cargo check --release` passed without warnings.
+- Eleven coordinator tests now cover fresh installation, positive legacy revision, real OS lock behavior, rollback, interruption restoration, corrupt registry, divergent history with per-shop compatibility detail, deterministic low disk before snapshots, a zero-space no-op rerun, two-shop migration with row preservation, and a one-version-back representative fixture upgraded through the repository's actual packaged migrations.
+- The mechanically enumerated Phase 1B source write-authority and migration-coordinator sub-gates are met. Phase 1B is not complete because the consolidated checkpoint has not passed a fresh clean-checkout Quality Gate, and installed Windows migration/failure-injection plus a separately approved representative seller-data copy remain unproven.
 - No packaged Windows, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
 
-Session environment limitation observed on 2026-07-17: GitHub repository access and Actions execution are available, but this chat environment has no mounted checkout, cannot resolve `github.com` for `git clone`, and has no Windows runtime. Clean-checkout Linux evidence is therefore provided by retained Actions runs; installed Windows evidence still requires the implementation lab.
+The current session has the local Windows checkout and Rust/TypeScript test toolchain. No MSI was built, installed or launched, and installation remains a separately confirmed implementation-lab action.
 
 ## Target experience or system
 
@@ -56,11 +70,10 @@ The internal installed candidate must expose one deterministic startup state mac
 
 - `sf-audit`, `sf-verify` and `sf-inventory` now execute from clean Actions checkouts and are retained through visible steps or artifacts.
 - Source inventory confirms the runtime/shop migration surface is broad enough that call-site enumeration must precede a `ShopContext` rewrite.
-- The current Tauri host still uses fixed ports 3000/3001, a default `shops/dev.db` migration target and process-global child environment.
-- The mandatory Next.js runtime is now fail-closed at source level, but the failure is still primarily diagnostic/log-facing; the dedicated seller-visible blocked/recovery shell remains missing.
+- Packaged startup now uses per-launch loopback endpoints and credentials, exact process/shop readiness, a seller-visible blocked document and a locally tested bounded restart/crash-loop policy. Installed process-kill, shutdown-race, sleep/resume and reboot proof remains missing.
 - WhatsApp remains a degradable capability with backoff respawn and demo/offline behavior. Its exact required/degraded policy must be represented in the startup state model rather than inferred from logs.
-- The current database path and migration runner still assume one default shop. This must not be expanded by ad hoc path changes; Phase 1B requires explicit registry/context and all-shop migration coordination.
-- Fixed endpoint removal, per-launch credentials and readiness must converge inside one supervisor boundary.
+- The coordinator enumerates the versioned registry, reports compatibility per shop, reserves verified-snapshot space only when work is pending, migrates every registered database and restores all verified snapshots after failure/interruption. Source drills cover low disk, rerun, multi-shop and supported one-version-back packaged migration; installed and representative real-data evidence remains.
+- The direct-write source inventory is closed for the current production mutation graph. New repository, background or remote execution paths must accept explicit context and must not reintroduce global active-shop selection.
 
 ## Multi-phase plan
 
@@ -81,15 +94,16 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ### Phase: 1A — Supervised authenticated local runtime
 
-- Status: started.
-- Completed bounded work: mandatory application-server resource/runtime/spawn/readiness failures now abort setup; timeout kills the server child; optional sidecar startup occurs only after application-server readiness; release-only code is compiled in CI.
-- Next work: introduce a structured startup state and seller-visible blocked/recovery window; select per-launch endpoints; generate per-launch credentials; define readiness protocol, restart budget, crash-loop/safe-mode behavior and support-readable diagnostics; then failure-inject each named state.
-- Evidence: release compile is green; installed-candidate failure-injection proof remains required before completion.
+- Status: source runtime/restart protocol locally verified; clean-checkout and installed evidence incomplete.
+- Completed bounded work: mandatory application-server failures abort setup; timeout kills the child; optional sidecar starts only after readiness; per-launch endpoints and credentials authenticate readiness/bootstrap; readiness binds process and shop authority; blocked startup is seller-visible and writes redacted diagnostics; one state machine bounds crash/restart failures, stable reset, safe mode and shutdown registration.
+- Next work: create a separately authorized committed checkpoint for the clean-checkout gate, then failure-inject child crash, failed restart, shutdown race, sleep/resume and reboot in an installed candidate.
+- Evidence: 20 Rust tests, warning-denied Clippy and release compile are green; installed-candidate failure-injection proof remains required before completion.
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
-- Status: call-site inventory next; implementation not started.
-- Work: define `ShopContext`; design atomic versioned registry; enumerate all call sites and background scopes; remove silent fallback through bounded adapters; replace production `db push`; implement all-shop preflight, compatibility report, external journal, verified snapshots, interruption/rerun/low-disk/corrupt-registry handling.
+- Status: source write-authority and migration-coordinator sub-gates met and locally verified; clean-checkout and installed exit evidence not met.
+- Completed bounded work: process-bound `ShopContext`; atomic versioned registry; positive imported revisions; process-bound database without registry fallback; production service/AI/e-commerce-sync/automation/credential/audit/auth/repository/API context propagation; packaged migration deployment; per-shop compatibility report; all-shop coordinator; external journal; verified snapshots; pending-work disk reserve; OS lock; corrupt/divergent-registry/history failure; rollback, interruption, rerun, multi-shop and actual packaged current-data tests.
+- Next work: create a separately authorized committed checkpoint for clean-checkout consolidation verification before separately approved installed Windows and representative-data drills.
 
 ### Phase: 0D — Reference baseline
 
@@ -130,7 +144,7 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ## Current checkpoint
 
-- What is now true: CI is fully green and binds clean-checkout authority, inventory, JS/Prisma verification and release-only Rust compilation; mandatory local-server failure no longer returns success at source level.
-- What changed in the plan: Phase 0A/0B source evidence is complete enough to proceed, and Phase 1A is active.
-- Current uncertainty: seller-visible blocked/recovery presentation, fixed endpoints, per-launch authentication and installed Windows behavior remain unproven.
-- Exact next move: enumerate startup/readiness call sites and implement one structured blocked/recovery startup state that cannot expose the main shell as ready, while designing endpoint allocation and per-launch authentication inside the same supervisor boundary.
+- What is now true: the uncommitted source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry and recoverable all-shop migration coordinator; the enumerated production write graph carries explicit shop authority; targeted TypeScript/Rust checks are green.
+- What changed in the plan: Phase 1A and 1B source work now proceed together because readiness is bound to the exact registry/shop/migration authority tuple.
+- Current uncertainty: clean-checkout consolidation, real child-process failure injection, representative real seller data and all installed Windows behavior remain unproven. Source scans, state-machine tests and fixtures are not proof against machine-specific failures.
+- Exact next move: create a separately authorized committed checkpoint for clean-checkout CI before any MSI or installed-candidate action.

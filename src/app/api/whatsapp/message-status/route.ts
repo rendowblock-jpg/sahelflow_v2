@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { readFileSync } from "fs";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logAudit } from "@/lib/audit";
 import { requireAuth } from "@/lib/auth/server";
@@ -113,6 +113,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const body = await req.json();
   const input = statusSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   const phone = jidToPhone(input.jid);
   const isFailure = input.deliveryStatus === "failed" || !!input.error;
@@ -147,7 +148,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         select: { id: true },
       });
       if (message) {
-        await db.message.update({
+        await context.prisma.message.update({
           where: { id: message.id },
           data: { deliveryStatus: input.deliveryStatus },
         });
@@ -165,7 +166,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // A future "failed messages" inbox indicator can query for
   // action="whatsapp.message.failed" entries.
   if (isFailure) {
-    await logAudit({
+    await logAudit(context, {
       action: "whatsapp.message.failed",
       entity: "conversation",
       entityId: updatedMessageId ?? undefined,
@@ -183,7 +184,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     // Non-failure status update (sent/delivered/read) — log only if we
     // actually updated a Message row (keeps the audit log focused; pure
     // status changes without a DB row aren't actionable).
-    await logAudit({
+    await logAudit(context, {
       action: "whatsapp.message.status_changed",
       entity: "message",
       entityId: updatedMessageId,

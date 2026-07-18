@@ -44,6 +44,8 @@ coverage/
 playwright-report/
 test-results/
 playwright/.cache/
+.sf-inventory/
+.sf-evidence/
 
 # OS
 .DS_Store

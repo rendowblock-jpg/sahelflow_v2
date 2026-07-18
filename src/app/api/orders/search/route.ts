@@ -6,7 +6,7 @@
  * customer name.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import type { OrderStatus } from "@/types/domain";
@@ -22,8 +22,8 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const offset = parseInt(req.nextUrl.searchParams.get("offset") ?? "0", 10);
 
   const [results, total] = await Promise.all([
-    orderServiceExtensions.search({ prisma: db }, q, { limit, offset, status: status ?? undefined }),
-    orderServiceExtensions.countSearch({ prisma: db }, q, { status: status ?? undefined }),
+    orderServiceExtensions.search({ prisma: db, shop: shopContext }, q, { limit, offset, status: status ?? undefined }),
+    orderServiceExtensions.countSearch({ prisma: db, shop: shopContext }, q, { status: status ?? undefined }),
   ]);
 
   return NextResponse.json({ orders: results, total, query: q });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
@@ -24,8 +24,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const body = await req.json();
   const input = resetSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
-  await db.$transaction(async (tx) => {
+  await context.prisma.$transaction(async (tx) => {
     // Delete in dependency order (children before parents).
     await tx.orderChange.deleteMany({});
     await tx.refund.deleteMany({});
@@ -59,7 +60,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     });
   });
 
-  await logAudit({
+  await logAudit(context, {
     entity: "system",
     entityId: "database",
     action: "reset",

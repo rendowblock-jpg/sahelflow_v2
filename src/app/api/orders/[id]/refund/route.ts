@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { createRefund } from "@/lib/data/refund-service";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { SahelFlowError } from "@/types/errors";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: Ctx) =
   // derive one from order+amount+method so double-clicks collapse to one refund.
   const idempotencyKey = parsed.idempotencyKey ?? `refund:${id}:${parsed.amount}:${parsed.method}`;
 
-  const refund = await createRefund({
+  const refund = await createRefund({ prisma: db, shop: shopContext }, {
     ...parsed,
     orderId: id,
     idempotencyKey,

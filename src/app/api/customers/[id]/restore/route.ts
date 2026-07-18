@@ -4,7 +4,7 @@
  * Called by the useUndoableDelete hook's "Undo" toast action.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
@@ -17,6 +17,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
 
   const record = await db.customer.findUnique({
     where: { id },
@@ -31,12 +32,12 @@ export const POST = withErrorHandler(async (_req: NextRequest, { params }: Route
     throw new SahelFlowError("Customer is not deleted", "CONFLICT", 409);
   }
 
-  await db.customer.update({
+  await context.prisma.customer.update({
     where: { id },
     data: { deletedAt: null },
   });
 
-  void logAudit({
+  void logAudit(context, {
     action: "customer.restored",
     entity: "customer",
     entityId: id,

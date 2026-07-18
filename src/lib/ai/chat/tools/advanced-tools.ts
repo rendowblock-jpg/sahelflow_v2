@@ -397,7 +397,10 @@ registerTool({
       }
 
       const adapter = getDeliveryAdapter(input.provider);
-      const creds = await loadDeliveryCredentials(input.provider);
+      const creds = await loadDeliveryCredentials(
+        { prisma: db, shop: ctx.shop },
+        input.provider,
+      );
       if (!creds) {
         return { success: false, error: `Identifiants ${input.provider} non configurés` };
       }
@@ -470,7 +473,14 @@ registerTool({
           data: { status: "shipped", shippedAt: new Date() },
         });
         // Ledger entry — same tx, actor "ai" (AI-M4).
-        await recordStatusChange(order.id, order.status, "shipped", "ai", tx);
+        await recordStatusChange(
+          { prisma: db, shop: ctx.shop },
+          order.id,
+          order.status,
+          "shipped",
+          "ai",
+          tx,
+        );
         return d;
       });
 
@@ -480,7 +490,7 @@ registerTool({
       // shipped → send WhatsApp notification") fire for AI-initiated
       // assignments. Wrapped in void + catch so a trigger failure never
       // breaks the user-facing response.
-      void dispatchTrigger("order.shipped" as TriggerEvent, {
+      void dispatchTrigger({ prisma: db, shop: ctx.shop }, "order.shipped" as TriggerEvent, {
         orderId: order.id,
         orderNumber: order.orderNumber,
         customerId: order.customerId,
@@ -535,7 +545,7 @@ registerTool({
   async execute(params, ctx): Promise<ToolResult> {
     try {
       const input = getDeliveryCostComparisonSchema.parse(params);
-      void ctx; // not needed — we use the delivery adapters directly
+      const db = getDb(ctx);
       const providers = ["yalidine", "maystro", "zrexpress"] as const;
       const comparisons: Array<{
         provider: string;
@@ -547,7 +557,10 @@ registerTool({
       for (const provider of providers) {
         try {
           const adapter = getDeliveryAdapter(provider);
-          const creds = await loadDeliveryCredentials(provider);
+          const creds = await loadDeliveryCredentials(
+            { prisma: db, shop: ctx.shop },
+            provider,
+          );
           if (!creds) {
             comparisons.push({ provider, cost: 0, available: false, error: "Non configuré" });
             continue;

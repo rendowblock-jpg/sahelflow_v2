@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { createCustomerSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -17,7 +17,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const offset = (page - 1) * limit;
 
   const [customers, total] = await Promise.all([
-    customerService.list({ prisma: db }, { limit, offset }),
+    customerService.list({ prisma: db, shop: shopContext }, { limit, offset }),
     db.customer.count({ where: { deletedAt: null } }),
   ]);
 
@@ -31,7 +31,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const data = createCustomerSchema.parse(body);
 
-  const customer = await customerService.create({ prisma: db }, data);
+  const customer = await customerService.create({ prisma: db, shop: shopContext }, data);
 
   return NextResponse.json({ customer }, { status: 201 });
 }, "POST /api/customers");

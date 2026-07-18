@@ -6,12 +6,14 @@
  * mutations back to the API.
  */
 import { create } from "zustand";
+import { mutate } from "swr";
+import { isTauriEnv } from "@/lib/env";
 
 export interface Shop {
   id: string;
   name: string;
-  /** Path to the shop's SQLite database (relative to project root). */
-  dbPath: string;
+  /** Controlled database file identity within the canonical shops directory. */
+  databaseFile: string;
   /** Emoji icon (nullable). */
   icon: string | null;
   createdAt: string;
@@ -62,6 +64,11 @@ export const useShopStore = create<ShopState>((set, get) => ({
     }
     const { shop } = (await res.json()) as { shop: Shop };
     set((s) => ({ shops: [...s.shops, shop] }));
+    await mutate(() => true, undefined, { revalidate: false });
+    if (isTauriEnv()) {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    }
     return shop;
   },
 
@@ -77,19 +84,31 @@ export const useShopStore = create<ShopState>((set, get) => ({
         s.activeShopId === shopId ? shops[0]?.id ?? null : s.activeShopId;
       return { shops, activeShopId };
     });
+    await mutate(() => true, undefined, { revalidate: false });
+    if (isTauriEnv()) {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    }
   },
 
   setActiveShop: async (shopId) => {
-    // Optimistic update
+    const res = await fetch("/api/shops/active", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shopId }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Échec du changement de boutique");
+    }
+
     set({ activeShopId: shopId });
-    try {
-      await fetch("/api/shops/active", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopId }),
-      });
-    } catch {
-      // best-effort — the optimistic update stays
+    await mutate(() => true, undefined, { revalidate: false });
+    if (isTauriEnv()) {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    } else if (typeof window !== "undefined") {
+      window.location.assign("/login");
     }
   },
 

@@ -1,5 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
+import { assertTestSandbox } from "./scripts/test-sandbox";
+
+assertTestSandbox("Vitest");
 
 export default defineConfig({
   test: {
@@ -9,6 +12,10 @@ export default defineConfig({
     // the next file's tests when running sequentially with fileParallelism:false).
     unstubGlobals: true,
     clearMocks: true,
+    // Crypto, SQLite snapshot, and full-domain integration tests are
+    // intentionally exercised on low-end Windows hardware where 5 seconds is
+    // too small and produces load-dependent false failures.
+    testTimeout: 15_000,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.test.ts"],
     exclude: ["node_modules", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const input = estimateSchema.parse(body);
 
   const adapter = getDeliveryAdapter(input.provider);
-  const creds = await loadDeliveryCredentials(input.provider);
+  const creds = await loadDeliveryCredentials(
+    { prisma: db, shop: shopContext },
+    input.provider,
+  );
 
   const estimate = await adapter.estimateCost(
     {

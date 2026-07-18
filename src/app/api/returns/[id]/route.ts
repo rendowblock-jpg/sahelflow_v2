@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
@@ -28,6 +28,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const { id } = await params;
   const body = await req.json();
   const { status, notes } = returnStatusSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   const existing = await db.return.findUnique({ where: { id } });
   if (!existing) {
@@ -59,7 +60,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   // customer.totalSpent inline WITHOUT flipping order.status to "returned",
   // so a subsequent Refund saw status="delivered" and applied the same
   // side effects again → 2× stock restore + 2× totalSpent decrement.
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await context.prisma.$transaction(async (tx) => {
     const ret = await tx.return.update({ where: { id }, data: { status } });
 
     if (notes) {
@@ -79,7 +80,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   if (status === "completed") {
     try {
       await orderService.updateStatus(
-        { prisma: db },
+        { prisma: db, shop: shopContext },
         existing.orderId,
         "returned",
         { actor: "system" },

@@ -121,7 +121,7 @@ vi.mock("@/lib/integrations/ecommerce/index", () => ({
     displayName: "Shopify",
     listOrdersSince: listOrdersMock,
   })),
-  loadEcommerceCredentials: vi.fn((platform: string) => mockCredsProvider(platform)),
+  loadEcommerceCredentials: vi.fn((_context: unknown, platform: string) => mockCredsProvider(platform)),
 }));
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────
@@ -151,6 +151,7 @@ import { getConfirmationQueue, getStaleOrderCount } from "@/lib/data/confirmatio
 import { createBackup, restoreBackup, deleteBackup } from "@/lib/backup";
 import { invalidateShopClient, invalidateMetaCache } from "@/lib/db";
 import { syncPlatform } from "@/lib/integrations/ecommerce/sync-engine";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import type { NormalizedOrder, SyncFetchResult } from "@/lib/integrations/ecommerce/types";
 import { POST as deliveryCreatePost } from "@/app/api/delivery/create/route";
 import { POST as deliverySyncPost } from "@/app/api/delivery/sync/route";
@@ -1116,7 +1117,7 @@ describe("Scenario 11 — COD reconciliation arithmetic", () => {
     await orderService.updateStatus({ prisma: rawDb as never }, o1.id, "confirmed");
     await orderService.updateStatus({ prisma: rawDb as never }, o1.id, "shipped");
     await orderService.updateStatus({ prisma: rawDb as never }, o1.id, "delivered");
-    await markCodCollected(o1.id, "user");
+    await markCodCollected({ prisma: rawDb as never }, o1.id, "user");
     // Simulate the remittance being marked (direct DB write — the bulk route
     // would call bulkMarkCodRemitted, but writing directly is equivalent for
     // this arithmetic test).
@@ -1134,7 +1135,7 @@ describe("Scenario 11 — COD reconciliation arithmetic", () => {
     await orderService.updateStatus({ prisma: rawDb as never }, o2.id, "confirmed");
     await orderService.updateStatus({ prisma: rawDb as never }, o2.id, "shipped");
     await orderService.updateStatus({ prisma: rawDb as never }, o2.id, "delivered");
-    await markCodCollected(o2.id, "user");
+    await markCodCollected({ prisma: rawDb as never }, o2.id, "user");
     // Bug B2 FIXED: markCodCollected now explicitly sets codRemitted=false
     // (and the schema defaults codRemitted Boolean @default(false)).
     // Previously codRemitted was left NULL — getCodReconciliationSummary
@@ -1151,11 +1152,11 @@ describe("Scenario 11 — COD reconciliation arithmetic", () => {
     });
     await orderService.updateStatus({ prisma: rawDb as never }, o3.id, "confirmed");
     await orderService.updateStatus({ prisma: rawDb as never }, o3.id, "shipped");
-    await markCodCollected(o3.id, "user");
+    await markCodCollected({ prisma: rawDb as never }, o3.id, "user");
     // (B2 fix: codRemitted now set to false by markCodCollected itself.)
 
     // ── getCodReconciliationSummary ─────────────────────────────────────────
-    const summary = await getCodReconciliationSummary();
+    const summary = await getCodReconciliationSummary({ prisma: rawDb as never });
 
     // deliveredCount = 2 (o1 + o2). o3 is shipped, not delivered.
     expect(summary.counts.delivered).toBe(2);
@@ -1311,7 +1312,8 @@ describe("Scenario 12 — Notifications bell i18n (ar / fr / en)", () => {
 
 describe("Scenario 13 — PII survives backup → wipe → restore", () => {
   let savedMeta: string | null = null;
-  const META_PATH = join(process.cwd(), "data", "app-meta.json");
+  const TEST_DATA_DIR = process.env.SF_DATA_DIR!;
+  const META_PATH = join(TEST_DATA_DIR, "shop-registry.json");
 
   beforeEach(() => {
     // Save the original app-meta.json so we can restore it after this suite.
@@ -1327,16 +1329,15 @@ describe("Scenario 13 — PII survives backup → wipe → restore", () => {
       else if (existsSync(META_PATH)) rmSync(META_PATH, { force: true });
     } catch { /* ignore */ }
     // Clean up any backups created during the test.
-    const backupDir = join(process.cwd(), "data", "backups");
+    const backupDir = join(TEST_DATA_DIR, "backups");
     if (existsSync(backupDir)) {
       try { rmSync(backupDir, { recursive: true, force: true }); } catch { /* ignore */ }
     }
   });
 
   it("customer with encrypted phone (via the PII-extended db Proxy) → backup → wipe DB → restore → phone decrypts correctly + blind-index search works", async () => {
-    // Point app-meta.json at the test DATABASE_URL so backup/restore operate
-    // on the same SQLite file the test uses.
-    mkdirSync(join(process.cwd(), "data"), { recursive: true });
+    // Bind the versioned registry to the same disposable SQLite file.
+    mkdirSync(TEST_DATA_DIR, { recursive: true });
     const dbUrl = process.env.DATABASE_URL ?? "";
     const testDbPath = dbUrl.startsWith("file:")
       ? dbUrl.slice("file:".length)
@@ -1344,8 +1345,11 @@ describe("Scenario 13 — PII survives backup → wipe → restore", () => {
     writeFileSync(
       META_PATH,
       JSON.stringify({
-        shops: [{ id: "default", name: "Test", dbPath: testDbPath, icon: "🏪", createdAt: new Date().toISOString() }],
-        activeShopId: "default",
+        formatVersion: 1,
+        revision: 1,
+        installationId: "test-installation",
+        shops: [{ id: "test", name: "Test", databaseFile: testDbPath.split(/[\\/]/).pop(), icon: null, createdAt: new Date().toISOString() }],
+        activeShopId: "test",
       }),
     );
 
@@ -1384,6 +1388,7 @@ describe("Scenario 13 — PII survives backup → wipe → restore", () => {
     // 2. Wipe the DB (delete the customer).
     await rawDb.customer.deleteMany();
     expect(await rawDb.customer.count()).toBe(0);
+    await rawDb.$disconnect();
 
     // 3. Restore the backup.
     const restoreResult = await restoreBackup(backup.filename);
@@ -1440,7 +1445,10 @@ describe("Scenario 14 — E-commerce sync doesn't duplicate + writes 'created' l
       nextWatermark: "1002",
       hasMore: false,
     } satisfies SyncFetchResult);
-    const r1 = await syncPlatform("shopify");
+    const r1 = await syncPlatform(
+      { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT },
+      "shopify",
+    );
     expect(r1.created).toBe(1);
     expect(r1.errors).toEqual([]);
 
@@ -1470,7 +1478,10 @@ describe("Scenario 14 — E-commerce sync doesn't duplicate + writes 'created' l
       nextWatermark: "1002",
       hasMore: false,
     } satisfies SyncFetchResult);
-    const r2 = await syncPlatform("shopify");
+    const r2 = await syncPlatform(
+      { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT },
+      "shopify",
+    );
     expect(r2.created).toBe(0);
     expect(r2.skipped).toBe(1);
     expect(r2.errors).toEqual([]);

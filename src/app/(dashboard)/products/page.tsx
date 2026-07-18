@@ -1,5 +1,5 @@
 import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
 import { Package, AlertTriangle, Boxes, DollarSign } from "lucide-react";
@@ -33,8 +33,8 @@ export default async function ProductsPage() {
   // rows (perf win) and only the columns it needs; the inventory query
   // fetches price+stock across everything.
   const [products, categories, totalProducts, activeCount, lowStockRows, inventoryRows] = await Promise.all([
-    productService.list({ prisma: db }, { limit: PAGE_SIZE, offset: 0 }),
-    productService.listCategories({ prisma: db }),
+    productService.list({ prisma: db, shop: shopContext }, { limit: PAGE_SIZE, offset: 0 }),
+    productService.listCategories({ prisma: db, shop: shopContext }),
     db.product.count({ where: { deletedAt: null } }),
     db.product.count({ where: { isActive: true, deletedAt: null } }),
     db.product.findMany({

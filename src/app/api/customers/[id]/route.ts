@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { updateCustomerSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -15,7 +15,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
   // W2-4: defense-in-depth — GET was unprotected, exposed customer PII to unauthenticated callers.
   await requireAuth();
   const { id } = await params;
-  const customer = await customerService.getById({ prisma: db }, id);
+  const customer = await customerService.getById({ prisma: db, shop: shopContext }, id);
   return NextResponse.json({ customer });
 }, "GET /api/customers/[id]");
 
@@ -26,7 +26,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const body = await req.json();
   const data = updateCustomerSchema.parse(body);
 
-  const customer = await customerService.update({ prisma: db }, id, data);
+  const customer = await customerService.update({ prisma: db, shop: shopContext }, id, data);
 
   return NextResponse.json({ customer });
 }, "PATCH /api/customers/[id]");
@@ -37,8 +37,8 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   const { id } = await params;
   // W2-5: capture before-state for audit (soft-delete — row stays in DB).
   const existing = await db.customer.findUnique({ where: { id } });
-  await customerService.delete({ prisma: db }, id);
-  void logAudit({
+  await customerService.delete({ prisma: db, shop: shopContext }, id);
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "customer.deleted",
     entity: "customer",
     entityId: id,

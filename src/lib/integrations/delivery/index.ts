@@ -19,6 +19,7 @@ import { maystroAdapter } from "./maystro";
 import { zrExpressAdapter } from "./zr-express";
 import { dhdAdapter } from "./dhd";
 import { getSecret } from "@/lib/secrets";
+import type { ServiceContext } from "@/lib/data/service-base";
 
 const REGISTRY: Record<string, DeliveryAdapter> = {
   yalidine: yalidineAdapter,
@@ -46,12 +47,13 @@ export function listDeliveryAdapters(): DeliveryAdapter[] {
  * Returns an empty object if none are configured (adapters handle this).
  */
 export async function loadDeliveryCredentials(
+  context: ServiceContext,
   provider: string,
 ): Promise<DeliveryCredentials> {
   const keys = deliverySecretKeys(provider);
   const creds: DeliveryCredentials = {};
   for (const key of keys) {
-    const value = await getSecret(key);
+    const value = await getSecret(context, key);
     if (value) {
       // Extract the field name from the key: delivery_yalidine_api_id → api_id
       const fieldMatch = key.match(/^delivery_\w+_(.+)$/);
@@ -65,9 +67,10 @@ export async function loadDeliveryCredentials(
 
 /** Check whether a provider has credentials configured. */
 export async function hasDeliveryCredentials(
+  context: ServiceContext,
   provider: string,
 ): Promise<boolean> {
-  const creds = await loadDeliveryCredentials(provider);
+  const creds = await loadDeliveryCredentials(context, provider);
   return Object.values(creds).some((v) => v && v.length > 0);
 }
 

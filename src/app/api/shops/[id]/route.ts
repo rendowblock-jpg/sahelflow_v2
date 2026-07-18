@@ -3,6 +3,7 @@ import { deleteShop, getShop, getActiveShopId } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function GET(
   return NextResponse.json({ shop });
 }
 
-/** DELETE /api/shops/[id] — delete a shop + its SQLite file.
+/** DELETE /api/shops/[id] — remove a shop and quarantine its SQLite file.
  *
  * Session 30 (AUDIT-2 A8): requires { confirm: "DELETE" } body. Also
  * refuses to delete the active shop (the user must switch first).
@@ -49,9 +50,10 @@ export const DELETE = withErrorHandler(
       );
     }
     deleteShop(id);
-    // W2-5: audit shop deletion — destructive (SQLite file is permanently deleted).
+    // The database is quarantined for explicit retention cleanup rather than
+    // permanently unlinked inside this request.
     // `shop` was fetched above (used for the 404 check + active-shop guard).
-    void logAudit({
+    void logAudit({ prisma: db, shop: shopContext }, {
       action: "shop.deleted",
       entity: "shop",
       entityId: id,

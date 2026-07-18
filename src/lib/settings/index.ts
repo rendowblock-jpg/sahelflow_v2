@@ -15,7 +15,7 @@
  */
 import "server-only";
 
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
 
 /**
@@ -33,29 +33,37 @@ function isReservedSettingKey(key: string): boolean {
 }
 
 /** Get a single setting value by key, or `null` if not set. */
-export async function getSetting(key: string): Promise<string | null> {
-  const row = await db.setting.findUnique({ where: { key } });
+export async function getSetting(context: ServiceContext, key: string): Promise<string | null> {
+  const row = await context.prisma.setting.findUnique({ where: { key } });
   return row?.value ?? null;
 }
 
 /** Get a setting as a boolean (`true` if value === "true"). Default if unset. */
-export async function getBool(key: string, defaultValue = false): Promise<boolean> {
-  const v = await getSetting(key);
+export async function getBool(
+  context: ServiceContext,
+  key: string,
+  defaultValue = false,
+): Promise<boolean> {
+  const v = await getSetting(context, key);
   if (v === null) return defaultValue;
   return v === "true";
 }
 
 /** Get a setting as an integer. Default if unset or unparseable. */
-export async function getInt(key: string, defaultValue: number): Promise<number> {
-  const v = await getSetting(key);
+export async function getInt(
+  context: ServiceContext,
+  key: string,
+  defaultValue: number,
+): Promise<number> {
+  const v = await getSetting(context, key);
   if (v === null) return defaultValue;
   const n = parseInt(v, 10);
   return Number.isNaN(n) ? defaultValue : n;
 }
 
 /** Get a setting as parsed JSON. Default if unset or unparseable. */
-export async function getJson<T>(key: string, defaultValue: T): Promise<T> {
-  const v = await getSetting(key);
+export async function getJson<T>(context: ServiceContext, key: string, defaultValue: T): Promise<T> {
+  const v = await getSetting(context, key);
   if (v === null) return defaultValue;
   try {
     return JSON.parse(v) as T;
@@ -72,7 +80,11 @@ export async function getJson<T>(key: string, defaultValue: T): Promise<T> {
  * overwriting auth secrets. Trusted internal callers (setupAuth, change-pin)
  * write auth values via `db.setting.upsert` directly, bypassing this check.
  */
-export async function setSetting(key: string, value: string | number | boolean): Promise<void> {
+export async function setSetting(
+  context: ServiceContext,
+  key: string,
+  value: string | number | boolean,
+): Promise<void> {
   if (isReservedSettingKey(key)) {
     throw new SahelFlowError(
       `Cannot set reserved setting key '${key}' via the settings API`,
@@ -81,7 +93,7 @@ export async function setSetting(key: string, value: string | number | boolean):
     );
   }
   const strValue = typeof value === "string" ? value : String(value);
-  await db.setting.upsert({
+  await context.prisma.setting.upsert({
     where: { key },
     create: { key, value: strValue },
     update: { value: strValue },
@@ -97,8 +109,8 @@ export async function setSetting(key: string, value: string | number | boolean):
  * bulk GET /api/settings endpoint. Per-key `getSetting(key)` still reads
  * them (defense-in-depth diagnostics for trusted internal callers).
  */
-export async function getAllSettings(): Promise<Record<string, string>> {
-  const rows = await db.setting.findMany();
+export async function getAllSettings(context: ServiceContext): Promise<Record<string, string>> {
+  const rows = await context.prisma.setting.findMany();
   const out: Record<string, string> = {};
   for (const row of rows) {
     if (isReservedSettingKey(row.key)) continue;
@@ -119,7 +131,7 @@ export async function getAllSettings(): Promise<Record<string, string>> {
  * wipe reserved keys (e.g. /api/settings/reset) use `db.setting.deleteMany`
  * directly, bypassing this guard — they are trusted server-side code paths.
  */
-export async function deleteSetting(key: string): Promise<void> {
+export async function deleteSetting(context: ServiceContext, key: string): Promise<void> {
   if (isReservedSettingKey(key)) {
     throw new SahelFlowError(
       `Cannot delete reserved setting key '${key}' via the settings API`,
@@ -127,7 +139,7 @@ export async function deleteSetting(key: string): Promise<void> {
       403,
     );
   }
-  await db.setting.deleteMany({ where: { key } });
+  await context.prisma.setting.deleteMany({ where: { key } });
 }
 
 // ── Well-known keys ────────────────────────────────────────────────────────

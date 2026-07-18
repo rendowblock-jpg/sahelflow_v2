@@ -1,20 +1,20 @@
 import "server-only";
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 
-export async function listCannedResponses() {
-  return db.cannedResponse.findMany({ orderBy: { shortCode: "asc" } });
+export async function listCannedResponses(context: ServiceContext) {
+  return context.prisma.cannedResponse.findMany({ orderBy: { shortCode: "asc" } });
 }
 
-export async function createCannedResponse(data: { shortCode: string; content: string; description?: string }) {
-  return db.cannedResponse.create({ data });
+export async function createCannedResponse(context: ServiceContext, data: { shortCode: string; content: string; description?: string }) {
+  return context.prisma.cannedResponse.create({ data });
 }
 
-export async function updateCannedResponse(id: string, data: Partial<{ shortCode: string; content: string; description: string }>) {
-  return db.cannedResponse.update({ where: { id }, data });
+export async function updateCannedResponse(context: ServiceContext, id: string, data: Partial<{ shortCode: string; content: string; description: string }>) {
+  return context.prisma.cannedResponse.update({ where: { id }, data });
 }
 
-export async function deleteCannedResponse(id: string) {
-  return db.cannedResponse.delete({ where: { id } });
+export async function deleteCannedResponse(context: ServiceContext, id: string) {
+  return context.prisma.cannedResponse.delete({ where: { id } });
 }
 
 /**
@@ -33,9 +33,9 @@ export async function deleteCannedResponse(id: string) {
  * future canned-response content uses mixed-case search, add a
  * case-insensitive collation or pre-lowercase at write time.
  */
-export async function searchCannedResponses(query: string, limit = 5) {
+export async function searchCannedResponses(context: ServiceContext, query: string, limit = 5) {
   const q = query.toLowerCase();
-  return db.cannedResponse.findMany({
+  return context.prisma.cannedResponse.findMany({
     where: {
       OR: [
         { shortCode: { contains: q } },

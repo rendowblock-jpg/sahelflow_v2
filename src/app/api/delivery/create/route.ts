@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { assertCanTransition } from "@/lib/order-transitions";
@@ -41,6 +41,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = createSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   // Fetch the order + customer
   const order = await db.order.findUnique({
@@ -80,7 +81,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   const adapter = getDeliveryAdapter(input.provider);
-  const creds = await loadDeliveryCredentials(input.provider);
+  const creds = await loadDeliveryCredentials(
+    context,
+    input.provider,
+  );
 
   const result = await adapter.createShipment(
     {
@@ -119,7 +123,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // order state in our DB. Now: delivery upsert + order status update + ledger
   // entry all happen inside the same tx. If any step fails, the whole thing
   // rolls back.
-  const [delivery] = await db.$transaction(async (tx) => {
+  const [delivery] = await context.prisma.$transaction(async (tx) => {
     const d = await tx.delivery.upsert({
       where: { orderId: order.id },
       create: {
@@ -156,7 +160,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           data: { status: to, shippedAt: new Date() },
         });
         // Record ledger entry — same tx (S2 fix)
-        await recordOrderChange({
+        await recordOrderChange(context, {
           orderId: order.id,
           actionType: "status_change",
           actor: "user",
@@ -174,7 +178,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // created via this route (the most common shipment path). Previously only the
   // AI create_shipment tool fired this trigger, so API/UI shipments silently
   // skipped automations. orderService.updateStatus does the same after its tx.
-  void dispatchTrigger("order.shipped", {
+  void dispatchTrigger({ prisma: db, shop: shopContext }, "order.shipped", {
     orderId: order.id,
     orderNumber: order.orderNumber,
     customerId: order.customerId,

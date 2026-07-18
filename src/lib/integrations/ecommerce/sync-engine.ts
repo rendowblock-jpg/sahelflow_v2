@@ -25,8 +25,8 @@
 import "server-only";
 
 
-import { db } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { syntheticPhone } from "@/lib/shared/phone";
 import { getEcommerceAdapter, loadEcommerceCredentials } from "./index";
 import type { EcommercePlatform, NormalizedOrder } from "./types";
@@ -55,9 +55,11 @@ interface IntegrationConfig {
  * @param maxPages - safety cap on pagination (default 10)
  */
 export async function syncPlatform(
+  context: ServiceContext,
   platform: EcommercePlatform,
   maxPages = 10,
 ): Promise<SyncResult> {
+  const db = context.prisma;
   const result: SyncResult = {
     platform,
     fetched: 0,
@@ -70,7 +72,7 @@ export async function syncPlatform(
   };
 
   // 1. Load credentials
-  const credentials = await loadEcommerceCredentials(platform);
+  const credentials = await loadEcommerceCredentials(context, platform);
   if (!credentials) {
     result.errors.push(`No credentials configured for ${platform}`);
     return result;
@@ -109,7 +111,7 @@ export async function syncPlatform(
   // throwing AlreadySyncedError and dropping the update.
   for (const normalized of fetchResult.orders) {
     try {
-      const outcome = await upsertOrderFromSync(normalized);
+      const outcome = await upsertOrderFromSync(context, normalized);
       if (outcome === "created") result.created++;
       else if (outcome === "updated") result.updated++;
       else result.skipped++;
@@ -189,8 +191,10 @@ function isPlatformCancelled(meta: Record<string, unknown>): boolean {
  * propagate to the internal Order instead of being silently dropped.
  */
 async function upsertOrderFromSync(
+  context: ServiceContext,
   normalized: NormalizedOrder,
 ): Promise<UpsertOutcome> {
+  const db = context.prisma;
   const sourceOrderId = normalized.sourceOrderId;
   const newMetaJson = JSON.stringify(normalized.sourceMetadata);
 
@@ -224,7 +228,7 @@ async function upsertOrderFromSync(
       if (isPlatformCancelled(normalized.sourceMetadata) && existing.status !== "cancelled") {
         try {
           await orderService.updateStatus(
-            { prisma: db },
+            context,
             existing.id,
             "cancelled",
             { actor: "system" },
@@ -299,7 +303,7 @@ async function upsertOrderFromSync(
   // from manual/AI/storefront orders in the orders list + deduped by the
   // SYNC-<PLATFORM> counter, separate from the ORD counter).
   await orderService.create(
-    { prisma: db },
+    context,
     {
       customerId: customer.id,
       items: normalized.items.map((item) => ({
@@ -325,16 +329,19 @@ async function upsertOrderFromSync(
  * Sync all configured e-commerce platforms.
  * Returns results per platform.
  */
-export async function syncAllPlatforms(maxPages = 10): Promise<SyncResult[]> {
+export async function syncAllPlatforms(
+  context: ServiceContext,
+  maxPages = 10,
+): Promise<SyncResult[]> {
   const platforms: EcommercePlatform[] = ["shopify", "woocommerce", "youcan"];
   const results: SyncResult[] = [];
 
   for (const platform of platforms) {
     // Skip platforms without credentials
-    const hasCreds = await loadEcommerceCredentials(platform);
+    const hasCreds = await loadEcommerceCredentials(context, platform);
     if (!hasCreds) continue;
 
-    const result = await syncPlatform(platform, maxPages);
+    const result = await syncPlatform(context, platform, maxPages);
     results.push(result);
   }
 

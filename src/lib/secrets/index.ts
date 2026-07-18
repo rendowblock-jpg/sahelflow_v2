@@ -19,7 +19,7 @@
 import "server-only";
 
 
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import {
   encryptString,
   decryptString,
@@ -41,15 +41,15 @@ function rowToPayload(row: SecretRow): EncryptedPayload {
 }
 
 /** Get a decrypted secret value, or null if it doesn't exist. */
-export async function getSecret(key: string): Promise<string | null> {
-  const row = await db.secret.findUnique({ where: { key } });
+export async function getSecret(context: ServiceContext, key: string): Promise<string | null> {
+  const row = await context.prisma.secret.findUnique({ where: { key } });
   if (!row) return null;
   return decryptString(rowToPayload(row), getMasterKey());
 }
 
 /** True if a secret is configured for this key (no decryption — cheap check). */
-export async function hasSecret(key: string): Promise<boolean> {
-  const row = await db.secret.findUnique({
+export async function hasSecret(context: ServiceContext, key: string): Promise<boolean> {
+  const row = await context.prisma.secret.findUnique({
     where: { key },
     select: { id: true },
   });
@@ -57,9 +57,13 @@ export async function hasSecret(key: string): Promise<boolean> {
 }
 
 /** Set (upsert) a secret. The value is encrypted before storage. */
-export async function setSecret(key: string, value: string): Promise<void> {
+export async function setSecret(
+  context: ServiceContext,
+  key: string,
+  value: string,
+): Promise<void> {
   const payload = encryptString(value, getMasterKey());
-  await db.secret.upsert({
+  await context.prisma.secret.upsert({
     where: { key },
     create: { key, ...payload },
     update: { ...payload },
@@ -67,8 +71,8 @@ export async function setSecret(key: string, value: string): Promise<void> {
 }
 
 /** Delete a secret. No-op if it doesn't exist. */
-export async function deleteSecret(key: string): Promise<void> {
-  await db.secret.deleteMany({ where: { key } });
+export async function deleteSecret(context: ServiceContext, key: string): Promise<void> {
+  await context.prisma.secret.deleteMany({ where: { key } });
 }
 
 /**
@@ -76,9 +80,10 @@ export async function deleteSecret(key: string): Promise<void> {
  * Returns the well-known keys with a boolean `configured` flag.
  */
 export async function listSecretStatus(
+  context: ServiceContext,
   knownKeys: readonly string[],
 ): Promise<Record<string, boolean>> {
-  const rows = await db.secret.findMany({
+  const rows = await context.prisma.secret.findMany({
     where: { key: { in: [...knownKeys] } },
     select: { key: true },
   });

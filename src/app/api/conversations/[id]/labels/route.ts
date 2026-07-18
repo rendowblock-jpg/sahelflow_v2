@@ -7,6 +7,7 @@ import {
   setConversationLabels,
 } from "@/lib/data/conversation-service";
 import { z } from "zod";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -26,8 +27,8 @@ export const GET = withErrorHandler(async (
   const { id: rawId } = await params;
     // Session 30 (AUDIT-5 C1): if rawId is a JID (live WhatsApp chat), ensure
     // a Conversation row exists and use its cuid. Otherwise rawId is already a cuid.
-    const id = await ensureConversationForJid(rawId);
-  const labels = await getConversationLabels(id);
+    const id = await ensureConversationForJid({ prisma: db, shop: shopContext }, rawId);
+  const labels = await getConversationLabels({ prisma: db, shop: shopContext }, id);
   return NextResponse.json({ labels });
 }, "GET /api/conversations/[id]/labels");
 
@@ -42,9 +43,13 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: Ctx) =>
   // the URL). Sibling GET + parallel /status, /priority, /assign routes all
   // do this; PUT was missed → 404 for live chats.
   const { id: rawId } = await params;
-  const id = await ensureConversationForJid(rawId);
+  const id = await ensureConversationForJid({ prisma: db, shop: shopContext }, rawId);
   const body = await req.json();
   const parsed = putSchema.parse(body);
-  const conv = await setConversationLabels(id, parsed.labels);
+  const conv = await setConversationLabels(
+    { prisma: db, shop: shopContext },
+    id,
+    parsed.labels,
+  );
   return NextResponse.json({ conversation: conv, labels: parsed.labels });
 }, "PUT /api/conversations/[id]/labels");

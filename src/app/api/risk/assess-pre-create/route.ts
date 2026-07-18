@@ -4,6 +4,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { assessOrderRiskPreCreate } from "@/lib/risk-engine";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -62,15 +63,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const input = preCreateSchema.parse(body);
 
-  const assessment = await assessOrderRiskPreCreate({
-    phone: input.phone,
-    wilaya: input.wilaya,
-    commune: input.commune ?? null,
-    address: input.address ?? null,
-    totalPrice: input.totalPrice,
-    source: input.source ?? "manual",
-    items: input.items,
-  });
+  const assessment = await assessOrderRiskPreCreate(
+    { prisma: db, shop: shopContext },
+    {
+      phone: input.phone,
+      wilaya: input.wilaya,
+      commune: input.commune ?? null,
+      address: input.address ?? null,
+      totalPrice: input.totalPrice,
+      source: input.source ?? "manual",
+      items: input.items,
+    },
+  );
 
   return NextResponse.json({ assessment });
 }, "POST /api/risk/assess-pre-create");

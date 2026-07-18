@@ -26,8 +26,8 @@ import "server-only";
 
 
 import { PrismaClient } from "@prisma/client";
-import { existsSync, readFileSync } from "fs";
-import { resolve } from "path";
+import { isAbsolute, resolve } from "path";
+import { processShopContext } from "@/lib/shops/context";
 import {
   encryptCustomerData,
   decryptCustomerRow,
@@ -66,15 +66,22 @@ function resolveDatabaseUrl(): string {
     const match = raw.match(/^file:(.+)$/);
     if (match && match[1]) {
       const p = match[1];
-      // If it's relative or contains .., resolve to absolute
-      if (!p.startsWith("/")) {
+      if (!isAbsolute(p)) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error("Production DATABASE_URL must use an absolute SQLite path");
+        }
         return `file:${resolve(process.cwd(), p)}`;
       }
       return raw;
     }
-    return raw; // non-file URL (e.g. postgresql://) — pass through
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SahelFlow desktop requires a file: SQLite DATABASE_URL");
+    }
+    return raw;
   }
-  // Not set — default to the dev SQLite path
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("DATABASE_URL is required in production");
+  }
   const dbPath = resolve(process.cwd(), "data", "shops", "dev.db");
   return `file:${dbPath}`;
 }
@@ -676,47 +683,19 @@ function isUnguardedBulkWhere(
 export type DbClient = ReturnType<typeof withSafetyGuards>;
 
 /**
- * The fallback client — used when no shop is registered yet (first run),
- * when the active shop's DB file is missing, or in test mode.
- *
- * This points at the default dev database (data/shops/dev.db via DATABASE_URL).
- * The shop registry bootstraps a "default" shop pointing here on first run,
- * so in normal operation the active-shop path below takes over.
+ * Process-bound client for the exact DATABASE_URL selected by Tauri before
+ * server startup. `processShopContext()` below fails closed if the matching
+ * authority tuple is incomplete; this client never selects a registry fallback.
  */
-const fallbackClient = (globalForPrisma.prisma as DbClient | undefined) ??
+const processClient = (globalForPrisma.prisma as DbClient | undefined) ??
   withSafetyGuards(withPiiEncryption(dbRaw));
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = fallbackClient;
+  globalForPrisma.prisma = processClient;
 }
 
-/**
- * Resolve the Prisma client for the currently active shop.
- *
- * Reads the active shop from the shop registry (data/app-meta.json), gets its
- * dbPath, and returns the cached (or newly created) extended client for that
- * file. Falls back to the default dev client if:
- *   - no shop is registered yet (first run before bootstrap)
- *   - the active shop's dbPath doesn't exist on disk
- *   - we're in a test environment (tests set their own DB via env vars)
- *
- * This reads app-meta.json directly (not via the shops module) to avoid a
- * circular dependency: shops/index.ts → getShopClient → db.ts → shops/index.ts.
- * The JSON shape is stable ({shops:[{id,dbPath,...}], activeShopId}).
- */
-// PERF-002: cache the parsed app-meta.json for 2s to avoid sync readFileSync
-// on every Prisma call (was: ~800 reads for a 200-order page load).
-let metaCache: { data: ParsedMeta; cachedAt: number } | null = null;
-const META_CACHE_TTL_MS = 2000;
-
-interface ParsedMeta {
-  shops?: Array<{ id: string; dbPath: string }>;
-  activeShopId?: string | null;
-}
-
-/** Invalidate the app-meta.json cache — call after shop switch/restore. */
+/** Retained as a no-op while callers migrate away from the legacy meta cache. */
 export function invalidateMetaCache(): void {
-  metaCache = null;
 }
 
 /**
@@ -743,75 +722,15 @@ export function invalidateShopClient(shopFilePath: string): void {
       globalForPrisma.shopClients.delete(shopFilePath);
     }
   }
-  metaCache = null;
-}
-
-function getActiveShopClient(): DbClient {
-  // In test mode, always use the fallback client (tests set DATABASE_URL)
-  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
-    return fallbackClient;
-  }
-
-  try {
-    const metaPath = resolve(process.cwd(), "data", "app-meta.json");
-    if (!existsSync(metaPath)) return fallbackClient;
-
-    // PERF-002: use cached meta if fresh (< 2s old) + file hasn't changed
-    const now = Date.now();
-    if (metaCache && now - metaCache.cachedAt < META_CACHE_TTL_MS) {
-      const meta = metaCache.data;
-      const activeId = meta.activeShopId;
-      if (!activeId) return fallbackClient;
-      const shop = meta.shops?.find((s) => s.id === activeId);
-      if (!shop) return fallbackClient;
-      const dbPath = resolve(process.cwd(), shop.dbPath);
-      return getShopClient(dbPath);
-    }
-
-    const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as ParsedMeta;
-    metaCache = { data: meta, cachedAt: now };
-
-    const activeId = meta.activeShopId;
-    if (!activeId) return fallbackClient;
-
-    const shop = meta.shops?.find((s) => s.id === activeId);
-    if (!shop) return fallbackClient;
-
-    const fullPath = resolve(process.cwd(), shop.dbPath);
-    if (!existsSync(fullPath)) return fallbackClient;
-
-    return getShopClient(fullPath);
-  } catch {
-    // Any error reading the registry → fall back to the dev client.
-    return fallbackClient;
-  }
 }
 
 /**
- * The active-shop-aware Prisma client.
- *
- * This is a Proxy that forwards every property access to the currently active
- * shop's Prisma client. When the user switches shops via the topbar selector,
- * subsequent `db.*` calls automatically route to the new shop's SQLite file —
- * no call-site changes needed (all 52 files that import `db` keep working).
- *
- * The resolution happens lazily on each access, so shop switching is immediate.
- * Shop clients are cached in-process (see getShopClient), so the per-access
- * overhead is just a Map lookup + a tiny file read.
- *
- * In test mode, this falls back to the default client (tests set DATABASE_URL).
+ * Immutable process-bound database client. Tauri resolves and migrates one
+ * exact ShopContext before spawning this server; shop changes relaunch the
+ * process rather than mutating database authority underneath in-flight work.
  */
-export const db: DbClient = new Proxy(fallbackClient, {
-  get(_target, prop, receiver) {
-    const client = getActiveShopClient();
-    const value = Reflect.get(client, prop, receiver);
-    // Preserve `this` binding for methods (Prisma client methods need it)
-    if (typeof value === "function") {
-      return value.bind(client);
-    }
-    return value;
-  },
-}) as DbClient;
+export const db: DbClient = processClient;
+export const shopContext = processShopContext();
 
 /**
  * Get an extended PrismaClient for a specific shop file.

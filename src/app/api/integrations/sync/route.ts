@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { syncPlatform, syncAllPlatforms } from "@/lib/integrations/ecommerce/sync-engine";
 import type { EcommercePlatform } from "@/lib/integrations/ecommerce/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -52,13 +52,18 @@ export const POST = withErrorHandler(async (req: NextRequest): Promise<NextRespo
 
   const body = await req.json().catch(() => ({}));
   const input = syncSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   if (input.platform) {
-    const result = await syncPlatform(input.platform as EcommercePlatform, input.maxPages);
+    const result = await syncPlatform(
+      context,
+      input.platform as EcommercePlatform,
+      input.maxPages,
+    );
     return NextResponse.json({ results: [result] });
   }
 
-  const results = await syncAllPlatforms(input.maxPages);
+  const results = await syncAllPlatforms(context, input.maxPages);
   if (results.length === 0) {
     return NextResponse.json({
       results: [],

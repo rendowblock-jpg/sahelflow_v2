@@ -18,15 +18,13 @@
  * so the user sees a graceful state instead of a browser error page.
  */
 
-const CACHE_VERSION = "sahelflow-v1";
+const CACHE_VERSION = "sahelflow-v2-shop-safe";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
 // Assets to pre-cache on install (the app shell).
 // We keep this minimal — the rest is cached on first fetch.
 const PRECACHE_URLS = [
-  "/",
-  "/dashboard",
   "/manifest.webmanifest",
 ];
 
@@ -88,23 +86,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigation requests (HTML pages): network-first, fall back to cached shell
+  // Authenticated navigation HTML is never cached. A cached document could
+  // otherwise survive a shop switch and reveal data from the previous shop.
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache the latest version of the page
-          const copy = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => {
-          // Offline — try the cached page, then fall back to the app shell
-          return caches.match(request).then(
-            (cached) => cached || caches.match("/dashboard"),
-          );
-        }),
-    );
+    event.respondWith(fetch(request));
     return;
   }
 

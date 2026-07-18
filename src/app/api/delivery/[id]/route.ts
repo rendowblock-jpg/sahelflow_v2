@@ -6,7 +6,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { deliveryService } from "@/lib/data/delivery-service";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -31,12 +31,13 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   await requireAuth();
   const { id } = await params;
   const { status } = updateSchema.parse(await req.json());
+  const context = { prisma: db, shop: shopContext };
 
   // Route the lookup through the service so the soft-delete filter
   // (deletedAt: null) is applied. The previous direct `findUnique` would
   // happily operate on a soft-deleted delivery. NotFoundError → 404 via
   // withErrorHandler.
-  const existing = await deliveryService.getById({ prisma: db }, id);
+  const existing = await deliveryService.getById(context, id);
 
   // Phase 1 bug 1.2: route the order status transition through the canonical
   // orderService.updateStatus (single source of truth) instead of inlining
@@ -56,7 +57,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
     status === "refused" ? "refused" : null;
   const orderId = existing.orderId;
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await context.prisma.$transaction(async (tx) => {
     const delivery = await tx.delivery.update({
       where: { id },
       data: { status },
@@ -72,7 +73,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   // the delivery update that already committed.
   if (orderId && targetOrderStatus) {
     try {
-      await orderService.updateStatus({ prisma: db }, orderId, targetOrderStatus, { actor: "system" });
+      await orderService.updateStatus({ prisma: db, shop: shopContext }, orderId, targetOrderStatus, { actor: "system" });
     } catch (err) {
       logger.warn("delivery/[id] PATCH: order status transition skipped", {
         orderId,

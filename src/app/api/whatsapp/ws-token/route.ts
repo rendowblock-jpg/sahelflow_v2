@@ -37,7 +37,9 @@ export const GET = withErrorHandler(async () => {
       { status: 503 },
     );
   }
-  return NextResponse.json({ token }, {
+  const sidecarUrl = process.env.WHATSAPP_SIDECAR_URL ?? "http://127.0.0.1:3001";
+  const wsUrl = `${sidecarUrl.replace(/^http/, "ws")}/ws`;
+  return NextResponse.json({ token, wsUrl }, {
     headers: { "Cache-Control": "no-store" },
   });
 }, "GET /api/whatsapp/ws-token");

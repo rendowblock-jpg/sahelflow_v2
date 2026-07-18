@@ -21,6 +21,14 @@ const NC = "\x1b[0m";
 function ok(msg: string) { console.log(`${GREEN}✅ ${msg}${NC}`); }
 function step(msg: string) { console.log(`${YELLOW}── ${msg} ──${NC}`); }
 
+// The installed candidate must never depend on a developer PATH runtime.
+step("0. Prepare pinned Windows runtime");
+execSync("bun run scripts/prepare-runtime.ts", {
+  stdio: "inherit",
+  cwd: ROOT,
+});
+ok("Pinned runtime prepared");
+
 // ── 1. Next.js standalone build ──────────────────────────────────────────────
 step("1. Next.js standalone build");
 // Skip type-checking during build (we run sf-verify separately)

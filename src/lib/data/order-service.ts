@@ -162,7 +162,7 @@ export const orderService = {
       // Record the order-creation event in the OrderChange ledger (S2-2).
       // If the caller provided a tx, the ledger entry participates in that tx
       // (atomic with the order.create). Otherwise it goes through the outer db.
-      await recordOrderChange({
+      await recordOrderChange(ctx, {
         orderId: row.id,
         actionType: "created",
         payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
@@ -173,7 +173,7 @@ export const orderService = {
       // The trigger payload carries everything the action needs (no DB re-read),
       // so it's safe to dispatch even when the caller's tx hasn't committed yet
       // — executeAutomation uses the payload directly.
-      void dispatchTrigger("order.created" as TriggerEvent, {
+      void dispatchTrigger(ctx, "order.created" as TriggerEvent, {
         orderId: row.id,
         orderNumber: row.orderNumber,
         customerId: row.customerId,
@@ -313,18 +313,18 @@ export const orderService = {
       // forget and the product state on disk reflects the committed stock,
       // so notifications match reality). Void-ed — never blocks the caller.
       for (const product of lowStockToDispatch) {
-        void dispatchLowStock(product);
+        void dispatchLowStock(ctx, product);
       }
 
       // Record the status transition in the OrderChange ledger (S2-1).
       // AI-M4: pass the actor through so AI-initiated transitions are
       // attributed correctly in the timeline.
       if (fromStatus !== undefined && fromStatus !== to) {
-        await recordStatusChange(id, fromStatus, to, opts?.actor ?? "user");
+        await recordStatusChange(ctx, id, fromStatus, to, opts?.actor ?? "user");
       }
 
       // Fire automation trigger (fire-and-forget — never blocks status update)
-      void dispatchTrigger(`order.${to}` as TriggerEvent, {
+      void dispatchTrigger(ctx, `order.${to}` as TriggerEvent, {
         orderId: updated.id,
         orderNumber: updated.orderNumber,
         customerId: updated.customerId,
@@ -389,7 +389,7 @@ export const orderService = {
         return toDomain(row as unknown as Record<string, unknown>);
       });
       // Record the edit in the OrderChange ledger (S2-2).
-      await recordOrderChange({
+      await recordOrderChange(ctx, {
         orderId: id,
         actionType: "edit",
         payload: { fields: Object.keys(data) },

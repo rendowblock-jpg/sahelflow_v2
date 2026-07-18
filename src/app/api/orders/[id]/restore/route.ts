@@ -6,7 +6,7 @@
  * its original state.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
@@ -19,6 +19,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
 
   const order = await db.order.findUnique({
     where: { id },
@@ -33,12 +34,12 @@ export const POST = withErrorHandler(async (_req: NextRequest, { params }: Route
     throw new SahelFlowError("Order is not deleted", "CONFLICT", 409);
   }
 
-  await db.order.update({
+  await context.prisma.order.update({
     where: { id },
     data: { deletedAt: null },
   });
 
-  void logAudit({
+  void logAudit(context, {
     action: "order.restored",
     entity: "order",
     entityId: id,

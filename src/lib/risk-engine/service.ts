@@ -10,8 +10,8 @@
  */
 import "server-only";
 
-import { db } from "@/lib/db";
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
+import type { ServiceContext } from "@/lib/data/service-base";
 import {
   DEFAULT_RISK_CONFIG,
   DEFAULT_RISK_RULES,
@@ -30,7 +30,8 @@ const RULES_KEY = "risk_engine_rules";
 // ── Config persistence ───────────────────────────────────────────────────────
 
 /** Load the risk engine config (falls back to defaults if not set). */
-export async function getRiskConfig(): Promise<RiskEngineConfig> {
+export async function getRiskConfig(context: ServiceContext): Promise<RiskEngineConfig> {
+  const db = context.prisma;
   const row = await db.setting.findUnique({ where: { key: CONFIG_KEY } });
   if (!row) return DEFAULT_RISK_CONFIG;
   try {
@@ -41,7 +42,11 @@ export async function getRiskConfig(): Promise<RiskEngineConfig> {
 }
 
 /** Save the risk engine config. */
-export async function saveRiskConfig(config: RiskEngineConfig): Promise<void> {
+export async function saveRiskConfig(
+  context: ServiceContext,
+  config: RiskEngineConfig,
+): Promise<void> {
+  const db = context.prisma;
   await db.setting.upsert({
     where: { key: CONFIG_KEY },
     create: { key: CONFIG_KEY, value: JSON.stringify(config) },
@@ -52,7 +57,8 @@ export async function saveRiskConfig(config: RiskEngineConfig): Promise<void> {
 // ── Rules persistence ────────────────────────────────────────────────────────
 
 /** Load all risk rules (creates defaults if none exist). */
-export async function getRiskRules(): Promise<RiskRule[]> {
+export async function getRiskRules(context: ServiceContext): Promise<RiskRule[]> {
+  const db = context.prisma;
   const row = await db.setting.findUnique({ where: { key: RULES_KEY } });
   if (!row) {
     // Seed defaults on first access
@@ -71,7 +77,8 @@ export async function getRiskRules(): Promise<RiskRule[]> {
 }
 
 /** Save all risk rules (replaces the entire set). */
-export async function saveRiskRules(rules: RiskRule[]): Promise<void> {
+export async function saveRiskRules(context: ServiceContext, rules: RiskRule[]): Promise<void> {
+  const db = context.prisma;
   await db.setting.upsert({
     where: { key: RULES_KEY },
     create: { key: RULES_KEY, value: JSON.stringify(rules) },
@@ -108,8 +115,12 @@ export async function saveRiskRules(rules: RiskRule[]): Promise<void> {
  * a medium-severity fix. The $transaction at least makes the read+write
  * atomic as a unit (no partial writes).
  */
-export async function incrementRuleTriggers(ruleIds: string[]): Promise<void> {
+export async function incrementRuleTriggers(
+  context: ServiceContext,
+  ruleIds: string[],
+): Promise<void> {
   if (ruleIds.length === 0) return;
+  const db = context.prisma;
   await db.$transaction(
     async (tx) => {
     // Re-read inside the tx so we see any concurrent committed writes.
@@ -147,7 +158,11 @@ export async function incrementRuleTriggers(ruleIds: string[]): Promise<void> {
  * Build the RiskAssessmentInput from a real order ID.
  * Loads the order, the customer's history, and the wilaya risk profile.
  */
-export async function buildAssessmentInputFromOrder(orderId: string): Promise<RiskAssessmentInput | null> {
+export async function buildAssessmentInputFromOrder(
+  context: ServiceContext,
+  orderId: string,
+): Promise<RiskAssessmentInput | null> {
+  const db = context.prisma;
   const order = await db.order.findFirst({
     where: { id: orderId, deletedAt: null },
     select: {
@@ -232,16 +247,22 @@ export async function buildAssessmentInputFromOrder(orderId: string): Promise<Ri
  * Loads config + rules, builds the input, runs the engine, and persists
  * the trigger counts for analytics.
  */
-export async function assessOrderRisk(orderId: string): Promise<RiskAssessment | null> {
-  const input = await buildAssessmentInputFromOrder(orderId);
+export async function assessOrderRisk(
+  context: ServiceContext,
+  orderId: string,
+): Promise<RiskAssessment | null> {
+  const input = await buildAssessmentInputFromOrder(context, orderId);
   if (!input) return null;
 
-  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+  const [config, rules] = await Promise.all([
+    getRiskConfig(context),
+    getRiskRules(context),
+  ]);
 
   const assessment = assessRisk(input, config, rules);
 
   // Persist rule trigger counts (fire-and-forget — don't block the response)
-  void incrementRuleTriggers(assessment.triggeredRules);
+  void incrementRuleTriggers(context, assessment.triggeredRules);
 
   return assessment;
 }
@@ -292,8 +313,10 @@ export interface PreCreateOrderData {
  * (factorNewCustomer fires, +20 risk points by default).
  */
 export async function buildAssessmentInputFromOrderData(
+  context: ServiceContext,
   orderData: PreCreateOrderData,
 ): Promise<RiskAssessmentInput> {
+  const db = context.prisma;
   // Look up existing customer by phone (phone is @@unique on Customer).
   // We allow soft-deleted customers to be found — if a seller is re-creating
   // an order for a previously-deleted customer, the risk history is still
@@ -395,14 +418,18 @@ export async function buildAssessmentInputFromOrderData(
  * post-create path.
  */
 export async function assessOrderRiskPreCreate(
+  context: ServiceContext,
   orderData: PreCreateOrderData,
 ): Promise<RiskAssessment> {
-  const input = await buildAssessmentInputFromOrderData(orderData);
-  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+  const input = await buildAssessmentInputFromOrderData(context, orderData);
+  const [config, rules] = await Promise.all([
+    getRiskConfig(context),
+    getRiskRules(context),
+  ]);
   const assessment = assessRisk(input, config, rules);
 
   // Persist rule trigger counts (fire-and-forget — matches assessOrderRisk).
-  void incrementRuleTriggers(assessment.triggeredRules);
+  void incrementRuleTriggers(context, assessment.triggeredRules);
 
   return assessment;
 }
@@ -411,8 +438,14 @@ export async function assessOrderRiskPreCreate(
  * Assess risk from a raw input (used by the order creation flow before
  * the order is persisted — e.g., to show a live risk preview in the order form).
  */
-export async function assessRiskFromInput(input: RiskAssessmentInput): Promise<RiskAssessment> {
-  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+export async function assessRiskFromInput(
+  context: ServiceContext,
+  input: RiskAssessmentInput,
+): Promise<RiskAssessment> {
+  const [config, rules] = await Promise.all([
+    getRiskConfig(context),
+    getRiskRules(context),
+  ]);
   return assessRisk(input, config, rules);
 }
 
@@ -424,15 +457,24 @@ export async function assessRiskFromInput(input: RiskAssessmentInput): Promise<R
  * Used by the orders page to show risk badges on every row without
  * N separate config/rules DB round-trips.
  */
-export async function batchAssessOrders(orderIds: string[]): Promise<Map<string, RiskAssessment>> {
+export async function batchAssessOrders(
+  context: ServiceContext,
+  orderIds: string[],
+): Promise<Map<string, RiskAssessment>> {
   if (orderIds.length === 0) return new Map();
 
-  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+  const [config, rules] = await Promise.all([
+    getRiskConfig(context),
+    getRiskRules(context),
+  ]);
   const results = new Map<string, RiskAssessment>();
 
   // Build all inputs first (parallel), then assess
   const inputs = await Promise.all(
-    orderIds.map(async (id) => ({ id, input: await buildAssessmentInputFromOrder(id) })),
+    orderIds.map(async (id) => ({
+      id,
+      input: await buildAssessmentInputFromOrder(context, id),
+    })),
   );
 
   let allTriggered: string[] = [];
@@ -445,7 +487,7 @@ export async function batchAssessOrders(orderIds: string[]): Promise<Map<string,
 
   // Persist rule trigger counts once (batched)
   if (allTriggered.length > 0) {
-    void incrementRuleTriggers(allTriggered);
+    void incrementRuleTriggers(context, allTriggered);
   }
 
   return results;
@@ -473,7 +515,12 @@ export async function batchAssessOrders(orderIds: string[]): Promise<Map<string,
  * the first → the first tag is lost. The tx serializes the read+write via
  * SQLite's single-writer lock.
  */
-export async function blacklistCustomer(customerId: string, reason?: string): Promise<void> {
+export async function blacklistCustomer(
+  context: ServiceContext,
+  customerId: string,
+  reason?: string,
+): Promise<void> {
+  const db = context.prisma;
   // Read outside the tx: used for the early no-op return + the dispatch payload.
   // (Reading twice is fine — the tx still serializes the WRITE; the dispatch
   // payload just needs a best-effort snapshot.)
@@ -516,7 +563,7 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
   });
 
   // Fire automation trigger (fire-and-forget)
-  void dispatchTrigger("customer.blacklisted" as TriggerEvent, {
+  void dispatchTrigger(context, "customer.blacklisted" as TriggerEvent, {
     customerId,
     customerName: customer.name,
     customerPhone: customer.phone,
@@ -528,7 +575,11 @@ export async function blacklistCustomer(customerId: string, reason?: string): Pr
  *
  * SV-M6: same transactional notes read-modify-write pattern as blacklistCustomer.
  */
-export async function unblacklistCustomer(customerId: string): Promise<void> {
+export async function unblacklistCustomer(
+  context: ServiceContext,
+  customerId: string,
+): Promise<void> {
+  const db = context.prisma;
   const customer = await db.customer.findFirst({
     where: { id: customerId, deletedAt: null },
     select: { notes: true, isBlacklisted: true },
@@ -565,7 +616,7 @@ export async function unblacklistCustomer(customerId: string): Promise<void> {
 }
 
 /** List all blacklisted customers (queries the dedicated isBlacklisted column). */
-export async function listBlacklistedCustomers(): Promise<Array<{
+export async function listBlacklistedCustomers(context: ServiceContext): Promise<Array<{
   id: string;
   name: string;
   phone: string;
@@ -574,6 +625,7 @@ export async function listBlacklistedCustomers(): Promise<Array<{
   blacklistReason: string | null;
   blacklistedAt: Date | null;
 }>> {
+  const db = context.prisma;
   const customers = await db.customer.findMany({
     where: { isBlacklisted: true, deletedAt: null },
     select: {

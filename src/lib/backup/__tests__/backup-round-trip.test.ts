@@ -8,12 +8,12 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { createBackup, restoreBackup, listBackups, deleteBackup, validateBackupFilename } from "../index";
-import { existsSync, rmSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-const db = new PrismaClient();
+let db = new PrismaClient();
 
 async function cleanDb() {
   await db.$transaction([
@@ -61,23 +61,19 @@ async function seedTestData() {
 // the test's PrismaClient uses. getActiveDbPath() reads data/app-meta.json; if it
 // points at the real dev.db (which exists), backup/restore touches dev.db while the
 // test queries DATABASE_URL — a mismatch that left restored data invisible.
-const META_PATH = join(process.cwd(), "data", "app-meta.json");
-let savedMeta: string | null = null;
+const DATA_DIR = process.env.SF_DATA_DIR!;
+const META_PATH = join(DATA_DIR, "shop-registry.json");
 
 beforeAll(async () => {
-  // Save original app-meta.json (if present) so we can restore it after the suite.
-  try {
-    if (existsSync(META_PATH)) savedMeta = readFileSync(META_PATH, "utf8");
-  } catch { /* ignore */ }
-  // Derive the test DB path from DATABASE_URL (set by the test runner / CI).
-  const dbUrl = process.env.DATABASE_URL ?? "";
-  const testDbPath = dbUrl.startsWith("file:") ? dbUrl.slice("file:".length) : join(process.cwd(), "data", "shops", "dev.db");
-  mkdirSync(join(process.cwd(), "data"), { recursive: true });
+  mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(
     META_PATH,
     JSON.stringify({
-      shops: [{ id: "default", name: "Test", dbPath: testDbPath, icon: "🏪", createdAt: new Date().toISOString() }],
-      activeShopId: "default",
+      formatVersion: 1,
+      revision: 1,
+      installationId: "test-installation",
+      shops: [{ id: "test", name: "Test", databaseFile: "test.db", icon: null, createdAt: new Date().toISOString() }],
+      activeShopId: "test",
     }),
   );
 });
@@ -88,12 +84,8 @@ describe("backup round-trip (PROD-006)", () => {
   afterAll(async () => {
     await cleanDb();
     await db.$disconnect();
-    const backupDir = join(process.cwd(), "data", "backups");
+    const backupDir = join(DATA_DIR, "backups");
     if (existsSync(backupDir)) rmSync(backupDir, { recursive: true, force: true });
-    // Restore the original app-meta.json so the test doesn't pollute the real shop registry.
-    try {
-      if (savedMeta !== null) writeFileSync(META_PATH, savedMeta);
-    } catch { /* ignore */ }
   });
 
   it("createBackup produces a backup file", async () => {
@@ -115,10 +107,12 @@ describe("backup round-trip (PROD-006)", () => {
     const backup = await createBackup();
     await cleanDb();
     expect(await db.product.findMany()).toHaveLength(0);
+    await db.$disconnect();
 
     const restoreResult = await restoreBackup(backup.filename);
     expect(restoreResult.success).toBe(true);
 
+    db = new PrismaClient();
     const products = await db.product.findMany();
     expect(products).toHaveLength(1);
     expect(products[0]!.name).toBe("TestProduct");
@@ -142,7 +136,7 @@ describe("backup round-trip (PROD-006)", () => {
   it("validateBackupFilename rejects path traversal", () => {
     expect(() => validateBackupFilename("../../../etc/passwd")).toThrow();
     expect(() => validateBackupFilename("")).toThrow();
-    const valid = validateBackupFilename("sahelflow-backup-2026-06-30T12-00-00-000Z.db");
+    const valid = validateBackupFilename("sahelflow-backup-test-2026-06-30T12-00-00-000Z.db");
     expect(valid).toBeTruthy();
   });
 });

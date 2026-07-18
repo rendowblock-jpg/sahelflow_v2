@@ -1,5 +1,5 @@
 import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { formatDZD } from "@/lib/utils";
 import { batchAssessOrders } from "@/lib/risk-engine";
 import type { OrderStatus } from "@/types/domain";
@@ -92,7 +92,10 @@ export default async function OrdersPage({
 
   // Batch-assess risk for ALL orders (used for the risk column + high-risk filter).
   // This loads config+rules once, then builds inputs for each order in parallel.
-  const riskMap = await batchAssessOrders(allOrders.map((o) => o.id));
+  const riskMap = await batchAssessOrders(
+    { prisma: db, shop: shopContext },
+    allOrders.map((o) => o.id),
+  );
   const highRiskCount = Array.from(riskMap.values()).filter(
     (a) => a.level === "high" || a.level === "critical",
   ).length;

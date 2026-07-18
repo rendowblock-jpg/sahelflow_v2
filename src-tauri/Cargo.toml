@@ -1,6 +1,6 @@
 [package]
 name = "sahelflow"
-version = "4.1.0"
+version = "1.0.0-internal.1"
 description = "AI-powered back-office for Algerian COD sellers"
 authors = ["SahelFlow"]
 edition = "2021"
@@ -20,15 +20,15 @@ tauri-plugin-store = "2"
 tauri-plugin-os = "2"
 tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-single-instance = "2"
 tauri-plugin-stronghold = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 urlencoding = "2"
-# T-M1: use the `which` crate for PATH lookups (replaces --version probing
-# in which_exists, which produced false negatives when the runtime existed
-# but `--version` was not a valid arg for the binary).
-which = "7"
-
+getrandom = "0.2"
+rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
+fs2 = "0.4"
 # T-M3: pin time to a range to avoid broken time_macros::timestamp in v0.3.50
 # while still allowing patch-level updates within 0.3.x.
 time = ">=0.3.41, <0.3.50"

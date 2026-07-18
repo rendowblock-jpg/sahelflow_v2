@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +40,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   let product;
   try {
-    product = await productService.getById({ prisma: db }, id);
+    product = await productService.getById({ prisma: db, shop: shopContext }, id);
   } catch (err) {
     if (err instanceof SahelFlowError && err.statusCode === 404) {
       notFound();

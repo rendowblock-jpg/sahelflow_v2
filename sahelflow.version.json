@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "productMajor": 1,
+  "version": "1.0.0-internal.1",
+  "channel": "internal",
+  "runtimeProtocolVersion": 1,
+  "shopRegistryFormatVersion": 1,
+  "backupFormatVersion": 1
+}

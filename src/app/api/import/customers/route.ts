@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   parseFile,
   mapRows,
@@ -92,12 +92,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     });
   }
 
+  const context = { prisma: db, shop: shopContext };
   const result = await batchInsert(validation.valid, async (chunk) => {
     let inserted = 0;
     const errors: Array<{ rowIndex: number; error: string }> = [];
     for (const row of chunk) {
       try {
-        await db.customer.create({ data: row.data });
+        await context.prisma.customer.create({ data: row.data });
         inserted++;
       } catch (err) {
         errors.push({

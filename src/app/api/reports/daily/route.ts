@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { generateDailyReport } from "@/lib/reports/daily-report";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -55,14 +55,15 @@ export const dynamic = "force-dynamic";
  * default in Algeria).
  */
 async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
+  const context = { prisma: db, shop: shopContext };
   // 1. Check if the daily report is enabled
-  const enabled = await getBool(SETTING_KEYS.dailyReportEnabled, false);
+  const enabled = await getBool(context, SETTING_KEYS.dailyReportEnabled, false);
   if (!enabled && trigger === "cron") {
     return NextResponse.json({ ok: false, reason: "disabled" });
   }
 
   // 2. Get the recipient phone
-  const phone = await getSetting(SETTING_KEYS.dailyReportPhone);
+  const phone = await getSetting(context, SETTING_KEYS.dailyReportPhone);
   if (!phone) {
     return NextResponse.json({ ok: false, reason: "no phone configured" });
   }
@@ -74,7 +75,7 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
   // calendar date so a UTC-server cron firing at 23:30 UTC = 00:30
   // Algiers next day correctly rolls over to the new day.
   const todayAlgiers = getAlgiersTodayDate();
-  const lastSent = await getSetting(DAILY_REPORT_LAST_SENT_KEY);
+  const lastSent = await getSetting(context, DAILY_REPORT_LAST_SENT_KEY);
   if (lastSent === todayAlgiers) {
     return NextResponse.json({ ok: true, skipped: "already sent today" });
   }
@@ -110,7 +111,7 @@ async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
   // marking it as sent and never retrying.)
   if (whatsappSent) {
     try {
-      await db.setting.upsert({
+      await context.prisma.setting.upsert({
         where: { key: DAILY_REPORT_LAST_SENT_KEY },
         create: { key: DAILY_REPORT_LAST_SENT_KEY, value: todayAlgiers },
         update: { value: todayAlgiers },

@@ -11,7 +11,7 @@
  * are handled by regex and never hit Gemini.
  */
 
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { extractWithRegex } from "./regex-extractor";
 import { extractWithGemini } from "./gemini-extractor";
 import type { ExtractionInput, ExtractionResult } from "./types";
@@ -67,7 +67,7 @@ export async function extractOrder(
  * Record an extraction metric for accuracy tracking (Phase 5 moat).
  * Fire-and-forget — never blocks the extraction flow.
  */
-export async function recordExtractionMetric(params: {
+export async function recordExtractionMetric(context: ServiceContext, params: {
   messageId?: string;
   method: string;
   confidence: number;
@@ -78,7 +78,7 @@ export async function recordExtractionMetric(params: {
   modelVersion?: string;
 }): Promise<void> {
   try {
-    await db.extractionMetric.create({
+    await context.prisma.extractionMetric.create({
       data: {
         messageId: params.messageId ?? null,
         method: params.method,

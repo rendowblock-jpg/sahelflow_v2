@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
@@ -26,6 +26,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = syncSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   // Find the delivery record
   const delivery = input.deliveryId
@@ -43,7 +44,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   const adapter = getDeliveryAdapter(delivery.provider);
-  const creds = await loadDeliveryCredentials(delivery.provider);
+  const creds = await loadDeliveryCredentials(
+    context,
+    delivery.provider,
+  );
 
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
 
@@ -63,7 +67,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // runs AFTER the tx commits via orderService.updateStatus, which opens its
   // own tx; SQLite serializes writes so this is safe).
   let shouldTransitionToDelivered = false;
-  await db.$transaction(async (tx) => {
+  await context.prisma.$transaction(async (tx) => {
     await tx.delivery.update({
       where: { id: delivery.id },
       data: {
@@ -94,7 +98,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // delivery update that already committed.
   if (shouldTransitionToDelivered) {
     try {
-      await orderService.updateStatus({ prisma: db }, delivery.orderId, "delivered");
+      await orderService.updateStatus({ prisma: db, shop: shopContext }, delivery.orderId, "delivered");
     } catch (err) {
       logger.warn("delivery/sync: order status transition skipped", {
         orderId: delivery.orderId,
@@ -135,7 +139,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   }
 
   const adapter = getDeliveryAdapter(delivery.provider);
-  const creds = await loadDeliveryCredentials(delivery.provider);
+  const creds = await loadDeliveryCredentials(
+    { prisma: db, shop: shopContext },
+    delivery.provider,
+  );
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
 
   return NextResponse.json({ tracking });

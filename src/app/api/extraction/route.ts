@@ -10,6 +10,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // consent, return 403 with a specific error code the UI can catch.
   // (Wave 1: gate the entire route. Wave 2 may allow regex-only without
   // consent since regex extraction is fully local.)
-  const consent = await getBool(SETTING_KEYS.geminiConsentAccepted, false);
+  const consent = await getBool(
+    { prisma: db, shop: shopContext },
+    SETTING_KEYS.geminiConsentAccepted,
+    false,
+  );
   if (!consent) {
     return NextResponse.json(
       {
@@ -87,7 +92,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Resolve the Gemini key: explicit override > stored secret > none
   let geminiApiKey = input.geminiApiKey;
   if (!geminiApiKey) {
-    geminiApiKey = (await getSecret("gemini_api_key")) ?? undefined;
+    geminiApiKey =
+      (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ?? undefined;
   }
 
   const start = Date.now();
@@ -102,7 +108,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // dashboard at /analytics/extraction is permanently empty.
   // AI-M14: forward the messageId (when provided by the caller) so the
   // ExtractionMetric row can be linked back to the source Message.
-  void recordExtractionMetric({
+  void recordExtractionMetric({ prisma: db, shop: shopContext }, {
     messageId: input.messageId,
     method: result.method,
     confidence: result.confidence,

@@ -1,228 +1,441 @@
-/**
- * Shop registry management — list/create/delete shop files.
- *
- * The shop registry is stored as a JSON file at `data/app-meta.json`:
- *   { shops: [{id, name, dbPath, icon, createdAt}], activeShopId: "..." }
- *
- * Each shop has its own SQLite file (e.g. `data/shops/my-shop.db`). Creating a
- * shop runs `prisma db push` against the new file to initialize the schema.
- *
- * The active shop ID is persisted here (not in a per-shop Setting table) so
- * it's available before any shop DB is opened. A follow-up PR will route all
- * `db` calls through the active shop's client (via getShopClient).
- */
 import "server-only";
 
-
-import { execSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "fs";
-import { join, dirname } from "path";
-import { shopsDir, appMetaPath } from "./paths";
+import {
+  closeSync,
+  copyFileSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { invalidateShopClient } from "@/lib/db";
+import {
+  appMetaPath,
+  legacyAppMetaPath,
+  prismaSchemaPath,
+  quarantineDir,
+  registryPath,
+  shopTemplatePath,
+  shopsDir,
+} from "./paths";
+
+export const SHOP_REGISTRY_FORMAT_VERSION = 1;
+const MAX_SHOPS = 10;
 
 export interface Shop {
   id: string;
   name: string;
-  /** Path to the shop's SQLite database (relative to project root). */
-  dbPath: string;
-  /** Emoji icon (nullable). */
+  databaseFile: string;
   icon: string | null;
   createdAt: string;
 }
 
-interface AppMeta {
-  shops: Shop[];
+export interface ShopRegistry {
+  formatVersion: 1;
+  revision: number;
+  installationId: string;
   activeShopId: string | null;
+  shops: Shop[];
 }
 
-const MAX_SHOPS = 10;
+type LegacyRegistry = {
+  activeShopId?: string | null;
+  shops?: Array<{
+    id?: string;
+    name?: string;
+    dbPath?: string;
+    icon?: string | null;
+    createdAt?: string;
+  }>;
+};
 
-/** Read the app-meta.json file (creates it with defaults if missing). */
-function readMeta(): AppMeta {
-  if (!existsSync(appMetaPath)) {
-    const initial: AppMeta = { shops: [], activeShopId: null };
-    writeFileSync(appMetaPath, JSON.stringify(initial, null, 2));
-    return initial;
+export class ShopRegistryError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+  ) {
+    super(message);
+    this.name = "ShopRegistryError";
+  }
+}
+
+function databasePath(shop: Shop): string {
+  const safeName = basename(shop.databaseFile);
+  if (safeName !== shop.databaseFile || !/^[a-z0-9][a-z0-9-]*\.db$/.test(safeName)) {
+    throw new ShopRegistryError(
+      `Shop ${shop.id} has an invalid database file identity`,
+      "REGISTRY_DATABASE_FILE_INVALID",
+    );
+  }
+  return join(shopsDir, safeName);
+}
+
+function validateShop(value: unknown): Shop {
+  if (!value || typeof value !== "object") {
+    throw new ShopRegistryError("Registry contains an invalid shop", "REGISTRY_SHOP_INVALID");
+  }
+  const shop = value as Partial<Shop>;
+  if (!shop.id || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(shop.id)) {
+    throw new ShopRegistryError("Registry contains an invalid shop ID", "REGISTRY_SHOP_ID_INVALID");
+  }
+  if (!shop.name?.trim() || !shop.databaseFile || !shop.createdAt) {
+    throw new ShopRegistryError(`Shop ${shop.id} is incomplete`, "REGISTRY_SHOP_INVALID");
+  }
+  const validated: Shop = {
+    id: shop.id,
+    name: shop.name.trim(),
+    databaseFile: shop.databaseFile,
+    icon: typeof shop.icon === "string" ? shop.icon : null,
+    createdAt: shop.createdAt,
+  };
+  databasePath(validated);
+  return validated;
+}
+
+function validateRegistry(value: unknown, requireFiles = true): ShopRegistry {
+  if (!value || typeof value !== "object") {
+    throw new ShopRegistryError("Shop registry is not an object", "REGISTRY_INVALID");
+  }
+  const registry = value as Partial<ShopRegistry>;
+  if (registry.formatVersion !== SHOP_REGISTRY_FORMAT_VERSION) {
+    throw new ShopRegistryError(
+      `Unsupported shop registry format ${String(registry.formatVersion)}`,
+      "REGISTRY_VERSION_UNSUPPORTED",
+    );
+  }
+  if (!Number.isSafeInteger(registry.revision) || (registry.revision ?? -1) < 0) {
+    throw new ShopRegistryError("Registry revision is invalid", "REGISTRY_REVISION_INVALID");
+  }
+  if (!registry.installationId || !Array.isArray(registry.shops)) {
+    throw new ShopRegistryError("Registry identity or shop list is missing", "REGISTRY_INVALID");
+  }
+
+  const shops = registry.shops.map(validateShop);
+  if (shops.length > 0 && registry.revision === 0) {
+    throw new ShopRegistryError(
+      "A non-empty shop registry must have a positive revision",
+      "REGISTRY_REVISION_INVALID",
+    );
+  }
+  if (new Set(shops.map((shop) => shop.id)).size !== shops.length) {
+    throw new ShopRegistryError("Registry contains duplicate shop IDs", "REGISTRY_DUPLICATE_SHOP");
+  }
+  if (new Set(shops.map((shop) => shop.databaseFile)).size !== shops.length) {
+    throw new ShopRegistryError(
+      "Registry assigns one database file to multiple shops",
+      "REGISTRY_DUPLICATE_DATABASE",
+    );
+  }
+  if (registry.activeShopId && !shops.some((shop) => shop.id === registry.activeShopId)) {
+    throw new ShopRegistryError("Active shop is not registered", "REGISTRY_ACTIVE_SHOP_INVALID");
+  }
+  if (requireFiles) {
+    for (const shop of shops) {
+      if (!existsSync(databasePath(shop))) {
+        throw new ShopRegistryError(
+          `Database file is missing for shop ${shop.id}`,
+          "REGISTRY_DATABASE_MISSING",
+        );
+      }
+    }
+  }
+
+  return {
+    formatVersion: SHOP_REGISTRY_FORMAT_VERSION,
+    revision: registry.revision!,
+    installationId: registry.installationId,
+    activeShopId: registry.activeShopId ?? null,
+    shops,
+  };
+}
+
+function parseJson(path: string): unknown {
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    throw new ShopRegistryError(
+      `Could not parse ${path}: ${error instanceof Error ? error.message : String(error)}`,
+      "REGISTRY_CORRUPT",
+    );
+  }
+}
+
+function writeRegistryFile(registry: ShopRegistry): void {
+  mkdirSync(dirname(registryPath), { recursive: true });
+  const tempPath = `${registryPath}.${process.pid}.${randomUUID()}.tmp`;
+  const handle = openSync(tempPath, "wx", 0o600);
+  try {
+    writeFileSync(handle, `${JSON.stringify(registry, null, 2)}\n`, "utf8");
+    fsyncSync(handle);
+  } finally {
+    closeSync(handle);
   }
   try {
-    return JSON.parse(readFileSync(appMetaPath, "utf-8")) as AppMeta;
+    renameSync(tempPath, registryPath);
+  } catch (error) {
+    rmSync(tempPath, { force: true });
+    throw error;
+  }
+}
+
+function withRegistryLock<T>(operation: () => T): T {
+  mkdirSync(dirname(registryPath), { recursive: true });
+  const lockPath = `${registryPath}.lock`;
+  let lock: number;
+  try {
+    lock = openSync(lockPath, "wx", 0o600);
   } catch {
-    return { shops: [], activeShopId: null };
+    throw new ShopRegistryError("Shop registry is busy", "REGISTRY_LOCKED");
+  }
+  try {
+    return operation();
+  } finally {
+    closeSync(lock);
+    unlinkSync(lockPath);
   }
 }
 
-/** Write the app-meta.json file. */
-function writeMeta(meta: AppMeta): void {
-  mkdirSync(dirname(appMetaPath), { recursive: true });
-  writeFileSync(appMetaPath, JSON.stringify(meta, null, 2));
+function emptyRegistry(): ShopRegistry {
+  return {
+    formatVersion: SHOP_REGISTRY_FORMAT_VERSION,
+    revision: 0,
+    installationId: randomUUID(),
+    activeShopId: null,
+    shops: [],
+  };
 }
 
-/**
- * List all registered shops. On first run (empty registry + no app-meta.json),
- * bootstraps a default shop pointing at the existing dev database so the user
- * sees their existing data instead of an empty state.
- */
-export function listShops(): Shop[] {
-  const meta = readMeta();
-  // First-run bootstrap: if the registry is empty, create a default shop.
-  // We detect "first run" by checking that app-meta.json didn't exist before
-  // this call (readMeta creates it if missing) AND there are no shops.
-  if (meta.shops.length === 0) {
-    const defaultShop: Shop = {
-      id: "default",
-      name: "Ma Boutique",
-      dbPath: "data/shops/dev.db",
-      icon: "🏪",
-      createdAt: new Date().toISOString(),
-    };
-    meta.shops = [defaultShop];
-    meta.activeShopId = "default";
-    writeMeta(meta);
+function importLegacyRegistry(): ShopRegistry {
+  const legacy = parseJson(legacyAppMetaPath) as LegacyRegistry;
+  if (!Array.isArray(legacy.shops)) {
+    throw new ShopRegistryError("Legacy registry has no shop list", "LEGACY_REGISTRY_INVALID");
   }
-  return meta.shops;
+  const shops = legacy.shops.map((shop) => {
+    if (!shop.id || !shop.name || !shop.dbPath) {
+      throw new ShopRegistryError("Legacy registry contains an incomplete shop", "LEGACY_REGISTRY_INVALID");
+    }
+    const candidate = resolve(process.cwd(), shop.dbPath);
+    const dataRelative = relative(resolve(process.cwd(), "data"), candidate);
+    const legacyPath =
+      !dataRelative.startsWith("..") && !dataRelative.startsWith("/")
+        ? resolve(dirname(legacyAppMetaPath), dataRelative)
+        : candidate;
+    const file = basename(legacyPath);
+    const canonicalPath = join(shopsDir, file);
+    if (resolve(legacyPath) !== resolve(canonicalPath) || !existsSync(canonicalPath)) {
+      throw new ShopRegistryError(
+        `Legacy database for ${shop.id} is missing or outside the canonical data root`,
+        "LEGACY_DATABASE_AMBIGUOUS",
+      );
+    }
+    return validateShop({
+      id: shop.id,
+      name: shop.name,
+      databaseFile: file,
+      icon: shop.icon ?? null,
+      createdAt: shop.createdAt ?? new Date().toISOString(),
+    });
+  });
+  return validateRegistry(
+    {
+      formatVersion: SHOP_REGISTRY_FORMAT_VERSION,
+      revision: 1,
+      installationId: randomUUID(),
+      activeShopId: legacy.activeShopId ?? shops[0]?.id ?? null,
+      shops,
+    },
+    true,
+  );
 }
 
-/** Get the active shop ID. */
-export function getActiveShopId(): string | null {
-  return readMeta().activeShopId;
-}
-
-/** Set the active shop ID. */
-export function setActiveShopId(shopId: string): void {
-  const meta = readMeta();
-  const exists = meta.shops.some((s) => s.id === shopId);
-  if (!exists) {
-    throw new Error(`Shop "${shopId}" not found`);
+function ensureRegistry(): ShopRegistry {
+  if (existsSync(registryPath)) {
+    return validateRegistry(parseJson(registryPath));
   }
-  meta.activeShopId = shopId;
-  writeMeta(meta);
+  return withRegistryLock(() => {
+    if (existsSync(registryPath)) return validateRegistry(parseJson(registryPath));
+    const registry = existsSync(legacyAppMetaPath) ? importLegacyRegistry() : emptyRegistry();
+    writeRegistryFile(registry);
+    return registry;
+  });
 }
 
-/** Get the active shop (or null if none set). */
-export function getActiveShop(): Shop | null {
-  const meta = readMeta();
-  return meta.shops.find((s) => s.id === meta.activeShopId) ?? null;
+function mutateRegistry(mutator: (registry: ShopRegistry) => void): ShopRegistry {
+  return withRegistryLock(() => {
+    const registry = existsSync(registryPath)
+      ? validateRegistry(parseJson(registryPath))
+      : existsSync(legacyAppMetaPath)
+        ? importLegacyRegistry()
+        : emptyRegistry();
+    mutator(registry);
+    registry.revision += 1;
+    const validated = validateRegistry(registry);
+    writeRegistryFile(validated);
+    return validated;
+  });
 }
 
-/** Generate a unique shop ID (slug-based, with collision avoidance). */
 function generateShopId(name: string, existing: Shop[]): string {
-  const base = name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 30) || "shop";
+  const base =
+    name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 30) || "shop";
   let id = base;
-  let i = 2;
-  while (existing.some((s) => s.id === id)) {
-    id = `${base}-${i}`;
-    i++;
-  }
+  let suffix = 2;
+  while (existing.some((shop) => shop.id === id)) id = `${base}-${suffix++}`;
   return id;
 }
 
-/**
- * Create a new shop: registers it + initializes the SQLite file with the
- * Prisma schema (via `prisma db push`).
- */
-export function createShop(input: {
-  name: string;
-  icon?: string | null;
-}): Shop {
-  const meta = readMeta();
-  if (meta.shops.length >= MAX_SHOPS) {
-    throw new Error(`Maximum ${MAX_SHOPS} shops allowed`);
+function provisionDatabase(target: string): void {
+  mkdirSync(dirname(target), { recursive: true });
+  if (existsSync(shopTemplatePath)) {
+    copyFileSync(shopTemplatePath, target);
+    return;
   }
-
-  const name = input.name.trim();
-  if (!name) throw new Error("Shop name is required");
-
-  const id = generateShopId(name, meta.shops);
-  const dbPath = `data/shops/${id}.db`;
-  const fullPath = join(process.cwd(), dbPath);
-
-  // Ensure the shops directory exists
-  mkdirSync(join(process.cwd(), "data", "shops"), { recursive: true });
-
-  // Initialize the SQLite file with the Prisma schema
-  // This runs `bunx prisma db push` with the datasource URL pointing to the
-  // new shop file. The schema is read from prisma/schema.prisma.
-  try {
-    execSync(
-      `bunx prisma db push --skip-generate --accept-data-loss`,
-      {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          DATABASE_URL: `file:${fullPath}`,
-        },
-        stdio: "pipe", // suppress output
-        timeout: 30000,
-      },
+  if (process.env.NODE_ENV === "production") {
+    throw new ShopRegistryError(
+      "The desktop migration coordinator did not prepare a shop template",
+      "SHOP_TEMPLATE_MISSING",
     );
-  } catch (err) {
-    // Clean up the partial file if schema push failed
-    if (existsSync(fullPath)) {
-      try { unlinkSync(fullPath); } catch { /* ignore */ }
+  }
+  const result = spawnSync(
+    "bunx",
+    ["prisma", "migrate", "deploy", `--schema=${prismaSchemaPath}`],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, DATABASE_URL: `file:${target}` },
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    },
+  );
+  if (result.status !== 0) {
+    rmSync(target, { force: true });
+    throw new ShopRegistryError(
+      result.stderr || "Could not initialize the shop database",
+      "SHOP_PROVISION_FAILED",
+    );
+  }
+}
+
+export function getRegistry(): ShopRegistry {
+  return ensureRegistry();
+}
+
+export function listShops(): Shop[] {
+  return ensureRegistry().shops;
+}
+
+export function getActiveShopId(): string | null {
+  return ensureRegistry().activeShopId;
+}
+
+export function setActiveShopId(shopId: string): void {
+  mutateRegistry((registry) => {
+    if (!registry.shops.some((shop) => shop.id === shopId)) {
+      throw new ShopRegistryError(`Shop ${shopId} not found`, "SHOP_NOT_FOUND");
     }
-    throw new Error(
-      `Failed to initialize shop database: ${err instanceof Error ? err.message : "Unknown error"}`,
-    );
-  }
-
-  const shop: Shop = {
-    id,
-    name,
-    dbPath,
-    icon: input.icon ?? null,
-    createdAt: new Date().toISOString(),
-  };
-
-  meta.shops.push(shop);
-  if (!meta.activeShopId) {
-    meta.activeShopId = id; // auto-activate the first shop
-  }
-  writeMeta(meta);
-
-  return shop;
+    registry.activeShopId = shopId;
+  });
 }
 
-/** Delete a shop (removes from registry + deletes the SQLite file). */
+export function getActiveShop(): Shop | null {
+  const registry = ensureRegistry();
+  return registry.shops.find((shop) => shop.id === registry.activeShopId) ?? null;
+}
+
+export function createShop(input: { name: string; icon?: string | null }): Shop {
+  const name = input.name.trim();
+  if (!name) throw new ShopRegistryError("Shop name is required", "SHOP_NAME_REQUIRED");
+
+  return withRegistryLock(() => {
+    const registry = existsSync(registryPath)
+      ? validateRegistry(parseJson(registryPath))
+      : existsSync(legacyAppMetaPath)
+        ? importLegacyRegistry()
+        : emptyRegistry();
+    if (registry.shops.length >= MAX_SHOPS) {
+      throw new ShopRegistryError(`Maximum ${MAX_SHOPS} shops allowed`, "SHOP_LIMIT_REACHED");
+    }
+    const id = generateShopId(name, registry.shops);
+    const shop: Shop = {
+      id,
+      name,
+      databaseFile: `${id}.db`,
+      icon: input.icon ?? null,
+      createdAt: new Date().toISOString(),
+    };
+    const target = databasePath(shop);
+    const staging = `${target}.${randomUUID()}.provisioning`;
+    provisionDatabase(staging);
+    renameSync(staging, target);
+
+    registry.shops.push(shop);
+    registry.activeShopId ??= id;
+    registry.revision += 1;
+    try {
+      writeRegistryFile(validateRegistry(registry));
+    } catch (error) {
+      mkdirSync(quarantineDir, { recursive: true });
+      renameSync(target, join(quarantineDir, `${id}-${Date.now()}.db`));
+      throw error;
+    }
+    return shop;
+  });
+}
+
 export function deleteShop(shopId: string): void {
-  const meta = readMeta();
-  const shop = meta.shops.find((s) => s.id === shopId);
-  if (!shop) throw new Error(`Shop "${shopId}" not found`);
+  withRegistryLock(() => {
+    const registry = validateRegistry(parseJson(registryPath));
+    const shop = registry.shops.find((candidate) => candidate.id === shopId);
+    if (!shop) throw new ShopRegistryError(`Shop ${shopId} not found`, "SHOP_NOT_FOUND");
+    if (registry.shops.length === 1) {
+      throw new ShopRegistryError("Cannot delete the last shop", "SHOP_LAST_DELETE_REJECTED");
+    }
 
-  // Don't allow deleting the last shop
-  if (meta.shops.length === 1) {
-    throw new Error("Cannot delete the last shop. Create another first.");
-  }
-
-  // Delete the SQLite file
-  const fullPath = join(process.cwd(), shop.dbPath);
-  // Session 31 (AUDIT-3 S7): invalidate the cached PrismaClient BEFORE deleting
-  // the file, so no stale connection lingers on a deleted file + the meta
-  // cache is cleared (activeShopId may change below).
-  invalidateShopClient(fullPath);
-  if (existsSync(fullPath)) {
-    try { unlinkSync(fullPath); } catch { /* ignore */ }
-  }
-
-  // Remove from registry + update active shop if needed
-  meta.shops = meta.shops.filter((s) => s.id !== shopId);
-  if (meta.activeShopId === shopId) {
-    meta.activeShopId = meta.shops[0]?.id ?? null;
-  }
-  writeMeta(meta);
+    const source = databasePath(shop);
+    mkdirSync(quarantineDir, { recursive: true });
+    const quarantined = join(quarantineDir, `${shop.id}-${Date.now()}.db`);
+    invalidateShopClient(source);
+    renameSync(source, quarantined);
+    registry.shops = registry.shops.filter((candidate) => candidate.id !== shopId);
+    if (registry.activeShopId === shopId) registry.activeShopId = registry.shops[0]?.id ?? null;
+    registry.revision += 1;
+    try {
+      writeRegistryFile(validateRegistry(registry));
+    } catch (error) {
+      renameSync(quarantined, source);
+      throw error;
+    }
+  });
 }
 
-/** Get a shop by ID. */
 export function getShop(shopId: string): Shop | null {
-  return readMeta().shops.find((s) => s.id === shopId) ?? null;
+  return ensureRegistry().shops.find((shop) => shop.id === shopId) ?? null;
 }
 
-// Re-export paths for convenience
-export { shopsDir, appMetaPath };
+export function getShopDatabasePath(shop: Shop): string {
+  return databasePath(shop);
+}
+
+export {
+  appMetaPath,
+  legacyAppMetaPath,
+  quarantineDir,
+  registryPath,
+  shopTemplatePath,
+  shopsDir,
+};

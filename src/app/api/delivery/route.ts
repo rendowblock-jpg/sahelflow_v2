@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { deliveryService } from "@/lib/data/delivery-service";
 import type { DeliveryStatus } from "@/types/domain";
 import { requireAuth } from "@/lib/auth/server";
@@ -41,7 +41,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 
   const [deliveries, total] = await Promise.all([
     deliveryService.list(
-      { prisma: db },
+      { prisma: db, shop: shopContext },
       {
         limit: pageSize,
         offset,

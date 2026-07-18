@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -18,7 +18,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   // Public path: fetch by slug for the storefront page
   if (slug) {
     const { storefrontService } = await import("@/lib/storefront/service");
-    const config = await storefrontService.getBySlug(slug);
+    const config = await storefrontService.getBySlug(
+      { prisma: db, shop: shopContext },
+      slug,
+    );
     if (!config || !config.isActive) {
       return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
     }
@@ -39,7 +42,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   // stays public (correct — renders the public storefront page).
   await requireAuth();
   const { storefrontService } = await import("@/lib/storefront/service");
-  const configs = await storefrontService.list();
+  const configs = await storefrontService.list({ prisma: db, shop: shopContext });
   return NextResponse.json({ configs });
 }, "GET /api/storefront/config");
 
@@ -70,7 +73,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const input = createConfigSchema.parse(body);
 
   const { storefrontService, DEFAULT_THEME } = await import("@/lib/storefront/service");
-  const config = await storefrontService.create({
+  const config = await storefrontService.create({ prisma: db, shop: shopContext }, {
     slug: input.slug,
     name: input.name,
     description: input.description,

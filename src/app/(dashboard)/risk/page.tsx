@@ -19,6 +19,7 @@ import { ShieldAlert, TrendingUp, TrendingDown, AlertTriangle, Ban, PiggyBank, A
 import type { Metadata } from "next";
 import type { ChartConfig } from "@/components/ui/chart";
 import type { RiskLevel } from "@/lib/risk-engine";
+import { db, shopContext } from "@/lib/db";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -51,12 +52,13 @@ export default async function RiskPage({
   const days = Number(daysParam);
   const validDays = [7, 14, 30, 90].includes(days) ? days : 30;
   const activeTab = tabParam ?? "overview";
+  const context = { prisma: db, shop: shopContext };
 
   const [report, config, rules, blacklisted] = await Promise.all([
-    getRiskAnalyticsReport(validDays),
-    getRiskConfig(),
-    getRiskRules(),
-    listBlacklistedCustomers(),
+    getRiskAnalyticsReport(context, validDays),
+    getRiskConfig(context),
+    getRiskRules(context),
+    listBlacklistedCustomers(context),
   ]);
 
   const k = report.kpis;

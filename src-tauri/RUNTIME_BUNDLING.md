@@ -43,7 +43,7 @@ jobs — see the Wave 7 macOS CI task T-H4/T-M9).
 | Prisma `libquery_engine` | `binaries.prisma.sh` | `resources/runtime/<engine>` |
 | Next.js standalone server | `bun run build` → `.next/standalone` | `resources/standalone/**/*` |
 | Prisma schema + migrations | `prisma/` | (already bundled) `../prisma/**/*` |
-| Migration runner | `scripts/run-migrations.ts` | (already bundled) |
+| Migration coordinator | `src/migration_coordinator.rs` | compiled into the Tauri host |
 
 ## Runtime resolution order in `lib.rs`
 

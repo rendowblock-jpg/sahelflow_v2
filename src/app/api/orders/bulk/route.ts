@@ -10,7 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import type { OrderStatus } from "@/types/domain";
@@ -31,7 +31,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const { ids, status } = bulkSchema.parse(body);
 
   const result = await orderServiceExtensions.bulkUpdateStatus(
-    { prisma: db },
+    { prisma: db, shop: shopContext },
     ids,
     status as OrderStatus,
   );

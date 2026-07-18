@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { requireLicense } from "@/lib/license/license-server";
@@ -33,7 +33,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireLicense();
   const body = await req.json().catch(() => ({}));
   const input = createSchema.parse(body);
-  const session = await db.aiChatSession.create({
+  const context = { prisma: db, shop: shopContext };
+  const session = await context.prisma.aiChatSession.create({
     data: { title: input.title ?? "Nouvelle conversation" },
   });
   return NextResponse.json({ session }, { status: 201 });

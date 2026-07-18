@@ -12,13 +12,14 @@
  * (the common case), entries are "confirmed" at creation.
  */
 import "server-only";
-import { db } from "@/lib/db";
+import type { DbClient } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { redactPii } from "@/lib/redact-pii";
 
 // Session 30 (AUDIT-3 S2): callers may pass a transaction client so the
 // ledger entry participates in the same tx as the mutation. If omitted,
 // falls back to the outer db client (legacy behavior).
-type DbOrTx = typeof db | Parameters<Parameters<typeof db["$transaction"]>[0]>[0];
+type DbOrTx = DbClient | Parameters<Parameters<DbClient["$transaction"]>[0]>[0];
 
 export interface OrderChangeEntry {
   orderId: string;
@@ -44,9 +45,12 @@ export interface OrderChangeEntry {
  *  the whole tx should roll back), use `recordOrderChangeInTx` instead.
  *  That variant does NOT catch errors.
  */
-export async function recordOrderChange(entry: OrderChangeEntry): Promise<void> {
+export async function recordOrderChange(
+  context: ServiceContext,
+  entry: OrderChangeEntry,
+): Promise<void> {
   try {
-    const client = entry.tx ?? db;
+    const client = entry.tx ?? context.prisma;
     await client.orderChange.create({
       data: {
         orderId: entry.orderId,
@@ -98,11 +102,11 @@ export async function recordOrderChange(entry: OrderChangeEntry): Promise<void> 
  * @param entry The ledger entry (without the `tx` field — `tx` is passed separately)
  */
 export async function recordOrderChangeInTx(
-  tx: DbOrTx,
+  context: ServiceContext,
   entry: Omit<OrderChangeEntry, "tx">,
 ): Promise<void> {
   // No try/catch — let errors propagate so the caller's $transaction rolls back.
-  await tx.orderChange.create({
+  await context.prisma.orderChange.create({
     data: {
       orderId: entry.orderId,
       actionType: entry.actionType,
@@ -115,9 +119,13 @@ export async function recordOrderChangeInTx(
 }
 
 /** Get the full timeline for an order (newest first). */
-export async function getOrderTimeline(orderId: string, limit = 50) {
+export async function getOrderTimeline(
+  context: ServiceContext,
+  orderId: string,
+  limit = 50,
+) {
   try {
-    return await db.orderChange.findMany({
+    return await context.prisma.orderChange.findMany({
       where: { orderId },
       orderBy: { createdAt: "desc" },
       take: Math.min(Math.max(limit, 1), 200),
@@ -136,6 +144,7 @@ export async function getOrderTimeline(orderId: string, limit = 50) {
  *  Migration deferred per task 2-e scope (callers not updated in this batch).
  */
 export async function recordStatusChange(
+  context: ServiceContext,
   orderId: string,
   from: string,
   to: string,
@@ -143,7 +152,7 @@ export async function recordStatusChange(
   /** F-H2: optional tx so the ledger entry participates in the caller's tx. */
   tx?: DbOrTx,
 ): Promise<void> {
-  await recordOrderChange({
+  await recordOrderChange(context, {
     orderId,
     actionType: "status_change",
     actor,
@@ -162,6 +171,7 @@ export async function recordStatusChange(
  *  scope (callers not updated in this batch).
  */
 export async function recordRefund(
+  context: ServiceContext,
   orderId: string,
   refundId: string,
   amount: number,
@@ -170,7 +180,7 @@ export async function recordRefund(
   /** F-H2: optional tx so the ledger entry participates in the refund tx. */
   tx?: DbOrTx,
 ): Promise<void> {
-  await recordOrderChange({
+  await recordOrderChange(context, {
     orderId,
     actionType: "refund",
     actor,

@@ -17,17 +17,11 @@
  * Usage: bun run dev:reset   (mapped in package.json)
  */
 import { spawnSync } from "child_process";
-import { resolve } from "path";
-import { existsSync, mkdirSync } from "fs";
+import { assertTestSandbox } from "./test-sandbox";
 
-// Compute absolute DB path from cwd (project root)
-const dbPath = resolve(process.cwd(), "data", "shops", "dev.db");
-const dbDir = resolve(dbPath, "..");
-if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
-
-// CRITICAL: Set absolute DATABASE_URL so prisma CLI + Prisma Client agree
-const absoluteDbUrl = `file:${dbPath}`;
-process.env.DATABASE_URL = absoluteDbUrl;
+assertTestSandbox("dev reset");
+const absoluteDbUrl = process.env.DATABASE_URL!;
+const dbPath = absoluteDbUrl.slice("file:".length);
 
 const isWindows = process.platform === "win32";
 

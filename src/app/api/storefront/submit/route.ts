@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { dzPhone } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -208,7 +208,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // Verify the storefront exists + is active
   const { storefrontService } = await import("@/lib/storefront/service");
-  const config = await storefrontService.getBySlug(input.slug);
+  const config = await storefrontService.getBySlug(
+    { prisma: db, shop: shopContext },
+    input.slug,
+  );
   if (!config || !config.isActive) {
     return NextResponse.json({ error: "Storefront not found or inactive" }, { status: 404 });
   }
@@ -269,7 +272,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // `order.created` automation trigger (same as manual UI orders). The
   // service runs inside this tx (opts.tx) so customer-upsert + order-create
   // + ledger entry all stay atomic.
-  const order = await db.$transaction(async (tx) => {
+  const context = { prisma: db, shop: shopContext };
+  const order = await context.prisma.$transaction(async (tx) => {
     const customer = await tx.customer.upsert({
       where: { phone: input.customer.phone },
       update: {
@@ -293,7 +297,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     });
 
     return orderService.create(
-      { prisma: tx as never },
+      { prisma: db, shop: shopContext },
       {
         customerId: customer.id,
         items: orderItems,

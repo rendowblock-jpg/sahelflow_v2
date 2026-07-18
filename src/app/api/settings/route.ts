@@ -4,6 +4,7 @@ import { getAllSettings, setSetting } from "@/lib/settings";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(): Promise<NextResponse> {
   await requireAuth();
-  const settings = await getAllSettings();
+  const settings = await getAllSettings({ prisma: db, shop: shopContext });
   return NextResponse.json({ settings });
 }
 
@@ -35,18 +36,19 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = updateSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   // W2-5: capture before-state (all settings before update) for audit.
-  const before = await getAllSettings();
+  const before = await getAllSettings(context);
 
   for (const [key, value] of Object.entries(input.settings)) {
-    await setSetting(key, value);
+    await setSetting(context, key, value);
   }
 
-  const settings = await getAllSettings();
+  const settings = await getAllSettings(context);
   // Fire-and-forget audit log — settings mutations are security-sensitive
   // (license payload, daily_report_phone, profile PII).
-  void logAudit({
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "settings.updated",
     entity: "settings",
     actor: "user",

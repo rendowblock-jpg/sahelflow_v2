@@ -14,6 +14,7 @@ interface PackageJson {
 interface Inventory {
   generatedAt: string;
   commit: string;
+  dirty: boolean;
   repositoryRoot: string;
   counts: Record<string, number>;
   files: string[];
@@ -84,6 +85,11 @@ const files = runGit(["ls-files", "-z"])
   .sort();
 
 const commit = runGit(["rev-parse", "HEAD"]);
+const dirtyStatus = runGit(["status", "--porcelain", "--untracked-files=all"]);
+const allowDirty = process.argv.includes("--allow-dirty");
+if (dirtyStatus && !allowDirty) {
+  throw new Error("sf-inventory requires a clean tree; pass --allow-dirty for non-evidence diagnostics");
+}
 const packagePath = resolve(repoRoot, "package.json");
 const pkg = JSON.parse(readUtf8(packagePath)) as PackageJson;
 
@@ -153,6 +159,7 @@ const sidecarsAndDesktopResources = files.filter(
 const inventory: Inventory = {
   generatedAt: new Date().toISOString(),
   commit,
+  dirty: Boolean(dirtyStatus),
   repositoryRoot: relative(repoRoot, repoRoot) || ".",
   counts: {
     files: files.length,

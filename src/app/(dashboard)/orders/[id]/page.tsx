@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { deliveryService } from "@/lib/data/delivery-service";
 import { assessOrderRisk } from "@/lib/risk-engine";
@@ -58,7 +58,7 @@ export default async function OrderDetailPage({
 
   let order;
   try {
-    order = await orderService.getById({ prisma: db }, id);
+    order = await orderService.getById({ prisma: db, shop: shopContext }, id);
   } catch (err) {
     if (err instanceof NotFoundError) notFound();
     throw err;
@@ -67,11 +67,11 @@ export default async function OrderDetailPage({
   // Fetch customer + delivery + risk assessment + timeline + refunds + COD fields
   const [customer, delivery, riskAssessment, timelineEntries, refunds, totalRefunded, codData] = await Promise.all([
     db.customer.findUnique({ where: { id: order.customerId } }),
-    deliveryService.getByOrderId({ prisma: db }, order.id),
-    assessOrderRisk(order.id).catch(() => null),
-    getOrderTimeline(order.id),
-    getRefundsForOrder(order.id),
-    getTotalRefunded(order.id),
+    deliveryService.getByOrderId({ prisma: db, shop: shopContext }, order.id),
+    assessOrderRisk({ prisma: db, shop: shopContext }, order.id).catch(() => null),
+    getOrderTimeline({ prisma: db, shop: shopContext }, order.id),
+    getRefundsForOrder({ prisma: db, shop: shopContext }, order.id),
+    getTotalRefunded({ prisma: db, shop: shopContext }, order.id),
     db.order.findUnique({
       where: { id: order.id },
       select: {

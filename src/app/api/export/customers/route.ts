@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { toCsv, toXlsx } from "@/lib/import/export";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /** GET /api/export/customers?format=csv|xlsx */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
-  void logAudit({ action: "export.customers", entity: "customers", actor: "user", after: { format: req.nextUrl.searchParams.get("format") ?? "csv" } });
+  void logAudit({ prisma: db, shop: shopContext }, { action: "export.customers", entity: "customers", actor: "user", after: { format: req.nextUrl.searchParams.get("format") ?? "csv" } });
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const { t, locale } = await getI18n();
   const customers = await db.customer.findMany({

@@ -12,7 +12,7 @@
 import "server-only";
 
 
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 
 export interface StorefrontTheme {
   template: "minimal" | "modern" | "classic";
@@ -68,26 +68,26 @@ function parseConfig(row: {
 }
 
 export const storefrontService = {
-  async getBySlug(slug: string): Promise<StorefrontConfig | null> {
-    const row = await db.storefrontConfig.findUnique({ where: { slug } });
+  async getBySlug(context: ServiceContext, slug: string): Promise<StorefrontConfig | null> {
+    const row = await context.prisma.storefrontConfig.findUnique({ where: { slug } });
     if (!row) return null;
     return parseConfig(row);
   },
 
-  async getById(id: string): Promise<StorefrontConfig | null> {
-    const row = await db.storefrontConfig.findUnique({ where: { id } });
+  async getById(context: ServiceContext, id: string): Promise<StorefrontConfig | null> {
+    const row = await context.prisma.storefrontConfig.findUnique({ where: { id } });
     if (!row) return null;
     return parseConfig(row);
   },
 
-  async list(): Promise<StorefrontConfig[]> {
-    const rows = await db.storefrontConfig.findMany({
+  async list(context: ServiceContext): Promise<StorefrontConfig[]> {
+    const rows = await context.prisma.storefrontConfig.findMany({
       orderBy: { updatedAt: "desc" },
     });
     return rows.map(parseConfig);
   },
 
-  async create(input: {
+  async create(context: ServiceContext, input: {
     slug: string;
     name: string;
     description?: string;
@@ -96,7 +96,7 @@ export const storefrontService = {
     contact?: StorefrontContact;
     isActive?: boolean;
   }): Promise<StorefrontConfig> {
-    const row = await db.storefrontConfig.create({
+    const row = await context.prisma.storefrontConfig.create({
       data: {
         slug: input.slug,
         name: input.name,
@@ -110,7 +110,7 @@ export const storefrontService = {
     return parseConfig(row);
   },
 
-  async update(id: string, input: Partial<{
+  async update(context: ServiceContext, id: string, input: Partial<{
     slug: string;
     name: string;
     description: string | null;
@@ -127,12 +127,12 @@ export const storefrontService = {
     if (input.productIds !== undefined) data.productIds = JSON.stringify(input.productIds);
     if (input.contact !== undefined) data.contact = input.contact ? JSON.stringify(input.contact) : null;
     if (input.isActive !== undefined) data.isActive = input.isActive;
-    const row = await db.storefrontConfig.update({ where: { id }, data });
+    const row = await context.prisma.storefrontConfig.update({ where: { id }, data });
     return parseConfig(row);
   },
 
-  async delete(id: string): Promise<void> {
-    await db.storefrontConfig.delete({ where: { id } });
+  async delete(context: ServiceContext, id: string): Promise<void> {
+    await context.prisma.storefrontConfig.delete({ where: { id } });
   },
 };
 

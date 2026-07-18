@@ -14,7 +14,7 @@
  * Fire-and-forget: never throws, never blocks the caller. Returns void.
  */
 import "server-only";
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { redactPii } from "@/lib/redact-pii";
 
 export interface AuditEntry {
@@ -41,7 +41,7 @@ export interface AuditEntry {
  * must never break the business operation it's recording).
  *
  * @example
- * await logAudit({
+ * await logAudit(context, {
  *   action: "order.status.changed",
  *   entity: "order",
  *   entityId: order.id,
@@ -51,9 +51,9 @@ export interface AuditEntry {
  *   metadata: { reason: "bulk confirm" },
  * });
  */
-export async function logAudit(entry: AuditEntry): Promise<void> {
+export async function logAudit(context: ServiceContext, entry: AuditEntry): Promise<void> {
   try {
-    await db.auditLog.create({
+    await context.prisma.auditLog.create({
       data: {
         action: entry.action,
         entity: entry.entity ?? null,
@@ -76,20 +76,21 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
  * Fire-and-forget variant — for use in non-awaited call sites.
  * `void logAudit(...)` works too, but this makes intent explicit.
  */
-export function logAuditAsync(entry: AuditEntry): void {
-  void logAudit(entry);
+export function logAuditAsync(context: ServiceContext, entry: AuditEntry): void {
+  void logAudit(context, entry);
 }
 
 /**
  * Fetch the audit timeline for an entity (used by order/customer detail pages).
  */
 export async function getEntityTimeline(
+  context: ServiceContext,
   entity: string,
   entityId: string,
   limit = 50,
 ): Promise<AuditLogRow[]> {
   try {
-    return await db.auditLog.findMany({
+    return await context.prisma.auditLog.findMany({
       where: { entity, entityId },
       orderBy: { createdAt: "desc" },
       take: Math.min(Math.max(limit, 1), 200),

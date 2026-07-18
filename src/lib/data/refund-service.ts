@@ -13,7 +13,7 @@
  * OrderChange entry (actionType: "refund_reversed").
  */
 import "server-only";
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { recordRefund } from "./order-change-service";
 import { logAudit } from "@/lib/audit";
 
@@ -30,7 +30,8 @@ export interface CreateRefundInput {
   reference?: string;
 }
 
-export async function createRefund(input: CreateRefundInput) {
+export async function createRefund(context: ServiceContext, input: CreateRefundInput) {
+  const db = context.prisma;
   // Session 30 (AUDIT-3 S3): idempotency — if idempotencyKey provided and a
   // refund with that key already exists, return the existing refund (no-op).
   if (input.idempotencyKey) {
@@ -178,7 +179,15 @@ export async function createRefund(input: CreateRefundInput) {
     // 6. Record in the order change ledger — same tx (F-H2: pass tx so the
     // ledger entry participates in this refund tx; if the tx rolls back, the
     // ledger entry rolls back too — no orphan refund records.)
-    await recordRefund(input.orderId, r.id, input.amount, input.method, input.actor, tx);
+    await recordRefund(
+      context,
+      input.orderId,
+      r.id,
+      input.amount,
+      input.method,
+      input.actor,
+      tx,
+    );
 
     // 7. If status changed, also record the status_change ledger entry
     if (statusChanged) {
@@ -213,7 +222,7 @@ export async function createRefund(input: CreateRefundInput) {
   });
 
   // Audit log (outside tx — fire-and-forget, never blocks the refund)
-  void logAudit({
+  void logAudit(context, {
     action: "order.refunded",
     entity: "order",
     entityId: input.orderId,
@@ -228,7 +237,8 @@ export async function createRefund(input: CreateRefundInput) {
  *  (the UI shows them with a "reversed" badge). Use `getTotalRefunded` for
  *  the effective total that excludes reversed refunds.
  */
-export async function getRefundsForOrder(orderId: string) {
+export async function getRefundsForOrder(context: ServiceContext, orderId: string) {
+  const db = context.prisma;
   return db.refund.findMany({
     where: { orderId },
     orderBy: { createdAt: "desc" },
@@ -239,7 +249,11 @@ export async function getRefundsForOrder(orderId: string) {
  *  W3-2: excludes reversed refunds (they no longer represent money returned
  *  to the customer).
  */
-export async function getTotalRefunded(orderId: string): Promise<number> {
+export async function getTotalRefunded(
+  context: ServiceContext,
+  orderId: string,
+): Promise<number> {
+  const db = context.prisma;
   const refunds = await db.refund.findMany({
     where: { orderId, reversed: false },
     select: { amount: true },
@@ -293,9 +307,11 @@ export interface ReverseRefundInput {
  * @throws if the refund is not found or is already reversed.
  */
 export async function reverseRefund(
+  context: ServiceContext,
   refundId: string,
   opts?: ReverseRefundInput,
 ): Promise<void> {
+  const db = context.prisma;
   const actor = opts?.actor ?? "user";
 
   // 1. Read the refund + its order (outside tx — read-only precheck so we
@@ -450,7 +466,7 @@ export async function reverseRefund(
   });
 
   // 8. Audit log (outside tx — fire-and-forget, never blocks the reversal).
-  void logAudit({
+  void logAudit(context, {
     action: "order.refund_reversed",
     entity: "order",
     entityId: refund.orderId,

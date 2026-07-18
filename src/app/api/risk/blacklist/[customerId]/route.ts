@@ -3,7 +3,7 @@ import { unblacklistCustomer } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +16,8 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: { p
     where: { id: customerId },
     select: { id: true, isBlacklisted: true, blacklistReason: true, blacklistedAt: true },
   });
-  await unblacklistCustomer(customerId);
-  void logAudit({
+  await unblacklistCustomer({ prisma: db, shop: shopContext }, customerId);
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "customer.unblacklisted",
     entity: "customer",
     entityId: customerId,

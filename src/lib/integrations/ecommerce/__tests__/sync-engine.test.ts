@@ -19,7 +19,12 @@
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
-import type { NormalizedOrder, SyncFetchResult, EcommerceCredentials } from "../types";
+import type {
+  NormalizedOrder,
+  SyncFetchResult,
+  EcommerceCredentials,
+  EcommercePlatform,
+} from "../types";
 
 // ── Mock the adapter registry + credentials loader ──────────────────────────
 const { mockAdapter, mockCreds, listOrdersMock, mockCredsProvider } = vi.hoisted(() => {
@@ -41,12 +46,31 @@ const { mockAdapter, mockCreds, listOrdersMock, mockCredsProvider } = vi.hoisted
 
 vi.mock("../index", () => ({
   getEcommerceAdapter: vi.fn(() => mockAdapter),
-  loadEcommerceCredentials: vi.fn((platform: string) => mockCredsProvider(platform)),
+  loadEcommerceCredentials: vi.fn((_context: unknown, platform: string) => mockCredsProvider(platform)),
 }));
 
 // Import AFTER the mock so sync-engine uses the mocked registry.
-import { syncPlatform, syncAllPlatforms } from "../sync-engine";
+import {
+  syncPlatform as syncPlatformWithContext,
+  syncAllPlatforms as syncAllPlatformsWithContext,
+} from "../sync-engine";
 import { db } from "@/lib/db";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
+
+function syncPlatform(platform: EcommercePlatform, maxPages?: number) {
+  return syncPlatformWithContext(
+    { prisma: db, shop: TEST_SHOP_CONTEXT },
+    platform,
+    maxPages,
+  );
+}
+
+function syncAllPlatforms(maxPages?: number) {
+  return syncAllPlatformsWithContext(
+    { prisma: db, shop: TEST_SHOP_CONTEXT },
+    maxPages,
+  );
+}
 
 async function cleanDb() {
   await db.$transaction([

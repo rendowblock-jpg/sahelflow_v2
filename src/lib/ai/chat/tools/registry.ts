@@ -11,6 +11,7 @@
  */
 
 import type { z } from "zod";
+import type { ShopContext } from "@/lib/shops/context";
 
 export interface ToolDefinition {
   name: string;
@@ -36,6 +37,7 @@ export interface ToolContext {
   // Prisma client (the extended, PII-encryption-aware client)
   // Using `unknown` here to avoid a circular import with db.ts
   db: unknown;
+  shop: ShopContext;
 }
 
 export interface ToolResult {

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { customerService, customerServiceExtensions } from "@/lib/data";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +50,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
   let customer;
   try {
-    customer = await customerService.getById({ prisma: db }, id);
+    customer = await customerService.getById({ prisma: db, shop: shopContext }, id);
   } catch (err) {
     if (err instanceof SahelFlowError && err.statusCode === 404) {
       notFound();
@@ -60,8 +60,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
   // Use the new stats service for accurate aggregation
   const [stats, orders] = await Promise.all([
-    customerServiceExtensions.getStats({ prisma: db }, id),
-    customerServiceExtensions.getOrderHistory({ prisma: db }, id, { limit: 50 }),
+    customerServiceExtensions.getStats({ prisma: db, shop: shopContext }, id),
+    customerServiceExtensions.getOrderHistory({ prisma: db, shop: shopContext }, id, { limit: 50 }),
   ]);
 
   const riskLevel = getRiskLevel(customer.riskScore);

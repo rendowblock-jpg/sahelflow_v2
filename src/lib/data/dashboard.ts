@@ -6,11 +6,11 @@
  * it's a normal server function.
  */
 import "server-only";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { statsService } from "@/lib/data/stats-service";
 
 export async function getDashboardStats() {
-  return statsService.getDashboard({ prisma: db });
+  return statsService.getDashboard({ prisma: db, shop: shopContext });
 }
 
 export async function getRecentOrders(limit = 5) {

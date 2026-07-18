@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { isTauriEnv } from "@/lib/env";
 
 interface BackupEntry {
   filename: string;
@@ -120,9 +121,12 @@ export function BackupRestorePanel() {
       }
       toast.success(t("backup.restoreSuccess"));
       setRestoreTarget(null);
-      // Reload the page so all in-memory caches / open Prisma connections
-      // are re-established against the freshly-overwritten DB.
-      if (typeof window !== "undefined") {
+      // Restore disconnects the process-bound Prisma client. Relaunch the
+      // desktop so migrations and ShopContext are revalidated before use.
+      if (isTauriEnv()) {
+        const { relaunch } = await import("@tauri-apps/plugin-process");
+        await relaunch();
+      } else if (typeof window !== "undefined") {
         setTimeout(() => window.location.reload(), 800);
       }
     } catch (err) {
