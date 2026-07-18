@@ -9,4 +9,4 @@ export {
   V4_VERTICAL,
   V4_DEMO,
   V4_LOOP,
-} from './refined';
+} from './final';
