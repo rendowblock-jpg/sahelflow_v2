@@ -117,6 +117,24 @@ async function authenticate(browser: Browser) {
   await context.close();
 }
 
+async function prepareProductState(page: Page, spec: CaptureSpec) {
+  if (spec.name !== 'inbox-ar') return;
+
+  const probe = await page.evaluate(async () => {
+    const response = await fetch('/api/conversations');
+    const payload = await response.json().catch(() => null) as {conversations?: unknown[]} | null;
+    return {status: response.status, count: payload?.conversations?.length ?? 0};
+  });
+  console.log(`Inbox seeded conversation probe: status=${probe.status} count=${probe.count}`);
+
+  if (probe.count > 0) {
+    const firstConversation = page.locator('div.space-y-1.p-2 > button').first();
+    await firstConversation.waitFor({state: 'visible', timeout: 15_000});
+    await firstConversation.click();
+    await page.waitForTimeout(1800);
+  }
+}
+
 async function captureOne(browser: Browser, spec: CaptureSpec) {
   const viewport = spec.viewport ?? desktop;
   const videoDir = path.join(outputDir, '.recordings', spec.name);
@@ -135,6 +153,7 @@ async function captureOne(browser: Browser, spec: CaptureSpec) {
   const page = await context.newPage();
   await page.goto(`${baseURL}${spec.route}`, {waitUntil: 'domcontentloaded', timeout: 60_000});
   await waitForProduct(page);
+  await prepareProductState(page, spec);
 
   await page.screenshot({
     path: path.join(outputDir, `${spec.name}.png`),
