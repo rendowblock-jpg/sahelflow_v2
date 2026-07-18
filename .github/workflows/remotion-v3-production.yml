@@ -10,16 +10,17 @@ on:
 permissions:
   contents: read
 
+env:
+  DATABASE_URL: file:${{ github.workspace }}/data/shops/dev.db
+  SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  SAHELFLOW_CAPTURE_BASE_URL: http://localhost:3000
+  TZ: Africa/Algiers
+
 jobs:
-  capture-and-render:
-    name: Capture real product and render V3 campaign
+  capture:
+    name: Capture authentic SahelFlow product evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    env:
-      DATABASE_URL: file:${{ github.workspace }}/data/shops/dev.db
-      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-      SAHELFLOW_CAPTURE_BASE_URL: http://localhost:3000
-      TZ: Africa/Algiers
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,7 +46,7 @@ jobs:
           bunx prisma migrate deploy
           bun run seed:rich
 
-      - name: Install Chromium for product capture
+      - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
       - name: Start SahelFlow capture server
@@ -62,7 +63,7 @@ jobs:
           cat /tmp/sahelflow-v3-server.log
           exit 1
 
-      - name: Capture authentic SahelFlow product surfaces
+      - name: Capture authentic product surfaces
         shell: bash
         run: |
           set -o pipefail
@@ -76,38 +77,140 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Install V3 Remotion workspace
-        working-directory: marketing/remotion
-        run: npm install --no-audit --no-fund
-
-      - name: Validate V3 campaign source
-        working-directory: marketing/remotion
-        run: npm run typecheck
-
-      - name: Render V3 campaign masters
-        working-directory: marketing/remotion
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run render:v3:all 2>&1 | tee v3-render.log
-
-      - name: Upload V3 render diagnostics
+      - name: Upload capture diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-v3-render-diagnostics
+          name: sahelflow-v3-capture-diagnostics
           path: |
-            marketing/remotion/v3-render.log
             /tmp/sahelflow-v3-server.log
             /tmp/sahelflow-v3-capture.log
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Upload V3 campaign masters
+  validate:
+    name: Validate V3 campaign source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: marketing/remotion
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Remotion workspace
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck V3 compositions
+        run: npm run typecheck
+
+  render:
+    name: Render V3 ${{ matrix.label }}
+    needs: [capture, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: vertical
+            label: vertical 15s ad
+            script: render:v3:vertical
+            output: renders/v3/sahelflow-v3-vertical-15.mp4
+          - key: social
+            label: social 30s campaign
+            script: render:v3:social
+            output: renders/v3/sahelflow-v3-social-30.mp4
+          - key: hero
+            label: cinematic 65s hero
+            script: render:v3:hero
+            output: renders/v3/sahelflow-v3-hero-65.mp4
+          - key: demo
+            label: guided 120s demo
+            script: render:v3:demo
+            output: renders/v3/sahelflow-v3-demo-120.mp4
+          - key: loop
+            label: landing 12s loop
+            script: render:v3:loop
+            output: renders/v3/sahelflow-v3-landing-loop-12.mp4
+    defaults:
+      run:
+        working-directory: marketing/remotion
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Remotion workspace
+        run: npm install --no-audit --no-fund
+
+      - name: Download authentic captures
+        uses: actions/download-artifact@v4
+        with:
+          name: sahelflow-v3-product-captures
+          path: marketing/remotion/public/captures
+
+      - name: Render ${{ matrix.key }} master
+        shell: bash
+        run: |
+          set +e
+          npm run "${{ matrix.script }}" > "${{ matrix.key }}-render.log" 2>&1
+          status=$?
+          tail -200 "${{ matrix.key }}-render.log"
+          exit $status
+
+      - name: Upload render diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v3-${{ matrix.key }}-diagnostics
+          path: marketing/remotion/${{ matrix.key }}-render.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Upload V3 master
         if: success()
         uses: actions/upload-artifact@v4
         with:
+          name: sahelflow-v3-master-${{ matrix.key }}
+          path: marketing/remotion/${{ matrix.output }}
+          if-no-files-found: error
+          retention-days: 14
+
+  package:
+    name: Package complete V3 campaign
+    needs: render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download all V3 masters
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sahelflow-v3-master-*
+          path: v3-masters
+          merge-multiple: true
+
+      - name: Verify delivery set
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find v3-masters -maxdepth 1 -name '*.mp4' | wc -l)" -eq 5
+          ls -lh v3-masters
+
+      - name: Upload complete campaign package
+        uses: actions/upload-artifact@v4
+        with:
           name: sahelflow-v3-campaign-masters
-          path: marketing/remotion/renders/v3/*.mp4
+          path: v3-masters/*.mp4
           if-no-files-found: error
           retention-days: 14
