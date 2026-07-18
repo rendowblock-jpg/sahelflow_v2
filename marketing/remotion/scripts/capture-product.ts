@@ -101,13 +101,17 @@ async function authenticate(browser: Browser) {
   const context = await browser.newContext({viewport: desktop, colorScheme: 'dark'});
   await setCaptureState(context, 'fr');
   const page = await context.newPage();
-  const response = await page.request.post(`${baseURL}/api/auth/login`, {
-    data: {pin: '12345678'},
-    headers: {'content-type': 'application/json'},
+  await page.goto(`${baseURL}/login`, {waitUntil: 'domcontentloaded', timeout: 60_000});
+  const result = await page.evaluate(async () => {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({pin: '12345678'}),
+    });
+    return {ok: response.ok, status: response.status, body: await response.text()};
   });
-  if (!response.ok()) {
-    const body = await response.text();
-    throw new Error(`SahelFlow capture login failed (${response.status()}): ${body}`);
+  if (!result.ok) {
+    throw new Error(`SahelFlow capture login failed (${result.status}): ${result.body}`);
   }
   await context.storageState({path: authStatePath});
   await context.close();
