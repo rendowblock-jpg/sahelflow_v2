@@ -11,14 +11,13 @@ permissions:
   contents: read
 
 jobs:
-  typecheck-and-render:
-    name: Typecheck and render premium video set
+  validate:
+    name: Validate premium video system
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: marketing/remotion
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,68 +31,71 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Typecheck premium compositions
+        run: npm run typecheck
+
+  render:
+    name: Render premium ${{ matrix.label }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: vertical
+            label: vertical 15s cut
+            script: render:vertical
+            output: renders/sahelflow-premium-vertical-15.mp4
+          - key: social
+            label: social 30s cut
+            script: render:social
+            output: renders/sahelflow-premium-social-30.mp4
+          - key: launch
+            label: launch 60s film
+            script: render:launch
+            output: renders/sahelflow-premium-launch-60.mp4
+          - key: demo
+            label: guided 90s demo
+            script: render:demo
+            output: renders/sahelflow-premium-demo-90.mp4
+    defaults:
+      run:
+        working-directory: marketing/remotion
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install premium Remotion workspace
+        run: npm install --no-audit --no-fund
+
+      - name: Render premium ${{ matrix.key }} master
         shell: bash
         run: |
           set +e
-          npm run typecheck > typecheck-render.log 2>&1
+          npm run "${{ matrix.script }}" > "${{ matrix.key }}-render.log" 2>&1
           status=$?
-          cat typecheck-render.log
+          tail -180 "${{ matrix.key }}-render.log"
           exit $status
 
-      - name: Render premium vertical cut
-        shell: bash
-        run: |
-          set +e
-          npm run render:vertical > vertical-render.log 2>&1
-          status=$?
-          tail -160 vertical-render.log
-          exit $status
-
-      - name: Render premium social cut
-        shell: bash
-        run: |
-          set +e
-          npm run render:social > social-render.log 2>&1
-          status=$?
-          tail -160 social-render.log
-          exit $status
-
-      - name: Render premium launch film
-        shell: bash
-        run: |
-          set +e
-          npm run render:launch > launch-render.log 2>&1
-          status=$?
-          tail -160 launch-render.log
-          exit $status
-
-      - name: Render premium guided demo
-        shell: bash
-        run: |
-          set +e
-          npm run render:demo > demo-render.log 2>&1
-          status=$?
-          tail -160 demo-render.log
-          exit $status
-
-      - name: Upload render diagnostics
+      - name: Upload ${{ matrix.key }} render diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-premium-v2-render-diagnostics
-          path: marketing/remotion/*-render.log
+          name: sahelflow-premium-v2-${{ matrix.key }}-diagnostics
+          path: marketing/remotion/${{ matrix.key }}-render.log
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Upload premium MP4 set
+      - name: Upload premium ${{ matrix.key }} master
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-premium-v2-videos
-          path: |
-            marketing/remotion/renders/sahelflow-premium-vertical-15.mp4
-            marketing/remotion/renders/sahelflow-premium-social-30.mp4
-            marketing/remotion/renders/sahelflow-premium-launch-60.mp4
-            marketing/remotion/renders/sahelflow-premium-demo-90.mp4
+          name: sahelflow-premium-v2-${{ matrix.key }}
+          path: marketing/remotion/${{ matrix.output }}
           if-no-files-found: error
           retention-days: 14
