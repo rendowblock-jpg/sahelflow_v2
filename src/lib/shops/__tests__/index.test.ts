@@ -8,21 +8,21 @@ import {
 } from "node:fs";
 
 const paths = vi.hoisted(() => {
-  const root = `${process.env.SF_TEST_ROOT}\\shop-registry-tests`;
+  const root = `${process.env.SF_TEST_ROOT}/shop-registry-tests`;
   return {
     root,
-    shopsDir: `${root}\\shops`,
-    registryPath: `${root}\\shop-registry.json`,
-    legacyAppMetaPath: `${root}\\app-meta.json`,
-    quarantineDir: `${root}\\quarantine\\shops`,
-    shopTemplatePath: `${root}\\system\\shop-template.db`,
+    shopsDir: `${root}/shops`,
+    registryPath: `${root}/shop-registry.json`,
+    legacyAppMetaPath: `${root}/app-meta.json`,
+    quarantineDir: `${root}/quarantine/shops`,
+    shopTemplatePath: `${root}/system/shop-template.db`,
   };
 });
 
 vi.mock("../paths", () => ({
   ...paths,
   appMetaPath: paths.registryPath,
-  prismaSchemaPath: `${paths.root}\\prisma\\schema.prisma`,
+  prismaSchemaPath: `${paths.root}/prisma/schema.prisma`,
 }));
 vi.mock("@/lib/db", () => ({ invalidateShopClient: vi.fn() }));
 
@@ -40,7 +40,7 @@ import {
 beforeEach(() => {
   rmSync(paths.root, { recursive: true, force: true });
   mkdirSync(paths.shopsDir, { recursive: true });
-  mkdirSync(`${paths.root}\\system`, { recursive: true });
+  mkdirSync(`${paths.root}/system`, { recursive: true });
   writeFileSync(paths.shopTemplatePath, "migrated-template");
 });
 
@@ -61,7 +61,7 @@ describe("atomic shop registry", () => {
 
     expect(shop.id).toBe("boutique-elegante");
     expect(shop.databaseFile).toBe("boutique-elegante.db");
-    expect(readFileSync(`${paths.shopsDir}\\${shop.databaseFile}`, "utf8")).toBe(
+    expect(readFileSync(`${paths.shopsDir}/${shop.databaseFile}`, "utf8")).toBe(
       "migrated-template",
     );
     expect(getActiveShopId()).toBe(shop.id);
@@ -129,7 +129,7 @@ describe("atomic shop registry", () => {
   });
 
   it("imports a coherent legacy registry without deleting the legacy source", () => {
-    writeFileSync(`${paths.shopsDir}\\dev.db`, "seller-data");
+    writeFileSync(`${paths.shopsDir}/dev.db`, "seller-data");
     writeFileSync(
       paths.legacyAppMetaPath,
       JSON.stringify({
@@ -152,11 +152,11 @@ describe("atomic shop registry", () => {
     expect(shops[0]?.databaseFile).toBe("dev.db");
     expect(getRegistry().revision).toBe(1);
     expect(existsSync(paths.legacyAppMetaPath)).toBe(true);
-    expect(readFileSync(`${paths.shopsDir}\\dev.db`, "utf8")).toBe("seller-data");
+    expect(readFileSync(`${paths.shopsDir}/dev.db`, "utf8")).toBe("seller-data");
   });
 
   it("rejects a non-empty canonical registry with revision zero", () => {
-    writeFileSync(`${paths.shopsDir}\\dev.db`, "seller-data");
+    writeFileSync(`${paths.shopsDir}/dev.db`, "seller-data");
     writeFileSync(
       paths.registryPath,
       JSON.stringify({
@@ -186,7 +186,7 @@ describe("atomic shop registry", () => {
 
     expect(getShop(second.id)).toBeNull();
     expect(getShop(first.id)).not.toBeNull();
-    expect(existsSync(`${paths.shopsDir}\\${second.databaseFile}`)).toBe(false);
+    expect(existsSync(`${paths.shopsDir}/${second.databaseFile}`)).toBe(false);
     expect(existsSync(paths.quarantineDir)).toBe(true);
   });
 
