@@ -1,0 +1,45 @@
+name: V3 Source Inspection
+
+on:
+  push:
+    branches:
+      - agent/remotion-launch-system
+    paths:
+      - ".github/workflows/v3-source-inspection.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bundle-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Bundle product and video source
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf sahelflow-v3-source.tgz \
+            src \
+            scripts \
+            prisma \
+            public \
+            marketing/remotion \
+            package.json \
+            tsconfig.json \
+            next.config.* \
+            playwright.config.* \
+            vitest.config.* \
+            eslint.config.* \
+            2>/dev/null || true
+          test -s sahelflow-v3-source.tgz
+
+      - name: Upload source bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-v3-source
+          path: sahelflow-v3-source.tgz
+          if-no-files-found: error
+          retention-days: 1
