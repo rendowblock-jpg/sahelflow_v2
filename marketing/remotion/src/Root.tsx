@@ -11,11 +11,65 @@ import {
   PremiumSocial30,
   PremiumVertical15,
 } from './v2/compositions';
+import {
+  V3_DEMO_DURATION,
+  V3_HERO_DURATION,
+  V3_LOOP_DURATION,
+  V3_SOCIAL_DURATION,
+  V3_VERTICAL_DURATION,
+  V3Demo120,
+  V3Hero65,
+  V3LandingLoop12,
+  V3Social30,
+  V3Vertical15,
+} from './v3/compositions';
 
 const FPS = 30;
 
 export const RemotionRoot: React.FC = () => (
   <>
+    <Folder name="SahelFlow-V3-Production">
+      <Composition
+        id="SahelFlow-V3-Hero-65"
+        component={V3Hero65}
+        durationInFrames={V3_HERO_DURATION}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="SahelFlow-V3-Social-30"
+        component={V3Social30}
+        durationInFrames={V3_SOCIAL_DURATION}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="SahelFlow-V3-Vertical-15"
+        component={V3Vertical15}
+        durationInFrames={V3_VERTICAL_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="SahelFlow-V3-Demo-120"
+        component={V3Demo120}
+        durationInFrames={V3_DEMO_DURATION}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="SahelFlow-V3-Landing-Loop-12"
+        component={V3LandingLoop12}
+        durationInFrames={V3_LOOP_DURATION}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+    </Folder>
     <Folder name="SahelFlow-Premium-V2">
       <Composition
         id="SahelFlow-Premium-Launch-60"
