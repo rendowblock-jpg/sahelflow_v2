@@ -1,6 +1,8 @@
 import {Easing, interpolate, random, spring} from 'remotion';
 
-export const premiumColors = {
+// The palette is intentionally dynamic because several cinematic data arrays mix
+// labels, coordinates and CSS color values before destructuring in JSX.
+export const premiumColors: Record<string, any> = {
   black: '#050807',
   canvas: '#07100d',
   canvasLift: '#0a1612',
