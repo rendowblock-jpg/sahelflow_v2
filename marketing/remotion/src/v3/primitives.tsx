@@ -127,7 +127,7 @@ export const CaptureFrame: React.FC<CaptureFrameProps> = ({asset, video = false,
     <Img src={staticFile(`captures/${asset}`)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
   );
   return (
-    <div style={{perspective: 2200, transformStyle: 'preserve-3d', ...style}}>
+    <div style={{width: '100%', height: '100%', perspective: 2200, transformStyle: 'preserve-3d', ...style}}>
       <div style={{position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: showChrome ? 26 : 18, border: `1px solid ${v3Colors.lineStrong}`, background: v3Colors.ink, boxShadow: v3Shadow.deep, opacity: enter, transformStyle: 'preserve-3d', transform: `translate3d(${x + driftX}px,${y + (1 - enter) * 90 + driftY}px,0) scale(${scale * (0.92 + enter * 0.08)}) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`}}>
         {showChrome ? <div style={{position: 'absolute', inset: '0 0 auto 0', height: 44, zIndex: 2, display: 'flex', alignItems: 'center', gap: 7, padding: '0 15px', background: 'rgba(4,10,7,.90)', borderBottom: `1px solid ${v3Colors.line}`}}>{[v3Colors.red, v3Colors.amber, v3Colors.emerald].map((c) => <span key={c} style={{width: 8, height: 8, borderRadius: '50%', background: c}} />)}<span style={{fontSize: 11, color: v3Colors.muted, marginLeft: 8}}>SahelFlow · Product capture</span><span style={{marginLeft: 'auto', fontSize: 9, letterSpacing: 1.5, color: v3Colors.emerald}}>AUTHENTIC UI</span></div> : null}
         <div style={{position: 'absolute', inset: showChrome ? '44px 0 0' : 0}}>{content}</div>
