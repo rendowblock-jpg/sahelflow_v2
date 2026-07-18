@@ -1,11 +1,10 @@
 name: V3 Source Inspection
 
 on:
-  push:
-    branches:
-      - agent/remotion-launch-system
+  pull_request:
     paths:
       - ".github/workflows/v3-source-inspection.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
