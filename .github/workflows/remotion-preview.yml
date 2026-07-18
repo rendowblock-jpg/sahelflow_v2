@@ -1,4 +1,4 @@
-name: Remotion Preview
+name: Remotion Premium V2
 
 on:
   workflow_dispatch:
@@ -12,9 +12,9 @@ permissions:
 
 jobs:
   typecheck-and-render:
-    name: Typecheck and render complete video set
+    name: Typecheck and render premium video set
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: marketing/remotion
@@ -28,66 +28,66 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Remotion workspace
+      - name: Install premium Remotion workspace
         run: npm install --no-audit --no-fund
 
-      - name: Typecheck compositions
+      - name: Typecheck premium compositions
         run: npm run typecheck
 
-      - name: Render vertical cut
+      - name: Render premium vertical cut
         shell: bash
         run: |
           set +e
           npm run render:vertical > vertical-render.log 2>&1
           status=$?
-          tail -120 vertical-render.log
+          tail -160 vertical-render.log
           exit $status
 
-      - name: Render social cut
+      - name: Render premium social cut
         shell: bash
         run: |
           set +e
           npm run render:social > social-render.log 2>&1
           status=$?
-          tail -120 social-render.log
+          tail -160 social-render.log
           exit $status
 
-      - name: Render launch film
+      - name: Render premium launch film
         shell: bash
         run: |
           set +e
           npm run render:launch > launch-render.log 2>&1
           status=$?
-          tail -120 launch-render.log
+          tail -160 launch-render.log
           exit $status
 
-      - name: Render guided demo
+      - name: Render premium guided demo
         shell: bash
         run: |
           set +e
           npm run render:demo > demo-render.log 2>&1
           status=$?
-          tail -120 demo-render.log
+          tail -160 demo-render.log
           exit $status
 
       - name: Upload render diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-remotion-render-diagnostics
+          name: sahelflow-premium-v2-render-diagnostics
           path: marketing/remotion/*-render.log
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Upload complete MP4 set
+      - name: Upload premium MP4 set
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-remotion-videos
+          name: sahelflow-premium-v2-videos
           path: |
-            marketing/remotion/renders/sahelflow-vertical-15.mp4
-            marketing/remotion/renders/sahelflow-social-30.mp4
-            marketing/remotion/renders/sahelflow-launch-60.mp4
-            marketing/remotion/renders/sahelflow-demo-90.mp4
+            marketing/remotion/renders/sahelflow-premium-vertical-15.mp4
+            marketing/remotion/renders/sahelflow-premium-social-30.mp4
+            marketing/remotion/renders/sahelflow-premium-launch-60.mp4
+            marketing/remotion/renders/sahelflow-premium-demo-90.mp4
           if-no-files-found: error
           retention-days: 14
