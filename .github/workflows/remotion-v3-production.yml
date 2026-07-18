@@ -62,7 +62,10 @@ jobs:
           exit 1
 
       - name: Capture authentic SahelFlow product surfaces
-        run: bun marketing/remotion/scripts/capture-product.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          bun marketing/remotion/scripts/capture-product.ts 2>&1 | tee /tmp/sahelflow-v3-capture.log
 
       - name: Upload product capture evidence
         uses: actions/upload-artifact@v4
@@ -95,6 +98,7 @@ jobs:
           path: |
             marketing/remotion/v3-render.log
             /tmp/sahelflow-v3-server.log
+            /tmp/sahelflow-v3-capture.log
           if-no-files-found: warn
           retention-days: 3
 
