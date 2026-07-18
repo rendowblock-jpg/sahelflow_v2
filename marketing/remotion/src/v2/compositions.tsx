@@ -20,6 +20,7 @@ import {
   VerticalLanguageFinale,
   VerticalOrderMove,
 } from './scenes';
+import {VerticalPremiumFinale} from './vertical-finale';
 
 export const PREMIUM_LAUNCH_DURATION = 1800;
 export const PREMIUM_SOCIAL_DURATION = 900;
@@ -34,13 +35,13 @@ const slideFromLeft = slide({direction: 'from-left'});
 const wipeFromRight = wipe({direction: 'from-right'});
 const wipeFromBottom = wipe({direction: 'from-bottom'});
 
-const PremiumAudio: React.FC<{src: string; volume?: number}> = ({src, volume = 0.56}) => (
+const PremiumAudio: React.FC<{src: string; volume?: number}> = ({src, volume = 0.94}) => (
   <Audio src={staticFile(`audio/${src}`)} volume={volume} />
 );
 
 export const PremiumLaunch60: React.FC = () => (
   <AbsoluteFill>
-    <PremiumAudio src="premium-launch-60.wav" volume={0.58} />
+    <PremiumAudio src="premium-launch-60.wav" volume={0.94} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={150}><PremiumColdOpen /></TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={wipeFromRight} timing={premiumTiming} />
@@ -65,7 +66,7 @@ export const PremiumLaunch60: React.FC = () => (
 
 export const PremiumSocial30: React.FC = () => (
   <AbsoluteFill>
-    <PremiumAudio src="premium-social-30.wav" volume={0.6} />
+    <PremiumAudio src="premium-social-30.wav" volume={0.95} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={90}><PremiumColdOpen /></TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={wipeFromRight} timing={socialTiming} />
@@ -86,7 +87,7 @@ export const PremiumSocial30: React.FC = () => (
 
 export const PremiumVertical15: React.FC = () => (
   <AbsoluteFill>
-    <PremiumAudio src="premium-vertical-15.wav" volume={0.62} />
+    <PremiumAudio src="premium-vertical-15.wav" volume={0.95} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={75}><VerticalHook /></TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={wipeFromBottom} timing={socialTiming} />
@@ -96,14 +97,14 @@ export const PremiumVertical15: React.FC = () => (
       <TransitionSeries.Transition presentation={fadePresentation} timing={socialTiming} />
       <TransitionSeries.Sequence durationInFrames={100}><VerticalLanguageFinale /></TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={wipeFromRight} timing={socialTiming} />
-      <TransitionSeries.Sequence durationInFrames={125}><PremiumFinale compact /></TransitionSeries.Sequence>
+      <TransitionSeries.Sequence durationInFrames={125}><VerticalPremiumFinale /></TransitionSeries.Sequence>
     </TransitionSeries>
   </AbsoluteFill>
 );
 
 export const PremiumDemo90: React.FC = () => (
   <AbsoluteFill>
-    <PremiumAudio src="premium-demo-90.wav" volume={0.52} />
+    <PremiumAudio src="premium-demo-90.wav" volume={0.92} />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={180}><PremiumColdOpen /></TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={wipeFromRight} timing={premiumTiming} />
