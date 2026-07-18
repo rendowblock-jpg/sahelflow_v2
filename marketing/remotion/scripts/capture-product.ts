@@ -122,14 +122,21 @@ async function prepareProductState(page: Page, spec: CaptureSpec) {
 
   const probe = await page.evaluate(async () => {
     const response = await fetch('/api/conversations');
-    const payload = await response.json().catch(() => null) as {conversations?: unknown[]} | null;
-    return {status: response.status, count: payload?.conversations?.length ?? 0};
+    const payload = await response.json().catch(() => null) as {
+      conversations?: Array<{contactName?: string | null}>;
+    } | null;
+    const firstName = payload?.conversations?.find((conversation) => conversation.contactName)?.contactName ?? null;
+    return {
+      status: response.status,
+      count: payload?.conversations?.length ?? 0,
+      firstName,
+    };
   });
-  console.log(`Inbox seeded conversation probe: status=${probe.status} count=${probe.count}`);
+  console.log(`Inbox seeded conversation probe: status=${probe.status} count=${probe.count} first=${probe.firstName ?? 'none'}`);
 
-  if (probe.count > 0) {
-    const firstConversation = page.locator('div.space-y-1.p-2 > button').first();
-    await firstConversation.waitFor({state: 'visible', timeout: 15_000});
+  if (probe.count > 0 && probe.firstName) {
+    const firstConversation = page.locator('button').filter({hasText: probe.firstName}).first();
+    await firstConversation.waitFor({state: 'visible', timeout: 20_000});
     await firstConversation.click();
     await page.waitForTimeout(1800);
   }
