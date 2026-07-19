@@ -69,6 +69,12 @@ These are development checks, not release evidence. The current CI command drift
 
 `prisma db push` is development-only and is not a production migration mechanism.
 
+### Codespaces
+
+The checked-in dev container is the normal remote coding-agent environment. Select the 2-core/8 GB machine for routine work; use 4 cores only for a bounded heavy command. Creation installs pinned Bun, Node and Rust tooling, frozen dependencies, Prisma and a disposable test sandbox automatically.
+
+Codespaces provides Linux development evidence only. GitHub Actions builds the Windows candidate, and installed Windows behavior is verified separately on an authorized machine. Keep ports private, use synthetic data, push intended work before stopping and delete obsolete Codespaces to limit storage use.
+
 ## Evidence rule
 
 A claim such as “verified,” “supported,” “production-ready,” or “Stable” must identify the exact source commit, artifact, environment/provider/device, procedure and result. Source code, mocks, historical test counts and version labels are not substitutes.

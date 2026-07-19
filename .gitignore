@@ -44,6 +44,8 @@ coverage/
 playwright-report/
 test-results/
 playwright/.cache/
+.sf-vitest-results.json
+.sf-vitest-first-failure.txt
 .sf-inventory/
 .sf-evidence/
 

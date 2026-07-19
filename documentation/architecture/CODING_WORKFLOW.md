@@ -197,6 +197,36 @@ Choose layers based on risk:
 
 Coverage is useful for regression detection, not proof of an invariant.
 
+### Execution environments and claim boundaries
+
+| Environment | Primary use | Claim boundary |
+|---|---|---|
+| 2-core/8 GB Codespace | Normal coding-agent work, Next.js, Prisma, TypeScript, ESLint, Vitest and Rust formatting | Linux source/development evidence only |
+| 4-core/16 GB Codespace | Measured heavy interactive work when the faster result justifies double allowance use | Same Linux-only boundary |
+| GitHub Actions Linux | Clean-checkout Quality Gate, coverage, audit and release-path Rust compilation | Retained CI evidence for the exact commit |
+| GitHub Actions Windows | Exact internal MSI build, signature and evidence manifest | Built Windows artifact, not installation behavior |
+| Authorized local Windows lab | MSI install, launch, process supervision, migration, recovery and failure injection | Installed-candidate evidence for the recorded machine |
+| T470 and agreed 4 GB reference | Final compatibility and performance measurements | Reference-device evidence only |
+
+Codespaces rules:
+
+- The checked-in `.devcontainer/devcontainer.json` and `.bun-version` define the reproducible environment.
+- The default Codespace uses 2 cores. Use 4 cores only for a bounded measured workload, then return to 2 cores or stop it.
+- Use the generated `SF_TEST_ROOT`, `SF_DATA_DIR` and `DATABASE_URL`; never upload seller databases or reuse production paths.
+- Keep forwarded ports private. Do not place provider credentials, WhatsApp sessions, signing keys or production secrets in the container.
+- Native Tauri release compilation remains in GitHub Actions because the default Codespaces image is not the release environment.
+- Record source commit, machine type, commands, result and limitations for material evidence.
+- Stop the Codespace after the session and delete obsolete environments because storage accrues while they exist.
+
+Codespaces session loop:
+
+1. Read `AGENTS.md`, Working Memory and the active wave.
+2. Declare Codespace Linux, machine type, branch, commit and worktree state.
+3. Use targeted tests while iterating and `bun run sf-verify --fast` at meaningful checkpoints.
+4. Run `bun run sf-verify` before publishing a material implementation checkpoint when the risk requires it.
+5. Commit and push intended work; update the active wave or Working Memory only when the durable checkpoint changes.
+6. Stop the Codespace. Never depend on unpushed container state for the next session.
+
 ## 8. Experience and page-completion rules
 
 A user-facing page or workflow is complete only when the applicable Experience Constitution contract is addressed, including:
