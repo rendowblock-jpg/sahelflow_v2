@@ -10,6 +10,7 @@
 //     the degradable WhatsApp sidecar.
 
 mod migration_coordinator;
+mod packaged_auth;
 mod runtime_protocol;
 mod runtime_supervisor;
 mod startup_recovery;
@@ -269,6 +270,7 @@ fn server_env(
     app: &tauri::AppHandle,
     runtime: &RuntimeProtocol,
     authority: &migration_coordinator::ActiveShopAuthority,
+    auth: &packaged_auth::PackagedAuth,
 ) -> Vec<(String, String)> {
     use tauri::Manager;
     let app_data_dir = app
@@ -281,7 +283,7 @@ fn server_env(
         .resource_dir()
         .unwrap_or_else(|_| std::path::PathBuf::from("."));
 
-    vec![
+    let mut environment = vec![
         (
             "DATABASE_URL".to_string(),
             format!("file:{}", authority.database_path.display()),
@@ -355,7 +357,12 @@ fn server_env(
             env!("CARGO_PKG_VERSION").to_string(),
         ),
         ("NODE_ENV".to_string(), "production".to_string()),
-    ]
+        ("SF_AUTH_MODE".to_string(), auth.mode().as_str().to_string()),
+    ];
+    if let Some(secret) = auth.secret() {
+        environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
+    }
+    environment
 }
 
 /// Least-privilege environment for the degradable WhatsApp sidecar.
@@ -385,6 +392,7 @@ fn sidecar_env(app: &tauri::AppHandle, runtime: &RuntimeProtocol) -> Vec<(String
             "SIDECAR_PORT".to_string(),
             runtime.sidecar_port().to_string(),
         ),
+        ("SIDECAR_HOST".to_string(), "127.0.0.1".to_string()),
         ("NODE_ENV".to_string(), "production".to_string()),
     ]
 }
@@ -424,11 +432,17 @@ fn spawn_services(app: &tauri::AppHandle) -> Result<RuntimeProtocol, Box<dyn std
     };
 
     for attempt in 1..=MAX_START_ATTEMPTS {
-        let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir)?;
         let authority = current_shop_authority(app)?;
-        let env = server_env(app, &runtime_protocol, &authority);
+        let auth = packaged_auth::load(&authority.database_path)?;
+        let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str())?;
+        let env = server_env(app, &runtime_protocol, &authority, &auth);
         let sidecar_environment = sidecar_env(app, &runtime_protocol);
-        let mut command = app.shell().command(&runtime_path).arg(&server_path);
+        let mut command = app
+            .shell()
+            .command(&runtime_path)
+            .arg(&server_path)
+            .env_clear()
+            .envs(windows_safe_parent_environment());
         for (key, value) in &env {
             command = command.env(key, value);
         }
@@ -644,7 +658,7 @@ fn spawn_sidecar_and_watch(app_handle: tauri::AppHandle, env: Vec<(String, Strin
     use tauri_plugin_shell::ShellExt;
 
     let mut command = match app_handle.shell().sidecar(SIDECAR_NAME) {
-        Ok(command) => command,
+        Ok(command) => command.env_clear().envs(windows_safe_parent_environment()),
         Err(error) => {
             eprintln!(
                 "[sahelflow] WhatsApp sidecar binary not found; inbox remains degraded: {error}"
@@ -774,4 +788,40 @@ fn bundled_bun(resource_dir: &std::path::Path) -> Option<String> {
     candidate
         .exists()
         .then(|| candidate.to_string_lossy().into_owned())
+}
+
+/// Preserve only OS paths required by Windows process/runtime APIs. Product
+/// configuration and credentials must always be injected explicitly above.
+fn windows_safe_parent_environment() -> Vec<(std::ffi::OsString, std::ffi::OsString)> {
+    std::env::vars_os()
+        .filter(|(key, _)| is_windows_safe_parent_environment_key(key))
+        .collect()
+}
+
+fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
+    let key = key.to_string_lossy();
+    ["SystemRoot", "WINDIR", "TEMP", "TMP"]
+        .iter()
+        .any(|allowed| key.eq_ignore_ascii_case(allowed))
+}
+
+#[cfg(test)]
+mod child_environment_tests {
+    use super::is_windows_safe_parent_environment_key;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn child_environment_allowlist_excludes_ambient_credentials_and_configuration() {
+        assert!(is_windows_safe_parent_environment_key(OsStr::new(
+            "SystemRoot"
+        )));
+        assert!(is_windows_safe_parent_environment_key(OsStr::new("temp")));
+        assert!(!is_windows_safe_parent_environment_key(OsStr::new(
+            "AUTH_SECRET"
+        )));
+        assert!(!is_windows_safe_parent_environment_key(OsStr::new(
+            "DATABASE_URL"
+        )));
+        assert!(!is_windows_safe_parent_environment_key(OsStr::new("PATH")));
+    }
 }

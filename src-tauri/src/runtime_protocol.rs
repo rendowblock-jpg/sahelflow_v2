@@ -24,6 +24,7 @@ pub struct RuntimeProtocol {
     runtime_token: String,
     app_token: String,
     sidecar_token: String,
+    auth_mode: String,
     manifest_path: PathBuf,
 }
 
@@ -53,6 +54,7 @@ struct RuntimeReadiness {
     shop_id: String,
     registry_revision: u64,
     migration_set_sha256: String,
+    auth_mode: String,
     checks: RuntimeChecks,
 }
 
@@ -63,12 +65,13 @@ struct RuntimeChecks {
     migration: String,
     registry: String,
     shop: String,
+    auth: String,
 }
 
 impl RuntimeProtocol {
     /// Ask the OS for an available loopback port and generate independent
     /// cryptographic launch identity and bearer credential.
-    pub fn allocate(app_data_dir: &Path) -> Result<Self, IoError> {
+    pub fn allocate(app_data_dir: &Path, auth_mode: &str) -> Result<Self, IoError> {
         let app_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
         let sidecar_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
         let app_port = app_listener.local_addr()?.port();
@@ -82,6 +85,7 @@ impl RuntimeProtocol {
             runtime_token: random_hex(32)?,
             app_token: random_hex(32)?,
             sidecar_token: random_hex(32)?,
+            auth_mode: auth_mode.to_string(),
             manifest_path: app_data_dir.join(MANIFEST_FILE),
         })
     }
@@ -229,7 +233,7 @@ impl RuntimeProtocol {
             }
         }
 
-        response_proves_readiness(&response, &self.instance_id, self.app_port)
+        response_proves_readiness(&response, &self.instance_id, self.app_port, &self.auth_mode)
     }
 }
 
@@ -266,6 +270,7 @@ fn response_proves_readiness(
     response: &[u8],
     expected_instance_id: &str,
     expected_port: u16,
+    expected_auth_mode: &str,
 ) -> bool {
     let header_end = match response.windows(4).position(|window| window == b"\r\n\r\n") {
         Some(position) => position,
@@ -308,11 +313,13 @@ fn response_proves_readiness(
         && !readiness.shop_id.trim().is_empty()
         && readiness.registry_revision > 0
         && readiness.migration_set_sha256.len() == 64
+        && readiness.auth_mode == expected_auth_mode
         && readiness.checks.app == "ready"
         && readiness.checks.database == "ready"
         && readiness.checks.migration == "ready"
         && readiness.checks.registry == "ready"
         && readiness.checks.shop == "ready"
+        && readiness.checks.auth == "ready"
 }
 
 #[cfg(test)]
@@ -321,7 +328,8 @@ mod tests {
 
     #[test]
     fn allocation_uses_loopback_port_and_non_serialized_random_secrets() {
-        let protocol = RuntimeProtocol::allocate(Path::new(".")).expect("runtime protocol");
+        let protocol =
+            RuntimeProtocol::allocate(Path::new("."), "configured").expect("runtime protocol");
 
         assert_ne!(protocol.app_port(), 0);
         assert_ne!(protocol.sidecar_port(), 0);
@@ -341,7 +349,7 @@ mod tests {
     #[test]
     fn readiness_requires_success_and_the_exact_instance_header() {
         let body = format!(
-            "{{\"protocolVersion\":1,\"status\":\"ready\",\"instanceId\":\"instance-a\",\"processId\":42,\"appVersion\":\"1.0.0-internal.1\",\"port\":49152,\"shopId\":\"default\",\"registryRevision\":1,\"migrationSetSha256\":\"{}\",\"checks\":{{\"app\":\"ready\",\"database\":\"ready\",\"migration\":\"ready\",\"registry\":\"ready\",\"shop\":\"ready\"}}}}",
+            "{{\"protocolVersion\":1,\"status\":\"ready\",\"instanceId\":\"instance-a\",\"processId\":42,\"appVersion\":\"1.0.0-internal.1\",\"port\":49152,\"shopId\":\"default\",\"registryRevision\":1,\"migrationSetSha256\":\"{}\",\"authMode\":\"configured\",\"checks\":{{\"app\":\"ready\",\"database\":\"ready\",\"migration\":\"ready\",\"registry\":\"ready\",\"shop\":\"ready\",\"auth\":\"ready\"}}}}",
             "f".repeat(64)
         );
         let valid = [
@@ -361,18 +369,36 @@ mod tests {
         ]
         .concat();
 
-        assert!(response_proves_readiness(&valid, "instance-a", 49152));
+        assert!(response_proves_readiness(
+            &valid,
+            "instance-a",
+            49152,
+            "configured"
+        ));
+        assert!(!response_proves_readiness(
+            &valid,
+            "instance-a",
+            49152,
+            "setup"
+        ));
         assert!(!response_proves_readiness(
             &wrong_instance,
             "instance-a",
-            49152
+            49152,
+            "configured"
         ));
         assert!(!response_proves_readiness(
             &unauthorized,
             "instance-a",
-            49152
+            49152,
+            "configured"
         ));
-        assert!(!response_proves_readiness(b"not http", "instance-a", 49152));
+        assert!(!response_proves_readiness(
+            b"not http",
+            "instance-a",
+            49152,
+            "configured"
+        ));
     }
 
     #[test]
@@ -386,6 +412,7 @@ mod tests {
             oversized.as_bytes(),
             "instance-a",
             49152,
+            "configured",
         ));
     }
 

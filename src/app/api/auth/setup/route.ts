@@ -4,6 +4,7 @@ import { isAuthSetup, setupAuth, createSession, auditLog } from "@/lib/auth/serv
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { seedWilayaRiskProfiles } from "@/lib/wilaya-risk/engine";
 import { db, shopContext } from "@/lib/db";
+import { AUTH_MODE_CONFIGURED, AUTH_MODE_ENV } from "@/lib/runtime-auth";
 
 const SetupSchema = z.object({
   pin: z.string().min(8, "PIN must be at least 8 characters").max(32, "PIN too long"),
@@ -29,6 +30,7 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   const { secret } = await setupAuth(parsed.data.pin);
   process.env.AUTH_SECRET = secret;
+  process.env[AUTH_MODE_ENV] = AUTH_MODE_CONFIGURED;
 
   const persistDevelopmentSecret =
     process.env.NODE_ENV === "development" &&

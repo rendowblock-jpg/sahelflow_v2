@@ -44,6 +44,7 @@ import { setupAuth, createSession } from "@/lib/auth/server";
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 const SAVED_AUTH_SECRET = process.env.AUTH_SECRET;
+const SAVED_AUTH_MODE = process.env.SF_AUTH_MODE;
 
 describe("auth routes", () => {
   beforeEach(async () => {
@@ -51,6 +52,7 @@ describe("auth routes", () => {
     cookieStore.clear();
     _resetRateLimitForTests();
     delete process.env.AUTH_SECRET;
+    delete process.env.SF_AUTH_MODE;
   });
 
   afterAll(async () => {
@@ -58,6 +60,11 @@ describe("auth routes", () => {
       delete process.env.AUTH_SECRET;
     } else {
       process.env.AUTH_SECRET = SAVED_AUTH_SECRET;
+    }
+    if (SAVED_AUTH_MODE === undefined) {
+      delete process.env.SF_AUTH_MODE;
+    } else {
+      process.env.SF_AUTH_MODE = SAVED_AUTH_MODE;
     }
     await rawDb.$disconnect();
   });
@@ -102,6 +109,7 @@ describe("auth routes", () => {
 
       // process.env.AUTH_SECRET was set (so getAuthSecret returns it on next reads)
       expect(process.env.AUTH_SECRET).toBeTruthy();
+      expect(process.env.SF_AUTH_MODE).toBe("configured");
     });
 
     it("returns 400 on PIN shorter than 8 chars", async () => {

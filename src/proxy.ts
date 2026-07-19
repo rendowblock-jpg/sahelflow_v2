@@ -3,6 +3,9 @@ import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { verifySessionToken } from "@/lib/auth/crypto";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import {
+  AUTH_MODE_CONFIGURED,
+  AUTH_MODE_ENV,
+  AUTH_MODE_SETUP,
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
   RUNTIME_READY_PATH,
@@ -19,11 +22,8 @@ import {
  * allowlist). Both layers are intentional.
  *
  * Session verification uses HMAC-SHA256 via Web Crypto API (Edge-compatible).
- * The secret is read from process.env.AUTH_SECRET (set after first setup + restart).
- *
- * Setup mode: if AUTH_SECRET is not set, middleware allows all requests
- * (the setup wizard handles initial protection — it's only accessible when
- * no PIN is set, and the first thing it does is set the PIN + secret).
+ * Packaged setup is allowed only when the desktop explicitly declares that
+ * the migrated active-shop database has no auth state.
  *
  * The actual API-route-level auth check (requireAuth) provides defense-in-depth:
  * even if middleware is bypassed, API routes verify the token against the DB secret.
@@ -49,6 +49,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const authMode = process.env[AUTH_MODE_ENV];
+  const explicitSetup = authMode === AUTH_MODE_SETUP && !secret;
+  const explicitConfigured = authMode === AUTH_MODE_CONFIGURED && !!secret;
+  const developmentFallback =
+    process.env.NODE_ENV !== "production" && authMode === undefined;
+  if (!explicitSetup && !explicitConfigured && !developmentFallback) {
+    return NextResponse.json(
+      { status: "blocked", code: "AUTH_RUNTIME_MISCONFIGURED" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   // The bootstrap route exchanges the one-time URL credential for an
   // HttpOnly launch cookie and performs its own constant-time validation.
   if (pathname === RUNTIME_BOOTSTRAP_PATH) {
@@ -69,9 +81,16 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Setup mode — no secret yet, allow everything
-  if (!secret) {
+  // Browser development retains its old no-secret setup behavior. Packaged
+  // production reaches this branch only through the explicit desktop mode.
+  if (explicitSetup || (developmentFallback && !secret)) {
     return NextResponse.next();
+  }
+  if (!secret) {
+    return NextResponse.json(
+      { status: "blocked", code: "AUTH_RUNTIME_MISCONFIGURED" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   // Allow public API routes
