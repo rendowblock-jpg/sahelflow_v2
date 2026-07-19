@@ -12,6 +12,7 @@
     "@whiskeysockets/baileys": "^6.7.0",
     "@hapi/boom": "^10.0.1",
     "hono": "^4.6.0",
+    "music-metadata": "^11.14.0",
     "pino": "^9.5.0",
     "qrcode": "^1.5.4"
   },

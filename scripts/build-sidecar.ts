@@ -106,6 +106,7 @@ if (skipBuild) {
     execSync(
       "bun build --compile " +
       compileTarget +
+      "--conditions=module-sync " +
       "--external jimp --external link-preview-js --external sharp " +
       "--external qrcode-terminal --external pino-pretty " +
       "--external fluent-ffmpeg " +
