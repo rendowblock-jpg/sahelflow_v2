@@ -9,9 +9,9 @@
  * Cross-platform: works on Windows, macOS, and Linux (uses Bun, not bash).
  */
 
-import { execFileSync, execSync } from "child_process";
-import { existsSync, mkdirSync, rmSync, cpSync, readdirSync } from "fs";
-import { resolve, join } from "path";
+import { execSync } from "child_process";
+import { cpSync, existsSync, mkdirSync, rmSync } from "fs";
+import { resolve } from "path";
 
 const ROOT = process.cwd();
 const GREEN = "\x1b[0;32m";
@@ -88,31 +88,9 @@ ok("Copied standalone → src-tauri/resources/standalone");
 
 // ── 4. Compile WhatsApp sidecar (Bun → standalone binary) ───────────────────
 step("4. Compile WhatsApp sidecar");
-const sidecarName = "sahelflow-whatsapp-x86_64-pc-windows-msvc.exe";
-const sidecarDir = resolve(ROOT, "src-tauri", "binaries");
-const sidecarOut = resolve(sidecarDir, sidecarName);
-mkdirSync(sidecarDir, { recursive: true });
-
 try {
-  execFileSync(
-    "bun",
-    [
-      "build",
-      "--compile",
-      "--target=bun-windows-x64-baseline",
-      "--external=jimp",
-      "--external=link-preview-js",
-      "--external=sharp",
-      "--external=qrcode-terminal",
-      "--external=pino-pretty",
-      "--external=fluent-ffmpeg",
-      "sidecars/whatsapp/index.ts",
-      "--outfile",
-      sidecarOut,
-    ],
-    { stdio: "inherit", cwd: ROOT },
-  );
-  ok(`Sidecar compiled → ${sidecarName}`);
+  execSync("bun run build:sidecar", { stdio: "inherit", cwd: ROOT });
+  ok("Sidecar compiled");
 } catch (err) {
   console.error("❌ Sidecar compilation failed — Tauri build cannot proceed.");
   console.error("   The externalBin is required for the production bundle.");

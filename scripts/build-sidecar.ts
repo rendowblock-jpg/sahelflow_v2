@@ -17,6 +17,13 @@ import { resolve } from "path";
 const ROOT = process.cwd();
 const SIDECAR_SRC = resolve(ROOT, "sidecars/whatsapp/index.ts");
 const SIDECAR_DIR = resolve(ROOT, "src-tauri", "binaries");
+const PINNED_BUN_COMPILER = resolve(
+  ROOT,
+  "src-tauri",
+  "resources",
+  "runtime",
+  "bun.exe",
+);
 
 // ── 1. Detect the target triple ──────────────────────────────────────────────
 // Tauri names externalBin as <name>-<target-triple>[.exe]
@@ -45,6 +52,9 @@ const sidecarName = `sahelflow-whatsapp-${triple}${isWindows ? ".exe" : ""}`;
 const sidecarOut = resolve(SIDECAR_DIR, sidecarName);
 const compileTarget = isWindows && triple === "x86_64-pc-windows-msvc"
   ? "--target=bun-windows-x64-baseline "
+  : "";
+const compileExecutable = isWindows && existsSync(PINNED_BUN_COMPILER)
+  ? `--compile-executable-path="${PINNED_BUN_COMPILER}" `
   : "";
 
 // ── 2. Check if the source exists ────────────────────────────────────────────
@@ -106,6 +116,7 @@ if (skipBuild) {
     execSync(
       "bun build --compile " +
       compileTarget +
+      compileExecutable +
       "--conditions=module-sync " +
       "--external jimp --external link-preview-js --external sharp " +
       "--external qrcode-terminal --external pino-pretty " +
