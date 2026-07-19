@@ -26,12 +26,21 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 urlencoding = "2"
 getrandom = "0.2"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["backup", "bundled"] }
 sha2 = "0.10"
 fs2 = "0.4"
 # T-M3: pin time to a range to avoid broken time_macros::timestamp in v0.3.50
 # while still allowing patch-level updates within 0.3.x.
 time = ">=0.3.41, <0.3.50"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_Storage_FileSystem",
+  "Win32_System_JobObjects",
+  "Win32_System_Threading",
+] }
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

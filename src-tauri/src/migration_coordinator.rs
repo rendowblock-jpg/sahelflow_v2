@@ -1,7 +1,8 @@
 use fs2::FileExt;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, DatabaseName, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::{BTreeSet, HashSet};
 use std::fs::{self, OpenOptions};
 use std::io::{Error as IoError, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
@@ -12,6 +13,7 @@ const LEGACY_REGISTRY_FILE: &str = "app-meta.json";
 const REGISTRY_FORMAT_VERSION: u8 = 1;
 const JOURNAL_FORMAT_VERSION: u8 = 1;
 const COMPATIBILITY_REPORT_FORMAT_VERSION: u8 = 1;
+const MIGRATION_SET_HASH_DOMAIN: &[u8] = b"sahelflow-migration-set-v1\n";
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -109,6 +111,64 @@ struct DatabaseCompatibility {
     legacy_baseline_inferred: bool,
 }
 
+#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct IndexColumnFingerprint {
+    sequence: i64,
+    column_id: i64,
+    name: Option<String>,
+    descending: i64,
+    collation: Option<String>,
+    key: i64,
+}
+
+#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum SchemaItem {
+    Table {
+        name: String,
+        object_type: String,
+        column_count: i64,
+        without_rowid: i64,
+        strict: i64,
+        sql: Option<String>,
+    },
+    Column {
+        table: String,
+        position: i64,
+        name: String,
+        data_type: String,
+        not_null: i64,
+        default_value: Option<String>,
+        primary_key: i64,
+        hidden: i64,
+    },
+    Index {
+        table: String,
+        name: String,
+        unique: i64,
+        origin: String,
+        partial: i64,
+        sql: Option<String>,
+        columns: Vec<IndexColumnFingerprint>,
+    },
+    ForeignKey {
+        table: String,
+        id: i64,
+        sequence: i64,
+        target_table: String,
+        from_column: String,
+        to_column: Option<String>,
+        on_update: String,
+        on_delete: String,
+        match_clause: String,
+    },
+    SchemaObject {
+        object_type: String,
+        name: String,
+        table: String,
+        sql: Option<String>,
+    },
+}
+
 #[derive(Clone, Debug)]
 pub struct ActiveShopAuthority {
     pub shop_id: String,
@@ -147,6 +207,9 @@ where
     let snapshot_dir = app_data_dir.join("migration-snapshots");
     fs::create_dir_all(&journal_dir)?;
     fs::create_dir_all(&snapshot_dir)?;
+    // Reject redirected storage roots before creating or opening any shop DB.
+    validated_shops_root(app_data_dir)?;
+    validated_snapshot_root(app_data_dir, &snapshot_dir)?;
     let journal_path = journal_dir.join("current.json");
     let compatibility_path = journal_dir.join("compatibility.json");
     recover_interrupted_migration(app_data_dir, &snapshot_dir, &journal_path)?;
@@ -208,7 +271,7 @@ where
     } else {
         pending
             .iter()
-            .map(|(_, path)| fs::metadata(path).map(|meta| meta.len()))
+            .map(|(_, path)| snapshot_size_estimate(path))
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .sum::<u64>()
@@ -282,15 +345,12 @@ where
         preflight_database(database_path)?;
         let snapshot_path =
             snapshot_dir.join(format!("{}-{}-pre-migration.db", timestamp, shop.id));
-        create_verified_snapshot(database_path, &snapshot_path)?;
-        let digest = sha256_file(&snapshot_path)?;
-        journal.shops[index].snapshot_file = Some(
-            snapshot_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned(),
-        );
+        let digest = create_verified_snapshot(database_path, &snapshot_path)?;
+        let snapshot_file = snapshot_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| IoError::new(ErrorKind::InvalidData, "snapshot identity is invalid"))?;
+        journal.shops[index].snapshot_file = Some(snapshot_file.to_string());
         journal.shops[index].snapshot_sha256 = Some(digest);
         journal.shops[index].state = "snapshot-verified".to_string();
         snapshots.push(VerifiedSnapshot {
@@ -316,7 +376,7 @@ where
             for shop in &mut journal.shops {
                 shop.state = "restored".to_string();
             }
-            write_json_atomic(&journal_path, &journal)?;
+            write_terminal_journal(&journal_path, &journal)?;
             compatibility.state = "blocked".to_string();
             compatibility.failure = Some(error.to_string());
             if let Some(shop) = compatibility
@@ -331,13 +391,14 @@ where
             return Err(error);
         }
         preflight_database(database_path)?;
+        sync_sqlite_database(database_path)?;
         journal.shops[index].state = "migrated-verified".to_string();
         write_json_atomic(&journal_path, &journal)?;
     }
 
     create_shop_template(app_data_dir, &migrations, &migration_set_sha256)?;
     journal.state = "complete".to_string();
-    write_json_atomic(&journal_path, &journal)?;
+    write_terminal_journal(&journal_path, &journal)?;
     compatibility.state = "complete".to_string();
     compatibility.failure = None;
     for shop in &mut compatibility.shops {
@@ -357,11 +418,32 @@ fn recover_interrupted_migration(
     snapshot_dir: &Path,
     journal_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !journal_path.exists() {
+    let previous_path = previous_generation_path(journal_path);
+    if !journal_path.exists() && !previous_path.exists() {
         return Ok(());
     }
+    if !journal_path.exists() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "the current migration journal is missing while a retained prior generation exists at {}; automatic rollback is blocked",
+                previous_path.display()
+            ),
+        )
+        .into());
+    }
 
-    let mut journal: MigrationJournal = read_json(journal_path)?;
+    let mut journal: MigrationJournal = read_json(journal_path).map_err(|current_error| {
+        let retained = read_json::<MigrationJournal>(&previous_path)
+            .map(|previous| format!("retained prior state is {}", previous.state))
+            .unwrap_or_else(|_| "no readable retained prior generation is available".to_string());
+        IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "the current migration journal is unreadable ({current_error}); {retained}; automatic rollback from a prior generation is blocked"
+            ),
+        )
+    })?;
     if journal.format_version != JOURNAL_FORMAT_VERSION {
         return Err(IoError::new(
             ErrorKind::InvalidData,
@@ -370,13 +452,21 @@ fn recover_interrupted_migration(
         .into());
     }
 
-    if !matches!(
-        journal.state.as_str(),
-        "preflight" | "migrating" | "restoring"
-    ) {
-        return Ok(());
+    match journal.state.as_str() {
+        "complete" | "failed-restored" | "interrupted-restored" => return Ok(()),
+        "preflight" | "migrating" | "restoring" => {}
+        state => {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                format!("migration journal contains an unsupported state: {state}"),
+            )
+            .into())
+        }
     }
 
+    let shops_root = validated_shops_root(app_data_dir)?;
+    let snapshot_root = validated_snapshot_root(app_data_dir, snapshot_dir)?;
+    let mut identities = HashSet::new();
     let mut snapshots = Vec::new();
     for shop in &journal.shops {
         let Some(snapshot_file) = shop.snapshot_file.as_deref() else {
@@ -404,9 +494,24 @@ fn recover_interrupted_migration(
         };
         let database_file = safe_file_name(&shop.database_file, "shop database")?;
         let snapshot_file = safe_file_name(snapshot_file, "migration snapshot")?;
+        if !valid_database_file(database_file) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "interrupted migration contains an invalid shop database identity",
+            )
+            .into());
+        }
+        let identity = validated_database_identity(&shops_root, database_file)?;
+        if !identities.insert(identity) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "interrupted migration aliases one physical shop database",
+            )
+            .into());
+        }
         snapshots.push(VerifiedSnapshot {
-            database_path: app_data_dir.join("shops").join(database_file),
-            snapshot_path: snapshot_dir.join(snapshot_file),
+            database_path: shops_root.join(database_file),
+            snapshot_path: validated_snapshot_path(&snapshot_root, snapshot_file)?,
             sha256: snapshot_sha256.to_string(),
         });
     }
@@ -423,7 +528,7 @@ fn recover_interrupted_migration(
             "unchanged".to_string()
         };
     }
-    write_json_atomic(journal_path, &journal)
+    write_terminal_journal(journal_path, &journal)
 }
 
 fn safe_file_name<'a>(value: &'a str, label: &str) -> Result<&'a str, IoError> {
@@ -469,14 +574,27 @@ fn load_migrations(directory: &Path) -> Result<Vec<Migration>, Box<dyn std::erro
         .into());
     }
     let mut entries = fs::read_dir(directory)?
-        .filter_map(Result::ok)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
         .filter(|entry| entry.path().is_dir())
         .collect::<Vec<_>>();
     entries.sort_by_key(|entry| entry.file_name());
     entries
         .into_iter()
         .map(|entry| {
-            let name = entry.file_name().to_string_lossy().into_owned();
+            let name = entry.file_name().into_string().map_err(|_| {
+                IoError::new(ErrorKind::InvalidData, "migration name is not valid UTF-8")
+            })?;
+            if !name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+            {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    format!("migration name has unsupported characters: {name}"),
+                )
+                .into());
+            }
             let path = entry.path().join("migration.sql");
             let sql = fs::read_to_string(&path)?;
             let checksum = sha256_bytes(sql.as_bytes());
@@ -491,9 +609,16 @@ fn load_migrations(directory: &Path) -> Result<Vec<Migration>, Box<dyn std::erro
 
 fn migration_set_hash(migrations: &[Migration]) -> String {
     let mut hasher = Sha256::new();
+    // Framed migration-set-v1 algorithm, shared with generate-evidence-manifest.ts:
+    // domain line, then `<UTF-8 name byte length>:<name>\n64:<SQL SHA-256 hex>\n`.
+    hasher.update(MIGRATION_SET_HASH_DOMAIN);
     for migration in migrations {
+        hasher.update(migration.name.len().to_string().as_bytes());
+        hasher.update(b":");
         hasher.update(migration.name.as_bytes());
+        hasher.update(b"\n64:");
         hasher.update(migration.checksum.as_bytes());
+        hasher.update(b"\n");
     }
     hex_digest(hasher.finalize().as_slice())
 }
@@ -623,58 +748,15 @@ fn infer_legacy_baseline(
     connection: &Connection,
     migrations: &[Migration],
 ) -> Result<usize, Box<dyn std::error::Error>> {
-    let names = migrations
-        .iter()
-        .map(|migration| migration.name.as_str())
-        .collect::<Vec<_>>();
-    let position = |needle: &str| {
-        names
-            .iter()
-            .position(|name| *name == needle)
-            .map(|index| index + 1)
-            .unwrap_or(0)
-    };
-
-    if !table_exists(connection, "Category")?
-        || !table_exists(connection, "Order")?
-        || !table_exists(connection, "Customer")?
-    {
-        return Ok(0);
+    let actual = schema_signature(connection)?;
+    let expected = Connection::open_in_memory()?;
+    for (index, migration) in migrations.iter().enumerate() {
+        expected.execute_batch(&migration.sql)?;
+        if schema_signature(&expected)? == actual {
+            return Ok(index + 1);
+        }
     }
-    let mut baseline = position("20260624000000_init");
-    if table_exists(connection, "AuthSecret")?
-        && column_exists(connection, "Order", "phoneBlindIndex")?
-    {
-        baseline = position("20260630000000_add_auth_search_blacklist");
-    }
-    if table_exists(connection, "OrderChange")? && table_exists(connection, "ExtractionMetric")? {
-        baseline = position("20260704000000_phase4_drift_capture");
-    }
-    if table_exists(connection, "PhoneReputation")? && !table_exists(connection, "ReservationItem")?
-    {
-        baseline = position("20260706000000_session30_31_32_drift_capture");
-    }
-    if column_exists(connection, "Order", "sourceOrderId")?
-        && !table_exists(connection, "PollingEvent")?
-    {
-        baseline = position("20260706000001_wave7_schema_medium");
-    }
-    if !table_exists(connection, "Notification")?
-        && !table_exists(connection, "DailyAnalyticsReport")?
-        && baseline >= position("20260706000001_wave7_schema_medium")
-    {
-        baseline = position("20260707000000_drop_orphaned_tables");
-    }
-    if column_is_required_with_false_default(connection, "Order", "codRemitted")? {
-        baseline = position("20260712120919_fix_codremitted_null_default");
-    }
-    if column_exists(connection, "Automation", "dryRun")?
-        && column_exists(connection, "Refund", "reversed")?
-        && index_exists(connection, "Order_status_createdAt_deletedAt_idx")?
-    {
-        baseline = position("20260712180000_w2w3_data_safety_indexes");
-    }
-    Ok(baseline)
+    Ok(0)
 }
 
 fn preflight_database(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -720,15 +802,32 @@ fn preflight_database(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 fn create_verified_snapshot(
     source: &Path,
     target: &Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<String, Box<dyn std::error::Error>> {
     if target.exists() {
-        fs::remove_file(target)?;
+        return Err(IoError::new(
+            ErrorKind::AlreadyExists,
+            format!("migration snapshot already exists at {}", target.display()),
+        )
+        .into());
     }
-    let connection = Connection::open(source)?;
-    connection.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
-    drop(connection);
-    fs::copy(source, target)?;
-    preflight_database(target)
+    let staged = target.with_extension(format!("{}.tmp", random_hex(8)));
+    let source_connection = Connection::open_with_flags(
+        source,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+    source_connection.busy_timeout(std::time::Duration::from_secs(10))?;
+    let backup_result = source_connection.backup(DatabaseName::Main, &staged, None);
+    drop(source_connection);
+    if let Err(error) = backup_result {
+        let _ = fs::remove_file(&staged);
+        return Err(error.into());
+    }
+
+    preflight_database(&staged)?;
+    sync_file(&staged)?;
+    replace_file_durable(&staged, target, false)?;
+    preflight_database(target)?;
+    sha256_file(target).map_err(Into::into)
 }
 
 fn restore_all(snapshots: &[VerifiedSnapshot]) -> Result<(), Box<dyn std::error::Error>> {
@@ -744,13 +843,27 @@ fn restore_all(snapshots: &[VerifiedSnapshot]) -> Result<(), Box<dyn std::error:
             )
             .into());
         }
-        let staged = snapshot.database_path.with_extension("restore-staged.db");
-        fs::copy(&snapshot.snapshot_path, &staged)?;
-        preflight_database(&staged)?;
-        if snapshot.database_path.exists() {
-            fs::remove_file(&snapshot.database_path)?;
+        let mut destination = Connection::open(&snapshot.database_path)?;
+        destination.busy_timeout(std::time::Duration::from_secs(10))?;
+        destination.restore(
+            DatabaseName::Main,
+            &snapshot.snapshot_path,
+            None::<fn(rusqlite::backup::Progress)>,
+        )?;
+        let checkpoint: (i64, i64, i64) =
+            destination.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })?;
+        if checkpoint.0 != 0 {
+            return Err(IoError::other(format!(
+                "restored database WAL could not be checkpointed for {}",
+                snapshot.database_path.display()
+            ))
+            .into());
         }
-        fs::rename(staged, &snapshot.database_path)?;
+        drop(destination);
+        sync_sqlite_database(&snapshot.database_path)?;
+        preflight_database(&snapshot.database_path)?;
     }
     Ok(())
 }
@@ -778,11 +891,9 @@ fn create_shop_template(
     Connection::open(&staged)?;
     migrate_database(&staged, migrations)?;
     preflight_database(&staged)?;
-    if target.exists() {
-        fs::remove_file(&target)?;
-    }
-    fs::rename(staged, &target)?;
-    fs::write(marker, format!("{migration_set_sha256}\n"))?;
+    sync_sqlite_database(&staged)?;
+    replace_file_durable(&staged, &target, false)?;
+    write_bytes_atomic(&marker, format!("{migration_set_sha256}\n").as_bytes())?;
     Ok(())
 }
 
@@ -885,26 +996,33 @@ fn validate_registry(
         .active_shop_id
         .as_ref()
         .ok_or_else(|| IoError::new(ErrorKind::InvalidData, "shop registry has no active shop"))?;
-    let mut ids = std::collections::HashSet::new();
-    let mut files = std::collections::HashSet::new();
+    let shops_root = validated_shops_root(app_data_dir)?;
+    let mut ids = HashSet::new();
+    let mut files = HashSet::new();
+    let mut identities = HashSet::new();
     for shop in &registry.shops {
+        if !valid_shop_id(&shop.id) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "shop registry contains an invalid shop ID",
+            )
+            .into());
+        }
         if !ids.insert(&shop.id) || !files.insert(&shop.database_file) {
             return Err(
                 IoError::new(ErrorKind::InvalidData, "shop registry contains duplicates").into(),
             );
         }
-        let file = Path::new(&shop.database_file);
-        if file.file_name().and_then(|name| name.to_str()) != Some(shop.database_file.as_str())
-            || file.extension().and_then(|extension| extension.to_str()) != Some("db")
-        {
+        if !valid_database_file(&shop.database_file) {
             return Err(
                 IoError::new(ErrorKind::InvalidData, "shop database identity is invalid").into(),
             );
         }
-        if !app_data_dir.join("shops").join(file).is_file() {
+        let identity = validated_database_identity(&shops_root, &shop.database_file)?;
+        if !identities.insert(identity) {
             return Err(IoError::new(
-                ErrorKind::NotFound,
-                format!("database is missing for registered shop {}", shop.id),
+                ErrorKind::InvalidData,
+                "shop registry aliases one physical database through multiple files",
             )
             .into());
         }
@@ -915,8 +1033,235 @@ fn validate_registry(
     Ok(())
 }
 
+fn validated_shops_root(app_data_dir: &Path) -> Result<PathBuf, IoError> {
+    let app_root = fs::canonicalize(app_data_dir)?;
+    let shops_path = app_data_dir.join("shops");
+    let metadata = fs::symlink_metadata(&shops_path)?;
+    if path_is_link(&metadata) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "the canonical shops directory must not be a link or reparse point",
+        ));
+    }
+    let shops_root = fs::canonicalize(&shops_path)?;
+    if shops_root != app_root.join("shops") {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "the canonical shops directory resolves outside the application data root",
+        ));
+    }
+    Ok(shops_root)
+}
+
+fn validated_snapshot_root(app_data_dir: &Path, snapshot_dir: &Path) -> Result<PathBuf, IoError> {
+    let app_root = fs::canonicalize(app_data_dir)?;
+    let metadata = fs::symlink_metadata(snapshot_dir)?;
+    if path_is_link(&metadata) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "the migration snapshot directory must not be a link or reparse point",
+        ));
+    }
+    let snapshot_root = fs::canonicalize(snapshot_dir)?;
+    if snapshot_root != app_root.join("migration-snapshots") {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "the migration snapshot directory resolves outside the application data root",
+        ));
+    }
+    Ok(snapshot_root)
+}
+
+fn validated_snapshot_path(snapshot_root: &Path, snapshot_file: &str) -> Result<PathBuf, IoError> {
+    let path = snapshot_root.join(snapshot_file);
+    let metadata = fs::symlink_metadata(&path)?;
+    if path_is_link(&metadata) || !metadata.is_file() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "migration snapshot is not a regular contained file: {}",
+                path.display()
+            ),
+        ));
+    }
+    let resolved = fs::canonicalize(&path)?;
+    if resolved.parent() != Some(snapshot_root) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "migration snapshot resolves outside its root: {}",
+                path.display()
+            ),
+        ));
+    }
+    Ok(resolved)
+}
+
+fn validated_database_identity(
+    shops_root: &Path,
+    database_file: &str,
+) -> Result<DatabaseFileIdentity, IoError> {
+    let path = shops_root.join(database_file);
+    let metadata = fs::symlink_metadata(&path).map_err(|error| {
+        IoError::new(
+            error.kind(),
+            format!(
+                "registered shop database is unavailable at {}: {error}",
+                path.display()
+            ),
+        )
+    })?;
+    if path_is_link(&metadata) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "registered shop database must not be a link: {}",
+                path.display()
+            ),
+        ));
+    }
+    if !metadata.is_file() {
+        return Err(IoError::new(
+            ErrorKind::NotFound,
+            format!("registered shop database is not a file: {}", path.display()),
+        ));
+    }
+    let resolved = fs::canonicalize(&path)?;
+    if resolved.parent() != Some(shops_root) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "registered shop database resolves outside the shops root: {}",
+                path.display()
+            ),
+        ));
+    }
+    database_file_identity(&resolved)
+}
+
+fn path_is_link(metadata: &fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
+        metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+#[cfg(windows)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct DatabaseFileIdentity {
+    volume: u32,
+    index: u64,
+}
+
+#[cfg(windows)]
+fn database_file_identity(path: &Path) -> Result<DatabaseFileIdentity, IoError> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileW, GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_NORMAL,
+        FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
+
+    let wide = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let handle = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            std::ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return Err(IoError::last_os_error());
+    }
+    let mut information: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    let queried = unsafe { GetFileInformationByHandle(handle, &mut information) };
+    let error = (queried == 0).then(IoError::last_os_error);
+    unsafe {
+        CloseHandle(handle);
+    }
+    if let Some(error) = error {
+        return Err(error);
+    }
+    if information.nNumberOfLinks != 1 {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "registered shop database must not be hard-linked: {}",
+                path.display()
+            ),
+        ));
+    }
+    Ok(DatabaseFileIdentity {
+        volume: information.dwVolumeSerialNumber,
+        index: ((information.nFileIndexHigh as u64) << 32) | information.nFileIndexLow as u64,
+    })
+}
+
+#[cfg(unix)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct DatabaseFileIdentity {
+    device: u64,
+    inode: u64,
+}
+
+#[cfg(unix)]
+fn database_file_identity(path: &Path) -> Result<DatabaseFileIdentity, IoError> {
+    use std::os::unix::fs::MetadataExt;
+    let metadata = fs::metadata(path)?;
+    if metadata.nlink() != 1 {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "registered shop database must not be hard-linked: {}",
+                path.display()
+            ),
+        ));
+    }
+    Ok(DatabaseFileIdentity {
+        device: metadata.dev(),
+        inode: metadata.ino(),
+    })
+}
+
 fn database_has_business_schema(connection: &Connection) -> rusqlite::Result<bool> {
     table_exists(connection, "Category")
+}
+
+fn valid_shop_id(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    (1..=64).contains(&bytes.len())
+        && (bytes[0].is_ascii_lowercase() || bytes[0].is_ascii_digit())
+        && bytes
+            .iter()
+            .skip(1)
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
+}
+
+fn valid_database_file(value: &str) -> bool {
+    let Some(stem) = value.strip_suffix(".db") else {
+        return false;
+    };
+    !stem.is_empty()
+        && (stem.as_bytes()[0].is_ascii_lowercase() || stem.as_bytes()[0].is_ascii_digit())
+        && stem
+            .bytes()
+            .skip(1)
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
 }
 
 fn table_exists(connection: &Connection, table: &str) -> rusqlite::Result<bool> {
@@ -927,46 +1272,136 @@ fn table_exists(connection: &Connection, table: &str) -> rusqlite::Result<bool> 
     )
 }
 
-fn index_exists(connection: &Connection, index: &str) -> rusqlite::Result<bool> {
-    connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='index' AND name=?1)",
-        params![index],
-        |row| row.get(0),
-    )
-}
-
-fn column_exists(connection: &Connection, table: &str, column: &str) -> rusqlite::Result<bool> {
-    let mut statement = connection.prepare(&format!(
-        "PRAGMA table_info(\"{}\")",
-        table.replace('"', "")
-    ))?;
-    let names = statement
-        .query_map([], |row| row.get::<_, String>(1))?
+fn schema_signature(connection: &Connection) -> rusqlite::Result<BTreeSet<SchemaItem>> {
+    let tables = connection
+        .prepare(
+            "SELECT name, sql FROM sqlite_master
+             WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+               AND name <> '_prisma_migrations'
+             ORDER BY name",
+        )?
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+        })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    Ok(names.iter().any(|name| name == column))
+    let mut signature = BTreeSet::new();
+
+    for (table, table_sql) in tables {
+        let (object_type, column_count, without_rowid, strict) = connection.query_row(
+            "SELECT type, ncol, wr, strict FROM pragma_table_list
+             WHERE schema = 'main' AND name = ?1",
+            params![table],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )?;
+        signature.insert(SchemaItem::Table {
+            name: table.clone(),
+            object_type,
+            column_count,
+            without_rowid,
+            strict,
+            sql: table_sql,
+        });
+        let quoted_table = sqlite_identifier(&table);
+        let columns = connection
+            .prepare(&format!("PRAGMA table_xinfo({quoted_table})"))?
+            .query_map([], |row| {
+                Ok(SchemaItem::Column {
+                    table: table.clone(),
+                    position: row.get(0)?,
+                    name: row.get(1)?,
+                    data_type: row.get(2)?,
+                    not_null: row.get(3)?,
+                    default_value: row.get(4)?,
+                    primary_key: row.get(5)?,
+                    hidden: row.get(6)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        signature.extend(columns);
+
+        let indexes = connection
+            .prepare(&format!("PRAGMA index_list({quoted_table})"))?
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        for (name, unique, origin, partial) in indexes {
+            let columns = connection
+                .prepare(&format!("PRAGMA index_xinfo({})", sqlite_identifier(&name)))?
+                .query_map([], |row| {
+                    Ok(IndexColumnFingerprint {
+                        sequence: row.get(0)?,
+                        column_id: row.get(1)?,
+                        name: row.get(2)?,
+                        descending: row.get(3)?,
+                        collation: row.get(4)?,
+                        key: row.get(5)?,
+                    })
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            let index_sql = connection
+                .query_row(
+                    "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?1",
+                    params![name],
+                    |row| row.get::<_, Option<String>>(0),
+                )
+                .optional()?
+                .flatten();
+            signature.insert(SchemaItem::Index {
+                table: table.clone(),
+                name,
+                unique,
+                origin,
+                partial,
+                sql: index_sql,
+                columns,
+            });
+        }
+
+        let foreign_keys = connection
+            .prepare(&format!("PRAGMA foreign_key_list({quoted_table})"))?
+            .query_map([], |row| {
+                Ok(SchemaItem::ForeignKey {
+                    table: table.clone(),
+                    id: row.get(0)?,
+                    sequence: row.get(1)?,
+                    target_table: row.get(2)?,
+                    from_column: row.get(3)?,
+                    to_column: row.get(4)?,
+                    on_update: row.get(5)?,
+                    on_delete: row.get(6)?,
+                    match_clause: row.get(7)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        signature.extend(foreign_keys);
+    }
+
+    let objects = connection
+        .prepare(
+            "SELECT type, name, tbl_name, sql FROM sqlite_master
+             WHERE type IN ('trigger', 'view') ORDER BY type, name",
+        )?
+        .query_map([], |row| {
+            Ok(SchemaItem::SchemaObject {
+                object_type: row.get(0)?,
+                name: row.get(1)?,
+                table: row.get(2)?,
+                sql: row.get(3)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    signature.extend(objects);
+    Ok(signature)
 }
 
-fn column_is_required_with_false_default(
-    connection: &Connection,
-    table: &str,
-    column: &str,
-) -> rusqlite::Result<bool> {
-    let mut statement = connection.prepare(&format!(
-        "PRAGMA table_info(\"{}\")",
-        table.replace('"', "")
-    ))?;
-    let mut rows = statement.query([])?;
-    while let Some(row) = rows.next()? {
-        let name: String = row.get(1)?;
-        if name == column {
-            let not_null: i64 = row.get(3)?;
-            let default_value: Option<String> = row.get(4)?;
-            return Ok(
-                not_null == 1 && matches!(default_value.as_deref(), Some("false") | Some("0"))
-            );
-        }
-    }
-    Ok(false)
+fn sqlite_identifier(value: &str) -> String {
+    format!("\"{}\"", value.replace('"', "\"\""))
 }
 
 fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, Box<dyn std::error::Error>> {
@@ -980,6 +1415,46 @@ fn write_json_atomic<T: Serialize>(
     path: &Path,
     value: &T,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let mut bytes = serde_json::to_vec_pretty(value)?;
+    bytes.push(b'\n');
+    write_bytes_atomic(path, &bytes)
+}
+
+fn write_terminal_journal(
+    path: &Path,
+    journal: &MigrationJournal,
+) -> Result<(), Box<dyn std::error::Error>> {
+    write_terminal_journal_with(path, journal, write_json_atomic)
+}
+
+fn write_terminal_journal_with<F>(
+    path: &Path,
+    journal: &MigrationJournal,
+    mut write: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnMut(&Path, &MigrationJournal) -> Result<(), Box<dyn std::error::Error>>,
+{
+    // Two successful replacements leave both current and retained generations
+    // terminal. A crash between them still leaves a readable terminal current.
+    write(path, journal)?;
+    write(path, journal)
+}
+
+fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    write_bytes_atomic_with_replace(path, bytes, |temp, target| {
+        replace_file_durable(temp, target, true)
+    })
+}
+
+fn write_bytes_atomic_with_replace<F>(
+    path: &Path,
+    bytes: &[u8],
+    replace: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnOnce(&Path, &Path) -> Result<(), IoError>,
+{
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -988,14 +1463,165 @@ fn write_json_atomic<T: Serialize>(
         .create_new(true)
         .write(true)
         .open(&temp)?;
-    serde_json::to_writer_pretty(&mut file, value)?;
-    file.write_all(b"\n")?;
+    file.write_all(bytes)?;
     file.sync_all()?;
-    if path.exists() {
-        fs::remove_file(path)?;
+    drop(file);
+    if let Err(error) = replace(&temp, path) {
+        let _ = fs::remove_file(&temp);
+        return Err(error.into());
     }
-    fs::rename(temp, path)?;
     Ok(())
+}
+
+fn previous_generation_path(path: &Path) -> PathBuf {
+    let mut value = path.as_os_str().to_os_string();
+    value.push(".previous");
+    PathBuf::from(value)
+}
+
+#[cfg(windows)]
+fn replace_file_durable(
+    staged: &Path,
+    target: &Path,
+    retain_previous: bool,
+) -> Result<(), IoError> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, ReplaceFileW, MOVEFILE_WRITE_THROUGH,
+    };
+
+    if !target.exists() {
+        let staged_wide = staged
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<_>>();
+        let target_wide = target
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<_>>();
+        if unsafe {
+            MoveFileExW(
+                staged_wide.as_ptr(),
+                target_wide.as_ptr(),
+                MOVEFILE_WRITE_THROUGH,
+            )
+        } == 0
+        {
+            return Err(IoError::last_os_error());
+        }
+        sync_file(target)?;
+        return sync_parent(target);
+    }
+
+    let previous = retain_previous.then(|| previous_generation_path(target));
+    if let Some(path) = &previous {
+        match fs::remove_file(path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+    }
+    let target_wide = target
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let staged_wide = staged
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let previous_wide = previous.as_ref().map(|path| {
+        path.as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<_>>()
+    });
+    let previous_ptr = previous_wide
+        .as_ref()
+        .map_or(std::ptr::null(), |path| path.as_ptr());
+    let replaced = unsafe {
+        // REPLACEFILE_WRITE_THROUGH is documented as unsupported. The staged
+        // file was flushed above; flush the resulting files after replacement.
+        ReplaceFileW(
+            target_wide.as_ptr(),
+            staged_wide.as_ptr(),
+            previous_ptr,
+            0,
+            std::ptr::null(),
+            std::ptr::null(),
+        )
+    };
+    if replaced == 0 {
+        return Err(IoError::last_os_error());
+    }
+    sync_file(target)?;
+    if let Some(previous) = previous {
+        sync_file(&previous)?;
+    }
+    sync_parent(target)
+}
+
+#[cfg(not(windows))]
+fn replace_file_durable(
+    staged: &Path,
+    target: &Path,
+    _retain_previous: bool,
+) -> Result<(), IoError> {
+    fs::rename(staged, target)?;
+    sync_file(target)?;
+    sync_parent(target)
+}
+
+fn sync_file(path: &Path) -> Result<(), IoError> {
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path)?
+        .sync_all()
+}
+
+#[cfg(not(windows))]
+fn sync_parent(path: &Path) -> Result<(), IoError> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| IoError::new(ErrorKind::InvalidInput, "path has no parent directory"))?;
+    fs::File::open(parent)?.sync_all()
+}
+
+#[cfg(windows)]
+fn sync_parent(_path: &Path) -> Result<(), IoError> {
+    // Windows has no supported ReplaceFile write-through option or portable
+    // directory flush here. File contents are flushed explicitly, but this
+    // does not claim directory-metadata or arbitrary power-loss durability.
+    Ok(())
+}
+
+fn sync_sqlite_database(path: &Path) -> Result<(), IoError> {
+    sync_file(path)?;
+    for suffix in ["-wal", "-journal"] {
+        let mut sidecar = path.as_os_str().to_os_string();
+        sidecar.push(suffix);
+        let sidecar = PathBuf::from(sidecar);
+        if sidecar.is_file() {
+            sync_file(&sidecar)?;
+        }
+    }
+    sync_parent(path)
+}
+
+fn snapshot_size_estimate(path: &Path) -> Result<u64, Box<dyn std::error::Error>> {
+    let connection = Connection::open_with_flags(
+        path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+    let page_count: u64 = connection.query_row("PRAGMA page_count", [], |row| row.get(0))?;
+    let page_size: u64 = connection.query_row("PRAGMA page_size", [], |row| row.get(0))?;
+    page_count
+        .checked_mul(page_size)
+        .ok_or_else(|| IoError::other("SQLite snapshot size estimate overflowed").into())
 }
 
 fn sha256_file(path: &Path) -> Result<String, IoError> {
@@ -1128,6 +1754,14 @@ mod tests {
         assert_eq!(report.shops.len(), 1);
         assert_eq!(report.shops[0].state, "current");
         assert_eq!(report.shops[0].pending_migration_count, 0);
+        #[cfg(windows)]
+        {
+            let previous: MigrationJournal = read_json(&previous_generation_path(
+                &app_data.join("migration-journal/current.json"),
+            ))
+            .expect("read retained terminal journal");
+            assert_eq!(previous.state, "complete");
+        }
 
         drop(connection);
         fs::remove_dir_all(root).expect("remove test root");
@@ -1464,7 +2098,6 @@ mod tests {
         );
         let authority =
             prepare_installation(&app_data, &resources).expect("prepare baseline installation");
-        let before = sha256_file(&authority.database_path).expect("baseline digest");
         write_migration(
             &resources,
             "002_broken",
@@ -1477,10 +2110,6 @@ mod tests {
         let connection = Connection::open(&authority.database_path).expect("open restored shop");
         assert!(table_exists(&connection, "Business").expect("business table"));
         assert!(!table_exists(&connection, "Partial").expect("partial table"));
-        assert_eq!(
-            sha256_file(&authority.database_path).expect("restored digest"),
-            before
-        );
         let journal: serde_json::Value =
             read_json(&app_data.join("migration-journal/current.json")).expect("journal");
         assert_eq!(journal["state"], "failed-restored");
@@ -1591,5 +2220,438 @@ mod tests {
         assert!(table_exists(&recovered, "ResumedMigration").expect("resumed table lookup"));
         drop(recovered);
         fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn snapshot_backup_includes_committed_wal_rows() {
+        let root = test_root("wal-snapshot");
+        fs::create_dir_all(&root).expect("create test root");
+        let source = root.join("source.db");
+        let snapshot = root.join("snapshot.db");
+        let writer = Connection::open(&source).expect("open WAL source");
+        writer
+            .execute_batch(
+                r#"
+                PRAGMA journal_mode=WAL;
+                PRAGMA wal_autocheckpoint=0;
+                CREATE TABLE SellerData (id TEXT PRIMARY KEY, value TEXT NOT NULL);
+                INSERT INTO SellerData (id, value) VALUES ('committed', 'from-wal');
+                "#,
+            )
+            .expect("commit WAL row");
+        let mut wal_path = source.as_os_str().to_os_string();
+        wal_path.push("-wal");
+        assert!(PathBuf::from(wal_path).is_file());
+
+        let digest = create_verified_snapshot(&source, &snapshot).expect("create WAL snapshot");
+
+        assert_eq!(digest, sha256_file(&snapshot).expect("snapshot digest"));
+        let restored = Connection::open(&snapshot).expect("open snapshot");
+        let value: String = restored
+            .query_row(
+                "SELECT value FROM SellerData WHERE id = 'committed'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("read committed WAL row from snapshot");
+        assert_eq!(value, "from-wal");
+        drop(restored);
+        drop(writer);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn failed_atomic_replacement_keeps_the_prior_journal_readable() {
+        let root = test_root("atomic-journal-failure");
+        fs::create_dir_all(&root).expect("create test root");
+        let path = root.join("current.json");
+        write_bytes_atomic(&path, br#"{"generation":"prior"}"#).expect("write prior journal");
+
+        let result = write_bytes_atomic_with_replace(
+            &path,
+            br#"{"generation":"next"}"#,
+            |staged, target| {
+                let prior: serde_json::Value = read_json(target).expect("read prior generation");
+                let next: serde_json::Value = read_json(staged).expect("read staged generation");
+                assert_eq!(prior["generation"], "prior");
+                assert_eq!(next["generation"], "next");
+                Err(IoError::other("injected failure before atomic replacement"))
+            },
+        );
+
+        assert!(result.is_err());
+        let current: serde_json::Value = read_json(&path).expect("prior journal remains readable");
+        assert_eq!(current["generation"], "prior");
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn corrupt_completed_journal_never_restores_a_retained_migrating_generation() {
+        let root = test_root("journal-terminal-corruption");
+        let app_data = root.join("data");
+        let snapshot_dir = app_data.join("migration-snapshots");
+        let journal_dir = app_data.join("migration-journal");
+        let shops_dir = app_data.join("shops");
+        fs::create_dir_all(&snapshot_dir).expect("create snapshot directory");
+        fs::create_dir_all(&journal_dir).expect("create journal directory");
+        fs::create_dir_all(&shops_dir).expect("create shops directory");
+        let path = journal_dir.join("current.json");
+        let database_path = shops_dir.join("seller.db");
+        let connection = Connection::open(&database_path).expect("create seller database");
+        connection
+            .execute_batch(
+                "CREATE TABLE SellerData (id TEXT PRIMARY KEY); INSERT INTO SellerData VALUES ('before');",
+            )
+            .expect("create pre-migration data");
+        drop(connection);
+        let snapshot_path = snapshot_dir.join("seller-pre-migration.db");
+        let snapshot_sha256 =
+            create_verified_snapshot(&database_path, &snapshot_path).expect("create snapshot");
+
+        let mut journal = MigrationJournal {
+            format_version: JOURNAL_FORMAT_VERSION,
+            state: "migrating".to_string(),
+            migration_set_sha256: "0".repeat(64),
+            started_at_unix_seconds: unix_seconds(),
+            shops: vec![ShopJournal {
+                shop_id: "seller".to_string(),
+                database_file: "seller.db".to_string(),
+                snapshot_file: Some("seller-pre-migration.db".to_string()),
+                snapshot_sha256: Some(snapshot_sha256),
+                state: "migrated-verified".to_string(),
+            }],
+            failure: None,
+        };
+        write_json_atomic(&path, &journal).expect("write migrating current generation");
+        journal.state = "complete".to_string();
+        let mut terminal_writes = 0;
+        let interrupted_terminal_write =
+            write_terminal_journal_with(&path, &journal, |path, journal| {
+                terminal_writes += 1;
+                if terminal_writes == 2 {
+                    return Err(IoError::other(
+                        "injected interruption before the second terminal replacement",
+                    )
+                    .into());
+                }
+                write_json_atomic(path, journal)
+            });
+        assert!(interrupted_terminal_write.is_err());
+        assert_eq!(terminal_writes, 2);
+        let current: MigrationJournal = read_json(&path).expect("read terminal current journal");
+        let retained: MigrationJournal =
+            read_json(&previous_generation_path(&path)).expect("read retained migrating journal");
+        assert_eq!(current.state, "complete");
+        assert_eq!(retained.state, "migrating");
+
+        let connection = Connection::open(&database_path).expect("open completed database");
+        connection
+            .execute("INSERT INTO SellerData VALUES ('after-complete')", [])
+            .expect("write data after completed migration");
+        drop(connection);
+        fs::write(&path, b"{broken").expect("write corrupt current journal");
+
+        let error = recover_interrupted_migration(&app_data, &snapshot_dir, &path)
+            .expect_err("corrupt current must block destructive prior-generation recovery")
+            .to_string();
+        assert!(error.contains("automatic rollback from a prior generation is blocked"));
+        let connection = Connection::open(&database_path).expect("reopen completed database");
+        let rows: i64 = connection
+            .query_row("SELECT COUNT(*) FROM SellerData", [], |row| row.get(0))
+            .expect("count preserved rows");
+        assert_eq!(
+            rows, 2,
+            "post-completion seller data must not be rolled back"
+        );
+
+        drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn successful_windows_replacement_retains_the_prior_generation() {
+        let root = test_root("atomic-journal-previous");
+        fs::create_dir_all(&root).expect("create test root");
+        let path = root.join("current.json");
+        write_bytes_atomic(&path, br#"{"generation":"prior"}"#).expect("write prior journal");
+        write_bytes_atomic(&path, br#"{"generation":"next"}"#).expect("replace journal");
+
+        let current: serde_json::Value = read_json(&path).expect("read current journal");
+        let previous: serde_json::Value =
+            read_json(&previous_generation_path(&path)).expect("read retained prior journal");
+        assert_eq!(current["generation"], "next");
+        assert_eq!(previous["generation"], "prior");
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn legacy_inference_requires_an_exact_packaged_schema_prefix() {
+        let migrations = vec![
+            Migration {
+                name: "001_init".to_string(),
+                checksum: sha256_bytes(b"CREATE TABLE Base (id TEXT PRIMARY KEY);"),
+                sql: "CREATE TABLE Base (id TEXT PRIMARY KEY);".to_string(),
+            },
+            Migration {
+                name: "002_more".to_string(),
+                checksum: sha256_bytes(b"ALTER TABLE Base ADD COLUMN value TEXT;"),
+                sql: "ALTER TABLE Base ADD COLUMN value TEXT;".to_string(),
+            },
+        ];
+        let exact = Connection::open_in_memory().expect("open exact legacy database");
+        for migration in &migrations {
+            exact
+                .execute_batch(&migration.sql)
+                .expect("apply legacy schema migration");
+        }
+        assert_eq!(
+            infer_legacy_baseline(&exact, &migrations).expect("infer exact prefix"),
+            2
+        );
+
+        let packaged_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("repository root")
+            .to_path_buf();
+        let packaged = load_migrations(&packaged_root.join("prisma/migrations"))
+            .expect("load packaged migrations");
+        let sparse = Connection::open_in_memory().expect("open sparse legacy database");
+        sparse
+            .execute_batch(
+                r#"
+                CREATE TABLE Category (id TEXT PRIMARY KEY);
+                CREATE TABLE Customer (id TEXT PRIMARY KEY);
+                CREATE TABLE "Order" (
+                    id TEXT PRIMARY KEY,
+                    status TEXT,
+                    createdAt DATETIME,
+                    deletedAt DATETIME
+                );
+                CREATE TABLE Automation (dryRun BOOLEAN);
+                CREATE TABLE Refund (reversed BOOLEAN);
+                CREATE INDEX Order_status_createdAt_deletedAt_idx
+                    ON "Order" (status, createdAt, deletedAt);
+                "#,
+            )
+            .expect("create sparse drift schema");
+        assert_eq!(
+            infer_legacy_baseline(&sparse, &packaged).expect("inspect sparse drift"),
+            0
+        );
+    }
+
+    #[test]
+    fn legacy_inference_fingerprints_constraints_indexes_views_and_triggers() {
+        let sql = r#"
+            CREATE TABLE Base (
+                id TEXT PRIMARY KEY,
+                value TEXT CHECK (length(value) > 0)
+            );
+            CREATE INDEX Base_value_idx
+                ON Base(value COLLATE NOCASE DESC) WHERE value IS NOT NULL;
+            CREATE VIEW Base_values AS SELECT value FROM Base WHERE value IS NOT NULL;
+            CREATE TRIGGER Base_touch AFTER UPDATE ON Base
+                BEGIN SELECT NEW.value; END;
+        "#;
+        let migrations = vec![Migration {
+            name: "001_exact".to_string(),
+            checksum: sha256_bytes(sql.as_bytes()),
+            sql: sql.to_string(),
+        }];
+        let exact = Connection::open_in_memory().expect("open exact schema");
+        exact.execute_batch(sql).expect("create exact schema");
+        assert_eq!(
+            infer_legacy_baseline(&exact, &migrations).expect("infer exact rich schema"),
+            1
+        );
+
+        let divergent = Connection::open_in_memory().expect("open divergent schema");
+        divergent
+            .execute_batch(
+                r#"
+                CREATE TABLE Base (
+                    id TEXT PRIMARY KEY,
+                    value TEXT CHECK (length(value) >= 0)
+                );
+                CREATE INDEX Base_value_idx
+                    ON Base(value COLLATE BINARY ASC) WHERE value <> '';
+                CREATE VIEW Base_values AS SELECT value FROM Base;
+                CREATE TRIGGER Base_touch AFTER UPDATE ON Base
+                    BEGIN SELECT OLD.value; END;
+                "#,
+            )
+            .expect("create structurally similar divergent schema");
+        assert_eq!(
+            infer_legacy_baseline(&divergent, &migrations).expect("inspect rich schema drift"),
+            0
+        );
+    }
+
+    #[test]
+    fn legacy_inference_preserves_semantic_whitespace_inside_schema_sql() {
+        let sql = "CREATE TABLE Category (id TEXT CHECK (id <> 'a  b'));";
+        let migrations = vec![Migration {
+            name: "001_exact".to_string(),
+            checksum: sha256_bytes(sql.as_bytes()),
+            sql: sql.to_string(),
+        }];
+        let divergent = Connection::open_in_memory().expect("open divergent schema");
+        divergent
+            .execute_batch("CREATE TABLE Category (id TEXT CHECK (id <> 'a b'));")
+            .expect("create schema with a different literal");
+
+        assert_eq!(
+            infer_legacy_baseline(&divergent, &migrations).expect("inspect schema literal drift"),
+            0
+        );
+    }
+
+    #[test]
+    fn registry_rejects_hard_linked_database_aliases() {
+        let root = test_root("hard-link-alias");
+        let app_data = root.join("data");
+        let shops = app_data.join("shops");
+        fs::create_dir_all(&shops).expect("create shops directory");
+        Connection::open(shops.join("first.db")).expect("create first database");
+        fs::hard_link(shops.join("first.db"), root.join("outside-alias.db"))
+            .expect("create external hard-linked database alias");
+        let registry = ShopRegistry {
+            format_version: REGISTRY_FORMAT_VERSION,
+            revision: 1,
+            installation_id: random_hex(16),
+            active_shop_id: Some("first".to_string()),
+            shops: vec![ShopRecord {
+                id: "first".to_string(),
+                name: "First".to_string(),
+                database_file: "first.db".to_string(),
+                icon: None,
+                created_at: unix_seconds().to_string(),
+            }],
+        };
+
+        let error = validate_registry(&app_data, &registry)
+            .expect_err("hard-linked databases must fail closed")
+            .to_string();
+        assert!(error.contains("hard-linked") || error.contains("aliases one physical"));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn registry_rejects_database_links_outside_the_shops_root() {
+        let root = test_root("outside-database-link");
+        let app_data = root.join("data");
+        let shops = app_data.join("shops");
+        fs::create_dir_all(&shops).expect("create shops directory");
+        let outside = root.join("outside.db");
+        Connection::open(&outside).expect("create outside database");
+        let linked = shops.join("linked.db");
+        #[cfg(windows)]
+        let link_result = std::os::windows::fs::symlink_file(&outside, &linked);
+        #[cfg(unix)]
+        let link_result = std::os::unix::fs::symlink(&outside, &linked);
+        if let Err(error) = link_result {
+            if error.kind() == ErrorKind::PermissionDenied || error.raw_os_error() == Some(1314) {
+                fs::remove_dir_all(root).expect("remove test root");
+                return;
+            }
+            panic!("create outside database link: {error}");
+        }
+        let registry = ShopRegistry {
+            format_version: REGISTRY_FORMAT_VERSION,
+            revision: 1,
+            installation_id: random_hex(16),
+            active_shop_id: Some("linked".to_string()),
+            shops: vec![ShopRecord {
+                id: "linked".to_string(),
+                name: "Linked".to_string(),
+                database_file: "linked.db".to_string(),
+                icon: None,
+                created_at: unix_seconds().to_string(),
+            }],
+        };
+
+        let error = validate_registry(&app_data, &registry)
+            .expect_err("database links must fail closed")
+            .to_string();
+        assert!(error.contains("must not be a link"));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn registry_rejects_a_junction_as_the_shops_root() {
+        let root = test_root("shops-junction");
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        let shops = app_data.join("shops");
+        let outside_shops = root.join("outside-shops");
+        fs::create_dir_all(&app_data).expect("create app data directory");
+        fs::create_dir_all(&outside_shops).expect("create outside shops directory");
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE Business (id TEXT PRIMARY KEY);",
+        );
+        let output = std::process::Command::new("cmd")
+            .arg("/C")
+            .arg("mklink")
+            .arg("/J")
+            .arg(&shops)
+            .arg(&outside_shops)
+            .output()
+            .expect("invoke junction creation");
+        assert!(
+            output.status.success(),
+            "create shops junction: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let error = prepare_installation(&app_data, &resources)
+            .expect_err("shops-root junction must fail closed")
+            .to_string();
+        assert!(error.contains("shops directory must not be a link or reparse point"));
+        assert!(!outside_shops.join("dev.db").exists());
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn shop_id_validation_matches_the_typescript_registry_grammar() {
+        assert!(valid_shop_id("a"));
+        assert!(valid_shop_id("9-shop-2"));
+        assert!(valid_shop_id(&"a".repeat(64)));
+        assert!(!valid_shop_id(""));
+        assert!(!valid_shop_id("Uppercase"));
+        assert!(!valid_shop_id("shop_name"));
+        assert!(!valid_shop_id("-shop"));
+        assert!(!valid_shop_id(&"a".repeat(65)));
+
+        assert!(valid_database_file("9-shop.db"));
+        assert!(!valid_database_file("shop_name.db"));
+        assert!(!valid_database_file("../shop.db"));
+        assert!(!valid_database_file("SHOP.db"));
+    }
+
+    #[test]
+    fn migration_set_hash_matches_the_shared_golden_vector() {
+        let sql_1 = "CREATE TABLE t (id INTEGER);\n";
+        let sql_2 = "ALTER TABLE t ADD COLUMN name TEXT;\n";
+        let migrations = vec![
+            Migration {
+                name: "001_init".to_string(),
+                checksum: sha256_bytes(sql_1.as_bytes()),
+                sql: sql_1.to_string(),
+            },
+            Migration {
+                name: "002_add_name".to_string(),
+                checksum: sha256_bytes(sql_2.as_bytes()),
+                sql: sql_2.to_string(),
+            },
+        ];
+
+        assert_eq!(
+            migration_set_hash(&migrations),
+            "b3b8d5e292253c7a85f58ea1eef8e4df810ea4a6cb1ab88de66a581e0e0e2c21"
+        );
     }
 }

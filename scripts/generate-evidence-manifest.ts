@@ -14,10 +14,56 @@ import { spawnSync } from "node:child_process";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const requireClean = process.argv.includes("--require-clean");
+const MIGRATION_SET_HASH_DOMAIN = "sahelflow-migration-set-v1\n";
+const MIGRATION_HASH_GOLDEN =
+  "b3b8d5e292253c7a85f58ea1eef8e4df810ea4a6cb1ab88de66a581e0e0e2c21";
+
+type MigrationHashInput = {
+  name: string;
+  sql: Uint8Array;
+};
+
+/**
+ * Framed migration-set-v1 algorithm, shared with migration_coordinator.rs:
+ * domain line, then `<UTF-8 name byte length>:<name>\n64:<SQL SHA-256 hex>\n`.
+ */
+function migrationSetSha256(migrations: MigrationHashInput[]): string {
+  const migrationSetHash = createHash("sha256");
+  migrationSetHash.update(MIGRATION_SET_HASH_DOMAIN);
+  for (const migration of migrations) {
+    const checksum = createHash("sha256").update(migration.sql).digest("hex");
+    migrationSetHash.update(String(Buffer.byteLength(migration.name, "utf8")));
+    migrationSetHash.update(":");
+    migrationSetHash.update(migration.name, "utf8");
+    migrationSetHash.update("\n64:");
+    migrationSetHash.update(checksum);
+    migrationSetHash.update("\n");
+  }
+  return migrationSetHash.digest("hex");
+}
+
+function verifyMigrationHashGoldenVector(): void {
+  const actual = migrationSetSha256([
+    {
+      name: "001_init",
+      sql: Buffer.from("CREATE TABLE t (id INTEGER);\n"),
+    },
+    {
+      name: "002_add_name",
+      sql: Buffer.from("ALTER TABLE t ADD COLUMN name TEXT;\n"),
+    },
+  ]);
+  if (actual !== MIGRATION_HASH_GOLDEN) {
+    throw new Error(
+      `Migration hash algorithm drifted: expected ${MIGRATION_HASH_GOLDEN}, found ${actual}`,
+    );
+  }
+}
 
 function git(args: string[]): string {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
-  if (result.status !== 0) throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  if (result.status !== 0)
+    throw new Error(result.stderr || `git ${args.join(" ")} failed`);
   return result.stdout.trim();
 }
 
@@ -33,21 +79,44 @@ function filesBelow(directory: string): string[] {
   });
 }
 
+verifyMigrationHashGoldenVector();
+if (process.argv.includes("--verify-migration-hash-vector")) {
+  console.log(
+    `Migration hash golden vector verified: ${MIGRATION_HASH_GOLDEN}`,
+  );
+  process.exit(0);
+}
+
 const status = git(["status", "--porcelain", "--untracked-files=all"]);
 if (requireClean && status) {
-  throw new Error("Evidence generation requires a clean tracked and untracked source tree");
+  throw new Error(
+    "Evidence generation requires a clean tracked and untracked source tree",
+  );
 }
 
 const version = JSON.parse(
   readFileSync(resolve(root, "sahelflow.version.json"), "utf8"),
 ) as Record<string, unknown>;
-const migrationFiles = filesBelow(resolve(root, "prisma", "migrations"))
-  .filter((path) => path.endsWith("migration.sql"))
-  .sort();
-const migrationSetHash = createHash("sha256");
-for (const path of migrationFiles) {
-  migrationSetHash.update(relative(root, path).replaceAll("\\", "/"));
-  migrationSetHash.update(readFileSync(path));
+const migrationDirectory = resolve(root, "prisma", "migrations");
+const migrations = readdirSync(migrationDirectory, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .sort((left, right) =>
+    left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+  )
+  .map((entry) => {
+    if (!/^[A-Za-z0-9_-]+$/.test(entry.name)) {
+      throw new Error(
+        `Migration name has unsupported characters: ${entry.name}`,
+      );
+    }
+    const path = resolve(migrationDirectory, entry.name, "migration.sql");
+    if (!existsSync(path)) {
+      throw new Error(`Migration ${entry.name} is missing migration.sql`);
+    }
+    return { name: entry.name, sql: readFileSync(path) };
+  });
+if (migrations.length === 0) {
+  throw new Error("No packaged migrations were found");
 }
 
 const msiDirectory = resolve(
@@ -59,11 +128,17 @@ const msiDirectory = resolve(
   "msi",
 );
 const msiDirectoryFiles = filesBelow(msiDirectory);
-const signatureFiles = msiDirectoryFiles.filter((path) => path.endsWith(".sig"));
+const signatureFiles = msiDirectoryFiles.filter((path) =>
+  path.endsWith(".sig"),
+);
 if (signatureFiles.length > 0) {
-  throw new Error("Unsigned internal evidence must not contain updater signatures");
+  throw new Error(
+    "Unsigned internal evidence must not contain updater signatures",
+  );
 }
-const bundleFiles = msiDirectoryFiles.filter((path) => /-UNSIGNED\.msi$/i.test(path));
+const bundleFiles = msiDirectoryFiles.filter((path) =>
+  /-UNSIGNED\.msi$/i.test(path),
+);
 if (bundleFiles.length !== 1) {
   throw new Error(
     `Expected exactly one explicitly UNSIGNED MSI, found ${bundleFiles.length}`,
@@ -92,7 +167,7 @@ const manifest = {
     updaterSignature: false,
   },
   version,
-  migrationSetSha256: migrationSetHash.digest("hex"),
+  migrationSetSha256: migrationSetSha256(migrations),
   lockfiles: ["bun.lock", "src-tauri/Cargo.lock"]
     .map((file) => resolve(root, file))
     .filter(existsSync)
