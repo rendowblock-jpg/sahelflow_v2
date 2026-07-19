@@ -17,6 +17,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { invalidateShopClient } from "@/lib/db";
+import { SahelFlowError } from "@/types/errors";
 import {
   appMetaPath,
   legacyAppMetaPath,
@@ -213,6 +214,16 @@ function emptyRegistry(): ShopRegistry {
   };
 }
 
+function registryBootstrapFallback(): ShopRegistry {
+  if (process.env.NODE_ENV === "production") {
+    throw new ShopRegistryError(
+      "The canonical shop registry is missing after desktop bootstrap",
+      "REGISTRY_MISSING",
+    );
+  }
+  return existsSync(legacyAppMetaPath) ? importLegacyRegistry() : emptyRegistry();
+}
+
 function importLegacyRegistry(): ShopRegistry {
   const legacy = parseJson(legacyAppMetaPath) as LegacyRegistry;
   if (!Array.isArray(legacy.shops)) {
@@ -262,7 +273,7 @@ function ensureRegistry(): ShopRegistry {
   }
   return withRegistryLock(() => {
     if (existsSync(registryPath)) return validateRegistry(parseJson(registryPath));
-    const registry = existsSync(legacyAppMetaPath) ? importLegacyRegistry() : emptyRegistry();
+    const registry = registryBootstrapFallback();
     writeRegistryFile(registry);
     return registry;
   });
@@ -272,9 +283,7 @@ function mutateRegistry(mutator: (registry: ShopRegistry) => void): ShopRegistry
   return withRegistryLock(() => {
     const registry = existsSync(registryPath)
       ? validateRegistry(parseJson(registryPath))
-      : existsSync(legacyAppMetaPath)
-        ? importLegacyRegistry()
-        : emptyRegistry();
+      : registryBootstrapFallback();
     mutator(registry);
     registry.revision += 1;
     const validated = validateRegistry(registry);
@@ -344,6 +353,13 @@ export function getActiveShopId(): string | null {
 }
 
 export function setActiveShopId(shopId: string): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new SahelFlowError(
+      "Shop switching is blocked until the desktop supervisor can own the process transition",
+      "SHOP_SWITCH_SUPERVISOR_REQUIRED",
+      503,
+    );
+  }
   mutateRegistry((registry) => {
     if (!registry.shops.some((shop) => shop.id === shopId)) {
       throw new ShopRegistryError(`Shop ${shopId} not found`, "SHOP_NOT_FOUND");
@@ -364,9 +380,7 @@ export function createShop(input: { name: string; icon?: string | null }): Shop 
   return withRegistryLock(() => {
     const registry = existsSync(registryPath)
       ? validateRegistry(parseJson(registryPath))
-      : existsSync(legacyAppMetaPath)
-        ? importLegacyRegistry()
-        : emptyRegistry();
+      : registryBootstrapFallback();
     if (registry.shops.length >= MAX_SHOPS) {
       throw new ShopRegistryError(`Maximum ${MAX_SHOPS} shops allowed`, "SHOP_LIMIT_REACHED");
     }

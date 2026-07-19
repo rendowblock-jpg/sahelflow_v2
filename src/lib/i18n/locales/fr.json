@@ -2527,6 +2527,8 @@
   "topbar.profile": "Profil",
   "topbar.searchPlaceholder": "Rechercher...",
   "topbar.selectShop": "Sélectionner",
+  "topbar.shopSwitchBlocked": "Changement bloqué : {{shop}}",
+  "topbar.shopSwitchPending": "Changement en attente : {{shop}}",
   "topbar.user": "Utilisateur",
   "topbar.viewAllNotifications": "Voir toutes les notifications",
   "updater.autoUpdateEnabled": "Auto-update activé",

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   existsSync,
   mkdirSync,
@@ -44,6 +44,10 @@ beforeEach(() => {
   writeFileSync(paths.shopTemplatePath, "migrated-template");
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("atomic shop registry", () => {
   it("creates an explicit empty versioned registry without a fallback shop", () => {
     expect(listShops()).toEqual([]);
@@ -54,6 +58,15 @@ describe("atomic shop registry", () => {
     expect(registry.revision).toBe(0);
     expect(registry.installationId).toBeTruthy();
     expect(existsSync(paths.registryPath)).toBe(true);
+  });
+
+  it("does not recreate a missing registry after production bootstrap", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(() => getRegistry()).toThrowError(
+      expect.objectContaining({ code: "REGISTRY_MISSING" }),
+    );
+    expect(existsSync(paths.registryPath)).toBe(false);
   });
 
   it("provisions a migrated database before atomically registering a shop", () => {
@@ -76,6 +89,19 @@ describe("atomic shop registry", () => {
     expect(getActiveShopId()).toBe(second.id);
     expect(getRegistry().revision).toBe(3);
     expect(first.id).not.toBe(second.id);
+  });
+
+  it("rejects production switching without changing the registry", () => {
+    const first = createShop({ name: "First" });
+    const second = createShop({ name: "Second" });
+    const revision = getRegistry().revision;
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(() => setActiveShopId(second.id)).toThrowError(
+      expect.objectContaining({ code: "SHOP_SWITCH_SUPERVISOR_REQUIRED" }),
+    );
+    expect(getActiveShopId()).toBe(first.id);
+    expect(getRegistry().revision).toBe(revision);
   });
 
   it("fails closed on malformed registry JSON", () => {

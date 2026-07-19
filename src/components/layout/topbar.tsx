@@ -37,6 +37,7 @@ import {
   Package, RotateCcw, AlertCircle} from "lucide-react";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
+import { toast } from "@/lib/toast";
 
 const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "fr", label: "Français", flag: "🇫🇷" },
@@ -86,6 +87,9 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
   const shops = useShopStore((s) => s.shops);
   const activeShopId = useShopStore((s) => s.activeShopId);
   const loaded = useShopStore((s) => s.loaded);
+  const switchStatus = useShopStore((s) => s.switchStatus);
+  const switchTargetId = useShopStore((s) => s.switchTargetId);
+  const switchError = useShopStore((s) => s.switchError);
   const setActiveShop = useShopStore((s) => s.setActiveShop);
   const loadShops = useShopStore((s) => s.loadShops);
 
@@ -118,7 +122,18 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
+  const switchTarget = shops.find((s) => s.id === switchTargetId) ?? null;
   const isRtl = serverDir === "rtl";
+
+  const handleShopSwitch = useCallback(async (shopId: string) => {
+    try {
+      await setActiveShop(shopId);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("topbar.shopSwitchBlocked"),
+      );
+    }
+  }, [setActiveShop, t]);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 lg:h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-3">
@@ -140,10 +155,22 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2 px-2 font-medium">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 px-2 font-medium"
+              aria-live="polite"
+              title={switchStatus === "blocked" ? (switchError ?? undefined) : undefined}
+            >
               <Store className="h-4 w-4 text-muted-foreground" />
               <span className="hidden sm:inline">
-                {loaded ? (activeShop?.name ?? t("topbar.selectShop")) : t("topbar.loading")}
+                {switchStatus === "pending"
+                  ? t("topbar.shopSwitchPending", { shop: switchTarget?.name ?? "" })
+                  : switchStatus === "blocked"
+                    ? t("topbar.shopSwitchBlocked", { shop: switchTarget?.name ?? "" })
+                    : loaded
+                      ? (activeShop?.name ?? t("topbar.selectShop"))
+                      : t("topbar.loading")}
               </span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
@@ -154,7 +181,8 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
             {shops.map((shop) => (
               <DropdownMenuItem
                 key={shop.id}
-                onClick={() => void setActiveShop(shop.id)}
+                onClick={() => void handleShopSwitch(shop.id)}
+                disabled={switchStatus === "pending" || shop.id === activeShopId}
                 className="gap-2"
               >
                 <span className="text-base">{shop.icon ?? "🏪"}</span>

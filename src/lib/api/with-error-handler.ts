@@ -23,6 +23,7 @@ import { logger } from "@/lib/logger";
 import { captureError } from "@/lib/monitoring/sentry";
 import { redactError } from "@/lib/redact-pii";
 import { shopContext } from "@/lib/db";
+import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
@@ -35,6 +36,9 @@ export function withErrorHandler<T extends RouteHandler>(
     const req = args[0] as NextRequest | undefined;
     const path = label ?? req?.nextUrl?.pathname ?? "unknown";
     try {
+      if (process.env.NODE_ENV === "production") {
+        assertProcessShopAuthority(shopContext);
+      }
       const response = await handler(...args);
       response.headers.set("X-SahelFlow-Shop-Id", shopContext.shopId);
       response.headers.set(

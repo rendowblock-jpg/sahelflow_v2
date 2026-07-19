@@ -28,6 +28,7 @@ import "server-only";
 import { PrismaClient } from "@prisma/client";
 import { isAbsolute, resolve } from "path";
 import { processShopContext } from "@/lib/shops/context";
+import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import {
   encryptCustomerData,
   decryptCustomerRow,
@@ -679,16 +680,52 @@ function isUnguardedBulkWhere(
   return false;
 }
 
-/** The type of the fully-composed Prisma client (PII + safety guards). */
-export type DbClient = ReturnType<typeof withSafetyGuards>;
+type SafetyGuardedClient = ReturnType<typeof withSafetyGuards>;
+
+const SHOP_WRITE_OPERATIONS = new Set([
+  "create",
+  "createMany",
+  "createManyAndReturn",
+  "update",
+  "updateMany",
+  "updateManyAndReturn",
+  "upsert",
+  "delete",
+  "deleteMany",
+]);
+
+function withShopAuthority(
+  client: SafetyGuardedClient,
+  context: ReturnType<typeof processShopContext>,
+) {
+  return client.$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ operation, args, query }) {
+          if (
+            process.env.NODE_ENV === "production" &&
+            SHOP_WRITE_OPERATIONS.has(operation)
+          ) {
+            assertProcessShopAuthority(context);
+          }
+          return query(args);
+        },
+      },
+    },
+  });
+}
+
+/** The type of the fully-composed Prisma client. */
+export type DbClient = ReturnType<typeof withShopAuthority>;
 
 /**
  * Process-bound client for the exact DATABASE_URL selected by Tauri before
  * server startup. `processShopContext()` below fails closed if the matching
  * authority tuple is incomplete; this client never selects a registry fallback.
  */
+const boundShopContext = processShopContext();
 const processClient = (globalForPrisma.prisma as DbClient | undefined) ??
-  withSafetyGuards(withPiiEncryption(dbRaw));
+  withShopAuthority(withSafetyGuards(withPiiEncryption(dbRaw)), boundShopContext);
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = processClient;
@@ -730,7 +767,7 @@ export function invalidateShopClient(shopFilePath: string): void {
  * process rather than mutating database authority underneath in-flight work.
  */
 export const db: DbClient = processClient;
-export const shopContext = processShopContext();
+export const shopContext = boundShopContext;
 
 /**
  * Get an extended PrismaClient for a specific shop file.

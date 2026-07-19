@@ -5,7 +5,7 @@
  * backup → verify data matches. Was: zero tests for backup/restore (219 LOC
  * at 0% coverage).
  */
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { createBackup, restoreBackup, listBackups, deleteBackup, validateBackupFilename } from "../index";
 import { existsSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
@@ -81,6 +81,10 @@ beforeAll(async () => {
 describe("backup round-trip (PROD-006)", () => {
   beforeEach(async () => { await cleanDb(); });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   afterAll(async () => {
     await cleanDb();
     await db.$disconnect();
@@ -121,6 +125,17 @@ describe("backup round-trip (PROD-006)", () => {
     const customers = await db.customer.findMany();
     expect(customers).toHaveLength(1);
     expect(customers[0]!.name).toBe("TestCustomer");
+  });
+
+  it("blocks live production replacement pending supervisor ownership", async () => {
+    await seedTestData();
+    const backup = await createBackup();
+    vi.stubEnv("NODE_ENV", "production");
+
+    await expect(restoreBackup(backup.filename)).rejects.toMatchObject({
+      code: "BACKUP_RESTORE_SUPERVISOR_REQUIRED",
+    });
+    expect(await db.product.count()).toBe(1);
   });
 
   it("deleteBackup removes the backup file", async () => {

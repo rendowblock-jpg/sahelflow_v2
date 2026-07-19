@@ -205,6 +205,13 @@ export async function listBackups(): Promise<BackupEntry[]> {
 export async function restoreBackup(
   filename: string,
 ): Promise<{ success: true; relaunchRequired: true; rescueFile: string }> {
+  if (process.env.NODE_ENV === "production") {
+    throw new SahelFlowError(
+      "Live backup restore is blocked until the desktop supervisor owns database replacement",
+      "BACKUP_RESTORE_SUPERVISOR_REQUIRED",
+      503,
+    );
+  }
   const safe = validateBackupFilename(filename);
   const backupPath = join(backupsDir, safe);
   const manifest = await readManifest(manifestPath(backupPath));

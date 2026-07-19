@@ -19,6 +19,7 @@ import {
 } from "./crypto";
 import { SahelFlowError } from "@/types/errors";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 const LEGACY_AUTH_SECRET_KEY = "auth_secret";
 const LEGACY_AUTH_PIN_KEY = "auth_pin_hash";
@@ -156,6 +157,9 @@ export async function getSessionToken(): Promise<string | undefined> {
 }
 
 export const isAuthenticated = cache(async (): Promise<boolean> => {
+  if (process.env.NODE_ENV === "production") {
+    assertProcessShopAuthority(shopContext);
+  }
   const token = await getSessionToken();
   const secret = await getAuthSecret();
   // Fail-OPEN only when auth is genuinely not set up (no AuthSecret row).
@@ -185,6 +189,9 @@ export const isAuthenticated = cache(async (): Promise<boolean> => {
 });
 
 export async function requireAuth(): Promise<void> {
+  if (process.env.NODE_ENV === "production") {
+    assertProcessShopAuthority(shopContext);
+  }
   const ok = await isAuthenticated();
   if (!ok) {
     throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);

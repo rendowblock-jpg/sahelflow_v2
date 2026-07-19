@@ -2527,6 +2527,8 @@
   "topbar.profile": "الملف الشخصي",
   "topbar.searchPlaceholder": "بحث...",
   "topbar.selectShop": "اختيار",
+  "topbar.shopSwitchBlocked": "تبديل المتجر محظور: {{shop}}",
+  "topbar.shopSwitchPending": "تبديل المتجر قيد الانتظار: {{shop}}",
   "topbar.user": "المستخدم",
   "topbar.viewAllNotifications": "عرض جميع الإشعارات",
   "updater.autoUpdateEnabled": "التحديث التلقائي مُفعّل",
