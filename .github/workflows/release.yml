@@ -15,9 +15,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 90
     env:
-      SF_TEST_ROOT: ${{ runner.temp }}\sahelflow-test
-      SF_DATA_DIR: ${{ runner.temp }}\sahelflow-test\data
-      DATABASE_URL: file:${{ runner.temp }}\sahelflow-test\data\shops\test.db
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
     steps:
@@ -70,6 +67,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw 'source_ref is not reachable from protected origin/main'
           }
+
+      - name: Configure disposable test sandbox
+        shell: pwsh
+        run: |
+          $sandboxRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-test'
+          $dataDir = Join-Path $sandboxRoot 'data'
+          $database = Join-Path $dataDir 'shops\test.db'
+          "SF_TEST_ROOT=$sandboxRoot" >> $env:GITHUB_ENV
+          "SF_DATA_DIR=$dataDir" >> $env:GITHUB_ENV
+          "DATABASE_URL=file:$database" >> $env:GITHUB_ENV
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
