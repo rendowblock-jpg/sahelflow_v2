@@ -22,7 +22,8 @@ A newer explicit Founder decision supersedes an older choice only when it states
 - Use the best available method to investigate, challenge, design, implement, test and revise.
 - Agent prompts describe strengths, not permission boundaries.
 - Use additional agents or parallel workstreams when they materially help.
-- Treat Codex Desktop as the only agent currently assumed to have full local desktop, filesystem and runtime access. Other agents may work through GitHub or connected tools.
+- Treat Codex Desktop as the only agent currently assumed to have full local Windows desktop/runtime access. A configured Codespace gives connected agents a disposable Linux workspace and command runtime, but it cannot prove installed Windows behavior.
+- Declare the execution environment before making evidence claims: Codespace Linux, GitHub Actions Linux/Windows or installed local Windows.
 - Keep durable facts, decisions, blockers and the exact next move in GitHub. Routine reasoning can remain in chat.
 - Update shared memory at meaningful checkpoints, not after every small action.
 - Update an existing authority instead of creating a new status, gap, handoff, experience, capability, journey or planning document.

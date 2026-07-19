@@ -27,12 +27,16 @@ afterEach(async () => {
   await disconnectTestPrisma(db);
 });
 
-/** "Yesterday at noon" — a Date safely inside yesterday's local-time bucket. */
+/** "Yesterday at noon" inside the same Algiers-local bucket as the report. */
 function yesterdayNoon(): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  d.setHours(12, 0, 0, 0);
-  return d;
+  const todayInAlgiers = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Algiers",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const startOfToday = new Date(`${todayInAlgiers}T00:00:00+01:00`);
+  return new Date(startOfToday.getTime() - 12 * 60 * 60 * 1000);
 }
 
 async function seedOrderWithItems(opts: {

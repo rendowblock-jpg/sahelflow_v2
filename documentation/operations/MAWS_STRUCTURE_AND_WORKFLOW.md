@@ -120,6 +120,17 @@ Currently the only MAWS agent assumed to have broad direct access to the Founder
 
 Claims depending on local unpublished files, running app, packaged candidate, database or machine evidence require Codex Desktop or another tool with actual access.
 
+### Codespaces — connected Linux implementation environment
+
+The repository's checked-in dev container gives an authorized coding agent a reproducible Linux workspace for source work, Next.js development, Prisma, TypeScript, ESLint, Vitest and Rust formatting. Codespaces is an execution environment, not a new MAWS role or durable-memory layer.
+
+- Git branches, commits, pull requests, Working Memory and the active wave remain durable; the Codespace is disposable.
+- The normal machine is 2 cores and 8 GB. Use 4 cores only when a measured heavy workload justifies consuming the allowance twice as fast.
+- Codespaces uses synthetic disposable data and private forwarded ports. Production credentials, seller data, signing material and live provider sessions remain outside it.
+- Codespaces evidence is Linux source/development evidence. It cannot establish MSI, WebView, Windows process, install, sleep/resume, reboot, SmartScreen or reference-device behavior.
+- Native Tauri release compilation remains in GitHub Actions; installed-candidate behavior remains in the authorized Windows lab.
+- Every agent states its execution environment, exact source ref and worktree state before reporting evidence.
+
 ### ChatGPT — product, experience, architecture and engineering partner
 
 Builds precise cross-layer models, traces journeys/states, challenges assumptions, designs solutions, reviews/implements through available GitHub tools and keeps durable memory accurate. It does not claim local desktop/runtime evidence without access.
@@ -216,6 +227,8 @@ Exact next move:
 ```
 
 A new agent resumes from repository documents rather than a narrative dump. GLM additionally updates its compact orphan checkpoint when it needs disposable-session continuity.
+
+For Codespaces, commit and push intended work before stopping or deleting the environment. Do not use an unpushed Codespace filesystem as cross-session memory.
 
 ### Step 10 — Finish, park or replace
 
