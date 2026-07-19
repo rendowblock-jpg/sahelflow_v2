@@ -22,7 +22,7 @@ A seller can install one Windows candidate, start it reliably, open only the int
 
 ## Current reality
 
-The integrated evidence below remains tied to the original wave branch and Actions runs. The current local Windows implementation checkpoint is on `agent/authenticated-runtime-protocol` and is uncommitted, so its source/test observations do not yet constitute clean-checkout or artifact evidence:
+The original wave evidence remains listed below for provenance. The consolidated Windows implementation checkpoint is committed on `agent/authenticated-runtime-protocol` in draft PR #104 at `7ad237a0271458b0a98801ef686262fce56a0e09`; clean-checkout source evidence is green, but no installed-artifact claim attaches to it:
 
 - GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
 - CI now binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
@@ -46,9 +46,11 @@ The integrated evidence below remains tied to the original wave branch and Actio
 - Automation dispatch now carries the originating `ServiceContext` through trigger lookup, low-stock dispatch, logging, retries, customer tagging and automated order-status transitions.
 - The secret repository and e-commerce, delivery, Google Sheets, Gemini and extraction credential loaders now require explicit `ServiceContext`; packaged Google Sheets loading cannot fall back to a process working-directory credential file.
 - Route-local import, delivery, return, storefront, settings-reset, profile, expense, automation, license and AI-session mutations now root transactions and writes through an explicit `{ prisma, shop }` tuple. Production routes contain no direct global-`db` mutation or global-`db.$transaction` root. The 23 remaining raw-name mutation matches across eight service/tool files are verified aliases of `ServiceContext.prisma` or `ToolContext.db`.
-- Local verification on 2026-07-18: the full shared gate passed Prisma generation, migration deployment, TypeScript, ESLint and the complete Vitest suite in a fresh disposable sandbox; the consolidated write-path regression wave passed 198/198 tests across 13 suites, including delivery, returns/refunds, storefront/import creation, orders/COD, AI tools/consent, auth and cross-table integrity. `cargo test --all-features` passed all 20 tests, `cargo clippy --lib --all-features -- -D warnings` passed and `cargo check --release` passed without warnings.
+- Adversarial review and commits `b3fcb26`/`7ad237a` added crash-safe journal terminal handling, creation-time Windows Job Object containment, generation-safe restart teardown, exact legacy schema fingerprinting, physical database-file validation, transaction-bound order ledgers, durable local shipment reservations/reconciliation receipts, identity-bound refund compensation and strict sandbox containment.
+- Local Windows verification on 2026-07-19: 60 focused transaction/sandbox tests passed; `cargo test --all-features --locked` passed 42/42 tests; warning-denied Clippy, formatting, release compilation and the shared migration hash vector passed; the fast shared gate passed TypeScript and complete ESLint.
+- Clean-checkout run `29697219950` at `7ad237a` passed the Quality Gate and Tauri release smoke. Coverage passed 94 files and 1,534 tests at 80.87% statements/lines; production audit and migration status were clean.
 - Eleven coordinator tests now cover fresh installation, positive legacy revision, real OS lock behavior, rollback, interruption restoration, corrupt registry, divergent history with per-shop compatibility detail, deterministic low disk before snapshots, a zero-space no-op rerun, two-shop migration with row preservation, and a one-version-back representative fixture upgraded through the repository's actual packaged migrations.
-- The mechanically enumerated Phase 1B source write-authority and migration-coordinator sub-gates are met. Phase 1B is not complete because the consolidated checkpoint has not passed a fresh clean-checkout Quality Gate, and installed Windows migration/failure-injection plus a separately approved representative seller-data copy remain unproven.
+- The mechanically enumerated Phase 1B source write-authority, migration-coordinator and clean-checkout sub-gates are met. Phase 1B remains incomplete because installed Windows migration/failure-injection and a separately approved representative seller-data copy remain unproven.
 - No packaged Windows, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
 
 The current session has the local Windows checkout and Rust/TypeScript test toolchain. No MSI was built, installed or launched, and installation remains a separately confirmed implementation-lab action.
@@ -94,16 +96,16 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ### Phase: 1A — Supervised authenticated local runtime
 
-- Status: source runtime/restart protocol locally verified; clean-checkout and installed evidence incomplete.
+- Status: source runtime/restart protocol locally and in clean-checkout CI verified; installed evidence incomplete.
 - Completed bounded work: mandatory application-server failures abort setup; timeout kills the child; optional sidecar starts only after readiness; per-launch endpoints and credentials authenticate readiness/bootstrap; readiness binds process and shop authority; blocked startup is seller-visible and writes redacted diagnostics; one state machine bounds crash/restart failures, stable reset, safe mode and shutdown registration.
-- Next work: create a separately authorized committed checkpoint for the clean-checkout gate, then failure-inject child crash, failed restart, shutdown race, sleep/resume and reboot in an installed candidate.
-- Evidence: 20 Rust tests, warning-denied Clippy and release compile are green; installed-candidate failure-injection proof remains required before completion.
+- Next work: integrate PR #104, then failure-inject child crash, failed restart, shutdown race, sleep/resume and reboot in an installed candidate.
+- Evidence: 42 Rust tests, warning-denied Clippy, local release compile and clean-checkout Tauri smoke are green; installed-candidate failure-injection proof remains required before completion.
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
-- Status: source write-authority and migration-coordinator sub-gates met and locally verified; clean-checkout and installed exit evidence not met.
+- Status: source write-authority and migration-coordinator sub-gates met locally and in clean-checkout CI; installed exit evidence not met.
 - Completed bounded work: process-bound `ShopContext`; atomic versioned registry; positive imported revisions; process-bound database without registry fallback; production service/AI/e-commerce-sync/automation/credential/audit/auth/repository/API context propagation; packaged migration deployment; per-shop compatibility report; all-shop coordinator; external journal; verified snapshots; pending-work disk reserve; OS lock; corrupt/divergent-registry/history failure; rollback, interruption, rerun, multi-shop and actual packaged current-data tests.
-- Next work: create a separately authorized committed checkpoint for clean-checkout consolidation verification before separately approved installed Windows and representative-data drills.
+- Next work: integrate PR #104 before separately approved installed Windows and representative-data drills. Add persisted shop-incarnation identity before backup restore or future durable inbox/outbox work can conflate a deleted-and-recreated shop slug.
 
 ### Phase: 0D — Reference baseline
 
@@ -133,9 +135,11 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ## Implementation and evidence
 
-- Branch and PR: `agent/proven-canonical-windows-desktop`; draft PR #100.
+- Integrated foundation: `agent/proven-canonical-windows-desktop`; PR #100.
+- Consolidated branch and PR: `agent/authenticated-runtime-protocol`; draft PR #104 at `7ad237a0271458b0a98801ef686262fce56a0e09`.
 - Green clean-checkout CI: run #371 (`29603869888`) and run #374 (`29604264999`).
 - Green runtime checkpoint: run #378 (`29605285748`) passed authority audit, inventory, Prisma generation/deploy/status, TypeScript, ESLint, Vitest, coverage, security audit and `cargo check --release`.
+- Green consolidated checkpoint: run `29697219950` passed 94 test files and 1,534 tests at 80.87% statements/lines, production audit, migration status and Tauri release compilation.
 - Inventory artifact: `phase0-repository-inventory`, artifact `8416217843`, digest `sha256:545f9ebbf1b9857bc7f44561c0f28832c5421bcf452bdd0036492380f3fd376c`.
 - Runtime source: Tauri setup rejects mandatory local-server startup failures and does not start the sidecar before server readiness.
 - Visual/RTL/accessibility evidence: none yet for the blocked/recovery startup state.
@@ -144,7 +148,7 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ## Current checkpoint
 
-- What is now true: the uncommitted source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry and recoverable all-shop migration coordinator; the enumerated production write graph carries explicit shop authority; targeted TypeScript/Rust checks are green.
+- What is now true: committed clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green.
 - What changed in the plan: Phase 1A and 1B source work now proceed together because readiness is bound to the exact registry/shop/migration authority tuple.
-- Current uncertainty: clean-checkout consolidation, real child-process failure injection, representative real seller data and all installed Windows behavior remain unproven. Source scans, state-machine tests and fixtures are not proof against machine-specific failures.
-- Exact next move: create a separately authorized committed checkpoint for clean-checkout CI before any MSI or installed-candidate action.
+- Current uncertainty: real installed child-process failure injection, representative real seller data, persisted shop-incarnation identity and all installed Windows behavior remain unproven. Source scans, state-machine tests and fixtures are not proof against machine-specific failures.
+- Exact next move: complete PR #104 integration review, then separately authorize the internal MSI and installed-candidate drill.

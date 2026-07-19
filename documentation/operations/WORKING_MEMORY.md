@@ -1,6 +1,6 @@
 # SahelFlow working memory
 
-> **Last updated:** 2026-07-18
+> **Last updated:** 2026-07-19
 
 This is the compact entry point for current work. Update it at meaningful checkpoints and link deeper material rather than turning it into a transcript.
 
@@ -82,7 +82,7 @@ Historical Session-40 handoff/tool content remains in orphan-branch Git history 
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active in the local Windows checkout on `agent/authenticated-runtime-protocol`. The branch has a large uncommitted implementation checkpoint; source and tests are evidence, but no clean-checkout or installed-candidate claim attaches to those uncommitted changes.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active on `agent/authenticated-runtime-protocol` in draft PR #104. The committed source checkpoint is `7ad237a0271458b0a98801ef686262fce56a0e09`; clean-checkout CI is green, while installed-candidate and device claims remain explicitly unproven.
 
 Required outcome:
 
@@ -101,13 +101,15 @@ Current checkpoint:
 - Production domain services, AI tools/agent, e-commerce sync, automation dispatch, secrets/credentials, audit/auth persistence, order ledger, repository writes and route-local transactions now carry explicit shop authority. Packaged Google Sheets credential loading cannot fall back to a process working-directory file. A production-only source scan finds zero direct global-`db` route mutations and zero global-`db.$transaction` route roots; the remaining 23 raw-name mutation matches across eight service/tool files are aliases assigned from `ServiceContext` or `ToolContext`, not authority selection.
 - The migration coordinator now writes an atomic, support-readable per-shop compatibility report before migration. Deterministic source drills prove insufficient-space blocking before snapshots, a zero-snapshot-space no-op rerun, two-shop migration with row preservation, divergent-history reporting, and one-version-back representative seller rows surviving the repository's actual packaged migration set.
 - Mandatory runtime supervision now uses one explicit state machine: post-ready crashes and failed automatic restarts share a three-attempt 2/5/15-second budget, 60 seconds of stable runtime resets the budget, exhaustion enters seller-visible crash-loop safe mode, and shutdown prevents restart or late child registration.
-- Current local verification is green: the full shared gate passed Prisma generation, migration deployment, TypeScript, ESLint and the complete Vitest suite in a fresh disposable sandbox; the consolidated write-path regression wave passed 198/198 tests across 13 suites; `cargo test --all-features` passed all 20 Rust tests; Clippy passed with warnings denied; and `cargo check --release` passed without warnings.
-- The Phase 1B source-level write-authority and migration-coordinator sub-gates are met for the mechanically enumerated graph and source fixtures, but Phase 1B remains incomplete. A fresh clean-checkout Quality Gate, installed Windows migration/failure injection, and a separately approved representative seller-data copy remain required before artifact or field claims.
+- Commits `b3fcb26` and `7ad237a` close the adversarial-review blockers around stale journal rollback, Windows process-tree containment, bounded generation-aware restarts, registry file aliasing, legacy schema fingerprinting, strict order ledgers, COD/refund atomicity, shipment reconciliation and disposable test-sandbox escape.
+- Clean-checkout CI run `29697219950` is green at `7ad237a`: the Quality Gate passed 94 files and 1,534 tests with 80.87% statement/line coverage, a clean production audit and current migration status; the independent Tauri job passed release-path Rust compilation.
+- Current local Windows verification is green for the source-testable changes: the fast shared gate passed TypeScript and complete ESLint; 60 focused transaction/sandbox tests passed; `cargo test --all-features --locked` passed 42/42 tests including a real descendant-process Job Object test; warning-denied Clippy, formatting, release compilation and the shared migration hash vector passed.
+- The Phase 1A/1B source and clean-checkout sub-gates are met for this checkpoint. Installed Windows migration/failure injection, a separately approved representative seller-data copy and reference-device measurements remain required before artifact or field claims.
 - No installed Windows artifact, failure-injection run, migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
 
 Exact next executable action:
 
-1. create a separately authorized committed checkpoint for the clean-checkout Quality Gate and release-path Rust verification;
+1. complete PR #104 integration review and merge the green source checkpoint;
 2. only then build the internal MSI and perform the separately confirmed clean-install, migration, restart/crash-loop and failure-injection matrix before any installed-candidate claim.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
@@ -116,5 +118,6 @@ Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion bef
 
 - Exact local Windows environment for the first installed candidate.
 - Exact 4 GB floor-reference machine/dataset and T470 dataset.
+- Persisted shop-incarnation identity before backup restore or future inbox/outbox records may treat a deleted-and-recreated slug as the same shop.
 - Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.
 - Which courier candidates the Founder selects for the public launch set after live certification evidence.
