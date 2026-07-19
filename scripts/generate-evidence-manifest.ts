@@ -50,9 +50,25 @@ for (const path of migrationFiles) {
   migrationSetHash.update(readFileSync(path));
 }
 
-const bundleFiles = filesBelow(
-  resolve(root, "src-tauri", "target", "release", "bundle", "msi"),
-).filter((path) => /\.msi(?:\.sig)?$/i.test(path));
+const msiDirectory = resolve(
+  root,
+  "src-tauri",
+  "target",
+  "release",
+  "bundle",
+  "msi",
+);
+const msiDirectoryFiles = filesBelow(msiDirectory);
+const signatureFiles = msiDirectoryFiles.filter((path) => path.endsWith(".sig"));
+if (signatureFiles.length > 0) {
+  throw new Error("Unsigned internal evidence must not contain updater signatures");
+}
+const bundleFiles = msiDirectoryFiles.filter((path) => /-UNSIGNED\.msi$/i.test(path));
+if (bundleFiles.length !== 1) {
+  throw new Error(
+    `Expected exactly one explicitly UNSIGNED MSI, found ${bundleFiles.length}`,
+  );
+}
 const runtimeFiles = filesBelow(
   resolve(root, "src-tauri", "resources", "runtime"),
 ).filter((path) => statSync(path).isFile());
@@ -67,6 +83,13 @@ const manifest = {
     dirtyStatusSha256: status
       ? createHash("sha256").update(status).digest("hex")
       : null,
+  },
+  candidate: {
+    purpose: "internal-build-evidence",
+    publishable: false,
+    signed: false,
+    authenticode: false,
+    updaterSignature: false,
   },
   version,
   migrationSetSha256: migrationSetHash.digest("hex"),
@@ -83,6 +106,9 @@ const manifest = {
     file: relative(root, path).replaceAll("\\", "/"),
     size: statSync(path).size,
     sha256: sha256(path),
+    signed: false,
+    authenticode: false,
+    updaterSignature: false,
   })),
   claims: {
     installedWindows: false,

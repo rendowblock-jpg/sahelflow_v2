@@ -3,6 +3,7 @@
   "product": "SahelFlow",
   "productMajor": 1,
   "version": "1.0.0-internal.1",
+  "windowsMsiVersion": "1.0.0.1",
   "channel": "internal",
   "runtimeProtocolVersion": 1,
   "shopRegistryFormatVersion": 1,

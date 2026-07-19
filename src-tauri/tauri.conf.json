@@ -30,6 +30,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": false,
     "targets": [
       "msi"
     ],
@@ -47,6 +48,11 @@
       "../prisma/": "prisma/",
       "resources/standalone/": "standalone/",
       "resources/runtime/": "runtime/"
+    },
+    "windows": {
+      "wix": {
+        "version": "1.0.0.1"
+      }
     }
   },
   "plugins": {

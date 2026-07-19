@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: Exact branch, tag, or commit to build
+        description: Exact lowercase 40-hex commit on protected main to build
         required: true
-        default: main
 
 permissions:
   contents: read
@@ -22,10 +21,55 @@ jobs:
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
     steps:
+      - name: Validate exact source and protected main
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:SOURCE_SHA -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'source_ref must be an exact lowercase 40-hex commit SHA'
+          }
+
+          $headers = @{
+            Accept = 'application/vnd.github+json'
+            Authorization = "Bearer $env:GH_TOKEN"
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $branch = Invoke-RestMethod `
+            -Headers $headers `
+            -Uri "https://api.github.com/repos/${{ github.repository }}/branches/main"
+          if (-not $branch.protected) {
+            throw 'origin/main is not protected; internal candidate builds are blocked'
+          }
+
       - name: Checkout exact source
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source is reachable from protected origin/main
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to fetch origin/main' }
+
+          $checkedOut = (git rev-parse HEAD).Trim()
+          if ($checkedOut -cne $env:SOURCE_SHA) {
+            throw "checkout mismatch: expected $env:SOURCE_SHA, found $checkedOut"
+          }
+
+          git cat-file -e "$env:SOURCE_SHA^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'source_ref is not a commit' }
+
+          git merge-base --is-ancestor $env:SOURCE_SHA refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw 'source_ref is not reachable from protected origin/main'
+          }
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -53,6 +97,12 @@ jobs:
       - name: Verify TypeScript, lint, tests, and migrations
         run: bun run sf-verify
 
+      - name: Verify coverage threshold
+        run: bunx vitest run --coverage
+
+      - name: Blocking production dependency audit
+        run: bun audit --production
+
       - name: Verify Rust runtime
         run: |
           cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
@@ -60,11 +110,19 @@ jobs:
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
           cargo check --manifest-path src-tauri/Cargo.toml --release --locked
 
-      - name: Build Windows MSI without publication
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: bunx tauri build --bundles msi
+      - name: Build unsigned Windows MSI without publication
+        run: bunx tauri build --bundles msi --no-sign
+
+      - name: Label MSI as unsigned internal evidence
+        shell: pwsh
+        run: |
+          $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+          if ($msis.Count -ne 1) {
+            throw "expected exactly one MSI, found $($msis.Count)"
+          }
+          Rename-Item `
+            -LiteralPath $msis[0].FullName `
+            -NewName "$($msis[0].BaseName)-UNSIGNED$($msis[0].Extension)"
 
       - name: Generate exact candidate evidence manifest
         run: bun run sf-evidence -- --require-clean
@@ -72,10 +130,9 @@ jobs:
       - name: Upload internal candidate and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: sahelflow-1.0-internal-windows-${{ github.run_id }}
+          name: sahelflow-1.0-internal-windows-UNSIGNED-${{ github.run_id }}
           path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.sig
+            src-tauri/target/release/bundle/msi/*-UNSIGNED.msi
             .sf-evidence/candidate-manifest.json
             src-tauri/resources/runtime/runtime-manifest.json
           if-no-files-found: error
