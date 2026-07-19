@@ -71,7 +71,7 @@ jobs:
       - name: Configure disposable test sandbox
         shell: pwsh
         run: |
-          $sandboxRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-test'
+          $sandboxRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'sahelflow-test'
           $dataDir = Join-Path $sandboxRoot 'data'
           $database = Join-Path $dataDir 'shops\test.db'
           "SF_TEST_ROOT=$sandboxRoot" >> $env:GITHUB_ENV
