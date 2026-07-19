@@ -22,7 +22,7 @@ A seller can install one Windows candidate, start it reliably, open only the int
 
 ## Current reality
 
-The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; the reproducible development environment is proposed from that baseline on `agent/codespaces-main-integration`. Clean-checkout source evidence is green, but no installed-artifact claim attaches to it:
+The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 proposes the reproducible development environment from that baseline on `agent/codespaces-main-integration`. Clean-checkout source evidence is green, but no installed-artifact claim attaches to it:
 
 - GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
 - CI binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
@@ -82,7 +82,7 @@ The internal installed candidate must expose one deterministic startup state mac
 ### Phase: 0A — Clean-checkout authority and repository truth
 
 - Status: source-level command and inventory evidence complete; refresh after material source changes.
-- Evidence: runs #371, #374, #378, `29697219950` and `29697766459` plus the retained `phase0-repository-inventory` artifact.
+- Evidence: runs #371, #374, #378, `29697219950`, `29697766459` and PR #105 run `29700383175` plus the retained `phase0-repository-inventory` artifact.
 
 ### Phase: 0B — CI startup and shared-command repair
 
@@ -129,7 +129,7 @@ The internal installed candidate must expose one deterministic startup state mac
 
 ## Working notes and open questions
 
-- Review and integrate the refreshed Codespaces branch through clean CI without absorbing unrelated local working-tree changes.
+- Merge green PR #105 without absorbing unrelated local working-tree changes.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices.
 
 ## Implementation and evidence
@@ -144,10 +144,11 @@ The internal installed candidate must expose one deterministic startup state mac
 - Known limitation: CI proves clean Linux checkout and release compilation, not an installed Windows candidate.
 - Codespaces integration branch: `agent/codespaces-main-integration`, rebuilt directly from integrated `main`; original measured checkpoint `74bfc07` remains historical evidence.
 - Codespaces evidence: full clean container rebuild, authority audit, fast/full shared gates, Rust formatting and private web-development startup; no Tauri native compile or Windows claim.
+- PR #105 clean-checkout evidence: run `29700383175` passed the Quality Gate in 3 minutes 32 seconds and Tauri release smoke in 51 seconds at `779e7311a99fe7f896ade9d23977fbf5119486ae`.
 
 ## Current checkpoint
 
 - What is now true: integrated clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green.
 - What changed in the plan: Codespaces becomes the normal coding-agent environment; CI remains clean-checkout/release compilation authority; local Windows remains installed evidence. Phase 1A and 1B source work proceed together because readiness is bound to the exact registry/shop/migration authority tuple.
 - Current uncertainty: real installed child-process failure injection, representative real seller data, persisted shop-incarnation identity and all installed Windows behavior remain unproven. Source scans, state-machine tests and fixtures are not proof against machine-specific failures.
-- Exact next move: integrate the refreshed Codespaces environment through clean CI, then separately authorize the internal MSI and installed-candidate drill.
+- Exact next move: merge green PR #105, then separately authorize the internal MSI and installed-candidate drill.

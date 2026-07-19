@@ -82,7 +82,7 @@ Historical Session-40 handoff/tool content remains in orphan-branch Git history 
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; the reproducible remote-development environment is proposed from that baseline on `agent/codespaces-main-integration`. No Codespaces result is installed-Windows evidence.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 proposes the reproducible remote-development environment from that baseline on `agent/codespaces-main-integration`. No Codespaces result is installed-Windows evidence.
 
 Required outcome:
 
@@ -107,13 +107,14 @@ Current checkpoint:
 - The HP development machine is an Intel Celeron N3060 with 8 GB RAM and less than 10 GB free disk. `sf-verify --fast` required 7 minutes 56 seconds, making it a Windows/low-end test machine rather than the primary compilation environment.
 - A personal GitHub Codespaces pilot proved the 2-core/8 GB environment as the normal coding-agent mode: warm `sf-verify --fast` completed in 37-48 seconds and the complete Prisma/TypeScript/ESLint/Vitest gate completed in about 1 minute 59 seconds to 2 minutes 10 seconds. The 4-core/16 GB pilot completed the fast gate in 39 seconds and the complete gate in about 93 seconds, so it is reserved for bounded heavy work rather than routine sessions.
 - The refreshed Codespaces branch pins Bun 1.3.14, Node 22 and Rust, prepares synthetic sandbox paths, keeps port 3000 private by default, creates only an ignored Linux sidecar placeholder and leaves native Tauri release compilation in GitHub Actions. The original full rebuild passed automatic bootstrap, authority audit and the complete shared gate at documented branch head `74bfc07`.
+- PR #105 is merge-ready at `779e7311a99fe7f896ade9d23977fbf5119486ae`: clean-checkout run `29700383175` passed the Quality Gate in 3 minutes 32 seconds and Tauri release smoke in 51 seconds.
 - The pilot corrected Windows-only shop test paths, a host-native `ShopContext` fixture and an Algiers-day report fixture. Auth tests no longer write `.env.local` or the unread `data/auth-secret` shadow file outside the sandbox.
 - The Phase 1A/1B source and clean-checkout sub-gates are met. Installed Windows migration/failure injection, a separately approved representative seller-data copy and reference-device measurements remain required before artifact or field claims.
 - No installed Windows artifact, failure-injection run, migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
 
 Exact next executable action:
 
-1. integrate the refreshed Codespaces environment through clean CI;
+1. merge green PR #105;
 2. only then separately authorize the internal MSI and perform the clean-install, migration, restart/crash-loop and failure-injection matrix before any installed-candidate claim.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
