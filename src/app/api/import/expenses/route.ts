@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   parseFile,
   mapRows,
@@ -86,8 +86,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     });
   }
 
+  const context = { prisma: db, shop: shopContext };
   const result = await batchInsert(validation.valid, async (batch) => {
-    await db.expense.createMany({
+    await context.prisma.expense.createMany({
       data: batch.map((row) => {
         const data = row.data as { date: string; category: string; description?: string; amount: number };
         return {

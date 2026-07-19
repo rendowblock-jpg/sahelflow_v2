@@ -1,5 +1,5 @@
 import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { formatDZD } from "@/lib/utils";
 import { Users, TrendingUp, AlertTriangle, UserCheck } from "lucide-react";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function CustomersPage() {
   const { t, locale } = await getI18n();
   const [customers, totalCustomers, aggregate, activeCountAgg, atRiskCountAgg] = await Promise.all([
-    customerService.list({ prisma: db }, { limit: 25, offset: 0 }),
+    customerService.list({ prisma: db, shop: shopContext }, { limit: 25, offset: 0 }),
     db.customer.count({ where: { deletedAt: null } }),
     // Session 30 (AUDIT-5 P1): compute KPIs from aggregate across ALL customers,
     // not just the first 25 on page 1. A seller with 200 customers was seeing

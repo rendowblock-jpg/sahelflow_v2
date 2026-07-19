@@ -43,6 +43,9 @@ if (!triple) {
 const isWindows = process.platform === "win32";
 const sidecarName = `sahelflow-whatsapp-${triple}${isWindows ? ".exe" : ""}`;
 const sidecarOut = resolve(SIDECAR_DIR, sidecarName);
+const compileTarget = isWindows && triple === "x86_64-pc-windows-msvc"
+  ? "--target=bun-windows-x64-baseline "
+  : "";
 
 // ── 2. Check if the source exists ────────────────────────────────────────────
 if (!existsSync(SIDECAR_SRC)) {
@@ -102,9 +105,10 @@ if (skipBuild) {
   try {
     execSync(
       "bun build --compile " +
+      compileTarget +
       "--external jimp --external link-preview-js --external sharp " +
-      "--external qrcode-terminal --external pino-pretty --external music-metadata " +
-      "--external fluent-ffmpeg --external libphonenumber-js " +
+      "--external qrcode-terminal --external pino-pretty " +
+      "--external fluent-ffmpeg " +
       `sidecars/whatsapp/index.ts --outfile "${sidecarOut}"`,
       { stdio: "inherit", cwd: ROOT }
     );

@@ -15,7 +15,7 @@ import "server-only";
 import { redactToolResult } from "@/lib/ai/redact";
 
 
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { getSecret } from "@/lib/secrets";
 import { getAllToolDefinitions, getTool, type ToolContext } from "./tools/registry";
 import "./tools/core-tools"; // registers the 6 core tools
@@ -164,7 +164,8 @@ export async function runAgent(
   conversationHistory: AgentMessage[],
   userMessage: string,
 ): Promise<AgentResult> {
-  const apiKey = await getSecret("gemini_api_key");
+  const ctx: ToolContext = { db, shop: shopContext };
+  const apiKey = await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key");
   if (!apiKey) {
     return {
       response:
@@ -174,7 +175,6 @@ export async function runAgent(
   }
 
   const toolDefs = getAllToolDefinitions();
-  const ctx: ToolContext = { db };
   const allToolCalls: AgentResult["toolCalls"] = [];
   // AI-M8: accumulate the assistant's text across function-call iterations
   // so the final response preserves framing text emitted before a tool call
@@ -420,7 +420,8 @@ export async function* runAgentStream(
    *  that would otherwise be consumed on a response the user never sees. */
   externalSignal?: AbortSignal,
 ): AsyncGenerator<AgentStreamEvent> {
-  const apiKey = await getSecret("gemini_api_key");
+  const ctx: ToolContext = { db, shop: shopContext };
+  const apiKey = await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key");
   if (!apiKey) {
     yield {
       type: "done",
@@ -432,7 +433,6 @@ export async function* runAgentStream(
   }
 
   const toolDefs = getAllToolDefinitions();
-  const ctx: ToolContext = { db };
   const allToolCalls: AgentResult["toolCalls"] = [];
 
   // AI-M15: same history-rendering fix as the non-streaming path —

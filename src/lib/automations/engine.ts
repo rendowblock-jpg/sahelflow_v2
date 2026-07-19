@@ -7,7 +7,7 @@
  *
  * Flow:
  *   1. A business action (e.g. orderService.updateStatus) calls
- *      dispatchTrigger("order.delivered", { orderId, customerId, ... })
+ *      dispatchTrigger(context, "order.delivered", { orderId, customerId, ... })
  *   2. The engine loads all active automations with trigger === "order.delivered"
  *   3. For each automation, it executes the action (send_whatsapp, tag_customer, etc.)
  *   4. It logs the result (success/failed/skipped) to AutomationLog
@@ -17,11 +17,14 @@
  * business operation. Failures are logged, not thrown.
  */
 import "server-only";
-import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { evaluateConditions, type ConditionGroup } from "./conditions";
 
 import { readFileSync, existsSync } from "fs";
+
+const WHATSAPP_SIDECAR_URL =
+  process.env.WHATSAPP_SIDECAR_URL ?? "http://127.0.0.1:3001";
 
 /** Read the sidecar bearer token from the token file (written by the sidecar on startup). */
 function readSidecarTokenFile(): string | undefined {
@@ -95,11 +98,12 @@ interface AutomationConfig {
  * failures.
  */
 export async function dispatchTrigger(
+  context: ServiceContext,
   event: TriggerEvent,
   payload: TriggerPayload,
 ): Promise<void> {
   try {
-    const automations = await db.automation.findMany({
+    const automations = await context.prisma.automation.findMany({
       where: { trigger: event, isActive: true },
     });
 
@@ -109,7 +113,7 @@ export async function dispatchTrigger(
 
     // Execute all matching automations in parallel
     await Promise.allSettled(
-      automations.map((auto) => executeAutomation(auto, event, payload)),
+      automations.map((auto) => executeAutomation(context, auto, event, payload)),
     );
   } catch (err) {
     // Never let automation failures bubble up to the business operation
@@ -199,8 +203,8 @@ export async function detectLowStock(
  * commits, so the dispatch matches the committed stock state (no
  * notifications for rolled-back changes).
  */
-export function dispatchLowStock(product: LowStockProductRow): void {
-  void dispatchTrigger("stock.low", {
+export function dispatchLowStock(context: ServiceContext, product: LowStockProductRow): void {
+  void dispatchTrigger(context, "stock.low", {
     productId: product.id,
     productName: product.name,
     stockLevel: product.stock,
@@ -217,11 +221,12 @@ export function dispatchLowStock(product: LowStockProductRow): void {
  * kept for non-tx callers only.
  */
 export async function checkAndDispatchLowStock(
+  context: ServiceContext,
   tx: LowStockQueryClient,
   productId: string,
 ): Promise<void> {
   const product = await detectLowStock(tx, productId);
-  if (product) dispatchLowStock(product);
+  if (product) dispatchLowStock(context, product);
 }
 
 // ── Destructive-action detection + rate-limiting (W3-3, task 2-g) ────────────
@@ -282,9 +287,12 @@ function isDestructiveAction(action: string, config: AutomationConfig): boolean 
  * filter excludes `dry_run`, `rate_limited`, and `skipped` rows — those
  * don't represent real execution attempts.
  */
-async function isDestructiveRateLimited(automationId: string): Promise<boolean> {
+async function isDestructiveRateLimited(
+  context: ServiceContext,
+  automationId: string,
+): Promise<boolean> {
   const sixtySecondsAgo = new Date(Date.now() - 60_000);
-  const recentCount = await db.automationLog.count({
+  const recentCount = await context.prisma.automationLog.count({
     where: {
       automationId,
       status: { in: ["success", "failed"] },
@@ -352,6 +360,7 @@ function describeActionIntent(
 // ── Single automation execution ──────────────────────────────────────────────
 
 async function executeAutomation(
+  context: ServiceContext,
   automation: {
     id: string;
     name: string;
@@ -365,6 +374,7 @@ async function executeAutomation(
   event: string,
   payload: TriggerPayload,
 ): Promise<void> {
+  const db = context.prisma;
   let status: ExecutionStatus = "success";
   let message: string | null = null;
 
@@ -430,7 +440,7 @@ async function executeAutomation(
     // (send_whatsapp, tag_customer, send_notification, update_status to
     // non-terminal statuses) are NOT rate-limited.
     if (isDestructiveAction(automation.action, config)) {
-      const rateLimited = await isDestructiveRateLimited(automation.id);
+      const rateLimited = await isDestructiveRateLimited(context, automation.id);
       if (rateLimited) {
         await db.automationLog.create({
           data: {
@@ -454,7 +464,7 @@ async function executeAutomation(
     const steps = automation.steps ? JSON.parse(automation.steps) as string[] : null;
     if (steps && Array.isArray(steps) && steps.length > 0) {
       for (const step of steps) {
-        const stepResult = await executeActionWithRetry(step, config, payload);
+        const stepResult = await executeActionWithRetry(context, step, config, payload);
         if (stepResult.status === "failed") {
           // If a step fails, log + continue (don't block subsequent steps)
           logger.warn("automation.step.failed", { automationId: automation.id, step, error: stepResult.message });
@@ -463,7 +473,7 @@ async function executeAutomation(
       status = "success";
       message = `Executed ${steps.length} steps`;
     } else {
-      const result = await executeActionWithRetry(automation.action, config, payload);
+      const result = await executeActionWithRetry(context, automation.action, config, payload);
       status = result.status;
       message = result.message;
     }
@@ -503,6 +513,7 @@ async function executeAutomation(
 // ── Action executor with retry (Phase 6) ─────────────────────────────────────
 
 async function executeActionWithRetry(
+  context: ServiceContext,
   action: string,
   config: AutomationConfig,
   payload: TriggerPayload,
@@ -511,7 +522,7 @@ async function executeActionWithRetry(
   let lastError: string | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await executeAction(action, config, payload);
+      return await executeAction(context, action, config, payload);
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
       if (attempt < maxRetries) {
@@ -527,6 +538,7 @@ async function executeActionWithRetry(
 // ── Action executors ─────────────────────────────────────────────────────────
 
 async function executeAction(
+  context: ServiceContext,
   action: string,
   config: AutomationConfig,
   payload: TriggerPayload,
@@ -543,10 +555,10 @@ async function executeAction(
       };
 
     case "tag_customer":
-      return executeTagCustomer(config, payload);
+      return executeTagCustomer(context, config, payload);
 
     case "update_status":
-      return executeUpdateStatus(config, payload);
+      return executeUpdateStatus(context, config, payload);
 
     default:
       return { status: "skipped", message: `Unknown action: ${action}` };
@@ -596,7 +608,7 @@ async function executeSendWhatsapp(
     const timeout = setTimeout(() => controller.abort(), 3000);
     // Read the sidecar bearer token (written by the sidecar on startup)
     const token = process.env.SIDECAR_TOKEN ?? readSidecarTokenFile();
-    const res = await fetch("http://127.0.0.1:3001/status", {
+    const res = await fetch(`${WHATSAPP_SIDECAR_URL}/status`, {
       signal: controller.signal,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).finally(() => clearTimeout(timeout));
@@ -615,7 +627,7 @@ async function executeSendWhatsapp(
     // Send the message
     // Sidecar expects { to, text } (not { phone, message }) + Bearer auth
     const sendToken = process.env.SIDECAR_TOKEN ?? readSidecarTokenFile();
-    const sendRes = await fetch("http://127.0.0.1:3001/send", {
+    const sendRes = await fetch(`${WHATSAPP_SIDECAR_URL}/send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -640,7 +652,7 @@ async function executeSendWhatsapp(
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("aborted") || msg.includes("fetch failed") || msg.includes("ECONNREFUSED")) {
       // Sidecar not running — skip, don't retry (user action needed)
-      return { status: "skipped", message: "WhatsApp sidecar not running (port 3001)" };
+      return { status: "skipped", message: "WhatsApp sidecar is not running" };
     }
     // Actual send error — re-throw so retry fires
     throw err;
@@ -660,6 +672,7 @@ async function executeSendWhatsapp(
  * single writer lock).
  */
 async function executeTagCustomer(
+  context: ServiceContext,
   config: AutomationConfig,
   payload: TriggerPayload,
 ): Promise<{ status: ExecutionStatus; message: string }> {
@@ -670,7 +683,7 @@ async function executeTagCustomer(
   const noteText = config.noteText ?? `Tagged by automation: ${payload.orderNumber ?? ""}`;
 
   try {
-    await db.$transaction(async (tx) => {
+    await context.prisma.$transaction(async (tx) => {
       // Re-read notes INSIDE the tx so we see any concurrent uncommitted writes.
       const customer = await tx.customer.findUnique({
         where: { id: payload.customerId! },
@@ -710,6 +723,7 @@ class TagCustomerNotFoundError extends Error {
  * Update the order status (e.g. auto-confirm low-risk orders).
  */
 async function executeUpdateStatus(
+  context: ServiceContext,
   config: AutomationConfig,
   payload: TriggerPayload,
 ): Promise<{ status: ExecutionStatus; message: string }> {
@@ -732,7 +746,11 @@ async function executeUpdateStatus(
   // Dynamic import avoids a circular module-eval dependency (engine ← order-service ← engine).
   const { orderService } = await import("@/lib/data/order-service");
   try {
-    await orderService.updateStatus({ prisma: db }, payload.orderId, targetStatus as import("@/types/domain").OrderStatus);
+    await orderService.updateStatus(
+      context,
+      payload.orderId,
+      targetStatus as import("@/types/domain").OrderStatus,
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("transition") || msg.includes("Not Found")) {

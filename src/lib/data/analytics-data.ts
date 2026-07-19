@@ -3,17 +3,17 @@
  * and analytics pages. Delegates to analyticsService.
  */
 import "server-only";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { analyticsService, type AnalyticsReport } from "@/lib/data/analytics";
 
 /** Full report for the analytics page (default 30 days). */
 export async function getAnalyticsReport(days = 30): Promise<AnalyticsReport> {
-  return analyticsService.getReport({ prisma: db }, days);
+  return analyticsService.getReport({ prisma: db, shop: shopContext }, days);
 }
 
 /** Lightweight 7-day series + status breakdown for the dashboard. */
 export async function getDashboardAnalytics() {
-  const report = await analyticsService.getReport({ prisma: db }, 7);
+  const report = await analyticsService.getReport({ prisma: db, shop: shopContext }, 7);
   // Delivery performance is computed from the Delivery model directly (all-time,
   // by delivery.status) so the dashboard card matches the /deliveries page.
   // Previously it was derived from 7-day-old orders by order.status, which showed

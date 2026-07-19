@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
@@ -27,8 +27,9 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const { id } = await params;
   const body = await req.json();
   const input = updateSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
-  const automation = await db.automation.update({
+  const automation = await context.prisma.automation.update({
     where: { id },
     data: {
       ...(input.name !== undefined && { name: input.name }),
@@ -54,12 +55,13 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
   // W2-5: capture before-state for audit.
   const existing = await db.automation.findUnique({ where: { id } });
   // Soft-delete (Automation has deletedAt). Hard-deleting would cascade-wipe
   // AutomationLog rows and lose the execution audit trail (C-audit S2-8).
-  await db.automation.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
-  void logAudit({
+  await context.prisma.automation.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
+  void logAudit(context, {
     action: "automation.deleted",
     entity: "automation",
     entityId: id,

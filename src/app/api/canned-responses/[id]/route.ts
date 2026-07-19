@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth/server";
 import { updateCannedResponse, deleteCannedResponse } from "@/lib/data/canned-response-service";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,11 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
   const { id } = await params;
   const body = await req.json();
   const parsed = updateSchema.parse(body);
-  const response = await updateCannedResponse(id, parsed);
+  const response = await updateCannedResponse(
+    { prisma: db, shop: shopContext },
+    id,
+    parsed,
+  );
   return NextResponse.json({ response });
 }, "PUT /api/canned-responses/[id]");
 
@@ -30,8 +34,8 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   const { id } = await params;
   // W2-5: capture before-state for audit (deleteCannedResponse hard-deletes).
   const existing = await db.cannedResponse.findUnique({ where: { id } });
-  await deleteCannedResponse(id);
-  void logAudit({
+  await deleteCannedResponse({ prisma: db, shop: shopContext }, id);
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "canned_response.deleted",
     entity: "canned_response",
     entityId: id,

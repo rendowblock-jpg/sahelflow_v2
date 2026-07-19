@@ -10,6 +10,7 @@ import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { deleteBackup } from "@/lib/backup";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export const DELETE = withErrorHandler(
     const decoded = decodeURIComponent(filename);
     const result = await deleteBackup(decoded);
     // W2-5: audit backup file deletion (destructive — file is permanently removed).
-    void logAudit({
+    void logAudit({ prisma: db, shop: shopContext }, {
       action: "backup.deleted",
       entity: "backup",
       entityId: decoded,

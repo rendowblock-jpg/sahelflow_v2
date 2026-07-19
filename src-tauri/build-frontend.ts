@@ -9,7 +9,7 @@
  * Cross-platform: works on Windows, macOS, and Linux (uses Bun, not bash).
  */
 
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import { existsSync, mkdirSync, rmSync, cpSync, readdirSync } from "fs";
 import { resolve, join } from "path";
 
@@ -17,9 +17,27 @@ const ROOT = process.cwd();
 const GREEN = "\x1b[0;32m";
 const YELLOW = "\x1b[0;33m";
 const NC = "\x1b[0m";
+const PINNED_BUN_VERSION = "1.3.14";
 
 function ok(msg: string) { console.log(`${GREEN}✅ ${msg}${NC}`); }
 function step(msg: string) { console.log(`${YELLOW}── ${msg} ──${NC}`); }
+
+if (process.platform !== "win32" || process.arch !== "x64") {
+  throw new Error("The SahelFlow internal candidate build supports Windows x64 only");
+}
+if (process.versions.bun !== PINNED_BUN_VERSION) {
+  throw new Error(
+    `Build Bun must be ${PINNED_BUN_VERSION}, found ${process.versions.bun ?? "not Bun"}`,
+  );
+}
+
+// The installed candidate must never depend on a developer PATH runtime.
+step("0. Prepare pinned Windows runtime");
+execSync("bun run scripts/prepare-runtime.ts", {
+  stdio: "inherit",
+  cwd: ROOT,
+});
+ok("Pinned runtime prepared");
 
 // ── 1. Next.js standalone build ──────────────────────────────────────────────
 step("1. Next.js standalone build");
@@ -70,32 +88,29 @@ ok("Copied standalone → src-tauri/resources/standalone");
 
 // ── 4. Compile WhatsApp sidecar (Bun → standalone binary) ───────────────────
 step("4. Compile WhatsApp sidecar");
-let triple = "";
-try {
-  const rustInfo = execSync("rustc -vV", { stdio: "pipe" }).toString();
-  const match = rustInfo.match(/^host:\s*(.+)$/m);
-  triple = match ? match[1].trim() : "";
-} catch {
-  // rustc not available, fall back to plain name
-}
-
-if (!triple) {
-  console.log("⚠️  Could not detect rustc target triple. Falling back to plain name.");
-}
-
-const sidecarName = triple ? `sahelflow-whatsapp-${triple}` : "sahelflow-whatsapp";
+const sidecarName = "sahelflow-whatsapp-x86_64-pc-windows-msvc.exe";
 const sidecarDir = resolve(ROOT, "src-tauri", "binaries");
 const sidecarOut = resolve(sidecarDir, sidecarName);
 mkdirSync(sidecarDir, { recursive: true });
 
 try {
-  execSync(
-    "bun build --compile " +
-    "--external jimp --external link-preview-js --external sharp " +
-    "--external qrcode-terminal --external pino-pretty --external music-metadata " +
-    "--external fluent-ffmpeg --external libphonenumber-js " +
-    "sidecars/whatsapp/index.ts --outfile " + sidecarOut,
-    { stdio: "inherit", cwd: ROOT }
+  execFileSync(
+    "bun",
+    [
+      "build",
+      "--compile",
+      "--target=bun-windows-x64-baseline",
+      "--external=jimp",
+      "--external=link-preview-js",
+      "--external=sharp",
+      "--external=qrcode-terminal",
+      "--external=pino-pretty",
+      "--external=fluent-ffmpeg",
+      "sidecars/whatsapp/index.ts",
+      "--outfile",
+      sidecarOut,
+    ],
+    { stdio: "inherit", cwd: ROOT },
   );
   ok(`Sidecar compiled → ${sidecarName}`);
 } catch (err) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { prepareSheetForExport, writeOrdersBatch } from "@/lib/integrations/google-sheets";
@@ -32,10 +32,11 @@ export const POST = withErrorHandler(async (req: Request) => {
       { status: 400 },
     );
   }
+  const context = { prisma: db, shop: shopContext };
 
   // 1. W3-6: prepare the sheet ONCE — writes headers + clears any existing
   //    data range (so we don't append duplicates or leave stale rows).
-  await prepareSheetForExport(parsed.data.spreadsheetId);
+  await prepareSheetForExport(context, parsed.data.spreadsheetId);
 
   // 2. Paginated DB fetch + streamed sheet write. Each batch is written
   //    at the row matching its global index (batch 0 → row 2, batch 1 →
@@ -61,6 +62,7 @@ export const POST = withErrorHandler(async (req: Request) => {
 
     const startRow = batchIndex * DB_BATCH_SIZE + 2; // row 1 = headers
     const result = await writeOrdersBatch(
+      context,
       parsed.data.spreadsheetId,
       batch.map((o) => ({
         orderNumber: o.orderNumber,

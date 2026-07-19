@@ -6,12 +6,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { deliveryService } from "@/lib/data/delivery-service";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { logger } from "@/lib/logger";
 import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
@@ -31,56 +30,36 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   await requireAuth();
   const { id } = await params;
   const { status } = updateSchema.parse(await req.json());
+  const context = { prisma: db, shop: shopContext };
 
   // Route the lookup through the service so the soft-delete filter
   // (deletedAt: null) is applied. The previous direct `findUnique` would
   // happily operate on a soft-deleted delivery. NotFoundError → 404 via
   // withErrorHandler.
-  const existing = await deliveryService.getById({ prisma: db }, id);
+  const existing = await deliveryService.getById(context, id);
 
-  // Phase 1 bug 1.2: route the order status transition through the canonical
-  // orderService.updateStatus (single source of truth) instead of inlining
-  // the state machine + stock + ledger here. The previous inline block:
-  //   - never set order.deliveredAt
-  //   - never incremented customer.orderCount / totalSpent
-  //   - never fired the order.delivered / order.returned automation triggers
-  //   - recorded the OrderChange ledger with the wrong `status` field
-  //     (literally the string "confirmed" regardless of the target status)
-  // The delivery.update stays in the tx (F-H5: delivery + order transition
-  // stay consistent — the order transition now runs AFTER the tx commits
-  // via orderService.updateStatus, which opens its own tx; SQLite serializes
-  // writes so this is safe, same pattern as /api/delivery/sync).
   const targetOrderStatus: OrderStatus | null =
     status === "delivered" ? "delivered" :
     status === "returned" ? "returned" :
     status === "refused" ? "refused" : null;
   const orderId = existing.orderId;
 
-  const updated = await db.$transaction(async (tx) => {
+  const result = await context.prisma.$transaction(async (tx) => {
     const delivery = await tx.delivery.update({
       where: { id },
       data: { status },
     });
-    return delivery;
+
+    const effects = orderId && targetOrderStatus
+      ? await orderService.updateStatusInTx(tx, orderId, targetOrderStatus, { actor: "system" })
+      : null;
+
+    return { delivery, effects };
   });
 
-  // After the tx commits: route the order transition through the canonical
-  // service so all side effects (deliveredAt, customer stats, stock, ledger,
-  // automation trigger) fire. Wrap in try/catch — if the transition is
-  // invalid (e.g. order already in a terminal state, or the delivery status
-  // doesn't map to a legal order transition right now), we don't want to 500
-  // the delivery update that already committed.
-  if (orderId && targetOrderStatus) {
-    try {
-      await orderService.updateStatus({ prisma: db }, orderId, targetOrderStatus, { actor: "system" });
-    } catch (err) {
-      logger.warn("delivery/[id] PATCH: order status transition skipped", {
-        orderId,
-        target: targetOrderStatus,
-        error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-      });
-    }
+  if (result.effects) {
+    orderService.dispatchStatusTransition(context, result.effects);
   }
 
-  return NextResponse.json({ delivery: updated });
+  return NextResponse.json({ delivery: result.delivery });
 }, "PATCH /api/delivery/[id]");

@@ -48,7 +48,7 @@
  * entry via `reportBadPhone`.
  */
 import "server-only";
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
 import { getMasterKey } from "@/lib/crypto/master-key";
 
@@ -71,10 +71,12 @@ function hashPhone(phone: string): string {
  * so the API route's response is unchanged).
  */
 export async function reportBadPhone(
+  context: ServiceContext,
   phone: string,
   reason: string,
   orderId?: string,
 ): Promise<{ success: true; total: number }> {
+  const db = context.prisma;
   const phoneHash = hashPhone(phone);
   const last4 = phone.length >= 4 ? phone.slice(-4) : phone;
   const now = new Date();
@@ -133,11 +135,12 @@ export async function reportBadPhone(
  * `reportedAt` is `lastSeenAt` as an ISO string (matches the old return
  * shape so `/api/phone-reputation/check` response is unchanged).
  */
-export async function checkPhoneReputation(phone: string): Promise<{
+export async function checkPhoneReputation(context: ServiceContext, phone: string): Promise<{
   isBad: boolean;
   reason?: string;
   reportedAt?: string;
 }> {
+  const db = context.prisma;
   const phoneHash = hashPhone(phone);
   const entry = await db.phoneReputation.findUnique({
     where: { phoneHash },
@@ -166,9 +169,10 @@ export async function checkPhoneReputation(phone: string): Promise<{
  * is unchanged. (`phoneTail` maps to the model's `last4` field; `reason`
  * maps to `notes`; `at` maps to `lastSeenAt` as an ISO string.)
  */
-export async function getBadPhoneList(): Promise<
+export async function getBadPhoneList(context: ServiceContext): Promise<
   Array<{ phoneHash: string; phoneTail?: string; reason: string; at: string }>
 > {
+  const db = context.prisma;
   const rows = await db.phoneReputation.findMany({
     orderBy: { lastSeenAt: "desc" },
     select: { phoneHash: true, last4: true, notes: true, lastSeenAt: true },

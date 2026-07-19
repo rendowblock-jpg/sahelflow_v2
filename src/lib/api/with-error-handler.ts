@@ -6,7 +6,7 @@
  * Usage:
  *   export const POST = withErrorHandler(async (req) => {
  *     const body = await req.json();
- *     const order = await orderService.create({ prisma: db }, body);
+ *     const order = await orderService.create({ prisma: db, shop: shopContext }, body);
  *     return NextResponse.json({ order }, { status: 201 });
  *   }, "POST /api/orders");
  *
@@ -22,6 +22,8 @@ import { SahelFlowError } from "@/types/errors";
 import { logger } from "@/lib/logger";
 import { captureError } from "@/lib/monitoring/sentry";
 import { redactError } from "@/lib/redact-pii";
+import { shopContext } from "@/lib/db";
+import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
@@ -34,7 +36,16 @@ export function withErrorHandler<T extends RouteHandler>(
     const req = args[0] as NextRequest | undefined;
     const path = label ?? req?.nextUrl?.pathname ?? "unknown";
     try {
-      return await handler(...args);
+      if (process.env.NODE_ENV === "production") {
+        assertProcessShopAuthority(shopContext);
+      }
+      const response = await handler(...args);
+      response.headers.set("X-SahelFlow-Shop-Id", shopContext.shopId);
+      response.headers.set(
+        "X-SahelFlow-Registry-Revision",
+        String(shopContext.registryRevision),
+      );
+      return response;
     } catch (err) {
       if (err instanceof z.ZodError) {
         return NextResponse.json(

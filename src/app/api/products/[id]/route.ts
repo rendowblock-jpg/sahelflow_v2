@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { updateProductSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -15,7 +15,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
   // W2-4: defense-in-depth — GET was unprotected, exposed product details.
   await requireAuth();
   const { id } = await params;
-  const product = await productService.getById({ prisma: db }, id);
+  const product = await productService.getById({ prisma: db, shop: shopContext }, id);
   return NextResponse.json({ product });
 }, "GET /api/products/[id]");
 
@@ -26,7 +26,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const body = await req.json();
   const data = updateProductSchema.parse(body);
 
-  const product = await productService.update({ prisma: db }, id, data);
+  const product = await productService.update({ prisma: db, shop: shopContext }, id, data);
 
   return NextResponse.json({ product });
 }, "PATCH /api/products/[id]");
@@ -37,8 +37,8 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   const { id } = await params;
   // W2-5: capture before-state for audit (soft-delete — row stays in DB).
   const existing = await db.product.findUnique({ where: { id } });
-  await productService.delete({ prisma: db }, id);
-  void logAudit({
+  await productService.delete({ prisma: db, shop: shopContext }, id);
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "product.deleted",
     entity: "product",
     entityId: id,

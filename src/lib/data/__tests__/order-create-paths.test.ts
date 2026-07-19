@@ -62,7 +62,7 @@ const { mockAdapter, mockCreds, listOrdersMock, mockCredsProvider } = vi.hoisted
 
 vi.mock("@/lib/integrations/ecommerce/index", () => ({
   getEcommerceAdapter: vi.fn(() => mockAdapter),
-  loadEcommerceCredentials: vi.fn((platform: string) => mockCredsProvider(platform)),
+  loadEcommerceCredentials: vi.fn((_context: unknown, platform: string) => mockCredsProvider(platform)),
 }));
 
 // ── Mock the delivery adapter so importing core-tools (which imports the
@@ -85,6 +85,7 @@ import { POST as importPost } from "@/app/api/import/orders/route";
 import { syncPlatform } from "@/lib/integrations/ecommerce/sync-engine";
 import "@/lib/ai/chat/tools/core-tools"; // side-effect: registers the AI tools
 import { getTool, type ToolContext } from "@/lib/ai/chat/tools/registry";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 
 import {
   rawDb,
@@ -376,7 +377,10 @@ describe("Phase 1 bug 1.3 — order-create paths produce OrderChange 'created' l
       hasMore: false,
     } satisfies SyncFetchResult);
 
-    const result = await syncPlatform("shopify");
+    const result = await syncPlatform(
+      { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT },
+      "shopify",
+    );
 
     expect(result.created).toBe(1);
     expect(result.errors).toEqual([]);
@@ -402,7 +406,10 @@ describe("Phase 1 bug 1.3 — order-create paths produce OrderChange 'created' l
       nextWatermark: "1002",
       hasMore: false,
     } satisfies SyncFetchResult);
-    await syncPlatform("shopify");
+    await syncPlatform(
+      { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT },
+      "shopify",
+    );
 
     const created = await rawDb.order.findFirst({
       where: { sourceOrderId: "shop-cancel-001" },
@@ -465,7 +472,10 @@ describe("Phase 1 bug 1.3 — order-create paths produce OrderChange 'created' l
       hasMore: false,
     } satisfies SyncFetchResult);
 
-    const result = await syncPlatform("shopify");
+    const result = await syncPlatform(
+      { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT },
+      "shopify",
+    );
     expect(result.updated).toBe(1);
     expect(result.errors).toEqual([]);
 
@@ -506,7 +516,7 @@ describe("Phase 1 bug 1.3 — order-create paths produce OrderChange 'created' l
     const tool = getTool("create_order")!;
     expect(tool).toBeTruthy();
 
-    const ctx: ToolContext = { db: rawDb };
+    const ctx: ToolContext = { db: rawDb, shop: TEST_SHOP_CONTEXT };
     const result = await tool.execute(
       {
         customerId: customer.id,

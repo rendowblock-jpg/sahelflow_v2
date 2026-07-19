@@ -170,7 +170,7 @@ export const productService = {
 
       // SV-M8: dispatch low-stock triggers AFTER the tx commits.
       for (const product of lowStockToDispatch) {
-        void dispatchLowStock(product);
+        void dispatchLowStock(ctx, product);
       }
 
       return toDomainProduct(row as unknown as Record<string, unknown>);

@@ -679,7 +679,7 @@ registerTool({
       // `reason` is preserved in the product timeline (AuditLog table).
       // Previously the reason was discarded, leaving no audit trail.
       const { logAuditAsync } = await import("@/lib/audit");
-      logAuditAsync({
+      logAuditAsync({ prisma: db, shop: ctx.shop }, {
         action: "product.stock.adjusted",
         entity: "product",
         entityId: input.productId,
@@ -753,7 +753,12 @@ registerTool({
       // to the AI assistant (not the user) — distinguishes AI-initiated
       // cancellations from human ones in the order timeline.
       const { orderService } = await import("@/lib/data/order-service");
-      await orderService.updateStatus({ prisma: db }, order.id, "cancelled", { actor: "ai" });
+      await orderService.updateStatus(
+        { prisma: db, shop: ctx.shop },
+        order.id,
+        "cancelled",
+        { actor: "ai" },
+      );
 
       // Append the cancellation reason as a note (separate from status update
       // so the state machine isn't bypassed by a second raw write).
@@ -811,7 +816,10 @@ registerTool({
           error: `Aucun profil de risque pour la wilaya "${input.wilaya}"`,
         };
       }
-      const assessment = await assessOrderRisk(input.wilaya);
+      const assessment = await assessOrderRisk(
+        { prisma: db, shop: ctx.shop },
+        input.wilaya,
+      );
       return {
         success: true,
         data: {

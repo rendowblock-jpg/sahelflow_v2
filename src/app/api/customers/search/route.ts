@@ -5,7 +5,7 @@
  * total spent, and risk score for each customer.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { customerServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
@@ -18,6 +18,6 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10), 100);
   const offset = parseInt(req.nextUrl.searchParams.get("offset") ?? "0", 10);
 
-  const customers = await customerServiceExtensions.search({ prisma: db }, q, { limit, offset });
+  const customers = await customerServiceExtensions.search({ prisma: db, shop: shopContext }, q, { limit, offset });
   return NextResponse.json({ customers, total: customers.length, query: q });
 }, "GET /api/customers/search");

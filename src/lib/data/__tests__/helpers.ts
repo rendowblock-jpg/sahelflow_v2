@@ -2,14 +2,22 @@
  * Shared test helpers for service-layer tests.
  *
  * Creates a clean PrismaClient + provides seed helpers.
- * The services accept ServiceContext = { prisma: PrismaClient }, so we pass
- * the raw client directly (the PII encryption extension is tested separately).
+ * Tests pass a raw Prisma client (the PII encryption extension is tested
+ * separately) together with a deterministic explicit ShopContext.
  */
 import { PrismaClient } from "@prisma/client";
 import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
+import type { ShopContext } from "@/lib/shops/context";
 
 // Set the master key for PII encryption (required by db.ts)
 process.env.SF_MASTER_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+export const TEST_SHOP_CONTEXT: ShopContext = Object.freeze({
+  shopId: "test",
+  registryRevision: 1,
+  databaseFileId: "test.db",
+  migrationSetSha256: "0".repeat(64),
+});
 
 function testKey(): Buffer {
   return Buffer.from(process.env.SF_MASTER_KEY!, "hex");
@@ -179,7 +187,7 @@ export async function teardownTestPrisma(db?: PrismaClient): Promise<void> {
 
 /** Build a ServiceContext from a PrismaClient. */
 export function makeContext(db: PrismaClient) {
-  return { prisma: db };
+  return { prisma: db as never, shop: TEST_SHOP_CONTEXT };
 }
 
 /** Generate a unique phone number for tests (avoids unique constraint conflicts). */

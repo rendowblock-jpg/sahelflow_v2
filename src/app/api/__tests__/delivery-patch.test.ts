@@ -11,8 +11,8 @@
  *   - recorded a correct OrderChange ledger entry (it literally wrote the
  *     string "confirmed" as the `status` field, regardless of target)
  *
- * Fix: route the order transition through orderService.updateStatus AFTER the
- * delivery-update tx commits — same pattern as /api/delivery/sync.
+ * Fix: route delivery + canonical order effects + ledger through one
+ * transaction, then dispatch automations after commit.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
@@ -87,10 +87,12 @@ async function seedShippedOrderWithDelivery() {
 
 describe("PATCH /api/delivery/[id] — order side effects (Phase 1 bug 1.2)", () => {
   beforeEach(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_status_ledger"');
     await cleanDb();
   });
 
   afterAll(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_status_ledger"');
     await rawDb.$disconnect();
   });
 
@@ -163,7 +165,7 @@ describe("PATCH /api/delivery/[id] — order side effects (Phase 1 bug 1.2)", ()
     expect(updatedProduct!.stock).toBeGreaterThanOrEqual(100);
   });
 
-  it("does not 500 when the order transition is invalid (e.g. already returned)", async () => {
+  it("rolls back the delivery status when the order transition is invalid", async () => {
     const { order, delivery } = await seedShippedOrderWithDelivery();
 
     // First mark returned.
@@ -172,20 +174,43 @@ describe("PATCH /api/delivery/[id] — order side effects (Phase 1 bug 1.2)", ()
       { params: Promise.resolve({ id: delivery.id }) },
     );
 
-    // Now try to mark delivered — order is in terminal state "returned",
-    // so orderService.updateStatus will throw InvalidTransitionError. The
-    // route should swallow it + return 200 (delivery update committed).
+    // Now try to mark delivered — order is in terminal state "returned".
+    // Delivery and order effects are one transaction, so both remain returned.
     const res = await PATCH(
       mockPost(`http://localhost/api/delivery/${delivery.id}`, { status: "delivered" }),
       { params: Promise.resolve({ id: delivery.id }) },
     );
-    expect(res.status).toBe(200);
-    const body = await getJson(res);
-    expect((body.delivery as { status: string }).status).toBe("delivered");
+    expect(res.status).toBe(409);
 
-    // The order should still be "returned" (transition was skipped).
     const updatedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
-    expect(updatedOrder!.status).toBe("returned");
+    expect(updatedOrder?.status).toBe("returned");
+    const updatedDelivery = await rawDb.delivery.findUnique({ where: { id: delivery.id } });
+    expect(updatedDelivery?.status).toBe("returned");
+  });
+
+  it("rolls back delivery, order, and customer state when the strict ledger fails", async () => {
+    const { order, customer, delivery } = await seedShippedOrderWithDelivery();
+    await rawDb.$executeRawUnsafe(`
+      CREATE TRIGGER "fail_delivery_status_ledger"
+      BEFORE INSERT ON "OrderChange"
+      WHEN NEW.actionType = 'status_change'
+      BEGIN
+        SELECT RAISE(ABORT, 'forced ledger failure');
+      END
+    `);
+
+    const res = await PATCH(
+      mockPost(`http://localhost/api/delivery/${delivery.id}`, { status: "delivered" }),
+      { params: Promise.resolve({ id: delivery.id }) },
+    );
+    expect(res.status).toBe(500);
+
+    expect((await rawDb.delivery.findUnique({ where: { id: delivery.id } }))?.status)
+      .toBe("in_transit");
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status)
+      .toBe("shipped");
+    expect(await rawDb.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 0, totalSpent: 0 });
   });
 
   it("returns 404 when the delivery does not exist", async () => {

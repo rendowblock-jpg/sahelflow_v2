@@ -31,6 +31,7 @@ import type { DbClient } from "@/lib/db";
 // and "0555 12 34 56" would create two different Customer rows for the same
 // person (blind-index mismatch → unfindable customer).
 import { normalizePhone } from "@/lib/import/fields";
+import { orderService } from "@/lib/data/order-service";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -379,121 +380,185 @@ registerTool({
     try {
       const input = assignOrderToDeliverySchema.parse(params);
       const db = getDb(ctx);
-
-      const order = await db.order.findFirst({
-        where: { orderNumber: input.orderNumber, deletedAt: null },
-        include: {
-          customer: true,
-          items: true,
-          delivery: { where: { deletedAt: null } },
-        },
-      });
-      if (!order) return { success: false, error: "Commande introuvable" };
-      if (order.delivery) {
-        return { success: false, error: `Cette commande a déjà une livraison (${order.delivery.provider}, tracking: ${order.delivery.trackingNumber ?? "N/A"})` };
-      }
-      if (order.status !== "confirmed") {
-        return { success: false, error: `La commande doit être confirmée avant la livraison (statut actuel: ${order.status})` };
-      }
-
       const adapter = getDeliveryAdapter(input.provider);
-      const creds = await loadDeliveryCredentials(input.provider);
+      const creds = await loadDeliveryCredentials(
+        { prisma: db, shop: ctx.shop },
+        input.provider,
+      );
       if (!creds) {
         return { success: false, error: `Identifiants ${input.provider} non configurés` };
       }
 
-      const result = await adapter.createShipment(
-        {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          customer: {
-            name: order.customer.name,
-            phone: order.phone || order.customer.phone,
-            wilaya: order.wilaya,
-            commune: order.commune,
-            address: order.address,
-          },
-          items: order.items.map((i) => ({
-            name: i.productName,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-          })),
-          totalPrice: order.totalPrice,
-          weight: input.weight,
-        },
-        creds,
-      );
+      const reserved = await db.$transaction(async (tx) => {
+        const order = await tx.order.findFirst({
+          where: { orderNumber: input.orderNumber, deletedAt: null },
+          include: { customer: true, items: true },
+        });
+        if (!order) throw new Error("Commande introuvable");
+        if (order.status !== "confirmed") {
+          throw new Error(
+            `La commande doit être confirmée avant la livraison (statut actuel: ${order.status})`,
+          );
+        }
 
-      if (!result.success) {
-        return { success: false, error: result.error ?? "Échec de la création de livraison" };
-      }
+        const existing = await tx.delivery.findUnique({ where: { orderId: order.id } });
+        if (existing) {
+          throw new Error(
+            `Cette commande a déjà une livraison (${existing.provider}, tracking: ${existing.trackingNumber ?? "N/A"}, statut: ${existing.status})`,
+          );
+        }
 
-      // Session 30 (AUDIT-7 AI7): wrap delivery create + order status update
-      // in a $transaction. Previously these were two separate writes — if the
-      // second failed, you had a Delivery record but the order was still
-      // 'confirmed' (and re-running the tool would error out because a
-      // delivery already exists).
-      //
-      // AI-M3: previously the status update was a raw tx.order.update that
-      // bypassed orderService.updateStatus — so the `order.shipped`
-      // automation trigger was never dispatched, the state machine wasn't
-      // enforced, and the ledger entry was hand-rolled with a stale
-      // `status: "confirmed"` field. We now inline the same steps that
-      // orderService.updateStatus performs (state-machine assertion +
-      // timestamped status update + recordStatusChange with actor="ai"),
-      // then dispatch the trigger AFTER the tx commits (matches the
-      // service's fire-and-forget pattern). We can't call
-      // orderService.updateStatus({ prisma: tx }, ...) directly because
-      // Prisma transaction clients don't expose $transaction for nested
-      // calls — but the trigger dispatch + ledger entry are the parts
-      // that matter for audit attribution.
-      // AI-M4: pass actor: "ai" so the OrderChange ledger attributes the
-      // transition to the assistant, not the human user.
-      const { assertCanTransition } = await import("@/lib/order-transitions");
-      const { recordStatusChange } = await import("@/lib/data/order-change-service");
-      type TriggerEvent = import("@/lib/automations/engine").TriggerEvent;
-      const { dispatchTrigger } = await import("@/lib/automations/engine");
-      const delivery = await db.$transaction(async (tx) => {
-        const d = await tx.delivery.create({
+        const reservation = await tx.delivery.create({
           data: {
             orderId: order.id,
             provider: input.provider,
-            trackingNumber: result.trackingId,
-            cost: result.cost,
-            status: "created",
+            status: "creating",
           },
         });
-        // Enforce the state machine inside the tx (race-safe).
-        assertCanTransition(order.status as never, "shipped" as never);
-        await tx.order.update({
-          where: { id: order.id },
-          data: { status: "shipped", shippedAt: new Date() },
-        });
-        // Ledger entry — same tx, actor "ai" (AI-M4).
-        await recordStatusChange(order.id, order.status, "shipped", "ai", tx);
-        return d;
+        return { order, reservation };
       });
+      const { order, reservation } = reserved;
 
-      // AI-M3: dispatch the `order.shipped` automation trigger AFTER the tx
-      // commits. orderService.updateStatus does this fire-and-forget; we
-      // replicate the behavior so automation rules (e.g. "when order
-      // shipped → send WhatsApp notification") fire for AI-initiated
-      // assignments. Wrapped in void + catch so a trigger failure never
-      // breaks the user-facing response.
-      void dispatchTrigger("order.shipped" as TriggerEvent, {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerId: order.customerId,
-        totalPrice: order.totalPrice,
-        wilaya: order.wilaya,
-        phone: order.phone,
-      }).catch(() => { /* fire-and-forget */ });
+      let result: Awaited<ReturnType<typeof adapter.createShipment>>;
+      try {
+        result = await adapter.createShipment(
+          {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customer: {
+              name: order.customer.name,
+              phone: order.phone || order.customer.phone,
+              wilaya: order.wilaya,
+              commune: order.commune,
+              address: order.address,
+            },
+            items: order.items.map((i) => ({
+              name: i.productName,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
+            totalPrice: order.totalPrice,
+            weight: input.weight,
+          },
+          creds,
+        );
+      } catch (error) {
+        try {
+          const marked = await db.delivery.updateMany({
+            where: { id: reservation.id, trackingNumber: null },
+            data: { status: "reconciliation_required" },
+          });
+          if (marked.count !== 1) {
+            throw new Error("La réservation locale ne peut pas enregistrer le résultat ambigu");
+          }
+        } catch (reconciliationError) {
+          throw new AggregateError(
+            [error, reconciliationError],
+            "Le résultat du transporteur est ambigu et la preuve de rapprochement n'a pas pu être enregistrée",
+          );
+        }
+        throw error;
+      }
+
+      if (!result.success) {
+        const marked = await db.delivery.updateMany({
+          where: { id: reservation.id, trackingNumber: null },
+          data: { status: "reconciliation_required" },
+        });
+        if (marked.count !== 1) {
+          throw new Error("La réservation locale ne peut pas enregistrer l'échec du transporteur");
+        }
+        return { success: false, error: result.error ?? "Échec de la création de livraison" };
+      }
+
+      const trackingNumber = typeof result.trackingId === "string"
+        ? result.trackingId.trim()
+        : "";
+      if (!trackingNumber) {
+        const marked = await db.delivery.updateMany({
+          where: { id: reservation.id, trackingNumber: null },
+          data: { status: "reconciliation_required" },
+        });
+        if (marked.count !== 1) {
+          throw new Error("La réservation locale ne peut pas enregistrer le reçu manquant");
+        }
+        return {
+          success: false,
+          error: "Le transporteur a accepté l'envoi sans fournir de numéro de suivi; rapprochement requis",
+        };
+      }
+
+      let committed;
+      try {
+        committed = await db.$transaction(async (tx) => {
+          const currentOrder = await tx.order.findFirst({
+            where: { id: order.id, deletedAt: null },
+            select: { updatedAt: true },
+          });
+          if (!currentOrder || currentOrder.updatedAt.getTime() !== order.updatedAt.getTime()) {
+            throw new Error("La commande a changé pendant la création de l'envoi");
+          }
+
+          const claimed = await tx.delivery.updateMany({
+            where: {
+              id: reservation.id,
+              status: "creating",
+              trackingNumber: null,
+              deletedAt: null,
+            },
+            data: {
+              trackingNumber,
+              cost: result.cost,
+              status: "created",
+            },
+          });
+          if (claimed.count !== 1) {
+            throw new Error("La réservation de livraison a changé avant la réponse du transporteur");
+          }
+          const delivery = await tx.delivery.findUniqueOrThrow({ where: { id: reservation.id } });
+          const effects = await orderService.updateStatusInTx(
+            tx,
+            order.id,
+            "shipped",
+            { actor: "ai" },
+          );
+          return { delivery, effects };
+        });
+      } catch (error) {
+        try {
+          const reconciled = await db.delivery.updateMany({
+            where: {
+              id: reservation.id,
+              OR: [{ trackingNumber: null }, { trackingNumber }],
+            },
+            data: {
+              trackingNumber,
+              cost: result.cost,
+              status: "reconciliation_required",
+            },
+          });
+          if (reconciled.count !== 1) {
+            throw new Error("Le reçu transporteur est en conflit avec la réservation locale");
+          }
+        } catch (reconciliationError) {
+          throw new AggregateError(
+            [error, reconciliationError],
+            "Le transporteur a créé l'envoi mais le reçu de rapprochement n'a pas pu être enregistré",
+          );
+        }
+        throw error;
+      }
+
+      orderService.dispatchStatusTransition(
+        { prisma: db, shop: ctx.shop },
+        committed.effects,
+      );
 
       return {
         success: true,
         data: {
-          deliveryId: delivery.id,
-          trackingId: result.trackingId,
+          deliveryId: committed.delivery.id,
+          trackingId: trackingNumber,
           provider: input.provider,
           cost: result.cost,
           orderId: order.id,
@@ -535,7 +600,7 @@ registerTool({
   async execute(params, ctx): Promise<ToolResult> {
     try {
       const input = getDeliveryCostComparisonSchema.parse(params);
-      void ctx; // not needed — we use the delivery adapters directly
+      const db = getDb(ctx);
       const providers = ["yalidine", "maystro", "zrexpress"] as const;
       const comparisons: Array<{
         provider: string;
@@ -547,7 +612,10 @@ registerTool({
       for (const provider of providers) {
         try {
           const adapter = getDeliveryAdapter(provider);
-          const creds = await loadDeliveryCredentials(provider);
+          const creds = await loadDeliveryCredentials(
+            { prisma: db, shop: ctx.shop },
+            provider,
+          );
           if (!creds) {
             comparisons.push({ provider, cost: 0, available: false, error: "Non configuré" });
             continue;

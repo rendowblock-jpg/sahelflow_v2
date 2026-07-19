@@ -6,7 +6,7 @@
  * undefined as the first arg + always provide a label, so withErrorHandler
  * never tries to read req.nextUrl.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withErrorHandler } from "../with-error-handler";
@@ -18,6 +18,7 @@ import {
   InvalidTransitionError,
   RateLimitError,
 } from "@/types/errors";
+import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 // Mock the logger to avoid console noise in tests
 vi.mock("@/lib/logger", () => ({
@@ -26,6 +27,10 @@ vi.mock("@/lib/logger", () => ({
     warn: vi.fn(),
     error: vi.fn(),
   },
+}));
+
+vi.mock("@/lib/shops/authority", () => ({
+  assertProcessShopAuthority: vi.fn(),
 }));
 
 async function bodyOf(res: Response): Promise<Record<string, unknown>> {
@@ -46,11 +51,33 @@ describe("withErrorHandler", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("returns the handler's response on success", async () => {
     const handler = wrap(async () => NextResponse.json({ ok: true }));
     const res = await handler();
     expect(res.status).toBe(200);
     expect((await bodyOf(res)).ok).toBe(true);
+  });
+
+  it("rejects stale production requests before an old-shop write", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(assertProcessShopAuthority).mockImplementation(() => {
+      throw new SahelFlowError("stale", "SHOP_CONTEXT_STALE", 409);
+    });
+    const write = vi.fn();
+    const handler = wrap(async () => {
+      write();
+      return NextResponse.json({ ok: true });
+    });
+
+    const res = await handler();
+
+    expect(res.status).toBe(409);
+    expect(await bodyOf(res)).toMatchObject({ code: "SHOP_CONTEXT_STALE" });
+    expect(write).not.toHaveBeenCalled();
   });
 
   it("maps ZodError → 400 Validation failed", async () => {

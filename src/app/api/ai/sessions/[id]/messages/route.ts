@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireLicense } from "@/lib/license/license-server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { redactPii } from "@/lib/redact-pii";
@@ -34,12 +34,17 @@ const sendSchema = z.object({
 /** POST /api/ai/sessions/[id]/messages — send a message + get AI response. */
 export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
+  const context = { prisma: db, shop: shopContext };
 
   // fix-B6: Informed-consent gate. The AI chat assistant forwards the
   // seller's question + conversation history (which may reference customer
   // PII via tool results) to Google Gemini. Without explicit consent,
   // refuse the request — same gate as /api/extraction.
-  const consent = await getBool(SETTING_KEYS.geminiConsentAccepted, false);
+  const consent = await getBool(
+    context,
+    SETTING_KEYS.geminiConsentAccepted,
+    false,
+  );
   if (!consent) {
     return NextResponse.json(
       {
@@ -78,7 +83,7 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
   }
 
   // Save the user message
-  await db.aiChatMessage.create({
+  await context.prisma.aiChatMessage.create({
     data: { sessionId: id, role: "user", content: input.message },
   });
 
@@ -113,7 +118,7 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
   const result = await runAgent(history, input.message);
 
   // Save the assistant response (with tool calls as metadata)
-  await db.aiChatMessage.create({
+  await context.prisma.aiChatMessage.create({
     data: {
       sessionId: id,
       role: "assistant",
@@ -129,12 +134,12 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
 
   // Update session timestamp + auto-title from first message
   if (session.messages.length === 0 && session.title === "Nouvelle conversation") {
-    await db.aiChatSession.update({
+    await context.prisma.aiChatSession.update({
       where: { id },
       data: { title: input.message.slice(0, 50) },
     });
   } else {
-    await db.aiChatSession.update({
+    await context.prisma.aiChatSession.update({
       where: { id },
       data: { updatedAt: new Date() },
     });

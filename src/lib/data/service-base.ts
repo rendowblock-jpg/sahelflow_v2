@@ -9,11 +9,20 @@ import "server-only";
 import { logger } from "@/lib/logger";
 
 import type { DbClient } from "@/lib/db";
+import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError, NotFoundError, ValidationError } from "@/types/errors";
 
-export type ServiceContext = {
-  prisma: DbClient;
-};
+export type ServiceContext =
+  | {
+      prisma: DbClient;
+      shop: ShopContext;
+    }
+  // Unit tests intentionally use an unextended Prisma client. `never` keeps
+  // that explicit escape hatch from weakening production call sites.
+  | {
+      prisma: never;
+      shop?: never;
+    };
 
 /**
  * Wrap a service call: catches Zod errors and converts to ValidationError,

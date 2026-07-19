@@ -4,7 +4,7 @@
  * for audit-trail integrity — the merchant must cancel first.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
@@ -18,6 +18,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
 
   const order = await db.order.findUnique({
     where: { id },
@@ -52,14 +53,14 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   // Phase 2: soft-delete (set deletedAt) instead of hard-delete.
   // The useUndoableDelete hook shows an undo toast; the restore route
   // un-sets deletedAt. This disproves the false "undo on delete: yes" handoff claim.
-  const updated = await db.order.update({
+  const updated = await context.prisma.order.update({
     where: { id },
     data: { deletedAt: new Date() },
     select: { id: true, orderNumber: true, deletedAt: true },
   });
 
   // Audit log
-  void logAudit({
+  void logAudit(context, {
     action: "order.deleted",
     entity: "order",
     entityId: id,
@@ -78,6 +79,6 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   await requireAuth();
   const { id } = await params;
   const body = await req.json();
-  const order = await orderService.update({ prisma: db }, id, body);
+  const order = await orderService.update({ prisma: db, shop: shopContext }, id, body);
   return NextResponse.json({ order });
 }, "PATCH /api/orders/[id]");

@@ -8,24 +8,31 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import {
-  getRiskConfig,
-  saveRiskConfig,
-  getRiskRules,
-  saveRiskRules,
-  incrementRuleTriggers,
-  buildAssessmentInputFromOrder,
-  assessOrderRisk,
-  assessRiskFromInput,
-  batchAssessOrders,
-  blacklistCustomer,
-  unblacklistCustomer,
-  listBlacklistedCustomers,
+  getRiskConfig as getRiskConfigForShop,
+  saveRiskConfig as saveRiskConfigForShop,
+  getRiskRules as getRiskRulesForShop,
+  saveRiskRules as saveRiskRulesForShop,
+  incrementRuleTriggers as incrementRuleTriggersForShop,
+  buildAssessmentInputFromOrder as buildAssessmentInputFromOrderForShop,
+  assessOrderRisk as assessOrderRiskForShop,
+  assessRiskFromInput as assessRiskFromInputForShop,
+  batchAssessOrders as batchAssessOrdersForShop,
+  blacklistCustomer as blacklistCustomerForShop,
+  unblacklistCustomer as unblacklistCustomerForShop,
+  listBlacklistedCustomers as listBlacklistedCustomersForShop,
 } from "../service";
-import { DEFAULT_RISK_CONFIG, DEFAULT_RISK_RULES, type RiskAssessmentInput } from "../types";
+import {
+  DEFAULT_RISK_CONFIG,
+  DEFAULT_RISK_RULES,
+  type RiskAssessmentInput,
+  type RiskEngineConfig,
+  type RiskRule,
+} from "../types";
 import {
   createTestPrisma,
   disconnectTestPrisma,
   seedTestCustomer,
+  TEST_SHOP_CONTEXT,
   uniquePhone,
 } from "@/lib/data/__tests__/helpers";
 // The extended db client (with PII encryption/decryption). The service writes
@@ -35,6 +42,25 @@ import {
 import { db as piiDb } from "@/lib/db";
 
 let db: PrismaClient;
+
+const context = { prisma: piiDb, shop: TEST_SHOP_CONTEXT };
+const getRiskConfig = () => getRiskConfigForShop(context);
+const saveRiskConfig = (config: RiskEngineConfig) => saveRiskConfigForShop(context, config);
+const getRiskRules = () => getRiskRulesForShop(context);
+const saveRiskRules = (rules: RiskRule[]) => saveRiskRulesForShop(context, rules);
+const incrementRuleTriggers = (ruleIds: string[]) =>
+  incrementRuleTriggersForShop(context, ruleIds);
+const buildAssessmentInputFromOrder = (orderId: string) =>
+  buildAssessmentInputFromOrderForShop(context, orderId);
+const assessOrderRisk = (orderId: string) => assessOrderRiskForShop(context, orderId);
+const assessRiskFromInput = (input: RiskAssessmentInput) =>
+  assessRiskFromInputForShop(context, input);
+const batchAssessOrders = (orderIds: string[]) => batchAssessOrdersForShop(context, orderIds);
+const blacklistCustomer = (customerId: string, reason?: string) =>
+  blacklistCustomerForShop(context, customerId, reason);
+const unblacklistCustomer = (customerId: string) =>
+  unblacklistCustomerForShop(context, customerId);
+const listBlacklistedCustomers = () => listBlacklistedCustomersForShop(context);
 
 beforeEach(async () => {
   db = await createTestPrisma();

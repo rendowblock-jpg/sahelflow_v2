@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { updateExpenseSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { NotFoundError } from "@/types/errors";
@@ -22,6 +22,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const { id } = await params;
   const body = await req.json();
   const data = updateExpenseSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   const existing = await db.expense.findUnique({
     where: { id },
@@ -29,7 +30,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   });
   if (!existing) throw new NotFoundError("Expense", id);
 
-  const expense = await db.expense.update({
+  const expense = await context.prisma.expense.update({
     where: { id },
     data: {
       ...(data.category !== undefined && { category: data.category }),
@@ -49,14 +50,15 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   await requireAuth();
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
 
   // W2-5: fetch full row for audit before-state (was id-only before).
   const existing = await db.expense.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError("Expense", id);
 
   // Soft-delete (enables undo via /api/expenses/[id]/restore)
-  await db.expense.update({ where: { id }, data: { deletedAt: new Date() } });
-  void logAudit({
+  await context.prisma.expense.update({ where: { id }, data: { deletedAt: new Date() } });
+  void logAudit(context, {
     action: "expense.deleted",
     entity: "expense",
     entityId: id,

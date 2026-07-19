@@ -7,18 +7,39 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import {
-  seedWilayaRiskProfiles,
-  getWilayaRisk,
-  listWilayaRisks,
-  assessOrderRisk,
+  seedWilayaRiskProfiles as seedWilayaRiskProfilesForShop,
+  getWilayaRisk as getWilayaRiskForShop,
+  listWilayaRisks as listWilayaRisksForShop,
+  assessOrderRisk as assessOrderRiskForShop,
   type WilayaRisk,
 } from "../engine";
 import {
   createTestPrisma,
   disconnectTestPrisma,
+  TEST_SHOP_CONTEXT,
 } from "@/lib/data/__tests__/helpers";
 
 let db: PrismaClient;
+
+function context() {
+  return { prisma: db as never, shop: TEST_SHOP_CONTEXT };
+}
+
+function seedWilayaRiskProfiles() {
+  return seedWilayaRiskProfilesForShop(context());
+}
+
+function getWilayaRisk(wilaya: string) {
+  return getWilayaRiskForShop(context(), wilaya);
+}
+
+function listWilayaRisks() {
+  return listWilayaRisksForShop(context());
+}
+
+function assessOrderRisk(wilaya: string) {
+  return assessOrderRiskForShop(context(), wilaya);
+}
 
 beforeEach(async () => {
   db = await createTestPrisma();

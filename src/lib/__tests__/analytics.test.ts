@@ -163,9 +163,9 @@ describe("analyticsService.buildTopWilayas", () => {
 describe("analyticsService.buildSalesByHour", () => {
   it("produces 24 buckets and assigns orders to the correct hour", () => {
     const orders = [
-      makeOrder({ createdAt: new Date("2026-06-15T08:00:00Z"), totalPrice: 100, status: "delivered" }),
-      makeOrder({ createdAt: new Date("2026-06-15T08:30:00Z"), totalPrice: 200, status: "delivered" }),
-      makeOrder({ createdAt: new Date("2026-06-15T14:00:00Z"), totalPrice: 300, status: "delivered" }),
+      makeOrder({ createdAt: new Date(2026, 5, 15, 8, 0), totalPrice: 100, status: "delivered" }),
+      makeOrder({ createdAt: new Date(2026, 5, 15, 8, 30), totalPrice: 200, status: "delivered" }),
+      makeOrder({ createdAt: new Date(2026, 5, 15, 14, 0), totalPrice: 300, status: "delivered" }),
     ];
     const buckets = analyticsService.buildSalesByHour(orders);
     expect(buckets).toHaveLength(24);

@@ -159,7 +159,7 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
     expect(customerAfterReturn!.totalSpent).toBe(0); // decremented EXACTLY once
 
     // Now issue a full Refund on the same order.
-    const refund = await createRefund({
+    const refund = await createRefund({ prisma: db as never }, {
       orderId: order.id,
       amount: 5000,
       method: "cash",
@@ -199,7 +199,7 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
     const { order, customer } = await seedDeliveredOrder();
 
     // No Return flow — issue a refund directly on the "delivered" order.
-    await createRefund({
+    await createRefund({ prisma: db as never }, {
       orderId: order.id,
       amount: 5000,
       method: "cash",
@@ -240,7 +240,7 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
     expect(customerAfterReturn!.totalSpent).toBe(0);
 
     // Issue a partial refund of 2000.
-    await createRefund({
+    await createRefund({ prisma: db as never }, {
       orderId: order.id,
       amount: 2000,
       method: "cash",

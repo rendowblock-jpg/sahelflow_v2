@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   parseFile,
   mapRows,
@@ -104,6 +104,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Commit mode — insert
+  const context = { prisma: db, shop: shopContext };
   // Resolve categories (create if missing)
   const categoryNameToId = new Map<string, string>();
   for (const row of validation.valid) {
@@ -113,7 +114,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       if (existing) {
         categoryNameToId.set(catName, existing.id);
       } else {
-        const created = await db.category.create({ data: { name: catName } });
+        const created = await context.prisma.category.create({ data: { name: catName } });
         categoryNameToId.set(catName, created.id);
       }
     }
@@ -133,7 +134,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           stock?: number;
           lowStockThreshold?: number;
         };
-        await db.product.create({
+        await context.prisma.product.create({
           data: {
             ...productData,
             stock: productData.stock ?? 0,

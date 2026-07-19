@@ -17,7 +17,7 @@
  */
 import "server-only";
 
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { getRiskConfig, getRiskRules, buildAssessmentInputFromOrder } from "./service";
 import { assessRisk } from "./scoring";
 import type { RiskAssessment, RiskLevel } from "./types";
@@ -79,11 +79,18 @@ export interface RiskAnalyticsReport {
 }
 
 /** Compute the full risk analytics report for a time range (default: last 30 days). */
-export async function getRiskAnalyticsReport(days = 30): Promise<RiskAnalyticsReport> {
+export async function getRiskAnalyticsReport(
+  context: ServiceContext,
+  days = 30,
+): Promise<RiskAnalyticsReport> {
+  const db = context.prisma;
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const [config, rules] = await Promise.all([getRiskConfig(), getRiskRules()]);
+  const [config, rules] = await Promise.all([
+    getRiskConfig(context),
+    getRiskRules(context),
+  ]);
 
   // Load all orders in the range (with customer + status for aggregation)
   const orders = await db.order.findMany({
@@ -103,7 +110,7 @@ export async function getRiskAnalyticsReport(days = 30): Promise<RiskAnalyticsRe
   const assessments: Array<{ orderId: string; assessment: RiskAssessment; status: string; wilaya: string; createdAt: Date; totalPrice: number }> = [];
 
   for (const order of orders) {
-    const input = await buildAssessmentInputFromOrder(order.id);
+    const input = await buildAssessmentInputFromOrder(context, order.id);
     if (!input) continue;
     const assessment = assessRisk(input, config, rules);
     assessments.push({

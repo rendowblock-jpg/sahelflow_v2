@@ -3,6 +3,7 @@ import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client"
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export const DELETE = withErrorHandler(async () => {
   try {
     const result = await sidecar.logout();
     // W2-5: audit the WhatsApp logout (security-relevant account action).
-    void logAudit({
+    void logAudit({ prisma: db, shop: shopContext }, {
       action: "whatsapp.logout",
       entity: "whatsapp",
       actor: "user",

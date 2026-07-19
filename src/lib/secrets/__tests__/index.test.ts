@@ -15,13 +15,36 @@ process.env.SF_MASTER_KEY =
 
 import { dbRaw } from "@/lib/db";
 import { getMasterKey, _resetMasterKeyCacheForTests } from "@/lib/crypto/master-key";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import {
-  getSecret,
-  setSecret,
-  hasSecret,
-  deleteSecret,
-  listSecretStatus,
+  getSecret as getSecretForShop,
+  setSecret as setSecretForShop,
+  hasSecret as hasSecretForShop,
+  deleteSecret as deleteSecretForShop,
+  listSecretStatus as listSecretStatusForShop,
 } from "../index";
+
+const context = { prisma: dbRaw as never, shop: TEST_SHOP_CONTEXT };
+
+function getSecret(key: string) {
+  return getSecretForShop(context, key);
+}
+
+function setSecret(key: string, value: string) {
+  return setSecretForShop(context, key, value);
+}
+
+function hasSecret(key: string) {
+  return hasSecretForShop(context, key);
+}
+
+function deleteSecret(key: string) {
+  return deleteSecretForShop(context, key);
+}
+
+function listSecretStatus(knownKeys: readonly string[]) {
+  return listSecretStatusForShop(context, knownKeys);
+}
 
 beforeEach(async () => {
   _resetMasterKeyCacheForTests();

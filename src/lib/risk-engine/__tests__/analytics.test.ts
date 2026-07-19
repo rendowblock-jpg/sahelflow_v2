@@ -7,17 +7,27 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
-import { getRiskAnalyticsReport, type RiskAnalyticsReport } from "../analytics";
-import { getRiskRules } from "../service";
+import {
+  getRiskAnalyticsReport as getRiskAnalyticsReportForShop,
+  type RiskAnalyticsReport,
+} from "../analytics";
+import { getRiskRules as getRiskRulesForShop } from "../service";
 import { DEFAULT_RISK_RULES } from "../types";
 import {
   createTestPrisma,
   disconnectTestPrisma,
   seedTestCustomer,
+  TEST_SHOP_CONTEXT,
   uniquePhone,
 } from "@/lib/data/__tests__/helpers";
+import { db as piiDb } from "@/lib/db";
 
 let db: PrismaClient;
+
+const context = { prisma: piiDb, shop: TEST_SHOP_CONTEXT };
+const getRiskAnalyticsReport = (days = 30) =>
+  getRiskAnalyticsReportForShop(context, days);
+const getRiskRules = () => getRiskRulesForShop(context);
 
 beforeEach(async () => {
   db = await createTestPrisma();

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { assertCanTransition } from "@/lib/order-transitions";
-import { recordOrderChange } from "@/lib/data/order-change-service";
-import { dispatchTrigger } from "@/lib/automations/engine";
-import type { OrderStatus } from "@/types/domain";
+import { orderService } from "@/lib/data/order-service";
+import { ConflictError, SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -16,176 +14,272 @@ const createSchema = z.object({
   provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
 });
 
+class ExistingShipmentError extends ConflictError {
+  constructor(public readonly trackingNumber: string) {
+    super(`Shipment already exists for this order (${trackingNumber})`);
+  }
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "P2002",
+  );
+}
+
 /**
  * POST /api/delivery/create — create a shipment with the delivery provider.
  *
  * Reads the order + customer from the DB, calls the provider's API, and
  * updates the Delivery record with the tracking number + cost.
  *
- * B4b (shipment idempotency): BEFORE calling the adapter, we check for an
- * existing Delivery row with a non-null trackingNumber. If one exists, we
- * return 409 immediately. This prevents two double-shipment paths:
- *   1. Double-click on "Create shipment" — the second request sees the row
- *      inserted by the first and bails with 409.
- *   2. Retry after partial failure where the FIRST attempt succeeded at the
- *      provider AND committed the Delivery row, then a later step failed —
- *      the retry sees the existing row and bails with 409.
- * The recovery path (order.status === "shipped" but NO Delivery row — a data
- * inconsistency) is still allowed through: in that case there is no parcel to
- * orphan, so we let the adapter run. The transaction's delivery.upsert below
- * is the second line of defense: by the time it runs, our pre-check has
- * guaranteed that any pre-existing Delivery row for this orderId has a NULL
- * trackingNumber (so the update branch cannot overwrite a real trackingNumber).
+ * A local Delivery reservation commits before the provider call. Concurrent
+ * requests and ambiguous retries therefore fail closed. Provider receipts
+ * that cannot complete the order transition remain marked for reconciliation.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = createSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
+  const adapter = getDeliveryAdapter(input.provider);
+  const creds = await loadDeliveryCredentials(context, input.provider);
 
-  // Fetch the order + customer
-  const order = await db.order.findUnique({
-    where: { id: input.orderId },
-    include: {
-      customer: true,
-      items: true,
-    },
-  });
+  let reserved;
+  try {
+    reserved = await context.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { id: input.orderId, deletedAt: null },
+        include: { customer: true, items: true },
+      });
+      if (!order) {
+        throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
+      }
+      const existing = await tx.delivery.findUnique({ where: { orderId: order.id } });
+      if (existing?.trackingNumber) {
+        throw new ExistingShipmentError(existing.trackingNumber);
+      }
+      if (existing) {
+        if (existing.deletedAt) {
+          return {
+            blocked: true as const,
+            reason: "A deleted shipment record requires manual reconciliation",
+          };
+        }
+        if (existing.status !== "creating" && existing.status !== "reconciliation_required") {
+          await tx.delivery.update({
+            where: { id: existing.id },
+            data: { status: "reconciliation_required" },
+          });
+        }
+        return {
+          blocked: true as const,
+          reason: existing.status === "creating"
+            ? "Shipment creation is already in progress"
+            : "An existing shipment record without tracking requires manual reconciliation",
+        };
+      }
+      if (order.status === "shipped") {
+        throw new SahelFlowError(
+          `Order cannot safely create a shipment from status '${order.status}'; manual reconciliation is required`,
+          "CONFLICT",
+          409,
+        );
+      }
+      if (order.status !== "confirmed") {
+        throw new SahelFlowError(
+          `Order must be confirmed before shipping (current status: ${order.status})`,
+          "VALIDATION_ERROR",
+          400,
+        );
+      }
 
-  if (!order) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      const reservation = await tx.delivery.create({
+        data: {
+          orderId: order.id,
+          provider: input.provider,
+          status: "creating",
+        },
+      });
+
+      return { blocked: false as const, order, reservation };
+    });
+  } catch (error) {
+    if (error instanceof ExistingShipmentError) {
+      return NextResponse.json(
+        {
+          error: "Shipment already exists for this order",
+          trackingNumber: error.trackingNumber,
+        },
+        { status: 409 },
+      );
+    }
+    if (isUniqueConstraintError(error)) {
+      throw new ConflictError("Shipment creation is already in progress");
+    }
+    throw error;
   }
 
-  if (order.status !== "confirmed" && order.status !== "shipped") {
+  if (reserved.blocked) {
     return NextResponse.json(
-      { error: `Order must be confirmed before shipping avant l'expédition (statut actuel: ${order.status})` },
-      { status: 400 },
-    );
-  }
-
-  // B4b: idempotency gate — refuse to create a second shipment for an order
-  // that already has a Delivery row with a trackingNumber. See the file-level
-  // comment for the full rationale. Checked BEFORE the adapter call so we
-  // never even touch the provider API when a shipment already exists.
-  const existingDelivery = await db.delivery.findFirst({
-    where: { orderId: order.id, trackingNumber: { not: null } },
-  });
-  if (existingDelivery) {
-    return NextResponse.json(
-      {
-        error: "Shipment already exists for this order",
-        trackingNumber: existingDelivery.trackingNumber,
-      },
+      { error: reserved.reason, reconciliationRequired: true },
       { status: 409 },
     );
   }
 
-  const adapter = getDeliveryAdapter(input.provider);
-  const creds = await loadDeliveryCredentials(input.provider);
+  const { order, reservation } = reserved;
 
-  const result = await adapter.createShipment(
-    {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customer: {
-        name: order.customer.name,
-        phone: order.customer.phone,
-        wilaya: order.wilaya,
-        commune: order.commune,
-        address: order.address,
+  let result: Awaited<ReturnType<typeof adapter.createShipment>>;
+  try {
+    result = await adapter.createShipment(
+      {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customer: {
+          name: order.customer.name,
+          phone: order.customer.phone,
+          wilaya: order.wilaya,
+          commune: order.commune,
+          address: order.address,
+        },
+        items: order.items.map((i) => ({
+          name: i.productName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        totalPrice: order.totalPrice,
+        weight: Math.max(1, order.items.reduce((sum, i) => sum + i.quantity, 0)),
+        notes: order.notes ?? undefined,
       },
-      items: order.items.map((i) => ({
-        name: i.productName,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-      })),
-      totalPrice: order.totalPrice,
-      weight: Math.max(1, order.items.reduce((sum, i) => sum + i.quantity, 0)), // Estimate: 1kg per unit, minimum 1kg
-      notes: order.notes ?? undefined,
-    },
-    creds,
-  );
+      creds,
+    );
+  } catch (error) {
+    try {
+      const marked = await context.prisma.delivery.updateMany({
+        where: { id: reservation.id, trackingNumber: null },
+        data: { status: "reconciliation_required" },
+      });
+      if (marked.count !== 1) {
+        throw new ConflictError("Shipment reservation could not record its ambiguous outcome");
+      }
+    } catch (reconciliationError) {
+      throw new AggregateError(
+        [error, reconciliationError],
+        "Shipment outcome is ambiguous and reconciliation evidence could not be persisted",
+      );
+    }
+    throw error;
+  }
 
   if (!result.success) {
+    const marked = await context.prisma.delivery.updateMany({
+      where: { id: reservation.id, trackingNumber: null },
+      data: { status: "reconciliation_required" },
+    });
+    if (marked.count !== 1) {
+      throw new ConflictError("Shipment reservation could not record the provider failure");
+    }
     return NextResponse.json(
-      { error: result.error ?? "Failed to create shipment" },
+      {
+        error: result.error ?? "Failed to create shipment",
+        reconciliationRequired: true,
+      },
       { status: 502 },
     );
   }
 
-  // Create/update the Delivery record + update order status in a transaction.
-  // Session 30 (AUDIT-2 A3): the entire create-shipment flow is now atomic.
-  // Previously the order status update happened OUTSIDE the $transaction,
-  // so a failure there left a delivery record at the provider with no matching
-  // order state in our DB. Now: delivery upsert + order status update + ledger
-  // entry all happen inside the same tx. If any step fails, the whole thing
-  // rolls back.
-  const [delivery] = await db.$transaction(async (tx) => {
-    const d = await tx.delivery.upsert({
-      where: { orderId: order.id },
-      create: {
-        orderId: order.id,
-        provider: input.provider,
-        trackingNumber: result.trackingId,
-        cost: result.cost,
-        status: "created",
-        estimatedDelivery: result.estimatedDelivery
-          ? new Date(result.estimatedDelivery)
-          : null,
-      },
-      update: {
-        provider: input.provider,
-        trackingNumber: result.trackingId,
-        cost: result.cost,
-        status: "created",
-        estimatedDelivery: result.estimatedDelivery
-          ? new Date(result.estimatedDelivery)
-          : null,
-      },
+  const trackingNumber = typeof result.trackingId === "string"
+    ? result.trackingId.trim()
+    : "";
+  if (!trackingNumber) {
+    const marked = await context.prisma.delivery.updateMany({
+      where: { id: reservation.id, trackingNumber: null },
+      data: { status: "reconciliation_required" },
     });
-
-    // Update order status inside the tx (enforce state machine manually
-    // since we can't call orderService.updateStatus which opens its own tx)
-    const fresh = await tx.order.findFirst({ where: { id: order.id, deletedAt: null }, select: { status: true } });
-    if (fresh) {
-      const from = fresh.status as OrderStatus;
-      const to: OrderStatus = "shipped";
-      if (from !== to) {
-        assertCanTransition(from, to);
-        await tx.order.update({
-          where: { id: order.id },
-          data: { status: to, shippedAt: new Date() },
-        });
-        // Record ledger entry — same tx (S2 fix)
-        await recordOrderChange({
-          orderId: order.id,
-          actionType: "status_change",
-          actor: "user",
-          payload: { from, to, reason: "delivery_create" },
-          tx,
-        });
-      }
+    if (marked.count !== 1) {
+      throw new ConflictError("Shipment reservation could not record the missing provider receipt");
     }
+    return NextResponse.json(
+      {
+        error: "Provider reported shipment creation without a tracking number",
+        reconciliationRequired: true,
+      },
+      { status: 502 },
+    );
+  }
 
-    return [d];
-  });
+  const estimatedDelivery = result.estimatedDelivery
+    ? new Date(result.estimatedDelivery)
+    : null;
+  let committed;
+  try {
+    committed = await context.prisma.$transaction(async (tx) => {
+      const currentOrder = await tx.order.findFirst({
+        where: { id: order.id, deletedAt: null },
+        select: { updatedAt: true },
+      });
+      if (!currentOrder || currentOrder.updatedAt.getTime() !== order.updatedAt.getTime()) {
+        throw new ConflictError("Order changed while the provider shipment was being created");
+      }
 
-  // Phase 1 bug 1.4: fire order.shipped trigger (fire-and-forget) AFTER the tx
-  // commits — so "ship → WhatsApp notify" automations fire when a shipment is
-  // created via this route (the most common shipment path). Previously only the
-  // AI create_shipment tool fired this trigger, so API/UI shipments silently
-  // skipped automations. orderService.updateStatus does the same after its tx.
-  void dispatchTrigger("order.shipped", {
-    orderId: order.id,
-    orderNumber: order.orderNumber,
-    customerId: order.customerId,
-    totalPrice: order.totalPrice,
-    wilaya: order.wilaya,
-    phone: order.phone,
-  });
+      const claimed = await tx.delivery.updateMany({
+        where: {
+          id: reservation.id,
+          status: "creating",
+          trackingNumber: null,
+          deletedAt: null,
+        },
+        data: {
+          provider: input.provider,
+          trackingNumber,
+          labelUrl: result.labelUrl ?? null,
+          cost: result.cost,
+          status: "created",
+          estimatedDelivery,
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictError("Shipment reservation changed before provider completion");
+      }
+      const delivery = await tx.delivery.findUniqueOrThrow({ where: { id: reservation.id } });
+      const effects = await orderService.updateStatusInTx(tx, order.id, "shipped");
+      return { delivery, effects };
+    });
+  } catch (error) {
+    try {
+      const reconciled = await context.prisma.delivery.updateMany({
+        where: {
+          id: reservation.id,
+          OR: [{ trackingNumber: null }, { trackingNumber }],
+        },
+        data: {
+          provider: input.provider,
+          trackingNumber,
+          labelUrl: result.labelUrl ?? null,
+          cost: result.cost,
+          status: "reconciliation_required",
+          estimatedDelivery,
+        },
+      });
+      if (reconciled.count !== 1) {
+        throw new ConflictError("Provider receipt conflicts with the local shipment reservation");
+      }
+    } catch (reconciliationError) {
+      throw new AggregateError(
+        [error, reconciliationError],
+        "Provider created a shipment but its reconciliation receipt could not be persisted",
+      );
+    }
+    throw error;
+  }
+
+  orderService.dispatchStatusTransition(context, committed.effects);
 
   return NextResponse.json({
     ok: true,
-    delivery,
+    delivery: committed.delivery,
     labelUrl: result.labelUrl,
   });
 }, "POST /api/delivery/create");

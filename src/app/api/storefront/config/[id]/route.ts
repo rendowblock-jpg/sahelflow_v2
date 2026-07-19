@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
   await requireAuth();
   const { id } = await params;
   const { storefrontService } = await import("@/lib/storefront/service");
-  const config = await storefrontService.getById(id);
+  const config = await storefrontService.getById({ prisma: db, shop: shopContext }, id);
   if (!config) {
     return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
@@ -57,12 +58,13 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
   const { storefrontService } = await import("@/lib/storefront/service");
 
   // Verify the storefront exists before updating (gives a clean 404)
-  const existing = await storefrontService.getById(id);
+  const context = { prisma: db, shop: shopContext };
+  const existing = await storefrontService.getById(context, id);
   if (!existing) {
     return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
 
-  const config = await storefrontService.update(id, input);
+  const config = await storefrontService.update(context, id, input);
   return NextResponse.json({ config });
 }, "PUT /api/storefront/config/[id]");
 
@@ -75,14 +77,15 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   const { id } = await params;
   const { storefrontService } = await import("@/lib/storefront/service");
 
-  const existing = await storefrontService.getById(id);
+  const context = { prisma: db, shop: shopContext };
+  const existing = await storefrontService.getById(context, id);
   if (!existing) {
     return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
 
-  await storefrontService.delete(id);
+  await storefrontService.delete(context, id);
   // W2-5: audit the delete (existing captured above).
-  void logAudit({
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "storefront.deleted",
     entity: "storefront",
     entityId: id,

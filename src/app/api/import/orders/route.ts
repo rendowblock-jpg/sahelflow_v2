@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { orderStatusSchema } from "@/lib/validation";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   parseFile,
   mapRows,
@@ -89,6 +89,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Insert orders — for each row, find or create the customer, then create the order
+  const context = { prisma: db, shop: shopContext };
   let inserted = 0;
   const errors: Array<{ rowIndex: number; error: string }> = [];
 
@@ -98,7 +99,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       // per-row $transaction. Previously a failed order.create (after
       // nextOrderNumber already incremented the counter) left gaps in
       // order numbering + a partial customer create. Now each row is atomic.
-      await db.$transaction(async (tx) => {
+      const afterCommit: Array<() => void> = [];
+      await context.prisma.$transaction(async (tx) => {
         const data = validRow.data as { customerName: string; phone: string; wilaya: string; commune?: string; address?: string; productName: string; quantity: number; unitPrice: number; deliveryCost?: number; status?: string; orderNumber?: string };
         const phone = data.phone;
 
@@ -135,7 +137,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         // Acceptable trade-off: imported orders get SahelFlow order numbers,
         // preserving the sequential counter invariant.
         await orderService.create(
-          { prisma: tx as never },
+          { prisma: db, shop: shopContext },
           {
             customerId: customer.id,
             items: [{
@@ -151,9 +153,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
             deliveryCost: deliveryCost > 0 ? deliveryCost : null,
             status,
           },
-          { tx: tx as never },
+          {
+            tx: tx as never,
+            afterCommit: (effect) => afterCommit.push(effect),
+          },
         );
       });
+      afterCommit.forEach((effect) => effect());
       inserted++;
     } catch (err) {
       errors.push({

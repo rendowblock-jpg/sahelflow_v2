@@ -9,9 +9,12 @@
 
 ## Decision: bundle Bun + Prisma engines as Tauri resources (option a)
 
-We bundle a platform-matched **Bun** binary + **Prisma `libquery_engine`**
+We bundle the pinned **Bun 1.3.14 Windows x64 baseline** binary + **Prisma `libquery_engine`**
 binary inside the installer via `tauri.conf.json` → `bundle.resources` →
-`resources/runtime/**/*`. At runtime, `lib.rs` (`bundled_bun()` helper)
+`resources/runtime/**/*`. The preparation script downloads the named Bun
+release asset, verifies its pinned SHA-256 checksum, and records its release
+URL and checksum provenance in `runtime-manifest.json`. It never copies the
+host Bun executable. At runtime, `lib.rs` (`bundled_bun()` helper)
 prefers `<resource_dir>/runtime/bun[.exe]` before falling back to PATH
 `bun` then PATH `node`. This matches the existing sidecar pattern
 (`externalBin: sahelflow-whatsapp`) and is the lowest-risk option.
@@ -31,19 +34,20 @@ bun run scripts/prepare-runtime.ts
 bun run tauri:build
 ```
 
-`prepare-runtime.ts` is idempotent (skips present files) and platform-aware.
-For a cross-platform release, run it once per target OS (e.g. in CI matrix
-jobs — see the Wave 7 macOS CI task T-H4/T-M9).
+`prepare-runtime.ts` currently supports the Windows x64 internal candidate. It
+downloads and verifies Bun on every candidate build so a host-selected modern
+binary cannot be mistaken for the older-CPU baseline.
 
 ## What gets bundled
 
 | Artifact | Source | Destination |
 |---|---|---|
-| Bun binary | `github.com/oven-sh/bun/releases` | `resources/runtime/bun[.exe]` |
+| Bun binary | `bun-v1.3.14/bun-windows-x64-baseline.zip` (pinned SHA-256) | `resources/runtime/bun.exe` |
 | Prisma `libquery_engine` | `binaries.prisma.sh` | `resources/runtime/<engine>` |
 | Next.js standalone server | `bun run build` → `.next/standalone` | `resources/standalone/**/*` |
 | Prisma schema + migrations | `prisma/` | (already bundled) `../prisma/**/*` |
-| Migration runner | `scripts/run-migrations.ts` | (already bundled) |
+| Migration coordinator | `src/migration_coordinator.rs` | compiled into the Tauri host |
+| WhatsApp sidecar | `bun build --compile --target=bun-windows-x64-baseline` | `binaries/sahelflow-whatsapp-x86_64-pc-windows-msvc.exe` |
 
 ## Runtime resolution order in `lib.rs`
 

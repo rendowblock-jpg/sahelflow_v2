@@ -1,6 +1,7 @@
 import "server-only";
 import { google } from "googleapis";
 import { getSecret } from "@/lib/secrets";
+import type { ServiceContext } from "@/lib/data/service-base";
 
 /**
  * Google Sheets integration — Service Account auth (server-to-server).
@@ -33,9 +34,9 @@ interface ServiceAccountKey {
 }
 
 /** Load the service account key from the Secret store or the data/ file. */
-async function loadServiceAccountKey(): Promise<ServiceAccountKey | null> {
+async function loadServiceAccountKey(context: ServiceContext): Promise<ServiceAccountKey | null> {
   // 1. Try the Secret store
-  const stored = await getSecret(SERVICE_ACCOUNT_SECRET_KEY);
+  const stored = await getSecret(context, SERVICE_ACCOUNT_SECRET_KEY);
   if (stored) {
     try {
       return JSON.parse(stored) as ServiceAccountKey;
@@ -44,7 +45,9 @@ async function loadServiceAccountKey(): Promise<ServiceAccountKey | null> {
     }
   }
 
-  // 2. Try the data/ file (dev convenience)
+  // 2. Try the data/ file only as a development convenience. Packaged
+  // execution must never bypass the active shop's secret store.
+  if (process.env.NODE_ENV === "production") return null;
   try {
     const { readFile } = await import("node:fs/promises");
     const { join } = await import("node:path");
@@ -57,8 +60,8 @@ async function loadServiceAccountKey(): Promise<ServiceAccountKey | null> {
 }
 
 /** Create an authenticated Google Sheets client. */
-async function getSheetsClient() {
-  const key = await loadServiceAccountKey();
+async function getSheetsClient(context: ServiceContext) {
+  const key = await loadServiceAccountKey(context);
   if (!key) {
     throw new Error("Google Service Account not configured. Add credentials in Settings → Integrations.");
   }
@@ -77,14 +80,18 @@ async function getSheetsClient() {
 }
 
 /** Check if Google Sheets is configured. */
-export async function isGoogleSheetsConfigured(): Promise<boolean> {
-  const key = await loadServiceAccountKey();
+export async function isGoogleSheetsConfigured(context: ServiceContext): Promise<boolean> {
+  const key = await loadServiceAccountKey(context);
   return key !== null;
 }
 
 /** Read all values from a sheet (by spreadsheet ID + range). */
-export async function readSheet(spreadsheetId: string, range: string): Promise<string[][]> {
-  const sheets = await getSheetsClient();
+export async function readSheet(
+  context: ServiceContext,
+  spreadsheetId: string,
+  range: string,
+): Promise<string[][]> {
+  const sheets = await getSheetsClient(context);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range,
@@ -94,11 +101,12 @@ export async function readSheet(spreadsheetId: string, range: string): Promise<s
 
 /** Write values to a sheet (append mode). */
 export async function appendToSheet(
+  context: ServiceContext,
   spreadsheetId: string,
   range: string,
   values: string[][],
 ): Promise<{ updatedRows: number }> {
-  const sheets = await getSheetsClient();
+  const sheets = await getSheetsClient(context);
   const res = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range,
@@ -112,11 +120,12 @@ export async function appendToSheet(
 
 /** Write values to a sheet (overwrite mode). */
 export async function updateSheet(
+  context: ServiceContext,
   spreadsheetId: string,
   range: string,
   values: string[][],
 ): Promise<{ updatedRows: number }> {
-  const sheets = await getSheetsClient();
+  const sheets = await getSheetsClient(context);
   const res = await sheets.spreadsheets.values.update({
     spreadsheetId,
     range,
@@ -140,10 +149,11 @@ export async function updateSheet(
  * to call unconditionally even on a fresh sheet.
  */
 export async function clearSheetRange(
+  context: ServiceContext,
   spreadsheetId: string,
   range: string,
 ): Promise<void> {
-  const sheets = await getSheetsClient();
+  const sheets = await getSheetsClient(context);
   await sheets.spreadsheets.values.clear({
     spreadsheetId,
     range,
@@ -151,8 +161,11 @@ export async function clearSheetRange(
 }
 
 /** Create a new spreadsheet and return its ID. */
-export async function createSpreadsheet(title: string): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
-  const key = await loadServiceAccountKey();
+export async function createSpreadsheet(
+  context: ServiceContext,
+  title: string,
+): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+  const key = await loadServiceAccountKey(context);
   if (!key) throw new Error("Google Service Account not configured");
 
   const jwt = new google.auth.JWT({
@@ -189,10 +202,13 @@ export async function createSpreadsheet(title: string): Promise<{ spreadsheetId:
  *
  * Called once per export, BEFORE any writeOrdersBatch calls.
  */
-export async function prepareSheetForExport(spreadsheetId: string): Promise<void> {
+export async function prepareSheetForExport(
+  context: ServiceContext,
+  spreadsheetId: string,
+): Promise<void> {
   const headers = [["Order #", "Customer", "Phone", "Wilaya", "Commune", "Total (DZD)", "Status", "Date"]];
-  await updateSheet(spreadsheetId, "A1", headers);
-  await clearSheetRange(spreadsheetId, "A2:Z100000");
+  await updateSheet(context, spreadsheetId, "A1", headers);
+  await clearSheetRange(context, spreadsheetId, "A2:Z100000");
 }
 
 /**
@@ -210,6 +226,7 @@ export async function prepareSheetForExport(spreadsheetId: string): Promise<void
  *     so batch N starts at row 2 + N * BATCH_SIZE).
  */
 export async function writeOrdersBatch(
+  context: ServiceContext,
   spreadsheetId: string,
   orders: Array<{
     orderNumber: string;
@@ -238,7 +255,7 @@ export async function writeOrdersBatch(
   ]);
   const endRow = startRow + rows.length - 1;
   const range = `A${startRow}:H${endRow}`;
-  return updateSheet(spreadsheetId, range, rows);
+  return updateSheet(context, spreadsheetId, range, rows);
 }
 
 /**
@@ -268,6 +285,7 @@ export async function writeOrdersBatch(
  * number of orders.
  */
 export async function exportOrdersToSheet(
+  context: ServiceContext,
   spreadsheetId: string,
   orders: Array<{
     orderNumber: string;
@@ -280,7 +298,7 @@ export async function exportOrdersToSheet(
     createdAt: Date;
   }>,
 ): Promise<{ updatedRows: number }> {
-  await prepareSheetForExport(spreadsheetId);
+  await prepareSheetForExport(context, spreadsheetId);
 
   if (orders.length === 0) {
     return { updatedRows: 0 };
@@ -293,7 +311,7 @@ export async function exportOrdersToSheet(
   for (let i = 0; i < orders.length; i += BATCH_SIZE) {
     const batch = orders.slice(i, i + BATCH_SIZE);
     const startRow = i + 2; // +2 because row 1 = headers
-    const result = await writeOrdersBatch(spreadsheetId, batch, startRow);
+    const result = await writeOrdersBatch(context, spreadsheetId, batch, startRow);
     totalUpdated += result.updatedRows;
   }
 
@@ -301,7 +319,10 @@ export async function exportOrdersToSheet(
 }
 
 /** Store the service account JSON (from the Settings UI upload). */
-export async function setServiceAccount(jsonContent: string): Promise<void> {
+export async function setServiceAccount(
+  context: ServiceContext,
+  jsonContent: string,
+): Promise<void> {
   const { setSecret } = await import("@/lib/secrets");
-  await setSecret(SERVICE_ACCOUNT_SECRET_KEY, jsonContent);
+  await setSecret(context, SERVICE_ACCOUNT_SECRET_KEY, jsonContent);
 }

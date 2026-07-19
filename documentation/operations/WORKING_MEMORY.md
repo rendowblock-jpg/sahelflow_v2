@@ -1,6 +1,6 @@
 # SahelFlow working memory
 
-> **Last updated:** 2026-07-17
+> **Last updated:** 2026-07-19
 
 This is the compact entry point for current work. Update it at meaningful checkpoints and link deeper material rather than turning it into a transcript.
 
@@ -82,7 +82,7 @@ Historical Session-40 handoff/tool content remains in orphan-branch Git history 
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active on `agent/proven-canonical-windows-desktop`, based on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active on `agent/authenticated-runtime-protocol` in draft PR #104. The committed source checkpoint is `7ad237a0271458b0a98801ef686262fce56a0e09`; clean-checkout CI is green, while installed-candidate and device claims remain explicitly unproven.
 
 Required outcome:
 
@@ -92,18 +92,25 @@ Current checkpoint:
 
 - GitHub Actions infrastructure is operational; run #371 passed the complete Quality Gate and Tauri smoke after the CI fallback key was corrected to a valid 256-bit hex key and the Linux cargo-check sidecar placeholder was created inside CI only.
 - `sf-inventory` now generates machine-readable clean-checkout evidence. Run #374 passed and retained an inventory for 691 files, 31 pages, 114 API routes, 125 components, 142 CSS custom-property tokens, 31 Prisma models and 97 test files.
+- A 2026-07-18 `sf-inventory --allow-dirty` diagnostic refresh reports 692 files, 31 pages, 114 API routes, 36 commands, 125 components, 31 Prisma models, 9 migration files, 97 test files and 14 sidecar/desktop resource files. This is useful local drift information only; it is not clean-checkout evidence.
 - The Tauri smoke now runs `cargo check --release`, so release-only startup code is compiled instead of being silently excluded by `cfg(not(debug_assertions))`.
 - The first Phase 1A runtime patch is implemented: the mandatory Next.js resource/runtime/spawn/readiness path fails closed, kills a timed-out child, and starts the degradable WhatsApp sidecar only after the application server is proven ready.
 - Run #378 passed authority audit, inventory, TypeScript, ESLint, Vitest, coverage, security audit, migration status and `cargo check --release` for that patch.
+- The uncommitted Phase 1A source checkpoint now allocates loopback endpoints per launch, creates independent runtime/application/sidecar credentials, authenticates readiness and webview bootstrap, binds readiness to the exact process/shop/registry/migration tuple, and shows a redacted seller-visible blocked-startup document instead of the main shell.
+- Phase 1B source work now includes a process-bound fail-closed `ShopContext`, atomic versioned registry, positive imported revisions, all-shop migration planning, external journal, verified snapshots, OS-backed installation lock, interrupted-run restoration, and process-bound database authority with no registry fallback.
+- Production domain services, AI tools/agent, e-commerce sync, automation dispatch, secrets/credentials, audit/auth persistence, order ledger, repository writes and route-local transactions now carry explicit shop authority. Packaged Google Sheets credential loading cannot fall back to a process working-directory file. A production-only source scan finds zero direct global-`db` route mutations and zero global-`db.$transaction` route roots; the remaining 23 raw-name mutation matches across eight service/tool files are aliases assigned from `ServiceContext` or `ToolContext`, not authority selection.
+- The migration coordinator now writes an atomic, support-readable per-shop compatibility report before migration. Deterministic source drills prove insufficient-space blocking before snapshots, a zero-snapshot-space no-op rerun, two-shop migration with row preservation, divergent-history reporting, and one-version-back representative seller rows surviving the repository's actual packaged migration set.
+- Mandatory runtime supervision now uses one explicit state machine: post-ready crashes and failed automatic restarts share a three-attempt 2/5/15-second budget, 60 seconds of stable runtime resets the budget, exhaustion enters seller-visible crash-loop safe mode, and shutdown prevents restart or late child registration.
+- Commits `b3fcb26` and `7ad237a` close the adversarial-review blockers around stale journal rollback, Windows process-tree containment, bounded generation-aware restarts, registry file aliasing, legacy schema fingerprinting, strict order ledgers, COD/refund atomicity, shipment reconciliation and disposable test-sandbox escape.
+- Clean-checkout CI run `29697219950` is green at `7ad237a`: the Quality Gate passed 94 files and 1,534 tests with 80.87% statement/line coverage, a clean production audit and current migration status; the independent Tauri job passed release-path Rust compilation.
+- Current local Windows verification is green for the source-testable changes: the fast shared gate passed TypeScript and complete ESLint; 60 focused transaction/sandbox tests passed; `cargo test --all-features --locked` passed 42/42 tests including a real descendant-process Job Object test; warning-denied Clippy, formatting, release compilation and the shared migration hash vector passed.
+- The Phase 1A/1B source and clean-checkout sub-gates are met for this checkpoint. Installed Windows migration/failure injection, a separately approved representative seller-data copy and reference-device measurements remain required before artifact or field claims.
 - No installed Windows artifact, failure-injection run, migration/recovery drill, T470 measurement or 4 GB measurement is claimed yet.
 
 Exact next executable action:
 
-1. enumerate desktop startup/readiness call sites from the retained inventory;
-2. implement one structured seller-visible blocked/recovery startup state that cannot expose the main shell as ready;
-3. design endpoint allocation, per-launch credentials and readiness as one bounded supervisor protocol;
-4. then begin the explicit `ShopContext` and atomic registry boundary, preserving one SQLite file per shop while removing silent fallback;
-5. validate each bounded change through the full clean-checkout Quality Gate and release-path Rust smoke before installed Windows evidence.
+1. complete PR #104 integration review and merge the green source checkpoint;
+2. only then build the internal MSI and perform the separately confirmed clean-install, migration, restart/crash-loop and failure-injection matrix before any installed-candidate claim.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 
@@ -111,5 +118,6 @@ Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion bef
 
 - Exact local Windows environment for the first installed candidate.
 - Exact 4 GB floor-reference machine/dataset and T470 dataset.
+- Persisted shop-incarnation identity before backup restore or future inbox/outbox records may treat a deleted-and-recreated slug as the same shop.
 - Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.
 - Which courier candidates the Founder selects for the public launch set after live certification evidence.

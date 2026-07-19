@@ -6,16 +6,18 @@
  * "activity") so it appears inline in the thread timeline.
  */
 import "server-only";
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 import { logAudit } from "@/lib/audit";
 
 export type ConversationStatus = "open" | "pending" | "resolved" | "snoozed";
 
 export async function updateConversationStatus(
+  context: ServiceContext,
   conversationId: string,
   status: ConversationStatus,
   snoozedUntil?: Date,
 ) {
+  const db = context.prisma;
   // TXN: conversation update + activity message must be atomic (audit finding
   // D-conv: "conversation update + activity message not transactional").
   const conv = await db.$transaction(async (tx) => {
@@ -44,7 +46,7 @@ export async function updateConversationStatus(
     return updated;
   });
 
-  void logAudit({
+  void logAudit(context, {
     action: "conversation.status.changed",
     entity: "conversation",
     entityId: conversationId,
@@ -55,7 +57,12 @@ export async function updateConversationStatus(
   return conv;
 }
 
-export async function assignConversation(conversationId: string, assigneeId: string | null) {
+export async function assignConversation(
+  context: ServiceContext,
+  conversationId: string,
+  assigneeId: string | null,
+) {
+  const db = context.prisma;
   // TXN: conversation update + activity message must be atomic.
   const conv = await db.$transaction(async (tx) => {
     const updated = await tx.conversation.update({
@@ -77,7 +84,7 @@ export async function assignConversation(conversationId: string, assigneeId: str
     return updated;
   });
 
-  void logAudit({
+  void logAudit(context, {
     action: "conversation.assigned",
     entity: "conversation",
     entityId: conversationId,
@@ -89,9 +96,11 @@ export async function assignConversation(conversationId: string, assigneeId: str
 }
 
 export async function setConversationPriority(
+  context: ServiceContext,
   conversationId: string,
   priority: "urgent" | "high" | "medium" | "low" | null,
 ) {
+  const db = context.prisma;
   // TXN: conversation update + activity message must be atomic.
   const conv = await db.$transaction(async (tx) => {
     const updated = await tx.conversation.update({
@@ -116,7 +125,12 @@ export async function setConversationPriority(
   return conv;
 }
 
-export async function setConversationLabels(conversationId: string, labels: string[]) {
+export async function setConversationLabels(
+  context: ServiceContext,
+  conversationId: string,
+  labels: string[],
+) {
+  const db = context.prisma;
   const conv = await db.conversation.update({
     where: { id: conversationId },
     data: { labels: JSON.stringify(labels) },
@@ -124,7 +138,11 @@ export async function setConversationLabels(conversationId: string, labels: stri
   return conv;
 }
 
-export async function getConversationLabels(conversationId: string): Promise<string[]> {
+export async function getConversationLabels(
+  context: ServiceContext,
+  conversationId: string,
+): Promise<string[]> {
+  const db = context.prisma;
   const conv = await db.conversation.findUnique({
     where: { id: conversationId },
     select: { labels: true },
@@ -145,7 +163,11 @@ export async function getConversationLabels(conversationId: string): Promise<str
  * Returns the conversation id (cuid) — callers can then PATCH by that id.
  * Or returns null if the input doesn't look like a JID.
  */
-export async function ensureConversationForJid(jidOrId: string): Promise<string> {
+export async function ensureConversationForJid(
+  context: ServiceContext,
+  jidOrId: string,
+): Promise<string> {
+  const db = context.prisma;
   // If it doesn't look like a JID, return as-is (it's already a cuid)
   if (!jidOrId.includes("@")) {
     return jidOrId;

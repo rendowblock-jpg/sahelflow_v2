@@ -42,7 +42,11 @@ import { readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import QRCode from "qrcode";
 import { wa, type SidecarEvent } from "./whatsapp";
 
-const PORT = 3001;
+const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
+if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
+  throw new Error("SIDECAR_PORT must be a valid TCP port");
+}
+const PORT = configuredPort;
 const HOST = process.env.SIDECAR_HOST || "127.0.0.1";
 // T-P5: use os.tmpdir() instead of hardcoding /tmp — /tmp doesn't exist
 // on Windows (the equivalent is %TEMP% / %TMP%). os.tmpdir() resolves the

@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { SpeculationRules } from "@/components/shared/speculation-rules";
 import { getDirection, type Locale } from "@/lib/i18n";
+import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
+import { redirect } from "next/navigation";
 
 const VALID_LOCALES: readonly string[] = ["ar", "fr", "en"];
 
@@ -23,6 +25,9 @@ export default async function DashboardRouteLayout({
 }: {
   children: React.ReactNode;
 }) {
+  if (!(await isAuthSetup())) redirect("/setup");
+  if (!(await isAuthenticated())) redirect("/login");
+
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get("sahelflow-locale")?.value;
   const locale: Locale =

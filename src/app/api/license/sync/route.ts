@@ -11,7 +11,7 @@
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
@@ -70,16 +70,17 @@ export const POST = withErrorHandler(async (req: Request) => {
       message: err instanceof Error ? err.message : "License verification failed",
     };
   }
+  const context = { prisma: db, shop: shopContext };
 
   // Store the SERVER-VERIFIED result (not the client's claim)
-  await db.setting.upsert({
+  await context.prisma.setting.upsert({
     where: { key: "active_license_status" },
     create: { key: "active_license_status", value: JSON.stringify(result) },
     update: { value: JSON.stringify(result) },
   });
 
   // Also store the license blob (for re-verification on future server checks)
-  await db.setting.upsert({
+  await context.prisma.setting.upsert({
     where: { key: "active_license_payload" },
     create: { key: "active_license_payload", value: JSON.stringify(license) },
     update: { value: JSON.stringify(license) },
@@ -87,7 +88,7 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   // Store the machine ID so server-side requireLicense() can re-verify
   // without calling getMachineId() (which returns "ssr-placeholder" SSR).
-  await db.setting.upsert({
+  await context.prisma.setting.upsert({
     where: { key: "active_machine_id" },
     create: { key: "active_machine_id", value: input.machineId },
     update: { value: input.machineId },
@@ -98,7 +99,7 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   // W2-5: audit license sync — security-relevant (license status changes gate app features).
   // Don't log the full license blob (contains machine IDs); log the validation result.
-  void logAudit({
+  void logAudit(context, {
     action: "license.synced",
     entity: "license",
     entityId: license.payload.id,

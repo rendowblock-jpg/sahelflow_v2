@@ -16,11 +16,17 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 // ── Module mocks (hoisted by vitest) ─────────────────────────────────────────
 
 vi.mock("@/lib/secrets", () => ({
-  getSecret: vi.fn<(key: string) => Promise<string | null>>().mockResolvedValue(null),
+  getSecret: vi.fn<(_context: unknown, key: string) => Promise<string | null>>().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {},
+  shopContext: {
+    shopId: "test",
+    registryRevision: 1,
+    databaseFileId: "test.db",
+    migrationSetSha256: "0".repeat(64),
+  },
 }));
 
 vi.mock("../tools/registry", () => ({
@@ -146,7 +152,7 @@ describe("runAgent — no API key", () => {
     expect(result.response).toMatch(/clé Gemini/i);
     expect(result.response).toMatch(/Paramètres/i);
     expect(result.toolCalls).toEqual([]);
-    expect(getSecret).toHaveBeenCalledWith("gemini_api_key");
+    expect(getSecret).toHaveBeenCalledWith(expect.any(Object), "gemini_api_key");
     // Must NOT have called Gemini
     expect(fetch).not.toHaveBeenCalled();
   });

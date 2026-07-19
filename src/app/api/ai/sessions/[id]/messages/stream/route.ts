@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireLicense } from "@/lib/license/license-server";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { runAgentStream, type AgentMessage, type AgentStreamEvent, type AgentResult } from "@/lib/ai/chat/agent";
 import { isAuthenticated, getCurrentUserKey } from "@/lib/auth/server";
 import { redactPii } from "@/lib/redact-pii";
@@ -43,6 +43,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
 
   // SEC-013: defense-in-depth auth check (middleware is the primary layer)
   if (!(await isAuthenticated())) {
@@ -58,7 +59,11 @@ export async function POST(
   // refuse the request — same gate as /api/extraction and the non-streaming
   // messages route. (Checked before the license + rate-limit gates so the
   // seller sees the consent_required error first.)
-  const consent = await getBool(SETTING_KEYS.geminiConsentAccepted, false);
+  const consent = await getBool(
+    context,
+    SETTING_KEYS.geminiConsentAccepted,
+    false,
+  );
   if (!consent) {
     return new Response(
       JSON.stringify({
@@ -122,7 +127,7 @@ export async function POST(
   }
 
   // Save the user message immediately
-  await db.aiChatMessage.create({
+  await context.prisma.aiChatMessage.create({
     data: { sessionId: id, role: "user", content: input.message },
   });
 
@@ -156,12 +161,12 @@ export async function POST(
 
   // Auto-title from first message
   if (session.messages.length === 0 && session.title === "Nouvelle conversation") {
-    await db.aiChatSession.update({
+    await context.prisma.aiChatSession.update({
       where: { id },
       data: { title: input.message.slice(0, 50) },
     });
   } else {
-    await db.aiChatSession.update({
+    await context.prisma.aiChatSession.update({
       where: { id },
       data: { updatedAt: new Date() },
     });
@@ -216,7 +221,7 @@ export async function POST(
 
       // Save the assistant message (whether success or error)
       try {
-        await db.aiChatMessage.create({
+        await context.prisma.aiChatMessage.create({
           data: {
             sessionId: id,
             role: "assistant",

@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
 import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,7 +20,7 @@ export default async function EditStorefrontPage({
   const { id } = await params;
   const { t } = await getI18n();
 
-  const config = await storefrontService.getById(id);
+  const config = await storefrontService.getById({ prisma: db, shop: shopContext }, id);
   if (!config) {
     notFound();
   }

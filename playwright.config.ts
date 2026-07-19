@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import { assertTestSandbox } from "./scripts/test-sandbox";
+
+assertTestSandbox("Playwright");
 
 /**
  * Playwright E2E configuration.

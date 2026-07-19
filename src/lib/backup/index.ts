@@ -1,228 +1,287 @@
-/**
- * Full-database backup / restore for the local-first SQLite store.
- *
- * ARCHITECTURE
- * ────────────
- * The app uses one SQLite file per shop (data/shops/*.db), with the active
- * shop tracked in data/app-meta.json. Backups are byte-for-byte copies of
- * the active shop's .db file stored under data/backups/. Restore copies a
- * backup back over the active .db file (destructive — overwrites current
- * data). All operations require authentication at the route layer.
- *
- * WAL SAFETY
- * ─────────
- * Prisma's SQLite driver uses WAL mode by default — committed transactions
- * may sit in the -wal sidecar until checkpointed. Before each backup we run
- * `PRAGMA wal_checkpoint(TRUNCATE)` so the .db file alone contains all
- * committed data. (The -wal file is not copied.)
- *
- * CONNECTION SAFETY ON RESTORE
- * ────────────────────────────
- * We disconnect every shop client (and the raw fallback client) before
- * overwriting the file, so no open file handle holds a stale inode. The
- * next request re-establishes the connection lazily through the existing
- * Proxy cache.
- */
 import "server-only";
 
-import { copyFile, mkdir, readdir, stat, unlink } from "fs/promises";
-import { existsSync, readFileSync } from "fs";
-import { basename, join, resolve } from "path";
-import { db, disconnectAllShops } from "@/lib/db";
+import { PrismaClient } from "@prisma/client";
+import {
+  copyFile,
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { basename, join } from "node:path";
+import { db, disconnectAllShops, shopContext } from "@/lib/db";
+import {
+  getRegistry,
+  getShop,
+  getShopDatabasePath,
+} from "@/lib/shops";
+import { dataRoot } from "@/lib/storage/data-root";
 import { SahelFlowError } from "@/types/errors";
 
-/** Directory where backup .db files are stored. */
-export const backupsDir = join(process.cwd(), "data", "backups");
+const BACKUP_FORMAT_VERSION = 1;
+export const backupsDir = join(dataRoot(), "backups");
+const BACKUP_FILENAME_RE = /^sahelflow-backup-([a-z0-9][a-z0-9-]*)-([0-9TZ-]+)\.db$/;
 
-/** Filename pattern: sahelflow-backup-<iso-timestamp-with-dashes>.db */
-const BACKUP_FILENAME_RE = /^sahelflow-backup-[0-9TZ-]+\.db$/;
-
-/** Ensure the backups directory exists. */
-async function ensureBackupsDir(): Promise<void> {
-  await mkdir(backupsDir, { recursive: true });
-}
-
-/**
- * Resolve the absolute path to the active shop's SQLite file.
- * Falls back to data/shops/dev.db (the default shop) when the registry
- * is missing or no shop is active.
- */
-export function getActiveDbPath(): string {
-  try {
-    const metaPath = join(process.cwd(), "data", "app-meta.json");
-    if (existsSync(metaPath)) {
-      const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as {
-        shops?: Array<{ id: string; dbPath: string }>;
-        activeShopId?: string | null;
-      };
-      const activeId = meta.activeShopId;
-      const shop = activeId
-        ? meta.shops?.find((s) => s.id === activeId)
-        : undefined;
-      if (shop?.dbPath) {
-        const resolved = resolve(process.cwd(), shop.dbPath);
-        if (existsSync(resolved)) return resolved;
-        // Fall through to DATABASE_URL if the file doesn't exist
-      }
-    }
-  } catch {
-    // ignore — fall through to fallback
-  }
-  // Fallback: use DATABASE_URL (test/CI environment where app-meta.json
-  // may point to a non-existent path)
-  const dbUrl = process.env.DATABASE_URL;
-  if (dbUrl?.startsWith("file:")) {
-    const path = dbUrl.slice("file:".length);
-    if (existsSync(path)) return resolve(path);
-  }
-  return join(process.cwd(), "data", "shops", "dev.db");
-}
-
-/**
- * Reject anything that isn't a single .db filename matching our naming
- * convention. Prevents path traversal (../) and arbitrary writes.
- * Returns the safe basename.
- */
-export function validateBackupFilename(filename: string): string {
-  if (!filename || typeof filename !== "string") {
-    throw new SahelFlowError("Filename required", "VALIDATION", 400);
-  }
-  const safe = basename(filename);
-  if (safe !== filename) {
-    throw new SahelFlowError("Invalid backup filename", "VALIDATION", 400);
-  }
-  if (safe.includes("..") || safe.includes("/") || safe.includes("\\")) {
-    throw new SahelFlowError("Invalid backup filename", "VALIDATION", 400);
-  }
-  if (!BACKUP_FILENAME_RE.test(safe)) {
-    throw new SahelFlowError(
-      "Backup filename does not match expected pattern",
-      "VALIDATION",
-      400,
-    );
-  }
-  return safe;
-}
+type BackupManifest = {
+  formatVersion: 1;
+  installationId: string;
+  shopId: string;
+  registryRevision: number;
+  databaseFile: string;
+  migrationSetSha256: string;
+  createdAt: string;
+  size: number;
+  sha256: string;
+  integrity: "ok";
+};
 
 export interface BackupEntry {
   filename: string;
   size: number;
-  /** ISO timestamp from the file's mtime. */
   createdAt: string;
+  shopId: string;
+  sha256: string;
 }
 
-/**
- * Create a timestamped backup of the active shop's SQLite file.
- * Returns the new filename + size in bytes.
- */
-export async function createBackup(): Promise<{
-  filename: string;
-  size: number;
-}> {
-  await ensureBackupsDir();
-  const dbPath = getActiveDbPath();
+function manifestPath(databaseBackupPath: string): string {
+  return `${databaseBackupPath}.manifest.json`;
+}
 
-  if (!existsSync(dbPath)) {
+async function sha256(path: string): Promise<string> {
+  const hash = createHash("sha256");
+  await new Promise<void>((resolve, reject) => {
+    const stream = createReadStream(path);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("error", reject);
+    stream.on("end", resolve);
+  });
+  return hash.digest("hex");
+}
+
+async function verifySqlite(path: string): Promise<void> {
+  const verifier = new PrismaClient({ datasourceUrl: `file:${path}` });
+  try {
+    const integrity = await verifier.$queryRawUnsafe<Array<Record<string, string>>>(
+      "PRAGMA integrity_check",
+    );
+    const result = Object.values(integrity[0] ?? {})[0];
+    if (result !== "ok") {
+      throw new Error(`SQLite integrity check returned ${result ?? "no result"}`);
+    }
+    const foreignKeys = await verifier.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      "PRAGMA foreign_key_check",
+    );
+    if (foreignKeys.length > 0) {
+      throw new Error("SQLite foreign key check failed");
+    }
+  } finally {
+    await verifier.$disconnect();
+  }
+}
+
+async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+  });
+  await rm(path, { force: true });
+  await rename(temporary, path);
+}
+
+function activeShopPath(): string {
+  const registry = getRegistry();
+  const shop = getShop(shopContext.shopId);
+  if (
+    registry.revision !== shopContext.registryRevision ||
+    !shop ||
+    shop.databaseFile !== shopContext.databaseFileId
+  ) {
     throw new SahelFlowError(
-      "Database file not found — nothing to back up",
-      "NOT_FOUND",
-      404,
+      "The active process ShopContext no longer matches the registry",
+      "SHOP_CONTEXT_STALE",
+      409,
     );
   }
-
-  // Force WAL checkpoint so all committed data is in the main .db file.
-  // Best-effort: proceed with the copy even if the checkpoint fails.
-  try {
-    await db.$queryRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)").catch(() => {}); // PRAGMA returns results — use queryRaw + tolerate error
-  } catch {
-    /* ignore — copy will still capture the main .db file */
-  }
-
-  const ts = new Date().toISOString().replace(/[:.]/g, "-");
-  const filename = `sahelflow-backup-${ts}.db`;
-  const backupPath = join(backupsDir, filename);
-
-  await copyFile(dbPath, backupPath);
-  const size = (await stat(backupPath)).size;
-
-  return { filename, size };
+  return getShopDatabasePath(shop);
 }
 
-/**
- * List all backup files, newest first.
- * Returns an empty array if the backups directory does not exist yet.
- */
-export async function listBackups(): Promise<BackupEntry[]> {
-  if (!existsSync(backupsDir)) return [];
+export function getActiveDbPath(): string {
+  return activeShopPath();
+}
 
+export function validateBackupFilename(filename: string): string {
+  if (!filename || basename(filename) !== filename || !BACKUP_FILENAME_RE.test(filename)) {
+    throw new SahelFlowError("Invalid backup filename", "VALIDATION", 400);
+  }
+  return filename;
+}
+
+async function readManifest(path: string): Promise<BackupManifest> {
+  let manifest: BackupManifest;
+  try {
+    manifest = JSON.parse(await readFile(path, "utf8")) as BackupManifest;
+  } catch {
+    throw new SahelFlowError("Backup manifest is missing or corrupt", "BACKUP_MANIFEST_INVALID", 409);
+  }
+  if (
+    manifest.formatVersion !== BACKUP_FORMAT_VERSION ||
+    manifest.integrity !== "ok" ||
+    !/^[0-9a-f]{64}$/i.test(manifest.sha256) ||
+    !/^[0-9a-f]{64}$/i.test(manifest.migrationSetSha256)
+  ) {
+    throw new SahelFlowError("Backup manifest is invalid", "BACKUP_MANIFEST_INVALID", 409);
+  }
+  return manifest;
+}
+
+export async function createBackup(): Promise<BackupEntry> {
+  await mkdir(backupsDir, { recursive: true });
+  const databasePath = activeShopPath();
+  await db.$queryRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)");
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `sahelflow-backup-${shopContext.shopId}-${timestamp}.db`;
+  const finalPath = join(backupsDir, filename);
+  const stagedPath = `${finalPath}.${randomUUID()}.tmp`;
+  await copyFile(databasePath, stagedPath);
+  await verifySqlite(stagedPath);
+  const size = (await stat(stagedPath)).size;
+  const digest = await sha256(stagedPath);
+  await rename(stagedPath, finalPath);
+
+  const registry = getRegistry();
+  const manifest: BackupManifest = {
+    formatVersion: BACKUP_FORMAT_VERSION,
+    installationId: registry.installationId,
+    shopId: shopContext.shopId,
+    registryRevision: shopContext.registryRevision,
+    databaseFile: shopContext.databaseFileId,
+    migrationSetSha256: shopContext.migrationSetSha256,
+    createdAt: new Date().toISOString(),
+    size,
+    sha256: digest,
+    integrity: "ok",
+  };
+  await writeJsonAtomic(manifestPath(finalPath), manifest);
+  return {
+    filename,
+    size,
+    createdAt: manifest.createdAt,
+    shopId: manifest.shopId,
+    sha256: manifest.sha256,
+  };
+}
+
+export async function listBackups(): Promise<BackupEntry[]> {
+  await mkdir(backupsDir, { recursive: true });
   const entries = await readdir(backupsDir);
   const backups: BackupEntry[] = [];
-
   for (const filename of entries) {
     if (!BACKUP_FILENAME_RE.test(filename)) continue;
+    const path = join(backupsDir, filename);
     try {
-      const filePath = join(backupsDir, filename);
-      const fileStat = await stat(filePath);
-      if (!fileStat.isFile()) continue;
+      const manifest = await readManifest(manifestPath(path));
+      if (manifest.shopId !== shopContext.shopId) continue;
       backups.push({
         filename,
-        size: fileStat.size,
-        createdAt: fileStat.mtime.toISOString(),
+        size: manifest.size,
+        createdAt: manifest.createdAt,
+        shopId: manifest.shopId,
+        sha256: manifest.sha256,
       });
     } catch {
-      // skip unreadable files
+      // Corrupt entries are not offered as restore points.
     }
   }
-
-  backups.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return backups;
+  return backups.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-/**
- * Restore a backup file by copying it over the active shop's DB file.
- *
- * DANGEROUS — overwrites all current data with the backup's snapshot.
- * Disconnects every shop client first so no stale file handle remains.
- * The next request re-establishes the connection lazily.
- */
 export async function restoreBackup(
   filename: string,
-): Promise<{ success: true }> {
+): Promise<{ success: true; relaunchRequired: true; rescueFile: string }> {
+  if (process.env.NODE_ENV === "production") {
+    throw new SahelFlowError(
+      "Live backup restore is blocked until the desktop supervisor owns database replacement",
+      "BACKUP_RESTORE_SUPERVISOR_REQUIRED",
+      503,
+    );
+  }
   const safe = validateBackupFilename(filename);
   const backupPath = join(backupsDir, safe);
-
-  if (!existsSync(backupPath)) {
-    throw new SahelFlowError("Backup file not found", "NOT_FOUND", 404);
+  const manifest = await readManifest(manifestPath(backupPath));
+  const registry = getRegistry();
+  if (
+    manifest.installationId !== registry.installationId ||
+    manifest.shopId !== shopContext.shopId ||
+    manifest.databaseFile !== shopContext.databaseFileId ||
+    manifest.migrationSetSha256 !== shopContext.migrationSetSha256
+  ) {
+    throw new SahelFlowError(
+      "Backup does not belong to the active installation, shop, or schema",
+      "BACKUP_CONTEXT_MISMATCH",
+      409,
+    );
+  }
+  if ((await sha256(backupPath)) !== manifest.sha256) {
+    throw new SahelFlowError("Backup hash verification failed", "BACKUP_HASH_MISMATCH", 409);
   }
 
-  const dbPath = getActiveDbPath();
+  const databasePath = activeShopPath();
+  const stagedRestore = `${databasePath}.${randomUUID()}.restore-staged`;
+  await copyFile(backupPath, stagedRestore);
+  await verifySqlite(stagedRestore);
+  await db.$queryRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)");
+  await disconnectAllShops();
 
-  // Disconnect Prisma so it releases file handles before we overwrite.
-  // The next request re-establishes the connection automatically.
+  const recoveryDir = join(backupsDir, "recovery");
+  await mkdir(recoveryDir, { recursive: true });
+  const rescueFile = `${shopContext.shopId}-${Date.now()}-pre-restore.db`;
+  const rescuePath = join(recoveryDir, rescueFile);
+  await copyFile(databasePath, rescuePath);
+  await verifySqlite(rescuePath);
+
+  const displaced = `${databasePath}.${randomUUID()}.displaced`;
+  let displacedReady = false;
   try {
-    await disconnectAllShops();
-  } catch {
-    /* best-effort */
+    await rename(databasePath, displaced);
+    displacedReady = true;
+    await rename(stagedRestore, databasePath);
+    await verifySqlite(databasePath);
+    await rm(displaced, { force: true });
+  } catch (error) {
+    if (displacedReady) {
+      await rm(databasePath, { force: true });
+      await rename(displaced, databasePath).catch(() => undefined);
+    }
+    await rm(stagedRestore, { force: true });
+    throw error;
   }
 
-  // Ensure the parent directory exists (in case the .db was deleted).
-  await mkdir(resolve(dbPath, ".."), { recursive: true });
-  await copyFile(backupPath, dbPath);
-
-  return { success: true as const };
+  await writeJsonAtomic(`${rescuePath}.json`, {
+    formatVersion: 1,
+    state: "restore-complete",
+    shopId: shopContext.shopId,
+    restoredFrom: safe,
+    rescueFile,
+    completedAt: new Date().toISOString(),
+  });
+  return { success: true, relaunchRequired: true, rescueFile };
 }
 
-/** Permanently delete a backup file. */
-export async function deleteBackup(
-  filename: string,
-): Promise<{ success: true }> {
+export async function deleteBackup(filename: string): Promise<{ success: true }> {
   const safe = validateBackupFilename(filename);
-  const backupPath = join(backupsDir, safe);
-
-  if (!existsSync(backupPath)) {
-    throw new SahelFlowError("Backup file not found", "NOT_FOUND", 404);
+  const path = join(backupsDir, safe);
+  const manifest = await readManifest(manifestPath(path));
+  if (manifest.shopId !== shopContext.shopId) {
+    throw new SahelFlowError("Backup belongs to another shop", "BACKUP_CONTEXT_MISMATCH", 409);
   }
-
-  await unlink(backupPath);
-  return { success: true as const };
+  await rm(path);
+  await rm(manifestPath(path), { force: true });
+  return { success: true };
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch page + total count in parallel (single round-trip feel)
   const [orders, total] = await Promise.all([
-    orderService.list({ prisma: db }, { status: statusFilter, limit, offset }),
+    orderService.list({ prisma: db, shop: shopContext }, { status: statusFilter, limit, offset }),
     db.order.count({ where: { deletedAt: null, ...(statusFilter ? { status: statusFilter } : {}) } }),
   ]);
 
@@ -43,14 +43,14 @@ export async function GET(req: NextRequest) {
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
-  const order = await orderService.create({ prisma: db }, body);
+  const order = await orderService.create({ prisma: db, shop: shopContext }, body);
 
   // Auto-assess risk on creation (fire-and-forget — don't block the response
   // if the risk engine has an issue; the assessment is also available via
   // GET /api/risk/assess/[orderId] on demand).
   let risk: Awaited<ReturnType<typeof assessOrderRisk>> = null;
   try {
-    risk = await assessOrderRisk(order.id);
+    risk = await assessOrderRisk({ prisma: db, shop: shopContext }, order.id);
   } catch {
     // Risk assessment is non-critical — the order was created successfully.
   }

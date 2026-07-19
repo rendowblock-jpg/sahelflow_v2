@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -20,8 +20,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = createSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
-  const automation = await db.automation.create({
+  const automation = await context.prisma.automation.create({
     data: {
       name: input.name,
       trigger: input.trigger,

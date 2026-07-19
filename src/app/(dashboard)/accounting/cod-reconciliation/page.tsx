@@ -13,6 +13,7 @@ import { formatDZD } from "@/lib/utils";
 import { DollarSign, CheckCircle2, Clock } from "lucide-react";
 import { StatCard } from "@/components/shared/stat-card";
 import type { Metadata } from "next";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function CodReconciliationPage() {
   const { t } = await getI18n();
-  const summary = await getCodReconciliationSummary();
+  const summary = await getCodReconciliationSummary({ prisma: db, shop: shopContext });
 
   return (
     <div className="app-content page-sections">

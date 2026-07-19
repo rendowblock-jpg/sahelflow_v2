@@ -263,7 +263,7 @@ registerTool({
       // service handles orderNumber generation, status (default "draft"),
       // totalPrice calculation, items, ledger, and trigger dispatch.
       const order = await orderService.create(
-        { prisma: db },
+        { prisma: db, shop: ctx.shop },
         {
           customerId: input.customerId,
           items,
@@ -381,7 +381,7 @@ registerTool({
       // AI-M4: attribute AI-initiated status transitions to actor "ai"
       // in the OrderChange ledger.
       const order = await orderService.updateStatus(
-        { prisma: db },
+        { prisma: db, shop: ctx.shop },
         input.orderId,
         input.status,
         { actor: "ai" },
@@ -427,9 +427,9 @@ registerTool({
   async execute(params, ctx): Promise<ToolResult> {
     try {
       const input = estimateDeliverySchema.parse(params);
-      void ctx;
+      const db = getDb(ctx);
       const adapter = getDeliveryAdapter(input.provider);
-      const creds = await loadDeliveryCredentials(input.provider);
+      const creds = await loadDeliveryCredentials({ prisma: db, shop: ctx.shop }, input.provider);
       const estimate = await adapter.estimateCost(
         { wilaya: input.wilaya, weight: input.weight, codAmount: input.codAmount },
         creds,

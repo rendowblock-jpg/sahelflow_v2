@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { setSecret } from "@/lib/secrets";
@@ -53,19 +53,20 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   const { provider, ...creds } = parsed.data;
+  const context = { prisma: db, shop: shopContext };
 
   // Store each credential as a secret
   const secretPromises: Promise<void>[] = [];
   for (const [key, value] of Object.entries(creds)) {
     if (value) {
       const secretKey = `ecommerce_${provider}_${key}`;  // was integration_ — mismatched loader
-      secretPromises.push(setSecret(secretKey, value));
+      secretPromises.push(setSecret(context, secretKey, value));
     }
   }
   await Promise.all(secretPromises);
 
   // Create or update the Integration record
-  await db.integration.upsert({
+  await context.prisma.integration.upsert({
     where: { platform: provider },
     create: {
       platform: provider,

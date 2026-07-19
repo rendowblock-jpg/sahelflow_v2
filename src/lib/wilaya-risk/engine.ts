@@ -8,7 +8,7 @@
 import "server-only";
 
 
-import { db } from "@/lib/db";
+import type { ServiceContext } from "@/lib/data/service-base";
 
 export interface WilayaRisk {
   wilaya: string;
@@ -28,7 +28,9 @@ const ZONE_RISK: Record<string, Omit<WilayaRisk, "wilaya">> = {
 };
 
 /** Seed the WilayaRiskProfile table from data/wilayas.json. Idempotent. */
-export async function seedWilayaRiskProfiles(): Promise<{ seeded: number; skipped: number }> {
+export async function seedWilayaRiskProfiles(
+  context: ServiceContext,
+): Promise<{ seeded: number; skipped: number }> {
   const wilayas = (await import("../../../data/wilayas.json")).default as Array<{
     name: string;
     zone: string;
@@ -37,7 +39,7 @@ export async function seedWilayaRiskProfiles(): Promise<{ seeded: number; skippe
   let skipped = 0;
 
   for (const w of wilayas) {
-    const existing = await db.wilayaRiskProfile.findUnique({
+    const existing = await context.prisma.wilayaRiskProfile.findUnique({
       where: { wilaya: w.name },
     });
     if (existing) {
@@ -46,7 +48,7 @@ export async function seedWilayaRiskProfiles(): Promise<{ seeded: number; skippe
     }
 
     const zoneRisk = ZONE_RISK[w.zone] ?? ZONE_RISK.center!;
-    await db.wilayaRiskProfile.create({
+    await context.prisma.wilayaRiskProfile.create({
       data: {
         wilaya: w.name,
         riskLevel: zoneRisk.riskLevel,
@@ -62,8 +64,11 @@ export async function seedWilayaRiskProfiles(): Promise<{ seeded: number; skippe
 }
 
 /** Get the risk profile for a wilaya (or null if not seeded). */
-export async function getWilayaRisk(wilaya: string): Promise<WilayaRisk | null> {
-  const row = await db.wilayaRiskProfile.findUnique({ where: { wilaya } });
+export async function getWilayaRisk(
+  context: ServiceContext,
+  wilaya: string,
+): Promise<WilayaRisk | null> {
+  const row = await context.prisma.wilayaRiskProfile.findUnique({ where: { wilaya } });
   if (!row) return null;
   return {
     wilaya: row.wilaya,
@@ -75,8 +80,8 @@ export async function getWilayaRisk(wilaya: string): Promise<WilayaRisk | null> 
 }
 
 /** Get all risk profiles (for the risk dashboard). */
-export async function listWilayaRisks(): Promise<WilayaRisk[]> {
-  const rows = await db.wilayaRiskProfile.findMany({
+export async function listWilayaRisks(context: ServiceContext): Promise<WilayaRisk[]> {
+  const rows = await context.prisma.wilayaRiskProfile.findMany({
     orderBy: { riskLevel: "desc" },
   });
   return rows.map((r) => ({
@@ -111,14 +116,14 @@ export async function listWilayaRisks(): Promise<WilayaRisk[]> {
  * locale-independent value (e.g. for AI tool output, logging, or
  * non-UI surfaces) should keep using `label`.
  */
-export async function assessOrderRisk(wilaya: string): Promise<{
+export async function assessOrderRisk(context: ServiceContext, wilaya: string): Promise<{
   level: number;
   label: string;
   recommendation: string;
   labelKey: string;
   recommendationKey: string;
 }> {
-  const risk = await getWilayaRisk(wilaya);
+  const risk = await getWilayaRisk(context, wilaya);
   const level = risk?.riskLevel ?? 3;
   const labels: Record<number, string> = {
     1: "Très faible",

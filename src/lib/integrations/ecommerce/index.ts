@@ -20,6 +20,7 @@ import { shopifyAdapter } from "./shopify";
 import { woocommerceAdapter } from "./woocommerce";
 import { youcanAdapter } from "./youcan";
 import { getSecret } from "@/lib/secrets";
+import type { ServiceContext } from "@/lib/data/service-base";
 
 const REGISTRY: Record<EcommercePlatform, EcommerceAdapter> = {
   shopify: shopifyAdapter,
@@ -48,6 +49,7 @@ export function listEcommerceAdapters(): EcommerceAdapter[] {
  * Returns null if the required secrets are not configured.
  */
 export async function loadEcommerceCredentials(
+  context: ServiceContext,
   platform: EcommercePlatform,
 ): Promise<EcommerceCredentials | null> {
   const keys = ECOMMERCE_SECRET_KEYS[platform];
@@ -57,16 +59,16 @@ export async function loadEcommerceCredentials(
       // Session 29 fix (AUDIT-6 I1): UI sends `shopDomain` (e.g. "acme-store.myshopify.com"
       // or "acme-store"). The previous loader read `keys.shop` (i.e. `ecommerce_shopify_shop`)
       // which the connect route never wrote -> null -> "credentials missing" in prod.
-      const shopDomain = await getSecret(keys.shopDomain!);
-      const accessToken = await getSecret(keys.accessToken!);
+      const shopDomain = await getSecret(context, keys.shopDomain!);
+      const accessToken = await getSecret(context, keys.accessToken!);
       if (!shopDomain || !accessToken) return null;
       const creds: ShopifyCredentials = { shop: shopDomain, accessToken };
       return creds;
     }
     case "woocommerce": {
-      const siteUrl = await getSecret(keys.siteUrl!);
-      const consumerKey = await getSecret(keys.consumerKey!);
-      const consumerSecret = await getSecret(keys.consumerSecret!);
+      const siteUrl = await getSecret(context, keys.siteUrl!);
+      const consumerKey = await getSecret(context, keys.consumerKey!);
+      const consumerSecret = await getSecret(context, keys.consumerSecret!);
       if (!siteUrl || !consumerKey || !consumerSecret) return null;
       const creds: WooCommerceCredentials = {
         siteUrl,
@@ -76,7 +78,7 @@ export async function loadEcommerceCredentials(
       return creds;
     }
     case "youcan": {
-      const accessToken = await getSecret(keys.accessToken!);
+      const accessToken = await getSecret(context, keys.accessToken!);
       if (!accessToken) return null;
       const creds: YouCanCredentials = { accessToken };
       return creds;
@@ -90,8 +92,9 @@ export async function loadEcommerceCredentials(
  * Check if a platform has credentials configured.
  */
 export async function hasEcommerceCredentials(
+  context: ServiceContext,
   platform: EcommercePlatform,
 ): Promise<boolean> {
-  const creds = await loadEcommerceCredentials(platform);
+  const creds = await loadEcommerceCredentials(context, platform);
   return creds !== null;
 }

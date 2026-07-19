@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Plus, Store } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { db, shopContext } from "@/lib/db";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StorefrontsPage() {
   const { t } = await getI18n();
-  const configs = await storefrontService.list();
+  const configs = await storefrontService.list({ prisma: db, shop: shopContext });
 
   return (
     <div className="app-content page-sections">

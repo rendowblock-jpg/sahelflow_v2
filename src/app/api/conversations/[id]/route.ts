@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -17,6 +17,7 @@ export const GET = withErrorHandler(async (
 ) => {
   await requireAuth();
   const { id } = await params;
+  const context = { prisma: db, shop: shopContext };
   const conversation = await db.conversation.findUnique({
     where: { id },
     include: { messages: { orderBy: { timestamp: "asc" } } },
@@ -26,7 +27,7 @@ export const GET = withErrorHandler(async (
   }
   // Mark as read
   if (conversation.unreadCount > 0) {
-    await db.conversation.update({
+    await context.prisma.conversation.update({
       where: { id },
       data: { unreadCount: 0 },
     });

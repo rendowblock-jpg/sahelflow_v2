@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { createProductSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -30,7 +30,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     const where = activeOnly ? { isActive: true, deletedAt: null } : { deletedAt: null };
 
     const [products, total] = await Promise.all([
-      productService.list({ prisma: db }, { limit: pageSize, offset, ...(activeOnly ? { activeOnly: true } : {}) }),
+      productService.list({ prisma: db, shop: shopContext }, { limit: pageSize, offset, ...(activeOnly ? { activeOnly: true } : {}) }),
       db.product.count({ where }),
     ]);
 
@@ -42,7 +42,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const limit = parseInt(searchParams.get("limit") ?? "50", 10);
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
   const products = await productService.list(
-    { prisma: db },
+    { prisma: db, shop: shopContext },
     {
       limit: Math.min(limit, 100),
       offset,
@@ -59,7 +59,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const data = createProductSchema.parse(body);
 
-  const product = await productService.create({ prisma: db }, data);
+  const product = await productService.create({ prisma: db, shop: shopContext }, data);
 
   return NextResponse.json({ product }, { status: 201 });
 }, "POST /api/products");

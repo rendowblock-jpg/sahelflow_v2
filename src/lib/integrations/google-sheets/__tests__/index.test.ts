@@ -61,14 +61,32 @@ beforeEach(() => {
 });
 
 import {
-  isGoogleSheetsConfigured,
-  readSheet,
-  appendToSheet,
-  updateSheet,
-  createSpreadsheet,
-  exportOrdersToSheet,
-  setServiceAccount,
+  isGoogleSheetsConfigured as isGoogleSheetsConfiguredForShop,
+  readSheet as readSheetForShop,
+  appendToSheet as appendToSheetForShop,
+  updateSheet as updateSheetForShop,
+  createSpreadsheet as createSpreadsheetForShop,
+  exportOrdersToSheet as exportOrdersToSheetForShop,
+  setServiceAccount as setServiceAccountForShop,
 } from "../index";
+import type { ServiceContext } from "@/lib/data/service-base";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
+
+const context = { prisma: {} as never, shop: TEST_SHOP_CONTEXT };
+
+function withContext<TArgs extends unknown[], TResult>(
+  operation: (context: ServiceContext, ...args: TArgs) => TResult,
+) {
+  return (...args: TArgs) => operation(context, ...args);
+}
+
+const isGoogleSheetsConfigured = withContext(isGoogleSheetsConfiguredForShop);
+const readSheet = withContext(readSheetForShop);
+const appendToSheet = withContext(appendToSheetForShop);
+const updateSheet = withContext(updateSheetForShop);
+const createSpreadsheet = withContext(createSpreadsheetForShop);
+const exportOrdersToSheet = withContext(exportOrdersToSheetForShop);
+const setServiceAccount = withContext(setServiceAccountForShop);
 
 const VALID_SA_JSON = JSON.stringify({
   type: "service_account",
@@ -400,6 +418,10 @@ describe("setServiceAccount", () => {
   it("stores the JSON content under the google_service_account secret key", async () => {
     secretsMock.setSecret.mockResolvedValue(undefined);
     await setServiceAccount(VALID_SA_JSON);
-    expect(secretsMock.setSecret).toHaveBeenCalledWith("google_service_account", VALID_SA_JSON);
+    expect(secretsMock.setSecret).toHaveBeenCalledWith(
+      expect.any(Object),
+      "google_service_account",
+      VALID_SA_JSON,
+    );
   });
 });

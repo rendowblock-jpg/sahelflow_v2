@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   await requireAuth();
   const { orderId } = await params;
-  const assessment = await assessOrderRisk(orderId);
+  const assessment = await assessOrderRisk({ prisma: db, shop: shopContext }, orderId);
   if (!assessment) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
@@ -20,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) => {
   await requireAuth();
   const { orderId } = await params;
-  const assessment = await assessOrderRisk(orderId);
+  const assessment = await assessOrderRisk({ prisma: db, shop: shopContext }, orderId);
   if (!assessment) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }

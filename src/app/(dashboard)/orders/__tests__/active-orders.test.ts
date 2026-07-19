@@ -33,16 +33,9 @@ async function seedOrdersOfStatus(status: string, count: number, startIdx: numbe
       address: "123 Rue Didouche",
     },
   });
-  for (let i = 0; i < count; i++) {
-    const counter = await db.counter.upsert({
-      where: { name: "ORD" },
-      update: { value: { increment: 1 } },
-      create: { name: "ORD", value: 1 },
-    });
-    const orderNumber = `ORD-${String(counter.value).padStart(5, "0")}`;
-    await db.order.create({
-      data: {
-        orderNumber,
+  await db.order.createMany({
+    data: Array.from({ length: count }, (_, index) => ({
+        orderNumber: `TEST-${status}-${startIdx}-${index}`,
         status,
         customerId: customer.id,
         totalPrice: 1000,
@@ -51,9 +44,8 @@ async function seedOrdersOfStatus(status: string, count: number, startIdx: numbe
         address: "123 Rue Didouche",
         phone: "0555123456",
         source: "manual",
-      },
-    });
-  }
+      })),
+  });
 }
 
 describe("computeActiveOrderCount — Phase 1 bug 1.5 (orders page stat cap)", () => {

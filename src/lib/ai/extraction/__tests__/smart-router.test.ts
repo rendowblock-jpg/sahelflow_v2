@@ -168,7 +168,7 @@ describe("extractOrder — Gemini routing", () => {
 
 describe("recordExtractionMetric", () => {
   it("persists the metric via db.extractionMetric.create with all fields", async () => {
-    await recordExtractionMetric({
+    await recordExtractionMetric({ prisma: db as never }, {
       messageId: "msg-123",
       method: "gemini",
       confidence: 0.9,
@@ -193,7 +193,7 @@ describe("recordExtractionMetric", () => {
   });
 
   it("defaults messageId and modelVersion to null and serializes missingFields", async () => {
-    await recordExtractionMetric({
+    await recordExtractionMetric({ prisma: db as never }, {
       method: "regex",
       confidence: 0.4,
       isComplete: false,
@@ -217,7 +217,7 @@ describe("recordExtractionMetric", () => {
     vi.mocked(db.extractionMetric.create).mockRejectedValue(new Error("DB down") as never);
 
     await expect(
-      recordExtractionMetric({
+      recordExtractionMetric({ prisma: db as never }, {
         method: "regex",
         confidence: 0.5,
         isComplete: true,

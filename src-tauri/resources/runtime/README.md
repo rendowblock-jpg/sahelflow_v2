@@ -1,7 +1,9 @@
 # Runtime resources
 
-This directory holds the platform Bun binary + Prisma `libquery_engine`
-binary, downloaded by `scripts/prepare-runtime.ts` before `bun run tauri:build`.
+This directory holds the pinned Bun 1.3.14 Windows x64 baseline binary +
+Prisma `libquery_engine` binary, prepared by `scripts/prepare-runtime.ts`
+before `bun run tauri:build`. The script verifies Bun's official release-asset
+checksum and records source provenance in `runtime-manifest.json`.
 They get bundled into the installer via `tauri.conf.json` → `bundle.resources`
 → `resources/runtime/**/*` so end users don't need Bun/Node installed.
 

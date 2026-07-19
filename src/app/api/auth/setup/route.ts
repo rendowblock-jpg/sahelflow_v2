@@ -3,6 +3,8 @@ import { z } from "zod";
 import { isAuthSetup, setupAuth, createSession, auditLog } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { seedWilayaRiskProfiles } from "@/lib/wilaya-risk/engine";
+import { db, shopContext } from "@/lib/db";
+import { AUTH_MODE_CONFIGURED, AUTH_MODE_ENV } from "@/lib/runtime-auth";
 
 const SetupSchema = z.object({
   pin: z.string().min(8, "PIN must be at least 8 characters").max(32, "PIN too long"),
@@ -28,20 +30,26 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   const { secret } = await setupAuth(parsed.data.pin);
   process.env.AUTH_SECRET = secret;
+  process.env[AUTH_MODE_ENV] = AUTH_MODE_CONFIGURED;
 
-  try {
-    const { writeFile, readFile, mkdir } = await import("node:fs/promises");
-    const { existsSync } = await import("node:fs");
-    const { join } = await import("node:path");
-    const envPath = join(process.cwd(), ".env.local");
-    const existing = existsSync(envPath) ? await readFile(envPath, "utf-8") : "";
-    const cleaned = existing.replace(/^AUTH_SECRET=.*$/gm, "").trim();
-    const newContent = (cleaned ? cleaned + "\n" : "") + `AUTH_SECRET=${secret}\n`;
-    await writeFile(envPath, newContent, { encoding: "utf-8" });
-    const dataDir = join(process.cwd(), "data");
-    await mkdir(dataDir, { recursive: true });
-    await writeFile(join(dataDir, "auth-secret"), secret, { mode: 0o600, encoding: "utf-8" });
-  } catch { /* non-critical */ }
+  const persistDevelopmentSecret =
+    process.env.NODE_ENV === "development" &&
+    process.env.VITEST !== "true" &&
+    !process.env.SF_TEST_ROOT;
+  if (persistDevelopmentSecret) {
+    try {
+      const { writeFile, readFile } = await import("node:fs/promises");
+      const { existsSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const envPath = join(process.cwd(), ".env.local");
+      const existing = existsSync(envPath) ? await readFile(envPath, "utf-8") : "";
+      const cleaned = existing.replace(/^AUTH_SECRET=.*$/gm, "").trim();
+      const newContent = (cleaned ? cleaned + "\n" : "") + `AUTH_SECRET=${secret}\n`;
+      await writeFile(envPath, newContent, { encoding: "utf-8" });
+    } catch {
+      // The database remains canonical if the development convenience file cannot be written.
+    }
+  }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   await createSession(ip);
@@ -51,7 +59,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   // immediately on a fresh install (was: silently disabled until manual
   // ?seed=true was called from the risk page).
   try {
-    const result = await seedWilayaRiskProfiles();
+    const result = await seedWilayaRiskProfiles({ prisma: db, shop: shopContext });
     void auditLog("risk.wilaya.seeded", { seeded: result.seeded, skipped: result.skipped }, ip);
   } catch {
     // Non-critical — the risk engine works without wilaya profiles (just

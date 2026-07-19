@@ -30,6 +30,7 @@ import {
   seedCustomer,
   seedProduct,
   seedCategory,
+  TEST_SHOP_CONTEXT,
   uniquePhone,
 } from "@/lib/data/__tests__/helpers";
 
@@ -48,7 +49,7 @@ afterEach(async () => {
 });
 
 function ctx(): ToolContext {
-  return { db };
+  return { db, shop: TEST_SHOP_CONTEXT };
 }
 
 // ── get_order_details ────────────────────────────────────────────────────────

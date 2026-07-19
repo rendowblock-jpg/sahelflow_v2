@@ -4,6 +4,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { markCodCollected, markCodRemitted } from "@/lib/data/cod-service";
 import { z } from "zod";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -18,10 +19,11 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Ctx) 
   const { id } = await params;
   const body = await req.json();
   const parsed = codSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   const order = parsed.action === "mark_collected"
-    ? await markCodCollected(id)
-    : await markCodRemitted(id, parsed.remittanceRef ?? "");
+    ? await markCodCollected(context, id)
+    : await markCodRemitted(context, id, parsed.remittanceRef ?? "");
 
   return NextResponse.json({ order });
 }, "PATCH /api/orders/[id]/cod");

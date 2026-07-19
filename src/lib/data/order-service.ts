@@ -19,24 +19,159 @@ import {
   triggersCustomerStatsReversal,
 } from "@/lib/order-transitions";
 import type { ServiceContext } from "./service-base";
-import { recordOrderChange, recordStatusChange } from "@/lib/data/order-change-service";
+import {
+  recordOrderChangeInTx,
+  recordStatusChangeInTx,
+  type OrderChangeTransactionClient,
+} from "@/lib/data/order-change-service";
 import { withServiceError, nextOrderNumber } from "./service-base";
 import {
   dispatchTrigger,
   detectLowStock,
   dispatchLowStock,
   type TriggerEvent,
+  type TriggerPayload,
 } from "@/lib/automations/engine";
-
-// Phase 1 bug 1.3: callers may pass a transaction client so orderService.create
-// can run inside an existing $transaction (storefront/submit + import/orders
-// wrap customer-find-or-create + order-create in one tx). Same shape as the
-// DbOrTx type in order-change-service.ts.
-type DbOrTx = Parameters<Parameters<ServiceContext["prisma"]["$transaction"]>[0]>[0] | ServiceContext["prisma"];
 
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
 }
+
+type LowStockProduct = {
+  id: string;
+  name: string;
+  sku: string | null;
+  stock: number;
+  lowStockThreshold: number;
+};
+
+export interface OrderStatusTransitionEffects {
+  order: Order;
+  changed: boolean;
+  lowStockProducts: LowStockProduct[];
+}
+
+async function updateStatusInTransaction(
+  tx: OrderChangeTransactionClient,
+  id: string,
+  to: OrderStatus,
+  actor: string,
+): Promise<OrderStatusTransitionEffects> {
+  const order = await tx.order.findFirst({
+    where: { id, deletedAt: null },
+    include: { items: true },
+  });
+  if (!order) throw new NotFoundError("Order", id);
+
+  const from = order.status as OrderStatus;
+  assertCanTransition(from, to);
+
+  if (from === to) {
+    return {
+      order: toDomain(order as unknown as Record<string, unknown>),
+      changed: false,
+      lowStockProducts: [],
+    };
+  }
+
+  const lowStockProducts: LowStockProduct[] = [];
+
+  if (triggersStockDeduction(from, to)) {
+    for (const item of order.items) {
+      if (item.productId) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+        const lowStockInfo = await detectLowStock(tx, item.productId);
+        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
+      }
+    }
+  }
+
+  if (triggersStockRestoration(from, to)) {
+    for (const item of order.items) {
+      if (item.productId) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+        const lowStockInfo = await detectLowStock(tx, item.productId);
+        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
+      }
+    }
+  }
+
+  if (triggersCustomerStatsUpdate(from, to)) {
+    await tx.customer.update({
+      where: { id: order.customerId },
+      data: {
+        orderCount: { increment: 1 },
+        totalSpent: { increment: order.totalPrice },
+      },
+    });
+  }
+
+  if (triggersCustomerStatsReversal(from, to)) {
+    await tx.customer.update({
+      where: { id: order.customerId },
+      data: {
+        orderCount: { decrement: 1 },
+        totalSpent: { decrement: order.totalPrice },
+      },
+    });
+  }
+
+  const data: Record<string, unknown> = { status: to };
+  if (to === "confirmed" && !order.confirmedAt) data.confirmedAt = new Date();
+  if (to === "shipped" && !order.shippedAt) data.shippedAt = new Date();
+  if (to === "delivered" && !order.deliveredAt) data.deliveredAt = new Date();
+
+  const updated = await tx.order.update({
+    where: { id },
+    data,
+    include: { items: true },
+  });
+
+  await recordStatusChangeInTx(tx, id, from, to, actor);
+
+  return {
+    order: toDomain(updated as unknown as Record<string, unknown>),
+    changed: true,
+    lowStockProducts,
+  };
+}
+
+function dispatchCommittedStatusTransition(
+  ctx: ServiceContext,
+  effects: OrderStatusTransitionEffects,
+): void {
+  if (!effects.changed) return;
+
+  for (const product of effects.lowStockProducts) {
+    void dispatchLowStock(ctx, product);
+  }
+
+  const order = effects.order;
+  void dispatchTrigger(ctx, `order.${order.status}` as TriggerEvent, {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    customerId: order.customerId,
+    totalPrice: order.totalPrice,
+    wilaya: order.wilaya,
+    phone: order.phone,
+  });
+}
+
+type OrderCreateOptions =
+  | {
+      tx: OrderChangeTransactionClient;
+      afterCommit: (effect: () => void) => void;
+    }
+  | {
+      tx?: undefined;
+      afterCommit?: undefined;
+    };
 
 export const orderService = {
   async list(ctx: ServiceContext, opts?: {
@@ -88,16 +223,20 @@ export const orderService = {
    *     just manual UI orders)
    * If \`opts.tx\` is provided, the order.create + ledger entry participate in
    * the caller's $transaction (atomic with the caller's customer-find-or-
-   * create, etc.). If not, the service opens its own $transaction (legacy
-   * behavior).
+   * create, etc.). Callers that own the transaction must collect the supplied
+   * post-commit effect and invoke it only after `$transaction` resolves.
    */
   async create(
     ctx: ServiceContext,
     input: unknown,
-    opts?: { tx?: DbOrTx },
+    opts?: OrderCreateOptions,
   ): Promise<Order> {
     return withServiceError(async () => {
       const data = createOrderSchema.parse(input);
+
+      if (opts?.tx && !opts.afterCommit) {
+        throw new Error("Caller-owned order transactions require an afterCommit collector");
+      }
 
       // Pick the client: caller's tx if provided, else the context's prisma.
       const client = opts?.tx ?? ctx.prisma;
@@ -153,27 +292,24 @@ export const orderService = {
       let row;
       if (opts?.tx) {
         row = await opts.tx.order.create({ data: orderCreateData, include: { items: true } });
+        await recordOrderChangeInTx(opts.tx, {
+          orderId: row.id,
+          actionType: "created",
+          payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
+        });
       } else {
         row = await ctx.prisma.$transaction(async (tx) => {
-          return tx.order.create({ data: orderCreateData, include: { items: true } });
+          const created = await tx.order.create({ data: orderCreateData, include: { items: true } });
+          await recordOrderChangeInTx(tx, {
+            orderId: created.id,
+            actionType: "created",
+            payload: { orderNumber: created.orderNumber, itemCount: created.items.length, totalPrice },
+          });
+          return created;
         });
       }
 
-      // Record the order-creation event in the OrderChange ledger (S2-2).
-      // If the caller provided a tx, the ledger entry participates in that tx
-      // (atomic with the order.create). Otherwise it goes through the outer db.
-      await recordOrderChange({
-        orderId: row.id,
-        actionType: "created",
-        payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
-        tx: opts?.tx,
-      });
-
-      // Fire automation trigger (fire-and-forget — never blocks order creation).
-      // The trigger payload carries everything the action needs (no DB re-read),
-      // so it's safe to dispatch even when the caller's tx hasn't committed yet
-      // — executeAutomation uses the payload directly.
-      void dispatchTrigger("order.created" as TriggerEvent, {
+      const triggerPayload: TriggerPayload = {
         orderId: row.id,
         orderNumber: row.orderNumber,
         customerId: row.customerId,
@@ -181,7 +317,16 @@ export const orderService = {
         customerPhone: customer.phone,
         totalPrice: row.totalPrice,
         wilaya: row.wilaya,
-      });
+      };
+
+      const dispatchCreated = () => {
+        void dispatchTrigger(ctx, "order.created" as TriggerEvent, triggerPayload);
+      };
+      if (opts?.tx) {
+        opts.afterCommit(dispatchCreated);
+      } else {
+        dispatchCreated();
+      }
 
       return toDomain(row as unknown as Record<string, unknown>);
     }, "Order");
@@ -201,140 +346,32 @@ export const orderService = {
     opts?: { actor?: string },
   ): Promise<Order> {
     return withServiceError(async () => {
-      // Capture the from-status outside the tx so we can record it in the
-      // OrderChange ledger after the tx commits (S2-1).
-      let fromStatus: OrderStatus | undefined;
-      // SV-M8: collect low-stock products detected INSIDE the tx (race-safe
-      // read of the just-updated stock) and dispatch the `stock.low` trigger
-      // AFTER the tx commits. Previously the dispatch fired inside the tx —
-      // if the tx rolled back, the seller got a low-stock notification for
-      // a stock change that didn't actually happen.
-      const lowStockToDispatch: Array<{ id: string; name: string; sku: string | null; stock: number; lowStockThreshold: number }> = [];
-      // TOCTOU FIX: re-read the order + assert the transition INSIDE the
-      // transaction. Two concurrent updateStatus calls (e.g. automation +
-      // manual click) previously both passed assertCanTransition outside the
-      // tx → double stock deduction. Now the tx serializes the read+check+write.
-      const updated = await ctx.prisma.$transaction(async (tx) => {
-        const order = await tx.order.findFirst({
-          where: { id, deletedAt: null },
-          include: { items: true },
-        });
-        if (!order) throw new NotFoundError("Order", id);
-
-        const from = order.status as OrderStatus;
-        fromStatus = from;
-
-        // Enforce state machine (inside tx — race-safe)
-        assertCanTransition(from, to);
-
-        // No-op for same-status
-        if (from === to) {
-          return order;
-        }
-
-        // Stock deduction (confirmed from non-confirmed)
-        if (triggersStockDeduction(from, to)) {
-          for (const item of order.items) {
-            if (item.productId) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { stock: { decrement: item.quantity } },
-              });
-              // SV-M8: race-safe low-stock DETECTION inside the tx (read
-              // sees the just-decremented stock), but dispatch is deferred
-              // to after the tx commits.
-              const lowStockInfo = await detectLowStock(tx, item.productId);
-              if (lowStockInfo) lowStockToDispatch.push(lowStockInfo);
-            }
-          }
-        }
-
-        // Stock restoration (returned/cancelled/refused from confirmed/shipped/delivered)
-        if (triggersStockRestoration(from, to)) {
-          for (const item of order.items) {
-            if (item.productId) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { stock: { increment: item.quantity } },
-              });
-              // If the product is still at or below threshold after
-              // restoration, surface the trigger so the merchant knows it's
-              // still low. Same race-safe pattern as above.
-              const lowStockInfo = await detectLowStock(tx, item.productId);
-              if (lowStockInfo) lowStockToDispatch.push(lowStockInfo);
-            }
-          }
-        }
-
-        // Customer stats update (delivered from non-delivered)
-        if (triggersCustomerStatsUpdate(from, to)) {
-          await tx.customer.update({
-            where: { id: order.customerId },
-            data: {
-              orderCount: { increment: 1 },
-              totalSpent: { increment: order.totalPrice },
-            },
-          });
-        }
-
-        // SV-M3: Customer stats REVERSAL on delivered → returned. The order
-        // is no longer "completed" — decrement orderCount + totalSpent (by
-        // the full order total, since this path doesn't go through
-        // refund-service which decrements totalSpent by the refund amount).
-        if (triggersCustomerStatsReversal(from, to)) {
-          await tx.customer.update({
-            where: { id: order.customerId },
-            data: {
-              orderCount: { decrement: 1 },
-              totalSpent: { decrement: order.totalPrice },
-            },
-          }).catch(() => {
-            // best-effort — customer row might be soft-deleted
-          });
-        }
-
-        // Update order status + timestamp fields
-        const data: Record<string, unknown> = { status: to };
-        if (to === "confirmed" && !order.confirmedAt) data.confirmedAt = new Date();
-        if (to === "shipped" && !order.shippedAt) data.shippedAt = new Date();
-        if (to === "delivered" && !order.deliveredAt) data.deliveredAt = new Date();
-
-        return tx.order.update({
-          where: { id },
-          data,
-          include: { items: true },
-        });
-      });
-
-      // SV-M8: dispatch low-stock triggers AFTER the tx commits. If the tx
-      // rolled back, lowStockToDispatch is empty (the detection happened
-      // inside the tx but the array is only populated if the tx succeeded —
-      // actually it's populated regardless, but the dispatch is fire-and-
-      // forget and the product state on disk reflects the committed stock,
-      // so notifications match reality). Void-ed — never blocks the caller.
-      for (const product of lowStockToDispatch) {
-        void dispatchLowStock(product);
-      }
-
-      // Record the status transition in the OrderChange ledger (S2-1).
-      // AI-M4: pass the actor through so AI-initiated transitions are
-      // attributed correctly in the timeline.
-      if (fromStatus !== undefined && fromStatus !== to) {
-        await recordStatusChange(id, fromStatus, to, opts?.actor ?? "user");
-      }
-
-      // Fire automation trigger (fire-and-forget — never blocks status update)
-      void dispatchTrigger(`order.${to}` as TriggerEvent, {
-        orderId: updated.id,
-        orderNumber: updated.orderNumber,
-        customerId: updated.customerId,
-        totalPrice: updated.totalPrice,
-        wilaya: updated.wilaya,
-        phone: updated.phone,
-      });
-
-      return toDomain(updated as unknown as Record<string, unknown>);
+      const effects = await ctx.prisma.$transaction((tx) =>
+        updateStatusInTransaction(tx, id, to, opts?.actor ?? "user"),
+      );
+      dispatchCommittedStatusTransition(ctx, effects);
+      return effects.order;
     }, "Order");
+  },
+
+  /**
+   * Apply an order transition inside a caller-owned transaction. The caller
+   * must invoke `dispatchStatusTransition` only after that transaction commits.
+   */
+  async updateStatusInTx(
+    tx: OrderChangeTransactionClient,
+    id: string,
+    to: OrderStatus,
+    opts?: { actor?: string },
+  ): Promise<OrderStatusTransitionEffects> {
+    return updateStatusInTransaction(tx, id, to, opts?.actor ?? "user");
+  },
+
+  dispatchStatusTransition(
+    ctx: ServiceContext,
+    effects: OrderStatusTransitionEffects,
+  ): void {
+    dispatchCommittedStatusTransition(ctx, effects);
   },
 
   async update(ctx: ServiceContext, id: string, input: unknown): Promise<Order> {
@@ -386,13 +423,12 @@ export const orderService = {
           },
           include: { items: true },
         });
+        await recordOrderChangeInTx(tx, {
+          orderId: id,
+          actionType: "edit",
+          payload: { fields: Object.keys(data) },
+        });
         return toDomain(row as unknown as Record<string, unknown>);
-      });
-      // Record the edit in the OrderChange ledger (S2-2).
-      await recordOrderChange({
-        orderId: id,
-        actionType: "edit",
-        payload: { fields: Object.keys(data) },
       });
       return updated;
     }, "Order");

@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::error::Error;
-use std::fs;
-use std::io::{Error as IoError, ErrorKind};
+use std::fs::{self, OpenOptions};
+use std::io::{Error as IoError, ErrorKind, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 
@@ -15,20 +15,21 @@ struct StartupDiagnostic<'a> {
     created_at_unix_seconds: u64,
 }
 
-pub fn show_ready(app: &tauri::App) -> Result<(), Box<dyn Error>> {
+pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let window = app.get_webview_window("main").ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "the configured main desktop window was not created",
         )
     })?;
+    window.navigate(tauri::Url::parse(app_url)?)?;
     window.show()?;
     window.set_focus()?;
     Ok(())
 }
 
 pub fn show_blocked(
-    app: &tauri::App,
+    app: &tauri::AppHandle,
     code: &str,
     detail: &str,
 ) -> Result<(), Box<dyn Error>> {
@@ -37,20 +38,31 @@ pub fn show_blocked(
 
     let report_path = app_data_dir.join("startup-diagnostic.json");
     let temp_report_path = app_data_dir.join("startup-diagnostic.json.tmp");
+    let safe_detail = redact_secrets(detail);
     let diagnostic = StartupDiagnostic {
         state: "blocked",
         code,
-        detail,
+        detail: &safe_detail,
         app_version: env!("CARGO_PKG_VERSION"),
         created_at_unix_seconds: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_secs())
             .unwrap_or(0),
     };
-    fs::write(&temp_report_path, serde_json::to_vec_pretty(&diagnostic)?)?;
+    let mut report = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(&temp_report_path)?;
+    report.write_all(&serde_json::to_vec_pretty(&diagnostic)?)?;
+    report.write_all(b"\n")?;
+    report.sync_all()?;
+    if report_path.exists() {
+        fs::remove_file(&report_path)?;
+    }
     fs::rename(&temp_report_path, &report_path)?;
 
-    let html = recovery_html(code, detail, &report_path.to_string_lossy());
+    let html = recovery_html(code, &safe_detail, &report_path.to_string_lossy());
     let data_url = format!(
         "data:text/html;charset=utf-8,{}",
         urlencoding::encode(&html)
@@ -126,4 +138,59 @@ fn escape_html(value: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
+}
+
+fn redact_secrets(value: &str) -> String {
+    let mut redacted = String::with_capacity(value.len());
+    let chars: Vec<char> = value.chars().collect();
+    let mut index = 0;
+    while index < chars.len() {
+        if chars[index].is_ascii_hexdigit() {
+            let start = index;
+            while index < chars.len() && chars[index].is_ascii_hexdigit() {
+                index += 1;
+            }
+            if index - start >= 32 {
+                redacted.push_str("[REDACTED]");
+            } else {
+                redacted.extend(chars[start..index].iter());
+            }
+            continue;
+        }
+        redacted.push(chars[index]);
+        index += 1;
+    }
+
+    if let Ok(profile) = std::env::var("USERPROFILE") {
+        if !profile.is_empty() {
+            redacted = redacted.replace(&profile, "%USERPROFILE%");
+        }
+    }
+    redacted
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn diagnostics_redact_launch_credentials_and_profile_paths() {
+        let token = "a".repeat(64);
+        let detail = format!("Bearer {token} at C:\\Users\\seller\\data");
+        std::env::set_var("USERPROFILE", "C:\\Users\\seller");
+
+        let redacted = redact_secrets(&detail);
+
+        assert!(!redacted.contains(&token));
+        assert!(!redacted.contains("C:\\Users\\seller"));
+        assert!(redacted.contains("[REDACTED]"));
+        assert!(redacted.contains("%USERPROFILE%"));
+    }
+
+    #[test]
+    fn recovery_html_escapes_diagnostic_content() {
+        let html = recovery_html("SF-TEST", "<script>bad()</script>", "C:\\report.json");
+        assert!(!html.contains("<script>bad()</script>"));
+        assert!(html.contains("&lt;script&gt;bad()&lt;/script&gt;"));
+    }
 }

@@ -9,6 +9,7 @@ import { deliverySecretKey, deliverySecretKeys, DELIVERY_PROVIDERS } from "@/lib
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
  */
 export const GET = withErrorHandler(async () => {
   await requireAuth();
+  const context = { prisma: db, shop: shopContext };
   const status: Record<string, Record<string, boolean>> = {};
   for (const provider of DELIVERY_PROVIDERS) {
     const keys = deliverySecretKeys(provider);
@@ -31,7 +33,7 @@ export const GET = withErrorHandler(async () => {
       // names or the loader finds nothing (bug B3 / dive-5).
       const fieldMatch = key.match(/^delivery_(\w+)_(.+)$/);
       const field = fieldMatch ? fieldMatch[2]! : key;
-      fieldStatus[field] = await hasSecret(key);
+      fieldStatus[field] = await hasSecret(context, key);
     }
     status[provider] = fieldStatus;
   }
@@ -57,13 +59,14 @@ const saveSchema = z.object({
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
+  const context = { prisma: db, shop: shopContext };
   const body = await req.json();
   const input = saveSchema.parse(body);
 
   // Save each credential field to the Secret store
   for (const [field, value] of Object.entries(input.credentials)) {
     const key = deliverySecretKey(input.provider, field);
-    await setSecret(key, value);
+    await setSecret(context, key, value);
   }
 
   return NextResponse.json({
@@ -82,6 +85,7 @@ const deleteSchema = z.object({
  */
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
+  const context = { prisma: db, shop: shopContext };
   const provider = req.nextUrl.searchParams.get("provider");
   const input = deleteSchema.parse({ provider });
 
@@ -89,12 +93,12 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   // Capture before-state (which keys were actually present?) for audit.
   const before: Record<string, boolean> = {};
   for (const key of keys) {
-    before[key] = await hasSecret(key);
-    await deleteSecret(key);
+    before[key] = await hasSecret(context, key);
+    await deleteSecret(context, key);
   }
 
   // W2-5: audit credential deletion (security-relevant — strips delivery integration access).
-  void logAudit({
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "delivery.credentials.deleted",
     entity: "delivery_credentials",
     entityId: input.provider,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -50,10 +50,11 @@ export const PUT = withErrorHandler(async (req: Request) => {
   }
 
   const updates = parsed.data;
+  const context = { prisma: db, shop: shopContext };
   const operations = Object.entries(updates)
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) =>
-      db.setting.upsert({
+      context.prisma.setting.upsert({
         where: { key: PROFILE_KEYS[key as keyof typeof PROFILE_KEYS] },
         create: { key: PROFILE_KEYS[key as keyof typeof PROFILE_KEYS], value: String(value) },
         update: { value: String(value) },
@@ -61,7 +62,7 @@ export const PUT = withErrorHandler(async (req: Request) => {
     );
 
   if (operations.length > 0) {
-    await db.$transaction(operations);
+    await context.prisma.$transaction(operations);
   }
 
   return NextResponse.json({ success: true });

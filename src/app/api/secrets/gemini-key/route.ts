@@ -9,6 +9,7 @@ import { verifyGeminiKey } from "@/lib/ai/extraction";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorHandler(async () => {
   // W2-4: defense-in-depth — GET was unprotected, leaked "is Gemini configured?" to anyone.
   await requireAuth();
-  const configured = await hasSecret("gemini_api_key");
+  const configured = await hasSecret({ prisma: db, shop: shopContext }, "gemini_api_key");
   return NextResponse.json({ configured });
 }, "GET /api/secrets/gemini-key");
 
@@ -50,7 +51,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       );
     }
     // Save the (verified) key
-    await setSecret("gemini_api_key", input.key);
+    await setSecret({ prisma: db, shop: shopContext }, "gemini_api_key", input.key);
     return NextResponse.json({
       ok: true,
       model: verification.model,
@@ -59,7 +60,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Save without testing
-  await setSecret("gemini_api_key", input.key);
+  await setSecret({ prisma: db, shop: shopContext }, "gemini_api_key", input.key);
   return NextResponse.json({
     ok: true,
     message: "Clé enregistrée (non testée).",
@@ -72,10 +73,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
  */
 export const DELETE = withErrorHandler(async () => {
   await requireAuth();
-  const hadKey = await hasSecret("gemini_api_key");
-  await deleteSecret("gemini_api_key");
+  const context = { prisma: db, shop: shopContext };
+  const hadKey = await hasSecret(context, "gemini_api_key");
+  await deleteSecret(context, "gemini_api_key");
   // W2-5: audit secret deletion. Don't log the key value — just that it was removed.
-  void logAudit({
+  void logAudit({ prisma: db, shop: shopContext }, {
     action: "secret.deleted",
     entity: "secret",
     entityId: "gemini_api_key",

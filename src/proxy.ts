@@ -1,6 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { verifySessionToken } from "@/lib/auth/crypto";
+import { constantTimeEqual } from "@/lib/auth/constant-time";
+import {
+  AUTH_MODE_CONFIGURED,
+  AUTH_MODE_ENV,
+  AUTH_MODE_SETUP,
+  RUNTIME_BOOTSTRAP_PATH,
+  RUNTIME_COOKIE,
+  RUNTIME_READY_PATH,
+} from "@/lib/runtime-auth";
 
 /**
  * Auth proxy (Next 16 middleware entry) — protects all /api/* (except the
@@ -13,11 +22,8 @@ import { verifySessionToken } from "@/lib/auth/crypto";
  * allowlist). Both layers are intentional.
  *
  * Session verification uses HMAC-SHA256 via Web Crypto API (Edge-compatible).
- * The secret is read from process.env.AUTH_SECRET (set after first setup + restart).
- *
- * Setup mode: if AUTH_SECRET is not set, middleware allows all requests
- * (the setup wizard handles initial protection — it's only accessible when
- * no PIN is set, and the first thing it does is set the PIN + secret).
+ * Packaged setup is allowed only when the desktop explicitly declares that
+ * the migrated active-shop database has no auth state.
  *
  * The actual API-route-level auth check (requireAuth) provides defense-in-depth:
  * even if middleware is bypassed, API routes verify the token against the DB secret.
@@ -26,9 +32,65 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const secret = process.env.AUTH_SECRET;
 
-  // Setup mode — no secret yet, allow everything
-  if (!secret) {
+  // The desktop supervisor probes this before a user session exists. It has
+  // its own independent per-launch bearer credential and is validated again
+  // inside the route. Keep this before setup mode so a missing AUTH_SECRET
+  // never turns runtime readiness into an unauthenticated endpoint.
+  if (pathname === RUNTIME_READY_PATH) {
+    const expected = process.env.SF_RUNTIME_TOKEN;
+    const authorization = request.headers.get("authorization") ?? "";
+    const supplied = /^Bearer\s+([0-9a-f]{64})$/i.exec(authorization)?.[1];
+    if (!expected || !supplied || !constantTimeEqual(supplied, expected)) {
+      return NextResponse.json(
+        { status: "rejected", code: "RUNTIME_CREDENTIAL_REJECTED" },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
     return NextResponse.next();
+  }
+
+  const authMode = process.env[AUTH_MODE_ENV];
+  const explicitSetup = authMode === AUTH_MODE_SETUP && !secret;
+  const explicitConfigured = authMode === AUTH_MODE_CONFIGURED && !!secret;
+  const developmentFallback =
+    process.env.NODE_ENV !== "production" && authMode === undefined;
+  if (!explicitSetup && !explicitConfigured && !developmentFallback) {
+    return NextResponse.json(
+      { status: "blocked", code: "AUTH_RUNTIME_MISCONFIGURED" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  // The bootstrap route exchanges the one-time URL credential for an
+  // HttpOnly launch cookie and performs its own constant-time validation.
+  if (pathname === RUNTIME_BOOTSTRAP_PATH) {
+    return NextResponse.next();
+  }
+
+  // In a packaged launch, runtime authentication precedes setup mode, public
+  // routes, and user authentication. Development remains unchanged when the
+  // desktop did not inject a launch token.
+  const runtimeAppToken = process.env.SF_RUNTIME_APP_TOKEN;
+  if (runtimeAppToken) {
+    const supplied = request.cookies.get(RUNTIME_COOKIE)?.value;
+    if (!supplied || !constantTimeEqual(supplied, runtimeAppToken)) {
+      return NextResponse.json(
+        { status: "rejected", code: "RUNTIME_SESSION_REQUIRED" },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  }
+
+  // Browser development retains its old no-secret setup behavior. Packaged
+  // production reaches this branch only through the explicit desktop mode.
+  if (explicitSetup || (developmentFallback && !secret)) {
+    return NextResponse.next();
+  }
+  if (!secret) {
+    return NextResponse.json(
+      { status: "blocked", code: "AUTH_RUNTIME_MISCONFIGURED" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   // Allow public API routes

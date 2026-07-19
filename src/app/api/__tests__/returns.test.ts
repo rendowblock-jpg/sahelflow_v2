@@ -7,9 +7,8 @@
  *                                completed/rejected)
  *
  * The PATCH /api/returns/[id] "completed" path also exercises Phase 1 bug
- * 1.1's canonical transition: orderService.updateStatus(orderId, "returned")
- * is called AFTER the Return-row tx commits — single source of truth for
- * stock restore + customer stats reversal + OrderChange ledger.
+ * 1.1's canonical transition in the same transaction as Return completion,
+ * stock restore, customer stats reversal, and the OrderChange ledger.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
@@ -179,8 +178,14 @@ describe("POST /api/returns — create return request", () => {
 });
 
 describe("PATCH /api/returns/[id] — update return status", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_return_status_ledger"');
+    await cleanDb();
+  });
+  afterAll(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_return_status_ledger"');
+    await rawDb.$disconnect();
+  });
 
   /** Seed a Return row in the given status for a delivered order. */
   async function seedReturnAtStatus(status: "requested" | "approved" | "rejected" | "completed") {
@@ -249,6 +254,52 @@ describe("PATCH /api/returns/[id] — update return status", () => {
       { params: Promise.resolve({ id: ret.id }) },
     );
     expect(res.status).toBe(409);
+  });
+
+  it("rolls back completion and notes when the order cannot transition to returned", async () => {
+    const { ret, order } = await seedReturnAtStatus("approved");
+    await rawDb.order.update({ where: { id: order.id }, data: { status: "cancelled" } });
+
+    const res = await PATCHReturn(
+      mockPost(`http://localhost/api/returns/${ret.id}`, {
+        status: "completed",
+        notes: "must not commit",
+      }),
+      { params: Promise.resolve({ id: ret.id }) },
+    );
+    expect(res.status).toBe(409);
+
+    const unchangedReturn = await rawDb.return.findUnique({ where: { id: ret.id } });
+    expect(unchangedReturn?.status).toBe("approved");
+    expect(await rawDb.returnNote.count({ where: { returnId: ret.id } })).toBe(0);
+  });
+
+  it("rolls back completion and all order effects when the strict ledger fails", async () => {
+    const { ret, order, product, customer } = await seedReturnAtStatus("approved");
+    await rawDb.$executeRawUnsafe(`
+      CREATE TRIGGER "fail_return_status_ledger"
+      BEFORE INSERT ON "OrderChange"
+      WHEN NEW.actionType = 'status_change'
+      BEGIN
+        SELECT RAISE(ABORT, 'forced ledger failure');
+      END
+    `);
+
+    const res = await PATCHReturn(
+      mockPost(`http://localhost/api/returns/${ret.id}`, {
+        status: "completed",
+        notes: "must roll back",
+      }),
+      { params: Promise.resolve({ id: ret.id }) },
+    );
+    expect(res.status).toBe(500);
+
+    expect((await rawDb.return.findUnique({ where: { id: ret.id } }))?.status).toBe("approved");
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status).toBe("delivered");
+    expect((await rawDb.product.findUnique({ where: { id: product.id } }))?.stock).toBe(98);
+    expect(await rawDb.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 1, totalSpent: 5000 });
+    expect(await rawDb.returnNote.count({ where: { returnId: ret.id } })).toBe(0);
   });
 
   it("returns 404 when the return does not exist", async () => {

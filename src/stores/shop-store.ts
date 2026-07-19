@@ -6,12 +6,14 @@
  * mutations back to the API.
  */
 import { create } from "zustand";
+import { mutate } from "swr";
+import { isTauriEnv } from "@/lib/env";
 
 export interface Shop {
   id: string;
   name: string;
-  /** Path to the shop's SQLite database (relative to project root). */
-  dbPath: string;
+  /** Controlled database file identity within the canonical shops directory. */
+  databaseFile: string;
   /** Emoji icon (nullable). */
   icon: string | null;
   createdAt: string;
@@ -21,6 +23,9 @@ interface ShopState {
   shops: Shop[];
   activeShopId: string | null;
   loaded: boolean;
+  switchStatus: "idle" | "pending" | "blocked";
+  switchTargetId: string | null;
+  switchError: string | null;
 
   /** Load the shop list + active shop ID from the API. Call on app mount. */
   loadShops: () => Promise<void>;
@@ -38,6 +43,9 @@ export const useShopStore = create<ShopState>((set, get) => ({
   shops: [],
   activeShopId: null,
   loaded: false,
+  switchStatus: "idle",
+  switchTargetId: null,
+  switchError: null,
 
   loadShops: async () => {
     try {
@@ -62,6 +70,11 @@ export const useShopStore = create<ShopState>((set, get) => ({
     }
     const { shop } = (await res.json()) as { shop: Shop };
     set((s) => ({ shops: [...s.shops, shop] }));
+    await mutate(() => true, undefined, { revalidate: false });
+    if (isTauriEnv()) {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    }
     return shop;
   },
 
@@ -77,19 +90,46 @@ export const useShopStore = create<ShopState>((set, get) => ({
         s.activeShopId === shopId ? shops[0]?.id ?? null : s.activeShopId;
       return { shops, activeShopId };
     });
+    await mutate(() => true, undefined, { revalidate: false });
+    if (isTauriEnv()) {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    }
   },
 
   setActiveShop: async (shopId) => {
-    // Optimistic update
-    set({ activeShopId: shopId });
+    if (shopId === get().activeShopId) return;
+    set({ switchStatus: "pending", switchTargetId: shopId, switchError: null });
     try {
-      await fetch("/api/shops/active", {
+      const res = await fetch("/api/shops/active", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shopId }),
       });
-    } catch {
-      // best-effort — the optimistic update stays
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        status?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || "Échec du changement de boutique");
+      }
+      if (data.status !== "pending") {
+        throw new Error("Le changement de boutique n'a pas été confirmé comme en attente");
+      }
+
+      if (isTauriEnv()) {
+        const { relaunch } = await import("@tauri-apps/plugin-process");
+        await relaunch();
+      } else if (typeof window !== "undefined") {
+        window.location.assign("/login");
+      } else {
+        throw new Error("Le redémarrage de SahelFlow n'est pas disponible");
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Échec du changement de boutique";
+      set({ switchStatus: "blocked", switchTargetId: shopId, switchError: message });
+      throw error;
     }
   },
 

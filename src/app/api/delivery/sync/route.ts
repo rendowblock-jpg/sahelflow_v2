@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { logger } from "@/lib/logger";
+import { recordOrderChangeInTx } from "@/lib/data/order-change-service";
+import { ConflictError, InvalidTransitionError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +27,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
   const input = syncSchema.parse(body);
+  const context = { prisma: db, shop: shopContext };
 
   // Find the delivery record
   const delivery = input.deliveryId
-    ? await db.delivery.findUnique({ where: { id: input.deliveryId } })
-    : await db.delivery.findUnique({ where: { orderId: input.orderId! } });
+    ? await context.prisma.delivery.findFirst({
+        where: { id: input.deliveryId, deletedAt: null },
+      })
+    : input.orderId
+      ? await context.prisma.delivery.findFirst({
+          where: { orderId: input.orderId, deletedAt: null },
+        })
+      : null;
 
   if (!delivery) {
     return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
@@ -43,64 +51,142 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   const adapter = getDeliveryAdapter(delivery.provider);
-  const creds = await loadDeliveryCredentials(delivery.provider);
+  const creds = await loadDeliveryCredentials(
+    context,
+    delivery.provider,
+  );
 
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
+  const estimatedDelivery = tracking.estimatedDelivery
+    ? new Date(tracking.estimatedDelivery)
+    : null;
 
-  // Update the delivery record + order status in a transaction (D-003).
-  // Route through orderService.updateStatus so the state machine enforces
-  // transitions and customer stats (orderCount, totalSpent) are updated.
-  // The old code did a direct db.order.update which bypassed both.
-  //
-  // Phase 7 (discovered by integration test delivery.test.ts): the
-  // orderService.updateStatus call MUST run AFTER the delivery-update tx
-  // commits, NOT inside it. The service opens its own $transaction; calling
-  // it from inside this $transaction deadlocks on SQLite (the outer tx
-  // holds the write lock, the inner tx waits for it forever → socket
-  // timeout). Same pattern as the Phase 1 bug 1.2 fix in
-  // /api/delivery/[id]/route.ts. The delivery update stays in the tx (F-H5:
-  // delivery + order transition stay consistent — the order transition now
-  // runs AFTER the tx commits via orderService.updateStatus, which opens its
-  // own tx; SQLite serializes writes so this is safe).
-  let shouldTransitionToDelivered = false;
-  await db.$transaction(async (tx) => {
-    await tx.delivery.update({
-      where: { id: delivery.id },
-      data: {
-        status: tracking.status,
-        estimatedDelivery: tracking.estimatedDelivery
-          ? new Date(tracking.estimatedDelivery)
-          : null,
-      },
-    });
-
-    // If delivered, flag for the post-tx order transition. Skip if the
-    // order is already delivered (idempotent).
-    if (tracking.status === "delivered") {
-      const order = await tx.order.findUnique({
-        where: { id: delivery.orderId },
-        select: { status: true },
+  let committed;
+  try {
+    committed = await context.prisma.$transaction(async (tx) => {
+      const claimed = await tx.delivery.updateMany({
+        where: {
+          id: delivery.id,
+          updatedAt: delivery.updatedAt,
+          deletedAt: null,
+        },
+        data: { status: tracking.status, estimatedDelivery },
       });
-      if (order && order.status !== "delivered") {
-        shouldTransitionToDelivered = true;
+      if (claimed.count !== 1) {
+        throw new ConflictError("Delivery changed while provider tracking was being fetched");
+      }
+
+      if (tracking.status !== "delivered") {
+        return { effects: null, conflict: null };
+      }
+
+      try {
+        const effects = await orderService.updateStatusInTx(
+          tx,
+          delivery.orderId,
+          "delivered",
+          { actor: "system" },
+        );
+        return { effects, conflict: null };
+      } catch (error) {
+        if (!(error instanceof InvalidTransitionError)) throw error;
+
+        await recordOrderChangeInTx(tx, {
+          orderId: delivery.orderId,
+          actionType: "delivery_sync_conflict",
+          actor: "system",
+          payload: {
+            deliveryId: delivery.id,
+            provider: delivery.provider,
+            providerStatus: tracking.status,
+            orderStatus: error.from,
+            attemptedOrderStatus: error.to,
+          },
+        });
+        return {
+          effects: null,
+          conflict: { orderStatus: error.from, providerStatus: tracking.status },
+        };
+      }
+    });
+  } catch (error) {
+    let evidenceError: unknown;
+    try {
+      await context.prisma.$transaction(async (tx) => {
+        const preserved = await tx.delivery.updateMany({
+          where: {
+            id: delivery.id,
+            updatedAt: delivery.updatedAt,
+            deletedAt: null,
+          },
+          data: { status: tracking.status, estimatedDelivery },
+        });
+        if (preserved.count !== 1) {
+          const current = await tx.delivery.findUnique({ where: { id: delivery.id } });
+          if (!current || current.status !== tracking.status) {
+            throw new ConflictError("Provider tracking conflicts with newer local delivery state");
+          }
+        }
+
+        const currentOrder = await tx.order.findUnique({
+          where: { id: delivery.orderId },
+          select: { status: true },
+        });
+        await recordOrderChangeInTx(tx, {
+          orderId: delivery.orderId,
+          actionType: "delivery_sync_conflict",
+          actor: "system",
+          payload: {
+            deliveryId: delivery.id,
+            provider: delivery.provider,
+            providerStatus: tracking.status,
+            orderStatus: currentOrder?.status ?? "missing",
+            attemptedOrderStatus: tracking.status === "delivered" ? "delivered" : null,
+            persistenceError: error instanceof Error ? error.name : "UnknownError",
+          },
+        });
+      });
+    } catch (failedEvidence) {
+      evidenceError = failedEvidence;
+      try {
+        const preserved = await context.prisma.delivery.updateMany({
+          where: {
+            id: delivery.id,
+            updatedAt: delivery.updatedAt,
+            deletedAt: null,
+          },
+          data: { status: tracking.status, estimatedDelivery },
+        });
+        if (preserved.count !== 1) {
+          const current = await context.prisma.delivery.findUnique({
+            where: { id: delivery.id },
+          });
+          if (!current || current.status !== tracking.status) {
+            throw new ConflictError("Provider tracking could not be preserved safely");
+          }
+        }
+      } catch (preservationError) {
+        throw new AggregateError(
+          [error, evidenceError, preservationError],
+          "Provider tracking and reconciliation evidence could not be persisted",
+        );
       }
     }
-  });
+    throw error;
+  }
 
-  // After the tx commits: route the order transition through the canonical
-  // service so all side effects (deliveredAt, customer stats, ledger,
-  // automation trigger) fire. Wrapped in try/catch — if the transition is
-  // invalid (e.g. order already terminal), we don't want to 500 the
-  // delivery update that already committed.
-  if (shouldTransitionToDelivered) {
-    try {
-      await orderService.updateStatus({ prisma: db }, delivery.orderId, "delivered");
-    } catch (err) {
-      logger.warn("delivery/sync: order status transition skipped", {
-        orderId: delivery.orderId,
-        error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-      });
-    }
+  if (committed.effects) {
+    orderService.dispatchStatusTransition(context, committed.effects);
+  }
+  if (committed.conflict) {
+    return NextResponse.json(
+      {
+        error: "Provider tracking conflicts with the current order state",
+        reconciliationRequired: true,
+        ...committed.conflict,
+      },
+      { status: 409 },
+    );
   }
 
   return NextResponse.json({
@@ -135,7 +221,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   }
 
   const adapter = getDeliveryAdapter(delivery.provider);
-  const creds = await loadDeliveryCredentials(delivery.provider);
+  const creds = await loadDeliveryCredentials(
+    { prisma: db, shop: shopContext },
+    delivery.provider,
+  );
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
 
   return NextResponse.json({ tracking });

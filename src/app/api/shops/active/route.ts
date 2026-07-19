@@ -19,5 +19,10 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const input = setActiveSchema.parse(body);
   setActiveShopId(input.shopId);
-  return NextResponse.json({ ok: true, activeShopId: input.shopId });
+  return NextResponse.json({
+    status: "pending",
+    processShopId: process.env.SF_ACTIVE_SHOP_ID ?? null,
+    requestedShopId: input.shopId,
+    relaunchRequired: true,
+  });
 }, "PUT /api/shops/active");

@@ -21,7 +21,9 @@ jobs:
     timeout-minutes: 15
 
     env:
-      DATABASE_URL: "file:/tmp/ci-test.db"
+      SF_TEST_ROOT: "/tmp/sahelflow-ci-test"
+      SF_DATA_DIR: "/tmp/sahelflow-ci-test/data"
+      DATABASE_URL: "file:/tmp/sahelflow-ci-test/data/shops/test.db"
       SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
       SF_TEST_FAIL_FAST: "1"
 
@@ -48,29 +50,11 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
-      # T-M7: verify the version is in sync across the three places it lives.
-      # A drift here causes the updater to ship a wrong latest.json or the
-      # desktop bundle to be tagged with a version that doesn't match the
-      # GitHub release tag. Cheap to check (no deps), expensive to miss.
-      - name: Version sync check (Cargo.toml == tauri.conf.json == package.json)
-        run: |
-          python3 - << 'PYEOF'
-          import json, re, sys
-          with open("package.json") as f:
-              pkg = json.load(f)["version"]
-          with open("src-tauri/tauri.conf.json") as f:
-              tauri = json.load(f)["version"]
-          with open("src-tauri/Cargo.toml") as f:
-              m = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.MULTILINE)
-              cargo = m.group(1) if m else None
-          print(f"package.json   : {pkg}")
-          print(f"tauri.conf.json: {tauri}")
-          print(f"Cargo.toml     : {cargo}")
-          if not (pkg == tauri == cargo):
-              print("::error::Version drift detected — all three must match.")
-              sys.exit(1)
-          print("OK: versions in sync.")
-          PYEOF
+      - name: Prepare disposable test sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-ci-test
+
+      - name: Product, app, and runtime protocol authority
+        run: bun run sf-version
 
       - name: Documentation authority and relative-link audit
         run: bun run sf-audit

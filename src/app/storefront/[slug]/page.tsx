@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { storefrontService } from "@/lib/storefront/service";
 import { StorefrontView } from "@/components/storefront/storefront-view";
 import type { Metadata } from "next";
@@ -13,7 +13,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const config = await storefrontService.getBySlug(slug);
+  const config = await storefrontService.getBySlug({ prisma: db, shop: shopContext }, slug);
   const { t } = await getI18n();
   if (!config) return { title: t("metadata.title.storefrontNotFound") };
   return { title: `${config.name} — SahelFlow` };
@@ -25,7 +25,7 @@ export default async function StorefrontPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const config = await storefrontService.getBySlug(slug);
+  const config = await storefrontService.getBySlug({ prisma: db, shop: shopContext }, slug);
 
   if (!config || !config.isActive) {
     notFound();

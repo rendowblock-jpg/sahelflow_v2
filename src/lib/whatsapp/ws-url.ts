@@ -49,9 +49,9 @@ export async function getWhatsAppWsUrlWithToken(): Promise<string | null> {
   try {
     const res = await fetch("/api/whatsapp/ws-token", { cache: "no-store" });
     if (!res.ok) return null;
-    const data = (await res.json()) as { token?: string | null };
+    const data = (await res.json()) as { token?: string | null; wsUrl?: string };
     if (!data.token) return null;
-    const baseUrl = getWhatsAppWsUrl();
+    const baseUrl = data.wsUrl ?? getWhatsAppWsUrl();
     const sep = baseUrl.includes("?") ? "&" : "?";
     return `${baseUrl}${sep}token=${encodeURIComponent(data.token)}`;
   } catch {

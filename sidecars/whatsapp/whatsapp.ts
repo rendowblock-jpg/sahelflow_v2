@@ -17,7 +17,8 @@
  * to Hono + Bun.serve.
  */
 
-import makeWASocket, {
+import {
+  makeWASocket,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeInMemoryStore,
