@@ -14,7 +14,12 @@
  */
 import "server-only";
 import type { ServiceContext } from "@/lib/data/service-base";
-import { recordRefund } from "./order-change-service";
+import {
+  recordOrderChangeInTx,
+  recordRefundInTx,
+  type OrderChangeTransactionClient,
+  type RefundMutationFacts,
+} from "./order-change-service";
 import { logAudit } from "@/lib/audit";
 
 export interface CreateRefundInput {
@@ -30,33 +35,62 @@ export interface CreateRefundInput {
   reference?: string;
 }
 
+function parseLedgerPayload(payload: string | null): Record<string, unknown> | null {
+  if (!payload) return null;
+  try {
+    const parsed = JSON.parse(payload) as unknown;
+    return parsed && typeof parsed === "object"
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function returnTransitionRefundId(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+): Promise<string | null> {
+  const changes = await tx.orderChange.findMany({
+    where: { orderId, actionType: "status_change" },
+    select: { payload: true },
+    orderBy: { createdAt: "desc" },
+  });
+  for (const change of changes) {
+    const payload = parseLedgerPayload(change.payload);
+    if (payload?.to !== "returned") continue;
+    if (payload.from !== "delivered" || payload.reason !== "refund") return null;
+    if (typeof payload.refundId !== "string") {
+      throw new Error("Cannot safely refund returned order: refund transition identity is missing");
+    }
+    return payload.refundId;
+  }
+  throw new Error("Cannot safely refund returned order: return transition fact is missing");
+}
+
 export async function createRefund(context: ServiceContext, input: CreateRefundInput) {
   const db = context.prisma;
-  // Session 30 (AUDIT-3 S3): idempotency — if idempotencyKey provided and a
-  // refund with that key already exists, return the existing refund (no-op).
-  if (input.idempotencyKey) {
-    const existing = await db.refund.findUnique({
-      where: { idempotencyKey: input.idempotencyKey },
-    });
-    if (existing) {
-      return existing;
-    }
+  if (!Number.isSafeInteger(input.amount) || input.amount < 1) {
+    throw new Error("Refund amount must be a positive integer");
   }
 
-  // Transactional: refund create + order-change ledger + (optional) status
-  // transition must all succeed together.
-  //
-  // F-H3 (TOCTOU for concurrent partial refunds): Prisma's interactive
-  // $transaction on SQLite serializes via the single-writer lock (per
-  // src/lib/automations/engine.ts:445 comment) — two concurrent createRefund
-  // calls can't both pass the over-refund guard with stale priorRefunds=0.
-  // The previous explicit `BEGIN IMMEDIATE` wrapper was redundant AND broken:
-  // it acquired the write lock on one pooled connection, then $transaction
-  // tried to start its own transaction on another connection, deadlocking
-  // (PrismaClientUnknownRequestError "SQL error or missing database").
-  // Removed in Phase 1 bug 1.1 — required for the regression test to run.
-  const refund = await db.$transaction(async (tx) => {
-    // 1. Re-read the order inside the tx (TOCTOU-safe)
+  const result = await db.$transaction(async (tx) => {
+    if (input.idempotencyKey) {
+      const existing = await tx.refund.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+      });
+      if (existing) {
+        if (
+          existing.orderId !== input.orderId ||
+          existing.amount !== input.amount ||
+          existing.method !== input.method
+        ) {
+          throw new Error("Idempotency key is already bound to a different refund");
+        }
+        return { refund: existing, created: false };
+      }
+    }
+
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
       select: { id: true, status: true, totalPrice: true, deletedAt: true, customerId: true },
@@ -73,9 +107,6 @@ export async function createRefund(context: ServiceContext, input: CreateRefundI
       throw new Error("Cannot refund a cancelled order");
     }
 
-    // 3. Over-refund guard — total refunds must not exceed order total.
-    //    W3-2: exclude reversed refunds (they no longer count toward the
-    //    total — a reversed refund is conceptually "undone").
     const priorRefunds = await tx.refund.findMany({
       where: { orderId: input.orderId, status: { in: ["completed", "pending"] }, reversed: false },
       select: { amount: true },
@@ -88,80 +119,35 @@ export async function createRefund(context: ServiceContext, input: CreateRefundI
       );
     }
 
-    // 4. Status transition + stock restore + orderCount reversal.
-    //
-    // Phase 1 bug 1.1 (Return + Refund double-counting): if the order is
-    // ALREADY "returned" (because a Return was completed first via
-    // /api/returns/[id], which now routes through
-    // orderService.updateStatus("returned")), the stock + orderCount + totalSpent
-    // side effects have ALREADY been applied by that flow. Re-applying them here
-    // would double-count. So we skip the inline transition entirely — only the
-    // Refund row + the totalSpent decrement (step 8, by the refund amount) need
-    // to run.
-    //
-    // If order.status === "delivered" (no Return was completed first), we still
-    // do the inline transition here (AUDIT-3 S4: COD reconciliation must stop
-    // counting it as collected+remitted) + restore stock + decrement orderCount.
-    // totalSpent is decremented separately in step 8 below by the refund amount.
-    // Phase 1 bug 1.1: when the order is already "returned" (Return completed
-    // first via /api/returns/[id] → orderService.updateStatus("returned")),
-    // the Return flow has ALREADY:
-    //   - restored stock
-    //   - decremented customer.orderCount
-    //   - decremented customer.totalSpent by order.totalPrice (the full order)
-    // So this Refund must NOT re-apply any of those — it only records the
-    // Refund row. In particular, step 8's totalSpent-by-refund-amount
-    // decrement must be skipped (otherwise totalSpent drifts negative for a
-    // full refund: -order.totalPrice - refund.amount).
-    let statusChanged = false;
-    let skipTotalSpentDecrement = false;
-    if (order.status === "delivered") {
-      await tx.order.update({
-        where: { id: input.orderId },
-        data: { status: "returned" },
-      });
-      statusChanged = true;
-
-      // F-H1: restore stock for each item with a productId.
-      const items = await tx.orderItem.findMany({
-        where: { orderId: input.orderId, productId: { not: null } },
-        select: { productId: true, quantity: true },
-      });
-      for (const item of items) {
-        if (item.productId) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
+    let totalSpentAdjusted = true;
+    if (order.status === "returned") {
+      const transitionRefundId = await returnTransitionRefundId(tx, input.orderId);
+      if (transitionRefundId) {
+        const transitionRefund = await tx.refund.findFirst({
+          where: {
+            id: transitionRefundId,
+            orderId: input.orderId,
+            reversed: false,
+          },
+          select: { id: true },
+        });
+        if (!transitionRefund) {
+          throw new Error(
+            "Cannot safely refund returned order: transition refund is missing or reversed",
+          );
         }
       }
-
-      // SV-M3: decrement the customer's orderCount — the order is no longer
-      // "completed" (it's now returned). totalSpent is decremented separately
-      // in step 8 below by the refund amount (which can be partial — for a
-      // full refund it equals order.totalPrice, for a partial refund the
-      // remaining amount stays in totalSpent as "real" revenue from the
-      // portion that wasn't refunded). Best-effort: customer may be soft-deleted.
-      await tx.customer.update({
-        where: { id: order.customerId },
-        data: { orderCount: { decrement: 1 } },
-      }).catch(() => {
-        // best-effort — customer row might be soft-deleted
-      });
-    } else if (order.status === "returned") {
-      // Phase 1 bug 1.1: Return flow already did stock restore + orderCount
-      // reversal + totalSpent-by-order.totalPrice reversal (via
-      // orderService.updateStatus). Skip the inline transition here, AND
-      // skip step 8's totalSpent-by-refund-amount decrement — otherwise
-      // totalSpent would be decremented twice (once by the Return flow's
-      // order.totalPrice, once by the Refund flow's refund.amount). Only
-      // the Refund row + the order-change ledger entry should be created.
-      statusChanged = false;
-      skipTotalSpentDecrement = true;
+      totalSpentAdjusted = transitionRefundId !== null;
     }
 
-    // 5. Create the refund row
-    const r = await tx.refund.create({
+    const facts: RefundMutationFacts = {
+      statusChanged: order.status === "delivered",
+      stockRestored: order.status === "delivered",
+      orderCountAdjusted: order.status === "delivered",
+      totalSpentAdjusted,
+    };
+
+    const created = await tx.refund.create({
       data: {
         orderId: input.orderId,
         amount: input.amount,
@@ -176,61 +162,73 @@ export async function createRefund(context: ServiceContext, input: CreateRefundI
       },
     });
 
-    // 6. Record in the order change ledger — same tx (F-H2: pass tx so the
-    // ledger entry participates in this refund tx; if the tx rolls back, the
-    // ledger entry rolls back too — no orphan refund records.)
-    await recordRefund(
-      context,
-      input.orderId,
-      r.id,
-      input.amount,
-      input.method,
-      input.actor,
-      tx,
-    );
+    if (facts.statusChanged) {
+      await tx.order.update({
+        where: { id: input.orderId },
+        data: { status: "returned" },
+      });
 
-    // 7. If status changed, also record the status_change ledger entry
-    if (statusChanged) {
-      await tx.orderChange.create({
-        data: {
-          orderId: input.orderId,
-          actionType: "status_change",
-          actor: input.actor ?? "user",
-          status: "confirmed",
-          payload: JSON.stringify({ from: "delivered", to: "returned", reason: "refund" }),
+      const items = await tx.orderItem.findMany({
+        where: { orderId: input.orderId, productId: { not: null } },
+        select: { productId: true, quantity: true },
+      });
+      for (const item of items) {
+        if (item.productId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+      }
+
+      await tx.customer.update({
+        where: { id: order.customerId },
+        data: { orderCount: { decrement: 1 } },
+      });
+      await recordOrderChangeInTx(tx, {
+        orderId: input.orderId,
+        actionType: "status_change",
+        actor: input.actor,
+        payload: {
+          from: "delivered",
+          to: "returned",
+          reason: "refund",
+          refundId: created.id,
         },
       });
     }
 
-    // 8. Customer stats reversal — decrement totalSpent by the refund amount.
-    // Phase 4 spec required this but it was never implemented. We only
-    // adjust totalSpent (not orderCount) since the order still happened.
-    // Phase 1 bug 1.1: SKIP this when the order was already "returned" —
-    // the Return flow already decremented totalSpent by order.totalPrice
-    // (the full order), so a second decrement by refund.amount would
-    // double-count.
-    if (!skipTotalSpentDecrement) {
+    if (facts.totalSpentAdjusted) {
       await tx.customer.update({
         where: { id: order.customerId },
         data: { totalSpent: { decrement: input.amount } },
-      }).catch(() => {
-        // best-effort — customer row might be soft-deleted
       });
     }
 
-    return r;
+    await recordRefundInTx(
+      tx,
+      input.orderId,
+      created.id,
+      input.amount,
+      input.method,
+      input.actor,
+      facts,
+    );
+
+    return { refund: created, created: true };
   });
 
-  // Audit log (outside tx — fire-and-forget, never blocks the refund)
-  void logAudit(context, {
-    action: "order.refunded",
-    entity: "order",
-    entityId: input.orderId,
-    actor: input.actor ?? "user",
-    after: { refundId: refund.id, amount: input.amount, method: input.method },
-  });
+  if (result.created) {
+    void logAudit(context, {
+      action: "order.refunded",
+      entity: "order",
+      entityId: input.orderId,
+      actor: input.actor ?? "user",
+      after: { refundId: result.refund.id, amount: input.amount, method: input.method },
+    });
+  }
 
-  return refund;
+  return result.refund;
 }
 
 /** Get all refunds for an order (newest first). Includes reversed refunds
@@ -281,26 +279,9 @@ export interface ReverseRefundInput {
  *     flips `order.status` back to "delivered".
  *   - Records an OrderChange ledger entry (actionType: "refund_reversed").
  *
- * Detection of what `createRefund` did (the refund row doesn't store this
- * explicitly, so we re-derive it from the OrderChange ledger + the order's
- * current state):
- *   - The inline `delivered → returned` transition is detected by looking for
- *     a `status_change` OrderChange entry on the same order whose payload is
- *     `{ from: "delivered", to: "returned", reason: "refund" }` (this is what
- *     `createRefund` writes in step 7 when `statusChanged === true`).
- *   - The `customer.totalSpent` decrement (createRefund step 8) is detected
- *     heuristically: if the inline transition ran, step 8 definitely ran.
- *     If the inline transition did NOT run, step 8 was skipped ONLY when the
- *     order was already "returned" at refund time (the `returned` branch with
- *     `skipTotalSpentDecrement = true`). We approximate "order was returned
- *     at refund time" by "order is currently `returned` AND no inline-
- *     transition ledger entry exists".
- *
- *     TODO(W3-2): this heuristic is wrong if the order was transitioned away
- *     from "returned" after a refund-on-already-returned-order (rare — would
- *     require a re-ship after a Return + Refund). A future task should add a
- *     `customerStatsAdjusted Boolean @default(true)` column to the Refund
- *     model, set explicitly in `createRefund`, for a definitive signal.
+ * Compensation uses the identity-bound facts stored in that refund's
+ * OrderChange payload. Legacy refunds without those facts fail closed rather
+ * than guessing from timestamps or current state.
  *
  * @param refundId  The Refund row id to reverse.
  * @param opts      Optional `reason` + `actor` for the audit trail.
@@ -314,86 +295,80 @@ export async function reverseRefund(
   const db = context.prisma;
   const actor = opts?.actor ?? "user";
 
-  // 1. Read the refund + its order (outside tx — read-only precheck so we
-  //    can produce a clear error before opening a tx).
-  const refund = await db.refund.findUnique({
-    where: { id: refundId },
-    select: {
-      id: true,
-      orderId: true,
-      amount: true,
-      method: true,
-      reversed: true,
-      reversedAt: true,
-      createdAt: true,
-      order: { select: { id: true, customerId: true, status: true } },
-    },
-  });
-  if (!refund) {
-    throw new Error(`Refund ${refundId} not found`);
-  }
-  if (refund.reversed) {
-    throw new Error(
-      `Refund ${refundId} is already reversed (reversedAt=${refund.reversedAt?.toISOString() ?? "null"})`,
-    );
-  }
-
-  await db.$transaction(async (tx) => {
-    // 2. Re-read inside tx (TOCTOU-safe — two concurrent reverseRefund
-    //    calls can't both pass the reversed check with stale state).
-    const current = await tx.refund.findUnique({
+  const reversed = await db.$transaction(async (tx) => {
+    const refund = await tx.refund.findUnique({
       where: { id: refundId },
-      select: { reversed: true },
+      select: {
+        id: true,
+        orderId: true,
+        amount: true,
+        method: true,
+        reversed: true,
+        reversedAt: true,
+        order: { select: { customerId: true, status: true } },
+      },
     });
-    if (current?.reversed) {
-      throw new Error(`Refund ${refundId} was reversed concurrently`);
+    if (!refund) {
+      throw new Error(`Refund ${refundId} not found`);
+    }
+    if (refund.reversed) {
+      throw new Error(
+        `Refund ${refundId} is already reversed (reversedAt=${refund.reversedAt?.toISOString() ?? "null"})`,
+      );
     }
 
-    // 3. Mark the refund as reversed (kept in the table for audit — refunds
-    //    are append-only; a reversal is a compensating action, not a delete).
+    const refundChanges = await tx.orderChange.findMany({
+      where: { orderId: refund.orderId, actionType: "refund" },
+      select: { payload: true },
+      orderBy: { createdAt: "desc" },
+    });
+    const matchingFacts = refundChanges.flatMap((change) => {
+      const payload = parseLedgerPayload(change.payload);
+      if (payload?.refundId !== refundId) return [];
+      if (
+        typeof payload.statusChanged !== "boolean" ||
+        typeof payload.stockRestored !== "boolean" ||
+        typeof payload.orderCountAdjusted !== "boolean" ||
+        typeof payload.totalSpentAdjusted !== "boolean"
+      ) {
+        return [];
+      }
+      return [{
+        statusChanged: payload.statusChanged,
+        stockRestored: payload.stockRestored,
+        orderCountAdjusted: payload.orderCountAdjusted,
+        totalSpentAdjusted: payload.totalSpentAdjusted,
+      }];
+    });
+    const facts = matchingFacts[0];
+    if (matchingFacts.length !== 1 || !facts) {
+      throw new Error(
+        `Cannot safely reverse refund ${refundId}: expected one identity-bound compensation record`,
+      );
+    }
+
+    if (facts.statusChanged) {
+      const otherActiveRefunds = await tx.refund.count({
+        where: { orderId: refund.orderId, id: { not: refundId }, reversed: false },
+      });
+      if (otherActiveRefunds > 0) {
+        throw new Error(
+          `Cannot reverse refund ${refundId} while other active refunds depend on its return transition`,
+        );
+      }
+      if (refund.order.status !== "returned") {
+        throw new Error(
+          `Cannot reverse refund ${refundId}: order status is '${refund.order.status}', expected 'returned'`,
+        );
+      }
+    }
+
     await tx.refund.update({
       where: { id: refundId },
       data: { reversed: true, reversedAt: new Date() },
     });
 
-    // 4. Detect if createRefund did the inline `delivered → returned`
-    //    transition (which also restored stock + decremented orderCount).
-    //    Signal: a `status_change` OrderChange on the same order whose
-    //    payload is `{ from: "delivered", to: "returned", reason: "refund" }`,
-    //    written within ±5 seconds of the refund's createdAt (same tx →
-    //    same timestamp, but allow slack for clock skew in test setups).
-    const statusChanges = await tx.orderChange.findMany({
-      where: {
-        orderId: refund.orderId,
-        actionType: "status_change",
-      },
-      select: { payload: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
-    });
-    let inlineTransitionRan = false;
-    const refundTime = refund.createdAt.getTime();
-    for (const sc of statusChanges) {
-      if (!sc.payload) continue;
-      if (Math.abs(sc.createdAt.getTime() - refundTime) > 5000) continue;
-      try {
-        const p = JSON.parse(sc.payload) as {
-          from?: string;
-          to?: string;
-          reason?: string;
-        };
-        if (p?.from === "delivered" && p?.to === "returned" && p?.reason === "refund") {
-          inlineTransitionRan = true;
-          break;
-        }
-      } catch {
-        // payload not JSON — skip
-      }
-    }
-
-    // 5. Reverse the inline-transition side effects (if they ran).
-    if (inlineTransitionRan) {
-      // 5a. Re-deduct stock for each item with a productId (createRefund
-      //     incremented stock — we decrement it back).
+    if (facts.stockRestored) {
       const items = await tx.orderItem.findMany({
         where: { orderId: refund.orderId, productId: { not: null } },
         select: { productId: true, quantity: true },
@@ -406,72 +381,67 @@ export async function reverseRefund(
           });
         }
       }
+    }
 
-      // 5b. Undo the orderCount decrement (createRefund decremented by 1).
+    if (facts.orderCountAdjusted) {
       await tx.customer.update({
         where: { id: refund.order.customerId },
         data: { orderCount: { increment: 1 } },
-      }).catch(() => {
-        // best-effort — customer row might be soft-deleted
       });
-
-      // 5c. Flip order.status back to "delivered" (best-effort — only if
-      //     the order is currently "returned"; if another flow transitioned
-      //     it since the refund, leave it alone).
-      if (refund.order.status === "returned") {
-        await tx.order.update({
-          where: { id: refund.orderId },
-          data: { status: "delivered" },
-        });
-      }
     }
 
-    // 6. Reverse the customer.totalSpent decrement (createRefund step 8).
-    //    Heuristic: step 8 ran UNLESS the order was already "returned" at
-    //    refund time (the `returned` branch with skipTotalSpentDecrement=true).
-    //    We approximate "order was returned at refund time" by "order is
-    //    currently `returned` AND no inline-transition ledger entry exists"
-    //    (if the inline transition ran, the order was `delivered` at refund
-    //    time, so step 8 ran). See the function docstring for the known edge
-    //    case where this heuristic is wrong.
-    const step8Ran = inlineTransitionRan || refund.order.status !== "returned";
-    if (step8Ran) {
+    if (facts.totalSpentAdjusted) {
       await tx.customer.update({
         where: { id: refund.order.customerId },
         data: { totalSpent: { increment: refund.amount } },
-      }).catch(() => {
-        // best-effort — customer row might be soft-deleted
       });
     }
 
-    // 7. Record the reversal in the order-change ledger (in-tx → atomic
-    //    with the reversal; if the tx rolls back, the ledger entry rolls
-    //    back too — no orphan reversal records).
-    await tx.orderChange.create({
-      data: {
+    if (facts.statusChanged) {
+      await tx.order.update({
+        where: { id: refund.orderId },
+        data: { status: "delivered" },
+      });
+      await recordOrderChangeInTx(tx, {
         orderId: refund.orderId,
-        actionType: "refund_reversed",
+        actionType: "status_change",
         actor,
-        status: "confirmed",
-        payload: JSON.stringify({
+        payload: {
+          from: "returned",
+          to: "delivered",
+          reason: "refund_reversal",
           refundId,
-          amount: refund.amount,
-          method: refund.method,
-          reason: opts?.reason ?? null,
-          inlineTransitionReversed: inlineTransitionRan,
-          customerStatsReversed: step8Ran,
-        }),
+        },
+      });
+    }
+
+    await recordOrderChangeInTx(tx, {
+      orderId: refund.orderId,
+      actionType: "refund_reversed",
+      actor,
+      payload: {
+        refundId,
+        amount: refund.amount,
+        method: refund.method,
+        reason: opts?.reason ?? null,
+        ...facts,
       },
     });
+
+    return { refund, facts };
   });
 
-  // 8. Audit log (outside tx — fire-and-forget, never blocks the reversal).
   void logAudit(context, {
     action: "order.refund_reversed",
     entity: "order",
-    entityId: refund.orderId,
+    entityId: reversed.refund.orderId,
     actor,
-    after: { refundId, amount: refund.amount, method: refund.method },
+    after: {
+      refundId,
+      amount: reversed.refund.amount,
+      method: reversed.refund.method,
+      ...reversed.facts,
+    },
     metadata: { reason: opts?.reason ?? null },
   });
 }

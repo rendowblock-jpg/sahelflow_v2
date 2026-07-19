@@ -11,7 +11,7 @@
  */
 import "server-only";
 import type { ServiceContext } from "@/lib/data/service-base";
-import { recordOrderChange } from "./order-change-service";
+import { recordOrderChangeInTx } from "./order-change-service";
 import { logAudit } from "@/lib/audit";
 
 /**
@@ -93,12 +93,11 @@ export async function markCodCollected(
 
     // Record the ledger entry INSIDE the tx (F-H2 pattern: if the tx rolls
     // back, the ledger entry rolls back too — no orphan rows).
-    await recordOrderChange(context, {
+    await recordOrderChangeInTx(tx, {
       orderId,
       actionType: "cod_collected",
       actor,
       payload: { amount: order.totalPrice },
-      tx,
     });
 
     return order;
@@ -170,12 +169,11 @@ export async function markCodRemitted(
       select: { id: true, orderNumber: true, totalPrice: true, codRemitted: true, codRemittedAt: true, codRemittanceRef: true },
     });
 
-    await recordOrderChange(context, {
+    await recordOrderChangeInTx(tx, {
       orderId,
       actionType: "cod_remitted",
       actor,
       payload: { amount: order.totalPrice, remittanceRef },
-      tx,
     });
 
     return order;
@@ -200,64 +198,52 @@ export async function bulkMarkCodRemitted(
   actor = "user",
 ) {
   const db = context.prisma;
-  // Session 30 (AUDIT-2 A2): only update + ledger the orders that actually
-  // need it (collected=true, remitted=false). Previously the ledger loop
-  // fired for every input id, including ones skipped by the updateMany filter
-  // → phantom ledger entries.
-  const candidates = await db.order.findMany({
-    where: { id: { in: orderIds }, codCollected: true, codRemitted: { not: true }, deletedAt: null },
-    select: { id: true },
-  });
-  const affectedIds = candidates.map((o) => o.id);
+  const updated = await db.$transaction(async (tx) => {
+    const candidates = await tx.order.findMany({
+      where: {
+        id: { in: orderIds },
+        codCollected: true,
+        codRemitted: { not: true },
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
 
-  if (affectedIds.length === 0) {
-    return { updated: 0, total: orderIds.length };
-  }
+    let count = 0;
+    const remittedAt = new Date();
+    for (const order of candidates) {
+      const claimed = await tx.order.updateMany({
+        where: {
+          id: order.id,
+          codCollected: true,
+          codRemitted: { not: true },
+          deletedAt: null,
+        },
+        data: {
+          codRemitted: true,
+          codRemittedAt: remittedAt,
+          codRemittanceRef: remittanceRef,
+        },
+      });
+      if (claimed.count === 0) continue;
 
-  const result = await db.order.updateMany({
-    where: { id: { in: affectedIds } },
-    data: {
-      codRemitted: true,
-      codRemittedAt: new Date(),
-      codRemittanceRef: remittanceRef,
-    },
-  });
+      const remitted = await tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+        select: { totalPrice: true },
+      });
 
-  // SV-M5: was `void recordOrderChange(...)` in a loop — failures silently
-  // swallowed (recordOrderChange has a try/catch that returns void on error).
-  // Now we use Promise.all + collect errors explicitly. recordOrderChange
-  // itself never throws (it has its own try/catch), but Promise.all gives
-  // us a clear concurrency boundary + the void wrapper documents intent.
-  // If any entry silently fails (returns void from its internal catch), we
-  // can't detect it — but at least the Promise.all boundary surfaces any
-  // unexpected rejections from the inner Promise chain. The audit's concern
-  // was "failures silently lost" — recordOrderChange's internal catch is the
-  // silence; we add an explicit log here so we have visibility into the
-  // batch dispatch completing.
-  const ledgerResults = await Promise.allSettled(
-    affectedIds.map((id) =>
-      recordOrderChange(context, {
-        orderId: id,
+      await recordOrderChangeInTx(tx, {
+        orderId: order.id,
         actionType: "cod_remitted",
         actor,
-        payload: { remittanceRef, bulk: true },
-      }),
-    ),
-  );
-  const failed = ledgerResults.filter((r) => r.status === "rejected");
-  if (failed.length > 0) {
-    // Log but don't throw — the updateMany succeeded, the ledger entries are
-    // best-effort. The seller's reconciliation is correct (codRemitted=true
-    // on the order rows); only the audit timeline is missing entries.
-    // Uses console.warn because logger might not be set up in all callers
-    // (this is a fire-and-forget path).
-    console.warn(
-      `[cod-service.bulkMarkCodRemitted] ${failed.length}/${affectedIds.length} ledger entries failed`,
-      { firstError: String((failed[0] as PromiseRejectedResult).reason) },
-    );
-  }
+        payload: { amount: remitted.totalPrice, remittanceRef, bulk: true },
+      });
+      count++;
+    }
+    return count;
+  });
 
-  return { updated: result.count, total: orderIds.length };
+  return { updated, total: orderIds.length };
 }
 
 /** Get COD reconciliation summary (for the accounting page). */

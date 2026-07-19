@@ -99,6 +99,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       // per-row $transaction. Previously a failed order.create (after
       // nextOrderNumber already incremented the counter) left gaps in
       // order numbering + a partial customer create. Now each row is atomic.
+      const afterCommit: Array<() => void> = [];
       await context.prisma.$transaction(async (tx) => {
         const data = validRow.data as { customerName: string; phone: string; wilaya: string; commune?: string; address?: string; productName: string; quantity: number; unitPrice: number; deliveryCost?: number; status?: string; orderNumber?: string };
         const phone = data.phone;
@@ -152,9 +153,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
             deliveryCost: deliveryCost > 0 ? deliveryCost : null,
             status,
           },
-          { tx: tx as never },
+          {
+            tx: tx as never,
+            afterCommit: (effect) => afterCommit.push(effect),
+          },
         );
       });
+      afterCommit.forEach((effect) => effect());
       inserted++;
     } catch (err) {
       errors.push({

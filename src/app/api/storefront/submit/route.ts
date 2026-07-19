@@ -273,6 +273,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // service runs inside this tx (opts.tx) so customer-upsert + order-create
   // + ledger entry all stay atomic.
   const context = { prisma: db, shop: shopContext };
+  const afterCommit: Array<() => void> = [];
   const order = await context.prisma.$transaction(async (tx) => {
     const customer = await tx.customer.upsert({
       where: { phone: input.customer.phone },
@@ -309,9 +310,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         sourceMetadata: { storefrontSlug: input.slug },
         notes: input.notes,
       },
-      { tx: tx as never },
+      {
+        tx: tx as never,
+        afterCommit: (effect) => afterCommit.push(effect),
+      },
     );
   });
+  afterCommit.forEach((effect) => effect());
 
   return NextResponse.json({
     ok: true,

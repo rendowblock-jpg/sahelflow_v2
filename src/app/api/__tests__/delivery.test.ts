@@ -58,6 +58,14 @@ import { POST as POSTSync } from "@/app/api/delivery/sync/route";
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 let _custCounter = 0;
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 async function seedCustomer() {
   _custCounter++;
   return rawDb.customer.create({
@@ -108,6 +116,7 @@ async function seedOrderAtStatus(status: "confirmed" | "shipped" | "delivered" |
 
 describe("POST /api/delivery/create — create shipment", () => {
   beforeEach(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_create_shipment_ledger"');
     await cleanDb();
     mockAdapter.createShipment.mockReset();
     mockAdapter.createShipment.mockResolvedValue({
@@ -118,7 +127,10 @@ describe("POST /api/delivery/create — create shipment", () => {
       estimatedDelivery: null,
     });
   });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  afterAll(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_create_shipment_ledger"');
+    await rawDb.$disconnect();
+  });
 
   it("creates a Delivery row + transitions order to 'shipped' on valid input (200)", async () => {
     const { order } = await seedOrderAtStatus("confirmed");
@@ -168,9 +180,11 @@ describe("POST /api/delivery/create — create shipment", () => {
     );
     expect(res.status).toBe(502);
 
-    // No Delivery row should have been created
+    // The reservation remains as explicit evidence because a provider error
+    // may be ambiguous; retries must fail closed until reconciliation.
     const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
-    expect(delivery).toBeNull();
+    expect(delivery?.status).toBe("reconciliation_required");
+    expect(delivery?.trackingNumber).toBeNull();
     // Order should still be confirmed (not flipped to shipped)
     const updatedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
     expect(updatedOrder!.status).toBe("confirmed");
@@ -243,30 +257,24 @@ describe("POST /api/delivery/create — create shipment", () => {
     expect(mockAdapter.createShipment).not.toHaveBeenCalled();
   });
 
-  it("B4b: recovery path — shipped order with NO delivery row is allowed through (data inconsistency repair)", async () => {
-    // Order was flipped to "shipped" somehow but no Delivery row exists
-    // (e.g. manual DB edit, partial migration). We must NOT block the
-    // create — there's no parcel to orphan. The adapter runs and a new
-    // delivery row is created.
+  it("fails closed for a shipped order with no local delivery evidence", async () => {
+    // A shipped order with no Delivery row may already have an orphaned remote
+    // parcel. Calling the provider again would risk a duplicate shipment.
     const { order } = await seedOrderAtStatus("shipped");
 
     const res = await POSTCreate(
       mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
     );
-    expect(res.status).toBe(200);
-    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(409);
+    expect(mockAdapter.createShipment).not.toHaveBeenCalled();
 
     const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
-    expect(delivery).toBeTruthy();
-    expect(delivery!.trackingNumber).toBe("YAL-TRACK-XYZ");
+    expect(delivery).toBeNull();
   });
 
-  it("B4b: a Delivery row with NULL trackingNumber does NOT trigger 409 (allows adapter to populate it)", async () => {
-    // Edge case: a prior create attempt created a Delivery row but never
-    // populated trackingNumber (e.g. an old code path or a manual insert).
-    // We must NOT 409 — the row has no real parcel reference, so re-running
-    // the adapter is safe. The upsert's update branch will populate the
-    // trackingNumber.
+  it("fails closed for a pre-existing Delivery row without tracking", async () => {
+    // A legacy row without tracking may represent an ambiguous provider POST.
+    // Preserve it for reconciliation rather than exposing a duplicate parcel.
     const { order } = await seedOrderAtStatus("confirmed");
     await rawDb.delivery.create({
       data: {
@@ -282,11 +290,132 @@ describe("POST /api/delivery/create — create shipment", () => {
     const res = await POSTCreate(
       mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
     );
-    expect(res.status).toBe(200);
-    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(409);
+    expect(mockAdapter.createShipment).not.toHaveBeenCalled();
 
     const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
-    expect(delivery!.trackingNumber).toBe("YAL-TRACK-XYZ");
+    expect(delivery).toMatchObject({
+      trackingNumber: null,
+      status: "reconciliation_required",
+    });
+  });
+
+  it("fails closed when the provider reports success without a tracking receipt", async () => {
+    const { order } = await seedOrderAtStatus("confirmed");
+    mockAdapter.createShipment.mockResolvedValue({
+      success: true,
+      trackingId: "",
+      cost: 600,
+    });
+
+    const res = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(res.status).toBe(502);
+    expect(await rawDb.delivery.findUnique({ where: { orderId: order.id } })).toMatchObject({
+      trackingNumber: null,
+      status: "reconciliation_required",
+    });
+
+    const retry = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(retry.status).toBe(409);
+    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+  });
+
+  it("reserves before the provider call so concurrent creates call the provider once", async () => {
+    const { order } = await seedOrderAtStatus("confirmed");
+    const gate = deferred<{
+      success: true;
+      trackingId: string;
+      cost: number;
+      estimatedDelivery: null;
+    }>();
+    mockAdapter.createShipment.mockReturnValueOnce(gate.promise);
+
+    const first = POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    await vi.waitFor(
+      () => expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1),
+      { timeout: 5000 },
+    );
+
+    const second = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(second.status).toBe(409);
+    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+
+    gate.resolve({
+      success: true,
+      trackingId: "YAL-CONCURRENT-1",
+      cost: 600,
+      estimatedDelivery: null,
+    });
+    expect((await first).status).toBe(200);
+  });
+
+  it("persists the provider receipt and fails closed when local completion conflicts", async () => {
+    const { order } = await seedOrderAtStatus("confirmed");
+    const gate = deferred<{
+      success: true;
+      trackingId: string;
+      cost: number;
+      estimatedDelivery: null;
+    }>();
+    mockAdapter.createShipment.mockReturnValueOnce(gate.promise);
+
+    const request = POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    await vi.waitFor(
+      () => expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1),
+      { timeout: 5000 },
+    );
+    await rawDb.order.update({ where: { id: order.id }, data: { status: "cancelled" } });
+    gate.resolve({
+      success: true,
+      trackingId: "YAL-RECONCILE-1",
+      cost: 600,
+      estimatedDelivery: null,
+    });
+
+    expect((await request).status).toBe(409);
+    const delivery = await rawDb.delivery.findUnique({ where: { orderId: order.id } });
+    expect(delivery?.status).toBe("reconciliation_required");
+    expect(delivery?.trackingNumber).toBe("YAL-RECONCILE-1");
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status).toBe("cancelled");
+
+    const retry = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(retry.status).toBe(409);
+    expect(mockAdapter.createShipment).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps reconciliation evidence when the provider succeeds but the ledger fails", async () => {
+    const { order } = await seedOrderAtStatus("confirmed");
+    await rawDb.$executeRawUnsafe(`
+      CREATE TRIGGER "fail_create_shipment_ledger"
+      BEFORE INSERT ON "OrderChange"
+      WHEN NEW.actionType = 'status_change'
+      BEGIN
+        SELECT RAISE(ABORT, 'forced ledger failure');
+      END
+    `);
+
+    const res = await POSTCreate(
+      mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
+    );
+    expect(res.status).toBe(500);
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status).toBe("confirmed");
+    expect(await rawDb.delivery.findUnique({ where: { orderId: order.id } })).toMatchObject({
+      trackingNumber: "YAL-TRACK-XYZ",
+      status: "reconciliation_required",
+    });
+    expect(await rawDb.orderChange.count({ where: { orderId: order.id } })).toBe(0);
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
@@ -303,10 +432,14 @@ describe("POST /api/delivery/create — create shipment", () => {
 
 describe("POST /api/delivery/sync — sync tracking", () => {
   beforeEach(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_sync_conflict"');
     await cleanDb();
     mockAdapter.syncTracking.mockReset();
   });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  afterAll(async () => {
+    await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_sync_conflict"');
+    await rawDb.$disconnect();
+  });
 
   /** Seed a shipped order + a Delivery row with a tracking number. */
   async function seedShippedOrderWithDelivery(trackingNumber = "YAL-TRACK-001") {
@@ -371,6 +504,63 @@ describe("POST /api/delivery/sync — sync tracking", () => {
     // Order should still be shipped
     const updatedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
     expect(updatedOrder!.status).toBe("shipped");
+  });
+
+  it("preserves delivered provider state and records a reconciliation conflict", async () => {
+    const { order, delivery } = await seedShippedOrderWithDelivery();
+    await rawDb.order.update({ where: { id: order.id }, data: { status: "returned" } });
+    mockAdapter.syncTracking.mockResolvedValue({
+      status: "delivered",
+      estimatedDelivery: null,
+      events: [],
+    });
+
+    const res = await POSTSync(
+      mockPost("http://localhost/api/delivery/sync", { deliveryId: delivery.id }),
+    );
+    expect(res.status).toBe(409);
+
+    const updatedDelivery = await rawDb.delivery.findUnique({ where: { id: delivery.id } });
+    expect(updatedDelivery?.status).toBe("delivered");
+    const unchangedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
+    expect(unchangedOrder?.status).toBe("returned");
+    const conflict = await rawDb.orderChange.findFirst({
+      where: { orderId: order.id, actionType: "delivery_sync_conflict" },
+    });
+    expect(JSON.parse(conflict?.payload ?? "{}")).toMatchObject({
+      providerStatus: "delivered",
+      orderStatus: "returned",
+    });
+  });
+
+  it("still preserves provider state when conflict evidence cannot be inserted", async () => {
+    const { order, delivery } = await seedShippedOrderWithDelivery();
+    await rawDb.order.update({ where: { id: order.id }, data: { status: "returned" } });
+    await rawDb.$executeRawUnsafe(`
+      CREATE TRIGGER "fail_delivery_sync_conflict"
+      BEFORE INSERT ON "OrderChange"
+      WHEN NEW.actionType = 'delivery_sync_conflict'
+      BEGIN
+        SELECT RAISE(ABORT, 'forced delivery conflict ledger failure');
+      END
+    `);
+    mockAdapter.syncTracking.mockResolvedValue({
+      status: "delivered",
+      estimatedDelivery: null,
+      events: [],
+    });
+
+    const res = await POSTSync(
+      mockPost("http://localhost/api/delivery/sync", { deliveryId: delivery.id }),
+    );
+    expect(res.status).toBe(500);
+    expect((await rawDb.delivery.findUnique({ where: { id: delivery.id } }))?.status)
+      .toBe("delivered");
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status)
+      .toBe("returned");
+    expect(await rawDb.orderChange.count({
+      where: { orderId: order.id, actionType: "delivery_sync_conflict" },
+    })).toBe(0);
   });
 
   it("returns 404 when the delivery does not exist", async () => {
