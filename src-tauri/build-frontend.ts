@@ -10,7 +10,7 @@
  */
 
 import { execSync } from "child_process";
-import { cpSync, existsSync, mkdirSync, rmSync } from "fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { prepareDesktopBuildContext } from "../scripts/desktop-build-context";
 
@@ -97,6 +97,10 @@ if (existsSync(resDir)) {
 }
 mkdirSync(resDir, { recursive: true });
 cpSync(standaloneDir, resDir, { recursive: true });
+// The directory is ignored except for this tracked placeholder. Recreate it
+// after replacing the generated resource tree so the build never deletes a
+// tracked source file.
+writeFileSync(resolve(resDir, ".gitkeep"), "", "utf8");
 ok("Copied standalone → src-tauri/resources/standalone");
 
 // ── 4. Compile WhatsApp sidecar (Bun → standalone binary) ───────────────────
