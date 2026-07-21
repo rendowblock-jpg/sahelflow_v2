@@ -14,6 +14,11 @@ const scriptPath = fileURLToPath(
   new URL("../verify-updater-contract.ts", import.meta.url),
 );
 const fixtureRoots: string[] = [];
+const publicKeyId = "C7183693A0589B55";
+const signingKeyId = "tauri-internal-c7183693a0589b55";
+const publicKey = Buffer.from(
+  `untrusted comment: minisign public key: ${publicKeyId}\nfixture-key-material\n`,
+).toString("base64");
 
 function writeFixture(options?: {
   authorityEnabled?: boolean;
@@ -29,8 +34,8 @@ function writeFixture(options?: {
   const tauriActive = options?.tauriActive ?? authorityEnabled;
   const createUpdaterArtifacts =
     options?.createUpdaterArtifacts ?? authorityEnabled;
-  const signingKeyId =
-    options?.signingKeyId ?? (authorityEnabled ? "internal-2026-01" : null);
+  const selectedSigningKeyId =
+    options?.signingKeyId ?? (authorityEnabled ? signingKeyId : null);
   const endpoint = "https://updates.example.test/internal/latest.json";
 
   const files = new Map<string, string>([
@@ -44,7 +49,10 @@ function writeFixture(options?: {
             manifestFormatVersion: 1,
             channelStatus: authorityEnabled ? "approved" : "candidate",
             signingKeyStatus: authorityEnabled ? "approved" : "unaccepted",
-            signingKeyId,
+            signingKeyId: selectedSigningKeyId,
+            publicKeyId,
+            approvalScope: "internal-lab",
+            authenticodeRequired: false,
             endpoint,
             installMode: "passive",
           },
@@ -62,7 +70,7 @@ function writeFixture(options?: {
             updater: {
               active: tauriActive,
               endpoints: [endpoint],
-              pubkey: "fixture-public-key",
+              pubkey: publicKey,
               windows: { installMode: "passive" },
             },
           },
@@ -75,16 +83,26 @@ function writeFixture(options?: {
       ".github/workflows/release.yml",
       options?.signedWorkflow
         ? [
+            "on:",
+            "  workflow_dispatch:",
+            "    inputs:",
+            "      source_ref:",
+            "        required: true",
             "permissions:",
             "  contents: write",
             "jobs:",
             "  release:",
-            "    environment: updater-internal",
+            "    environment: internal-updater",
             "    steps:",
-            "      - run: echo latest.json",
+            "      - uses: tauri-apps/tauri-action@v0.6.2",
             "        env:",
             "          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}",
             "          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}",
+            "        with:",
+            "          releaseDraft: true",
+            "          uploadUpdaterJson: true",
+            "          uploadUpdaterSignatures: true",
+            "      - run: echo latest.json",
           ].join("\n")
         : [
             "permissions:",
@@ -154,12 +172,14 @@ describe("verify-updater-contract", () => {
     expect(result.stderr).toContain("must not label artifacts UNSIGNED");
   });
 
-  it("accepts a coherently approved signed publication configuration", () => {
+  it("accepts a coherently approved signed draft configuration", () => {
     const result = verify(
       writeFixture({ authorityEnabled: true, signedWorkflow: true }),
     );
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("enabled with key internal-2026-01");
+    expect(result.stdout).toContain(
+      `internal/internal-lab enabled with key ${signingKeyId}`,
+    );
   });
 });
