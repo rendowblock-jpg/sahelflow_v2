@@ -12,6 +12,7 @@
 import { execSync } from "child_process";
 import { cpSync, existsSync, mkdirSync, rmSync } from "fs";
 import { resolve } from "path";
+import { prepareDesktopBuildContext } from "../scripts/desktop-build-context";
 
 const ROOT = process.cwd();
 const GREEN = "\x1b[0;32m";
@@ -41,15 +42,25 @@ ok("Pinned runtime prepared");
 
 // ── 1. Next.js standalone build ──────────────────────────────────────────────
 step("1. Next.js standalone build");
-// The canonical package build explicitly selects Webpack. Next.js 16 defaults
-// to Turbopack, whose Windows file-pattern analysis treats server-only runtime
-// SQLite path resolution as repository-wide globs and blocks the installer
-// build. TypeScript and ESLint still run independently through sf-verify.
-execSync("bun run build", {
-  stdio: "inherit",
-  cwd: ROOT,
-  env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" },
-});
+// The canonical package build explicitly selects Webpack. Next.js imports
+// server route modules while collecting build metadata, so provide a complete,
+// disposable ShopContext that lives below the OS temporary directory. The
+// installed server receives its real authority tuple from Tauri at runtime.
+const buildContext = prepareDesktopBuildContext();
+try {
+  execSync("bun run build", {
+    stdio: "inherit",
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      ...buildContext.env,
+      NODE_OPTIONS: "--max-old-space-size=4096",
+      NEXT_TELEMETRY_DISABLED: "1",
+    },
+  });
+} finally {
+  buildContext.cleanup();
+}
 ok("Next.js build complete");
 
 // ── 2. Arrange static + public into standalone ──────────────────────────────

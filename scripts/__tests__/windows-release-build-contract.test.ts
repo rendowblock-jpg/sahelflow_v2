@@ -10,7 +10,7 @@ function read(relativePath: string): string {
 }
 
 describe("Windows signed release build contract", () => {
-  it("uses the canonical Webpack standalone build from the Tauri hook", () => {
+  it("uses the canonical Webpack build with a disposable build-only ShopContext", () => {
     const packageJson = JSON.parse(read("package.json")) as {
       scripts?: Record<string, string>;
     };
@@ -19,6 +19,9 @@ describe("Windows signed release build contract", () => {
     expect(packageJson.scripts?.build).toContain("next build --webpack");
     expect(packageJson.scripts?.build).not.toContain("--turbopack");
     expect(frontendBuild).toContain('execSync("bun run build"');
+    expect(frontendBuild).toContain("prepareDesktopBuildContext()");
+    expect(frontendBuild).toContain("...buildContext.env");
+    expect(frontendBuild).toMatch(/finally\s*{\s*buildContext\.cleanup\(\);\s*}/);
     expect(frontendBuild).not.toContain(
       "node_modules/next/dist/bin/next build\"",
     );
