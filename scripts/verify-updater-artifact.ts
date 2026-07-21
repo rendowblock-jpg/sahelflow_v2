@@ -24,31 +24,78 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function decodePayload(box: string, expectedLabel: string): Uint8Array {
-  const decodedBox = Buffer.from(box.trim(), "base64").toString("utf8");
-  const payloadLine = decodedBox
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find((line) => line.length > 0 && !line.toLowerCase().startsWith("untrusted comment:"));
-  if (!payloadLine) fail(`${expectedLabel} has no encoded payload line`);
-  try {
-    return Buffer.from(payloadLine, "base64");
-  } catch {
-    fail(`${expectedLabel} payload is not valid base64`);
+function decodeBase64Strict(value: string, label: string): Uint8Array {
+  const compact = value.replace(/\s+/g, "");
+  if (!compact || compact.length % 4 === 1) {
+    fail(`${label} is not valid base64`);
   }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact)) {
+    fail(`${label} is not valid base64`);
+  }
+
+  const decoded = Buffer.from(compact, "base64");
+  const canonical = decoded.toString("base64").replace(/=+$/u, "");
+  if (canonical !== compact.replace(/=+$/u, "")) {
+    fail(`${label} is not canonical base64`);
+  }
+  return decoded;
 }
 
-function decodeSignature(signatureBox: string): Uint8Array {
-  const payloadLine = signatureBox
+function payloadLine(box: string, label: string): string {
+  const line = box
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find((line) => line.length > 0 && !line.toLowerCase().startsWith("untrusted comment:"));
-  if (!payloadLine) fail("signature file has no encoded signature payload");
-  try {
-    return Buffer.from(payloadLine, "base64");
-  } catch {
-    fail("signature payload is not valid base64");
+    .map((entry) => entry.trim())
+    .find(
+      (entry) =>
+        entry.length > 0 &&
+        !entry.toLowerCase().startsWith("untrusted comment:") &&
+        !entry.toLowerCase().startsWith("trusted comment:"),
+    );
+  if (!line) fail(`${label} has no encoded payload line`);
+  return line;
+}
+
+/**
+ * Tauri accepts and emits minisign material in two equivalent forms:
+ *
+ * 1. a plain minisign text box (`untrusted comment`, payload, trusted comment), or
+ * 2. one outer base64 string whose decoded bytes are that minisign text box.
+ *
+ * Older fixtures may also contain only the raw base64 payload line. Decode all
+ * three forms, but require the exact expected minisign payload length so an
+ * arbitrary outer envelope can never be mistaken for a signature payload.
+ */
+function decodeMinisignPayload(
+  box: string,
+  expectedLabel: string,
+  expectedLength: number,
+): Uint8Array {
+  const trimmed = box.trim();
+  if (!trimmed) fail(`${expectedLabel} is empty`);
+
+  if (/^(?:untrusted|trusted) comment:/imu.test(trimmed) || /\r?\n/u.test(trimmed)) {
+    return decodeBase64Strict(
+      payloadLine(trimmed, expectedLabel),
+      `${expectedLabel} payload`,
+    );
   }
+
+  const firstLayer = decodeBase64Strict(trimmed, expectedLabel);
+  if (firstLayer.length === expectedLength) {
+    return firstLayer;
+  }
+
+  const decodedBox = Buffer.from(firstLayer).toString("utf8");
+  if (!/(?:untrusted|trusted) comment:/iu.test(decodedBox)) {
+    fail(
+      `${expectedLabel} decoded to ${firstLayer.length} bytes instead of a ${expectedLength}-byte payload or minisign text box`,
+    );
+  }
+
+  return decodeBase64Strict(
+    payloadLine(decodedBox, expectedLabel),
+    `${expectedLabel} payload`,
+  );
 }
 
 function keyIdFromRawBytes(bytes: Uint8Array): string {
@@ -77,7 +124,7 @@ if (!publicKeyBox) fail("Tauri updater public key is missing");
 if (!expectedPublicKeyId) fail("version authority publicKeyId is missing");
 if (!signingKeyId) fail("version authority signingKeyId is missing");
 
-const publicKeyPayload = decodePayload(publicKeyBox, "public key");
+const publicKeyPayload = decodeMinisignPayload(publicKeyBox, "public key", 42);
 if (publicKeyPayload.length !== 42) {
   fail(`public key payload must contain 42 bytes, found ${publicKeyPayload.length}`);
 }
@@ -96,7 +143,7 @@ if (!signingKeyId.toLowerCase().endsWith(expectedPublicKeyId.toLowerCase())) {
 }
 
 const signatureBox = readFileSync(signaturePath, "utf8").trim();
-const signaturePayload = decodeSignature(signatureBox);
+const signaturePayload = decodeMinisignPayload(signatureBox, "signature file", 74);
 if (signaturePayload.length !== 74) {
   fail(`signature payload must contain 74 bytes, found ${signaturePayload.length}`);
 }
