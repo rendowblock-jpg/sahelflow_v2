@@ -56,5 +56,19 @@ jobs:
       - name: TypeScript compatibility
         run: bun run typecheck
 
-      - name: ESLint compatibility
-        run: bun run lint
+      - name: Capture ESLint compatibility result
+        id: eslint
+        shell: bash
+        run: |
+          set +e
+          bun run lint > "$RUNNER_TEMP/eslint.log" 2>&1
+          code=$?
+          set -e
+          summary="$(tail -n 12 "$RUNNER_TEMP/eslint.log" | tr '\n' ' ' | tr -cs '[:alnum:] ._:/@()-' ' ' | cut -c1-700)"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/eslint.log"
+
+      - name: ESLint code=${{ steps.eslint.outputs.code }} error=${{ steps.eslint.outputs.summary }}
+        shell: bash
+        run: test "${{ steps.eslint.outputs.code }}" -eq 0
