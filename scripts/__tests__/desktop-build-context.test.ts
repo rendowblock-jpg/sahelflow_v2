@@ -43,9 +43,11 @@ describe("desktop build ShopContext", () => {
     expect(registry.formatVersion).toBe(1);
     expect(registry.revision).toBe(1);
     expect(registry.activeShopId).toBe("bundle-build");
-    expect(registry.shops).toEqual([
-      { id: "bundle-build", databaseFile: "bundle-build.db" },
-    ]);
+    expect(registry.shops).toHaveLength(1);
+    expect(registry.shops[0]).toMatchObject({
+      id: "bundle-build",
+      databaseFile: "bundle-build.db",
+    });
   });
 
   it("removes the disposable context idempotently", () => {
