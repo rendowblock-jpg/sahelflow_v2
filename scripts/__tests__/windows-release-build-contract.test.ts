@@ -41,6 +41,9 @@ describe("Windows signed release build contract", () => {
 
   it("attests clean source before build and generates evidence in a clean worktree", () => {
     const workflow = read(".github/workflows/release.yml");
+    const evidenceHelper = read(
+      "scripts/generate-release-evidence-worktree.ts",
+    );
     const attest = workflow.indexOf("Attest clean exact source checkout");
     const build = workflow.indexOf("Build signed updater artifacts into a draft release");
     const tracked = workflow.indexOf("Verify build preserved tracked source");
@@ -52,12 +55,18 @@ describe("Windows signed release build contract", () => {
     expect(build).toBeGreaterThan(attest);
     expect(tracked).toBeGreaterThan(build);
     expect(evidence).toBeGreaterThan(tracked);
-    expect(workflow).toContain("git worktree add --detach");
-    expect(workflow).toContain("--require-clean --signed-updater");
+    expect(workflow).toContain(
+      "bun run scripts/generate-release-evidence-worktree.ts",
+    );
+    expect(evidenceHelper).toContain(
+      'run("git", ["worktree", "add", "--detach"',
+    );
+    expect(evidenceHelper).toContain('"--require-clean"');
+    expect(evidenceHelper).toContain('"--signed-updater"');
     expect(workflow).toContain("SF_SOURCE_COMMIT");
     expect(workflow).toContain("SF_SOURCE_TREE");
-    expect(workflow).not.toContain("git clean -fd");
-    expect(workflow).not.toContain("gh release delete");
+    expect(`${workflow}\n${evidenceHelper}`).not.toContain("git clean -fd");
+    expect(`${workflow}\n${evidenceHelper}`).not.toContain("gh release delete");
   });
 
   it("binds each unpublished internal draft tag to the exact source commit", () => {
