@@ -5,6 +5,13 @@
   "version": "1.0.0-internal.1",
   "windowsMsiVersion": "1.0.0.1",
   "channel": "internal",
+  "updater": {
+    "enabled": false,
+    "manifestFormatVersion": 1,
+    "signingKeyId": null,
+    "endpoint": "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json",
+    "installMode": "passive"
+  },
   "runtimeProtocolVersion": 1,
   "shopRegistryFormatVersion": 1,
   "backupFormatVersion": 1
