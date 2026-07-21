@@ -74,6 +74,7 @@ function writeFixture(options?: {
             "  contents: write",
             "jobs:",
             "  release:",
+            "    environment: updater-internal",
             "    steps:",
             "      - run: echo latest.json",
             "        env:",
