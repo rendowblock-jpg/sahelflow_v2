@@ -125,25 +125,28 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Configure disposable Windows test sandbox
+      - name: Prepare unique disposable Windows test sandbox
         shell: pwsh
         run: |
-          $sandboxRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-ci-test'
-          $dataDir = Join-Path $sandboxRoot 'data'
-          $database = Join-Path $dataDir 'shops\test.db'
-          "SF_TEST_ROOT=$sandboxRoot" >> $env:GITHUB_ENV
-          "SF_DATA_DIR=$dataDir" >> $env:GITHUB_ENV
-          "DATABASE_URL=file:$database" >> $env:GITHUB_ENV
+          $sandboxRoot = Join-Path $env:RUNNER_TEMP "sahelflow-ci-test-$env:GITHUB_RUN_ID"
+          $output = @(& bun run scripts/prepare-test-sandbox.ts $sandboxRoot)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'canonical test sandbox preparation failed'
+          }
+          $required = @('SF_TEST_ROOT', 'SF_DATA_DIR', 'DATABASE_URL')
+          foreach ($name in $required) {
+            $line = $output | Where-Object { $_ -like "$name=*" } | Select-Object -Last 1
+            if ([string]::IsNullOrWhiteSpace($line)) {
+              throw "canonical test sandbox did not return $name"
+            }
+            $line >> $env:GITHUB_ENV
+          }
 
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile --linker=hoisted
 
       - name: Generate Prisma client
         run: bunx prisma generate
-
-      - name: Prepare disposable Windows test sandbox
-        shell: pwsh
-        run: bun run test:sandbox -- "$env:SF_TEST_ROOT"
 
       - name: Verify order service database suite on Windows
         run: bunx vitest run src/lib/data/__tests__/order-service.test.ts
