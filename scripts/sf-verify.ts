@@ -90,6 +90,11 @@ if (!skipTests) {
 
 const steps: Step[] = [
   {
+    name: "Version and updater authority",
+    command: "bun",
+    args: ["run", "sf-version"],
+  },
+  {
     name: "Prisma client generation",
     command: "bun",
     args: ["run", "db:generate"],
