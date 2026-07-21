@@ -84,6 +84,10 @@ function run(
   });
 }
 
+function output(result: ReturnType<typeof spawnSync>): string {
+  return `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+}
+
 afterEach(() => {
   while (fixtures.length > 0) {
     rmSync(fixtures.pop()!, { recursive: true, force: true });
@@ -101,7 +105,7 @@ describe("release tracked-source hygiene", () => {
 
     const result = run(state.root, state.commit, state.tree);
 
-    expect(result.status).toBe(0);
+    expect(result.status, output(result)).toBe(0);
     expect(result.stdout).toContain("Verified and restored deterministic build rewrites");
     expect(readFileSync(state.cargoPath, "utf8")).toBe(state.committedCargo);
     expect(readFileSync(state.placeholderPath, "utf8")).toBe("");
@@ -118,7 +122,7 @@ describe("release tracked-source hygiene", () => {
     const result = run(state.root, state.commit, state.tree);
 
     expect(result.status).not.toBe(0);
-    expect(`${result.stdout}\n${result.stderr}`).toContain(
+    expect(output(result)).toContain(
       "Tauri packaging changed Cargo.toml semantics",
     );
   });
@@ -130,7 +134,7 @@ describe("release tracked-source hygiene", () => {
     const result = run(state.root, state.commit, state.tree);
 
     expect(result.status).not.toBe(0);
-    expect(`${result.stdout}\n${result.stderr}`).toContain(
+    expect(output(result)).toContain(
       "build modified unexpected tracked source",
     );
   });
