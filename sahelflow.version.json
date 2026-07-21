@@ -6,11 +6,13 @@
   "windowsMsiVersion": "1.0.0.1",
   "channel": "internal",
   "updater": {
-    "enabled": false,
+    "enabled": true,
     "manifestFormatVersion": 1,
-    "channelStatus": "candidate",
-    "signingKeyStatus": "unaccepted",
-    "signingKeyId": null,
+    "channelStatus": "approved",
+    "signingKeyStatus": "approved",
+    "signingKeyId": "tauri-internal-c7183693a0589b55",
+    "approvalScope": "internal-lab",
+    "authenticodeRequired": false,
     "endpoint": "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json",
     "installMode": "passive"
   },
