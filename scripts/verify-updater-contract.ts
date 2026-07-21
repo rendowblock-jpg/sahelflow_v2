@@ -13,7 +13,7 @@ type UpdaterAuthority = {
 
 type VersionAuthority = {
   channel: string;
-  updater: UpdaterAuthority;
+  updater?: UpdaterAuthority;
 };
 
 type TauriConfiguration = {
@@ -51,20 +51,24 @@ const workflow = readFileSync(
 );
 
 const updater = authority.updater;
+if (!updater) {
+  console.error("Updater/release contract verification failed:");
+  console.error("- sahelflow.version.json must define updater authority");
+  process.exit(1);
+}
+
 const tauriUpdater = tauri.plugins?.updater;
 const endpoints = tauriUpdater?.endpoints ?? [];
 const active = tauriUpdater?.active;
 const createUpdaterArtifacts = tauri.bundle?.createUpdaterArtifacts;
 const pubkey = tauriUpdater?.pubkey?.trim() ?? "";
 const installMode = tauriUpdater?.windows?.installMode;
+const signingKeyVariable = /\bTAURI_SIGNING_PRIVATE_KEY\b/;
+const signingPasswordVariable = /\bTAURI_SIGNING_PRIVATE_KEY_PASSWORD\b/;
 
 requireCondition(
   ["internal", "beta", "stable"].includes(authority.channel),
   `version authority channel must be internal, beta, or stable; found ${authority.channel}`,
-);
-requireCondition(
-  typeof updater === "object" && updater !== null,
-  "sahelflow.version.json must define updater authority",
 );
 requireCondition(
   typeof updater.enabled === "boolean",
@@ -135,12 +139,16 @@ if (updater.enabled) {
     "enabled updater workflow must not label artifacts UNSIGNED",
   );
   requireCondition(
-    /TAURI_SIGNING_PRIVATE_KEY/.test(workflow),
+    signingKeyVariable.test(workflow),
     "enabled updater workflow must use the protected Tauri updater signing-key environment",
   );
   requireCondition(
-    /TAURI_SIGNING_PRIVATE_KEY_PASSWORD/.test(workflow),
+    signingPasswordVariable.test(workflow),
     "enabled updater workflow must use the protected updater signing-key password environment",
+  );
+  requireCondition(
+    /^\s*environment:\s*\S+/m.test(workflow),
+    "enabled updater workflow must bind signing/publication to a protected GitHub environment",
   );
   requireCondition(
     /latest\.json/.test(workflow),
@@ -164,7 +172,8 @@ if (updater.enabled) {
     "disabled updater baseline must label candidate artifacts UNSIGNED",
   );
   requireCondition(
-    !/TAURI_SIGNING_PRIVATE_KEY/.test(workflow),
+    !signingKeyVariable.test(workflow) &&
+      !signingPasswordVariable.test(workflow),
     "disabled updater baseline must not request updater private signing material",
   );
   requireCondition(
