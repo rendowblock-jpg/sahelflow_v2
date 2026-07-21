@@ -35,13 +35,14 @@ jobs:
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
 
-      - name: Add advisory-only semver-union overrides
+      - name: Add ESLint 10 and advisory-only overrides
         shell: bash
         run: |
           bun -e '
             const fs = require("node:fs");
             const path = "package.json";
             const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+            pkg.devDependencies.eslint = "10.7.0";
             pkg.overrides = {
               ...(pkg.overrides || {}),
               "brace-expansion": ">=1.1.16 <2 || >=2.1.2 <3 || >=5.0.7 <6",
@@ -50,7 +51,7 @@ jobs:
             fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
           '
 
-      - name: Install exact override tree
+      - name: Install exact candidate tree
         run: bun install --force --linker=hoisted
 
       - name: TypeScript compatibility
@@ -69,6 +70,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/eslint.log"
 
-      - name: ESLint code=${{ steps.eslint.outputs.code }} error=${{ steps.eslint.outputs.summary }}
+      - name: ESLint10 code=${{ steps.eslint.outputs.code }} result=${{ steps.eslint.outputs.summary }}
         shell: bash
         run: test "${{ steps.eslint.outputs.code }}" -eq 0
