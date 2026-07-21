@@ -28,7 +28,9 @@ function git(args: string[]): string {
   if (result.status !== 0) {
     throw new Error(result.stderr || `git ${args.join(" ")} failed`);
   }
-  return result.stdout.trim();
+  // Preserve the two leading porcelain status columns. Trimming both ends would
+  // corrupt the first status line (` M path` → `M path`) and misparse its path.
+  return result.stdout.trimEnd();
 }
 
 function stable(value: unknown): unknown {
