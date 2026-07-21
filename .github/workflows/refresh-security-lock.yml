@@ -36,14 +36,15 @@ jobs:
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
 
-      - name: Refresh only audit-named top-level dependency trees
+      - name: Refresh exact vulnerable dependency owners
         run: >-
           bun update
           eslint
-          eslint-config-next
-          @vitest/coverage-v8
-          @sentry/nextjs
-          googleapis
+          minimatch
+          glob
+          test-exclude
+          @typescript-eslint/typescript-estree
+          @sentry/bundler-plugin-core
           --force
           --lockfile-only
 
@@ -215,7 +216,7 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           if git diff --quiet -- bun.lock; then
-            echo 'targeted dependency-tree refresh produced no lockfile change'
+            echo 'targeted dependency-owner refresh produced no lockfile change'
             exit 1
           fi
           git config user.name 'github-actions[bot]'
