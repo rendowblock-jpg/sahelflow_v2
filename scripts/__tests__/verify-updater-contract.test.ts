@@ -100,9 +100,8 @@ function writeFixture(options?: {
             "          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}",
             "        with:",
             "          releaseDraft: true",
-            "          uploadUpdaterJson: true",
-            "          uploadUpdaterSignatures: true",
-            "      - run: echo latest.json",
+            "          includeUpdaterJson: true",
+            "      - run: echo artifact.msi.sig latest.json",
           ].join("\n")
         : [
             "permissions:",
