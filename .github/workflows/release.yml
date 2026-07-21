@@ -227,23 +227,8 @@ jobs:
           "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
           "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV
 
-      - name: Verify build preserved tracked source
-        shell: pwsh
-        run: |
-          $commit = (git rev-parse HEAD).Trim()
-          $tree = (git rev-parse "HEAD^{tree}").Trim()
-          if ($commit -cne $env:SF_SOURCE_COMMIT) {
-            throw "source commit changed during build: expected $env:SF_SOURCE_COMMIT, found $commit"
-          }
-          if ($tree -cne $env:SF_SOURCE_TREE) {
-            throw "source tree changed during build: expected $env:SF_SOURCE_TREE, found $tree"
-          }
-          $trackedStatus = @(git status --porcelain --untracked-files=no)
-          if ($LASTEXITCODE -ne 0) { throw 'failed to inspect tracked source after build' }
-          if ($trackedStatus.Count -gt 0) {
-            $trackedStatus | ForEach-Object { Write-Host $_ }
-            throw 'build modified tracked source; evidence generation is blocked'
-          }
+      - name: Verify and restore deterministic build source rewrites
+        run: bun run scripts/restore-release-source.ts
 
       - name: Generate signed candidate evidence manifest from clean worktree
         env:
