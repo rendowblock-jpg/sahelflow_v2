@@ -149,7 +149,7 @@ jobs:
       - name: Verify generated path set
         shell: bash
         run: |
-          mapfile -t changed < <(git status --short | awk '{print $2}' | sort)
+          mapfile -t changed < <(git status --short --untracked-files=all | awk '{print $2}' | sort)
           if [ "${#changed[@]}" -lt 2 ] || [ "${#changed[@]}" -gt 3 ]; then
             echo 'expected package.json, one patch file, and optional bun.lock only'
             printf '%s\n' "${changed[@]}"
