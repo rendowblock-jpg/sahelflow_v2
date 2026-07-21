@@ -35,33 +35,59 @@ jobs:
           git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
+          cp package.json "$RUNNER_TEMP/main-package.json"
 
-      - name: Refresh exact vulnerable dependency owners
-        run: >-
-          bun update
-          eslint
-          minimatch
-          glob
-          test-exclude
-          @typescript-eslint/typescript-estree
-          @sentry/bundler-plugin-core
-          --force
-          --lockfile-only
-
-      - name: Restore reviewed package manifest
-        shell: bash
-        run: git show origin/main:package.json > package.json
-
-      - name: Reconcile lockfile with reviewed package manifest
-        run: bun install --lockfile-only
-
-      - name: Verify only the lockfile changed
+      - name: Add advisory-only semver-union overrides
         shell: bash
         run: |
-          changed="$(git diff --name-only)"
-          if [ "$changed" != "bun.lock" ]; then
+          cat > "$RUNNER_TEMP/add-security-overrides.ts" <<'EOF'
+          import { readFileSync, writeFileSync } from "node:fs";
+
+          const path = "package.json";
+          const packageJson = JSON.parse(readFileSync(path, "utf8")) as {
+            overrides?: Record<string, string>;
+          };
+
+          packageJson.overrides = {
+            ...(packageJson.overrides ?? {}),
+            "brace-expansion": ">=1.1.16 <2 || >=2.1.2 <3 || >=5.0.7 <6",
+            "js-yaml": ">=3.15.0 <4 || >=4.3.0 <5 || >=5",
+          };
+
+          writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
+          EOF
+          bun "$RUNNER_TEMP/add-security-overrides.ts"
+
+      - name: Regenerate lockfile from advisory-only overrides
+        run: bun install --force --lockfile-only
+
+      - name: Verify manifest delta is advisory-only
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/verify-manifest-delta.ts" <<'EOF'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          const before = JSON.parse(readFileSync(process.env.MAIN_PACKAGE!, "utf8"));
+          const after = JSON.parse(readFileSync("package.json", "utf8"));
+
+          before.overrides = {
+            ...(before.overrides ?? {}),
+            "brace-expansion": ">=1.1.16 <2 || >=2.1.2 <3 || >=5.0.7 <6",
+            "js-yaml": ">=3.15.0 <4 || >=4.3.0 <5 || >=5",
+          };
+
+          assert.deepEqual(after, before, "package.json changed outside the approved advisory overrides");
+          EOF
+          MAIN_PACKAGE="$RUNNER_TEMP/main-package.json" bun "$RUNNER_TEMP/verify-manifest-delta.ts"
+
+      - name: Verify only package manifest and lockfile changed
+        shell: bash
+        run: |
+          mapfile -t changed < <(git diff --name-only)
+          if [ "${#changed[@]}" -ne 2 ] || [ "${changed[0]}" != "bun.lock" ] || [ "${changed[1]}" != "package.json" ]; then
             echo "unexpected generated changes:"
-            printf '%s\n' "$changed"
+            printf '%s\n' "${changed[@]}"
             exit 1
           fi
 
@@ -76,6 +102,8 @@ jobs:
           yaml="$(grep -oE 'js-yaml@[0-9]+\.[0-9]+\.[0-9]+' bun.lock | cut -d@ -f2 | sort -Vu | paste -sd, -)"
           echo "brace=$brace" >> "$GITHUB_OUTPUT"
           echo "yaml=$yaml" >> "$GITHUB_OUTPUT"
+          echo "brace-expansion resolutions: $brace"
+          echo "js-yaml resolutions: $yaml"
 
       - name: Collect vulnerable lock ownership paths
         id: paths
@@ -213,17 +241,13 @@ jobs:
       - name: Verify fast application gate
         run: bun run sf-verify --fast
 
-      - name: Commit targeted audited lock repair
+      - name: Commit advisory-only dependency repair
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
-          if git diff --quiet -- bun.lock; then
-            echo 'targeted dependency-owner refresh produced no lockfile change'
-            exit 1
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add bun.lock
-          git commit -m 'fix(deps): repair audited transitive resolutions'
+          git add package.json bun.lock
+          git commit -m 'fix(deps): enforce patched advisory ranges'
           git push origin "HEAD:$HEAD_BRANCH"
