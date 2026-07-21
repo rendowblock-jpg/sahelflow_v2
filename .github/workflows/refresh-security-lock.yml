@@ -35,57 +35,34 @@ jobs:
           git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
-          cp package.json "$RUNNER_TEMP/main-package.json"
 
-      - name: Add version-scoped security overrides
+      - name: Refresh only audit-named top-level dependency trees
+        run: >-
+          bun update
+          eslint
+          eslint-config-next
+          @vitest/coverage-v8
+          @sentry/nextjs
+          googleapis
+          --force
+          --lockfile-only
+
+      - name: Restore reviewed package manifest
+        shell: bash
+        run: git show origin/main:package.json > package.json
+
+      - name: Verify only the lockfile changed
         shell: bash
         run: |
-          cat > "$RUNNER_TEMP/add-security-overrides.ts" <<'EOF'
-          import { readFileSync, writeFileSync } from "node:fs";
+          changed="$(git diff --name-only)"
+          if [ "$changed" != "bun.lock" ]; then
+            echo "unexpected generated changes:"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
 
-          const path = "package.json";
-          const packageJson = JSON.parse(readFileSync(path, "utf8")) as {
-            overrides?: Record<string, string>;
-          };
-
-          packageJson.overrides = {
-            ...(packageJson.overrides ?? {}),
-            "brace-expansion@<1.1.16": "1.1.16",
-            "brace-expansion@>=2.0.0 <2.1.2": "2.1.2",
-            "brace-expansion@>=3.0.0 <5.0.7": "5.0.7",
-            "js-yaml@>=3.0.0 <3.15.0": "3.15.0",
-            "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
-          };
-
-          writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
-          EOF
-          bun "$RUNNER_TEMP/add-security-overrides.ts"
-
-      - name: Regenerate lockfile from scoped overrides
-        run: bun install --force --lockfile-only
-
-      - name: Verify manifest delta is security-only
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/verify-manifest-delta.ts" <<'EOF'
-          import { readFileSync } from "node:fs";
-          import assert from "node:assert/strict";
-
-          const before = JSON.parse(readFileSync(process.env.MAIN_PACKAGE!, "utf8"));
-          const after = JSON.parse(readFileSync("package.json", "utf8"));
-
-          before.overrides = {
-            ...(before.overrides ?? {}),
-            "brace-expansion@<1.1.16": "1.1.16",
-            "brace-expansion@>=2.0.0 <2.1.2": "2.1.2",
-            "brace-expansion@>=3.0.0 <5.0.7": "5.0.7",
-            "js-yaml@>=3.0.0 <3.15.0": "3.15.0",
-            "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
-          };
-
-          assert.deepEqual(after, before, "package.json changed outside the approved security overrides");
-          EOF
-          MAIN_PACKAGE="$RUNNER_TEMP/main-package.json" bun "$RUNNER_TEMP/verify-manifest-delta.ts"
+      - name: Verify frozen install
+        run: bun install --frozen-lockfile --linker=hoisted
 
       - name: Collect resolved advisory versions
         id: resolved
@@ -105,7 +82,6 @@ jobs:
           import { readFileSync } from "node:fs";
 
           type Version = readonly [number, number, number];
-
           const lock = readFileSync("bun.lock", "utf8");
 
           function parse(version: string): Version {
@@ -162,18 +138,14 @@ jobs:
           EOF
           bun "$RUNNER_TEMP/verify-advisory-versions.ts"
 
-      - name: Verify only package manifest and lockfile changed
+      - name: Explain any remaining brace-expansion and js-yaml paths
+        if: failure()
         shell: bash
         run: |
-          mapfile -t changed < <(git diff --name-only)
-          if [ "${#changed[@]}" -ne 2 ] || [ "${changed[0]}" != "bun.lock" ] || [ "${changed[1]}" != "package.json" ]; then
-            echo "unexpected generated changes:"
-            printf '%s\n' "${changed[@]}"
-            exit 1
-          fi
-
-      - name: Verify frozen install
-        run: bun install --frozen-lockfile --linker=hoisted
+          echo '=== brace-expansion dependency paths ==='
+          bun why brace-expansion --depth 20 || true
+          echo '=== js-yaml dependency paths ==='
+          bun why js-yaml --depth 20 || true
 
       - name: Verify production dependency audit
         run: bun audit --production
@@ -184,13 +156,17 @@ jobs:
       - name: Verify fast application gate
         run: bun run sf-verify --fast
 
-      - name: Commit scoped audited dependency repair
+      - name: Commit targeted audited lock repair
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
+          if git diff --quiet -- bun.lock; then
+            echo 'targeted dependency-tree refresh produced no lockfile change'
+            exit 1
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json bun.lock
-          git commit -m 'fix(deps): scope audited transitive resolutions'
+          git add bun.lock
+          git commit -m 'fix(deps): repair audited transitive resolutions'
           git push origin "HEAD:$HEAD_BRANCH"
