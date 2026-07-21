@@ -57,10 +57,10 @@ jobs:
           echo "tracked=$(count 'Verify build preserved tracked source' "$workflow")" >> "$GITHUB_OUTPUT"
           echo "evidence=$(count 'Generate signed candidate evidence manifest from clean worktree' "$workflow")" >> "$GITHUB_OUTPUT"
           echo "helper_call=$(count 'bun run scripts/generate-release-evidence-worktree.ts' "$workflow")" >> "$GITHUB_OUTPUT"
-          echo "worktree=$(count 'worktree", "add", "--detach' "$helper")" >> "$GITHUB_OUTPUT"
-          echo "require_clean=$(count '"--require-clean"' "$helper")" >> "$GITHUB_OUTPUT"
-          echo "signed=$(count '"--signed-updater"' "$helper")" >> "$GITHUB_OUTPUT"
-          echo "tag=$(count '$tag = "sahelflow-v$($authority.version)-$env:SF_SOURCE_COMMIT"' "$workflow")" >> "$GITHUB_OUTPUT"
+          echo "worktree=$(count 'worktree\", \"add\", \"--detach' "$helper")" >> "$GITHUB_OUTPUT"
+          echo "require_clean=$(count '\"--require-clean\"' "$helper")" >> "$GITHUB_OUTPUT"
+          echo "signed=$(count '\"--signed-updater\"' "$helper")" >> "$GITHUB_OUTPUT"
+          echo "tag=$(count '$tag = \"sahelflow-v$($authority.version)-$env:SF_SOURCE_COMMIT\"' "$workflow")" >> "$GITHUB_OUTPUT"
           echo "tag_name=$(count 'tagName: sahelflow-v__VERSION__-${{ inputs.source_ref }}' "$workflow")" >> "$GITHUB_OUTPUT"
           destructive=$(( $(count 'git clean -fd' "$workflow") + $(count 'gh release delete' "$workflow") + $(count 'git clean -fd' "$helper") + $(count 'gh release delete' "$helper") ))
           echo "destructive=$destructive" >> "$GITHUB_OUTPUT"
@@ -71,8 +71,26 @@ jobs:
       - name: Verify updater and release contract
         run: bun run sf-version
 
-      - name: Verify Windows release contract tests
-        run: bunx vitest run scripts/__tests__/windows-release-build-contract.test.ts
+      - name: Run Windows release contract tests
+        id: contract_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          bunx vitest run scripts/__tests__/windows-release-build-contract.test.ts --reporter=json --outputFile=.release-contract-results.json
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          summary=$(bun -e 'const j=await Bun.file(".release-contract-results.json").json(); const all=(j.testResults||[]).flatMap((t)=>t.assertionResults||[]); const failed=all.find((a)=>a.status==="failed"); const raw=failed?.failureMessages?.[0]||failed?.title||"unknown failure"; console.log(raw.replace(/\s+/g," ").slice(0,180))' 2>/dev/null || echo 'unable to parse failure')
+          summary=${summary//'%'/'%25'}
+          summary=${summary//$'\n'/'%0A'}
+          summary=${summary//$'\r'/'%0D'}
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Contract test status=${{ steps.contract_tests.outputs.status }} failure=${{ steps.contract_tests.outputs.summary }}
+        if: always()
+        shell: bash
+        run: test "${{ steps.contract_tests.outputs.status }}" = "0"
 
       - name: Commit exact workflow repair
         shell: bash
