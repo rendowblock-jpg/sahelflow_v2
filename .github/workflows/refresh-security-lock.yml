@@ -16,9 +16,15 @@ jobs:
   repair-lock:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-security-repair
+      SF_DATA_DIR: /tmp/sahelflow-security-repair/data
+      DATABASE_URL: file:/tmp/sahelflow-security-repair/data/shops/test.db
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
     steps:
-      - name: Checkout security-fix branch
+      - name: Checkout exact security-fix head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -36,8 +42,9 @@ jobs:
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
           cp package.json "$RUNNER_TEMP/main-package.json"
+          rm -rf patches node_modules
 
-      - name: Add advisory-only semver-union overrides
+      - name: Add exact patched advisory resolutions
         shell: bash
         run: |
           cat > "$RUNNER_TEMP/add-security-overrides.ts" <<'EOF'
@@ -50,187 +57,142 @@ jobs:
 
           packageJson.overrides = {
             ...(packageJson.overrides ?? {}),
-            "brace-expansion": ">=1.1.16 <2 || >=2.1.2 <3 || >=5.0.7 <6",
-            "js-yaml": ">=3.15.0 <4 || >=4.3.0 <5 || >=5",
+            "brace-expansion": "5.0.7",
+            "js-yaml": "4.3.0",
           };
 
           writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
           EOF
           bun "$RUNNER_TEMP/add-security-overrides.ts"
 
-      - name: Regenerate lockfile from advisory-only overrides
-        run: bun install --force --lockfile-only
+      - name: Install exact patched dependency candidates
+        run: bun install --force --linker=hoisted
 
-      - name: Verify manifest delta is advisory-only
+      - name: Prepare brace-expansion for safe patching
+        run: bun patch brace-expansion@5.0.7
+
+      - name: Add legacy CommonJS callable bridge
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/apply-brace-bridge.ts" <<'EOF'
+          import { readFileSync, writeFileSync } from "node:fs";
+
+          const path = "node_modules/brace-expansion/dist/commonjs/index.js";
+          const marker = "module.exports = Object.assign(exports.expand, exports);";
+          const source = readFileSync(path, "utf8");
+
+          if (!source.includes("exports.expand")) {
+            throw new Error("brace-expansion CommonJS build does not expose exports.expand");
+          }
+          if (source.includes(marker)) {
+            throw new Error("brace-expansion compatibility bridge already exists upstream");
+          }
+
+          writeFileSync(path, `${source.trimEnd()}\n${marker}\n`);
+          EOF
+          bun "$RUNNER_TEMP/apply-brace-bridge.ts"
+
+      - name: Commit Bun dependency patch
+        run: bun patch --commit brace-expansion@5.0.7
+
+      - name: Verify package manifest delta is security-only
         shell: bash
         run: |
           cat > "$RUNNER_TEMP/verify-manifest-delta.ts" <<'EOF'
           import assert from "node:assert/strict";
-          import { readFileSync } from "node:fs";
+          import { existsSync, readFileSync } from "node:fs";
 
           const before = JSON.parse(readFileSync(process.env.MAIN_PACKAGE!, "utf8"));
           const after = JSON.parse(readFileSync("package.json", "utf8"));
 
           before.overrides = {
             ...(before.overrides ?? {}),
-            "brace-expansion": ">=1.1.16 <2 || >=2.1.2 <3 || >=5.0.7 <6",
-            "js-yaml": ">=3.15.0 <4 || >=4.3.0 <5 || >=5",
+            "brace-expansion": "5.0.7",
+            "js-yaml": "4.3.0",
           };
 
-          assert.deepEqual(after, before, "package.json changed outside the approved advisory overrides");
+          const patched = after.patchedDependencies as Record<string, string> | undefined;
+          assert.ok(patched, "patchedDependencies was not generated");
+          assert.deepEqual(Object.keys(patched), ["brace-expansion@5.0.7"]);
+
+          const patchPath = patched["brace-expansion@5.0.7"];
+          assert.equal(typeof patchPath, "string");
+          assert.match(patchPath, /^patches\/[A-Za-z0-9@._+-]+\.patch$/);
+          assert.ok(existsSync(patchPath), `generated patch does not exist: ${patchPath}`);
+
+          before.patchedDependencies = patched;
+          assert.deepEqual(after, before, "package.json changed outside approved security fields");
           EOF
           MAIN_PACKAGE="$RUNNER_TEMP/main-package.json" bun "$RUNNER_TEMP/verify-manifest-delta.ts"
 
-      - name: Verify only package manifest and lockfile changed
+      - name: Verify generated patch is minimal
         shell: bash
         run: |
-          mapfile -t changed < <(git diff --name-only)
-          if [ "${#changed[@]}" -ne 2 ] || [ "${changed[0]}" != "bun.lock" ] || [ "${changed[1]}" != "package.json" ]; then
-            echo "unexpected generated changes:"
+          patch_file="$(find patches -maxdepth 1 -type f -name '*.patch' -print)"
+          if [ -z "$patch_file" ] || [ "$(printf '%s\n' "$patch_file" | wc -l)" -ne 1 ]; then
+            echo 'expected exactly one generated patch file'
+            find patches -maxdepth 1 -type f -print || true
+            exit 1
+          fi
+          if [ "$(grep -c '^diff --git ' "$patch_file")" -ne 1 ]; then
+            echo 'patch changes more than one file'
+            cat "$patch_file"
+            exit 1
+          fi
+          grep -F 'dist/commonjs/index.js' "$patch_file" >/dev/null
+          grep -F '+module.exports = Object.assign(exports.expand, exports);' "$patch_file" >/dev/null
+          if grep -E '^Binary files|^GIT binary patch' "$patch_file" >/dev/null; then
+            echo 'binary patch content is forbidden'
+            exit 1
+          fi
+
+      - name: Verify generated path set
+        shell: bash
+        run: |
+          mapfile -t changed < <(git status --short | awk '{print $2}' | sort)
+          if [ "${#changed[@]}" -ne 3 ]; then
+            echo 'expected package.json, bun.lock, and one patch file only'
+            printf '%s\n' "${changed[@]}"
+            exit 1
+          fi
+          printf '%s\n' "${changed[@]}" | grep -Fx 'bun.lock' >/dev/null
+          printf '%s\n' "${changed[@]}" | grep -Fx 'package.json' >/dev/null
+          if [ "$(printf '%s\n' "${changed[@]}" | grep -Ec '^patches/[^/]+\.patch$')" -ne 1 ]; then
+            echo 'unexpected generated path set'
             printf '%s\n' "${changed[@]}"
             exit 1
           fi
 
-      - name: Verify frozen install
-        run: bun install --frozen-lockfile --linker=hoisted
+      - name: Reinstall from committed dependency evidence
+        shell: bash
+        run: |
+          rm -rf node_modules
+          bun install --frozen-lockfile --linker=hoisted
 
-      - name: Collect resolved advisory versions
-        id: resolved
+      - name: Verify patched legacy and modern API
+        shell: bash
+        run: |
+          bun -e '
+            const expansion = require("brace-expansion");
+            if (typeof expansion !== "function") throw new Error("legacy callable export is unavailable");
+            if (expansion.expand !== expansion) throw new Error("modern expand export is not retained");
+            const expected = JSON.stringify(["file-a", "file-b"]);
+            const legacy = JSON.stringify(expansion("file-{a,b}"));
+            const modern = JSON.stringify(expansion.expand("file-{a,b}"));
+            if (legacy !== expected || modern !== expected) {
+              throw new Error(`unexpected expansion results: ${legacy} / ${modern}`);
+            }
+          '
+
+      - name: Verify exact advisory versions
         shell: bash
         run: |
           brace="$(grep -oE 'brace-expansion@[0-9]+\.[0-9]+\.[0-9]+' bun.lock | cut -d@ -f2 | sort -Vu | paste -sd, -)"
           yaml="$(grep -oE 'js-yaml@[0-9]+\.[0-9]+\.[0-9]+' bun.lock | cut -d@ -f2 | sort -Vu | paste -sd, -)"
-          echo "brace=$brace" >> "$GITHUB_OUTPUT"
-          echo "yaml=$yaml" >> "$GITHUB_OUTPUT"
           echo "brace-expansion resolutions: $brace"
           echo "js-yaml resolutions: $yaml"
-
-      - name: Collect vulnerable lock ownership paths
-        id: paths
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/collect-vulnerable-paths.ts" <<'EOF'
-          import { appendFileSync, readFileSync } from "node:fs";
-
-          type Version = readonly [number, number, number];
-
-          function parse(version: string): Version {
-            const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
-            if (!match) throw new Error(`unsupported semver: ${version}`);
-            return [Number(match[1]), Number(match[2]), Number(match[3])];
-          }
-
-          function compare(a: Version, b: Version): number {
-            for (let index = 0; index < 3; index += 1) {
-              if (a[index] !== b[index]) return a[index] - b[index];
-            }
-            return 0;
-          }
-
-          function vulnerableBrace(version: string): boolean {
-            const parsed = parse(version);
-            const major = parsed[0];
-            if (major < 1) return true;
-            if (major === 1) return compare(parsed, [1, 1, 16]) < 0;
-            if (major === 2) return compare(parsed, [2, 1, 2]) < 0;
-            if (major === 3 || major === 4) return true;
-            if (major === 5) return compare(parsed, [5, 0, 7]) < 0;
-            return false;
-          }
-
-          function vulnerableYaml(version: string): boolean {
-            const parsed = parse(version);
-            if (parsed[0] === 3) return compare(parsed, [3, 15, 0]) < 0;
-            if (parsed[0] === 4) return compare(parsed, [4, 3, 0]) < 0;
-            return false;
-          }
-
-          const brace: string[] = [];
-          const yaml: string[] = [];
-
-          for (const line of readFileSync("bun.lock", "utf8").split("\n")) {
-            const match = /^\s*"([^"]+)": \["(brace-expansion|js-yaml)@(\d+\.\d+\.\d+)"/.exec(line);
-            if (!match) continue;
-            const [, key, name, version] = match;
-            if (name === "brace-expansion" && vulnerableBrace(version)) brace.push(`${key}=${version}`);
-            if (name === "js-yaml" && vulnerableYaml(version)) yaml.push(`${key}=${version}`);
-          }
-
-          const output = process.env.GITHUB_OUTPUT;
-          if (!output) throw new Error("GITHUB_OUTPUT is unavailable");
-          appendFileSync(output, `brace=${brace.join("|").slice(0, 900)}\n`);
-          appendFileSync(output, `yaml=${yaml.join("|").slice(0, 900)}\n`);
-          EOF
-          bun "$RUNNER_TEMP/collect-vulnerable-paths.ts"
-
-      - name: Remaining vulnerable paths brace=${{ steps.paths.outputs.brace }} yaml=${{ steps.paths.outputs.yaml }}
-        run: true
-
-      - name: Verify patched versions brace=${{ steps.resolved.outputs.brace }} yaml=${{ steps.resolved.outputs.yaml }}
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/verify-advisory-versions.ts" <<'EOF'
-          import { readFileSync } from "node:fs";
-
-          type Version = readonly [number, number, number];
-          const lock = readFileSync("bun.lock", "utf8");
-
-          function parse(version: string): Version {
-            const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
-            if (!match) throw new Error(`unsupported semver in lockfile: ${version}`);
-            return [Number(match[1]), Number(match[2]), Number(match[3])];
-          }
-
-          function compare(a: Version, b: Version): number {
-            for (let index = 0; index < 3; index += 1) {
-              if (a[index] !== b[index]) return a[index] - b[index];
-            }
-            return 0;
-          }
-
-          function collect(packageName: string): string[] {
-            return [...lock.matchAll(new RegExp(`${packageName.replace("-", "\\-")}@(\\d+\\.\\d+\\.\\d+)`, "g"))]
-              .map((match) => match[1])
-              .filter((value, index, values) => values.indexOf(value) === index)
-              .sort((left, right) => compare(parse(left), parse(right)));
-          }
-
-          const braceVersions = collect("brace-expansion");
-          const yamlVersions = collect("js-yaml");
-
-          const vulnerableBrace = braceVersions.filter((version) => {
-            const parsed = parse(version);
-            const major = parsed[0];
-            if (major < 1) return true;
-            if (major === 1) return compare(parsed, [1, 1, 16]) < 0;
-            if (major === 2) return compare(parsed, [2, 1, 2]) < 0;
-            if (major === 3 || major === 4) return true;
-            if (major === 5) return compare(parsed, [5, 0, 7]) < 0;
-            return false;
-          });
-
-          const vulnerableYaml = yamlVersions.filter((version) => {
-            const parsed = parse(version);
-            if (parsed[0] === 3) return compare(parsed, [3, 15, 0]) < 0;
-            if (parsed[0] === 4) return compare(parsed, [4, 3, 0]) < 0;
-            return false;
-          });
-
-          if (vulnerableBrace.length > 0) {
-            throw new Error(`vulnerable brace-expansion resolutions remain: ${vulnerableBrace.join(", ")}`);
-          }
-          if (vulnerableYaml.length > 0) {
-            throw new Error(`vulnerable js-yaml resolutions remain: ${vulnerableYaml.join(", ")}`);
-          }
-          EOF
-          bun "$RUNNER_TEMP/verify-advisory-versions.ts"
-
-      - name: Explain any remaining brace-expansion and js-yaml paths
-        if: failure()
-        shell: bash
-        run: |
-          bun why brace-expansion --depth 20 || true
-          bun why js-yaml --depth 20 || true
+          test "$brace" = '5.0.7'
+          test "$yaml" = '4.3.0'
 
       - name: Verify production dependency audit
         run: bun audit --production
@@ -238,16 +200,26 @@ jobs:
       - name: Verify version and updater authority
         run: bun run sf-version
 
-      - name: Verify fast application gate
-        run: bun run sf-verify --fast
+      - name: Verify documentation authority
+        run: bun run sf-audit
 
-      - name: Commit advisory-only dependency repair
+      - name: Prepare disposable application test sandbox
+        run: bun run test:sandbox -- "$SF_TEST_ROOT"
+
+      - name: Verify complete application gate
+        run: bun run sf-verify
+
+      - name: Verify coverage threshold
+        run: bunx vitest run --coverage
+
+      - name: Commit reviewed dependency repair
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
+          patch_file="$(find patches -maxdepth 1 -type f -name '*.patch' -print)"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json bun.lock
-          git commit -m 'fix(deps): enforce patched advisory ranges'
+          git add package.json bun.lock "$patch_file"
+          git commit -m 'fix(deps): patch secure brace-expansion compatibility'
           git push origin "HEAD:$HEAD_BRANCH"
