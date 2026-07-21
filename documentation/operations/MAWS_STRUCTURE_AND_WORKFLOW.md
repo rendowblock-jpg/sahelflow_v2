@@ -2,7 +2,7 @@
 
 MAWS is SahelFlow's lightweight way of coordinating capable AI agents across interfaces and sessions. GitHub holds shared memory, prompts provide useful starting roles, and deep-dive waves hold the evolving investigation, plan, implementation and evidence.
 
-MAWS is not an autonomous runtime, ticket factory, permission system or parallel product/experience/engineering authority.
+MAWS is not an autonomous runtime, ticket factory, permission system or parallel product/experience/engineering authority. Execution environments are disposable; GitHub state is durable.
 
 ## 1. Authority-aware core model
 
@@ -21,11 +21,15 @@ WORKING_MEMORY.md
         ↓
 Active wave governing contract
         ↓
-Inspect ↔ reason ↔ design ↔ build ↔ test ↔ recover
+ChatGPT lead reasoning / critical implementation / review
         ↕
-Other agents contribute when useful
-        ↓
-Coherent pull request + exact evidence
+Codex Cloud implementation / Linux execution / browser validation
+        ↕
+GitHub branch, pull request and exact evidence
+        ↕
+GitHub Actions clean-checkout and artifact production
+        ↕
+Codex Desktop installed-Windows laboratory when required
         ↓
 Merge, continue, finish or replace wave
 ```
@@ -38,7 +42,7 @@ A wave is flexible in method but not free to drift from authority. It records th
 
 ### `AGENTS.md` — common entry point and precedence
 
-Every agent starts at repository-root `AGENTS.md`. It points to current memory and states the authority/read-order rules.
+Every agent starts at repository-root `AGENTS.md`. It points to current memory, the exact interface resume prompts and the authority/read-order rules.
 
 ### Product, experience and engineering packages — durable target truth
 
@@ -88,6 +92,14 @@ Copy `WAVE_TEMPLATE.md` when a new wave begins. Phase names/counts may change as
 
 Chat is where live reasoning happens. GitHub stores understanding that must survive.
 
+### Disposable execution environments
+
+Codex Cloud, Codespaces and temporary CI workspaces are execution environments, not durable-memory layers. Their files, terminals and running processes are disposable.
+
+- Intended changes must be committed and pushed before a cloud session ends.
+- Branches, PRs, Working Memory, the active wave, exact commits and retained artifacts are the cross-session bridge.
+- No important conclusion may depend only on an unpushed cloud filesystem or an old chat transcript.
+
 ### `agent-handoff` — GLM continuity only
 
 The orphan `agent-handoff` ref preserves GLM's cross-session checkpoint and thin bootstrap. It is deliberately outside `main` so a disposable GLM environment can resume from one stable ref, but it is not a parallel authority or implementation branch.
@@ -108,32 +120,79 @@ Historical files that remain in orphan-branch history are provenance only. They 
 - `documentation/history/` preserves chronology without current product/readiness authority.
 - The root changelog records current SahelFlow 1.0 migration truth.
 
-## 3. People and agents
+## 3. People, agents and execution environments
 
 ### Founder
 
 Supplies product direction, priority, value judgment, provider launch-set choices, important tradeoffs and Stable approval. Agents bring decisions requiring product authority, not routine coordination.
 
-### Codex Desktop — primary builder and continuity lead
+The Founder workstation is low-end and SSD-constrained. Routine implementation must not depend on it retaining a full development checkout, dependency cache, `.next` output, Rust `target` directory or repeated build artifacts. The preferred hands-on Windows path is to download and install an exact prebuilt internal artifact, launch it locally and record the observed experience without recreating the heavy compiler workspace.
 
-Currently the only MAWS agent assumed to have broad direct access to the Founder-authorized local workspace/runtime. It can inspect/edit local code, run product/tests/build/package/database, inspect artifacts/processes/logs/browser/desktop behavior, publish GitHub work and integrate other agents' findings.
+### ChatGPT — lead engineering partner, critical implementer and reviewer
 
-Claims depending on local unpublished files, running app, packaged candidate, database or machine evidence require Codex Desktop or another tool with actual access.
+Builds precise cross-layer models, traces journeys/states, challenges assumptions, designs solutions, implements critical or foundational changes through available GitHub tools, authors or reviews pull requests and keeps durable memory accurate.
 
-### Codespaces — connected Linux implementation environment
+ChatGPT normally:
 
-The repository's checked-in dev container gives an authorized coding agent a reproducible Linux workspace for source work, Next.js development, Prisma, TypeScript, ESLint, Vitest and Rust formatting. Codespaces is an execution environment, not a new MAWS role or durable-memory layer.
+- translates Founder outcomes into a governing implementation contract;
+- decides which work benefits from direct implementation versus Codex Cloud delegation;
+- implements sensitive architecture, contracts or fixes when connector-based editing is the strongest path;
+- independently reviews material Codex Cloud changes and requests or applies corrections;
+- updates the existing authority, active wave and Working Memory when durable truth changes.
+
+It does not claim local desktop/runtime or cloud-shell evidence without actual access.
+
+### Codex Cloud — primary cloud builder and Linux runtime executor
+
+Codex Cloud is the normal primary builder for routine and large source work. A configured environment provides a disposable Linux checkout and command runtime suitable for source inspection, implementation, dependency installation, Next.js development, Prisma, TypeScript, ESLint, Vitest, browser/runtime inspection and other cloud-validatable checks.
+
+Codex Cloud normally:
+
+- resumes from `AGENTS.md`, Working Memory and the active wave;
+- declares repository, branch, exact commit and worktree state;
+- inspects, designs, implements, launches the development application, tests and revises;
+- uses targeted checks while iterating and shared gates at meaningful checkpoints;
+- commits and pushes intended changes;
+- creates or updates one coherent PR;
+- records exact validation, limitations, blocker and next move.
+
+Codex Cloud evidence is Linux source/development/browser evidence. It cannot establish MSI installation, Windows WebView, process-tree, sleep/resume, reboot, SmartScreen or reference-device behavior.
+
+### Codex Desktop — installed-Windows laboratory and local-machine executor
+
+Codex Desktop is not the routine primary compiler. It is the only MAWS agent currently assumed to have broad direct access to the Founder-authorized Windows desktop/runtime.
+
+It is used for:
+
+- downloading and verifying the exact approved Windows artifact;
+- MSI installation, uninstall and replacement-install behavior;
+- packaged Tauri launch and WebView behavior;
+- Windows process supervision, crash/restart/shutdown and resource failures;
+- sleep/resume, reboot, clock/time-zone and OS security interactions;
+- migration, recovery and failure-injection drills on the installed candidate;
+- T470, low-end and agreed 4 GB reference measurements;
+- screenshots, logs and human hands-on experience from the exact machine.
+
+Preserve the storage-constrained workstation. Do not recreate full dependency or build caches unless a bounded Windows-only investigation explicitly requires them.
+
+### GitHub Actions — clean-checkout and artifact-production authority
+
+GitHub Actions provides neutral retained evidence for the exact commit:
+
+- clean-checkout quality gates, coverage, audit and migration checks;
+- release-path compilation;
+- Windows artifact production, hashes and manifests when configured.
+
+A successful Windows build proves artifact production for the exact commit; it does not prove installation or machine behavior.
+
+### Codespaces — optional connected Linux implementation environment
+
+The repository's checked-in dev container remains a reproducible optional Linux workspace. It is useful as a fallback, comparison environment or explicitly selected connected workspace, but Codex Cloud is the normal primary cloud builder after the 2026-07-21 workflow decision.
 
 - Git branches, commits, pull requests, Working Memory and the active wave remain durable; the Codespace is disposable.
 - The normal machine is 2 cores and 8 GB. Use 4 cores only when a measured heavy workload justifies consuming the allowance twice as fast.
 - Codespaces uses synthetic disposable data and private forwarded ports. Production credentials, seller data, signing material and live provider sessions remain outside it.
-- Codespaces evidence is Linux source/development evidence. It cannot establish MSI, WebView, Windows process, install, sleep/resume, reboot, SmartScreen or reference-device behavior.
-- Native Tauri release compilation remains in GitHub Actions; installed-candidate behavior remains in the authorized Windows lab.
-- Every agent states its execution environment, exact source ref and worktree state before reporting evidence.
-
-### ChatGPT — product, experience, architecture and engineering partner
-
-Builds precise cross-layer models, traces journeys/states, challenges assumptions, designs solutions, reviews/implements through available GitHub tools and keeps durable memory accurate. It does not claim local desktop/runtime evidence without access.
+- Codespaces evidence is Linux source/development evidence and cannot establish installed Windows behavior.
 
 ### GLM — external research and discovery specialist
 
@@ -145,7 +204,7 @@ These are specializations, not contribution restrictions.
 
 ### Step 1 — Discuss the outcome
 
-Founder and lead agent establish what should become true, for whom and why. Early discussion may be exploratory.
+Founder and ChatGPT establish what should become true, for whom and why. Early discussion may be exploratory.
 
 ### Step 2 — Resolve governing authority
 
@@ -167,9 +226,22 @@ Inspect relevant documents, source, tests, behavior, data, infrastructure and hi
 
 Use `WAVE_TEMPLATE.md`, link from Working Memory and fill the governing contract. The plan is a working model, not a ritual contract.
 
-### Step 5 — Choose collaborators naturally
+### Step 5 — Allocate implementation naturally
 
-Use another agent when a second perspective/parallel workstream improves the outcome. A concise brief includes:
+ChatGPT chooses the strongest division for the outcome:
+
+```text
+Ordinary or broad feature:
+ChatGPT contract/design → Codex Cloud implementation/execution → ChatGPT review → Codex Cloud revision
+
+Critical architecture or sensitive boundary:
+ChatGPT direct implementation or close control → Codex Cloud integration/execution → ChatGPT review
+
+Mixed feature:
+ChatGPT critical contracts/logic → Codex Cloud surrounding implementation/tests/UI → ChatGPT final review
+```
+
+A concise collaboration brief includes:
 
 ```text
 Active wave:
@@ -182,7 +254,7 @@ Useful output:
 
 The receiving agent may challenge framing or inspect adjacent context.
 
-### Step 6 — Execute phases
+### Step 6 — Execute phases in Codex Cloud or the selected environment
 
 Investigate, design, implement, migrate, test and revise. Small actions remain in the wave. Separate issues only when useful.
 
@@ -197,13 +269,28 @@ Material discoveries update the document that owns them:
 - progress → wave/Working Memory;
 - GLM resume checkpoint → `agent-handoff/AGENT_HANDOFF.md` only.
 
-### Step 7 — Integrate connected and local work
+### Step 7 — Publish a coherent cloud checkpoint
 
-Connected agents may produce branches/PRs/reviews/research. GLM work branches from current `main`; the orphan ref is never a product-code branch. Codex Desktop integrates remote and local state and runs/verifies local-only behavior.
+Before a Codex Cloud or Codespace session ends:
 
-### Step 8 — Publish coherent checkpoints
+- commit intended work on a normal `agent/<outcome>` branch;
+- push the branch;
+- create or update the coherent PR;
+- record exact commands, results and skipped validation;
+- update the active wave or Working Memory only if the durable checkpoint changed;
+- leave the exact branch, PR, commit, blocker and next move.
 
-A PR records:
+Never use unpushed container state as cross-session memory.
+
+### Step 8 — Independent review and correction
+
+ChatGPT reviews material implementation for product scope, complete journeys/states, architecture, security, migration, data survivability, UI/UX, Arabic/RTL, accessibility, low-end behavior and evidence quality.
+
+Blocking findings are corrected either directly by ChatGPT or through a precise Codex Cloud revision on the same branch/PR. Validation is rerun after correction.
+
+### Step 9 — Clean-checkout and artifact evidence
+
+GitHub Actions validates the exact commit and produces required artifacts. A PR records:
 
 - outcome and active wave;
 - governing product/scope/capability/journey/experience/invariants;
@@ -215,9 +302,25 @@ A PR records:
 
 Review depth is proportional to risk, not ceremony.
 
-### Step 9 — Hand off or resume
+### Step 10 — Launch locally without rebuilding the development workspace
 
-Before meaningful switch, update:
+When hands-on Windows behavior is required:
+
+1. GitHub Actions produces the exact approved internal MSI or other Windows artifact.
+2. Record commit, artifact identity, digest and procedure.
+3. On the Founder-authorized low-storage PC, download only the artifact and bounded evidence tools/files required for the test.
+4. Install and launch SahelFlow normally.
+5. Test the specified seller journey, startup/failure/recovery behavior and visual experience.
+6. Capture logs, screenshots, machine profile and result.
+7. Remove obsolete downloaded artifacts after evidence is preserved when storage requires it.
+
+Do not restore `node_modules`, `.next`, Rust `target` or routine development caches merely to launch and evaluate the installed application.
+
+### Step 11 — Hand off or resume
+
+The exact ChatGPT and Codex Cloud resume prompts live in `AGENT_PROMPTS.md`.
+
+Before a meaningful switch, update:
 
 ```text
 What is now true:
@@ -226,11 +329,9 @@ Current blocker or uncertainty:
 Exact next move:
 ```
 
-A new agent resumes from repository documents rather than a narrative dump. GLM additionally updates its compact orphan checkpoint when it needs disposable-session continuity.
+A new agent resumes from repository documents rather than a narrative dump.
 
-For Codespaces, commit and push intended work before stopping or deleting the environment. Do not use an unpushed Codespace filesystem as cross-session memory.
-
-### Step 10 — Finish, park or replace
+### Step 12 — Finish, park or replace
 
 A wave finishes when its coherent outcome and required evidence are demonstrated. Record limitations and integrated commits/artifacts. If Founder changes direction, update or replace the wave; Git history preserves the old model.
 
@@ -244,6 +345,7 @@ A wave finishes when its coherent outcome and required evidence are demonstrated
 - exact SHAs in ordinary conversation;
 - mandatory external review for routine low-risk work;
 - Founder relay of routine messages;
-- separate product or architecture truth for GLM.
+- a full local development installation on the storage-constrained Founder PC;
+- separate product or architecture truth for GLM, Codex Cloud or Codex Desktop.
 
 MAWS succeeds when another strong agent can understand authority, current outcome, evidence, plan and next move from GitHub and contribute without coordination theater.
