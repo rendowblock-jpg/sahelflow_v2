@@ -9,6 +9,9 @@ type UpdaterAuthority = {
   channelStatus: "candidate" | "approved";
   signingKeyStatus: "unaccepted" | "approved";
   signingKeyId: string | null;
+  publicKeyId: string;
+  approvalScope: "internal-lab" | "beta" | "stable";
+  authenticodeRequired: boolean;
   endpoint: string;
   installMode: string;
 };
@@ -67,6 +70,13 @@ const pubkey = tauriUpdater?.pubkey?.trim() ?? "";
 const installMode = tauriUpdater?.windows?.installMode;
 const signingKeyVariable = /\bTAURI_SIGNING_PRIVATE_KEY\b/;
 const signingPasswordVariable = /\bTAURI_SIGNING_PRIVATE_KEY_PASSWORD\b/;
+let decodedPublicKey = "";
+
+try {
+  decodedPublicKey = Buffer.from(pubkey, "base64").toString("utf8");
+} catch {
+  failures.push("Tauri updater public key must be valid base64-encoded key content");
+}
 
 requireCondition(
   ["internal", "beta", "stable"].includes(authority.channel),
@@ -88,6 +98,18 @@ requireCondition(
 requireCondition(
   ["unaccepted", "approved"].includes(updater.signingKeyStatus),
   `updater.signingKeyStatus must be unaccepted or approved; found ${updater.signingKeyStatus}`,
+);
+requireCondition(
+  /^[A-F0-9]{16}$/.test(updater.publicKeyId),
+  "updater.publicKeyId must be a 16-character uppercase minisign key ID",
+);
+requireCondition(
+  ["internal-lab", "beta", "stable"].includes(updater.approvalScope),
+  `updater.approvalScope is invalid: ${updater.approvalScope}`,
+);
+requireCondition(
+  typeof updater.authenticodeRequired === "boolean",
+  "updater.authenticodeRequired must be a boolean",
 );
 requireCondition(
   typeof updater.endpoint === "string" && updater.endpoint.length > 0,
@@ -133,6 +155,10 @@ requireCondition(
   `Tauri updater install mode (${String(installMode)}) must equal version authority (${updater.installMode})`,
 );
 requireCondition(pubkey.length > 0, "Tauri updater public key must not be empty");
+requireCondition(
+  decodedPublicKey.includes(`minisign public key: ${updater.publicKeyId}`),
+  "Tauri updater public key content must contain the approved publicKeyId",
+);
 
 if (updater.enabled) {
   requireCondition(
@@ -147,6 +173,15 @@ if (updater.enabled) {
     typeof updater.signingKeyId === "string" &&
       /^[A-Za-z0-9._-]{3,128}$/.test(updater.signingKeyId),
     "enabled updater requires an approved non-secret signingKeyId",
+  );
+  requireCondition(
+    updater.signingKeyId?.toLowerCase().endsWith(updater.publicKeyId.toLowerCase()) ===
+      true,
+    "updater signingKeyId must be visibly bound to publicKeyId",
+  );
+  requireCondition(
+    authority.channel !== "internal" || updater.approvalScope === "internal-lab",
+    "internal updater activation requires approvalScope=internal-lab",
   );
   requireCondition(
     !/--no-sign\b/i.test(workflow),
@@ -165,16 +200,33 @@ if (updater.enabled) {
     "enabled updater workflow must use the protected updater signing-key password environment",
   );
   requireCondition(
-    /^\s*environment:\s*\S+/m.test(workflow),
-    "enabled updater workflow must bind signing/publication to a protected GitHub environment",
+    /^\s*environment:\s*internal-updater\s*$/m.test(workflow),
+    "enabled internal updater workflow must bind signing to environment internal-updater",
+  );
+  requireCondition(
+    /workflow_dispatch:/.test(workflow) && /source_ref:/.test(workflow),
+    "internal updater publication must require a manual exact-source workflow dispatch",
+  );
+  requireCondition(
+    /tauri-apps\/tauri-action@v0\.6\.2/.test(workflow),
+    "enabled updater workflow must use the reviewed Tauri action version v0.6.2",
+  );
+  requireCondition(
+    /releaseDraft:\s*true/.test(workflow),
+    "internal updater workflow must create a draft release for explicit publication",
+  );
+  requireCondition(
+    /uploadUpdaterJson:\s*true/.test(workflow) &&
+      /uploadUpdaterSignatures:\s*true/.test(workflow),
+    "enabled updater workflow must create latest.json and upload updater signatures",
   );
   requireCondition(
     /latest\.json/.test(workflow),
-    "enabled updater workflow must generate or verify signed channel metadata",
+    "enabled updater workflow must verify signed channel metadata",
   );
   requireCondition(
     /contents:\s*write/.test(workflow),
-    "enabled updater publication workflow requires explicit contents: write permission",
+    "enabled updater draft workflow requires explicit contents: write permission",
   );
 } else {
   requireCondition(
@@ -208,6 +260,6 @@ if (failures.length > 0) {
 
 console.log(
   updater.enabled
-    ? `Updater contract verified: ${authority.channel} enabled with key ${updater.signingKeyId}`
+    ? `Updater contract verified: ${authority.channel}/${updater.approvalScope} enabled with key ${updater.signingKeyId}`
     : `Updater contract verified: ${authority.channel} remains disabled; channel ${updater.channelStatus}; key ${updater.signingKeyStatus}; unsigned evidence workflow retained`,
 );
