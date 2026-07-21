@@ -150,14 +150,18 @@ jobs:
         shell: bash
         run: |
           mapfile -t changed < <(git status --short | awk '{print $2}' | sort)
-          if [ "${#changed[@]}" -ne 3 ]; then
-            echo 'expected package.json, bun.lock, and one patch file only'
+          if [ "${#changed[@]}" -lt 2 ] || [ "${#changed[@]}" -gt 3 ]; then
+            echo 'expected package.json, one patch file, and optional bun.lock only'
             printf '%s\n' "${changed[@]}"
             exit 1
           fi
-          printf '%s\n' "${changed[@]}" | grep -Fx 'bun.lock' >/dev/null
           printf '%s\n' "${changed[@]}" | grep -Fx 'package.json' >/dev/null
           if [ "$(printf '%s\n' "${changed[@]}" | grep -Ec '^patches/[^/]+\.patch$')" -ne 1 ]; then
+            echo 'expected exactly one patch file'
+            printf '%s\n' "${changed[@]}"
+            exit 1
+          fi
+          if printf '%s\n' "${changed[@]}" | grep -Ev '^(package\.json|bun\.lock|patches/[^/]+\.patch)$' >/dev/null; then
             echo 'unexpected generated path set'
             printf '%s\n' "${changed[@]}"
             exit 1
