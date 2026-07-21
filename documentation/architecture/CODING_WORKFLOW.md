@@ -39,6 +39,8 @@ Core rules:
 - Architecture changes update the Engineering Specification or a superseding ADR only when the target decision changes.
 - Durable findings, decisions, blockers and next moves go into the owning authority, Working Memory or the active wave—not an endless handoff log.
 - Credentials, signing material and seller data never belong in GitHub artifacts.
+- The Founder workstation is low-end and storage-constrained. Routine implementation, verification and artifact production belong in Codex Cloud or GitHub Actions rather than requiring restoration of the full local dependency/build cache.
+- Hands-on Windows evaluation should normally install an exact prebuilt internal artifact on the Founder PC instead of rebuilding the application locally.
 
 ## 3. Governing contract for a wave or pull request
 
@@ -201,14 +203,28 @@ Coverage is useful for regression detection, not proof of an invariant.
 
 | Environment | Primary use | Claim boundary |
 |---|---|---|
-| 2-core/8 GB Codespace | Normal coding-agent work, Next.js, Prisma, TypeScript, ESLint, Vitest and Rust formatting | Linux source/development evidence only |
-| 4-core/16 GB Codespace | Measured heavy interactive work when the faster result justifies double allowance use | Same Linux-only boundary |
+| ChatGPT with GitHub connector | Product/experience/architecture reasoning, critical implementation, PR review and durable-memory updates | Repository and connector-observed evidence only; no shell/runtime claim unless another attached tool provides it |
+| Codex Cloud Linux | Normal primary implementation, dependency installation, Next.js/Prisma/TypeScript/ESLint/Vitest, development-app launch and browser/runtime inspection | Linux source/development/browser evidence only |
+| 2-core/8 GB Codespace | Optional reproducible Linux fallback or comparison environment | Linux source/development evidence only |
+| 4-core/16 GB Codespace | Bounded measured heavy interactive work when the faster result justifies double allowance use | Same Linux-only boundary |
 | GitHub Actions Linux | Clean-checkout Quality Gate, coverage, audit and release-path Rust compilation | Retained CI evidence for the exact commit |
 | GitHub Actions Windows | Exact internal MSI build, signature and evidence manifest | Built Windows artifact, not installation behavior |
-| Authorized local Windows lab | MSI install, launch, process supervision, migration, recovery and failure injection | Installed-candidate evidence for the recorded machine |
+| Authorized local Windows lab / Codex Desktop | MSI install, launch, process supervision, migration, recovery and failure injection | Installed-candidate evidence for the recorded artifact and machine |
 | T470 and agreed 4 GB reference | Final compatibility and performance measurements | Reference-device evidence only |
 
-Codespaces rules:
+### Codex Cloud rules
+
+- The exact resume prompt lives in `../operations/AGENT_PROMPTS.md`.
+- Start from `AGENTS.md`, Working Memory, the active wave and the governing authorities.
+- Declare Codex Cloud Linux, repository, branch, exact commit and worktree state before evidence claims.
+- Use synthetic/disposable data and development/test secrets only. Never upload seller databases, signing material, WhatsApp production sessions or unrestricted production credentials.
+- Keep development ports private unless a bounded approved review requires otherwise.
+- Use targeted checks while iterating, `bun run sf-verify --fast` at meaningful checkpoints and `bun run sf-verify` before publishing a material checkpoint when the risk requires it.
+- Launch the development application and inspect browser/runtime errors when that evidence is relevant.
+- Commit and push intended work, update the coherent PR and record exact commands/results before ending. Never depend on unpushed cloud state for the next session.
+- Native Windows artifact production remains in GitHub Actions, and installed Windows behavior remains in the authorized local lab.
+
+### Codespaces rules
 
 - The checked-in `.devcontainer/devcontainer.json` and `.bun-version` define the reproducible environment.
 - The default Codespace uses 2 cores. Use 4 cores only for a bounded measured workload, then return to 2 cores or stop it.
@@ -217,15 +233,16 @@ Codespaces rules:
 - Native Tauri release compilation remains in GitHub Actions because the default Codespaces image is not the release environment.
 - Record source commit, machine type, commands, result and limitations for material evidence.
 - Stop the Codespace after the session and delete obsolete environments because storage accrues while they exist.
+- Commit and push intended work before stopping. Never depend on unpushed container state for the next session.
 
-Codespaces session loop:
+### Low-storage local Windows launch rules
 
-1. Read `AGENTS.md`, Working Memory and the active wave.
-2. Declare Codespace Linux, machine type, branch, commit and worktree state.
-3. Use targeted tests while iterating and `bun run sf-verify --fast` at meaningful checkpoints.
-4. Run `bun run sf-verify` before publishing a material implementation checkpoint when the risk requires it.
-5. Commit and push intended work; update the active wave or Working Memory only when the durable checkpoint changes.
-6. Stop the Codespace. Never depend on unpushed container state for the next session.
+- The Founder PC is an installed-product observation device, not the routine compiler.
+- Prefer the exact prebuilt MSI or other approved Windows artifact from GitHub Actions.
+- Record commit, artifact digest, signature result, Windows build and machine profile before attaching evidence claims.
+- Do not restore `node_modules`, `.next`, Rust `target` or routine build caches merely to launch and evaluate SahelFlow.
+- Download only the artifact and bounded test/evidence files required for the current procedure.
+- After evidence is retained, remove obsolete downloaded artifacts when storage requires it without deleting seller data or recovery material.
 
 ## 8. Experience and page-completion rules
 
