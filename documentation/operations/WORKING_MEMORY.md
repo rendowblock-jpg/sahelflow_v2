@@ -20,6 +20,7 @@ This is the compact entry point for current work. Update it at meaningful checkp
 - The Founder PC is low-end and SSD-constrained. Routine work must not require it to retain the full development checkout, dependency caches, `.next`, Rust `target` or repeated build/install caches.
 - The preferred hands-on test path is: cloud implementation and validation → GitHub Actions internal Windows artifact → download/install only the exact artifact on the Founder PC → launch SahelFlow locally and record observed behavior.
 - The Founder removed heavy caches, build output and development installation because the disk became full and the machine became slow. Do not recreate them unless a bounded Windows-only investigation explicitly requires it.
+- Prefer the first routine local installation to contain a proven signed updater. After an installed A→B update drill succeeds, normal testing should use in-app updates rather than source pulls, local builds or repeated manual MSI installation.
 
 ## Canonical documentation state
 
@@ -31,6 +32,7 @@ The documentation reset, experience recovery, semantic consistency audit and MAW
 - PR #98 — post-audit checkpoint: `7a5e21d94f577db3946ac347fad49533b8625687`.
 - Integrated baseline used to start the first implementation wave: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 - PR #112 — MAWS Codex Cloud workflow and low-storage Windows launch path: `11e6fa114dc257f8f686c9859d72886a034e1e50`.
+- PR #113 — post-merge Working Memory and active-wave checkpoint: `87af8227f4c361b2d99786bed3289a87f17a12f2`.
 
 No application behavior or executable product source changed in the documentation waves above.
 
@@ -103,36 +105,39 @@ Historical Session-40 handoff/tool content remains in orphan-branch Git history 
 
 Required outcome:
 
-> A seller can install one Windows candidate, start it reliably, open only the intended shop, and receive a clear recoverable failure instead of silent fallback or partial startup. The repository can prove this from a clean checkout.
+> A seller can install one Windows candidate, start it reliably, open only the intended shop, receive a clear recoverable failure instead of silent fallback or partial startup, and move to a newer approved version without rebuilding locally or losing shop data. The repository can prove this from a clean checkout and an installed A→B drill.
 
 Current checkpoint:
 
-- GitHub Actions infrastructure is operational; run #371 passed the complete Quality Gate and Tauri smoke after the CI fallback key was corrected to a valid 256-bit hex key and the Linux cargo-check sidecar placeholder was created inside CI only.
-- `sf-inventory` now generates machine-readable clean-checkout evidence. Run #374 passed and retained an inventory for 691 files, 31 pages, 114 API routes, 125 components, 142 CSS custom-property tokens, 31 Prisma models and 97 test files.
-- A 2026-07-18 `sf-inventory --allow-dirty` diagnostic refresh reports 692 files, 31 pages, 114 API routes, 36 commands, 125 components, 31 Prisma models, 9 migration files, 97 test files and 14 sidecar/desktop resource files. This is useful local drift information only; it is not clean-checkout evidence.
-- The Tauri smoke runs `cargo check --release`, so release-only startup code is compiled instead of being silently excluded by `cfg(not(debug_assertions))`.
+- GitHub Actions infrastructure is operational; clean-checkout quality and release-path Rust gates are green for the integrated source baseline.
 - The integrated runtime fails closed when mandatory resources or readiness fail, kills timed-out children, starts the degradable sidecar only after readiness and exposes a redacted seller-visible blocked-startup document.
 - Packaged startup allocates per-launch loopback endpoints and credentials, binds readiness to exact process/shop/registry/migration authority and uses one bounded restart/crash-loop supervisor.
 - Process-bound shop/database authority, an atomic registry, all-shop migration planning, external journal, verified snapshots, OS lock, interrupted restoration and transaction-bound order effects are integrated.
-- Clean-checkout CI run `29697219950` passed at `7ad237a`: 94 files and 1,534 tests with 80.87% statement/line coverage, a clean production audit, current migration status and release-path Rust compilation.
 - Local Windows source-testable verification is green, but no installed MSI, migration/failure-injection drill, T470 measurement or 4 GB measurement is claimed yet.
-- The previous local HP development machine is an Intel Celeron N3060 with 8 GB RAM and less than 10 GB free disk. `sf-verify --fast` required 7 minutes 56 seconds, so it is a Windows/low-end observation device rather than the primary compilation environment.
-- A personal Codespaces pilot proved the 2-core/8 GB environment as a fast Linux coding mode. Codex Cloud is now the selected normal primary cloud builder; its specific SahelFlow environment still needs a first recorded bootstrap/launch/verification checkpoint.
+- The previous local HP development machine is an Intel Celeron N3060 with 8 GB RAM and less than 10 GB free disk. It is a Windows/low-end observation device rather than the primary compilation environment.
+- Codex Cloud is the selected normal primary cloud builder; its specific SahelFlow environment still needs a first recorded bootstrap/launch/verification checkpoint.
 - The Founder removed local dependency, build and installation caches because the SSD became full and the machine became unusably slow. The local goal is not to restore the full development workspace; it is to install and launch an exact prebuilt SahelFlow candidate for hands-on testing.
-- PR #112 integrated the canonical role allocation, exact ChatGPT and Codex Cloud resume prompts, GitHub-backed session continuity and low-storage local launch procedure into `main`.
+- The updater dependencies and Tauri plugin are present, but the checked-in configuration currently has updater artifact creation disabled and updater activation disabled. No updater signing-key custody, published update channel, signed metadata, in-app update journey or installed A→B proof is accepted yet.
 
-Exact next executable action:
+Exact next executable action — use this sequence in both new ChatGPT and Codex Cloud sessions:
 
-1. start a Codex Cloud session with the canonical resume prompt, declare the exact environment/branch/commit and prove bootstrap, development launch and the appropriate shared gate from current `main` without changing product behavior unnecessarily;
-2. separately select and authorize the exact Windows implementation-lab machine and internal-candidate procedure;
-3. have GitHub Actions produce the exact internal Windows artifact, then download/install only that artifact on the low-storage PC and launch SahelFlow for the clean-install, startup, migration, restart/crash-loop and failure-injection matrix.
+1. **ChatGPT lead pass:** resume from canonical GitHub state; inspect the updater, release, versioning, migration and signing boundaries; define the governing implementation contract and directly control or implement the sensitive trust/signing/release portions.
+2. **Codex Cloud bootstrap:** declare Codex Cloud Linux, repository/branch/commit/worktree; prove dependency setup, development-app launch and the appropriate shared gate from current `main` without making an installed-Windows claim.
+3. **Updater implementation:** on a normal `agent/<outcome>` branch, enable signed updater artifacts and checking; implement the complete checking/available/downloading/installing/restart/later/failure/retry journey; synchronize versions; create the GitHub Actions publishing path and signed update metadata; add tests and evidence. Do not place private signing material in the repository or prompts.
+4. **Independent review:** ChatGPT reviews the complete updater/release diff, security model, data-preservation behavior, failure recovery and UX; Codex Cloud applies corrections and reruns validation.
+5. **First installer:** GitHub Actions builds the first updater-enabled internal Windows MSI and updater artifacts for version A. The exact signing key, public key, release channel, artifact digest and procedure must be authorized and recorded.
+6. **Local installation:** Codex Desktop downloads and verifies only version A, installs it on the authorized low-storage PC and launches SahelFlow without restoring development caches.
+7. **A→B proof:** publish a deliberately small version B through the same signed channel; from the installed version A, check, download, install and restart into B. Prove that shops, databases, settings, credentials, migration history and recovery material remain intact, and exercise offline/download/signature/install/restart failure handling.
+8. **Normal future loop:** only after the A→B drill passes, use coherent in-app updates for routine local testing. Manual MSI replacement remains the recovery fallback, not the normal path.
 
-Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
+Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation and updater/install gates pass.
 
 ## Open implementation-lab decisions
 
 - Exact local Windows environment for the first installed candidate; the Founder low-storage PC is the intended hands-on launch machine but must be explicitly named as the authorized lab for evidence claims.
-- Exact internal-candidate download, digest verification, installation and cleanup procedure.
+- Exact updater signing-key generation, offline backup, custody, rotation and loss procedure.
+- Exact internal update channel and hosting/publishing policy, including whether GitHub Releases is acceptable for the internal phase.
+- Exact initial MSI and updater artifact download, digest/signature verification, installation and cleanup procedure.
 - Exact 4 GB floor-reference machine/dataset and T470 dataset.
 - Persisted shop-incarnation identity before backup restore or future inbox/outbox records may treat a deleted-and-recreated slug as the same shop.
 - Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.

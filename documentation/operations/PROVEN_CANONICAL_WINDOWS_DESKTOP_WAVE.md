@@ -1,7 +1,7 @@
 # Wave: Proven Canonical Windows Desktop
 
 > Started: 2026-07-17  
-> Current focus: Codex Cloud bootstrap and installed-candidate preparation  
+> Current focus: Codex Cloud bootstrap, updater pipeline and installed-candidate preparation  
 > Lead: ChatGPT / Codex Cloud; Codex Desktop for installed-Windows evidence
 
 ## Founder intent and outcome
@@ -10,21 +10,23 @@ A seller can install one Windows candidate, start it reliably, open only the int
 
 The Founder must also be able to launch and evaluate the exact internal SahelFlow candidate on a low-end, SSD-constrained Windows PC without rebuilding the complete development workspace or retaining heavy dependency/build caches.
 
+The preferred routine is install once, then receive coherent signed in-app updates. The first trusted local installation must include the updater, and the workflow must prove an installed version A updating to version B without losing shops, databases, settings, credentials, migration history or recovery material.
+
 ## Governing contract
 
 - Product clause or Founder decision: SahelFlow 1.0 Launch Constitution and Launch Scope requirements for canonical local Windows operation, shop entitlements, data preservation, low-end support and evidence-gated claims.
-- Scope class: Required for the Windows desktop, shop isolation, startup/recovery behavior and clean-checkout proof; Depth requirement for explicit degraded/error/recovery states; Candidate only for exact implementation mechanisms not already fixed by engineering authority.
-- Capability atlas section: desktop shell/runtime, shop management, settings/support diagnostics, local data authority and migration/recovery surfaces.
-- Journey and required states: install/first launch, startup, open intended shop, switch shop, missing/corrupt registry, missing shop file, occupied endpoint, missing runtime resource, child-process failure, migration preflight/failure/interruption, maintenance and recovery. Applicable states include loading, pending, ready, degraded, blocked, rejected, error, maintenance and recoverable failure.
+- Scope class: Required for the Windows desktop, shop isolation, startup/recovery behavior, safe update path and clean-checkout proof; Depth requirement for explicit degraded/error/recovery/update states; Candidate only for exact implementation mechanisms not already fixed by engineering authority.
+- Capability atlas section: desktop shell/runtime, shop management, settings/support diagnostics, local data authority, updater and migration/recovery surfaces.
+- Journey and required states: install/first launch, startup, open intended shop, switch shop, update check, update available, later, download, install, restart, update failure/retry, offline, invalid signature, missing/corrupt registry, missing shop file, occupied endpoint, missing runtime resource, child-process failure, migration preflight/failure/interruption, maintenance and recovery. Applicable states include loading, pending, ready, degraded, blocked, rejected, error, maintenance and recoverable failure.
 - Experience dimensions and page-completion obligations: trustworthy authority/freshness, clear progress and failure language, no silent fallback, keyboard and screen-reader operability, Arabic/French/English and RTL/LTR behavior where seller-visible, 1366×768 and low-end behavior, reduced motion and support-readable diagnostics.
-- Engineering invariants / ADRs: canonical Windows desktop remains final local business-mutation authority; explicit trusted shop context; one operational SQLite database per shop; atomic versioned registry; no silent database fallback; supervised authenticated local runtime; append-only all-shop migration with preflight, journal, verified snapshot gate and fail-closed recovery; artifact-level evidence separated from source claims.
-- Roadmap phase and dependencies: Phase 0, then the minimum converging Phase 1A runtime and Phase 1B shop/data authority work needed for the installed candidate.
-- Risk class and evidence layers: R0 for wave/inventory records; R3 for authenticated runtime and trusted shop context; R4 for migrations, data survivability and installed candidate/release authority. Evidence must distinguish source inspection, Codex Cloud or Codespaces Linux execution, clean-checkout GitHub Actions, produced Windows artifact, installed Windows behavior, failure injection, migration/recovery drills and reference-hardware measurements.
-- Explicit non-goals: no Cloudflare implementation; no hosted storefront; no remote PWA; no provider expansion; no broad page redesign; no deletion of legacy runtime or data paths before compatible migration and recovery evidence exist; no requirement to restore a full local development toolchain merely to launch the candidate on the Founder PC.
+- Engineering invariants / ADRs: canonical Windows desktop remains final local business-mutation authority; explicit trusted shop context; one operational SQLite database per shop; atomic versioned registry; no silent database fallback; supervised authenticated local runtime; append-only all-shop migration with preflight, journal, verified snapshot gate and fail-closed recovery; signed/versioned update metadata and artifacts; no unsigned or unapproved update installation; artifact-level evidence separated from source claims.
+- Roadmap phase and dependencies: Phase 0, then the minimum converging Phase 1A runtime and Phase 1B shop/data authority work needed for the updater-enabled installed candidate.
+- Risk class and evidence layers: R0 for wave/inventory records; R3 for authenticated runtime, updater trust/signing and trusted shop context; R4 for migrations, data survivability, installed update and release authority. Evidence must distinguish source inspection, Codex Cloud or Codespaces Linux execution, clean-checkout GitHub Actions, produced Windows/update artifacts, installed Windows behavior, installed A→B update, failure injection, migration/recovery drills and reference-hardware measurements.
+- Explicit non-goals: no Cloudflare implementation; no hosted storefront; no remote PWA; no provider expansion; no broad page redesign; no deletion of legacy runtime or data paths before compatible migration and recovery evidence exist; no requirement to restore a full local development toolchain merely to launch the candidate on the Founder PC; no dependence on the updater until its signed A→B drill passes.
 
 ## Current reality
 
-The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. Clean-checkout source evidence is green, but no installed-artifact claim attaches to it:
+The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. Clean-checkout source evidence is green, but no installed-artifact or installed-update claim attaches to it:
 
 - GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
 - CI binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
@@ -55,9 +57,10 @@ The original wave evidence remains listed below for provenance. PR #104 integrat
 - On 2026-07-21, the Founder configured a Codex Cloud environment for `rendowblock-jpg/sahelflow_v2` with agent internet access. Its first SahelFlow bootstrap, development launch and shared-gate checkpoint is not yet recorded.
 - PR #112 integrated ChatGPT as lead engineering partner/critical implementer/reviewer, Codex Cloud as primary cloud implementation/runtime agent, Codex Desktop as installed-Windows laboratory and GitHub Actions as clean-checkout/artifact-production authority.
 - The Founder removed local dependency, build and installation caches because the SSD filled and the PC became unusably slow. The intended local path is to download and install an exact prebuilt internal artifact and launch SahelFlow for hands-on evaluation without restoring `node_modules`, `.next`, Rust `target` or routine compiler caches.
-- No packaged Windows, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
+- The JavaScript and Rust updater dependencies are present and the Tauri updater plugin is registered, but `createUpdaterArtifacts` and updater activation are disabled. The configured public key/channel are not accepted as production-ready evidence, and no signed update metadata, complete in-app update journey or installed A→B proof exists.
+- No packaged Windows, installed update, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
 
-The current program has clean integrated source, a reproducible Linux environment, a configured Codex Cloud environment and an integrated cross-session workflow. No MSI has yet been built, installed or launched under the current internal-candidate procedure, and installation remains a separately confirmed implementation-lab action.
+The current program has clean integrated source, a reproducible Linux environment, a configured Codex Cloud environment and an integrated cross-session workflow. No updater-enabled MSI has yet been built, installed or updated under the current internal-candidate procedure, and installation/update remain separately confirmed implementation-lab actions.
 
 ## Target experience or system
 
@@ -72,14 +75,17 @@ The internal installed candidate must expose one deterministic startup state mac
 7. enter ready only after all required gates pass;
 8. otherwise enter a named blocked/degraded/recovery state with safe retry, diagnostics and no fallback to another shop or partial-ready shell.
 
-The Founder hands-on path must be lightweight:
+The Founder hands-on install/update path must be lightweight:
 
-1. obtain the exact internally approved Windows artifact from retained GitHub Actions output;
-2. verify the recorded artifact identity/digest;
+1. obtain the exact internally approved updater-enabled Windows version A from retained GitHub Actions output;
+2. verify the recorded artifact identity, digest and signature;
 3. install it on the authorized low-storage PC without restoring the source development workspace;
 4. launch and use the application as a seller would;
-5. record visual, runtime, recovery and low-end observations;
-6. preserve evidence, then remove obsolete downloaded artifacts when storage requires it.
+5. publish an approved signed version B with release notes and compatible migrations;
+6. from A, check for the update, choose install or later, download, verify, install and restart into B;
+7. prove data/settings/credentials/recovery preservation and visible recovery for offline, download, signature, installation and restart failures;
+8. preserve evidence, then remove obsolete downloaded artifacts when storage requires it;
+9. after the A→B proof passes, use in-app updates as the normal local testing path and retain manual MSI replacement only as a recovery fallback.
 
 ## Deep-dive findings
 
@@ -90,7 +96,8 @@ The Founder hands-on path must be lightweight:
 - The direct-write source inventory is closed for the current production mutation graph. New repository, background or remote execution paths must accept explicit context and must not reintroduce global active-shop selection.
 - Codex Cloud and Codespaces provide Linux source/development evidence; GitHub Actions provides exact clean-checkout and artifact-production evidence; the Windows lab remains installed-runtime authority. None can silently substitute for another claim layer.
 - Packaged startup reloads the canonical active-shop HMAC secret fail-closed; cloud or CI passes still cannot prove installed restart behavior.
-- The low-storage PC constraint changes the execution method, not the product evidence standard: local testing should consume a prebuilt candidate instead of rebuilding the app locally.
+- The low-storage PC constraint changes the execution method, not the product evidence standard: local testing should consume a prebuilt candidate and signed updates instead of rebuilding the app locally.
+- The updater foundation is incomplete: plugin presence is source evidence only. Trust depends on protected signing-key custody, signed artifacts/metadata, version and channel policy, complete UI states, data-safe migrations and installed A→B/failure evidence.
 
 ## Multi-phase plan
 
@@ -104,11 +111,13 @@ The Founder hands-on path must be lightweight:
 - Status: complete for the integrated source checkpoint.
 - Evidence: required Quality Gate and Tauri release smoke passed after integration review.
 
-### Phase: 0C — Cloud workflow bootstrap and installed Windows candidate baseline
+### Phase: 0C — Cloud bootstrap, updater pipeline and installed Windows baseline
 
-- Status: Codex Cloud environment configured and MAWS workflow integrated; SahelFlow bootstrap/launch evidence and installed candidate not yet executed.
-- Cloud work: resume from canonical GitHub state, declare exact environment/ref, install from clean checkout, run appropriate shared gates, launch the development application, inspect runtime/browser behavior and record limitations without making installed-Windows claims.
-- Windows work: produce one internal Windows-only candidate and establish runtime/readiness truth through clean install, missing resource, occupied endpoint, child failure and shutdown/restart evidence.
+- Status: Codex Cloud environment configured and MAWS workflow integrated; SahelFlow bootstrap/launch evidence, updater implementation and installed candidate/update proof not yet executed.
+- ChatGPT lead work: inspect the updater/release/versioning/migration/signing boundaries, define the governing implementation contract, directly control sensitive trust/signing/release logic and independently review the final diff/evidence.
+- Codex Cloud work: resume from canonical GitHub state, declare exact environment/ref, install from clean checkout, run appropriate shared gates, launch the development application, then implement and validate the updater/release pipeline on a normal `agent/<outcome>` branch without making installed-Windows claims.
+- GitHub Actions work: build the updater-enabled version A MSI plus signed updater artifacts/metadata, and later publish a deliberately small signed version B through the same approved internal channel.
+- Windows work: install version A on the authorized low-storage PC, establish runtime/readiness truth, then prove A→B update, restart, preservation, signature rejection and failure recovery before routine in-app updates become the default.
 
 ### Phase: 1A — Supervised authenticated local runtime
 
@@ -121,7 +130,7 @@ The Founder hands-on path must be lightweight:
 
 - Status: source write-authority and migration-coordinator sub-gates met locally and in clean-checkout CI; installed exit evidence not met.
 - Completed bounded work: process-bound `ShopContext`; atomic versioned registry; positive imported revisions; process-bound database without registry fallback; production context propagation; packaged migration deployment; per-shop compatibility report; all-shop coordinator; external journal; verified snapshots; pending-work disk reserve; OS lock; corrupt/divergent-registry/history failure; rollback, interruption, rerun, multi-shop and actual packaged current-data tests.
-- Next work: perform separately approved installed Windows and representative-data drills. Add persisted shop-incarnation identity before backup restore or future durable inbox/outbox work can conflate a deleted-and-recreated shop slug.
+- Next work: prove updater-triggered compatible migration/preservation in the installed A→B drill and perform separately approved representative-data drills. Add persisted shop-incarnation identity before backup restore or future durable inbox/outbox work can conflate a deleted-and-recreated shop slug.
 
 ### Phase: 0D — Reference baseline
 
@@ -147,12 +156,15 @@ The Founder hands-on path must be lightweight:
 | Use Codex Desktop as the installed-Windows laboratory rather than the routine primary compiler. | Windows installation and machine behavior require local access, while ordinary implementation belongs in the cloud. | Founder/MAWS workflow decision. | 2026-07-21 |
 | Launch SahelFlow locally from an exact prebuilt internal Windows artifact without restoring full build/dependency caches. | The SSD filled and the PC became slow; hands-on testing needs the installed product, not the full compiler workspace. | Founder constraint and decision. | 2026-07-21 |
 | Integrate the MAWS cloud workflow through PR #112. | Every new ChatGPT or Codex Cloud session now has a canonical GitHub-backed resume protocol and clear evidence boundaries. | PR #112, commit `11e6fa114dc257f8f686c9859d72886a034e1e50`. | 2026-07-21 |
+| Make the first routine local installation updater-enabled and require an installed A→B proof before relying on in-app updates. | This preserves the low-storage install-once workflow without treating plugin scaffolding or unsigned/unverified publication as evidence. | Founder decision and source inspection. | 2026-07-21 |
 
 ## Working notes and open questions
 
 - Select and separately authorize the exact first installed-candidate lab and procedure.
 - The Founder low-storage PC is the intended hands-on launch machine, but its exact machine profile and evidence role must be recorded before claims attach to it.
-- Define the exact artifact download, digest verification, install, test-data and cleanup procedure.
+- Define updater signing-key generation, offline backup, custody, rotation and key-loss recovery. Never place the private key in the repository, prompts or logs.
+- Select the internal update channel/hosting and publishing policy, including whether GitHub Releases is acceptable for the internal phase.
+- Define exact version-A/version-B artifact identity, digest/signature verification, install, update, test-data and cleanup procedures.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices.
 
 ## Implementation and evidence
@@ -162,18 +174,19 @@ The Founder hands-on path must be lightweight:
 - Green clean-checkout CI: run #371 (`29603869888`), run #374 (`29604264999`), run #378 (`29605285748`), `29697219950` and `29697766459`.
 - Inventory artifact: `phase0-repository-inventory`, artifact `8416217843`, digest `sha256:545f9ebbf1b9857bc7f44561c0f28832c5421bcf452bdd0036492380f3fd376c`.
 - Runtime source: Tauri setup rejects mandatory local-server startup failures and does not start the sidecar before server readiness.
-- Visual/RTL/accessibility evidence: none yet for the blocked/recovery startup state.
-- Packaged/provider/recovery evidence: none yet.
-- Known limitation: CI proves clean checkout and release compilation/artifact steps, not an installed Windows candidate.
+- Visual/RTL/accessibility evidence: none yet for the blocked/recovery startup or update states.
+- Packaged/provider/recovery/update evidence: none yet.
+- Known limitation: CI proves clean checkout and release compilation/artifact steps, not an installed Windows candidate or installed update.
 - Codespaces integration: PR #105 merged into `main` at `1a0469bb5384561d85178316d0cd6e94745b44a0`; original measured checkpoint `74bfc07` remains historical evidence.
 - Codespaces evidence: full clean container rebuild, authority audit, fast/full shared gates, Rust formatting and private web-development startup; no installed-Windows claim.
 - PR #105 clean-checkout evidence: final-head run `29700649624` passed the Quality Gate in 3 minutes 26 seconds and Tauri release smoke in 46 seconds at `013f61df335c2341d4eacbafab68078e0aa633ab`.
 - Codex Cloud: environment configured on 2026-07-21; first exact bootstrap/launch/verification checkpoint pending.
 - MAWS workflow transition: PR #112 merged into `main` at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
+- Updater source checkpoint: updater dependencies/plugin registration exist, but artifact creation and activation are disabled; signing/channel/UI/A→B evidence is absent.
 
 ## Current checkpoint
 
-- What is now true: integrated clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green. Codex Cloud is configured as the primary cloud builder, the MAWS resume protocol is integrated, and the low-storage PC is reserved for installed candidate launch/testing rather than routine compilation.
-- What changed in the plan: ChatGPT leads architecture, critical implementation and review; Codex Cloud performs primary cloud implementation/runtime/browser work; GitHub Actions produces clean-checkout evidence and Windows artifacts; Codex Desktop runs the installed candidate locally. The local test path uses a prebuilt artifact without restoring full caches.
-- Current uncertainty: first Codex Cloud SahelFlow bootstrap/launch evidence, the exact authorized Windows lab/procedure, real installed child-process failure injection, representative seller data, persisted shop-incarnation identity and all installed Windows behavior remain unproven.
-- Exact next move: run the canonical Codex Cloud resume/bootstrap/launch checkpoint from current `main`; then select/authorize the Windows lab, produce the exact internal artifact in GitHub Actions and install/launch only that artifact on the low-storage PC for the recorded drill.
+- What is now true: integrated clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green. Codex Cloud is configured as the primary cloud builder, the MAWS resume protocol is integrated, the low-storage PC is reserved for installed candidate launch/testing, and updater scaffolding exists but is disabled and unproven.
+- What changed in the plan: ChatGPT leads architecture, sensitive updater/signing/release implementation and independent review; Codex Cloud performs cloud bootstrap plus updater implementation/runtime/browser/test work; GitHub Actions produces clean-checkout evidence and signed version-A/version-B artifacts; Codex Desktop installs A and proves the A→B journey locally. The first routine installation should include the updater so future local testing can use coherent in-app updates.
+- Current uncertainty: first Codex Cloud SahelFlow bootstrap/launch evidence, updater signing-key custody and channel, complete updater implementation, the exact authorized Windows lab/procedure, installed A→B preservation/failure evidence, real installed child-process failure injection, representative seller data, persisted shop-incarnation identity and all installed Windows behavior remain unproven.
+- Exact next move: follow the eight-step sequence recorded in Working Memory—ChatGPT updater/release governing pass; Codex Cloud bootstrap; updater implementation; independent review; GitHub Actions version A; local A install; signed A→B proof; only then normal in-app update use.
