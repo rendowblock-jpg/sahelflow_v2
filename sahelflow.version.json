@@ -11,6 +11,7 @@
     "channelStatus": "approved",
     "signingKeyStatus": "approved",
     "signingKeyId": "tauri-internal-c7183693a0589b55",
+    "publicKeyId": "C7183693A0589B55",
     "approvalScope": "internal-lab",
     "authenticodeRequired": false,
     "endpoint": "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json",
