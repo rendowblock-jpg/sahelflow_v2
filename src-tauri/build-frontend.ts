@@ -10,7 +10,14 @@
  */
 
 import { execSync } from "child_process";
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { resolve } from "path";
 import { prepareDesktopBuildContext } from "../scripts/desktop-build-context";
 
@@ -92,15 +99,19 @@ if (existsSync(publicDir)) {
 // ── 3. Copy standalone → src-tauri/resources/standalone ─────────────────────
 step("3. Copy standalone → src-tauri/resources/standalone");
 const resDir = resolve(ROOT, "src-tauri", "resources", "standalone");
+const placeholderPath = resolve(resDir, ".gitkeep");
+if (!existsSync(placeholderPath)) {
+  throw new Error(`Tracked standalone placeholder is missing before build: ${placeholderPath}`);
+}
+const placeholderBytes = readFileSync(placeholderPath);
 if (existsSync(resDir)) {
   rmSync(resDir, { recursive: true, force: true });
 }
 mkdirSync(resDir, { recursive: true });
 cpSync(standaloneDir, resDir, { recursive: true });
-// The directory is ignored except for this tracked placeholder. Recreate it
-// after replacing the generated resource tree so the build never deletes a
-// tracked source file.
-writeFileSync(resolve(resDir, ".gitkeep"), "", "utf8");
+// Restore the exact existing working-tree bytes, including its current checkout
+// line endings, so replacing generated resources never dirties the placeholder.
+writeFileSync(placeholderPath, placeholderBytes);
 ok("Copied standalone → src-tauri/resources/standalone");
 
 // ── 4. Compile WhatsApp sidecar (Bun → standalone binary) ───────────────────
