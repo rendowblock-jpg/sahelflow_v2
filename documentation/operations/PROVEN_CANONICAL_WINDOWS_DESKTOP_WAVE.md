@@ -1,7 +1,7 @@
 # Wave: Proven Canonical Windows Desktop
 
 > Started: 2026-07-17  
-> Current focus: Codex Cloud workflow transition and installed-candidate preparation  
+> Current focus: Codex Cloud bootstrap and installed-candidate preparation  
 > Lead: ChatGPT / Codex Cloud; Codex Desktop for installed-Windows evidence
 
 ## Founder intent and outcome
@@ -24,7 +24,7 @@ The Founder must also be able to launch and evaluate the exact internal SahelFlo
 
 ## Current reality
 
-The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`. Clean-checkout source evidence is green, but no installed-artifact claim attaches to it:
+The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. Clean-checkout source evidence is green, but no installed-artifact claim attaches to it:
 
 - GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
 - CI binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
@@ -53,11 +53,11 @@ The original wave evidence remains listed below for provenance. PR #104 integrat
 - The pilot corrected Windows-only shop test paths, a host-native `ShopContext` fixture, an Algiers-boundary report fixture and auth-test writes outside the sandbox.
 - The packaged-auth blocker found during the pilot was repaired before PR #104 integration: startup now loads the canonical active-shop `AuthSecret` fail-closed. Installed restart evidence remains outstanding.
 - On 2026-07-21, the Founder configured a Codex Cloud environment for `rendowblock-jpg/sahelflow_v2` with agent internet access. Its first SahelFlow bootstrap, development launch and shared-gate checkpoint is not yet recorded.
-- ChatGPT is now the lead engineering partner, critical implementer and independent reviewer; Codex Cloud is the primary cloud implementation/runtime agent; Codex Desktop is the installed-Windows laboratory; GitHub Actions remains clean-checkout and artifact-production authority.
+- PR #112 integrated ChatGPT as lead engineering partner/critical implementer/reviewer, Codex Cloud as primary cloud implementation/runtime agent, Codex Desktop as installed-Windows laboratory and GitHub Actions as clean-checkout/artifact-production authority.
 - The Founder removed local dependency, build and installation caches because the SSD filled and the PC became unusably slow. The intended local path is to download and install an exact prebuilt internal artifact and launch SahelFlow for hands-on evaluation without restoring `node_modules`, `.next`, Rust `target` or routine compiler caches.
 - No packaged Windows, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
 
-The current program has clean integrated source, a reproducible Linux environment and a configured Codex Cloud environment. No MSI has yet been built, installed or launched under the current internal-candidate procedure, and installation remains a separately confirmed implementation-lab action.
+The current program has clean integrated source, a reproducible Linux environment, a configured Codex Cloud environment and an integrated cross-session workflow. No MSI has yet been built, installed or launched under the current internal-candidate procedure, and installation remains a separately confirmed implementation-lab action.
 
 ## Target experience or system
 
@@ -106,7 +106,7 @@ The Founder hands-on path must be lightweight:
 
 ### Phase: 0C — Cloud workflow bootstrap and installed Windows candidate baseline
 
-- Status: Codex Cloud environment configured; SahelFlow bootstrap/launch evidence and installed candidate not yet executed.
+- Status: Codex Cloud environment configured and MAWS workflow integrated; SahelFlow bootstrap/launch evidence and installed candidate not yet executed.
 - Cloud work: resume from canonical GitHub state, declare exact environment/ref, install from clean checkout, run appropriate shared gates, launch the development application, inspect runtime/browser behavior and record limitations without making installed-Windows claims.
 - Windows work: produce one internal Windows-only candidate and establish runtime/readiness truth through clean install, missing resource, occupied endpoint, child failure and shutdown/restart evidence.
 
@@ -146,6 +146,7 @@ The Founder hands-on path must be lightweight:
 | Use Codex Cloud as the normal primary builder and Linux executable environment. | The Founder PC is too slow and storage-constrained for routine heavy development; the configured cloud environment can hold the disposable checkout and runtime. | Founder decision and configured environment. | 2026-07-21 |
 | Use Codex Desktop as the installed-Windows laboratory rather than the routine primary compiler. | Windows installation and machine behavior require local access, while ordinary implementation belongs in the cloud. | Founder/MAWS workflow decision. | 2026-07-21 |
 | Launch SahelFlow locally from an exact prebuilt internal Windows artifact without restoring full build/dependency caches. | The SSD filled and the PC became slow; hands-on testing needs the installed product, not the full compiler workspace. | Founder constraint and decision. | 2026-07-21 |
+| Integrate the MAWS cloud workflow through PR #112. | Every new ChatGPT or Codex Cloud session now has a canonical GitHub-backed resume protocol and clear evidence boundaries. | PR #112, commit `11e6fa114dc257f8f686c9859d72886a034e1e50`. | 2026-07-21 |
 
 ## Working notes and open questions
 
@@ -168,11 +169,11 @@ The Founder hands-on path must be lightweight:
 - Codespaces evidence: full clean container rebuild, authority audit, fast/full shared gates, Rust formatting and private web-development startup; no installed-Windows claim.
 - PR #105 clean-checkout evidence: final-head run `29700649624` passed the Quality Gate in 3 minutes 26 seconds and Tauri release smoke in 46 seconds at `013f61df335c2341d4eacbafab68078e0aa633ab`.
 - Codex Cloud: environment configured on 2026-07-21; first exact bootstrap/launch/verification checkpoint pending.
-- MAWS workflow transition: branch `agent/maws-codex-cloud-workflow`; documentation review and merge pending.
+- MAWS workflow transition: PR #112 merged into `main` at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 
 ## Current checkpoint
 
-- What is now true: integrated clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green. Codex Cloud is configured as the primary cloud builder, and the low-storage PC is reserved for installed candidate launch/testing rather than routine compilation.
+- What is now true: integrated clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green. Codex Cloud is configured as the primary cloud builder, the MAWS resume protocol is integrated, and the low-storage PC is reserved for installed candidate launch/testing rather than routine compilation.
 - What changed in the plan: ChatGPT leads architecture, critical implementation and review; Codex Cloud performs primary cloud implementation/runtime/browser work; GitHub Actions produces clean-checkout evidence and Windows artifacts; Codex Desktop runs the installed candidate locally. The local test path uses a prebuilt artifact without restoring full caches.
 - Current uncertainty: first Codex Cloud SahelFlow bootstrap/launch evidence, the exact authorized Windows lab/procedure, real installed child-process failure injection, representative seller data, persisted shop-incarnation identity and all installed Windows behavior remain unproven.
-- Exact next move: merge the MAWS workflow update; run the canonical Codex Cloud resume/bootstrap/launch checkpoint from current `main`; then select/authorize the Windows lab, produce the exact internal artifact in GitHub Actions and install/launch only that artifact on the low-storage PC for the recorded drill.
+- Exact next move: run the canonical Codex Cloud resume/bootstrap/launch checkpoint from current `main`; then select/authorize the Windows lab, produce the exact internal artifact in GitHub Actions and install/launch only that artifact on the low-storage PC for the recorded drill.
