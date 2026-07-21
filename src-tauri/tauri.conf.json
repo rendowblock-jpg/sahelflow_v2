@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "targets": [
       "msi"
     ],
@@ -57,7 +57,7 @@
   },
   "plugins": {
     "updater": {
-      "active": false,
+      "active": true,
       "endpoints": [
         "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json"
       ],

@@ -16,7 +16,7 @@ This is the compact entry point for current work. Update it at meaningful checkp
 - Use ChatGPT as the lead product/experience/architecture/engineering partner, active critical implementer, independent reviewer and continuity controller.
 - Use Codex Cloud as the normal primary builder and executable Linux environment for implementation, development-app launch, browser inspection, tests, builds and iterative fixes.
 - Use Codex Desktop as the installed-Windows laboratory and local-machine executor rather than the routine primary compiler.
-- Keep GitHub Actions as clean-checkout and artifact-production authority for the exact commit.
+- Keep GitHub Actions as clean-checkout validation and exact artifact production authority.
 - The Founder PC is low-end and SSD-constrained. Routine work must not require it to retain the full development checkout, dependency caches, `.next`, Rust `target` or repeated build/install caches.
 - The preferred hands-on test path is: cloud implementation and validation → GitHub Actions internal Windows artifact → download/install only the exact artifact on the Founder PC → launch SahelFlow locally and record observed behavior.
 - The Founder removed heavy caches, build output and development installation because the disk became full and the machine became slow. Do not recreate them unless a bounded Windows-only investigation explicitly requires it.
@@ -97,11 +97,11 @@ bun run sf-verify --fast
 bun run glm:bootstrap
 ```
 
-Historical Session-40 handoff/tool content remains in orphan-branch Git history only. GLM reads current `AGENTS.md`, Working Memory, active wave and governing authorities at every resume.
+Historical Session-40 handoff/tool content remains in orphan-branch Git history only. GLM reads current `AGENTS.md`, Working Memory, the active wave and governing authorities at every resume.
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible remote-development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. No Linux/cloud result is installed-Windows evidence.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. No Linux/cloud result is installed-Windows evidence.
 
 Required outcome:
 
@@ -114,31 +114,31 @@ Current checkpoint:
 - Packaged startup allocates per-launch loopback endpoints and credentials, binds readiness to exact process/shop/registry/migration authority and uses one bounded restart/crash-loop supervisor.
 - Process-bound shop/database authority, an atomic registry, all-shop migration planning, external journal, verified snapshots, OS lock, interrupted restoration and transaction-bound order effects are integrated.
 - Local Windows source-testable verification is green, but no installed MSI, migration/failure-injection drill, T470 measurement or 4 GB measurement is claimed yet.
-- The previous local HP development machine is an Intel Celeron N3060 with 8 GB RAM and less than 10 GB free disk. It is a Windows/low-end observation device rather than the primary compilation environment.
-- Codex Cloud is the selected normal primary cloud builder; its specific SahelFlow environment still needs a first recorded bootstrap/launch/verification checkpoint.
-- The Founder removed local dependency, build and installation caches because the SSD became full and the machine became unusably slow. The local goal is not to restore the full development workspace; it is to install and launch an exact prebuilt SahelFlow candidate for hands-on testing.
-- The updater dependencies and Tauri plugin are present, but the checked-in configuration currently has updater artifact creation disabled and updater activation disabled. No updater signing-key custody, published update channel, signed metadata, in-app update journey or installed A→B proof is accepted yet.
+- The Founder removed local dependency, build and installation caches because the SSD filled and the PC became unusably slow. The local goal is to install and launch an exact prebuilt SahelFlow candidate, not restore the development workspace.
+- In draft PR #115 on `agent/updater-release-contract`, the Founder authorized the **internal laboratory path only**: GitHub Releases as the internal updater channel, the checked-in Tauri updater public key ID `C7183693A0589B55`, and a first laboratory MSI that may remain without Authenticode while still requiring a valid Tauri updater signature, exact artifact digest and evidence manifest. This is not beta or Stable authorization.
+- PR #115 now proposes updater activation and updater artifact creation, binds the accepted non-secret key identity, uses the protected GitHub environment `internal-updater`, creates a signed Windows MSI/update signature/`latest.json` as a draft GitHub Release, validates the signature and exact asset URL, and retains a signed-candidate evidence artifact. The workflow intentionally requires explicit publication of the verified draft before the live `releases/latest` updater pointer changes.
+- The branch-level clean-checkout authority, documentation, TypeScript, ESLint, Vitest, Prisma and release-path Rust gates have passed through the updater activation checkpoint; final CI completion and merge remain required before a version-A workflow may use an exact protected-`main` SHA.
+- No private updater key, signed Windows artifact, published channel, installed MSI or installed A→B proof is claimed yet. The workflow will fail closed if the protected secret is missing or does not produce the expected updater signature.
 
-Exact next executable action — use this sequence in both new ChatGPT and Codex Cloud sessions:
+Exact next executable action:
 
-1. **ChatGPT lead pass:** resume from canonical GitHub state; inspect the updater, release, versioning, migration and signing boundaries; define the governing implementation contract and directly control or implement the sensitive trust/signing/release portions.
-2. **Codex Cloud bootstrap:** declare Codex Cloud Linux, repository/branch/commit/worktree; prove dependency setup, development-app launch and the appropriate shared gate from current `main` without making an installed-Windows claim.
-3. **Updater implementation:** on a normal `agent/<outcome>` branch, enable signed updater artifacts and checking; implement the complete checking/available/downloading/installing/restart/later/failure/retry journey; synchronize versions; create the GitHub Actions publishing path and signed update metadata; add tests and evidence. Do not place private signing material in the repository or prompts.
-4. **Independent review:** ChatGPT reviews the complete updater/release diff, security model, data-preservation behavior, failure recovery and UX; Codex Cloud applies corrections and reruns validation.
-5. **First installer:** GitHub Actions builds the first updater-enabled internal Windows MSI and updater artifacts for version A. The exact signing key, public key, release channel, artifact digest and procedure must be authorized and recorded.
-6. **Local installation:** Codex Desktop downloads and verifies only version A, installs it on the authorized low-storage PC and launches SahelFlow without restoring development caches.
-7. **A→B proof:** publish a deliberately small version B through the same signed channel; from the installed version A, check, download, install and restart into B. Prove that shops, databases, settings, credentials, migration history and recovery material remain intact, and exercise offline/download/signature/install/restart failure handling.
-8. **Normal future loop:** only after the A→B drill passes, use coherent in-app updates for routine local testing. Manual MSI replacement remains the recovery fallback, not the normal path.
+1. Complete CI and independent review for PR #115, then merge the updater activation checkpoint into protected `main`.
+2. Confirm the GitHub environment `internal-updater` contains the private key matching public key ID `C7183693A0589B55` and that the private key has a separate offline backup/custody record. Never put private signing material in Git, prompts or logs.
+3. Manually dispatch **Build Signed Internal Windows Update** using the exact merged `main` commit SHA. GitHub Actions Windows must produce one MSI, one `.msi.sig`, `latest.json`, runtime manifest and signed-candidate evidence manifest in a draft release.
+4. Inspect the exact draft release and retained workflow evidence. Publish only that verified draft to make the internal updater endpoint live.
+5. Download the version-A MSI and evidence only, record SHA-256/signing identity/Windows machine profile, install on the Founder-authorized low-storage PC without restoring development caches, and launch SahelFlow.
+6. Record first-launch/runtime/shop/data observations. Then create a deliberately small compatible version B and prove installed A→B update, restart, preservation and failure recovery.
+7. Only after the installed A→B drill passes may normal local testing rely on in-app updates. Manual MSI replacement remains the recovery fallback.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation and updater/install gates pass.
 
 ## Open implementation-lab decisions
 
-- Exact local Windows environment for the first installed candidate; the Founder low-storage PC is the intended hands-on launch machine but must be explicitly named as the authorized lab for evidence claims.
-- Exact updater signing-key generation, offline backup, custody, rotation and loss procedure.
-- Exact internal update channel and hosting/publishing policy, including whether GitHub Releases is acceptable for the internal phase.
-- Exact initial MSI and updater artifact download, digest/signature verification, installation and cleanup procedure.
-- Exact 4 GB floor-reference machine/dataset and T470 dataset.
-- Persisted shop-incarnation identity before backup restore or future inbox/outbox records may treat a deleted-and-recreated slug as the same shop.
+- Confirm that the existing protected private signing secret matches public key ID `C7183693A0589B55`; if not, rotate coherently before version A rather than publishing an unusable installer.
+- Record updater private-key generation provenance, named custody, offline backup, recovery test, rotation and key-loss procedure outside Git.
+- Record the exact Windows machine profile used for the first version-A installation. The Founder-selected low-storage PC is authorized for the laboratory install, but one-machine observations remain limited to that exact machine/artifact.
+- Define the exact initial MSI/evidence download, SHA-256 verification, installation, test-data, screenshot/log and cleanup procedure before attaching installed evidence claims.
+- Exact T470 and 4 GB reference datasets remain implementation-lab choices.
+- Persisted shop-incarnation identity is still required before backup restore or future inbox/outbox records may treat a deleted-and-recreated slug as the same shop.
 - Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.
 - Which courier candidates the Founder selects for the public launch set after live certification evidence.

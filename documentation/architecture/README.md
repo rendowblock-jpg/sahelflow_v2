@@ -16,11 +16,12 @@ The experience package is a separate, complementary authority: it preserves the 
 1. [`../product/README.md`](../product/README.md)
 2. [`../experience/README.md`](../experience/README.md) — experience, frontend, capability and journey authority.
 3. [`ENGINEERING_SPECIFICATION.md`](ENGINEERING_SPECIFICATION.md) — finished-system boundaries and invariants.
-4. [`SUPERSEDING_ADRS.md`](SUPERSEDING_ADRS.md) — accepted rationale and rejected alternatives when deeper context is needed.
-5. [`CURRENT_TO_TARGET_ANALYSIS.md`](CURRENT_TO_TARGET_ANALYSIS.md) — real codebase, gaps, metrics and migration disposition.
-6. [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) — dependency-correct program path.
-7. [`CODING_WORKFLOW.md`](CODING_WORKFLOW.md) — lightweight work, review and evidence rules.
-8. [`PROVIDER_CONTRACT_REGISTRY.md`](PROVIDER_CONTRACT_REGISTRY.md) when work touches an external-provider claim or live certification.
+4. [`UPDATER_RELEASE_CONTRACT.md`](UPDATER_RELEASE_CONTRACT.md) — updater signing, channel, compatibility, promotion, migration-preservation and installed A→B contract when work touches updates or releases.
+5. [`SUPERSEDING_ADRS.md`](SUPERSEDING_ADRS.md) — accepted rationale and rejected alternatives when deeper context is needed.
+6. [`CURRENT_TO_TARGET_ANALYSIS.md`](CURRENT_TO_TARGET_ANALYSIS.md) — real codebase, gaps, metrics and migration disposition.
+7. [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) — dependency-correct program path.
+8. [`CODING_WORKFLOW.md`](CODING_WORKFLOW.md) — lightweight work, review and evidence rules.
+9. [`PROVIDER_CONTRACT_REGISTRY.md`](PROVIDER_CONTRACT_REGISTRY.md) when work touches an external-provider claim or live certification.
 
 Operational drills are indexed in `CODING_WORKFLOW.md` and become separate runbooks only when implemented and exercised.
 
