@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 type UpdaterAuthority = {
   enabled: boolean;
   manifestFormatVersion: number;
+  channelStatus: "candidate" | "approved";
+  signingKeyStatus: "unaccepted" | "approved";
   signingKeyId: string | null;
   endpoint: string;
   installMode: string;
@@ -80,6 +82,14 @@ requireCondition(
   "updater.manifestFormatVersion must be a positive integer",
 );
 requireCondition(
+  ["candidate", "approved"].includes(updater.channelStatus),
+  `updater.channelStatus must be candidate or approved; found ${updater.channelStatus}`,
+);
+requireCondition(
+  ["unaccepted", "approved"].includes(updater.signingKeyStatus),
+  `updater.signingKeyStatus must be unaccepted or approved; found ${updater.signingKeyStatus}`,
+);
+requireCondition(
   typeof updater.endpoint === "string" && updater.endpoint.length > 0,
   "updater.endpoint must be a non-empty HTTPS URL",
 );
@@ -125,6 +135,14 @@ requireCondition(
 requireCondition(pubkey.length > 0, "Tauri updater public key must not be empty");
 
 if (updater.enabled) {
+  requireCondition(
+    updater.channelStatus === "approved",
+    "enabled updater requires an explicitly approved channel",
+  );
+  requireCondition(
+    updater.signingKeyStatus === "approved",
+    "enabled updater requires an explicitly approved signing key",
+  );
   requireCondition(
     typeof updater.signingKeyId === "string" &&
       /^[A-Za-z0-9._-]{3,128}$/.test(updater.signingKeyId),
@@ -191,5 +209,5 @@ if (failures.length > 0) {
 console.log(
   updater.enabled
     ? `Updater contract verified: ${authority.channel} enabled with key ${updater.signingKeyId}`
-    : `Updater contract verified: ${authority.channel} remains disabled; unsigned evidence workflow retained`,
+    : `Updater contract verified: ${authority.channel} remains disabled; channel ${updater.channelStatus}; key ${updater.signingKeyStatus}; unsigned evidence workflow retained`,
 );
