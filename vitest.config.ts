@@ -4,6 +4,8 @@ import { assertTestSandbox } from "./scripts/test-sandbox";
 
 assertTestSandbox("Vitest");
 
+const testTimeout = process.platform === "win32" ? 30_000 : 15_000;
+
 export default defineConfig({
   test: {
     environment: "node",
@@ -13,9 +15,10 @@ export default defineConfig({
     unstubGlobals: true,
     clearMocks: true,
     // Crypto, SQLite snapshot, and full-domain integration tests are
-    // intentionally exercised on low-end Windows hardware where 5 seconds is
-    // too small and produces load-dependent false failures.
-    testTimeout: 15_000,
+    // intentionally exercised on low-end Windows hardware. Windows filesystem,
+    // SQLite, and security-scanner overhead can exceed 15 seconds under hosted
+    // runner contention, while Linux remains on the stricter 15-second limit.
+    testTimeout,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.test.ts"],
     exclude: ["node_modules", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB

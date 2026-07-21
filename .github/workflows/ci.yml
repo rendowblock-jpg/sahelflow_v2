@@ -106,14 +106,15 @@ jobs:
         # Migrations are now fully wired (phase4_drift_capture)
 
   # Release-path frontend proof on the same Windows runner family used by the
-  # signed updater workflow. This catches build-time route loading, standalone
-  # output, pinned runtime, and sidecar bundling failures before merge.
+  # signed updater workflow. This catches Windows SQLite timing, build-time route
+  # loading, standalone output, pinned runtime, and sidecar bundling failures.
   windows-standalone-build:
-    name: Windows standalone frontend bundle
+    name: Windows database smoke + standalone frontend bundle
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+      SF_TEST_FAIL_FAST: "1"
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Checkout repository
@@ -124,8 +125,51 @@ jobs:
         with:
           bun-version: 1.3.14
 
+      - name: Prepare unique disposable Windows test sandbox
+        shell: pwsh
+        run: |
+          $tempRoot = (& bun -e "console.log(require('node:os').tmpdir())").Trim()
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tempRoot)) {
+            throw 'failed to resolve the Bun OS temporary directory'
+          }
+          $sandboxRoot = Join-Path $tempRoot "sahelflow-ci-test-$env:GITHUB_RUN_ID"
+          $output = @(& bun run scripts/prepare-test-sandbox.ts $sandboxRoot)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'canonical test sandbox preparation failed'
+          }
+          $required = @('SF_TEST_ROOT', 'SF_DATA_DIR', 'DATABASE_URL')
+          foreach ($name in $required) {
+            $line = $output | Where-Object { $_ -like "$name=*" } | Select-Object -Last 1
+            if ([string]::IsNullOrWhiteSpace($line)) {
+              throw "canonical test sandbox did not return $name"
+            }
+            $line >> $env:GITHUB_ENV
+          }
+
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Deploy Windows test database migrations
+        run: bunx prisma migrate deploy
+
+      - name: Verify order service database suite on Windows
+        shell: pwsh
+        run: |
+          & bunx vitest run src/lib/data/__tests__/order-service.test.ts 2>&1 |
+            Tee-Object -FilePath .sf-windows-order-service.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload Windows database smoke diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-order-service-diagnostics-${{ github.run_id }}
+          path: .sf-windows-order-service.log
+          if-no-files-found: error
+          retention-days: 2
 
       - name: Build exact Windows standalone frontend resources
         run: bun run src-tauri/build-frontend.ts
