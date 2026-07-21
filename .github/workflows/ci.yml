@@ -152,8 +152,24 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
+      - name: Deploy Windows test database migrations
+        run: bunx prisma migrate deploy
+
       - name: Verify order service database suite on Windows
-        run: bunx vitest run src/lib/data/__tests__/order-service.test.ts
+        shell: pwsh
+        run: |
+          & bunx vitest run src/lib/data/__tests__/order-service.test.ts 2>&1 |
+            Tee-Object -FilePath .sf-windows-order-service.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload Windows database smoke diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-order-service-diagnostics-${{ github.run_id }}
+          path: .sf-windows-order-service.log
+          if-no-files-found: error
+          retention-days: 2
 
       - name: Build exact Windows standalone frontend resources
         run: bun run src-tauri/build-frontend.ts
