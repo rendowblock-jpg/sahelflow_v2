@@ -43,7 +43,18 @@ jobs:
         shell: bash
         run: git show origin/main:package.json > package.json
 
-      - name: Verify advisory versions are fully patched
+      - name: Collect resolved advisory versions
+        id: resolved
+        shell: bash
+        run: |
+          brace="$(grep -oE 'brace-expansion@[0-9]+\.[0-9]+\.[0-9]+' bun.lock | cut -d@ -f2 | sort -Vu | paste -sd, -)"
+          yaml="$(grep -oE 'js-yaml@[0-9]+\.[0-9]+\.[0-9]+' bun.lock | cut -d@ -f2 | sort -Vu | paste -sd, -)"
+          echo "brace=$brace" >> "$GITHUB_OUTPUT"
+          echo "yaml=$yaml" >> "$GITHUB_OUTPUT"
+          echo "brace-expansion resolutions: $brace"
+          echo "js-yaml resolutions: $yaml"
+
+      - name: Verify patched versions brace=${{ steps.resolved.outputs.brace }} yaml=${{ steps.resolved.outputs.yaml }}
         shell: bash
         run: |
           cat > "$RUNNER_TEMP/verify-advisory-versions.ts" <<'EOF'
@@ -97,9 +108,6 @@ jobs:
             if (major === 4) return compare(parsed, [4, 3, 0]) < 0;
             return false;
           });
-
-          console.log(`brace-expansion resolutions: ${braceVersions.join(", ")}`);
-          console.log(`js-yaml resolutions: ${yamlVersions.join(", ")}`);
 
           if (vulnerableBrace.length > 0) {
             throw new Error(`vulnerable brace-expansion resolutions remain: ${vulnerableBrace.join(", ")}`);
