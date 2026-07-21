@@ -53,6 +53,9 @@ function fixture(): {
   git(root, ["init"]);
   git(root, ["config", "user.name", "SahelFlow Test"]);
   git(root, ["config", "user.email", "test@sahelflow.local"]);
+  // Reproduce the Windows hosted runner checkout policy explicitly. The release
+  // restoration must remain clean even when Git would normally materialize CRLF.
+  git(root, ["config", "core.autocrlf", "true"]);
   git(root, ["add", "."]);
   git(root, ["commit", "-m", "fixture"]);
 
@@ -95,7 +98,7 @@ afterEach(() => {
 });
 
 describe("release tracked-source hygiene", () => {
-  it("restores a TOML-equivalent Cargo rewrite and deleted placeholder", () => {
+  it("restores a TOML-equivalent Cargo rewrite and deleted placeholder byte-exactly", () => {
     const state = fixture();
     write(
       state.cargoPath,
@@ -106,7 +109,9 @@ describe("release tracked-source hygiene", () => {
     const result = run(state.root, state.commit, state.tree);
 
     expect(result.status, output(result)).toBe(0);
-    expect(result.stdout).toContain("Verified and restored deterministic build rewrites");
+    expect(result.stdout).toContain(
+      "Verified and restored deterministic build rewrites byte-exactly",
+    );
     expect(readFileSync(state.cargoPath, "utf8")).toBe(state.committedCargo);
     expect(readFileSync(state.placeholderPath, "utf8")).toBe("");
     expect(git(state.root, ["status", "--porcelain", "--untracked-files=no"])).toBe("");
