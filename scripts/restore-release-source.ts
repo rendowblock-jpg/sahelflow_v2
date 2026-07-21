@@ -1,7 +1,12 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
@@ -33,6 +38,19 @@ function git(args: string[]): string {
   return result.stdout.trimEnd();
 }
 
+function gitBytes(args: string[]): Uint8Array {
+  const result = spawnSync("git", args, { cwd: root });
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr?.toString("utf8") || `git ${args.join(" ")} failed`,
+    );
+  }
+  if (!result.stdout) {
+    throw new Error(`git ${args.join(" ")} returned no content`);
+  }
+  return result.stdout;
+}
+
 function stable(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stable);
   if (value && typeof value === "object") {
@@ -53,6 +71,16 @@ function statusPath(line: string): string {
   const raw = line.slice(3).trim();
   const renamed = raw.includes(" -> ") ? raw.split(" -> ").at(-1)! : raw;
   return renamed.replaceAll("\\", "/");
+}
+
+function restoreCommittedPath(sourceCommit: string, path: string): void {
+  const destination = resolve(root, path);
+  const committedBytes = gitBytes(["show", `${sourceCommit}:${path}`]);
+  mkdirSync(dirname(destination), { recursive: true });
+  // Write the exact committed blob instead of asking Git to materialize it.
+  // `git restore` can apply Windows checkout line-ending conversion and leave a
+  // text file reported as modified even when its TOML semantics are identical.
+  writeFileSync(destination, committedBytes);
 }
 
 const sourceCommit = requireEnv("SF_SOURCE_COMMIT");
@@ -103,13 +131,13 @@ if (changedPaths.includes(cargoManifest)) {
 }
 
 for (const path of changedPaths) {
-  git(["restore", `--source=${sourceCommit}`, "--worktree", "--", path]);
+  restoreCommittedPath(sourceCommit, path);
 }
 
 const remaining = git(["status", "--porcelain=v1", "--untracked-files=no"]);
 if (remaining) {
   throw new Error(
-    `tracked source is not clean after deterministic restoration:\n${remaining}`,
+    `tracked source is not clean after byte-exact deterministic restoration:\n${remaining}`,
   );
 }
 
@@ -123,5 +151,5 @@ if (git(["rev-parse", "HEAD^{tree}"]) !== sourceTree) {
 console.log(
   changedPaths.length === 0
     ? `Tracked source remained clean for ${sourceCommit}`
-    : `Verified and restored deterministic build rewrites: ${changedPaths.join(", ")}`,
+    : `Verified and restored deterministic build rewrites byte-exactly: ${changedPaths.join(", ")}`,
 );
