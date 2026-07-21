@@ -181,8 +181,8 @@ jobs:
           releaseDraft: true
           prerelease: false
           releaseCommitish: ${{ inputs.source_ref }}
-          uploadUpdaterJson: true
-          uploadUpdaterSignatures: true
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: false
           args: --bundles msi
 
       - name: Verify local MSI and updater signature
