@@ -216,9 +216,17 @@ if (updater.enabled) {
     "internal updater workflow must create a draft release for explicit publication",
   );
   requireCondition(
-    /uploadUpdaterJson:\s*true/.test(workflow) &&
-      /uploadUpdaterSignatures:\s*true/.test(workflow),
-    "enabled updater workflow must create latest.json and upload updater signatures",
+    /includeUpdaterJson:\s*true/.test(workflow),
+    "enabled updater workflow must create latest.json with the reviewed includeUpdaterJson input",
+  );
+  requireCondition(
+    !/\buploadUpdaterJson:/.test(workflow) &&
+      !/\buploadUpdaterSignatures:/.test(workflow),
+    "enabled updater workflow must not use unsupported tauri-action updater inputs",
+  );
+  requireCondition(
+    /\.msi\.sig/.test(workflow),
+    "enabled updater workflow must verify and retain the generated MSI updater signature",
   );
   requireCondition(
     /latest\.json/.test(workflow),
