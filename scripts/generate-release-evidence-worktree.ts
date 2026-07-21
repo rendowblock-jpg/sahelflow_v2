@@ -68,16 +68,16 @@ if (currentTree !== sourceTree) {
   );
 }
 
-const trackedStatus = run("git", [
-  "status",
-  "--porcelain",
-  "--untracked-files=no",
-]);
-if (trackedStatus) {
-  throw new Error(
-    `build modified tracked source; evidence is blocked:\n${trackedStatus}`,
-  );
-}
+// The packaging worktree may contain one verified, formatting-only Cargo.toml
+// rewrite. Re-run the fail-closed verifier here so evidence generation never
+// depends only on workflow step ordering.
+const sourceVerification = run(
+  "bun",
+  ["run", "scripts/verify-release-source.ts"],
+  root,
+  process.env,
+);
+if (sourceVerification) console.log(sourceVerification);
 
 const evidenceRoot = resolve(
   runnerTemp,
