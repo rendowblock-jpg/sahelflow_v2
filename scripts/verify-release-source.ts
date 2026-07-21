@@ -1,18 +1,12 @@
 #!/usr/bin/env bun
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const cargoManifest = "src-tauri/Cargo.toml";
-const standalonePlaceholder = "src-tauri/resources/standalone/.gitkeep";
-const allowedTrackedChanges = new Set([cargoManifest, standalonePlaceholder]);
+const allowedTrackedChanges = new Set([cargoManifest]);
 const toml = (
   globalThis as typeof globalThis & {
     Bun: { TOML: { parse(input: string): unknown } };
@@ -33,22 +27,7 @@ function git(args: string[]): string {
   if (result.status !== 0) {
     throw new Error(result.stderr || `git ${args.join(" ")} failed`);
   }
-  // Preserve the two leading porcelain status columns. Trimming both ends would
-  // corrupt the first status line (` M path` → `M path`) and misparse its path.
   return result.stdout.trimEnd();
-}
-
-function gitBytes(args: string[]): Uint8Array {
-  const result = spawnSync("git", args, { cwd: root });
-  if (result.status !== 0) {
-    throw new Error(
-      result.stderr?.toString("utf8") || `git ${args.join(" ")} failed`,
-    );
-  }
-  if (!result.stdout) {
-    throw new Error(`git ${args.join(" ")} returned no content`);
-  }
-  return result.stdout;
 }
 
 function stable(value: unknown): unknown {
@@ -71,16 +50,6 @@ function statusPath(line: string): string {
   const raw = line.slice(3).trim();
   const renamed = raw.includes(" -> ") ? raw.split(" -> ").at(-1)! : raw;
   return renamed.replaceAll("\\", "/");
-}
-
-function restoreCommittedPath(sourceCommit: string, path: string): void {
-  const destination = resolve(root, path);
-  const committedBytes = gitBytes(["show", `${sourceCommit}:${path}`]);
-  mkdirSync(dirname(destination), { recursive: true });
-  // Write the exact committed blob instead of asking Git to materialize it.
-  // `git restore` can apply Windows checkout line-ending conversion and leave a
-  // text file reported as modified even when its TOML semantics are identical.
-  writeFileSync(destination, committedBytes);
 }
 
 const sourceCommit = requireEnv("SF_SOURCE_COMMIT");
@@ -107,15 +76,22 @@ if (observedTree !== sourceTree) {
 
 const status = git(["status", "--porcelain=v1", "--untracked-files=no"]);
 const lines = status ? status.split(/\r?\n/).filter(Boolean) : [];
-const changedPaths = lines.map(statusPath);
-const unexpected = changedPaths.filter((path) => !allowedTrackedChanges.has(path));
+const changed = lines.map((line) => ({
+  code: line.slice(0, 2),
+  path: statusPath(line),
+  line,
+}));
+
+const unexpected = changed.filter(
+  ({ code, path }) => !allowedTrackedChanges.has(path) || code !== " M",
+);
 if (unexpected.length > 0) {
   throw new Error(
     `build modified unexpected tracked source:\n${lines.join("\n")}`,
   );
 }
 
-if (changedPaths.includes(cargoManifest)) {
+if (changed.some(({ path }) => path === cargoManifest)) {
   const currentPath = resolve(root, cargoManifest);
   if (!existsSync(currentPath)) {
     throw new Error(`${cargoManifest} was removed during build`);
@@ -130,26 +106,8 @@ if (changedPaths.includes(cargoManifest)) {
   }
 }
 
-for (const path of changedPaths) {
-  restoreCommittedPath(sourceCommit, path);
-}
-
-const remaining = git(["status", "--porcelain=v1", "--untracked-files=no"]);
-if (remaining) {
-  throw new Error(
-    `tracked source is not clean after byte-exact deterministic restoration:\n${remaining}`,
-  );
-}
-
-if (git(["rev-parse", "HEAD"]) !== sourceCommit) {
-  throw new Error("source commit changed while restoring deterministic build rewrites");
-}
-if (git(["rev-parse", "HEAD^{tree}"]) !== sourceTree) {
-  throw new Error("source tree changed while restoring deterministic build rewrites");
-}
-
 console.log(
-  changedPaths.length === 0
+  changed.length === 0
     ? `Tracked source remained clean for ${sourceCommit}`
-    : `Verified and restored deterministic build rewrites byte-exactly: ${changedPaths.join(", ")}`,
+    : `Verified approved non-semantic packaging rewrite without restoring the build worktree: ${changed.map(({ path }) => path).join(", ")}`,
 );

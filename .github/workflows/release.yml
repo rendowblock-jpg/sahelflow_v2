@@ -227,8 +227,8 @@ jobs:
           "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
           "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV
 
-      - name: Verify and restore deterministic build source rewrites
-        run: bun run scripts/restore-release-source.ts
+      - name: Verify deterministic build source rewrites
+        run: bun run scripts/verify-release-source.ts
 
       - name: Generate signed candidate evidence manifest from clean worktree
         env:

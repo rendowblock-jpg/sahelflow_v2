@@ -10,7 +10,7 @@ function read(relativePath: string): string {
 }
 
 describe("Windows signed release build contract", () => {
-  it("uses the canonical Webpack build with a disposable build-only ShopContext", () => {
+  it("uses the canonical Webpack build and preserves the tracked placeholder bytes", () => {
     const packageJson = JSON.parse(read("package.json")) as {
       scripts?: Record<string, string>;
     };
@@ -22,7 +22,11 @@ describe("Windows signed release build contract", () => {
     expect(frontendBuild).toContain("prepareDesktopBuildContext()");
     expect(frontendBuild).toContain("...buildContext.env");
     expect(frontendBuild).toMatch(/finally\s*{\s*buildContext\.cleanup\(\);\s*}/);
-    expect(frontendBuild).toContain('writeFileSync(resolve(resDir, ".gitkeep"), ""');
+    expect(frontendBuild).toContain("const placeholderBytes = readFileSync(placeholderPath)");
+    expect(frontendBuild).toContain("writeFileSync(placeholderPath, placeholderBytes)");
+    expect(frontendBuild).not.toContain(
+      'writeFileSync(resolve(resDir, ".gitkeep"), ""',
+    );
     expect(frontendBuild).not.toContain(
       "node_modules/next/dist/bin/next build\"",
     );
@@ -40,42 +44,42 @@ describe("Windows signed release build contract", () => {
     expect(workflow).toContain("latest.json");
   });
 
-  it("attests, restores, and re-verifies tracked source before clean evidence", () => {
+  it("verifies approved packaging drift but generates evidence from a clean exact worktree", () => {
     const workflow = read(".github/workflows/release.yml");
     const evidenceHelper = read("scripts/generate-release-evidence-worktree.ts");
-    const restoreHelper = read("scripts/restore-release-source.ts");
+    const verifyHelper = read("scripts/verify-release-source.ts");
     const attest = workflow.indexOf("Attest clean exact source checkout");
     const build = workflow.indexOf("Build signed updater artifacts into a draft release");
-    const restore = workflow.indexOf(
-      "Verify and restore deterministic build source rewrites",
-    );
+    const verify = workflow.indexOf("Verify deterministic build source rewrites");
     const evidence = workflow.indexOf(
       "Generate signed candidate evidence manifest from clean worktree",
     );
 
     expect(attest).toBeGreaterThan(-1);
     expect(build).toBeGreaterThan(attest);
-    expect(restore).toBeGreaterThan(build);
-    expect(evidence).toBeGreaterThan(restore);
-    expect(workflow).toContain("bun run scripts/restore-release-source.ts");
+    expect(verify).toBeGreaterThan(build);
+    expect(evidence).toBeGreaterThan(verify);
+    expect(workflow).toContain("bun run scripts/verify-release-source.ts");
     expect(workflow).toContain(
       "bun run scripts/generate-release-evidence-worktree.ts",
     );
-    expect(restoreHelper).toContain("toml.parse");
-    expect(restoreHelper).toContain("allowedTrackedChanges");
-    expect(restoreHelper).toContain("restoreCommittedPath");
-    expect(restoreHelper).toContain('gitBytes(["show"');
-    expect(restoreHelper).toContain("writeFileSync(destination, committedBytes)");
-    expect(restoreHelper).not.toContain('git(["restore"');
+    expect(evidenceHelper).toContain(
+      '["run", "scripts/verify-release-source.ts"]',
+    );
+    expect(verifyHelper).toContain("toml.parse");
+    expect(verifyHelper).toContain("const allowedTrackedChanges = new Set([cargoManifest])");
+    expect(verifyHelper).toContain('code !== " M"');
+    expect(verifyHelper).not.toContain("restoreCommittedPath");
+    expect(verifyHelper).not.toContain('git(["restore"');
     expect(evidenceHelper).toMatch(/worktree[\s\S]*add[\s\S]*--detach/);
     expect(evidenceHelper).toContain("--require-clean");
     expect(evidenceHelper).toContain("--signed-updater");
     expect(workflow).toContain("SF_SOURCE_COMMIT");
     expect(workflow).toContain("SF_SOURCE_TREE");
-    expect(`${workflow}\n${evidenceHelper}\n${restoreHelper}`).not.toContain(
+    expect(`${workflow}\n${evidenceHelper}\n${verifyHelper}`).not.toContain(
       "git clean -fd",
     );
-    expect(`${workflow}\n${evidenceHelper}\n${restoreHelper}`).not.toContain(
+    expect(`${workflow}\n${evidenceHelper}\n${verifyHelper}`).not.toContain(
       "gh release delete",
     );
   });
