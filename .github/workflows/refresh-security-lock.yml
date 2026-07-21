@@ -35,13 +35,57 @@ jobs:
           git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
+          cp package.json "$RUNNER_TEMP/main-package.json"
 
-      - name: Target only advisory packages
-        run: bun update brace-expansion js-yaml --force --lockfile-only
-
-      - name: Restore reviewed package manifest
+      - name: Add version-scoped security overrides
         shell: bash
-        run: git show origin/main:package.json > package.json
+        run: |
+          cat > "$RUNNER_TEMP/add-security-overrides.ts" <<'EOF'
+          import { readFileSync, writeFileSync } from "node:fs";
+
+          const path = "package.json";
+          const packageJson = JSON.parse(readFileSync(path, "utf8")) as {
+            overrides?: Record<string, string>;
+          };
+
+          packageJson.overrides = {
+            ...(packageJson.overrides ?? {}),
+            "brace-expansion@<1.1.16": "1.1.16",
+            "brace-expansion@>=2.0.0 <2.1.2": "2.1.2",
+            "brace-expansion@>=3.0.0 <5.0.7": "5.0.7",
+            "js-yaml@>=3.0.0 <3.15.0": "3.15.0",
+            "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
+          };
+
+          writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
+          EOF
+          bun "$RUNNER_TEMP/add-security-overrides.ts"
+
+      - name: Regenerate lockfile from scoped overrides
+        run: bun install --force --lockfile-only
+
+      - name: Verify manifest delta is security-only
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/verify-manifest-delta.ts" <<'EOF'
+          import { readFileSync } from "node:fs";
+          import assert from "node:assert/strict";
+
+          const before = JSON.parse(readFileSync(process.env.MAIN_PACKAGE!, "utf8"));
+          const after = JSON.parse(readFileSync("package.json", "utf8"));
+
+          before.overrides = {
+            ...(before.overrides ?? {}),
+            "brace-expansion@<1.1.16": "1.1.16",
+            "brace-expansion@>=2.0.0 <2.1.2": "2.1.2",
+            "brace-expansion@>=3.0.0 <5.0.7": "5.0.7",
+            "js-yaml@>=3.0.0 <3.15.0": "3.15.0",
+            "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
+          };
+
+          assert.deepEqual(after, before, "package.json changed outside the approved security overrides");
+          EOF
+          MAIN_PACKAGE="$RUNNER_TEMP/main-package.json" bun "$RUNNER_TEMP/verify-manifest-delta.ts"
 
       - name: Collect resolved advisory versions
         id: resolved
@@ -118,13 +162,13 @@ jobs:
           EOF
           bun "$RUNNER_TEMP/verify-advisory-versions.ts"
 
-      - name: Verify only the lockfile changed
+      - name: Verify only package manifest and lockfile changed
         shell: bash
         run: |
-          changed="$(git diff --name-only)"
-          if [ "$changed" != "bun.lock" ]; then
+          mapfile -t changed < <(git diff --name-only)
+          if [ "${#changed[@]}" -ne 2 ] || [ "${changed[0]}" != "bun.lock" ] || [ "${changed[1]}" != "package.json" ]; then
             echo "unexpected generated changes:"
-            printf '%s\n' "$changed"
+            printf '%s\n' "${changed[@]}"
             exit 1
           fi
 
@@ -140,17 +184,13 @@ jobs:
       - name: Verify fast application gate
         run: bun run sf-verify --fast
 
-      - name: Commit targeted audited lock repair
+      - name: Commit scoped audited dependency repair
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
-          if git diff --quiet -- bun.lock; then
-            echo 'targeted update produced no lockfile change'
-            exit 1
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add bun.lock
-          git commit -m 'fix(deps): repair audited transitive resolutions'
+          git add package.json bun.lock
+          git commit -m 'fix(deps): scope audited transitive resolutions'
           git push origin "HEAD:$HEAD_BRANCH"
