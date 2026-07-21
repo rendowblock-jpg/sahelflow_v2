@@ -13,7 +13,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const script = resolve(repoRoot, "scripts", "restore-release-source.ts");
+const script = resolve(repoRoot, "scripts", "verify-release-source.ts");
 const fixtures: string[] = [];
 
 function git(cwd: string, args: string[]): string {
@@ -31,6 +31,7 @@ function fixture(): {
   placeholderPath: string;
   extraPath: string;
   committedCargo: string;
+  placeholder: string;
   commit: string;
   tree: string;
 } {
@@ -46,15 +47,14 @@ function fixture(): {
   );
   const extraPath = resolve(root, "tracked.txt");
   const committedCargo = `[package]\nname = "fixture"\nversion = "1.0.0"\n\n[features]\ncustom-protocol = ["tauri/custom-protocol"]\n`;
+  const placeholder = "tracked standalone placeholder\n";
 
   write(cargoPath, committedCargo);
-  write(placeholderPath, "");
+  write(placeholderPath, placeholder);
   write(extraPath, "canonical\n");
   git(root, ["init"]);
   git(root, ["config", "user.name", "SahelFlow Test"]);
   git(root, ["config", "user.email", "test@sahelflow.local"]);
-  // Reproduce the Windows hosted runner checkout policy explicitly. The release
-  // restoration must remain clean even when Git would normally materialize CRLF.
   git(root, ["config", "core.autocrlf", "true"]);
   git(root, ["add", "."]);
   git(root, ["commit", "-m", "fixture"]);
@@ -65,6 +65,7 @@ function fixture(): {
     placeholderPath,
     extraPath,
     committedCargo,
+    placeholder,
     commit: git(root, ["rev-parse", "HEAD"]),
     tree: git(root, ["rev-parse", "HEAD^{tree}"]),
   };
@@ -98,23 +99,22 @@ afterEach(() => {
 });
 
 describe("release tracked-source hygiene", () => {
-  it("restores a TOML-equivalent Cargo rewrite and deleted placeholder byte-exactly", () => {
+  it("accepts only a non-semantic Cargo rewrite and leaves the build worktree untouched", () => {
     const state = fixture();
-    write(
-      state.cargoPath,
-      `# Tauri rewrite\n[features]\ncustom-protocol=["tauri/custom-protocol"]\n\n[package]\nversion="1.0.0"\nname="fixture"\n`,
-    );
-    unlinkSync(state.placeholderPath);
+    const rewritten = `# Tauri rewrite\n[features]\ncustom-protocol=["tauri/custom-protocol"]\n\n[package]\nversion="1.0.0"\nname="fixture"\n`;
+    write(state.cargoPath, rewritten);
 
     const result = run(state.root, state.commit, state.tree);
 
     expect(result.status, output(result)).toBe(0);
     expect(result.stdout).toContain(
-      "Verified and restored deterministic build rewrites byte-exactly",
+      "Verified approved non-semantic packaging rewrite without restoring the build worktree",
     );
-    expect(readFileSync(state.cargoPath, "utf8")).toBe(state.committedCargo);
-    expect(readFileSync(state.placeholderPath, "utf8")).toBe("");
-    expect(git(state.root, ["status", "--porcelain", "--untracked-files=no"])).toBe("");
+    expect(readFileSync(state.cargoPath, "utf8")).toBe(rewritten);
+    expect(readFileSync(state.placeholderPath, "utf8")).toBe(state.placeholder);
+    expect(git(state.root, ["status", "--porcelain", "--untracked-files=no"])).toBe(
+      "M src-tauri/Cargo.toml",
+    );
   });
 
   it("rejects a semantic Cargo manifest change", () => {
@@ -132,15 +132,23 @@ describe("release tracked-source hygiene", () => {
     );
   });
 
-  it("rejects any unapproved tracked-source modification", () => {
+  it("rejects deletion of the tracked standalone placeholder", () => {
+    const state = fixture();
+    unlinkSync(state.placeholderPath);
+
+    const result = run(state.root, state.commit, state.tree);
+
+    expect(result.status).not.toBe(0);
+    expect(output(result)).toContain("build modified unexpected tracked source");
+  });
+
+  it("rejects any other tracked-source modification", () => {
     const state = fixture();
     write(state.extraPath, "changed\n");
 
     const result = run(state.root, state.commit, state.tree);
 
     expect(result.status).not.toBe(0);
-    expect(output(result)).toContain(
-      "build modified unexpected tracked source",
-    );
+    expect(output(result)).toContain("build modified unexpected tracked source");
   });
 });
