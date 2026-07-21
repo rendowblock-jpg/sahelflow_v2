@@ -79,6 +79,29 @@ jobs:
             throw 'source_ref is not reachable from protected origin/main'
           }
 
+      - name: Attest clean exact source checkout
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          $status = @(git status --porcelain --untracked-files=all)
+          if ($LASTEXITCODE -ne 0) { throw 'failed to inspect exact source checkout' }
+          if ($status.Count -gt 0) {
+            $status | ForEach-Object { Write-Host $_ }
+            throw 'exact source checkout is not clean before validation or build'
+          }
+
+          $commit = (git rev-parse HEAD).Trim()
+          $tree = (git rev-parse "HEAD^{tree}").Trim()
+          if ($commit -cne $env:SOURCE_SHA) {
+            throw "source attestation commit mismatch: expected $env:SOURCE_SHA, found $commit"
+          }
+          if ($tree -cnotmatch '^[0-9a-f]{40}$') {
+            throw "source attestation tree is invalid: $tree"
+          }
+          "SF_SOURCE_COMMIT=$commit" >> $env:GITHUB_ENV
+          "SF_SOURCE_TREE=$tree" >> $env:GITHUB_ENV
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -151,7 +174,7 @@ jobs:
           if ($authority.updater.approvalScope -cne 'internal-lab') {
             throw 'updater approval scope must be internal-lab'
           }
-          $tag = "sahelflow-v$($authority.version)"
+          $tag = "sahelflow-v$($authority.version)-$env:SF_SOURCE_COMMIT"
           "SF_RELEASE_TAG=$tag" >> $env:GITHUB_ENV
           "SF_RELEASE_VERSION=$($authority.version)" >> $env:GITHUB_ENV
 
@@ -172,7 +195,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: sahelflow-v__VERSION__
+          tagName: sahelflow-v__VERSION__-${{ inputs.source_ref }}
           releaseName: SahelFlow Internal __VERSION__
           releaseBody: |
             Internal updater laboratory candidate. This is not SahelFlow Stable.
@@ -204,10 +227,28 @@ jobs:
           "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
           "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV
 
-      - name: Generate signed candidate evidence manifest
+      - name: Verify build preserved tracked source
+        shell: pwsh
+        run: |
+          $commit = (git rev-parse HEAD).Trim()
+          $tree = (git rev-parse "HEAD^{tree}").Trim()
+          if ($commit -cne $env:SF_SOURCE_COMMIT) {
+            throw "source commit changed during build: expected $env:SF_SOURCE_COMMIT, found $commit"
+          }
+          if ($tree -cne $env:SF_SOURCE_TREE) {
+            throw "source tree changed during build: expected $env:SF_SOURCE_TREE, found $tree"
+          }
+          $trackedStatus = @(git status --porcelain --untracked-files=no)
+          if ($LASTEXITCODE -ne 0) { throw 'failed to inspect tracked source after build' }
+          if ($trackedStatus.Count -gt 0) {
+            $trackedStatus | ForEach-Object { Write-Host $_ }
+            throw 'build modified tracked source; evidence generation is blocked'
+          }
+
+      - name: Generate signed candidate evidence manifest from clean worktree
         env:
           SF_RELEASE_TAG: ${{ env.SF_RELEASE_TAG }}
-        run: bun run sf-evidence -- --require-clean --signed-updater
+        run: bun run scripts/generate-release-evidence-worktree.ts
 
       - name: Download and verify draft latest.json
         shell: pwsh
