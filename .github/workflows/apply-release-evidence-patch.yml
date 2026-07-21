@@ -46,6 +46,28 @@ jobs:
             exit 1
           fi
 
+      - name: Collect release contract diagnostics
+        id: contract
+        shell: bash
+        run: |
+          workflow='.github/workflows/release.yml'
+          helper='scripts/generate-release-evidence-worktree.ts'
+          count() { grep -F -c -- "$1" "$2" || true; }
+          echo "attest=$(count 'Attest clean exact source checkout' "$workflow")" >> "$GITHUB_OUTPUT"
+          echo "tracked=$(count 'Verify build preserved tracked source' "$workflow")" >> "$GITHUB_OUTPUT"
+          echo "evidence=$(count 'Generate signed candidate evidence manifest from clean worktree' "$workflow")" >> "$GITHUB_OUTPUT"
+          echo "helper_call=$(count 'bun run scripts/generate-release-evidence-worktree.ts' "$workflow")" >> "$GITHUB_OUTPUT"
+          echo "worktree=$(count 'worktree", "add", "--detach' "$helper")" >> "$GITHUB_OUTPUT"
+          echo "require_clean=$(count '"--require-clean"' "$helper")" >> "$GITHUB_OUTPUT"
+          echo "signed=$(count '"--signed-updater"' "$helper")" >> "$GITHUB_OUTPUT"
+          echo "tag=$(count '$tag = "sahelflow-v$($authority.version)-$env:SF_SOURCE_COMMIT"' "$workflow")" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$(count 'tagName: sahelflow-v__VERSION__-${{ inputs.source_ref }}' "$workflow")" >> "$GITHUB_OUTPUT"
+          destructive=$(( $(count 'git clean -fd' "$workflow") + $(count 'gh release delete' "$workflow") + $(count 'git clean -fd' "$helper") + $(count 'gh release delete' "$helper") ))
+          echo "destructive=$destructive" >> "$GITHUB_OUTPUT"
+
+      - name: Contract attest=${{ steps.contract.outputs.attest }} tracked=${{ steps.contract.outputs.tracked }} evidence=${{ steps.contract.outputs.evidence }} helper=${{ steps.contract.outputs.helper_call }} worktree=${{ steps.contract.outputs.worktree }} clean=${{ steps.contract.outputs.require_clean }} signed=${{ steps.contract.outputs.signed }} tag=${{ steps.contract.outputs.tag }} tagName=${{ steps.contract.outputs.tag_name }} destructive=${{ steps.contract.outputs.destructive }}
+        run: true
+
       - name: Verify updater and release contract
         run: bun run sf-version
 
