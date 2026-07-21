@@ -14,6 +14,7 @@ import { spawnSync } from "node:child_process";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const requireClean = process.argv.includes("--require-clean");
+const signedUpdater = process.argv.includes("--signed-updater");
 const MIGRATION_SET_HASH_DOMAIN = "sahelflow-migration-set-v1\n";
 const MIGRATION_HASH_GOLDEN =
   "b3b8d5e292253c7a85f58ea1eef8e4df810ea4a6cb1ab88de66a581e0e0e2c21";
@@ -21,6 +22,17 @@ const MIGRATION_HASH_GOLDEN =
 type MigrationHashInput = {
   name: string;
   sql: Uint8Array;
+};
+
+type VersionAuthority = {
+  version: string;
+  channel: string;
+  updater?: {
+    enabled?: boolean;
+    signingKeyId?: string | null;
+    approvalScope?: string;
+    authenticodeRequired?: boolean;
+  };
 };
 
 /**
@@ -62,8 +74,9 @@ function verifyMigrationHashGoldenVector(): void {
 
 function git(args: string[]): string {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
-  if (result.status !== 0)
+  if (result.status !== 0) {
     throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  }
   return result.stdout.trim();
 }
 
@@ -96,7 +109,7 @@ if (requireClean && status) {
 
 const version = JSON.parse(
   readFileSync(resolve(root, "sahelflow.version.json"), "utf8"),
-) as Record<string, unknown>;
+) as VersionAuthority;
 const migrationDirectory = resolve(root, "prisma", "migrations");
 const migrations = readdirSync(migrationDirectory, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
@@ -128,43 +141,83 @@ const msiDirectory = resolve(
   "msi",
 );
 const msiDirectoryFiles = filesBelow(msiDirectory);
-const signatureFiles = msiDirectoryFiles.filter((path) =>
-  path.endsWith(".sig"),
-);
-if (signatureFiles.length > 0) {
-  throw new Error(
-    "Unsigned internal evidence must not contain updater signatures",
-  );
-}
-const bundleFiles = msiDirectoryFiles.filter((path) =>
+const signatureFiles = msiDirectoryFiles.filter((path) => path.endsWith(".msi.sig"));
+const unsignedBundleFiles = msiDirectoryFiles.filter((path) =>
   /-UNSIGNED\.msi$/i.test(path),
 );
-if (bundleFiles.length !== 1) {
-  throw new Error(
-    `Expected exactly one explicitly UNSIGNED MSI, found ${bundleFiles.length}`,
-  );
+const signedBundleFiles = msiDirectoryFiles.filter(
+  (path) => path.endsWith(".msi") && !/-UNSIGNED\.msi$/i.test(path),
+);
+
+let bundleFiles: string[];
+if (signedUpdater) {
+  if (!version.updater?.enabled) {
+    throw new Error("Signed updater evidence requires updater.enabled=true");
+  }
+  if (!version.updater.signingKeyId) {
+    throw new Error("Signed updater evidence requires a non-secret signing key ID");
+  }
+  if (unsignedBundleFiles.length > 0) {
+    throw new Error("Signed updater evidence must not contain UNSIGNED MSI files");
+  }
+  if (signedBundleFiles.length !== 1) {
+    throw new Error(
+      `Expected exactly one signed-updater MSI, found ${signedBundleFiles.length}`,
+    );
+  }
+  if (signatureFiles.length !== 1) {
+    throw new Error(
+      `Expected exactly one MSI updater signature, found ${signatureFiles.length}`,
+    );
+  }
+  bundleFiles = signedBundleFiles;
+} else {
+  if (signatureFiles.length > 0) {
+    throw new Error(
+      "Unsigned internal evidence must not contain updater signatures",
+    );
+  }
+  if (unsignedBundleFiles.length !== 1) {
+    throw new Error(
+      `Expected exactly one explicitly UNSIGNED MSI, found ${unsignedBundleFiles.length}`,
+    );
+  }
+  bundleFiles = unsignedBundleFiles;
 }
+
 const runtimeFiles = filesBelow(
   resolve(root, "src-tauri", "resources", "runtime"),
 ).filter((path) => statSync(path).isFile());
+const sourceCommit = git(["rev-parse", "HEAD"]);
+const sourceTree = git(["rev-parse", "HEAD^{tree}"]);
+const releaseTag = process.env.SF_RELEASE_TAG ?? null;
+const runId = process.env.GITHUB_RUN_ID ?? null;
+const authenticodeRequired = version.updater?.authenticodeRequired === true;
 
 const manifest = {
-  formatVersion: 1,
+  formatVersion: 2,
   generatedAt: new Date().toISOString(),
   source: {
-    commit: git(["rev-parse", "HEAD"]),
-    tree: git(["rev-parse", "HEAD^{tree}"]),
+    commit: sourceCommit,
+    tree: sourceTree,
     dirty: Boolean(status),
     dirtyStatusSha256: status
       ? createHash("sha256").update(status).digest("hex")
       : null,
   },
+  build: {
+    environment: process.env.GITHUB_ACTIONS === "true" ? "github-actions-windows" : "local",
+    runId,
+    releaseTag,
+  },
   candidate: {
-    purpose: "internal-build-evidence",
-    publishable: false,
-    signed: false,
-    authenticode: false,
-    updaterSignature: false,
+    purpose: signedUpdater ? "internal-updater-candidate" : "internal-build-evidence",
+    publishable: signedUpdater,
+    updaterSigned: signedUpdater,
+    updaterSigningKeyId: version.updater?.signingKeyId ?? null,
+    updaterApprovalScope: version.updater?.approvalScope ?? null,
+    authenticodeRequired,
+    authenticodeVerified: false,
   },
   version,
   migrationSetSha256: migrationSetSha256(migrations),
@@ -181,12 +234,22 @@ const manifest = {
     file: relative(root, path).replaceAll("\\", "/"),
     size: statSync(path).size,
     sha256: sha256(path),
-    signed: false,
-    authenticode: false,
-    updaterSignature: false,
+    updaterSigned: signedUpdater,
+    updaterSignature: signedUpdater
+      ? {
+          file: relative(root, signatureFiles[0]!).replaceAll("\\", "/"),
+          size: statSync(signatureFiles[0]!).size,
+          sha256: sha256(signatureFiles[0]!),
+        }
+      : null,
+    authenticodeVerified: false,
   })),
   claims: {
+    cleanCheckoutWindowsArtifact: Boolean(process.env.GITHUB_ACTIONS === "true"),
+    updaterArtifactSignature: signedUpdater,
+    publishedUpdateChannel: false,
     installedWindows: false,
+    installedAtoB: false,
     migrationRecovery: false,
     accessibilityRtl: false,
     t470Performance: false,
