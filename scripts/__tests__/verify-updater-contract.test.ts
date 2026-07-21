@@ -39,6 +39,8 @@ function writeFixture(options?: {
           updater: {
             enabled: authorityEnabled,
             manifestFormatVersion: 1,
+            channelStatus: authorityEnabled ? "approved" : "candidate",
+            signingKeyStatus: authorityEnabled ? "approved" : "unaccepted",
             signingKeyId,
             endpoint,
             installMode: "passive",
@@ -121,6 +123,8 @@ describe("verify-updater-contract", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("remains disabled");
+    expect(result.stdout).toContain("channel candidate");
+    expect(result.stdout).toContain("key unaccepted");
   });
 
   it("rejects Tauri activation that disagrees with version authority", () => {
@@ -147,7 +151,7 @@ describe("verify-updater-contract", () => {
     expect(result.stderr).toContain("must not label artifacts UNSIGNED");
   });
 
-  it("accepts a coherently enabled signed publication configuration", () => {
+  it("accepts a coherently approved signed publication configuration", () => {
     const result = verify(
       writeFixture({ authorityEnabled: true, signedWorkflow: true }),
     );
