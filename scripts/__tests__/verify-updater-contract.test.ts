@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { afterEach, describe, expect, it } from "vitest";
 
 const scriptPath = resolve(process.cwd(), "scripts", "verify-updater-contract.ts");
 const fixtureRoots: string[] = [];
@@ -102,7 +102,7 @@ function writeFixture(options?: {
 }
 
 function verify(root: string) {
-  return spawnSync(process.execPath, [scriptPath], {
+  return spawnSync("bun", [scriptPath], {
     encoding: "utf8",
     env: { ...process.env, SF_REPO_DIR: root },
   });
