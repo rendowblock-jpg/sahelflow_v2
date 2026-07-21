@@ -128,7 +128,11 @@ jobs:
       - name: Prepare unique disposable Windows test sandbox
         shell: pwsh
         run: |
-          $sandboxRoot = Join-Path $env:RUNNER_TEMP "sahelflow-ci-test-$env:GITHUB_RUN_ID"
+          $tempRoot = (& bun -e "console.log(require('node:os').tmpdir())").Trim()
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tempRoot)) {
+            throw 'failed to resolve the Bun OS temporary directory'
+          }
+          $sandboxRoot = Join-Path $tempRoot "sahelflow-ci-test-$env:GITHUB_RUN_ID"
           $output = @(& bun run scripts/prepare-test-sandbox.ts $sandboxRoot)
           if ($LASTEXITCODE -ne 0) {
             throw 'canonical test sandbox preparation failed'
