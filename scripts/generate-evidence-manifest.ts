@@ -92,6 +92,31 @@ function filesBelow(directory: string): string[] {
   });
 }
 
+function verifyUpdaterArtifact(artifactPath: string, signaturePath: string): void {
+  const result = spawnSync(
+    "bun",
+    [
+      "run",
+      "scripts/verify-updater-artifact.ts",
+      "--",
+      artifactPath,
+      signaturePath,
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, SF_REPO_DIR: root },
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr || result.stdout || "Updater artifact key binding verification failed",
+    );
+  }
+  const output = result.stdout.trim();
+  if (output) console.log(output);
+}
+
 verifyMigrationHashGoldenVector();
 if (process.argv.includes("--verify-migration-hash-vector")) {
   console.log(
@@ -170,6 +195,7 @@ if (signedUpdater) {
       `Expected exactly one MSI updater signature, found ${signatureFiles.length}`,
     );
   }
+  verifyUpdaterArtifact(signedBundleFiles[0]!, signatureFiles[0]!);
   bundleFiles = signedBundleFiles;
 } else {
   if (signatureFiles.length > 0) {
