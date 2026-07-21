@@ -23,13 +23,14 @@ This is the compact entry point for current work. Update it at meaningful checkp
 
 ## Canonical documentation state
 
-The documentation reset, experience recovery and semantic consistency audit are integrated into `main`:
+The documentation reset, experience recovery, semantic consistency audit and MAWS cloud-workflow transition are integrated into `main`:
 
 - PR #95 — current-to-target program: `dee78e9c6085b367fb7a533b50624f4389a4cb8d`.
 - PR #96 — Maze Map experience authority: `2e5594b9af5bf1cb765f7b84dfbce4b393ba21c5`.
 - PR #97 — documentation authority/consistency audit: `7a138695d4075998165cee362436f5201febe4ea`.
 - PR #98 — post-audit checkpoint: `7a5e21d94f577db3946ac347fad49533b8625687`.
 - Integrated baseline used to start the first implementation wave: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
+- PR #112 — MAWS Codex Cloud workflow and low-storage Windows launch path: `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 
 No application behavior or executable product source changed in the documentation waves above.
 
@@ -98,7 +99,7 @@ Historical Session-40 handoff/tool content remains in orphan-branch Git history 
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible remote-development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`. No Linux/cloud result is installed-Windows evidence.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible remote-development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. No Linux/cloud result is installed-Windows evidence.
 
 Required outcome:
 
@@ -118,14 +119,13 @@ Current checkpoint:
 - The previous local HP development machine is an Intel Celeron N3060 with 8 GB RAM and less than 10 GB free disk. `sf-verify --fast` required 7 minutes 56 seconds, so it is a Windows/low-end observation device rather than the primary compilation environment.
 - A personal Codespaces pilot proved the 2-core/8 GB environment as a fast Linux coding mode. Codex Cloud is now the selected normal primary cloud builder; its specific SahelFlow environment still needs a first recorded bootstrap/launch/verification checkpoint.
 - The Founder removed local dependency, build and installation caches because the SSD became full and the machine became unusably slow. The local goal is not to restore the full development workspace; it is to install and launch an exact prebuilt SahelFlow candidate for hands-on testing.
-- MAWS authority is being updated on branch `agent/maws-codex-cloud-workflow` to record the new role allocation, exact resume prompts and low-storage local launch procedure.
+- PR #112 integrated the canonical role allocation, exact ChatGPT and Codex Cloud resume prompts, GitHub-backed session continuity and low-storage local launch procedure into `main`.
 
 Exact next executable action:
 
-1. review and merge the MAWS Codex Cloud workflow update;
-2. start a Codex Cloud session with the canonical resume prompt, declare the exact environment/branch/commit and prove bootstrap, development launch and the appropriate shared gate from current `main` without changing product behavior unnecessarily;
-3. separately select and authorize the exact Windows implementation-lab machine and internal-candidate procedure;
-4. have GitHub Actions produce the exact internal Windows artifact, then download/install only that artifact on the low-storage PC and launch SahelFlow for the clean-install, startup, migration, restart/crash-loop and failure-injection matrix.
+1. start a Codex Cloud session with the canonical resume prompt, declare the exact environment/branch/commit and prove bootstrap, development launch and the appropriate shared gate from current `main` without changing product behavior unnecessarily;
+2. separately select and authorize the exact Windows implementation-lab machine and internal-candidate procedure;
+3. have GitHub Actions produce the exact internal Windows artifact, then download/install only that artifact on the low-storage PC and launch SahelFlow for the clean-install, startup, migration, restart/crash-loop and failure-injection matrix.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation gates pass.
 
