@@ -52,6 +52,9 @@ jobs:
         shell: bash
         run: git show origin/main:package.json > package.json
 
+      - name: Reconcile lockfile with reviewed package manifest
+        run: bun install --lockfile-only
+
       - name: Verify only the lockfile changed
         shell: bash
         run: |
