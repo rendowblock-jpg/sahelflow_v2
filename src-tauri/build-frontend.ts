@@ -41,9 +41,11 @@ ok("Pinned runtime prepared");
 
 // ── 1. Next.js standalone build ──────────────────────────────────────────────
 step("1. Next.js standalone build");
-// Skip type-checking during build (we run sf-verify separately)
-// Increase memory limit to avoid OOM
-execSync("node --max-old-space-size=4096 node_modules/next/dist/bin/next build", {
+// The canonical package build explicitly selects Webpack. Next.js 16 defaults
+// to Turbopack, whose Windows file-pattern analysis treats server-only runtime
+// SQLite path resolution as repository-wide globs and blocks the installer
+// build. TypeScript and ESLint still run independently through sf-verify.
+execSync("bun run build", {
   stdio: "inherit",
   cwd: ROOT,
   env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" },
@@ -73,7 +75,7 @@ if (existsSync(staticDir)) {
 if (existsSync(publicDir)) {
   const standalonePublicDir = resolve(standaloneDir, "public");
   cpSync(publicDir, standalonePublicDir, { recursive: true });
-  ok("Copied public/ → standalone");
+  ok("Copied public → standalone");
 }
 
 // ── 3. Copy standalone → src-tauri/resources/standalone ─────────────────────
