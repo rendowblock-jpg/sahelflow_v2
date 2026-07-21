@@ -1,9 +1,13 @@
 name: Repair Audited Transitive Dependency Lock
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/fix-security-audit-2026-07-21
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -17,6 +21,7 @@ jobs:
       - name: Checkout security-fix branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Setup Bun
@@ -129,6 +134,8 @@ jobs:
 
       - name: Commit targeted audited lock repair
         shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           if git diff --quiet -- bun.lock; then
             echo 'targeted update produced no lockfile change'
@@ -138,4 +145,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bun.lock
           git commit -m 'fix(deps): repair audited transitive resolutions'
-          git push origin HEAD:agent/fix-security-audit-2026-07-21
+          git push origin "HEAD:$HEAD_BRANCH"
