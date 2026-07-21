@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
   //
   // Rationale: `next build` spawns a separate worker for `tsc` + eslint.
   // On memory-constrained dev/CI boxes (4 GB RAM, no swap) that worker gets
-  // SIGKILL'd by the OOM killer after Turbopack compilation succeeds —
+  // SIGKILL'd by the OOM killer after bundler compilation succeeds —
   // `bun run build` exits 1 even though the bundle compiled cleanly.
   // Phase 2 of the data-integrity plan re-enabled these checks but the OOM
   // makes `next build` non-functional on the founder's deploy box, so we
