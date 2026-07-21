@@ -8,6 +8,11 @@ const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const cargoManifest = "src-tauri/Cargo.toml";
 const standalonePlaceholder = "src-tauri/resources/standalone/.gitkeep";
 const allowedTrackedChanges = new Set([cargoManifest, standalonePlaceholder]);
+const toml = (
+  globalThis as typeof globalThis & {
+    Bun: { TOML: { parse(input: string): unknown } };
+  }
+).Bun.TOML;
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -39,7 +44,7 @@ function stable(value: unknown): unknown {
 }
 
 function parsedToml(text: string): string {
-  return JSON.stringify(stable(Bun.TOML.parse(text)));
+  return JSON.stringify(stable(toml.parse(text)));
 }
 
 function statusPath(line: string): string {
