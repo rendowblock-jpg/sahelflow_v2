@@ -89,14 +89,26 @@ jobs:
           bunx vitest run scripts/__tests__/windows-release-build-contract.test.ts --reporter=verbose 2>&1 | tee .release-contract-results.log
           status=${PIPESTATUS[0]}
           echo "status=$status" >> "$GITHUB_OUTPUT"
-          summary=$(grep -E 'AssertionError|expected .* to|FAIL|×|Error:' .release-contract-results.log | tail -n 3 | tr '\n' ' ' | tr -s ' ' | cut -c1-230)
-          summary=${summary//'%'/'%25'}
-          summary=${summary//$'\n'/'%0A'}
-          summary=${summary//$'\r'/'%0D'}
-          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          encoded=$(tail -n 24 .release-contract-results.log | base64 -w0)
+          echo "c1=${encoded:0:180}" >> "$GITHUB_OUTPUT"
+          echo "c2=${encoded:180:180}" >> "$GITHUB_OUTPUT"
+          echo "c3=${encoded:360:180}" >> "$GITHUB_OUTPUT"
+          echo "c4=${encoded:540:180}" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Contract test status=${{ steps.contract_tests.outputs.status }} error=${{ steps.contract_tests.outputs.summary }}
+      - name: Vitest tail 1=${{ steps.contract_tests.outputs.c1 }}
+        if: always()
+        run: true
+
+      - name: Vitest tail 2=${{ steps.contract_tests.outputs.c2 }}
+        if: always()
+        run: true
+
+      - name: Vitest tail 3=${{ steps.contract_tests.outputs.c3 }}
+        if: always()
+        run: true
+
+      - name: Vitest tail 4=${{ steps.contract_tests.outputs.c4 }}
         if: always()
         shell: bash
         run: test "${{ steps.contract_tests.outputs.status }}" = "0"
