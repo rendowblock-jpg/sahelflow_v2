@@ -63,7 +63,10 @@ describe("Windows signed release build contract", () => {
     );
     expect(restoreHelper).toContain("toml.parse");
     expect(restoreHelper).toContain("allowedTrackedChanges");
-    expect(restoreHelper).toContain('git(["restore"');
+    expect(restoreHelper).toContain("restoreCommittedPath");
+    expect(restoreHelper).toContain('gitBytes(["show"');
+    expect(restoreHelper).toContain("writeFileSync(destination, committedBytes)");
+    expect(restoreHelper).not.toContain('git(["restore"');
     expect(evidenceHelper).toMatch(/worktree[\s\S]*add[\s\S]*--detach/);
     expect(evidenceHelper).toContain("--require-clean");
     expect(evidenceHelper).toContain("--signed-updater");
