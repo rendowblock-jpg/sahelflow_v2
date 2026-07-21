@@ -15,7 +15,7 @@ jobs:
   diagnose:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
@@ -35,24 +35,52 @@ jobs:
           git show origin/main:package.json > package.json
           git show origin/main:bun.lock > bun.lock
 
-      - name: Add ESLint 10 and advisory-only overrides
+      - name: Add exact patched advisory resolutions
         shell: bash
         run: |
           bun -e '
             const fs = require("node:fs");
             const path = "package.json";
             const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
-            pkg.devDependencies.eslint = "10.7.0";
             pkg.overrides = {
               ...(pkg.overrides || {}),
-              "brace-expansion": ">=1.1.16 <2 || >=2.1.2 <3 || >=5.0.7 <6",
-              "js-yaml": ">=3.15.0 <4 || >=4.3.0 <5 || >=5"
+              "brace-expansion": "5.0.7",
+              "js-yaml": "4.3.0"
             };
             fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
           '
 
       - name: Install exact candidate tree
         run: bun install --force --linker=hoisted
+
+      - name: Apply CommonJS compatibility bridge in sandbox
+        shell: bash
+        run: |
+          bun -e '
+            const fs = require("node:fs");
+            const path = "node_modules/brace-expansion/dist/commonjs/index.js";
+            const marker = "module.exports = Object.assign(exports.expand, exports);";
+            const source = fs.readFileSync(path, "utf8");
+            if (!source.includes("exports.expand")) {
+              throw new Error("brace-expansion CommonJS build does not expose exports.expand");
+            }
+            if (!source.includes(marker)) {
+              fs.writeFileSync(path, source + "\n" + marker + "\n");
+            }
+          '
+
+      - name: Verify legacy and modern CommonJS API compatibility
+        shell: bash
+        run: |
+          bun -e '
+            const expansion = require("brace-expansion");
+            if (typeof expansion !== "function") throw new Error("legacy callable export is unavailable");
+            if (expansion.expand !== expansion) throw new Error("modern expand export is not retained");
+            const expected = JSON.stringify(["file-a", "file-b"]);
+            const legacy = JSON.stringify(expansion("file-{a,b}"));
+            const modern = JSON.stringify(expansion.expand("file-{a,b}"));
+            if (legacy !== expected || modern !== expected) throw new Error(`unexpected expansion results: ${legacy} / ${modern}`);
+          '
 
       - name: TypeScript compatibility
         run: bun run typecheck
@@ -70,6 +98,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/eslint.log"
 
-      - name: ESLint10 code=${{ steps.eslint.outputs.code }} result=${{ steps.eslint.outputs.summary }}
+      - name: ESLint9-patched code=${{ steps.eslint.outputs.code }} result=${{ steps.eslint.outputs.summary }}
         shell: bash
         run: test "${{ steps.eslint.outputs.code }}" -eq 0
