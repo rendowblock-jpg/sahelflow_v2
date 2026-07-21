@@ -7,9 +7,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
-const scriptPath = resolve(process.cwd(), "scripts", "verify-updater-contract.ts");
+const scriptPath = fileURLToPath(
+  new URL("../verify-updater-contract.ts", import.meta.url),
+);
 const fixtureRoots: string[] = [];
 
 function writeFixture(options?: {
