@@ -61,7 +61,7 @@ describe("Windows signed release build contract", () => {
     expect(workflow).toContain(
       "bun run scripts/generate-release-evidence-worktree.ts",
     );
-    expect(restoreHelper).toContain("Bun.TOML.parse");
+    expect(restoreHelper).toContain("toml.parse");
     expect(restoreHelper).toContain("allowedTrackedChanges");
     expect(restoreHelper).toContain('git(["restore"');
     expect(evidenceHelper).toMatch(/worktree[\s\S]*add[\s\S]*--detach/);
