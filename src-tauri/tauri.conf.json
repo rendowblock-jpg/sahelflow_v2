@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "targets": [
       "msi"
     ],
@@ -57,11 +57,11 @@
   },
   "plugins": {
     "updater": {
-      "active": false,
+      "active": true,
       "endpoints": [
         "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3MTgzNjkzQTA1ODlCNTUKUldSVm0xaWdrellZeDNWZ3BYU2xmakFsR0VQQkNQY1Y2VGxpN0F4bm5ib2kzT0xPb2cyMnlaRG0K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaW4gcHVibGljIGtleTogQzcxODM2OTNBMDU4OUI1NQpSV1JWbTFpZ2t6WVl4M1ZncFhTbGZqQWxHRVBCQ1BjVjZUbGk3QXhubmJvaTNPTG9vZzIyeVpEbQo=",
       "windows": {
         "installMode": "passive"
       }
