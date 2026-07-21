@@ -8,6 +8,8 @@
   "updater": {
     "enabled": false,
     "manifestFormatVersion": 1,
+    "channelStatus": "candidate",
+    "signingKeyStatus": "unaccepted",
     "signingKeyId": null,
     "endpoint": "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json",
     "installMode": "passive"
