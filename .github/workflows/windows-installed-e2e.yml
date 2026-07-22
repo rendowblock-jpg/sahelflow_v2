@@ -84,6 +84,7 @@ jobs:
           $roaming = Join-Path $env:APPDATA 'com.sahelflow.desktop'
           $evidenceFiles = @(
             'startup-diagnostic.json',
+            'runtime-probe-diagnostic.json',
             'runtime-readiness-diagnostic.json',
             'runtime-endpoint.json',
             'shop-registry.json',
