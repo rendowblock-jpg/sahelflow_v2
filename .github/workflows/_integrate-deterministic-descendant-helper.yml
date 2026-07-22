@@ -1,0 +1,45 @@
+name: Integrate deterministic descendant helper
+
+on:
+  push:
+    branches:
+      - agent/deterministic-rust-descendant-helper
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/deterministic-rust-descendant-helper
+          fetch-depth: 0
+
+      - name: Setup Rust formatting
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Apply reviewed source and CI repair
+        run: python .github/patches/integrate_deterministic_descendant_helper.py
+
+      - name: Canonical Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
+
+      - name: Remove one-shot integration files
+        run: |
+          rm .github/patches/integrate_deterministic_descendant_helper.py
+          rm .github/workflows/_integrate-deterministic-descendant-helper.yml
+
+      - name: Commit integrated repair
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src-tauri/src/child_containment.rs .github/workflows/ci.yml .github/workflows/release.yml .github/patches/integrate_deterministic_descendant_helper.py .github/workflows/_integrate-deterministic-descendant-helper.yml
+          git diff --cached --check
+          git commit -m "test(runtime): make Windows descendant containment deterministic"
+          git push origin HEAD:agent/deterministic-rust-descendant-helper
