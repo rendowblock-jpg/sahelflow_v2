@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - agent/hermetic-libsodium-windows
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/prepare-libsodium-windows.ps1
+      - .github/patches/integrate-hermetic-libsodium.py
+      - .github/workflows/_integrate-hermetic-libsodium.yml
 
 permissions:
   contents: write
