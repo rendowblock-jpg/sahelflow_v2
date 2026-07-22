@@ -208,6 +208,18 @@ jobs:
           updaterJsonPreferNsis: false
           args: --bundles msi
 
+      - name: Verify staged packaged runtime reaches authenticated readiness
+        run: bun run scripts/verify-windows-packaged-runtime.ts
+
+      - name: Upload staged packaged runtime diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-windows-packaged-runtime-diagnostics-${{ github.run_id }}
+          path: .sf-windows-runtime-smoke.log
+          if-no-files-found: error
+          retention-days: 2
+
       - name: Verify local MSI and updater signature
         shell: pwsh
         run: |
@@ -272,6 +284,7 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi.sig
             .sf-evidence/candidate-manifest.json
             src-tauri/resources/runtime/runtime-manifest.json
+            src-tauri/resources/standalone/sahelflow-standalone-manifest.json
             ${{ env.SF_LATEST_JSON_PATH }}
           if-no-files-found: error
           retention-days: 30
