@@ -15,13 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout staging branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/windows-runtime-staging
-          fetch-depth: 1
-          show-progress: false
-
       - name: Apply readable fail-closed integration
         shell: bash
         env:
@@ -29,6 +22,11 @@ jobs:
           HEAD_BRANCH: agent/windows-runtime-staging
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "$HEAD_BRANCH" \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
+          cd repo
+
           set +e
           python .github/runtime-stage/apply-runtime-staging-readable.py \
             > runtime-staging-integration-trace.log 2>&1
@@ -46,6 +44,7 @@ jobs:
             gh pr comment "$PR_NUMBER" --body-file runtime-staging-integration-comment.md
             exit "$status"
           fi
+
           rm -rf .github/runtime-stage
           rm -f .github/workflows/apply-runtime-staging.yml
           rm -f runtime-staging-integration-trace.log
