@@ -601,16 +601,16 @@ mod platform {
             let child = ContainedChild::spawn(
                 &command,
                 &[
+                    OsString::from("/D"),
+                    OsString::from("/S"),
                     OsString::from("/C"),
-                    OsString::from(
-                        "start \"\" /B ping -n 30 127.0.0.1 ^>NUL ^& ping -n 30 127.0.0.1 ^>NUL",
-                    ),
+                    OsString::from("\"%SystemRoot%\\System32\\ping.exe\" -n 30 127.0.0.1 >NUL"),
                 ],
                 &command_environment(),
             )
             .expect("spawn process tree in a job");
 
-            let deadline = Instant::now() + Duration::from_secs(5);
+            let deadline = Instant::now() + Duration::from_secs(15);
             while child.active_process_count().expect("query job") < 2 {
                 assert!(
                     Instant::now() < deadline,

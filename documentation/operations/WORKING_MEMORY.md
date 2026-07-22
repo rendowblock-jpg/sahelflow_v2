@@ -34,6 +34,7 @@ The documentation reset, experience recovery, semantic consistency audit and MAW
 - PR #112 — MAWS Codex Cloud workflow and low-storage Windows launch path: `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 - PR #113 — post-merge Working Memory and active-wave checkpoint: `87af8227f4c361b2d99786bed3289a87f17a12f2`.
 - PRs #115–#124 — signed internal updater activation and Windows release hardening through `f977242924e98b4be0f147988b41504f0dbeba1b`.
+- PRs #125–#128 — verified LocalAppData runtime staging, production dependency repair, contained-child standard handles and release-format enforcement through `abf2603fa9291615300ffe679e32c7861ff4375c`.
 
 No application behavior or executable product source changed in the documentation waves above.
 
@@ -111,21 +112,22 @@ Required outcome:
 Current checkpoint:
 
 - The signed internal updater path is active in source and protected by exact-source dispatch, the `internal-updater` environment, Tauri updater signature verification, immutable source-specific draft tags, `latest.json` verification and retained evidence. This is internal-lab authority only; no Beta or Stable claim follows.
-- GitHub Actions produced signed candidate `1.0.0-internal.1` from exact commit `f977242924e98b4be0f147988b41504f0dbeba1b`. The Founder verified the MSI, signature, source commit, signing-key ID, evidence manifest and SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f`, then installed it on the authorized Windows lab PC.
-- Installed `.1` created registry revision 1 with active shop `default`, deployed all eight packaged migrations and preserved fail-closed startup. It did not reach ready: bundled Bun 1.3.14 returned `EPERM` only when loading `C:\Program Files\SahelFlow\standalone\server.js` as its entry script. The `.1` GitHub Release remains draft and must not be published.
-- PowerShell and both Bun file APIs could read the packaged `server.js`; the exact complete standalone tree copied to a writable directory, using the same bundled Bun, Prisma engine, database, registry, migration digest, auth mode and readiness token, returned HTTP 200 with all app/database/migration/registry/shop/auth checks `ready`. This isolates the installed blocker to Bun entry-script loading below Program Files rather than data, migration, authentication, signing or installer integrity.
-- Draft PR #125 on `agent/windows-runtime-staging` implements corrected manual-replacement baseline `1.0.0-internal.2` / MSI `1.0.0.2`: deterministic standalone tree manifest, packaged-source verification, atomic version/digest-bound LocalAppData staging, cached-tree verification, explicit contained-process working directory, release evidence binding and exact Windows authenticated readiness smoke.
-- PR #125 CI run `29881291176` passed the complete quality gate, coverage, production audit, migration status, Tauri release compilation, exact Windows database suite, production standalone build and the new staged packaged-runtime authenticated readiness check. This is source/CI evidence, not yet an installed `.2` claim.
-- Seller databases, registry, migration records and master key remain in the canonical roaming AppData directory; only immutable packaged application-server resources are staged in the local runtime cache.
+- Signed `1.0.0-internal.1` from `f977242924e98b4be0f147988b41504f0dbeba1b` was verified and installed. It created registry revision 1, selected shop `default`, deployed all eight packaged migrations and failed closed because Bun could not use the Program Files standalone entry script. Its release remains draft and must not be published.
+- PR #125 staged and verified the immutable standalone tree in LocalAppData. Signed `1.0.0-internal.2` from `341711e5a3e6f2301197f1cf8c5fcc7da56e8ec4` was verified and installed over `.1` without deleting AppData. It created the expected version/digest-bound cache, but installed launch still blocked because the custom Windows GUI launcher did not provide usable standard handles to Bun.
+- Manual execution of the exact final `.2` cache, using the installed Bun, Prisma engine, shop database, registry revision, migration digest and runtime authentication, returned HTTP 200 with every app/database/migration/registry/shop/auth check ready. This proves the cache, data, migration and server runtime are healthy.
+- PR #127 added explicit restricted `NUL` stdin/stdout/stderr handles while preserving suspended-before-resume Job Object containment. Windows CI proved bundled Bun HTTP through the actual Rust `ContainedChild` path and then proved complete staged authenticated runtime readiness. PR #128 added canonical Rust formatting to normal CI.
+- The signed workflow from exact main `abf2603fa9291615300ffe679e32c7861ff4375c` stopped before build/signing only because the older synthetic `start /B` descendant-observation test did not create a visible descendant within five seconds. The real contained-Bun HTTP test passed in that same run.
+- PR #129 advances the immutable baseline to `1.0.0-internal.3` / MSI `1.0.0.3` and replaces the flaky `start /B` timing dependency with a direct long-running system process tree and a 15-second observation deadline. Product data paths, updater trust, signing key, runtime protocol and migration formats remain unchanged.
+- Seller databases, registry, migration records and master key remain in canonical roaming AppData; only immutable packaged application-server resources are staged in the local runtime cache.
 
 Exact next executable action:
 
-1. Complete final review and merge PR #125 into protected `main`.
-2. Manually dispatch **Build Signed Internal Windows Update** from the exact new merged `main` SHA to produce signed `1.0.0-internal.2` as a draft and retained workflow artifact.
-3. Verify `.2` source/signature/hash/evidence, install it over `.1` without deleting AppData, and prove first launch plus close/reopen while preserving registry, shop database and migration records.
-4. Keep both `.1` and `.2` releases unpublished during that installed baseline test.
-5. After installed `.2` passes, create a deliberately small compatible `1.0.0-internal.3`, publish only the approved `.3` channel metadata/artifacts, and prove installed `.2`→`.3` in-app update, restart, preservation and failure recovery.
-6. Only after the installed updater drill passes may normal local testing rely on in-app updates. Manual MSI replacement remains the recovery fallback.
+1. Complete review and merge green PR #129 into protected `main`.
+2. Manually dispatch **Build Signed Internal Windows Update** from the exact merged `main` SHA to produce signed `1.0.0-internal.3` as a draft and retained workflow artifact.
+3. Verify `.3` source/signature/hash/evidence, install it over the broken `.2` without deleting either AppData directory, and prove first launch plus close/reopen while preserving registry, shop database and migration records.
+4. Keep `.1` and `.2` unpublished. Keep `.3` draft until installed launch/restart/preservation succeeds.
+5. After installed `.3` passes, create one deliberately small compatible `1.0.0-internal.4`, publish only the approved `.4` channel metadata/artifacts, and prove installed `.3`→`.4` in-app update, restart, preservation and failure recovery.
+6. After the `.3`→`.4` drill passes, normal product work uses two lanes: ordinary PR CI for implementation and one monotonically increasing signed internal version per Founder-approved feature slice for installed testing. Manual MSI installation remains recovery-only.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation and updater/install gates pass.
 
