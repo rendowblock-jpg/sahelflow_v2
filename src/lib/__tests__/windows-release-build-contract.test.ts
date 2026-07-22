@@ -146,4 +146,34 @@ describe("Windows signed release build contract", () => {
       /Upload staged packaged runtime diagnostics[\s\S]*if-no-files-found:\s*ignore/,
     );
   });
+
+  it("prepares a signed and digest-pinned local libsodium distribution before every Windows Rust build", () => {
+    const prepare = read("scripts/prepare-libsodium-windows.ps1");
+    const ci = read(".github/workflows/ci.yml");
+    const parity = read(".github/workflows/windows-rust-release-parity.yml");
+    const release = read(".github/workflows/release.yml");
+
+    expect(prepare).toContain('$libsodiumVersion = "1.0.22"');
+    expect(prepare).toContain(
+      '$pointArchiveName = "libsodium-$libsodiumVersion-msvc.zip"',
+    );
+    expect(prepare).toContain('$releaseTag = "$libsodiumVersion-RELEASE"');
+    expect(prepare).toContain(
+      "3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279",
+    );
+    expect(prepare).toContain("SODIUM_DIST_DIR");
+    expect(prepare).toContain(
+      "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3",
+    );
+    expect(prepare).not.toContain("http://download.libsodium.org");
+    expect(ci).toContain("prepare-libsodium-windows.ps1");
+    expect(parity).toContain("prepare-libsodium-windows.ps1");
+    expect(release).toContain("prepare-libsodium-windows.ps1");
+    expect(
+      release.indexOf("Prepare signed local libsodium distribution"),
+    ).toBeLessThan(
+      release.indexOf("Verify Rust runtime and actual contained Bun launcher"),
+    );
+    expect(release).toContain("sahelflow-libsodium-build-manifest.json");
+  });
 });
