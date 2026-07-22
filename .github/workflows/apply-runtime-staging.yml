@@ -5,12 +5,16 @@ on:
     branches: [agent/windows-runtime-staging]
     paths:
       - .github/workflows/apply-runtime-staging.yml
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.event_name == 'push' || github.head_ref == 'agent/windows-runtime-staging'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -48,6 +52,8 @@ jobs:
 
       - name: Validate and commit integration
         shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.head_ref || 'agent/windows-runtime-staging' }}
         run: |
           set -euo pipefail
           git diff --check
@@ -58,4 +64,4 @@ jobs:
           git config user.email 'runtime-integration@users.noreply.github.com'
           git add -A
           git commit -m 'fix(runtime): stage verified standalone tree before Bun launch'
-          git push origin HEAD:agent/windows-runtime-staging
+          git push origin HEAD:"$HEAD_BRANCH"
