@@ -125,3 +125,5 @@ new_test = r'''
   });
 '''
 test_path.write_text(test_text[: -len(marker)] + new_test + marker, encoding="utf-8")
+
+# This one-shot script intentionally exists only long enough to generate the reviewed files.
