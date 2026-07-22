@@ -176,4 +176,21 @@ describe("Windows signed release build contract", () => {
     );
     expect(release).toContain("sahelflow-libsodium-build-manifest.json");
   });
+
+  it("retains hidden release evidence without widening the upload path", () => {
+    const release = read(".github/workflows/release.yml");
+    const retainStart = release.indexOf("Retain signed candidate and evidence");
+    const handoffStart = release.indexOf("Record publication handoff");
+    const retain = release.slice(retainStart, handoffStart);
+
+    expect(retainStart).toBeGreaterThan(-1);
+    expect(handoffStart).toBeGreaterThan(retainStart);
+    expect(retain).toContain(".sf-evidence/candidate-manifest.json");
+    expect(retain).toContain(
+      ".sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json",
+    );
+    expect(retain).toMatch(/^\s*include-hidden-files:\s*true\s*$/m);
+    expect(retain).not.toContain(".env");
+    expect(retain).not.toContain(".git/");
+  });
 });
