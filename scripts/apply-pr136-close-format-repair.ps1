@@ -1,0 +1,136 @@
+$ErrorActionPreference = "Stop"
+
+$repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$harnessPath = Join-Path $repositoryRoot "scripts\verify-installed-windows-msi.ps1"
+$source = Get-Content -LiteralPath $harnessPath -Raw
+$pattern = '(?ms)^function Close-SahelFlowNormally \{.*?^\}\r?\n\r?\n\$existing ='
+if (-not [regex]::IsMatch($source, $pattern)) {
+    throw "Could not locate the existing Close-SahelFlowNormally function."
+}
+
+$replacement = @'
+if (-not ("SahelFlowWindowCloser" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+public static class SahelFlowWindowCloser
+{
+    private delegate bool EnumWindowsProc(IntPtr window, IntPtr parameter);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr parameter);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+    public static long[] FindTopLevelWindows(uint processId)
+    {
+        var windows = new List<long>();
+        EnumWindows((window, parameter) =>
+        {
+            uint ownerProcessId;
+            GetWindowThreadProcessId(window, out ownerProcessId);
+            if (ownerProcessId == processId)
+            {
+                windows.Add(window.ToInt64());
+            }
+            return true;
+        }, IntPtr.Zero);
+        return windows.ToArray();
+    }
+
+    public static bool RequestClose(long handle)
+    {
+        const uint WM_CLOSE = 0x0010;
+        return PostMessage(new IntPtr(handle), WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+    }
+}
+"@
+}
+
+function Close-SahelFlowNormally {
+    param([System.Diagnostics.Process]$Process)
+
+    $Process.Refresh()
+    if ($Process.HasExited) {
+        return
+    }
+
+    $handles = @(
+        [SahelFlowWindowCloser]::FindTopLevelWindows([uint32]$Process.Id)
+    )
+    if ($handles.Count -eq 0) {
+        $Process.Refresh()
+        if ($Process.MainWindowHandle -ne [IntPtr]::Zero) {
+            $handles = @($Process.MainWindowHandle.ToInt64())
+        }
+    }
+    if ($handles.Count -eq 0) {
+        throw "SahelFlow exposed no top-level window for a normal close request."
+    }
+
+    $posted = @(
+        foreach ($handle in $handles) {
+            if ([SahelFlowWindowCloser]::RequestClose([int64]$handle)) {
+                $handle
+            }
+        }
+    )
+    if ($posted.Count -eq 0) {
+        throw "Windows rejected every SahelFlow WM_CLOSE request."
+    }
+    Write-Host "Posted WM_CLOSE to $($posted.Count) SahelFlow top-level window(s)."
+
+    if (-not $Process.WaitForExit(30000)) {
+        throw "SahelFlow did not exit after a real GUI close request within 30 seconds."
+    }
+
+    $deadline = (Get-Date).AddSeconds(20)
+    do {
+        $remaining = @(
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Name -ieq "sahelflow.exe" -or
+                    $_.Name -ieq "bun.exe" -or
+                    $_.Name -ieq "sahelflow-whatsapp.exe"
+                }
+        )
+        if ($remaining.Count -eq 0) {
+            return
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    $remainingSummary = ($remaining | ForEach-Object {
+        "$($_.Name):$($_.ProcessId)"
+    }) -join ", "
+    throw "SahelFlow or a bundled child remained after normal close: $remainingSummary"
+}
+
+$existing =
+'@
+
+$updated = [regex]::Replace($source, $pattern, $replacement, 1)
+Set-Content -LiteralPath $harnessPath -Value $updated -Encoding utf8NoBOM
+
+& cargo fmt --manifest-path (Join-Path $repositoryRoot "src-tauri\Cargo.toml") --all
+if ($LASTEXITCODE -ne 0) {
+    throw "cargo fmt failed with exit code $LASTEXITCODE"
+}
+
+Push-Location $repositoryRoot
+try {
+    git diff --check
+    if ($LASTEXITCODE -ne 0) {
+        throw "git diff --check failed after applying the close/format repair."
+    }
+} finally {
+    Pop-Location
+}
+
+Write-Host "Applied real GUI close harness and canonical Rust formatting."
