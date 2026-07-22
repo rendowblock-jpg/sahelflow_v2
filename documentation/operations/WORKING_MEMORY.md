@@ -1,6 +1,6 @@
 # SahelFlow working memory
 
-> **Last updated:** 2026-07-21
+> **Last updated:** 2026-07-22
 
 This is the compact entry point for current work. Update it at meaningful checkpoints and link deeper material rather than turning it into a transcript.
 
@@ -33,6 +33,7 @@ The documentation reset, experience recovery, semantic consistency audit and MAW
 - Integrated baseline used to start the first implementation wave: `5fe00b5cb85505e5df27499fe46d0fa6050c0788`.
 - PR #112 — MAWS Codex Cloud workflow and low-storage Windows launch path: `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 - PR #113 — post-merge Working Memory and active-wave checkpoint: `87af8227f4c361b2d99786bed3289a87f17a12f2`.
+- PRs #115–#124 — signed internal updater activation and Windows release hardening through `f977242924e98b4be0f147988b41504f0dbeba1b`.
 
 No application behavior or executable product source changed in the documentation waves above.
 
@@ -101,7 +102,7 @@ Historical Session-40 handoff/tool content remains in orphan-branch Git history 
 
 ## Active wave
 
-[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. No Linux/cloud result is installed-Windows evidence.
+[**Proven Canonical Windows Desktop**](PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md) is active. PR #104 integrated the source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. No Linux/cloud result substitutes for installed-Windows evidence.
 
 Required outcome:
 
@@ -109,35 +110,29 @@ Required outcome:
 
 Current checkpoint:
 
-- GitHub Actions infrastructure is operational; clean-checkout quality and release-path Rust gates are green for the integrated source baseline.
-- The integrated runtime fails closed when mandatory resources or readiness fail, kills timed-out children, starts the degradable sidecar only after readiness and exposes a redacted seller-visible blocked-startup document.
-- Packaged startup allocates per-launch loopback endpoints and credentials, binds readiness to exact process/shop/registry/migration authority and uses one bounded restart/crash-loop supervisor.
-- Process-bound shop/database authority, an atomic registry, all-shop migration planning, external journal, verified snapshots, OS lock, interrupted restoration and transaction-bound order effects are integrated.
-- Local Windows source-testable verification is green, but no installed MSI, migration/failure-injection drill, T470 measurement or 4 GB measurement is claimed yet.
-- The Founder removed local dependency, build and installation caches because the SSD filled and the PC became unusably slow. The local goal is to install and launch an exact prebuilt SahelFlow candidate, not restore the development workspace.
-- In draft PR #115 on `agent/updater-release-contract`, the Founder authorized the **internal laboratory path only**: GitHub Releases as the internal updater channel, the checked-in Tauri updater public key ID `C7183693A0589B55`, and a first laboratory MSI that may remain without Authenticode while still requiring a valid Tauri updater signature, exact artifact digest and evidence manifest. This is not beta or Stable authorization.
-- PR #115 now proposes updater activation and updater artifact creation, binds the accepted non-secret key identity, uses the protected GitHub environment `internal-updater`, creates a signed Windows MSI/update signature/`latest.json` as a draft GitHub Release, validates the signature and exact asset URL, and retains a signed-candidate evidence artifact. The workflow intentionally requires explicit publication of the verified draft before the live `releases/latest` updater pointer changes.
-- The branch-level clean-checkout authority, documentation, TypeScript, ESLint, Vitest, Prisma and release-path Rust gates have passed through the updater activation checkpoint; final CI completion and merge remain required before a version-A workflow may use an exact protected-`main` SHA.
-- No private updater key, signed Windows artifact, published channel, installed MSI or installed A→B proof is claimed yet. The workflow will fail closed if the protected secret is missing or does not produce the expected updater signature.
+- The signed internal updater path is active in source and protected by exact-source dispatch, the `internal-updater` environment, Tauri updater signature verification, immutable source-specific draft tags, `latest.json` verification and retained evidence. This is internal-lab authority only; no Beta or Stable claim follows.
+- GitHub Actions produced signed candidate `1.0.0-internal.1` from exact commit `f977242924e98b4be0f147988b41504f0dbeba1b`. The Founder verified the MSI, signature, source commit, signing-key ID, evidence manifest and SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f`, then installed it on the authorized Windows lab PC.
+- Installed `.1` created registry revision 1 with active shop `default`, deployed all eight packaged migrations and preserved fail-closed startup. It did not reach ready: bundled Bun 1.3.14 returned `EPERM` only when loading `C:\Program Files\SahelFlow\standalone\server.js` as its entry script. The `.1` GitHub Release remains draft and must not be published.
+- PowerShell and both Bun file APIs could read the packaged `server.js`; the exact complete standalone tree copied to a writable directory, using the same bundled Bun, Prisma engine, database, registry, migration digest, auth mode and readiness token, returned HTTP 200 with all app/database/migration/registry/shop/auth checks `ready`. This isolates the installed blocker to Bun entry-script loading below Program Files rather than data, migration, authentication, signing or installer integrity.
+- Draft PR #125 on `agent/windows-runtime-staging` implements corrected manual-replacement baseline `1.0.0-internal.2` / MSI `1.0.0.2`: deterministic standalone tree manifest, packaged-source verification, atomic version/digest-bound LocalAppData staging, cached-tree verification, explicit contained-process working directory, release evidence binding and exact Windows authenticated readiness smoke.
+- PR #125 CI run `29881291176` passed the complete quality gate, coverage, production audit, migration status, Tauri release compilation, exact Windows database suite, production standalone build and the new staged packaged-runtime authenticated readiness check. This is source/CI evidence, not yet an installed `.2` claim.
+- Seller databases, registry, migration records and master key remain in the canonical roaming AppData directory; only immutable packaged application-server resources are staged in the local runtime cache.
 
 Exact next executable action:
 
-1. Complete CI and independent review for PR #115, then merge the updater activation checkpoint into protected `main`.
-2. Confirm the GitHub environment `internal-updater` contains the private key matching public key ID `C7183693A0589B55` and that the private key has a separate offline backup/custody record. Never put private signing material in Git, prompts or logs.
-3. Manually dispatch **Build Signed Internal Windows Update** using the exact merged `main` commit SHA. GitHub Actions Windows must produce one MSI, one `.msi.sig`, `latest.json`, runtime manifest and signed-candidate evidence manifest in a draft release.
-4. Inspect the exact draft release and retained workflow evidence. Publish only that verified draft to make the internal updater endpoint live.
-5. Download the version-A MSI and evidence only, record SHA-256/signing identity/Windows machine profile, install on the Founder-authorized low-storage PC without restoring development caches, and launch SahelFlow.
-6. Record first-launch/runtime/shop/data observations. Then create a deliberately small compatible version B and prove installed A→B update, restart, preservation and failure recovery.
-7. Only after the installed A→B drill passes may normal local testing rely on in-app updates. Manual MSI replacement remains the recovery fallback.
+1. Complete final review and merge PR #125 into protected `main`.
+2. Manually dispatch **Build Signed Internal Windows Update** from the exact new merged `main` SHA to produce signed `1.0.0-internal.2` as a draft and retained workflow artifact.
+3. Verify `.2` source/signature/hash/evidence, install it over `.1` without deleting AppData, and prove first launch plus close/reopen while preserving registry, shop database and migration records.
+4. Keep both `.1` and `.2` releases unpublished during that installed baseline test.
+5. After installed `.2` passes, create a deliberately small compatible `1.0.0-internal.3`, publish only the approved `.3` channel metadata/artifacts, and prove installed `.2`→`.3` in-app update, restart, preservation and failure recovery.
+6. Only after the installed updater drill passes may normal local testing rely on in-app updates. Manual MSI replacement remains the recovery fallback.
 
 Do not begin Cloudflare, hosted storefront, remote PWA or provider expansion before the foundation and updater/install gates pass.
 
 ## Open implementation-lab decisions
 
-- Confirm that the existing protected private signing secret matches public key ID `C7183693A0589B55`; if not, rotate coherently before version A rather than publishing an unusable installer.
 - Record updater private-key generation provenance, named custody, offline backup, recovery test, rotation and key-loss procedure outside Git.
-- Record the exact Windows machine profile used for the first version-A installation. The Founder-selected low-storage PC is authorized for the laboratory install, but one-machine observations remain limited to that exact machine/artifact.
-- Define the exact initial MSI/evidence download, SHA-256 verification, installation, test-data, screenshot/log and cleanup procedure before attaching installed evidence claims.
+- Record the exact Windows machine profile used for the installed-candidate evidence. One-machine observations remain limited to that exact machine and artifact.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices.
 - Persisted shop-incarnation identity is still required before backup restore or future inbox/outbox records may treat a deleted-and-recreated slug as the same shop.
 - Which implemented design tokens are retained or changed after the packaged frontend/design-system audit.
