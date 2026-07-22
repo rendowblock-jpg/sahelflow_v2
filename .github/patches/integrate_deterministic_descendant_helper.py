@@ -1,20 +1,19 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
-
 rust_path = root / "src-tauri" / "src" / "child_containment.rs"
 rust = rust_path.read_text(encoding="utf-8")
-rust_start_marker = """        #[test]
+start_marker = """        #[test]
         fn contained_spawn_assigns_before_resume_and_waits_for_an_empty_job() {
 """
-rust_end_marker = """        #[test]
+end_marker = """        #[test]
         fn contained_bun_runs_with_explicit_stdio_handles() {
 """
-rust_start = rust.find(rust_start_marker)
-rust_end = rust.find(rust_end_marker, rust_start)
-if rust_start < 0 or rust_end < 0 or rust_end <= rust_start:
+start = rust.find(start_marker)
+end = rust.find(end_marker, start)
+if start < 0 or end < 0 or end <= start:
     raise SystemExit("failed to locate the legacy containment-tree test boundaries")
-new_test = '''        const DESCENDANT_HELPER_TEST: &str =
+replacement = '''        const DESCENDANT_HELPER_TEST: &str =
             "child_containment::platform::tests::contained_descendant_helper";
 
         fn helper_environment(mode: &str) -> Vec<(OsString, OsString)> {
@@ -81,51 +80,4 @@ new_test = '''        const DESCENDANT_HELPER_TEST: &str =
         }
 
 '''
-rust_path.write_text(rust[:rust_start] + new_test + rust[rust_end:], encoding="utf-8")
-
-ci_path = root / ".github" / "workflows" / "ci.yml"
-ci = ci_path.read_text(encoding="utf-8")
-ci_start_marker = "      - name: Verify bundled Bun through actual contained launcher\n"
-ci_end_marker = "      - name: Verify staged packaged runtime reaches authenticated readiness\n"
-ci_start = ci.find(ci_start_marker)
-ci_end = ci.find(ci_end_marker, ci_start)
-if ci_start < 0 or ci_end < 0 or ci_end <= ci_start:
-    raise SystemExit("failed to locate the Windows contained-launcher CI boundaries")
-new_ci = '''      - name: Verify full Windows Rust runtime suite and contained Bun launcher
-        shell: pwsh
-        env:
-          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\\src-tauri\\resources\\runtime\\bun.exe
-        run: |
-          & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture --test-threads=1 2>&1 |
-            Tee-Object -FilePath .sf-contained-bun.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-          $treeTest = 'child_containment::platform::tests::contained_spawn_assigns_before_resume_and_waits_for_an_empty_job'
-          for ($attempt = 1; $attempt -le 5; $attempt++) {
-            Write-Host "Containment-tree stress attempt $attempt/5"
-            & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked $treeTest -- --exact --nocapture --test-threads=1 2>&1 |
-              Tee-Object -FilePath .sf-contained-tree-stress.log -Append
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-
-      - name: Upload contained launcher diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-contained-launcher-diagnostics-${{ github.run_id }}
-          path: |
-            .sf-contained-bun.log
-            .sf-contained-tree-stress.log
-          if-no-files-found: ignore
-          retention-days: 2
-
-'''
-ci_path.write_text(ci[:ci_start] + new_ci + ci[ci_end:], encoding="utf-8")
-
-release_path = root / ".github" / "workflows" / "release.yml"
-release = release_path.read_text(encoding="utf-8")
-old_release = "& cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture 2>&1 |"
-new_release = "& cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture --test-threads=1 2>&1 |"
-if release.count(old_release) != 1:
-    raise SystemExit("expected exactly one release Rust-suite command")
-release_path.write_text(release.replace(old_release, new_release), encoding="utf-8")
+rust_path.write_text(rust[:start] + replacement + rust[end:], encoding="utf-8")
