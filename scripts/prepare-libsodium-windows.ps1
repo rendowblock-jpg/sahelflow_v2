@@ -9,7 +9,7 @@ $ProgressPreference = "SilentlyContinue"
 
 $crateVersion = "1.24.0"
 $libsodiumVersion = "1.0.22"
-$expectedArchiveSha256 = ""
+$expectedArchiveSha256 = "3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279"
 $pointArchiveName = "libsodium-$libsodiumVersion-msvc.zip"
 $pointSignatureName = "$pointArchiveName.minisig"
 $buildArchiveName = "libsodium-$libsodiumVersion-stable-msvc.zip"
@@ -174,6 +174,3 @@ if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_ENV)) {
 Write-Host "Prepared local signed libsodium distribution for libsodium-sys-stable verification."
 Write-Host "SODIUM_DIST_DIR=$distDir"
 Write-Host "libsodium archive SHA-256: $archiveSha256"
-if ([string]::IsNullOrWhiteSpace($expectedArchiveSha256)) {
-    Write-Warning "The archive digest is in discovery mode and must be pinned before merge."
-}
