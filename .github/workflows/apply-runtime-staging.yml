@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   apply:
@@ -24,12 +25,30 @@ jobs:
       - name: Apply readable fail-closed integration
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           HEAD_BRANCH: agent/windows-runtime-staging
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          set -euo pipefail
-          python .github/runtime-stage/apply-runtime-staging-readable.py
+          set +e
+          python .github/runtime-stage/apply-runtime-staging-readable.py \
+            > runtime-staging-integration-trace.log 2>&1
+          status=$?
+          set -e
+          cat runtime-staging-integration-trace.log
+          if [ "$status" -ne 0 ]; then
+            {
+              echo '### Runtime staging integration traceback'
+              echo
+              echo '```text'
+              cat runtime-staging-integration-trace.log
+              echo '```'
+            } > runtime-staging-integration-comment.md
+            gh pr comment "$PR_NUMBER" --body-file runtime-staging-integration-comment.md
+            exit "$status"
+          fi
           rm -rf .github/runtime-stage
           rm -f .github/workflows/apply-runtime-staging.yml
+          rm -f runtime-staging-integration-trace.log
           git diff --check
           test -f src-tauri/src/packaged_runtime.rs
           grep -q '1.0.0-internal.2' sahelflow.version.json
