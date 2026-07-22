@@ -4,38 +4,16 @@ root = Path(__file__).resolve().parents[2]
 
 rust_path = root / "src-tauri" / "src" / "child_containment.rs"
 rust = rust_path.read_text(encoding="utf-8")
-old_test = '''        #[test]
+rust_start_marker = """        #[test]
         fn contained_spawn_assigns_before_resume_and_waits_for_an_empty_job() {
-            let command = std::env::var_os("ComSpec")
-                .map(std::path::PathBuf::from)
-                .unwrap_or_else(|| std::path::PathBuf::from("cmd.exe"));
-            let child = ContainedChild::spawn(
-                &command,
-                &[
-                    OsString::from("/D"),
-                    OsString::from("/S"),
-                    OsString::from("/C"),
-                    OsString::from("\"%SystemRoot%\\System32\\ping.exe\" -n 30 127.0.0.1 >NUL"),
-                ],
-                &command_environment(),
-            )
-            .expect("spawn process tree in a job");
-
-            let deadline = Instant::now() + Duration::from_secs(15);
-            while child.active_process_count().expect("query job") < 2 {
-                assert!(
-                    Instant::now() < deadline,
-                    "child did not create a descendant"
-                );
-                std::thread::sleep(Duration::from_millis(25));
-            }
-
-            child
-                .terminate_tree_and_wait(Duration::from_secs(5))
-                .expect("terminate complete process tree");
-            assert_eq!(child.active_process_count().expect("query empty job"), 0);
-        }
-'''
+"""
+rust_end_marker = """        #[test]
+        fn contained_bun_runs_with_explicit_stdio_handles() {
+"""
+rust_start = rust.find(rust_start_marker)
+rust_end = rust.find(rust_end_marker, rust_start)
+if rust_start < 0 or rust_end < 0 or rust_end <= rust_start:
+    raise SystemExit("failed to locate the legacy containment-tree test boundaries")
 new_test = '''        const DESCENDANT_HELPER_TEST: &str =
             "child_containment::platform::tests::contained_descendant_helper";
 
@@ -101,31 +79,18 @@ new_test = '''        const DESCENDANT_HELPER_TEST: &str =
                 .expect("terminate complete process tree");
             assert_eq!(child.active_process_count().expect("query empty job"), 0);
         }
+
 '''
-if rust.count(old_test) != 1:
-    raise SystemExit("expected exactly one legacy containment-tree test block")
-rust_path.write_text(rust.replace(old_test, new_test), encoding="utf-8")
+rust_path.write_text(rust[:rust_start] + new_test + rust[rust_end:], encoding="utf-8")
 
 ci_path = root / ".github" / "workflows" / "ci.yml"
 ci = ci_path.read_text(encoding="utf-8")
-old_ci = '''      - name: Verify bundled Bun through actual contained launcher
-        shell: pwsh
-        env:
-          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\\src-tauri\\resources\\runtime\\bun.exe
-        run: |
-          & cargo test --manifest-path src-tauri/Cargo.toml contained_bun_runs_with_explicit_stdio_handles --locked -- --nocapture 2>&1 |
-            Tee-Object -FilePath .sf-contained-bun.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Upload contained Bun launcher diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-contained-bun-diagnostics-${{ github.run_id }}
-          path: .sf-contained-bun.log
-          if-no-files-found: ignore
-          retention-days: 2
-'''
+ci_start_marker = "      - name: Verify bundled Bun through actual contained launcher\n"
+ci_end_marker = "      - name: Verify staged packaged runtime reaches authenticated readiness\n"
+ci_start = ci.find(ci_start_marker)
+ci_end = ci.find(ci_end_marker, ci_start)
+if ci_start < 0 or ci_end < 0 or ci_end <= ci_start:
+    raise SystemExit("failed to locate the Windows contained-launcher CI boundaries")
 new_ci = '''      - name: Verify full Windows Rust runtime suite and contained Bun launcher
         shell: pwsh
         env:
@@ -153,10 +118,9 @@ new_ci = '''      - name: Verify full Windows Rust runtime suite and contained B
             .sf-contained-tree-stress.log
           if-no-files-found: ignore
           retention-days: 2
+
 '''
-if ci.count(old_ci) != 1:
-    raise SystemExit("expected exactly one Windows contained-Bun CI block")
-ci_path.write_text(ci.replace(old_ci, new_ci), encoding="utf-8")
+ci_path.write_text(ci[:ci_start] + new_ci + ci[ci_end:], encoding="utf-8")
 
 release_path = root / ".github" / "workflows" / "release.yml"
 release = release_path.read_text(encoding="utf-8")
