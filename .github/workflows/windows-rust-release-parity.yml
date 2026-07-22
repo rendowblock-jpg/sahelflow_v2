@@ -69,15 +69,6 @@ jobs:
       - name: Verify canonical Rust formatting
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 
-      - name: Verify full release-equivalent Windows Rust suite
-        shell: pwsh
-        env:
-          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
-        run: |
-          & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture --test-threads=1 2>&1 |
-            Tee-Object -FilePath .sf-windows-rust-release-parity.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
       - name: Stress deterministic contained descendant tree
         shell: pwsh
         run: |
@@ -85,9 +76,18 @@ jobs:
           for ($attempt = 1; $attempt -le 5; $attempt++) {
             Write-Host "Containment-tree stress attempt $attempt/5"
             & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked $treeTest -- --exact --nocapture --test-threads=1 2>&1 |
-              Tee-Object -FilePath .sf-contained-tree-stress.log -Append
+              Tee-Object -FilePath sf-contained-tree-stress.log -Append
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+
+      - name: Verify full release-equivalent Windows Rust suite
+        shell: pwsh
+        env:
+          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
+        run: |
+          & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture --test-threads=1 2>&1 |
+            Tee-Object -FilePath sf-windows-rust-release-parity.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify Windows Rust lint authority
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
@@ -101,7 +101,7 @@ jobs:
         with:
           name: windows-rust-release-parity-diagnostics-${{ github.run_id }}
           path: |
-            .sf-windows-rust-release-parity.log
-            .sf-contained-tree-stress.log
-          if-no-files-found: ignore
+            sf-windows-rust-release-parity.log
+            sf-contained-tree-stress.log
+          if-no-files-found: error
           retention-days: 2
