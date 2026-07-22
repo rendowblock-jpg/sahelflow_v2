@@ -43,6 +43,7 @@ The original wave evidence remains listed for provenance. PR #104 integrated the
 - The signed `.3` workflow from that exact source passed product authority, TypeScript, lint, tests, migrations, coverage and dependency audit, then stopped before signing or MSI creation because `libsodium-sys-stable v1.24.0` attempted a hidden network download and received `ConnectionRefused`. No `.3` artifact or draft release was produced.
 - PR #131 made Windows libsodium preparation hermetic. Before every Windows Cargo invocation, the pipeline downloads immutable libsodium `1.0.22` MSVC bytes over HTTPS, pins SHA-256 `3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279`, preserves the crate-bundled source/signature and official minisign public-key verification path, requires the exact x64 v143 debug/release static libraries, exposes the local distribution through `SODIUM_DIST_DIR` and retains a provenance manifest with the signed candidate.
 - PR #131 final head `6fbc3942db5a07a10dd0e2c129f015004337ad6a` passed an isolated Windows Cargo proof with no dependency build-script network fallback, normal CI and Windows release parity; it merged to protected `main` at `274cdb71406ff05cc98b732bf0fafc6547101a40`.
+- PR #132 is a documentation-only continuity checkpoint merged at `e4169a12745dfa1e6daf28ba1dbb579f99e876cd`. It changed the `main` tip at that checkpoint but did not supersede approved executable source `274cdb71406ff05cc98b732bf0fafc6547101a40` for the `.3` artifact.
 - No signed `.3` artifact exists at this checkpoint. Installed `.2` remains closed; do not uninstall it or delete either AppData directory.
 - Seller data remains in canonical roaming AppData. LocalAppData contains only verified immutable application-server cache content derived from the installed package.
 
@@ -91,12 +92,12 @@ The Founder hands-on install/update path must remain lightweight:
 
 ### Phase: 0B — CI startup and shared-command repair
 
-- Status: complete for protected `main` `274cdb71406ff05cc98b732bf0fafc6547101a40`.
+- Status: complete for approved executable source `274cdb71406ff05cc98b732bf0fafc6547101a40`; later documentation-only continuity commits do not replace that artifact source.
 - Evidence: full quality, coverage, audit, migrations, Rust format/release, deterministic containment tree, actual contained Bun HTTP, staged authenticated readiness and hermetic libsodium preparation are green before signed release dispatch.
 
 ### Phase: 0C — Signed updater pipeline and installed Windows baseline
 
-- Status: `.1` and `.2` installed evidence complete; both blocked safely for distinct fixed causes. `.3` source is ready on protected `main`, but no `.3` artifact exists yet.
+- Status: `.1` and `.2` installed evidence complete; both blocked safely for distinct fixed causes. `.3` executable source is ready and reachable from protected `main`, but no `.3` artifact exists yet.
 - Exact next GitHub Actions work: manually dispatch **Build Signed Internal Windows Update** from branch `main` with `source_ref` `274cdb71406ff05cc98b732bf0fafc6547101a40` and the release notes recorded in Working Memory.
 - Exact next artifact work: after a green run, verify `.3` source/version/signing identity, MSI and signature hashes, standalone manifest, libsodium provenance and `latest.json` source-tag binding.
 - Exact next Windows work: install `.3` over `.2` without deleting AppData; prove first launch, close/reopen, active shop/database/migration preservation and verified LocalAppData cache creation/reuse.
@@ -151,6 +152,7 @@ The Founder hands-on install/update path must remain lightweight:
 - Immutable `.3` version authority: PR #129 at `e3ae19334bb8066039340820a3b90e745f8bee9f`.
 - Deterministic containment, Windows release parity and collision-safe snapshots: PR #130 at `a79d4fc22a4b3d5e4b27604dac8e6be5d0aff957`.
 - Hermetic digest-pinned Windows libsodium preparation: PR #131 at `274cdb71406ff05cc98b732bf0fafc6547101a40`.
+- Documentation-only resume checkpoint: PR #132 at `e4169a12745dfa1e6daf28ba1dbb579f99e876cd`.
 - Signed installed `.1`: source `f977242924e98b4be0f147988b41504f0dbeba1b`; MSI SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f`; startup blocked before workspace.
 - Signed installed `.2`: source `341711e5a3e6f2301197f1cf8c5fcc7da56e8ec4`; exact final cache HTTP 200 manually; GUI contained launch blocked before PR #127.
 - PR #131 exact final head `6fbc3942db5a07a10dd0e2c129f015004337ad6a`: isolated local-libsodium Cargo probe green; normal CI run `29950419410` green; Windows Rust release-parity run `29950419462` green.
@@ -158,7 +160,7 @@ The Founder hands-on install/update path must remain lightweight:
 
 ## Current checkpoint
 
-- What is now true: the signed internal pipeline source includes verified staging, valid contained Bun stdio, deterministic Job Object tree validation, collision-safe snapshots and digest-pinned local libsodium preparation. Exact protected `main` is `274cdb71406ff05cc98b732bf0fafc6547101a40`. No `.3` artifact has been produced yet.
+- What is now true: the signed internal pipeline source includes verified staging, valid contained Bun stdio, deterministic Job Object tree validation, collision-safe snapshots and digest-pinned local libsodium preparation. Approved executable source for the `.3` artifact is `274cdb71406ff05cc98b732bf0fafc6547101a40`. PR #132 later moved `main` to `e4169a12745dfa1e6daf28ba1dbb579f99e876cd` with documentation only; later documentation-only merges likewise do not supersede the approved artifact source. No `.3` artifact has been produced yet.
 - What changed in the plan: release-only native dependency downloads are prohibited; Windows native build inputs are prepared and verified before Cargo, and the same boundary is enforced by normal CI, Windows release parity and signed release.
 - Current uncertainty: whether the next signed `.3` workflow completes artifact/signature/evidence production; installed `.3` launch/relaunch; `.3`→`.4` updater preservation/failure recovery; representative seller data and reference-device behavior.
 - Exact next move: manually dispatch **Build Signed Internal Windows Update** from exact source `274cdb71406ff05cc98b732bf0fafc6547101a40`; verify the retained signed `.3` candidate; install it over `.2` without deleting AppData; prove launch/relaunch and preservation; then build/publish a deliberately small signed `.4` for the installed updater drill.
