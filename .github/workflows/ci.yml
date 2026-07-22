@@ -221,7 +221,7 @@ jobs:
   # drift in the code that actually ships. The desktop startup supervisor is
   # guarded by cfg(not(debug_assertions)), so a debug cargo check is insufficient.
   tauri-build-smoke:
-    name: Tauri Rust smoke (cargo check --release)
+    name: Tauri Rust smoke (fmt + cargo check --release)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -230,6 +230,11 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Verify canonical Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 
       - name: Install Linux dependencies (Tauri native deps)
         run: |
