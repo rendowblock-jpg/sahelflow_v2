@@ -14,6 +14,7 @@ export const runtime = "nodejs";
 
 const INSTANCE_HEADER = "x-sahelflow-runtime-instance";
 const READINESS_DIAGNOSTIC_FILE = "runtime-readiness-diagnostic.json";
+let recordedFailureKey: string | null = null;
 
 type DatabaseAuthState =
   | { mode: typeof AUTH_MODE_SETUP }
@@ -44,6 +45,9 @@ async function recordReadinessFailure(payload: BlockedPayload): Promise<void> {
   const path = readinessDiagnosticPath();
   if (!path) return;
 
+  const failureKey = `${process.pid}:${payload.code}`;
+  if (recordedFailureKey === failureKey) return;
+
   const tempPath = `${path}.tmp`;
   const dataDir = process.env.SF_DATA_DIR as string;
   const diagnostic = {
@@ -61,6 +65,7 @@ async function recordReadinessFailure(payload: BlockedPayload): Promise<void> {
     await writeFile(tempPath, `${JSON.stringify(diagnostic, null, 2)}\n`, "utf8");
     await rm(path, { force: true });
     await rename(tempPath, path);
+    recordedFailureKey = failureKey;
   } catch {
     // Diagnostic persistence must never change the readiness decision.
     await rm(tempPath, { force: true }).catch(() => undefined);
@@ -69,6 +74,7 @@ async function recordReadinessFailure(payload: BlockedPayload): Promise<void> {
 
 async function clearReadinessFailure(): Promise<void> {
   const path = readinessDiagnosticPath();
+  recordedFailureKey = null;
   if (!path) return;
   await rm(path, { force: true }).catch(() => undefined);
 }
