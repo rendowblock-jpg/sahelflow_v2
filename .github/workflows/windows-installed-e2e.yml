@@ -1,16 +1,25 @@
 name: Windows installed MSI end-to-end
 
 on:
-  push:
-    branches:
-      - agent/windows-installed-runtime-e2e
+  pull_request:
+    paths:
+      - ".github/workflows/windows-installed-e2e.yml"
+      - "scripts/verify-installed-windows-msi.ps1"
+      - "scripts/prepare-runtime.ts"
+      - "scripts/prepare-libsodium-windows.ps1"
+      - "src-tauri/**"
+      - "src/app/api/internal/runtime-ready/**"
+      - "src/lib/db.ts"
+      - "prisma/**"
+      - "package.json"
+      - "bun.lock"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-installed-e2e-${{ github.ref }}
+  group: windows-installed-e2e-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
