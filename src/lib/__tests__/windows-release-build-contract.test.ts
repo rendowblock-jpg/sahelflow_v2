@@ -113,8 +113,17 @@ describe("Windows signed release build contract", () => {
     expect(staging).toContain('const MANIFEST_FILE: &str = "sahelflow-standalone-manifest.json"');
     expect(staging).toContain("cached standalone runtime failed verification");
     expect(containment).toContain("current_directory: Option<&Path>");
+    expect(containment).toContain("STARTF_USESTDHANDLES");
+    expect(containment).toContain("PROC_THREAD_ATTRIBUTE_HANDLE_LIST");
+    expect(containment).toContain("AssignProcessToJobObject");
+    expect(containment).toContain("contained_bun_runs_with_explicit_stdio_handles");
+    expect(containment).not.toContain("PROC_THREAD_ATTRIBUTE_JOB_LIST");
     expect(ci).toContain("verify-windows-packaged-runtime.ts");
+    expect(ci).toContain("Verify bundled Bun through actual contained launcher");
+    expect(ci).toContain("SF_CONTAINED_BUN_PATH");
     expect(release).toContain("verify-windows-packaged-runtime.ts");
+    expect(release).toContain("Verify Rust runtime and actual contained Bun launcher");
+    expect(release).toContain("SF_CONTAINED_BUN_PATH");
     expect(release).toContain("sahelflow-standalone-manifest.json");
     expect(evidence).toContain("verifyStandaloneManifest");
   });
