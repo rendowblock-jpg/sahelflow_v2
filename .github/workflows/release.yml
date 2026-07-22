@@ -135,6 +135,10 @@ jobs:
       - name: Build bundled WhatsApp sidecar
         run: bun run build:sidecar
 
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
       - name: Prepare disposable test sandbox
         shell: pwsh
         run: bun run test:sandbox -- "$env:SF_TEST_ROOT"
@@ -302,6 +306,7 @@ jobs:
             .sf-evidence/candidate-manifest.json
             src-tauri/resources/runtime/runtime-manifest.json
             src-tauri/resources/standalone/sahelflow-standalone-manifest.json
+            .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
             ${{ env.SF_LATEST_JSON_PATH }}
           if-no-files-found: error
           retention-days: 30
