@@ -54,4 +54,5 @@ jobs:
           name: runtime-staging-integration-trace-${{ github.run_id }}
           path: .github/runtime-stage/apply-readable.log
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 2
