@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
+      - "scripts/apply-pr136-close-format-repair.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
@@ -47,6 +48,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
+
+      - name: Apply close and formatting repair under test
+        shell: pwsh
+        run: ./scripts/apply-pr136-close-format-repair.ps1
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
