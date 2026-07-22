@@ -49,6 +49,7 @@ playwright/.cache/
 .sf-windows-runtime-smoke.log
 .sf-inventory/
 .sf-evidence/
+.sf-build/
 
 # OS
 .DS_Store
