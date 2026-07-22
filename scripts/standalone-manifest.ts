@@ -80,10 +80,7 @@ export function standaloneTreeSha256(
   return hash.digest("hex");
 }
 
-export function writeStandaloneManifest(
-  root: string,
-  appVersion: string,
-): StandaloneManifest {
+function currentManifest(root: string, appVersion: string): StandaloneManifest {
   if (!/^\d+\.\d+\.\d+-internal\.\d+$/.test(appVersion)) {
     throw new Error(`Standalone manifest app version is invalid: ${appVersion}`);
   }
@@ -93,16 +90,56 @@ export function writeStandaloneManifest(
   if (!files.some((file) => file.path === "server.js")) {
     throw new Error("Standalone resources do not contain server.js");
   }
-  const manifest: StandaloneManifest = Object.freeze({
+  return Object.freeze({
     formatVersion: 1,
     appVersion,
     treeSha256: standaloneTreeSha256(files),
     fileCount: files.length,
   });
+}
+
+export function writeStandaloneManifest(
+  root: string,
+  appVersion: string,
+): StandaloneManifest {
+  const manifest = currentManifest(root, appVersion);
   writeFileSync(
     resolve(root, STANDALONE_MANIFEST_FILE),
     `${JSON.stringify(manifest, null, 2)}\n`,
     "utf8",
   );
   return manifest;
+}
+
+export function verifyStandaloneManifest(
+  root: string,
+  expectedAppVersion: string,
+): StandaloneManifest {
+  const path = resolve(root, STANDALONE_MANIFEST_FILE);
+  const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<StandaloneManifest>;
+  if (
+    parsed.formatVersion !== 1 ||
+    parsed.appVersion !== expectedAppVersion ||
+    typeof parsed.treeSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/.test(parsed.treeSha256) ||
+    !Number.isSafeInteger(parsed.fileCount) ||
+    (parsed.fileCount ?? 0) < 1
+  ) {
+    throw new Error("Standalone manifest is invalid or version-mismatched");
+  }
+  const observed = currentManifest(root, expectedAppVersion);
+  if (
+    observed.fileCount !== parsed.fileCount ||
+    observed.treeSha256 !== parsed.treeSha256
+  ) {
+    throw new Error(
+      `Standalone tree mismatch: expected ${parsed.fileCount} files/${parsed.treeSha256}, observed ${observed.fileCount} files/${observed.treeSha256}`,
+    );
+  }
+  return Object.freeze({
+    formatVersion: 1,
+    appVersion: expectedAppVersion,
+    treeSha256: parsed.treeSha256,
+    fileCount: parsed.fileCount,
+  });
 }
