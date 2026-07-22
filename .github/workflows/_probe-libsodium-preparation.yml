@@ -1,0 +1,39 @@
+name: Probe Windows libsodium preparation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/prepare-libsodium-windows.ps1
+      - .github/workflows/_probe-libsodium-preparation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
+      - name: Prove libsodium crate builds without network fallback
+        shell: pwsh
+        run: cargo check --manifest-path src-tauri/Cargo.toml --lib --locked
+
+      - name: Upload discovery provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsodium-preparation-${{ github.run_id }}
+          path: .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+          if-no-files-found: error
+          retention-days: 2
