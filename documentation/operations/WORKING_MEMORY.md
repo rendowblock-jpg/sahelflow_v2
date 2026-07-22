@@ -39,7 +39,7 @@ The documentation reset, experience recovery, semantic consistency audit and MAW
 - PR #130 — deterministic Rust descendant containment, collision-safe migration snapshots and permanent Windows Rust release parity: `a79d4fc22a4b3d5e4b27604dac8e6be5d0aff957`.
 - PR #131 — digest-pinned hermetic Windows libsodium preparation enforced across CI, release parity and signed release: `274cdb71406ff05cc98b732bf0fafc6547101a40`.
 
-No application behavior or executable product source changed in the documentation waves above.
+PRs #95–#98, #112 and #113 are documentation/continuity changes. PRs #115–#131 include executable, version, workflow or release-source changes and define the current implementation baseline.
 
 ### Canonical read order
 
