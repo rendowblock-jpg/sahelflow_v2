@@ -1,0 +1,59 @@
+name: Prepare Rustfmt CI Gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.head_ref == 'agent/rustfmt-release-gate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout formatting branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/rustfmt-release-gate
+          fetch-depth: 1
+
+      - name: Generate permanent CI workflow candidate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('.github/workflows/ci.yml')
+          text = source.read_text(encoding='utf-8')
+          old = '''      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies (Tauri native deps)
+'''
+          new = '''      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Verify canonical Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: Install Linux dependencies (Tauri native deps)
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one Tauri Rust setup block, found {text.count(old)}')
+          Path('ci.next.yml').write_text(text.replace(old, new), encoding='utf-8')
+          PY
+
+      - name: Commit generated CI candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'SahelFlow CI Gate'
+          git config user.email 'ci-gate@users.noreply.github.com'
+          git add ci.next.yml
+          git commit -m 'ci: prepare permanent rustfmt gate'
+          git push origin HEAD:agent/rustfmt-release-gate
