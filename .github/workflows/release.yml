@@ -217,7 +217,7 @@ jobs:
         with:
           name: signed-windows-packaged-runtime-diagnostics-${{ github.run_id }}
           path: .sf-windows-runtime-smoke.log
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 2
 
       - name: Verify local MSI and updater signature
