@@ -593,28 +593,61 @@ mod platform {
                 .collect()
         }
 
+        const DESCENDANT_HELPER_TEST: &str =
+            "child_containment::platform::tests::contained_descendant_helper";
+
+        fn helper_environment(mode: &str) -> Vec<(OsString, OsString)> {
+            let mut environment = command_environment();
+            environment.push((
+                OsString::from("SF_CONTAINMENT_HELPER_MODE"),
+                OsString::from(mode),
+            ));
+            environment
+        }
+
+        #[test]
+        fn contained_descendant_helper() {
+            let Some(mode) = std::env::var_os("SF_CONTAINMENT_HELPER_MODE") else {
+                return;
+            };
+
+            match mode.to_string_lossy().as_ref() {
+                "child" => {
+                    let current =
+                        std::env::current_exe().expect("resolve containment helper executable");
+                    let mut grandchild = std::process::Command::new(current)
+                        .args(["--exact", DESCENDANT_HELPER_TEST, "--nocapture"])
+                        .env("SF_CONTAINMENT_HELPER_MODE", "grandchild")
+                        .spawn()
+                        .expect("spawn containment grandchild");
+                    std::thread::sleep(Duration::from_secs(60));
+                    let _ = grandchild.kill();
+                    let _ = grandchild.wait();
+                }
+                "grandchild" => std::thread::sleep(Duration::from_secs(60)),
+                other => panic!("unexpected containment helper mode: {other}"),
+            }
+        }
+
         #[test]
         fn contained_spawn_assigns_before_resume_and_waits_for_an_empty_job() {
-            let command = std::env::var_os("ComSpec")
-                .map(std::path::PathBuf::from)
-                .unwrap_or_else(|| std::path::PathBuf::from("cmd.exe"));
+            let executable = std::env::current_exe().expect("resolve current Rust test executable");
             let child = ContainedChild::spawn(
-                &command,
+                &executable,
                 &[
-                    OsString::from("/D"),
-                    OsString::from("/S"),
-                    OsString::from("/C"),
-                    OsString::from("\"%SystemRoot%\\System32\\ping.exe\" -n 30 127.0.0.1 >NUL"),
+                    OsString::from("--exact"),
+                    OsString::from(DESCENDANT_HELPER_TEST),
+                    OsString::from("--nocapture"),
                 ],
-                &command_environment(),
+                &helper_environment("child"),
             )
-            .expect("spawn process tree in a job");
+            .expect("spawn deterministic process tree in a job");
 
-            let deadline = Instant::now() + Duration::from_secs(15);
+            let deadline = Instant::now() + Duration::from_secs(20);
             while child.active_process_count().expect("query job") < 2 {
                 assert!(
                     Instant::now() < deadline,
-                    "child did not create a descendant"
+                    "deterministic helper did not create a contained grandchild"
                 );
                 std::thread::sleep(Duration::from_millis(25));
             }
