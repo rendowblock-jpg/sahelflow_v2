@@ -153,8 +153,11 @@ describe("Windows signed release build contract", () => {
     const parity = read(".github/workflows/windows-rust-release-parity.yml");
     const release = read(".github/workflows/release.yml");
 
-    expect(prepare).toContain("libsodium-1.0.22-msvc.zip");
-    expect(prepare).toContain("1.0.22-RELEASE");
+    expect(prepare).toContain('$libsodiumVersion = "1.0.22"');
+    expect(prepare).toContain(
+      '$pointArchiveName = "libsodium-$libsodiumVersion-msvc.zip"',
+    );
+    expect(prepare).toContain('$releaseTag = "$libsodiumVersion-RELEASE"');
     expect(prepare).toContain(
       "3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279",
     );
