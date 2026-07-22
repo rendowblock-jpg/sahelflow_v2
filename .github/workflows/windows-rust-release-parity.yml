@@ -1,0 +1,114 @@
+name: Windows Rust release parity
+
+on:
+  pull_request:
+    paths:
+      - "src-tauri/**"
+      - "sidecars/whatsapp/**"
+      - "prisma/**"
+      - "scripts/build-sidecar.ts"
+      - "scripts/prepare-runtime.ts"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/windows-rust-release-parity.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src-tauri/**"
+      - "sidecars/whatsapp/**"
+      - "prisma/**"
+      - "scripts/build-sidecar.ts"
+      - "scripts/prepare-runtime.ts"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/windows-rust-release-parity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-rust-release-parity:
+    name: Windows Rust release parity
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Windows Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-release-parity-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-release-parity-
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare pinned Windows runtime
+        run: bun run scripts/prepare-runtime.ts
+
+      - name: Build bundled WhatsApp sidecar
+        run: bun run build:sidecar
+
+      - name: Verify canonical Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: Stress deterministic contained descendant tree
+        shell: pwsh
+        run: |
+          $treeTest = 'child_containment::platform::tests::contained_spawn_assigns_before_resume_and_waits_for_an_empty_job'
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Host "Containment-tree stress attempt $attempt/5"
+            & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked $treeTest -- --exact --nocapture --test-threads=1 2>&1 |
+              Tee-Object -FilePath sf-contained-tree-stress.log -Append
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Verify full release-equivalent Windows Rust suite
+        shell: pwsh
+        env:
+          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
+        run: |
+          & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture --test-threads=1 2>&1 |
+            Tee-Object -FilePath sf-windows-rust-release-parity.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Windows Rust lint authority
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+
+      - name: Verify Windows Rust release compilation
+        run: cargo check --manifest-path src-tauri/Cargo.toml --release --locked
+
+      - name: Upload Windows Rust release-parity diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-rust-release-parity-diagnostics-${{ github.run_id }}
+          path: |
+            sf-windows-rust-release-parity.log
+            sf-contained-tree-stress.log
+          if-no-files-found: error
+          retention-days: 2

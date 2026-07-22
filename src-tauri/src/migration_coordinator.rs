@@ -224,6 +224,10 @@ where
     validate_registry(app_data_dir, &registry)?;
 
     let timestamp = unix_seconds();
+    // Seconds remain the seller/support-facing journal time, while a per-run
+    // random identity prevents retained snapshot collisions when two upgrades
+    // begin within the same second.
+    let snapshot_run_id = random_hex(8);
     let mut pending = Vec::new();
     let mut compatibility_shops = Vec::new();
     let mut compatibility_failure = None;
@@ -343,8 +347,10 @@ where
     let mut snapshots = Vec::new();
     for (index, (shop, database_path)) in pending.iter().enumerate() {
         preflight_database(database_path)?;
-        let snapshot_path =
-            snapshot_dir.join(format!("{}-{}-pre-migration.db", timestamp, shop.id));
+        let snapshot_path = snapshot_dir.join(format!(
+            "{}-{}-{}-pre-migration.db",
+            timestamp, snapshot_run_id, shop.id
+        ));
         let digest = create_verified_snapshot(database_path, &snapshot_path)?;
         let snapshot_file = snapshot_path
             .file_name()
