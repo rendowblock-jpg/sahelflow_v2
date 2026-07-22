@@ -30,13 +30,15 @@ jobs:
           python .github/runtime-stage/apply-runtime-staging-readable.py \
             > .github/runtime-stage/apply-readable.log 2>&1
           status=$?
+          cp .github/runtime-stage/apply-readable.log runtime-staging-integration-trace.log
           set -e
-          cat .github/runtime-stage/apply-readable.log
+          cat runtime-staging-integration-trace.log
           if [ "$status" -ne 0 ]; then
             exit "$status"
           fi
           rm -rf .github/runtime-stage
           rm -f .github/workflows/apply-runtime-staging.yml
+          rm -f runtime-staging-integration-trace.log
           git diff --check
           test -f src-tauri/src/packaged_runtime.rs
           grep -q '1.0.0-internal.2' sahelflow.version.json
@@ -52,7 +54,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: runtime-staging-integration-trace-${{ github.run_id }}
-          path: .github/runtime-stage/apply-readable.log
+          path: runtime-staging-integration-trace.log
           if-no-files-found: error
-          include-hidden-files: true
           retention-days: 2
