@@ -27,6 +27,7 @@ const GREEN = "\x1b[0;32m";
 const YELLOW = "\x1b[0;33m";
 const NC = "\x1b[0m";
 const PINNED_BUN_VERSION = "1.3.14";
+const RUNTIME_BOOTSTRAP_MARKER = "// SahelFlow desktop runtime bootstrap";
 const APP_VERSION = (
   JSON.parse(readFileSync(resolve(ROOT, "package.json"), "utf8")) as {
     version?: unknown;
@@ -104,6 +105,23 @@ if (existsSync(publicDir)) {
   cpSync(publicDir, standalonePublicDir, { recursive: true });
   ok("Copied public → standalone");
 }
+
+// The installed desktop intentionally gives the mandatory server a tiny,
+// deterministic environment with no user-profile variables. Next telemetry
+// otherwise tries to discover profile state that is irrelevant to this local
+// application server and differs from the direct packaged-runtime smoke. Make
+// the standalone artifact self-contained instead of weakening the launcher
+// environment boundary.
+const standaloneServer = resolve(standaloneDir, "server.js");
+if (!existsSync(standaloneServer)) {
+  throw new Error(`Standalone server entry is missing: ${standaloneServer}`);
+}
+const serverSource = readFileSync(standaloneServer, "utf8");
+if (!serverSource.startsWith(RUNTIME_BOOTSTRAP_MARKER)) {
+  const bootstrap = `${RUNTIME_BOOTSTRAP_MARKER}\nprocess.env.NEXT_TELEMETRY_DISABLED ??= "1";\n`;
+  writeFileSync(standaloneServer, `${bootstrap}${serverSource}`, "utf8");
+}
+ok("Hardened standalone runtime bootstrap");
 
 const standaloneManifest = writeStandaloneManifest(standaloneDir, APP_VERSION);
 ok(
