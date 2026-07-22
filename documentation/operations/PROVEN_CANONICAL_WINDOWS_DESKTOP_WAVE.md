@@ -38,8 +38,12 @@ The original wave evidence remains listed for provenance. PR #104 integrated the
 - Installed `.2` created and verified cache `1.0.0-internal.2-4ed75a71e6d72c06` with 3,981 files, but startup still blocked because the custom Windows GUI process launcher did not supply valid standard handles to Bun.
 - The exact final `.2` cache launched manually with the installed Bun, Prisma engine, shop database, registry revision, migration digest and runtime authentication returned HTTP 200 with all app/database/migration/registry/shop/auth checks ready. This proves the package data, staged tree and runtime itself are healthy.
 - PR #127 supplied explicit restricted `NUL` stdin/stdout/stderr handles while retaining suspended process creation, pre-resume Job Object assignment and kill-on-close tree containment. Windows CI proved HTTP through the actual Rust `ContainedChild` path and complete staged authenticated readiness. PR #128 added release-equivalent Rust formatting to normal CI.
-- The signed workflow from `abf2603fa9291615300ffe679e32c7861ff4375c` stopped before build/signing only because an older synthetic `start /B` test did not expose a descendant within five seconds. The real contained-Bun HTTP test passed in that run.
-- PR #129 advances the immutable candidate to `1.0.0-internal.3` / MSI `1.0.0.3` and replaces `start /B` with a direct long-running system `ping.exe` descendant plus a 15-second observation deadline. Updater trust, signing key, runtime protocol, data paths and migration formats do not change.
+- PR #129 established immutable candidate `1.0.0-internal.3` / MSI `1.0.0.3` rather than rebuilding `.2` under the same version.
+- PR #130 replaced the remaining shell-dependent descendant observation with a deterministic Rust helper child/grandchild, added a permanent Windows Rust release-parity workflow, required five consecutive process-tree passes and fixed a real migration-snapshot collision by adding a secure per-run identity to filenames. It merged to `main` at `a79d4fc22a4b3d5e4b27604dac8e6be5d0aff957`.
+- The signed `.3` workflow from that exact source passed product authority, TypeScript, lint, tests, migrations, coverage and dependency audit, then stopped before signing or MSI creation because `libsodium-sys-stable v1.24.0` attempted a hidden network download and received `ConnectionRefused`. No `.3` artifact or draft release was produced.
+- PR #131 made Windows libsodium preparation hermetic. Before every Windows Cargo invocation, the pipeline downloads immutable libsodium `1.0.22` MSVC bytes over HTTPS, pins SHA-256 `3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279`, preserves the crate-bundled source/signature and official minisign public-key verification path, requires the exact x64 v143 debug/release static libraries, exposes the local distribution through `SODIUM_DIST_DIR` and retains a provenance manifest with the signed candidate.
+- PR #131 final head `6fbc3942db5a07a10dd0e2c129f015004337ad6a` passed an isolated Windows Cargo proof with no dependency build-script network fallback, normal CI and Windows release parity; it merged to protected `main` at `274cdb71406ff05cc98b732bf0fafc6547101a40`.
+- No signed `.3` artifact exists at this checkpoint. Installed `.2` remains closed; do not uninstall it or delete either AppData directory.
 - Seller data remains in canonical roaming AppData. LocalAppData contains only verified immutable application-server cache content derived from the installed package.
 
 ## Target experience or system
@@ -75,6 +79,7 @@ The Founder hands-on install/update path must remain lightweight:
 - Writable staging must not become an unsigned injection path. Both packaged and cached trees are verified and altered bytes fail closed.
 - Seller databases, registry, migration journal/snapshots and key material must never enter the runtime cache.
 - A real bundled-Bun HTTP probe through the production Rust launcher is more representative than a shell timing test. Synthetic process-tree tests must be deterministic and cannot substitute for the real launcher gate.
+- Build dependencies that download artifacts during Cargo compilation create release-only failure and provenance gaps. Windows native dependencies must be prepared and verified before compilation, with immutable digest/signature evidence and the same path in PR CI and release.
 - The low-storage constraint changes execution method, not evidence quality: local testing consumes signed prebuilt candidates and updates instead of rebuilding locally.
 - Normal product work should use two lanes after updater proof: PR CI for rapid implementation, and one immutable signed internal version for each Founder-approved feature slice tested in the installed app.
 
@@ -86,14 +91,15 @@ The Founder hands-on install/update path must remain lightweight:
 
 ### Phase: 0B — CI startup and shared-command repair
 
-- Status: complete for the `.3` source checkpoint when PR #129 is green and merged.
-- Evidence required: full quality, coverage, audit, migrations, Rust format/release, deterministic containment tree, actual contained Bun HTTP and staged authenticated readiness.
+- Status: complete for protected `main` `274cdb71406ff05cc98b732bf0fafc6547101a40`.
+- Evidence: full quality, coverage, audit, migrations, Rust format/release, deterministic containment tree, actual contained Bun HTTP, staged authenticated readiness and hermetic libsodium preparation are green before signed release dispatch.
 
 ### Phase: 0C — Signed updater pipeline and installed Windows baseline
 
-- Status: `.1` and `.2` installed evidence complete; both blocked safely for distinct fixed causes. `.3` is the immutable repaired baseline candidate in PR #129.
-- Next GitHub Actions work: after merge, produce signed `.3` from the exact protected-main commit as draft plus retained evidence.
-- Next Windows work: verify and install `.3` over `.2` without deleting AppData; prove first launch, close/reopen, active shop/database/migration preservation and verified LocalAppData cache creation/reuse.
+- Status: `.1` and `.2` installed evidence complete; both blocked safely for distinct fixed causes. `.3` source is ready on protected `main`, but no `.3` artifact exists yet.
+- Exact next GitHub Actions work: manually dispatch **Build Signed Internal Windows Update** from branch `main` with `source_ref` `274cdb71406ff05cc98b732bf0fafc6547101a40` and the release notes recorded in Working Memory.
+- Exact next artifact work: after a green run, verify `.3` source/version/signing identity, MSI and signature hashes, standalone manifest, libsodium provenance and `latest.json` source-tag binding.
+- Exact next Windows work: install `.3` over `.2` without deleting AppData; prove first launch, close/reopen, active shop/database/migration preservation and verified LocalAppData cache creation/reuse.
 - Update drill: after `.3` passes, create one deliberately small `.4`, publish only approved `.4` metadata/assets and prove installed `.3`→`.4` update and restart.
 
 ### Phase: 1A — Supervised authenticated local runtime
@@ -103,7 +109,7 @@ The Founder hands-on install/update path must remain lightweight:
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
-- Status: source write authority and migration-coordinator sub-gates are met; installed `.3` preservation and `.3`→`.4` update evidence remain.
+- Status: source write authority and migration-coordinator sub-gates are met; collision-safe snapshot identity is integrated. Installed `.3` preservation and `.3`→`.4` update evidence remain.
 - Persisted shop-incarnation identity remains required for future restore/inbox/outbox work.
 
 ### Phase: 0D — Reference baseline
@@ -122,11 +128,15 @@ The Founder hands-on install/update path must remain lightweight:
 | Stage a manifest-verified standalone tree in LocalAppData before Bun launch. | Program Files entry loading failed; writable execution must remain bound to packaged bytes. | Installed lab plus PR #125. | 2026-07-22 |
 | Give contained GUI children explicit restricted standard handles. | The exact cached server worked manually with valid stdio while the GUI-launched child exited before readiness. | Installed `.2` evidence and PR #127 Windows gate. | 2026-07-22 |
 | Use `.3` as a new immutable baseline rather than rebuilding `.2`. | Distinct binaries require monotonically increasing versions and unambiguous evidence/update ordering. | Founder best-practice direction; PR #129. | 2026-07-22 |
+| Require deterministic Rust helper descendants and full Windows release parity before signed workflow dispatch. | Release must not discover a broader Rust boundary than normal PR validation. | Failed signed run plus PR #130. | 2026-07-22 |
+| Add a secure per-run identity to migration snapshot filenames. | Consecutive upgrades within one second must not collide with retained snapshots. | Windows release-parity evidence; PR #130. | 2026-07-22 |
+| Prepare and verify libsodium before Cargo instead of allowing a dependency build script to download it. | Hidden build-time network access caused release-only failure and weak provenance. | Failed signed run plus PR #131. | 2026-07-22 |
 | After `.3`→`.4` proof, use PR CI for implementation and signed internal updates only for approved feature slices. | This preserves real installed testing without turning packaging into the development loop. | Founder workflow direction. | 2026-07-22 |
 
 ## Working notes and open questions
 
 - Keep `.1` and `.2` draft/unpublished. Keep `.3` draft until installed launch/restart/preservation passes.
+- Keep installed `.2` closed until `.3` is verified and ready to install. Do not uninstall it or delete Roaming/Local AppData.
 - Record updater private-key generation provenance, named custody, offline backup, recovery test, rotation and key-loss response outside Git.
 - Record the exact Windows machine profile for installed evidence; do not generalize one-machine observations.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices.
@@ -138,14 +148,17 @@ The Founder hands-on install/update path must remain lightweight:
 - Reproducible environment: PR #105 at `1a0469bb5384561d85178316d0cd6e94745b44a0`; MAWS transition: PR #112 at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 - Updater pipeline: PRs #115–#124 through `f977242924e98b4be0f147988b41504f0dbeba1b`.
 - Runtime staging and launcher repair: PRs #125–#128 through `abf2603fa9291615300ffe679e32c7861ff4375c`.
+- Immutable `.3` version authority: PR #129 at `e3ae19334bb8066039340820a3b90e745f8bee9f`.
+- Deterministic containment, Windows release parity and collision-safe snapshots: PR #130 at `a79d4fc22a4b3d5e4b27604dac8e6be5d0aff957`.
+- Hermetic digest-pinned Windows libsodium preparation: PR #131 at `274cdb71406ff05cc98b732bf0fafc6547101a40`.
 - Signed installed `.1`: source `f977242924e98b4be0f147988b41504f0dbeba1b`; MSI SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f`; startup blocked before workspace.
 - Signed installed `.2`: source `341711e5a3e6f2301197f1cf8c5fcc7da56e8ec4`; exact final cache HTTP 200 manually; GUI contained launch blocked before PR #127.
-- PR #129 head at this checkpoint: `30c712abd48c26addb225572d92ad88081300b57`; normal CI run `29895398412` proves version authority, quality, audit, migrations, Rust release, deterministic containment, actual contained Bun HTTP and staged authenticated readiness before merge.
+- PR #131 exact final head `6fbc3942db5a07a10dd0e2c129f015004337ad6a`: isolated local-libsodium Cargo probe green; normal CI run `29950419410` green; Windows Rust release-parity run `29950419462` green.
 - Visual/RTL/accessibility evidence: the blocked recovery page was observed on installed `.1` and `.2`; broader ready/update-state evidence remains.
 
 ## Current checkpoint
 
-- What is now true: the signed internal pipeline works; `.1` and `.2` preserved canonical data and failed closed; the exact `.2` cached runtime is healthy; the actual contained-launcher standard-handle repair is source/CI proven; PR #129 packages that repair under immutable version `.3` and removes the flaky synthetic test dependency.
-- What changed in the plan: `.3` is the manual installed baseline A. `.4` is the deliberately small updater B. Different binaries never reuse `.2` again.
-- Current uncertainty: installed `.3` launch/relaunch, `.3`→`.4` updater preservation/failure recovery, representative seller data and reference-device behavior remain unproven.
-- Exact next move: merge green PR #129; build and verify signed `.3` from its exact protected-main commit; install `.3` over `.2` without deleting AppData; prove launch/relaunch and preservation; then build/publish a deliberately small signed `.4` for the installed updater drill.
+- What is now true: the signed internal pipeline source includes verified staging, valid contained Bun stdio, deterministic Job Object tree validation, collision-safe snapshots and digest-pinned local libsodium preparation. Exact protected `main` is `274cdb71406ff05cc98b732bf0fafc6547101a40`. No `.3` artifact has been produced yet.
+- What changed in the plan: release-only native dependency downloads are prohibited; Windows native build inputs are prepared and verified before Cargo, and the same boundary is enforced by normal CI, Windows release parity and signed release.
+- Current uncertainty: whether the next signed `.3` workflow completes artifact/signature/evidence production; installed `.3` launch/relaunch; `.3`→`.4` updater preservation/failure recovery; representative seller data and reference-device behavior.
+- Exact next move: manually dispatch **Build Signed Internal Windows Update** from exact source `274cdb71406ff05cc98b732bf0fafc6547101a40`; verify the retained signed `.3` candidate; install it over `.2` without deleting AppData; prove launch/relaunch and preservation; then build/publish a deliberately small signed `.4` for the installed updater drill.
