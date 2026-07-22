@@ -1,0 +1,37 @@
+name: Integrate hermetic Windows libsodium build
+
+on:
+  push:
+    branches:
+      - agent/hermetic-libsodium-windows
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/hermetic-libsodium-windows
+          fetch-depth: 0
+
+      - name: Apply reviewed workflow and contract changes
+        run: python .github/patches/integrate-hermetic-libsodium.py
+
+      - name: Remove one-shot integration files
+        run: |
+          rm .github/patches/integrate-hermetic-libsodium.py
+          rm .github/workflows/_integrate-hermetic-libsodium.yml
+
+      - name: Commit integrated repair
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "build(windows): remove libsodium build-script network dependency"
+          git push origin HEAD:agent/hermetic-libsodium-windows
