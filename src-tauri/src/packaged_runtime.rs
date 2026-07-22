@@ -188,10 +188,7 @@ fn verify_tree(
             ErrorKind::InvalidData,
             format!(
                 "standalone tree mismatch: expected {} files/{}, observed {} files/{}",
-                manifest.file_count,
-                manifest.tree_sha256,
-                identity.file_count,
-                identity.sha256
+                manifest.file_count, manifest.tree_sha256, identity.file_count, identity.sha256
             ),
         ));
     }
@@ -412,7 +409,10 @@ mod tests {
         let first = stage_standalone(&source, &local, "1.0.0-internal.2").expect("stage");
         let second = stage_standalone(&source, &local, "1.0.0-internal.2").expect("reuse");
         assert_eq!(first, second);
-        assert_eq!(fs::read_to_string(first).expect("server"), "console.log('server')\n");
+        assert_eq!(
+            fs::read_to_string(first).expect("server"),
+            "console.log('server')\n"
+        );
         fs::remove_dir_all(source.parent().expect("root")).expect("cleanup");
     }
 

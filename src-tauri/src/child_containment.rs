@@ -631,7 +631,8 @@ mod platform {
             use std::net::{TcpListener, TcpStream};
             use std::path::PathBuf;
 
-            let Some(bun_path) = std::env::var_os("SF_CONTAINED_BUN_PATH").map(PathBuf::from) else {
+            let Some(bun_path) = std::env::var_os("SF_CONTAINED_BUN_PATH").map(PathBuf::from)
+            else {
                 return;
             };
             assert!(bun_path.is_file(), "bundled Bun test path is missing");
@@ -665,9 +666,7 @@ Bun.serve({
 
             let mut environment = ["SystemRoot", "WINDIR", "TEMP", "TMP"]
                 .into_iter()
-                .filter_map(|key| {
-                    std::env::var_os(key).map(|value| (OsString::from(key), value))
-                })
+                .filter_map(|key| std::env::var_os(key).map(|value| (OsString::from(key), value)))
                 .collect::<Vec<_>>();
             environment.push((OsString::from("PORT"), OsString::from(port.to_string())));
 
@@ -688,9 +687,13 @@ Bun.serve({
                             .set_read_timeout(Some(Duration::from_secs(2)))
                             .expect("set read timeout");
                         stream
-                            .write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+                            .write_all(
+                                b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+                            )
                             .expect("write readiness request");
-                        stream.read_to_string(&mut response).expect("read readiness response");
+                        stream
+                            .read_to_string(&mut response)
+                            .expect("read readiness response");
                         if response.contains("contained-ready") {
                             break;
                         }
