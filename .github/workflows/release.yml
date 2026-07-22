@@ -154,12 +154,29 @@ jobs:
       - name: Blocking production dependency audit
         run: bun audit --production
 
-      - name: Verify Rust runtime
+      - name: Verify Rust runtime and actual contained Bun launcher
+        shell: pwsh
+        env:
+          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
         run: |
           cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
-          cargo test --manifest-path src-tauri/Cargo.toml --lib --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture 2>&1 |
+            Tee-Object -FilePath .sf-contained-bun-release.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo check --manifest-path src-tauri/Cargo.toml --release --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload contained Bun release diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-contained-bun-diagnostics-${{ github.run_id }}
+          path: .sf-contained-bun-release.log
+          if-no-files-found: ignore
+          retention-days: 2
 
       - name: Resolve exact internal release identity
         shell: pwsh
