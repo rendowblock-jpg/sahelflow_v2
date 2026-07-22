@@ -14,6 +14,28 @@ import { createServer } from "node:net";
 import { basename, isAbsolute, resolve } from "node:path";
 import { STANDALONE_MANIFEST_FILE } from "./standalone-manifest";
 
+type BunSubprocess = Readonly<{
+  stdout: ReadableStream<Uint8Array>;
+  stderr: ReadableStream<Uint8Array>;
+  exited: Promise<number>;
+  exitCode: number | null;
+  kill: () => void;
+}>;
+
+type BunRuntime = Readonly<{
+  spawn: (
+    command: string[],
+    options: Readonly<{
+      cwd: string;
+      env: Record<string, string>;
+      stdout: "pipe";
+      stderr: "pipe";
+    }>,
+  ) => BunSubprocess;
+  sleep: (milliseconds: number) => Promise<void>;
+}>;
+
+const bunRuntime = (globalThis as unknown as { Bun: BunRuntime }).Bun;
 const root = process.cwd();
 const dataDir = process.env.SF_DATA_DIR;
 const databaseUrl = process.env.DATABASE_URL;
@@ -95,7 +117,7 @@ if (!stageParent || !isAbsolute(stageParent)) {
 const stage = mkdtempSync(resolve(stageParent, "sahelflow-packaged-runtime-smoke-"));
 const stagedStandalone = resolve(stage, "standalone");
 const logPath = resolve(root, ".sf-windows-runtime-smoke.log");
-let child: ReturnType<typeof Bun.spawn> | null = null;
+let child: BunSubprocess | null = null;
 let stdoutPromise: Promise<string> | null = null;
 let stderrPromise: Promise<string> | null = null;
 let stdout = "";
@@ -145,7 +167,7 @@ try {
       .map((name) => [name, process.env[name]])
       .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
-  const environment = {
+  const environment: Record<string, string> = {
     ...parentEnvironment,
     DATABASE_URL: `file:${databasePath}`,
     SF_DATA_DIR: dataDir,
@@ -173,7 +195,7 @@ try {
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
-  child = Bun.spawn([bundledBun, stagedServer], {
+  child = bunRuntime.spawn([bundledBun, stagedServer], {
     cwd: stagedStandalone,
     env: environment,
     stdout: "pipe",
@@ -204,7 +226,7 @@ try {
     } catch (error) {
       lastResponse = error instanceof Error ? error.message : String(error);
     }
-    await Bun.sleep(250);
+    await bunRuntime.sleep(250);
   }
 
   const checks = readyBody?.checks as Record<string, unknown> | undefined;
@@ -231,7 +253,7 @@ try {
 } finally {
   if (child && child.exitCode === null) child.kill();
   if (child) {
-    await Promise.race([child.exited, Bun.sleep(5_000)]);
+    await Promise.race([child.exited, bunRuntime.sleep(5_000)]);
     stdout = stdoutPromise ? await stdoutPromise : "";
     stderr = stderrPromise ? await stderrPromise : "";
   }
