@@ -1,7 +1,7 @@
 # Wave: Proven Canonical Windows Desktop
 
 > Started: 2026-07-17  
-> Current focus: Codex Cloud bootstrap, updater pipeline and installed-candidate preparation  
+> Current focus: corrected installed baseline and signed `.2`→`.3` updater proof  
 > Lead: ChatGPT / Codex Cloud; Codex Desktop for installed-Windows evidence
 
 ## Founder intent and outcome
@@ -26,41 +26,24 @@ The preferred routine is install once, then receive coherent signed in-app updat
 
 ## Current reality
 
-The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`. Clean-checkout source evidence is green, but no installed-artifact or installed-update claim attaches to it:
+The original wave evidence remains listed below for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 
-- GitHub billing was the original pre-step Actions blocker and is resolved; current jobs execute normally.
-- CI binds clean-checkout dependency installation, Prisma generation and migration deployment, documentation authority audit, TypeScript, ESLint, Vitest, coverage, production dependency audit, migration status and Tauri Rust compilation.
-- The CI fallback `SF_MASTER_KEY` is a deterministic valid 64-character hexadecimal test key; run #371 passed the full Quality Gate after this repair.
-- Tauri `externalBin` resolution requires a target-suffixed binary even for Linux cargo checking. CI creates only a temporary Linux placeholder; packaged Windows sidecar contents are unchanged.
-- `sf-verify` retains complete failure output and CI uploads bounded diagnostic artifacts when Actions logs are truncated.
-- `sf-inventory` generates machine-readable clean-checkout inventories without becoming a competing permanent authority. Run #374 retained a seven-day artifact.
-- The retained inventory at commit `bf369cd5f091dd0d74bcbdac12f07ba00c8b2238` reports 691 tracked files, 38 Markdown files, 9 READMEs, 31 pages, 114 API routes, 33 commands, 125 components, 2 design-token source files, 142 CSS custom-property tokens, 31 Prisma models, 9 migration files, 97 test files, 35 provider/integration files and 13 sidecar/desktop resource files.
-- A 2026-07-18 dirty-tree diagnostic refresh reports 692 files, 36 commands and 14 sidecar/desktop resource files, with the other headline counts unchanged. Because it used `--allow-dirty`, it is drift information rather than retained clean-checkout evidence.
-- CI runs `cargo check --release`, so release-only packaged startup code is compiled rather than excluded by `cfg(not(debug_assertions))`.
-- Mandatory application-server failures abort setup; timed-out process trees are terminated; the degradable WhatsApp sidecar starts only after authenticated server readiness.
-- Packaged startup uses OS-allocated loopback ports and independent per-launch runtime, application and sidecar credentials. Readiness verifies the exact process identity, instance header, app version, port, shop ID, positive registry revision, migration-set digest and required checks.
-- A hidden main window navigates to either an authenticated bootstrap URL or a seller-visible blocked-startup document with redacted support diagnostics.
-- One supervisor state machine gives post-ready crashes and failed restart attempts a shared three-attempt 2/5/15-second budget, resets after 60 stable seconds, enters persistent-diagnostic crash-loop safe mode on exhaustion, and rejects restart or child registration after shutdown begins.
-- Process-bound `ShopContext`, an atomic versioned registry, exact database-file authority, all-shop migration planning, an external journal, verified snapshots, OS-backed installation locking, interrupted-run restoration and a migrated shop template are implemented.
-- The coordinator writes `migration-journal/compatibility.json` atomically with per-shop current/migration-required/blocked state, applied and pending counts, inferred-legacy status, snapshot-space requirements and bounded failure detail.
-- Domain `ServiceContext` and AI `ToolContext` carry explicit shop authority through production services, provider credentials, automation dispatch, route-local transactions and repositories.
-- Adversarial review and commits `b3fcb26`/`7ad237a` added terminal journal safety, creation-time Windows Job Object containment, generation-safe restart teardown, exact legacy schema fingerprinting, physical database-file validation, transaction-bound order ledgers, local shipment reservations/reconciliation receipts, identity-bound refund compensation and strict sandbox containment.
-- Local Windows verification on 2026-07-19 passed 60 focused transaction/sandbox tests; `cargo test --all-features --locked` passed 42/42 tests; warning-denied Clippy, formatting, release compilation, the shared migration hash vector, TypeScript and complete ESLint passed.
-- Clean-checkout runs `29697219950` and `29697766459` passed the Quality Gate and Tauri release smoke. Coverage passed 94 files and 1,534 tests at 80.87% statements/lines; production audit and migration status were clean.
-- Eleven coordinator tests cover fresh installation, positive legacy revision, real OS lock behavior, rollback, interruption restoration, corrupt registry, divergent history with per-shop compatibility detail, deterministic low disk before snapshots, a zero-space no-op rerun, two-shop migration with row preservation, and a one-version-back representative fixture upgraded through the packaged migrations.
-- The mechanically enumerated Phase 1B source write-authority, migration-coordinator and clean-checkout sub-gates are met. Phase 1B remains incomplete because installed Windows migration/failure injection and a separately approved representative seller-data copy remain unproven.
-- The local HP workstation is CPU-bound on an Intel Celeron N3060 with 8 GB RAM and less than 10 GB free disk: `sf-verify --fast` took 7 minutes 56 seconds. It remains useful for Windows installation and constrained-device behavior, not as the primary compiler.
-- A 2026-07-19 Codespaces pilot measured a 2-core/8 GB warm fast gate at 37-48 seconds and a complete shared gate at about 1:59-2:10. A 4-core/16 GB fast gate took 39 seconds and the complete gate about 93 seconds. The 2-core machine remains an optional reproducible fallback; Codex Cloud is now the selected normal primary cloud builder.
-- A full rebuild from `.devcontainer/devcontainer.json` installed pinned Bun 1.3.14, Node 22, Rust, frozen dependencies, Prisma, an ignored Linux sidecar placeholder and a disposable sandbox without creating `.env.local`. `sf-version`, `sf-audit`, shell syntax, Rust formatting and the complete shared gate passed in that rebuilt container.
-- The pilot corrected Windows-only shop test paths, a host-native `ShopContext` fixture, an Algiers-boundary report fixture and auth-test writes outside the sandbox.
-- The packaged-auth blocker found during the pilot was repaired before PR #104 integration: startup now loads the canonical active-shop `AuthSecret` fail-closed. Installed restart evidence remains outstanding.
-- On 2026-07-21, the Founder configured a Codex Cloud environment for `rendowblock-jpg/sahelflow_v2` with agent internet access. Its first SahelFlow bootstrap, development launch and shared-gate checkpoint is not yet recorded.
-- PR #112 integrated ChatGPT as lead engineering partner/critical implementer/reviewer, Codex Cloud as primary cloud implementation/runtime agent, Codex Desktop as installed-Windows laboratory and GitHub Actions as clean-checkout/artifact-production authority.
-- The Founder removed local dependency, build and installation caches because the SSD filled and the PC became unusably slow. The intended local path is to download and install an exact prebuilt internal artifact and launch SahelFlow for hands-on evaluation without restoring `node_modules`, `.next`, Rust `target` or routine compiler caches.
-- The JavaScript and Rust updater dependencies are present and the Tauri updater plugin is registered, but `createUpdaterArtifacts` and updater activation are disabled. The configured public key/channel are not accepted as production-ready evidence, and no signed update metadata, complete in-app update journey or installed A→B proof exists.
-- No packaged Windows, installed update, failure-injection, migration/recovery, provider, performance, T470 or 4 GB result is claimed yet.
-
-The current program has clean integrated source, a reproducible Linux environment, a configured Codex Cloud environment and an integrated cross-session workflow. No updater-enabled MSI has yet been built, installed or updated under the current internal-candidate procedure, and installation/update remain separately confirmed implementation-lab actions.
+- GitHub Actions infrastructure is operational and binds clean-checkout dependency installation, Prisma generation/deployment/status, documentation authority, TypeScript, ESLint, Vitest, coverage, production audit and Tauri release compilation.
+- Tauri release checking compiles the packaged startup path behind `cfg(not(debug_assertions))`; mandatory application-server failures abort setup, timed-out process trees are terminated, and the degradable WhatsApp sidecar starts only after authenticated server readiness.
+- Packaged startup uses OS-allocated loopback ports and independent per-launch runtime, application and sidecar credentials. Readiness binds exact process identity, instance header, app version, port, shop ID, positive registry revision, migration-set digest, auth mode and required checks.
+- A hidden main window navigates to either an authenticated bootstrap URL or a seller-visible blocked-startup document with redacted support diagnostics. One supervisor state machine bounds crash/restart attempts, stable reset, safe mode and shutdown registration.
+- Process-bound `ShopContext`, an atomic versioned registry, exact database-file authority, all-shop migration planning, external journal, verified snapshots, OS-backed locking, interrupted restoration and migrated shop templates are implemented.
+- Production service, AI, integration, automation, credential, audit/auth, repository and API writes carry explicit shop authority. Adversarial review added terminal journal safety, Windows Job Object containment, generation-safe teardown, legacy schema fingerprinting, physical database identity validation, transaction-bound order ledgers, shipment reconciliation, refund compensation and strict sandbox containment.
+- Source and clean-checkout migration tests cover fresh install, legacy import, OS locking, rollback, interruption recovery, corrupt/divergent registry/history, low disk, no-op rerun, two-shop row preservation and a supported prior-version fixture upgraded through packaged migrations.
+- PRs #115–#124 activated and hardened the signed internal updater path through exact `main` commit `f977242924e98b4be0f147988b41504f0dbeba1b`. The protected workflow creates source-specific draft releases, verifies the Tauri signature key binding and `latest.json`, and retains exact-source candidate evidence. This is internal-lab authority only.
+- GitHub Actions produced signed `1.0.0-internal.1` from `f977242924e98b4be0f147988b41504f0dbeba1b`. The Founder verified source, key identity, MSI/signature hashes and evidence, then installed MSI SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f` on the authorized Windows lab PC.
+- Installed `.1` successfully created registry revision 1, selected shop `default`, deployed all eight packaged migrations and failed closed before workspace load. Its redacted diagnostic was `SF-RUNTIME-STARTUP-BLOCKED`: the mandatory local server did not complete authenticated readiness.
+- Installed investigation proved the bundled Bun runtime and files were intact: PowerShell and Bun file APIs could read `server.js`; however, Bun 1.3.14 returned `EPERM` when the same path below `C:\Program Files\SahelFlow\standalone` was used as the entry script.
+- The exact complete standalone tree copied to a writable directory, with the same bundled Bun, Prisma engine, installed database, registry, migration digest, auth mode and runtime token, returned HTTP 200 and all app/database/migration/registry/shop/auth checks `ready`. The blocker is therefore entry-script loading below Program Files, not installer integrity, signing, shop data, migration or authentication.
+- The `.1` release remains draft and must not be published.
+- Draft PR #125 implements corrected manual baseline `1.0.0-internal.2` / MSI `1.0.0.2`: deterministic standalone tree manifest; packaged-tree verification; atomic version/digest-bound LocalAppData staging; cached-tree verification with tamper rejection; explicit contained-process working directory; standalone evidence binding; and exact Windows staged-runtime authenticated readiness smoke.
+- PR #125 CI run `29881291176` passed the full quality gate, coverage, production audit, migration status, Rust release check, Windows database suite, production standalone build and the exact staged packaged-runtime readiness check. This does not yet prove installed `.2` behavior.
+- Seller data remains in canonical roaming AppData. The new local cache contains only verified immutable application-server resources derived from the installed package.
 
 ## Target experience or system
 
@@ -75,118 +58,104 @@ The internal installed candidate must expose one deterministic startup state mac
 7. enter ready only after all required gates pass;
 8. otherwise enter a named blocked/degraded/recovery state with safe retry, diagnostics and no fallback to another shop or partial-ready shell.
 
-The Founder hands-on install/update path must be lightweight:
+The Founder hands-on install/update path must remain lightweight:
 
-1. obtain the exact internally approved updater-enabled Windows version A from retained GitHub Actions output;
-2. verify the recorded artifact identity, digest and signature;
-3. install it on the authorized low-storage PC without restoring the source development workspace;
-4. launch and use the application as a seller would;
-5. publish an approved signed version B with release notes and compatible migrations;
-6. from A, check for the update, choose install or later, download, verify, install and restart into B;
-7. prove data/settings/credentials/recovery preservation and visible recovery for offline, download, signature, installation and restart failures;
-8. preserve evidence, then remove obsolete downloaded artifacts when storage requires it;
-9. after the A→B proof passes, use in-app updates as the normal local testing path and retain manual MSI replacement only as a recovery fallback.
+1. obtain the exact internally approved updater-enabled Windows baseline from retained GitHub Actions output;
+2. verify artifact identity, digest, source and updater signature;
+3. install it over the prior internal candidate without deleting canonical AppData;
+4. launch, close and reopen it as a seller would;
+5. publish an approved deliberately small signed version B with compatible metadata/migrations;
+6. from A, check, defer or install, download, verify, restart and confirm B;
+7. prove shop/data/settings/credentials/migration/recovery preservation and visible failure recovery;
+8. preserve evidence and remove only obsolete downloaded artifacts when storage requires it;
+9. use in-app updates as the normal local loop only after the A→B proof passes.
 
 ## Deep-dive findings
 
-- `sf-audit`, `sf-verify` and `sf-inventory` execute from clean Actions checkouts and are retained through visible steps or artifacts.
-- Packaged startup uses per-launch loopback endpoints and credentials, exact process/shop readiness, a seller-visible blocked document and a locally tested bounded restart/crash-loop policy. Installed process-kill, shutdown-race, sleep/resume and reboot proof remains missing.
-- WhatsApp remains a degradable capability with backoff respawn and demo/offline behavior. Its exact required/degraded policy must be represented in the startup state model rather than inferred from logs.
-- The coordinator enumerates the versioned registry, reports compatibility per shop, reserves verified-snapshot space only when work is pending, migrates every registered database and restores all verified snapshots after failure/interruption. Installed and representative real-data evidence remains.
-- The direct-write source inventory is closed for the current production mutation graph. New repository, background or remote execution paths must accept explicit context and must not reintroduce global active-shop selection.
-- Codex Cloud and Codespaces provide Linux source/development evidence; GitHub Actions provides exact clean-checkout and artifact-production evidence; the Windows lab remains installed-runtime authority. None can silently substitute for another claim layer.
-- Packaged startup reloads the canonical active-shop HMAC secret fail-closed; cloud or CI passes still cannot prove installed restart behavior.
-- The low-storage PC constraint changes the execution method, not the product evidence standard: local testing should consume a prebuilt candidate and signed updates instead of rebuilding the app locally.
-- The updater foundation is incomplete: plugin presence is source evidence only. Trust depends on protected signing-key custody, signed artifacts/metadata, version and channel policy, complete UI states, data-safe migrations and installed A→B/failure evidence.
+- Clean-checkout gates, Windows artifact production and installed-Windows behavior remain separate evidence layers.
+- The `.1` installed failure is useful positive safety evidence: the desktop did not open another shop or partial workspace when the mandatory local server was not ready.
+- A readable packaged file does not guarantee Bun can use it as an entry script below Program Files on the authorized machine. The corrected design stages and verifies immutable resources in Tauri LocalAppData before launch.
+- Writable staging must not become an unsigned code-injection path. The build emits a deterministic tree digest; the desktop verifies both packaged and cached trees and fails closed on mismatch instead of executing altered files.
+- Seller databases, registry, migration journal/snapshots and key material must never be copied into the runtime cache.
+- WhatsApp remains degradable with bounded respawn; its exact seller-visible offline policy still needs installed behavior evidence.
+- The all-shop coordinator remains authoritative on first launch after installation/update; installed migration/failure evidence and separately approved representative data remain outstanding.
+- The low-storage constraint changes the execution method, not the product evidence standard: local testing consumes signed prebuilt candidates and updates instead of rebuilding locally.
 
 ## Multi-phase plan
 
 ### Phase: 0A — Clean-checkout authority and repository truth
 
 - Status: source-level command and inventory evidence complete; refresh after material source changes.
-- Evidence: runs #371, #374, #378, `29697219950`, `29697766459` and final PR #105 run `29700649624` plus the retained `phase0-repository-inventory` artifact.
+- Evidence: runs #371, #374, #378, `29697219950`, `29697766459`, PR #105 run `29700649624`, and current updater/runtime CI checkpoints.
 
 ### Phase: 0B — CI startup and shared-command repair
 
-- Status: complete for the integrated source checkpoint.
-- Evidence: required Quality Gate and Tauri release smoke passed after integration review.
+- Status: complete for the current source checkpoint.
+- Evidence: full quality, coverage, audit, migrations and release-path Rust checks are green; Windows CI now also proves staged packaged runtime readiness.
 
-### Phase: 0C — Cloud bootstrap, updater pipeline and installed Windows baseline
+### Phase: 0C — Signed updater pipeline and installed Windows baseline
 
-- Status: Codex Cloud environment configured and MAWS workflow integrated; SahelFlow bootstrap/launch evidence, updater implementation and installed candidate/update proof not yet executed.
-- ChatGPT lead work: inspect the updater/release/versioning/migration/signing boundaries, define the governing implementation contract, directly control sensitive trust/signing/release logic and independently review the final diff/evidence.
-- Codex Cloud work: resume from canonical GitHub state, declare exact environment/ref, install from clean checkout, run appropriate shared gates, launch the development application, then implement and validate the updater/release pipeline on a normal `agent/<outcome>` branch without making installed-Windows claims.
-- GitHub Actions work: build the updater-enabled version A MSI plus signed updater artifacts/metadata, and later publish a deliberately small signed version B through the same approved internal channel.
-- Windows work: install version A on the authorized low-storage PC, establish runtime/readiness truth, then prove A→B update, restart, preservation, signature rejection and failure recovery before routine in-app updates become the default.
+- Status: signed `.1` built, verified and installed; installed `.1` blocked on Program Files entry loading; corrected `.2` source/CI implementation ready in PR #125.
+- Next GitHub Actions work: merge PR #125 and produce signed `.2` from the exact protected-main commit as a draft plus retained evidence.
+- Next Windows work: install `.2` over `.1` without deleting AppData; prove first launch, close/reopen, active shop/database/migration preservation and creation/reuse of the verified LocalAppData runtime cache.
+- Update drill: after `.2` passes, create deliberately small `.3`, publish only approved `.3` metadata/assets and prove installed `.2`→`.3` update and restart.
 
 ### Phase: 1A — Supervised authenticated local runtime
 
-- Status: source runtime/restart protocol locally and in clean-checkout CI verified; installed evidence incomplete.
-- Completed bounded work: mandatory application-server failures abort setup; timeout kills the contained process tree; optional sidecar starts only after readiness; per-launch endpoints and credentials authenticate readiness/bootstrap; readiness binds process and shop authority; blocked startup is seller-visible and writes redacted diagnostics; one state machine bounds crash/restart failures, stable reset, safe mode and shutdown registration.
-- Next work: failure-inject child crash, failed restart, shutdown race, sleep/resume and reboot in an installed candidate.
-- Evidence: 42 Rust tests, warning-denied Clippy, local release compile and clean-checkout Tauri smoke are green; installed-candidate failure-injection proof remains required before completion.
+- Status: source runtime/restart protocol and exact Windows staged-runtime readiness are verified; installed `.2` and failure-injection evidence remain incomplete.
+- Completed bounded work: fail-closed startup, process-tree containment, per-launch authenticated endpoints, exact readiness, verified writable staging, seller-visible blocked state and bounded crash/restart/safe-mode behavior.
+- Next work: installed `.2` launch/relaunch, then child crash, failed restart, shutdown race, sleep/resume and reboot drills.
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
-- Status: source write-authority and migration-coordinator sub-gates met locally and in clean-checkout CI; installed exit evidence not met.
-- Completed bounded work: process-bound `ShopContext`; atomic versioned registry; positive imported revisions; process-bound database without registry fallback; production context propagation; packaged migration deployment; per-shop compatibility report; all-shop coordinator; external journal; verified snapshots; pending-work disk reserve; OS lock; corrupt/divergent-registry/history failure; rollback, interruption, rerun, multi-shop and actual packaged current-data tests.
-- Next work: prove updater-triggered compatible migration/preservation in the installed A→B drill and perform separately approved representative-data drills. Add persisted shop-incarnation identity before backup restore or future durable inbox/outbox work can conflate a deleted-and-recreated shop slug.
+- Status: source write-authority and migration-coordinator sub-gates are met; installed preservation/failure exit evidence remains.
+- Completed bounded work: process-bound shop/database authority, versioned registry, all-shop preflight, compatibility report, external journal, verified snapshots, disk reserve, lock, rollback/interruption restoration and packaged migration tests.
+- Next work: prove `.1`→`.2` replacement preservation and `.2`→`.3` updater preservation, then perform separately approved representative-data drills. Persisted shop-incarnation identity remains required for future restore/inbox/outbox work.
 
 ### Phase: 0D — Reference baseline
 
 - Status: not executed.
-- Work: run the exact candidate and datasets on ThinkPad T470 and an agreed 4 GB floor-reference environment. The low-storage Founder PC may be used as one observation device only after it is explicitly identified and its machine profile is recorded.
+- Work: run the exact accepted candidate and dataset on ThinkPad T470 and an agreed 4 GB floor-reference environment. The current Founder PC proves only the exact recorded artifact/machine behavior.
 
 ## Decisions
 
 | Decision | Why | Decided by or evidence | Date |
 |---|---|---|---|
-| Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It is the integrated default-branch commit observed at wave start. | GitHub repository inspection. | 2026-07-17 |
-| Use a valid deterministic 256-bit hexadecimal fallback key in CI. | The earlier placeholder violated the encryption key contract and caused broad test failure. | Retained diagnostics; run #371. | 2026-07-17 |
-| Create the target-suffixed Linux sidecar placeholder inside CI only. | Tauri validation needs the path for Linux checking; committing a fake packaged sidecar would weaken artifact truth. | Build-script error and green smoke. | 2026-07-17 |
-| Retain diagnostic artifacts for truncated Quality Gate and Rust logs. | Connector responses can omit the failure tail; artifacts provide exact bounded evidence. | Runs #370 and #377. | 2026-07-17 |
-| Add `sf-inventory` as a mechanical evidence command. | Phase 0 requires repeatable inventories without creating a second authority. | Run #374. | 2026-07-17 |
-| Compile Tauri with `cargo check --release` in CI. | Packaged startup code is behind `cfg(not(debug_assertions))`; debug checking excluded it. | Runs #376 and #378. | 2026-07-17 |
-| Fail closed when the mandatory application server is unavailable. | Returning success allowed a blank or partial-ready shell. | Source inspection and run #378. | 2026-07-17 |
-| Start the degradable WhatsApp sidecar only after mandatory server readiness. | A failed shell launch must not leave an orphan sidecar or imply partial readiness. | Source inspection and release compile. | 2026-07-17 |
-| Use 2-core/8 GB Codespaces as an optional reproducible Linux fallback and 4 cores only for bounded heavy work. | The measured 2-core full gate is about two minutes and preserves twice the included wall-clock allowance. | Codespaces pilot measurements. | 2026-07-19 |
-| Keep native Tauri release compilation/artifact production in GitHub Actions and installed Windows behavior in the local lab. | A Linux cloud environment cannot prove packaged Windows behavior. | Environment/evidence boundary review. | 2026-07-19 |
-| Use ChatGPT as lead engineering partner, critical implementer and independent reviewer. | It provides cross-layer product/architecture reasoning and a separate review pass instead of letting the implementing agent judge itself. | Founder decision. | 2026-07-21 |
-| Use Codex Cloud as the normal primary builder and Linux executable environment. | The Founder PC is too slow and storage-constrained for routine heavy development; the configured cloud environment can hold the disposable checkout and runtime. | Founder decision and configured environment. | 2026-07-21 |
-| Use Codex Desktop as the installed-Windows laboratory rather than the routine primary compiler. | Windows installation and machine behavior require local access, while ordinary implementation belongs in the cloud. | Founder/MAWS workflow decision. | 2026-07-21 |
-| Launch SahelFlow locally from an exact prebuilt internal Windows artifact without restoring full build/dependency caches. | The SSD filled and the PC became slow; hands-on testing needs the installed product, not the full compiler workspace. | Founder constraint and decision. | 2026-07-21 |
-| Integrate the MAWS cloud workflow through PR #112. | Every new ChatGPT or Codex Cloud session now has a canonical GitHub-backed resume protocol and clear evidence boundaries. | PR #112, commit `11e6fa114dc257f8f686c9859d72886a034e1e50`. | 2026-07-21 |
-| Make the first routine local installation updater-enabled and require an installed A→B proof before relying on in-app updates. | This preserves the low-storage install-once workflow without treating plugin scaffolding or unsigned/unverified publication as evidence. | Founder decision and source inspection. | 2026-07-21 |
+| Base the wave on `main` commit `5fe00b5cb85505e5df27499fe46d0fa6050c0788`. | It was the integrated default-branch commit observed at wave start. | GitHub repository inspection. | 2026-07-17 |
+| Use a valid deterministic 256-bit hexadecimal fallback key in CI. | The earlier placeholder violated the encryption contract. | Retained diagnostics; run #371. | 2026-07-17 |
+| Create target-suffixed Linux sidecar placeholders inside CI only. | Release checking needs the path; a fake committed packaged sidecar would weaken artifact truth. | Build error and green smoke. | 2026-07-17 |
+| Compile Tauri with `cargo check --release` in CI. | Packaged startup is excluded from debug checks. | Runs #376 and #378. | 2026-07-17 |
+| Fail closed when the mandatory application server is unavailable. | A blank or partial-ready shell would violate shop/data authority. | Source inspection and installed `.1` behavior. | 2026-07-17 / 2026-07-22 |
+| Start WhatsApp only after mandatory server readiness. | A blocked workspace must not leave a misleading optional child. | Source and release compile. | 2026-07-17 |
+| Use ChatGPT as lead/reviewer, Codex Cloud as primary Linux builder, GitHub Actions as exact artifact authority and Codex Desktop as installed-Windows laboratory. | Each environment has a distinct evidence boundary. | Founder/MAWS decision. | 2026-07-21 |
+| Keep the Founder PC as a low-storage installed-product observation device. | Hands-on testing needs the product, not the compiler workspace. | Founder constraint. | 2026-07-21 |
+| Activate only the signed internal-lab updater channel and require installed A→B proof before relying on it. | Plugin scaffolding or a signed artifact alone is not installed update evidence. | Founder decision; PR #115. | 2026-07-21 |
+| Keep `.1` unpublished and treat `.2` as a corrected manual replacement baseline rather than updater B. | `.1` cannot reach ready; publishing it would expose a broken channel. A trusted A must launch before the updater drill. | Installed `.1` and staged HTTP 200 evidence. | 2026-07-22 |
+| Stage a manifest-verified standalone tree in LocalAppData before Bun launch. | Exact installed evidence isolates Bun entry loading below Program Files; writable execution must remain cryptographically bound to packaged bytes. | Installed lab plus PR #125 CI. | 2026-07-22 |
 
 ## Working notes and open questions
 
-- Select and separately authorize the exact first installed-candidate lab and procedure.
-- The Founder low-storage PC is the intended hands-on launch machine, but its exact machine profile and evidence role must be recorded before claims attach to it.
-- Define updater signing-key generation, offline backup, custody, rotation and key-loss recovery. Never place the private key in the repository, prompts or logs.
-- Select the internal update channel/hosting and publishing policy, including whether GitHub Releases is acceptable for the internal phase.
-- Define exact version-A/version-B artifact identity, digest/signature verification, install, update, test-data and cleanup procedures.
+- Keep `.1` and `.2` releases draft/unpublished until installed `.2` launch/restart/preservation passes.
+- Record updater private-key generation provenance, named custody, offline backup, recovery test, rotation and key-loss response outside Git.
+- Record the exact Windows machine profile for the installed evidence; do not generalize one-machine observations.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices.
+- Persisted shop-incarnation identity remains required before future restore/inbox/outbox semantics can treat a recreated slug safely.
 
 ## Implementation and evidence
 
-- Integrated foundation: PR #100.
-- Consolidated source: PR #104 integrated into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`.
-- Green clean-checkout CI: run #371 (`29603869888`), run #374 (`29604264999`), run #378 (`29605285748`), `29697219950` and `29697766459`.
-- Inventory artifact: `phase0-repository-inventory`, artifact `8416217843`, digest `sha256:545f9ebbf1b9857bc7f44561c0f28832c5421bcf452bdd0036492380f3fd376c`.
-- Runtime source: Tauri setup rejects mandatory local-server startup failures and does not start the sidecar before server readiness.
-- Visual/RTL/accessibility evidence: none yet for the blocked/recovery startup or update states.
-- Packaged/provider/recovery/update evidence: none yet.
-- Known limitation: CI proves clean checkout and release compilation/artifact steps, not an installed Windows candidate or installed update.
-- Codespaces integration: PR #105 merged into `main` at `1a0469bb5384561d85178316d0cd6e94745b44a0`; original measured checkpoint `74bfc07` remains historical evidence.
-- Codespaces evidence: full clean container rebuild, authority audit, fast/full shared gates, Rust formatting and private web-development startup; no installed-Windows claim.
-- PR #105 clean-checkout evidence: final-head run `29700649624` passed the Quality Gate in 3 minutes 26 seconds and Tauri release smoke in 46 seconds at `013f61df335c2341d4eacbafab68078e0aa633ab`.
-- Codex Cloud: environment configured on 2026-07-21; first exact bootstrap/launch/verification checkpoint pending.
-- MAWS workflow transition: PR #112 merged into `main` at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
-- Updater source checkpoint: updater dependencies/plugin registration exist, but artifact creation and activation are disabled; signing/channel/UI/A→B evidence is absent.
+- Integrated foundation: PR #100; consolidated source: PR #104 at `d33890fe31836d9a982902dd469bcc3960c4c23c`.
+- Reproducible environment: PR #105 at `1a0469bb5384561d85178316d0cd6e94745b44a0`; MAWS transition: PR #112 at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
+- Updater pipeline: PRs #115–#124 through `f977242924e98b4be0f147988b41504f0dbeba1b`.
+- Signed installed `.1`: source `f977242924e98b4be0f147988b41504f0dbeba1b`; MSI SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f`; key identity `tauri-internal-c7183693a0589b55`; installed startup blocked before workspace load.
+- Installed `.1` data authority: registry format/revision `1/1`, active shop `default`, database `dev.db`, eight packaged migrations complete.
+- Installed root-cause proof: packaged Program Files entrypoint `EPERM`; exact complete writable copy returned authenticated HTTP 200 with all readiness checks ready.
+- Corrected source: draft PR #125, version `.2`; CI run `29881291176` green across quality, coverage, audit, migrations, Rust, Windows database/build and exact staged-runtime readiness.
+- Visual/RTL/accessibility evidence: the blocked recovery page was observed on installed `.1`; broader ready/update-state evidence remains.
+- Known limitation: `.2` is not yet signed, installed or launched; `.2`→`.3` updater behavior, failure injection, representative data, T470 and 4 GB evidence remain unproven.
 
 ## Current checkpoint
 
-- What is now true: integrated clean-checkout source has an authenticated per-launch runtime, seller-visible blocked startup, process-bound shop authority, atomic registry, recoverable all-shop migration, contained child trees, bounded generation-safe restarts and transaction-bound order effects; required CI is green. Codex Cloud is configured as the primary cloud builder, the MAWS resume protocol is integrated, the low-storage PC is reserved for installed candidate launch/testing, and updater scaffolding exists but is disabled and unproven.
-- What changed in the plan: ChatGPT leads architecture, sensitive updater/signing/release implementation and independent review; Codex Cloud performs cloud bootstrap plus updater implementation/runtime/browser/test work; GitHub Actions produces clean-checkout evidence and signed version-A/version-B artifacts; Codex Desktop installs A and proves the A→B journey locally. The first routine installation should include the updater so future local testing can use coherent in-app updates.
-- Current uncertainty: first Codex Cloud SahelFlow bootstrap/launch evidence, updater signing-key custody and channel, complete updater implementation, the exact authorized Windows lab/procedure, installed A→B preservation/failure evidence, real installed child-process failure injection, representative seller data, persisted shop-incarnation identity and all installed Windows behavior remain unproven.
-- Exact next move: follow the eight-step sequence recorded in Working Memory—ChatGPT updater/release governing pass; Codex Cloud bootstrap; updater implementation; independent review; GitHub Actions version A; local A install; signed A→B proof; only then normal in-app update use.
+- What is now true: the signed internal artifact pipeline works; `.1` was exactly verified and installed; its data/migration path succeeded and its fail-closed runtime correctly blocked an unsafe partial workspace. The remaining `.1` blocker is exactly isolated to Bun entry loading below Program Files. PR #125 implements and CI-proves a manifest-verified LocalAppData staging repair as `.2`.
+- What changed in the plan: `.1` is retained only as failed installed evidence and never published. `.2` becomes the corrected manual replacement baseline. `.3`, not `.2`, becomes updater B after `.2` installed launch/restart/preservation passes.
+- Current uncertainty: installed `.2` behavior, runtime-cache creation/reuse on the Founder PC, `.2`→`.3` updater preservation/failure recovery, representative seller data and reference-device behavior remain unproven.
+- Exact next move: merge green PR #125; build and verify signed `.2` from its exact protected-main commit; install `.2` over `.1` without deleting AppData; prove launch/relaunch and preservation; then build/publish a deliberately small signed `.3` for the installed updater drill.
