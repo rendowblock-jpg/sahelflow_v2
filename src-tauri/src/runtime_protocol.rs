@@ -9,14 +9,16 @@ const LOOPBACK_HOST: &str = "127.0.0.1";
 const READY_PATH: &str = "/api/internal/runtime-ready";
 const INSTANCE_HEADER: &str = "x-sahelflow-runtime-instance";
 const MANIFEST_FILE: &str = "runtime-endpoint.json";
+const PROBE_DIAGNOSTIC_FILE: &str = "runtime-probe-diagnostic.json";
 const MAX_HEADER_BYTES: usize = 64 * 1024;
 const MAX_RESPONSE_BYTES: usize = 128 * 1024;
+const MAX_DIAGNOSTIC_DETAIL_CHARS: usize = 512;
 pub const RUNTIME_PROTOCOL_VERSION: u8 = 1;
 
 /// Per-launch authority for the mandatory local application server.
 ///
 /// Secrets intentionally do not implement Debug or Serialize and are never
-/// written to the endpoint manifest.
+/// written to the endpoint manifest or readiness diagnostics.
 pub struct RuntimeProtocol {
     app_port: u16,
     sidecar_port: u16,
@@ -39,6 +41,17 @@ struct RuntimeEndpointManifest<'a> {
     instance_id: &'a str,
     process_id: u32,
     app_version: &'a str,
+    created_at_unix_seconds: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeProbeDiagnostic<'a> {
+    format_version: u8,
+    state: &'static str,
+    code: &'static str,
+    detail: &'a str,
+    app_port: u16,
     created_at_unix_seconds: u64,
 }
 
@@ -137,13 +150,20 @@ impl RuntimeProtocol {
     /// Wait until the exact spawned instance authenticates the probe and
     /// reports that its configured database is queryable.
     pub fn wait_until_ready(&self, timeout: Duration) -> bool {
+        self.clear_probe_diagnostic();
         let started_at = Instant::now();
+        let mut last_failure = "the local server did not accept a readiness connection".to_string();
         while started_at.elapsed() < timeout {
-            if self.probe_once() {
-                return true;
+            match self.probe_once() {
+                Ok(()) => {
+                    self.clear_probe_diagnostic();
+                    return true;
+                }
+                Err(detail) => last_failure = detail,
             }
             std::thread::sleep(Duration::from_millis(250));
         }
+        self.write_probe_diagnostic(&last_failure);
         false
     }
 
@@ -167,10 +187,7 @@ impl RuntimeProtocol {
             instance_id: &self.instance_id,
             process_id: std::process::id(),
             app_version,
-            created_at_unix_seconds: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|duration| duration.as_secs())
-                .unwrap_or(0),
+            created_at_unix_seconds: unix_seconds(),
         };
 
         let mut file = OpenOptions::new()
@@ -197,26 +214,25 @@ impl RuntimeProtocol {
         Ok(())
     }
 
-    fn probe_once(&self) -> bool {
+    fn probe_once(&self) -> Result<(), String> {
         let address = SocketAddr::from((Ipv4Addr::LOCALHOST, self.app_port));
-        let mut stream = match TcpStream::connect_timeout(&address, Duration::from_millis(500)) {
-            Ok(stream) => stream,
-            Err(_) => return false,
-        };
+        let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500))
+            .map_err(|error| format!("readiness connection failed: {}", error.kind()))?;
         let io_timeout = Some(Duration::from_secs(2));
-        if stream.set_read_timeout(io_timeout).is_err()
-            || stream.set_write_timeout(io_timeout).is_err()
-        {
-            return false;
-        }
+        stream
+            .set_read_timeout(io_timeout)
+            .map_err(|error| format!("could not configure readiness read timeout: {}", error.kind()))?;
+        stream
+            .set_write_timeout(io_timeout)
+            .map_err(|error| format!("could not configure readiness write timeout: {}", error.kind()))?;
 
         let request = format!(
             "GET {READY_PATH} HTTP/1.1\r\nHost: {LOOPBACK_HOST}:{}\r\nAuthorization: Bearer {}\r\nConnection: close\r\n\r\n",
             self.app_port, self.runtime_token
         );
-        if stream.write_all(request.as_bytes()).is_err() {
-            return false;
-        }
+        stream
+            .write_all(request.as_bytes())
+            .map_err(|error| format!("could not write readiness request: {}", error.kind()))?;
 
         let mut response = Vec::with_capacity(4096);
         let mut chunk = [0_u8; 1024];
@@ -226,14 +242,105 @@ impl RuntimeProtocol {
                 Ok(read) => {
                     response.extend_from_slice(&chunk[..read]);
                     if response.len() > MAX_RESPONSE_BYTES {
-                        return false;
+                        return Err("readiness response exceeded the bounded size limit".to_string());
+                    }
+                    if let Some(expected_length) = declared_http_message_length(&response)? {
+                        if response.len() >= expected_length {
+                            response.truncate(expected_length);
+                            break;
+                        }
                     }
                 }
-                Err(_) => return false,
+                Err(error)
+                    if matches!(error.kind(), ErrorKind::TimedOut | ErrorKind::WouldBlock) =>
+                {
+                    if let Some(expected_length) = declared_http_message_length(&response)? {
+                        if response.len() >= expected_length {
+                            response.truncate(expected_length);
+                            break;
+                        }
+                    }
+                    return Err(format!(
+                        "readiness response timed out before completion after {} bytes",
+                        response.len()
+                    ));
+                }
+                Err(error) => {
+                    return Err(format!(
+                        "could not read readiness response: {}",
+                        error.kind()
+                    ));
+                }
             }
         }
 
-        response_proves_readiness(&response, &self.instance_id, self.app_port, &self.auth_mode)
+        validate_readiness_response(&response, &self.instance_id, self.app_port, &self.auth_mode)
+    }
+
+    fn probe_diagnostic_path(&self) -> Option<PathBuf> {
+        self.manifest_path
+            .parent()
+            .map(|parent| parent.join(PROBE_DIAGNOSTIC_FILE))
+    }
+
+    fn clear_probe_diagnostic(&self) {
+        let Some(path) = self.probe_diagnostic_path() else {
+            return;
+        };
+        if let Err(error) = fs::remove_file(&path) {
+            if error.kind() != ErrorKind::NotFound {
+                eprintln!(
+                    "[sahelflow] could not remove stale runtime probe diagnostic {}: {error}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    fn write_probe_diagnostic(&self, detail: &str) {
+        let Some(path) = self.probe_diagnostic_path() else {
+            return;
+        };
+        let Some(parent) = path.parent() else {
+            return;
+        };
+        let safe_detail = bounded_diagnostic_detail(detail);
+        let diagnostic = RuntimeProbeDiagnostic {
+            format_version: 1,
+            state: "blocked",
+            code: "RUNTIME_PROBE_FAILED",
+            detail: &safe_detail,
+            app_port: self.app_port,
+            created_at_unix_seconds: unix_seconds(),
+        };
+        let temp_path = parent.join(format!("{PROBE_DIAGNOSTIC_FILE}.tmp"));
+        let result = (|| -> Result<(), IoError> {
+            fs::create_dir_all(parent)?;
+            let mut file = OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(&temp_path)?;
+            serde_json::to_writer_pretty(&mut file, &diagnostic).map_err(|error| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    format!("could not encode runtime probe diagnostic: {error}"),
+                )
+            })?;
+            file.write_all(b"\n")?;
+            file.sync_all()?;
+            if path.exists() {
+                fs::remove_file(&path)?;
+            }
+            fs::rename(&temp_path, &path)
+        })();
+        if let Err(error) = result {
+            let _ = fs::remove_file(&temp_path);
+            eprintln!(
+                "[sahelflow] could not persist runtime probe diagnostic {}: {error}",
+                path.display()
+            );
+        }
     }
 }
 
@@ -247,6 +354,21 @@ pub fn remove_manifest(app_data_dir: &Path) {
             );
         }
     }
+}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn bounded_diagnostic_detail(detail: &str) -> String {
+    detail
+        .chars()
+        .filter(|character| !character.is_control())
+        .take(MAX_DIAGNOSTIC_DETAIL_CHARS)
+        .collect()
 }
 
 fn random_hex(byte_count: usize) -> Result<String, IoError> {
@@ -266,65 +388,166 @@ fn random_hex(byte_count: usize) -> Result<String, IoError> {
     Ok(encoded)
 }
 
-fn response_proves_readiness(
+fn response_header_end(response: &[u8]) -> Result<Option<usize>, String> {
+    if let Some(position) = response.windows(4).position(|window| window == b"\r\n\r\n") {
+        if position + 4 > MAX_HEADER_BYTES {
+            return Err("readiness response headers exceeded the bounded size limit".to_string());
+        }
+        return Ok(Some(position));
+    }
+    if response.len() > MAX_HEADER_BYTES {
+        return Err("readiness response headers exceeded the bounded size limit".to_string());
+    }
+    Ok(None)
+}
+
+fn declared_http_message_length(response: &[u8]) -> Result<Option<usize>, String> {
+    let Some(header_end) = response_header_end(response)? else {
+        return Ok(None);
+    };
+    let headers = std::str::from_utf8(&response[..header_end])
+        .map_err(|_| "readiness response headers were not valid UTF-8".to_string())?;
+    let mut content_length = None;
+    for line in headers.split("\r\n").skip(1) {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        if !name.eq_ignore_ascii_case("content-length") {
+            continue;
+        }
+        let parsed = value
+            .trim()
+            .parse::<usize>()
+            .map_err(|_| "readiness response declared an invalid Content-Length".to_string())?;
+        if content_length.is_some_and(|current| current != parsed) {
+            return Err("readiness response declared conflicting Content-Length values".to_string());
+        }
+        content_length = Some(parsed);
+    }
+    let Some(content_length) = content_length else {
+        return Ok(None);
+    };
+    let message_length = header_end
+        .checked_add(4)
+        .and_then(|length| length.checked_add(content_length))
+        .ok_or_else(|| "readiness response length overflowed".to_string())?;
+    if message_length > MAX_RESPONSE_BYTES {
+        return Err("readiness response exceeded the bounded size limit".to_string());
+    }
+    Ok(Some(message_length))
+}
+
+fn safe_blocked_code(body: &[u8]) -> Option<String> {
+    let value = serde_json::from_slice::<serde_json::Value>(body).ok()?;
+    let code = value.get("code")?.as_str()?;
+    if code.is_empty()
+        || code.len() > 64
+        || !code
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return None;
+    }
+    Some(code.to_string())
+}
+
+fn validate_readiness_response(
     response: &[u8],
     expected_instance_id: &str,
     expected_port: u16,
     expected_auth_mode: &str,
-) -> bool {
-    let header_end = match response.windows(4).position(|window| window == b"\r\n\r\n") {
-        Some(position) => position,
-        None => return false,
-    };
-    if header_end + 4 > MAX_HEADER_BYTES {
-        return false;
-    }
-    let headers = match std::str::from_utf8(&response[..header_end]) {
-        Ok(headers) => headers,
-        Err(_) => return false,
-    };
+) -> Result<(), String> {
+    let header_end = response_header_end(response)?
+        .ok_or_else(|| "readiness response did not contain complete HTTP headers".to_string())?;
+    let headers = std::str::from_utf8(&response[..header_end])
+        .map_err(|_| "readiness response headers were not valid UTF-8".to_string())?;
     let mut lines = headers.split("\r\n");
     let status = lines.next().unwrap_or_default();
-    if !(status.starts_with("HTTP/1.1 200 ") || status.starts_with("HTTP/1.0 200 ")) {
-        return false;
-    }
-
-    let exact_instance_header = lines.any(|line| {
+    let status_code = status.split_ascii_whitespace().nth(1).unwrap_or("unknown");
+    let exact_instance_header = lines.clone().any(|line| {
         line.split_once(':').is_some_and(|(name, value)| {
             name.eq_ignore_ascii_case(INSTANCE_HEADER) && value.trim() == expected_instance_id
         })
     });
+
+    let body_start = header_end + 4;
+    let body_end = declared_http_message_length(response)?.unwrap_or(response.len());
+    if body_end > response.len() || body_end < body_start {
+        return Err("readiness response body was incomplete".to_string());
+    }
+    let body = &response[body_start..body_end];
+
+    if !(status.starts_with("HTTP/1.1 200 ") || status.starts_with("HTTP/1.0 200 ")) {
+        let code = safe_blocked_code(body).unwrap_or_else(|| "UNSPECIFIED".to_string());
+        return Err(format!(
+            "readiness endpoint returned HTTP {status_code} with code {code}"
+        ));
+    }
     if !exact_instance_header {
-        return false;
+        return Err("readiness response did not bind the exact runtime instance".to_string());
     }
 
-    let body = &response[header_end + 4..];
-    let readiness: RuntimeReadiness = match serde_json::from_slice(body) {
-        Ok(readiness) => readiness,
-        Err(_) => return false,
-    };
-
-    readiness.protocol_version == RUNTIME_PROTOCOL_VERSION
-        && readiness.status == "ready"
-        && readiness.instance_id == expected_instance_id
-        && readiness.process_id > 0
-        && !readiness.app_version.trim().is_empty()
-        && readiness.port == expected_port
-        && !readiness.shop_id.trim().is_empty()
-        && readiness.registry_revision > 0
-        && readiness.migration_set_sha256.len() == 64
-        && readiness.auth_mode == expected_auth_mode
-        && readiness.checks.app == "ready"
-        && readiness.checks.database == "ready"
-        && readiness.checks.migration == "ready"
-        && readiness.checks.registry == "ready"
-        && readiness.checks.shop == "ready"
-        && readiness.checks.auth == "ready"
+    let readiness: RuntimeReadiness = serde_json::from_slice(body)
+        .map_err(|_| "readiness response body was not valid semantic JSON".to_string())?;
+    if readiness.protocol_version != RUNTIME_PROTOCOL_VERSION {
+        return Err("readiness protocol version did not match".to_string());
+    }
+    if readiness.status != "ready" {
+        return Err("readiness response did not report ready state".to_string());
+    }
+    if readiness.instance_id != expected_instance_id {
+        return Err("readiness body did not bind the exact runtime instance".to_string());
+    }
+    if readiness.process_id == 0 {
+        return Err("readiness response did not identify a live process".to_string());
+    }
+    if readiness.app_version.trim().is_empty() {
+        return Err("readiness response omitted the application version".to_string());
+    }
+    if readiness.port != expected_port {
+        return Err("readiness response reported the wrong loopback port".to_string());
+    }
+    if readiness.shop_id.trim().is_empty() {
+        return Err("readiness response omitted the active shop".to_string());
+    }
+    if readiness.registry_revision == 0 {
+        return Err("readiness response reported an invalid registry revision".to_string());
+    }
+    if readiness.migration_set_sha256.len() != 64
+        || !readiness
+            .migration_set_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err("readiness response reported an invalid migration digest".to_string());
+    }
+    if readiness.auth_mode != expected_auth_mode {
+        return Err("readiness response reported the wrong authentication mode".to_string());
+    }
+    if readiness.checks.app != "ready"
+        || readiness.checks.database != "ready"
+        || readiness.checks.migration != "ready"
+        || readiness.checks.registry != "ready"
+        || readiness.checks.shop != "ready"
+        || readiness.checks.auth != "ready"
+    {
+        return Err("readiness response contained a blocked semantic check".to_string());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::mpsc;
+    use std::thread;
+
+    fn valid_body(instance: &str, port: u16, auth_mode: &str) -> String {
+        format!(
+            "{{\"protocolVersion\":1,\"status\":\"ready\",\"instanceId\":\"{instance}\",\"processId\":42,\"appVersion\":\"1.0.0-internal.3\",\"port\":{port},\"shopId\":\"default\",\"registryRevision\":1,\"migrationSetSha256\":\"{}\",\"authMode\":\"{auth_mode}\",\"checks\":{{\"app\":\"ready\",\"database\":\"ready\",\"migration\":\"ready\",\"registry\":\"ready\",\"shop\":\"ready\",\"auth\":\"ready\"}}}}",
+            "f".repeat(64)
+        )
+    }
 
     #[test]
     fn allocation_uses_loopback_port_and_non_serialized_random_secrets() {
@@ -348,10 +571,7 @@ mod tests {
 
     #[test]
     fn readiness_requires_success_and_the_exact_instance_header() {
-        let body = format!(
-            "{{\"protocolVersion\":1,\"status\":\"ready\",\"instanceId\":\"instance-a\",\"processId\":42,\"appVersion\":\"1.0.0-internal.1\",\"port\":49152,\"shopId\":\"default\",\"registryRevision\":1,\"migrationSetSha256\":\"{}\",\"authMode\":\"configured\",\"checks\":{{\"app\":\"ready\",\"database\":\"ready\",\"migration\":\"ready\",\"registry\":\"ready\",\"shop\":\"ready\",\"auth\":\"ready\"}}}}",
-            "f".repeat(64)
-        );
+        let body = valid_body("instance-a", 49152, "configured");
         let valid = [
             b"HTTP/1.1 200 OK\r\nX-SahelFlow-Runtime-Instance: instance-a\r\n\r\n".as_slice(),
             body.as_bytes(),
@@ -369,36 +589,100 @@ mod tests {
         ]
         .concat();
 
-        assert!(response_proves_readiness(
+        assert!(validate_readiness_response(
             &valid,
             "instance-a",
             49152,
             "configured"
-        ));
-        assert!(!response_proves_readiness(
-            &valid,
-            "instance-a",
-            49152,
-            "setup"
-        ));
-        assert!(!response_proves_readiness(
+        )
+        .is_ok());
+        assert!(validate_readiness_response(&valid, "instance-a", 49152, "setup").is_err());
+        assert!(validate_readiness_response(
             &wrong_instance,
             "instance-a",
             49152,
             "configured"
-        ));
-        assert!(!response_proves_readiness(
+        )
+        .is_err());
+        assert!(validate_readiness_response(
             &unauthorized,
             "instance-a",
             49152,
             "configured"
-        ));
-        assert!(!response_proves_readiness(
+        )
+        .is_err());
+        assert!(validate_readiness_response(
             b"not http",
             "instance-a",
             49152,
             "configured"
-        ));
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn complete_content_length_response_does_not_require_socket_eof() {
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind readiness server");
+        let port = listener.local_addr().expect("readiness address").port();
+        let body = valid_body("instance-a", port, "configured");
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: keep-alive\r\nX-SahelFlow-Runtime-Instance: instance-a\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let (release_sender, release_receiver) = mpsc::channel();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept readiness probe");
+            let mut request = [0_u8; 2048];
+            let read = stream.read(&mut request).expect("read readiness request");
+            assert!(String::from_utf8_lossy(&request[..read]).contains(READY_PATH));
+            stream
+                .write_all(response.as_bytes())
+                .expect("write readiness response");
+            stream.flush().expect("flush readiness response");
+            release_receiver
+                .recv_timeout(Duration::from_secs(5))
+                .expect("probe should finish without waiting for EOF");
+        });
+        let protocol = RuntimeProtocol {
+            app_port: port,
+            sidecar_port: port.saturating_add(1),
+            instance_id: "instance-a".to_string(),
+            runtime_token: "a".repeat(64),
+            app_token: "b".repeat(64),
+            sidecar_token: "c".repeat(64),
+            auth_mode: "configured".to_string(),
+            manifest_path: std::env::temp_dir().join("unused-runtime-endpoint.json"),
+        };
+
+        let started = Instant::now();
+        assert!(protocol.probe_once().is_ok());
+        assert!(started.elapsed() < Duration::from_secs(2));
+        release_sender.send(()).expect("release readiness server");
+        server.join().expect("readiness server thread");
+    }
+
+    #[test]
+    fn blocked_readiness_preserves_only_bounded_code_detail() {
+        let body = br#"{"status":"blocked","code":"RUNTIME_AUTH_MISMATCH"}"#;
+        let response = [
+            format!(
+                "HTTP/1.1 503 Service Unavailable\r\nContent-Length: {}\r\n\r\n",
+                body.len()
+            )
+            .into_bytes(),
+            body.to_vec(),
+        ]
+        .concat();
+        let failure = validate_readiness_response(
+            &response,
+            "instance-a",
+            49152,
+            "configured",
+        )
+        .expect_err("blocked readiness must fail");
+        assert!(failure.contains("HTTP 503"));
+        assert!(failure.contains("RUNTIME_AUTH_MISMATCH"));
     }
 
     #[test]
@@ -408,12 +692,13 @@ mod tests {
             "a".repeat(MAX_HEADER_BYTES)
         );
 
-        assert!(!response_proves_readiness(
+        assert!(validate_readiness_response(
             oversized.as_bytes(),
             "instance-a",
             49152,
             "configured",
-        ));
+        )
+        .is_err());
     }
 
     #[test]
