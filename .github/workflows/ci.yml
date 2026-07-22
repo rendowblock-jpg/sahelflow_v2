@@ -187,6 +187,10 @@ jobs:
       - name: Build exact Windows standalone frontend resources
         run: bun run src-tauri/build-frontend.ts
 
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
       - name: Verify bundled Bun through actual contained launcher
         shell: pwsh
         env:
