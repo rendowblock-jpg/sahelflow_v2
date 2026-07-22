@@ -21,12 +21,20 @@ jobs:
           fetch-depth: 0
 
       - name: Apply readable fail-closed integration
+        id: apply
         shell: bash
         env:
           HEAD_BRANCH: agent/windows-runtime-staging
         run: |
-          set -euo pipefail
-          python .github/runtime-stage/apply-runtime-staging-readable.py
+          set +e
+          python .github/runtime-stage/apply-runtime-staging-readable.py \
+            > .github/runtime-stage/apply-readable.log 2>&1
+          status=$?
+          set -e
+          cat .github/runtime-stage/apply-readable.log
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
           rm -rf .github/runtime-stage
           rm -f .github/workflows/apply-runtime-staging.yml
           git diff --check
@@ -38,3 +46,12 @@ jobs:
           git add -A
           git commit -m 'fix(runtime): stage verified standalone tree before Bun launch'
           git push origin HEAD:"$HEAD_BRANCH"
+
+      - name: Upload readable integration traceback
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-staging-integration-trace-${{ github.run_id }}
+          path: .github/runtime-stage/apply-readable.log
+          if-no-files-found: error
+          retention-days: 2
