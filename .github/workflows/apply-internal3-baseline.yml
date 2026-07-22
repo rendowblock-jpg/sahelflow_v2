@@ -1,0 +1,94 @@
+name: Apply internal.3 working baseline
+
+on:
+  push:
+    branches:
+      - agent/deterministic-contained-descendant-test
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/deterministic-contained-descendant-test
+          fetch-depth: 0
+
+      - name: Apply immutable version and deterministic containment test
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          def replace_exact(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one exact match, found {count}")
+              file.write_text(text.replace(old, new), encoding="utf-8", newline="\n")
+
+          package = Path("package.json")
+          package_data = json.loads(package.read_text(encoding="utf-8"))
+          if package_data["version"] != "1.0.0-internal.2":
+              raise SystemExit("package.json version authority moved unexpectedly")
+          package_data["version"] = "1.0.0-internal.3"
+          package.write_text(json.dumps(package_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+          authority = Path("sahelflow.version.json")
+          authority_data = json.loads(authority.read_text(encoding="utf-8"))
+          if authority_data["version"] != "1.0.0-internal.2" or authority_data["windowsMsiVersion"] != "1.0.0.2":
+              raise SystemExit("version authority moved unexpectedly")
+          authority_data["version"] = "1.0.0-internal.3"
+          authority_data["windowsMsiVersion"] = "1.0.0.3"
+          authority.write_text(json.dumps(authority_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+          tauri = Path("src-tauri/tauri.conf.json")
+          tauri_data = json.loads(tauri.read_text(encoding="utf-8"))
+          if tauri_data["version"] != "1.0.0-internal.2" or tauri_data["bundle"]["windows"]["wix"]["version"] != "1.0.0.2":
+              raise SystemExit("Tauri version authority moved unexpectedly")
+          tauri_data["version"] = "1.0.0-internal.3"
+          tauri_data["bundle"]["windows"]["wix"]["version"] = "1.0.0.3"
+          tauri.write_text(json.dumps(tauri_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+          replace_exact("src-tauri/Cargo.toml", 'version = "1.0.0-internal.2"', 'version = "1.0.0-internal.3"')
+          replace_exact(
+              "src-tauri/Cargo.lock",
+              '[[package]]\nname = "sahelflow"\nversion = "1.0.0-internal.2"',
+              '[[package]]\nname = "sahelflow"\nversion = "1.0.0-internal.3"',
+          )
+
+          replace_exact(
+              "src-tauri/src/child_containment.rs",
+              '''                &[\n                    OsString::from("/C"),\n                    OsString::from(\n                        "start \\\"\\\" /B ping -n 30 127.0.0.1 ^>NUL ^& ping -n 30 127.0.0.1 ^>NUL",\n                    ),\n                ],''',
+              '''                &[\n                    OsString::from("/D"),\n                    OsString::from("/S"),\n                    OsString::from("/C"),\n                    OsString::from(\n                        "\\\"%SystemRoot%\\\\System32\\\\ping.exe\\\" -n 30 127.0.0.1 >NUL",\n                    ),\n                ],''',
+          )
+          replace_exact(
+              "src-tauri/src/child_containment.rs",
+              "            let deadline = Instant::now() + Duration::from_secs(5);\n            while child.active_process_count().expect(\"query job\") < 2 {",
+              "            let deadline = Instant::now() + Duration::from_secs(15);\n            while child.active_process_count().expect(\"query job\") < 2 {",
+          )
+
+          workflow = Path(".github/workflows/apply-internal3-baseline.yml")
+          workflow.unlink()
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Canonical Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
+
+      - name: Commit integrated baseline
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(release): establish immutable internal.3 working baseline"
+          git push origin HEAD:agent/deterministic-contained-descendant-test
