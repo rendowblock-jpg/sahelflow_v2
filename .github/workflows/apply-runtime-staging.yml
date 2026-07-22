@@ -18,27 +18,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: agent/windows-runtime-staging
-          fetch-depth: 0
+          fetch-depth: 1
+          show-progress: false
 
       - name: Apply readable fail-closed integration
-        id: apply
         shell: bash
         env:
           HEAD_BRANCH: agent/windows-runtime-staging
         run: |
-          set +e
-          python .github/runtime-stage/apply-runtime-staging-readable.py \
-            > .github/runtime-stage/apply-readable.log 2>&1
-          status=$?
-          cp .github/runtime-stage/apply-readable.log runtime-staging-integration-trace.log
-          set -e
-          cat runtime-staging-integration-trace.log
-          if [ "$status" -ne 0 ]; then
-            exit "$status"
-          fi
+          set -euo pipefail
+          python .github/runtime-stage/apply-runtime-staging-readable.py
           rm -rf .github/runtime-stage
           rm -f .github/workflows/apply-runtime-staging.yml
-          rm -f runtime-staging-integration-trace.log
           git diff --check
           test -f src-tauri/src/packaged_runtime.rs
           grep -q '1.0.0-internal.2' sahelflow.version.json
@@ -48,12 +39,3 @@ jobs:
           git add -A
           git commit -m 'fix(runtime): stage verified standalone tree before Bun launch'
           git push origin HEAD:"$HEAD_BRANCH"
-
-      - name: Upload readable integration traceback
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime-staging-integration-trace-${{ github.run_id }}
-          path: runtime-staging-integration-trace.log
-          if-no-files-found: error
-          retention-days: 2
