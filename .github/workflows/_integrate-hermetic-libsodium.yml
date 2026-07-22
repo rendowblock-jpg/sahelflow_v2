@@ -4,16 +4,9 @@ on:
   push:
     branches:
       - agent/hermetic-libsodium-windows
-  pull_request:
-    branches:
-      - main
-    paths:
-      - scripts/prepare-libsodium-windows.ps1
-      - .github/patches/integrate-hermetic-libsodium.py
-      - .github/workflows/_integrate-hermetic-libsodium.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   integrate:
@@ -29,16 +22,28 @@ jobs:
       - name: Apply reviewed workflow and contract changes
         run: python .github/patches/integrate-hermetic-libsodium.py
 
-      - name: Remove one-shot integration files
+      - name: Verify generated changes
         run: |
-          rm .github/patches/integrate-hermetic-libsodium.py
-          rm .github/workflows/_integrate-hermetic-libsodium.yml
+          git diff --check
+          grep -F '3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279' scripts/prepare-libsodium-windows.ps1
+          grep -F 'Prepare signed local libsodium distribution' .github/workflows/release.yml
+          grep -F 'Prepare signed local libsodium distribution' .github/workflows/windows-rust-release-parity.yml
+          grep -F 'Prepare signed local libsodium distribution' .github/workflows/ci.yml
 
-      - name: Commit integrated repair
+      - name: Package exact generated files
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git diff --cached --check
-          git commit -m "build(windows): remove libsodium build-script network dependency"
-          git push origin HEAD:agent/hermetic-libsodium-windows
+          tar -czf hermetic-libsodium-final-files.tar.gz \
+            scripts/prepare-libsodium-windows.ps1 \
+            .github/workflows/release.yml \
+            .github/workflows/windows-rust-release-parity.yml \
+            .github/workflows/ci.yml \
+            .gitignore \
+            src/lib/__tests__/windows-release-build-contract.test.ts
+
+      - name: Upload generated integration
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermetic-libsodium-final-${{ github.run_id }}
+          path: hermetic-libsodium-final-files.tar.gz
+          if-no-files-found: error
+          retention-days: 2
