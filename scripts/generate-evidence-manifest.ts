@@ -11,6 +11,7 @@ import {
 import { createHash } from "node:crypto";
 import { relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { verifyStandaloneManifest } from "./standalone-manifest";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const requireClean = process.argv.includes("--require-clean");
@@ -219,6 +220,13 @@ const sourceTree = git(["rev-parse", "HEAD^{tree}"]);
 const releaseTag = process.env.SF_RELEASE_TAG ?? null;
 const runId = process.env.GITHUB_RUN_ID ?? null;
 const authenticodeRequired = version.updater?.authenticodeRequired === true;
+const standaloneDirectory = resolve(
+  root,
+  "src-tauri",
+  "resources",
+  "standalone",
+);
+const standalone = verifyStandaloneManifest(standaloneDirectory, version.version);
 
 const manifest = {
   formatVersion: 2,
@@ -256,6 +264,7 @@ const manifest = {
     size: statSync(path).size,
     sha256: sha256(path),
   })),
+  standaloneRuntime: standalone,
   artifacts: bundleFiles.map((path) => ({
     file: relative(root, path).replaceAll("\\", "/"),
     size: statSync(path).size,

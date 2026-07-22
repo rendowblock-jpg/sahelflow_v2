@@ -12,6 +12,7 @@
 mod child_containment;
 mod migration_coordinator;
 mod packaged_auth;
+mod packaged_runtime;
 mod runtime_protocol;
 mod runtime_supervisor;
 mod startup_recovery;
@@ -483,19 +484,26 @@ fn spawn_runtime_generation(
     use tauri::Manager;
 
     let app_data_dir = app.path().app_data_dir()?;
+    let app_local_data_dir = app.path().app_local_data_dir()?;
     let resource_dir = app.path().resource_dir()?;
-    let server_js = resource_dir.join("standalone").join("server.js");
-
-    if !server_js.exists() {
-        return Err(IoError::new(
-            ErrorKind::NotFound,
-            format!(
-                "Next.js standalone server is missing at {}. Reinstall SahelFlow or rebuild the candidate.",
-                server_js.display()
-            ),
+    let packaged_standalone = resource_dir.join("standalone");
+    let server_js = packaged_runtime::stage_standalone(
+        &packaged_standalone,
+        &app_local_data_dir,
+        env!("CARGO_PKG_VERSION"),
+    )
+    .map_err(|error| {
+        IoError::new(
+            ErrorKind::InvalidData,
+            format!("failed to stage the verified standalone runtime: {error}"),
         )
-        .into());
-    }
+    })?;
+    let server_working_dir = server_js.parent().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidData,
+            "staged standalone server has no working directory",
+        )
+    })?;
 
     let runtime_path = match bundled_bun(&resource_dir) {
         Some(path) => path,
@@ -513,10 +521,11 @@ fn spawn_runtime_generation(
     let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str())?;
     let env = server_env(app, &runtime_protocol, &authority, &auth)?;
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
-    let server_child = child_containment::ContainedChild::spawn(
+    let server_child = child_containment::ContainedChild::spawn_in(
         Path::new(&runtime_path),
         &[server_js.as_os_str().to_os_string()],
         &process_environment(&env),
+        Some(server_working_dir),
     )
     .map_err(|error| {
         if error.containment_uncertain() {

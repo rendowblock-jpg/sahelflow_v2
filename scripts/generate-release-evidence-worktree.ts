@@ -4,6 +4,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  rmSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -126,6 +127,20 @@ const runtimeDestination = resolve(
 );
 mkdirSync(dirname(runtimeDestination), { recursive: true });
 cpSync(runtimeSource, runtimeDestination, { recursive: true });
+
+const standaloneSource = resolve(root, "src-tauri", "resources", "standalone");
+const standaloneDestination = resolve(
+  evidenceRoot,
+  "src-tauri",
+  "resources",
+  "standalone",
+);
+if (!existsSync(standaloneSource)) {
+  throw new Error(`standalone evidence directory is missing: ${standaloneSource}`);
+}
+rmSync(standaloneDestination, { recursive: true, force: true });
+mkdirSync(dirname(standaloneDestination), { recursive: true });
+cpSync(standaloneSource, standaloneDestination, { recursive: true });
 
 const copiedEvidenceStatus = run(
   "git",

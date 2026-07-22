@@ -163,11 +163,24 @@ mod platform {
             args: &[OsString],
             environment: &[(OsString, OsString)],
         ) -> Result<Self, SpawnError> {
+            Self::spawn_in(program, args, environment, None)
+        }
+
+        pub fn spawn_in(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+        ) -> Result<Self, SpawnError> {
             let application = wide_null(program.as_os_str()).map_err(SpawnError::before_process)?;
             let mut command_line =
                 command_line(program.as_os_str(), args).map_err(SpawnError::before_process)?;
             let mut environment_block =
                 environment_block(environment).map_err(SpawnError::before_process)?;
+            let current_directory = current_directory
+                .map(|path| wide_null(path.as_os_str()))
+                .transpose()
+                .map_err(SpawnError::before_process)?;
             let job = create_kill_on_close_job().map_err(SpawnError::before_process)?;
             let attributes = match ProcessAttributeList::with_job(job) {
                 Ok(attributes) => attributes,
@@ -195,7 +208,9 @@ mod platform {
                         | CREATE_UNICODE_ENVIRONMENT
                         | EXTENDED_STARTUPINFO_PRESENT,
                     environment_block.as_mut_ptr().cast(),
-                    std::ptr::null(),
+                    current_directory
+                        .as_ref()
+                        .map_or(std::ptr::null(), |path| path.as_ptr()),
                     &startup.StartupInfo,
                     &mut process,
                 )
@@ -561,11 +576,23 @@ mod platform {
             args: &[OsString],
             environment: &[(OsString, OsString)],
         ) -> Result<Self, SpawnError> {
+            Self::spawn_in(program, args, environment, None)
+        }
+
+        pub fn spawn_in(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+        ) -> Result<Self, SpawnError> {
             let mut command = Command::new(program);
             command
                 .args(args)
                 .env_clear()
                 .envs(environment.iter().cloned());
+            if let Some(directory) = current_directory {
+                command.current_dir(directory);
+            }
             let child = command.spawn().map_err(SpawnError::before_process)?;
             let pid = child.id();
             Ok(Self {

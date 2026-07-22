@@ -20,12 +20,21 @@ import {
 } from "fs";
 import { resolve } from "path";
 import { prepareDesktopBuildContext } from "../scripts/desktop-build-context";
+import { writeStandaloneManifest } from "../scripts/standalone-manifest";
 
 const ROOT = process.cwd();
 const GREEN = "\x1b[0;32m";
 const YELLOW = "\x1b[0;33m";
 const NC = "\x1b[0m";
 const PINNED_BUN_VERSION = "1.3.14";
+const APP_VERSION = (
+  JSON.parse(readFileSync(resolve(ROOT, "package.json"), "utf8")) as {
+    version?: unknown;
+  }
+).version;
+if (typeof APP_VERSION !== "string") {
+  throw new Error("package.json version is missing during desktop build");
+}
 
 function ok(msg: string) { console.log(`${GREEN}✅ ${msg}${NC}`); }
 function step(msg: string) { console.log(`${YELLOW}── ${msg} ──${NC}`); }
@@ -95,6 +104,11 @@ if (existsSync(publicDir)) {
   cpSync(publicDir, standalonePublicDir, { recursive: true });
   ok("Copied public → standalone");
 }
+
+const standaloneManifest = writeStandaloneManifest(standaloneDir, APP_VERSION);
+ok(
+  `Standalone manifest: ${standaloneManifest.fileCount} files; ${standaloneManifest.treeSha256}`,
+);
 
 // ── 3. Copy standalone → src-tauri/resources/standalone ─────────────────────
 step("3. Copy standalone → src-tauri/resources/standalone");

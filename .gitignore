@@ -46,6 +46,7 @@ test-results/
 playwright/.cache/
 .sf-vitest-results.json
 .sf-vitest-first-failure.txt
+.sf-windows-runtime-smoke.log
 .sf-inventory/
 .sf-evidence/
 

@@ -97,4 +97,25 @@ describe("Windows signed release build contract", () => {
       /releaseCommitish:\s*\$\{\{\s*inputs\.source_ref\s*\}\}/,
     );
   });
+
+  it("stages and verifies the packaged standalone runtime before Bun launch", () => {
+    const frontendBuild = read("src-tauri/build-frontend.ts");
+    const desktop = read("src-tauri/src/lib.rs");
+    const staging = read("src-tauri/src/packaged_runtime.rs");
+    const containment = read("src-tauri/src/child_containment.rs");
+    const ci = read(".github/workflows/ci.yml");
+    const release = read(".github/workflows/release.yml");
+    const evidence = read("scripts/generate-evidence-manifest.ts");
+
+    expect(frontendBuild).toContain("writeStandaloneManifest(standaloneDir, APP_VERSION)");
+    expect(desktop).toContain("packaged_runtime::stage_standalone");
+    expect(desktop).toContain("ContainedChild::spawn_in");
+    expect(staging).toContain('const MANIFEST_FILE: &str = "sahelflow-standalone-manifest.json"');
+    expect(staging).toContain("cached standalone runtime failed verification");
+    expect(containment).toContain("current_directory: Option<&Path>");
+    expect(ci).toContain("verify-windows-packaged-runtime.ts");
+    expect(release).toContain("verify-windows-packaged-runtime.ts");
+    expect(release).toContain("sahelflow-standalone-manifest.json");
+    expect(evidence).toContain("verifyStandaloneManifest");
+  });
 });
