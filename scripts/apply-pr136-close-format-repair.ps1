@@ -3,12 +3,15 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $harnessPath = Join-Path $repositoryRoot "scripts\verify-installed-windows-msi.ps1"
 $source = Get-Content -LiteralPath $harnessPath -Raw
-$pattern = '(?ms)^function Close-SahelFlowNormally \{.*?^\}\r?\n\r?\n\$existing ='
-if (-not [regex]::IsMatch($source, $pattern)) {
-    throw "Could not locate the existing Close-SahelFlowNormally function."
-}
+$updated = $source
 
-$replacement = @'
+if ($source -notmatch 'class SahelFlowWindowCloser') {
+    $closePattern = '(?ms)^function Close-SahelFlowNormally \{.*?^\}\r?\n\r?\n\$existing ='
+    if (-not [regex]::IsMatch($source, $closePattern)) {
+        throw "Could not locate the existing Close-SahelFlowNormally function."
+    }
+
+    $closeReplacement = @'
 if (-not ("SahelFlowWindowCloser" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
@@ -58,7 +61,7 @@ function Close-SahelFlowNormally {
 
     $Process.Refresh()
     if ($Process.HasExited) {
-        return
+        throw "SahelFlow exited before the normal close request could be proven."
     }
 
     $handles = @(
@@ -100,22 +103,94 @@ function Close-SahelFlowNormally {
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
-        if ($remaining.Count -eq 0) {
+        $endpointPresent = Test-Path -LiteralPath $runtimeEndpointPath -PathType Leaf
+        if ($remaining.Count -eq 0 -and -not $endpointPresent) {
             return
         }
         Start-Sleep -Milliseconds 250
     } while ((Get-Date) -lt $deadline)
 
-    $remainingSummary = ($remaining | ForEach-Object {
-        "$($_.Name):$($_.ProcessId)"
-    }) -join ", "
-    throw "SahelFlow or a bundled child remained after normal close: $remainingSummary"
+    $remainingSummary = if ($remaining.Count -eq 0) {
+        "none"
+    } else {
+        ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
+    }
+    throw "Normal close was incomplete; remaining processes: $remainingSummary; runtime endpoint present: $endpointPresent"
 }
 
 $existing =
 '@
 
-$updated = [regex]::Replace($source, $pattern, $replacement, 1)
+    $updated = [regex]::Replace($source, $closePattern, $closeReplacement, 1)
+} elseif (
+    $source -notmatch 'Posted WM_CLOSE' -or
+    $source -notmatch 'runtime endpoint present'
+) {
+    throw "The existing SahelFlowWindowCloser block is incomplete or not the approved repair."
+}
+
+$firstLaunchCleanupPattern = '(?m)^    Remove-Item -LiteralPath \$runtimeEndpointPath -Force -ErrorAction SilentlyContinue$'
+if ([regex]::IsMatch($updated, $firstLaunchCleanupPattern)) {
+    $updated = [regex]::Replace(
+        $updated,
+        $firstLaunchCleanupPattern,
+        @'
+    if ($attempt -eq 1) {
+        Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
+    }
+'@,
+        1
+    )
+}
+
+$registryPattern = '(?ms)        if \(\$currentRegistryIdentity\.revision -ne \$registryIdentity\.revision -or\r?\n            \$currentRegistryIdentity\.activeShopId -ne \$registryIdentity\.activeShopId\) \{\r?\n            throw "Second launch changed registry authority\."\r?\n        \}'
+if ([regex]::IsMatch($updated, $registryPattern)) {
+    $updated = [regex]::Replace(
+        $updated,
+        $registryPattern,
+        @'
+        if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
+            $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
+            $currentRegistryIdentity.registrySha256 -ne $registryIdentity.registrySha256) {
+            throw "Second launch changed registry authority."
+        }
+'@,
+        1
+    )
+}
+
+$databasePattern = '(?ms)        if \(\$currentDatabaseIdentity\.path -ne \$databaseIdentity\.path\) \{\r?\n            throw "Second launch switched the active shop database\."\r?\n        \}'
+if ([regex]::IsMatch($updated, $databasePattern)) {
+    $updated = [regex]::Replace(
+        $updated,
+        $databasePattern,
+        @'
+        if ($currentDatabaseIdentity.path -ne $databaseIdentity.path -or
+            $currentDatabaseIdentity.length -ne $databaseIdentity.length -or
+            $currentDatabaseIdentity.sha256 -ne $databaseIdentity.sha256) {
+            throw "Second launch changed the active shop database identity."
+        }
+        if ($launches[1].endpoint.instanceId -eq $launches[0].endpoint.instanceId) {
+            throw "Second launch reused the first runtime instance identity."
+        }
+'@,
+        1
+    )
+}
+
+foreach ($required in @(
+    'class SahelFlowWindowCloser',
+    'Posted WM_CLOSE',
+    'runtime endpoint present',
+    'registrySha256 -ne $registryIdentity.registrySha256',
+    'sha256 -ne $databaseIdentity.sha256',
+    'Second launch reused the first runtime instance identity'
+)) {
+    if ($updated -notlike "*$required*") {
+        throw "The repaired harness is missing required proof: $required"
+    }
+}
+
 Set-Content -LiteralPath $harnessPath -Value $updated -Encoding utf8NoBOM
 
 & cargo fmt --manifest-path (Join-Path $repositoryRoot "src-tauri\Cargo.toml") --all
@@ -133,4 +208,4 @@ try {
     Pop-Location
 }
 
-Write-Host "Applied real GUI close harness and canonical Rust formatting."
+Write-Host "Applied idempotent GUI close, endpoint cleanup, cache, registry, database, and runtime-instance proofs."
