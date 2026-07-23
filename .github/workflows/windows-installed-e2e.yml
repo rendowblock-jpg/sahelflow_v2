@@ -6,10 +6,17 @@ on:
       - ".github/workflows/windows-installed-e2e.yml"
       - "sahelflow.version.json"
       - "scripts/verify-installed-windows-msi.ps1"
+      - "scripts/verify-installed-windows-ui.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
       - "src-tauri/**"
       - "src/app/api/internal/runtime-ready/**"
+      - "src/app/api/internal/runtime-bootstrap/**"
+      - "src/app/api/internal/runtime-ui-ready/**"
+      - "src/components/runtime/**"
+      - "src/app/layout.tsx"
+      - "src/lib/runtime-auth.ts"
+      - "src/proxy.ts"
       - "src/lib/db.ts"
       - "prisma/**"
       - "package.json"
@@ -82,7 +89,7 @@ jobs:
             Tee-Object -FilePath .sf-installed-e2e-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Install and prove launch/reopen
+      - name: Install and prove runtime launch/reopen
         shell: pwsh
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
@@ -99,6 +106,19 @@ jobs:
             throw
           }
 
+      - name: Prove authenticated hydrated WebView UI twice
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-ui.ps1
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'ui-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
       - name: Collect installed Windows evidence
         if: always()
         shell: pwsh
@@ -112,6 +132,7 @@ jobs:
             'runtime-probe-diagnostic.json',
             'runtime-readiness-diagnostic.json',
             'runtime-endpoint.json',
+            'runtime-ui-ready.json',
             'shop-registry.json',
             'migration-journal\current.json',
             'migration-journal\compatibility.json'
@@ -119,7 +140,7 @@ jobs:
           foreach ($relative in $evidenceFiles) {
             $source = Join-Path $roaming $relative
             if (Test-Path -LiteralPath $source -PathType Leaf) {
-              $safeName = $relative -replace '[\\/:*?"<>|]', '_'
+              $safeName = $relative -replace '[\/:*?"<>|]', '_'
               Copy-Item -LiteralPath $source -Destination (Join-Path $destination $safeName) -Force
             }
           }
