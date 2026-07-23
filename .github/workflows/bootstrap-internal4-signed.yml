@@ -1,0 +1,109 @@
+name: Bootstrap signed internal.4 build
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/bootstrap-internal4-signed.yml
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: bootstrap-signed-internal-4
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'ops/bootstrap-internal4-signed-build'
+    name: Dispatch exact signed internal.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Dispatch and record exact signed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: 685ee164cc4ff17e33a57cd07d7937e6ebc81f65
+          RELEASE_PR: "142"
+          RELEASE_TAG: sahelflow-v1.0.0-internal.4-685ee164cc4ff17e33a57cd07d7937e6ebc81f65
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Exact signed draft already exists: ${RELEASE_TAG}"
+            exit 0
+          fi
+
+          before_ids="$(gh run list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --workflow release.yml \
+            --event workflow_dispatch \
+            --limit 100 \
+            --json databaseId \
+            --jq '.[].databaseId')"
+
+          notes="SahelFlow internal.4 immutable Windows replacement candidate. Exact signed MSI must pass updater-signature verification, latest.json binding, installed launch, normal close, child teardown, reopen, runtime-cache reuse, and shop-data preservation."
+          gh workflow run release.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main \
+            -f source_ref="${SOURCE_SHA}" \
+            -f release_notes="${notes}"
+
+          signed_run_id=""
+          for _ in $(seq 1 60); do
+            while read -r candidate; do
+              [[ -n "${candidate}" ]] || continue
+              if ! grep -qx "${candidate}" <<< "${before_ids}"; then
+                signed_run_id="${candidate}"
+                break
+              fi
+            done < <(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release.yml \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId \
+              --jq '.[].databaseId')
+            [[ -n "${signed_run_id}" ]] && break
+            sleep 2
+          done
+
+          if [[ -z "${signed_run_id}" ]]; then
+            echo "Signed workflow dispatch was accepted but no new run appeared within 120 seconds." >&2
+            exit 1
+          fi
+
+          run_json="$(gh run view "${signed_run_id}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json databaseId,status,conclusion,headSha,url,event,createdAt,workflowName)"
+          signed_status="$(jq -r '.status' <<< "${run_json}")"
+          signed_conclusion="$(jq -r '.conclusion // "pending"' <<< "${run_json}")"
+          signed_head_sha="$(jq -r '.headSha' <<< "${run_json}")"
+          signed_url="$(jq -r '.url' <<< "${run_json}")"
+          signed_created_at="$(jq -r '.createdAt' <<< "${run_json}")"
+
+          body=$(cat <<EOF
+          <!-- sahelflow-internal4-bootstrap:${signed_run_id} -->
+          **Exact signed internal.4 build dispatched**
+
+          - Version authority: \`1.0.0-internal.4\` / MSI \`1.0.0.4\`
+          - Exact source input: \`${SOURCE_SHA}\`
+          - Bootstrap run: \`${GITHUB_RUN_ID}\`
+          - Signed updater run: \`${signed_run_id}\`
+          - Workflow head: \`${signed_head_sha}\`
+          - Initial status: \`${signed_status}\` / \`${signed_conclusion}\`
+          - Created: \`${signed_created_at}\`
+          - Run: ${signed_url}
+          EOF
+          )
+
+          gh api \
+            --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/issues/${RELEASE_PR}/comments" \
+            -f body="${body}"
+
+          echo "SIGNED_RUN_ID=${signed_run_id}" >> "${GITHUB_ENV}"
+          echo "Signed updater run ${signed_run_id}: ${signed_url}"
