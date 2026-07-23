@@ -1,0 +1,115 @@
+name: Bootstrap final internal.4 signed dispatch
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/bootstrap-final-internal4-dispatch.yml
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: bootstrap-final-internal4-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'ops/bootstrap-final-internal4-dispatch'
+    name: Dispatch canonical exact-source signed workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_SHA: 98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf
+      RELEASE_PR: '150'
+      EXPECTED_TAG: sahelflow-v1.0.0-internal.4-98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf
+    steps:
+      - name: Dispatch once and record exact signed run
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${SOURCE_SHA}" != "98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf" ]]; then
+            echo 'unexpected final source authority' >&2
+            exit 1
+          fi
+
+          find_exact_run() {
+            gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release.yml \
+              --branch main \
+              --event workflow_dispatch \
+              --limit 100 \
+              --json databaseId,headSha,status,conclusion,url,createdAt \
+              --jq ".[] | select(.headSha == \"${SOURCE_SHA}\") | [.databaseId,.status,(.conclusion // \"\"),.url,.createdAt] | @tsv" \
+              | head -n 1
+          }
+
+          signed_run="$(find_exact_run)"
+          dispatch_required=true
+
+          if [[ -n "${signed_run}" ]]; then
+            IFS=$'\t' read -r signed_run_id signed_status signed_conclusion signed_url signed_created_at <<< "${signed_run}"
+            if [[ "${signed_status}" == 'queued' || "${signed_status}" == 'in_progress' || "${signed_conclusion}" == 'success' ]]; then
+              dispatch_required=false
+            fi
+          fi
+
+          if git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${EXPECTED_TAG}" >/dev/null 2>&1; then
+            dispatch_required=false
+            signed_run_id="${signed_run_id:-tag-present}"
+            signed_status="${signed_status:-completed}"
+            signed_conclusion="${signed_conclusion:-success}"
+            signed_url="${signed_url:-https://github.com/${GITHUB_REPOSITORY}/releases/tag/${EXPECTED_TAG}}"
+            signed_created_at="${signed_created_at:-unknown}"
+          fi
+
+          if [[ "${dispatch_required}" == true ]]; then
+            notes='SahelFlow 1.0.0-internal.4 final protected-main candidate with signed artifact, latest.json, installed launch, normal close, teardown, reopen, cache reuse, and data-preservation verification.'
+            gh workflow run release.yml \
+              --repo "${GITHUB_REPOSITORY}" \
+              --ref main \
+              -f source_ref="${SOURCE_SHA}" \
+              -f release_notes="${notes}"
+
+            signed_run=''
+            for _ in $(seq 1 45); do
+              signed_run="$(find_exact_run)"
+              [[ -n "${signed_run}" ]] && break
+              sleep 2
+            done
+            if [[ -z "${signed_run}" ]]; then
+              echo 'canonical release dispatch was accepted but no exact-source run appeared within 90 seconds' >&2
+              exit 1
+            fi
+            IFS=$'\t' read -r signed_run_id signed_status signed_conclusion signed_url signed_created_at <<< "${signed_run}"
+          fi
+
+          body=$(cat <<EOF
+          <!-- sahelflow-final-signed-dispatch:${signed_run_id} -->
+          **Final exact-source signed internal.4 workflow recorded**
+
+          - Source SHA: \`${SOURCE_SHA}\`
+          - Expected tag: \`${EXPECTED_TAG}\`
+          - Signed workflow run: \`${signed_run_id}\`
+          - Status: \`${signed_status}\`
+          - Conclusion: \`${signed_conclusion:-pending}\`
+          - Created: \`${signed_created_at}\`
+          - Run: ${signed_url}
+          - Bootstrap PR: #${{ github.event.pull_request.number }}
+          EOF
+          )
+
+          for target in "${RELEASE_PR}" "${{ github.event.pull_request.number }}"; do
+            gh api \
+              --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/issues/${target}/comments" \
+              -f body="${body}"
+          done
+
+          echo "Exact-source signed run ${signed_run_id}: ${signed_status}/${signed_conclusion:-pending}" >> "${GITHUB_STEP_SUMMARY}"
