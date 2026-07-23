@@ -56,7 +56,9 @@ jobs:
           python scripts/apply-signed-release-lifecycle.py
           if ($LASTEXITCODE -ne 0) { throw 'failed to apply signed installed lifecycle gate' }
           git diff --quiet -- .github/workflows/release.yml
-          if ($LASTEXITCODE -eq 0) { throw 'signed release lifecycle patch produced no release workflow change' }
+          $releaseChanged = $LASTEXITCODE -ne 0
+          $global:LASTEXITCODE = 0
+          if (-not $releaseChanged) { throw 'signed release lifecycle patch produced no release workflow change' }
 
       - name: Verify canonical Rust formatting
         shell: pwsh
