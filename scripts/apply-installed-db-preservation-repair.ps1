@@ -12,40 +12,6 @@ $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $harnessPath = Join-Path $repositoryRoot "scripts\verify-installed-windows-msi.ps1"
 $source = (Get-Content -LiteralPath $harnessPath -Raw) -replace "`r`n", "`n"
 
-$old = @'
-    $currentDatabaseIdentity = [pscustomobject]@{
-        path = $databasePath
-        length = (Get-Item -LiteralPath $databasePath).Length
-        sha256 = (Get-FileHash -LiteralPath $databasePath -Algorithm SHA256).Hash
-    }
-
-    if ($attempt -eq 1) {
-        $cacheIdentity = $currentCacheIdentity
-        $registryIdentity = $currentRegistryIdentity
-        $databaseIdentity = $currentDatabaseIdentity
-    } else {
-        if ($currentCacheIdentity.directory -ne $cacheIdentity.directory -or
-            $currentCacheIdentity.manifestSha256 -ne $cacheIdentity.manifestSha256) {
-            throw "Second launch did not reuse the verified runtime cache."
-        }
-        if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
-            $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
-            $currentRegistryIdentity.registrySha256 -ne $registryIdentity.registrySha256) {
-            throw "Second launch changed registry authority."
-        }
-        if ($currentDatabaseIdentity.path -ne $databaseIdentity.path -or
-            $currentDatabaseIdentity.length -ne $databaseIdentity.length -or
-            $currentDatabaseIdentity.sha256 -ne $databaseIdentity.sha256) {
-            throw "Second launch changed the active shop database identity."
-        }
-        if ($launches[1].endpoint.instanceId -eq $launches[0].endpoint.instanceId) {
-            throw "Second launch reused the first runtime instance identity."
-        }
-    }
-
-    $closures += Close-SahelFlowNormally -Process $process
-'@
-
 $new = @'
     $closures += Close-SahelFlowNormally -Process $process
 
@@ -85,15 +51,29 @@ $new = @'
 
 if ($source.Contains($new)) {
     Write-Host "Post-shutdown database preservation proof is already present."
-} elseif ($source.Contains($old)) {
-    $source = $source.Replace($old, $new)
+} else {
+    $pattern = '(?ms)^    \$currentDatabaseIdentity = \[pscustomobject\]@\{.*?^    \$closures \+= Close-SahelFlowNormally -Process \$process$'
+    $found = [regex]::Matches($source, $pattern)
+    [pscustomobject]@{
+        matchCount = $found.Count
+        sourceLength = $source.Length
+    } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidenceRoot "db-preservation-repair-match.json") -Encoding UTF8
+    if ($found.Count -ne 1) {
+        throw "Expected exactly one live-database hashing range, found $($found.Count)."
+    }
+    $match = $found[0]
+    $source = $source.Substring(0, $match.Index) + $new + $source.Substring($match.Index + $match.Length)
     Set-Content -LiteralPath $harnessPath -Value $source -Encoding utf8NoBOM
     Write-Host "Moved database hashing after proven shutdown."
-} else {
-    throw "Could not locate the canonical live-database hashing block."
 }
 
 $repaired = Get-Content -LiteralPath $harnessPath -Raw
-if (-not $repaired.Contains('Prisma owns the SQLite file while the packaged runtime is live')) {
-    throw "Post-shutdown database preservation marker is missing."
+foreach ($required in @(
+    'Prisma owns the SQLite file while the packaged runtime is live',
+    '$closures += Close-SahelFlowNormally -Process $process',
+    'Get-FileHash -LiteralPath $databasePath'
+)) {
+    if (-not $repaired.Contains($required)) {
+        throw "Post-shutdown database preservation proof is missing required source: $required"
+    }
 }
