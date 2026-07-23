@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
       - "scripts/apply-main-window-shutdown-repair.ps1"
+      - "scripts/apply-installed-db-preservation-repair.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
@@ -53,6 +54,10 @@ jobs:
       - name: Apply explicit main-window shutdown path under test
         shell: pwsh
         run: ./scripts/apply-main-window-shutdown-repair.ps1
+
+      - name: Apply post-shutdown database preservation proof
+        shell: pwsh
+        run: ./scripts/apply-installed-db-preservation-repair.ps1
 
       - name: Format Rust source under test
         shell: pwsh
@@ -113,12 +118,12 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- src-tauri/src/lib.rs src-tauri/src/runtime_protocol.rs
+          git add -- scripts/verify-installed-windows-msi.ps1 src-tauri/src/lib.rs src-tauri/src/runtime_protocol.rs
           git diff --cached --check
           if ($LASTEXITCODE -ne 0) { throw 'lifecycle-proven desktop source has whitespace errors' }
           git diff --cached --quiet
           if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but produced no desktop source change' }
-          git commit -m 'fix(desktop): exit cleanly on main-window close'
+          git commit -m 'fix(desktop): exit cleanly and preserve data on reopen'
           if ($LASTEXITCODE -ne 0) { throw 'failed to commit lifecycle-proven desktop source' }
           git push origin "HEAD:$env:HEAD_BRANCH"
           if ($LASTEXITCODE -ne 0) { throw 'failed to push lifecycle-proven desktop source' }
