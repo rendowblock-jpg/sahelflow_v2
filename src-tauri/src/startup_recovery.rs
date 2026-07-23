@@ -1,9 +1,21 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::{self, OpenOptions};
 use std::io::{Error as IoError, ErrorKind, Write};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};
 use tauri::Manager;
+
+const RUNTIME_BOOTSTRAP_PATH: &str = "/api/internal/runtime-bootstrap";
+const RUNTIME_COOKIE: &str = "sf_runtime";
+const RUNTIME_ENDPOINT_FILE: &str = "runtime-endpoint.json";
+const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
+const STARTUP_DIAGNOSTIC_FILE: &str = "startup-diagnostic.json";
+const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(60);
+const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
+const RUNTIME_PROTOCOL_VERSION: u8 = 1;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,17 +27,206 @@ struct StartupDiagnostic<'a> {
     created_at_unix_seconds: u64,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeEndpoint {
+    state: String,
+    instance_id: String,
+    app_version: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeUiReady {
+    format_version: u8,
+    protocol_version: u8,
+    state: String,
+    instance_id: String,
+    app_version: String,
+    page_url: String,
+}
+
+struct PackagedHandoff {
+    workspace_url: tauri::Url,
+    host: String,
+    token: String,
+}
+
+/// Navigate the configured WebView to a ready application.
+///
+/// Development URLs are shown immediately. A packaged bootstrap URL is never
+/// loaded into the WebView: the per-launch credential is extracted in Rust,
+/// injected into the native cookie store, and removed from browser navigation.
+/// The hidden window is shown only after a hydrated page reports an authenticated
+/// UI acknowledgment matching the current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
+    let requested_url = tauri::Url::parse(app_url)?;
     let window = app.get_webview_window("main").ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "the configured main desktop window was not created",
         )
     })?;
-    window.navigate(tauri::Url::parse(app_url)?)?;
-    window.show()?;
-    window.set_focus()?;
+
+    let Some(handoff) = packaged_handoff(&requested_url)? else {
+        window.navigate(requested_url)?;
+        window.show()?;
+        window.set_focus()?;
+        return Ok(());
+    };
+
+    let app_data_dir = app.path().app_data_dir()?;
+    clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
+    clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
+
+    window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
+    window.navigate(handoff.workspace_url)?;
+
+    monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
+}
+
+fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError> {
+    if url.path() != RUNTIME_BOOTSTRAP_PATH {
+        return Ok(None);
+    }
+    if url.scheme() != "http" {
+        return Err(IoError::new(
+            ErrorKind::InvalidInput,
+            "packaged runtime bootstrap must use loopback HTTP",
+        ));
+    }
+    let host = url.host_str().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "packaged runtime bootstrap URL has no host",
+        )
+    })?;
+    if host != "127.0.0.1" && host != "localhost" {
+        return Err(IoError::new(
+            ErrorKind::PermissionDenied,
+            "packaged runtime bootstrap host is not loopback",
+        ));
+    }
+
+    let token = url
+        .query_pairs()
+        .find_map(|(name, value)| (name == "token").then(|| value.into_owned()))
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::PermissionDenied,
+                "packaged runtime bootstrap credential is missing",
+            )
+        })?;
+    if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(IoError::new(
+            ErrorKind::PermissionDenied,
+            "packaged runtime bootstrap credential is malformed",
+        ));
+    }
+
+    let mut workspace_url = url.clone();
+    workspace_url.set_path("/");
+    workspace_url.set_query(None);
+    workspace_url.set_fragment(None);
+
+    Ok(Some(PackagedHandoff {
+        workspace_url,
+        host: host.to_string(),
+        token,
+    }))
+}
+
+fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
+    if host != "127.0.0.1" && host != "localhost" {
+        return Err(IoError::new(
+            ErrorKind::PermissionDenied,
+            "runtime cookie host is not loopback",
+        ));
+    }
+    if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(IoError::new(
+            ErrorKind::PermissionDenied,
+            "runtime cookie credential is malformed",
+        ));
+    }
+
+    Ok(Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
+        .domain(host.to_string())
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Strict)
+        .secure(false)
+        .build())
+}
+
+fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
+    thread::spawn(move || {
+        if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
+            if let Err(error) = window.show().and_then(|_| window.set_focus()) {
+                let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
+                eprintln!("[sahelflow] FATAL: {detail}");
+                let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
+            }
+            return;
+        }
+
+        let detail = "the hidden desktop WebView did not produce a matching authenticated UI-ready acknowledgment";
+        eprintln!("[sahelflow] FATAL: {detail}");
+        let _ = show_blocked(&app, "SF-RUNTIME-UI-BLOCKED", detail);
+    });
+}
+
+fn wait_for_matching_ui_ready(app_data_dir: &Path, timeout: Duration) -> bool {
+    let endpoint_path = app_data_dir.join(RUNTIME_ENDPOINT_FILE);
+    let ui_ready_path = app_data_dir.join(RUNTIME_UI_READY_FILE);
+    let started_at = Instant::now();
+
+    while started_at.elapsed() < timeout {
+        if matching_ui_ready(&endpoint_path, &ui_ready_path) {
+            return true;
+        }
+        thread::sleep(UI_READY_POLL_INTERVAL);
+    }
+    false
+}
+
+fn matching_ui_ready(endpoint_path: &Path, ui_ready_path: &Path) -> bool {
+    let Ok(endpoint_bytes) = fs::read(endpoint_path) else {
+        return false;
+    };
+    let Ok(ui_ready_bytes) = fs::read(ui_ready_path) else {
+        return false;
+    };
+    if endpoint_bytes.len() > 64 * 1024 || ui_ready_bytes.len() > 64 * 1024 {
+        return false;
+    }
+
+    let Ok(endpoint) = serde_json::from_slice::<RuntimeEndpoint>(&endpoint_bytes) else {
+        return false;
+    };
+    let Ok(ui_ready) = serde_json::from_slice::<RuntimeUiReady>(&ui_ready_bytes) else {
+        return false;
+    };
+
+    endpoint.state == "ready"
+        && endpoint.app_version == env!("CARGO_PKG_VERSION")
+        && !endpoint.instance_id.is_empty()
+        && ui_ready.format_version == 1
+        && ui_ready.protocol_version == RUNTIME_PROTOCOL_VERSION
+        && ui_ready.state == "ready"
+        && ui_ready.app_version == env!("CARGO_PKG_VERSION")
+        && ui_ready.instance_id == endpoint.instance_id
+        && (ui_ready.page_url.starts_with("http://127.0.0.1:")
+            || ui_ready.page_url.starts_with("http://localhost:"))
+}
+
+fn clear_file(path: &Path) -> Result<(), IoError> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
 }
 
 pub fn show_blocked(
@@ -36,7 +237,7 @@ pub fn show_blocked(
     let app_data_dir = app.path().app_data_dir()?;
     fs::create_dir_all(&app_data_dir)?;
 
-    let report_path = app_data_dir.join("startup-diagnostic.json");
+    let report_path = app_data_dir.join(STARTUP_DIAGNOSTIC_FILE);
     let temp_report_path = app_data_dir.join("startup-diagnostic.json.tmp");
     let safe_detail = redact_secrets(detail);
     let diagnostic = StartupDiagnostic {
@@ -172,6 +373,78 @@ fn redact_secrets(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn packaged_handoff_removes_the_credential_from_browser_navigation() {
+        let token = "a".repeat(64);
+        let url = tauri::Url::parse(&format!(
+            "http://127.0.0.1:43123{RUNTIME_BOOTSTRAP_PATH}?token={token}"
+        ))
+        .unwrap();
+
+        let handoff = packaged_handoff(&url).unwrap().unwrap();
+        assert_eq!(handoff.workspace_url.as_str(), "http://127.0.0.1:43123/");
+        assert_eq!(handoff.host, "127.0.0.1");
+        assert_eq!(handoff.token, token);
+        assert!(!handoff.workspace_url.as_str().contains("token="));
+    }
+
+    #[test]
+    fn runtime_cookie_is_loopback_scoped_http_only_and_strict() {
+        let token = "b".repeat(64);
+        let cookie = runtime_cookie("127.0.0.1", &token).unwrap();
+
+        assert_eq!(cookie.name(), RUNTIME_COOKIE);
+        assert_eq!(cookie.value(), token);
+        assert_eq!(cookie.domain(), Some("127.0.0.1"));
+        assert_eq!(cookie.path(), Some("/"));
+        assert_eq!(cookie.http_only(), Some(true));
+        assert_eq!(cookie.same_site(), Some(SameSite::Strict));
+        assert_eq!(cookie.secure(), Some(false));
+    }
+
+    #[test]
+    fn ui_ready_must_match_the_current_runtime_instance() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-ui-ready-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let endpoint_path = root.join(RUNTIME_ENDPOINT_FILE);
+        let ui_ready_path = root.join(RUNTIME_UI_READY_FILE);
+        fs::write(
+            &endpoint_path,
+            format!(
+                r#"{{"state":"ready","instanceId":"instance-a","appVersion":"{}"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        fs::write(
+            &ui_ready_path,
+            format!(
+                r#"{{"formatVersion":1,"protocolVersion":1,"state":"ready","instanceId":"instance-b","appVersion":"{}","pageUrl":"http://127.0.0.1:43123"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        assert!(!matching_ui_ready(&endpoint_path, &ui_ready_path));
+
+        fs::write(
+            &ui_ready_path,
+            format!(
+                r#"{{"formatVersion":1,"protocolVersion":1,"state":"ready","instanceId":"instance-a","appVersion":"{}","pageUrl":"http://127.0.0.1:43123"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        assert!(matching_ui_ready(&endpoint_path, &ui_ready_path));
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn diagnostics_redact_launch_credentials_and_profile_paths() {
