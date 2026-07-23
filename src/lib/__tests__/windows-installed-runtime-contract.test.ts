@@ -49,6 +49,7 @@ describe("installed Windows runtime contract", () => {
     const desktop = read("src-tauri/src/lib.rs");
 
     expect(workflow).toContain("contents: read");
+    expect(workflow).toContain('      - "sahelflow.version.json"');
     expect(workflow).not.toContain("Persist lifecycle-proven");
     expect(workflow).toContain("bunx tauri build --bundles msi");
     expect(workflow).toContain("verify-installed-windows-msi.ps1");
@@ -61,5 +62,38 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain(".run(|_app_handle, _event| {");
     expect(desktop).toContain("_app_handle.cleanup_before_exit();");
     expect(desktop).toContain("std::process::exit(0);");
+  });
+
+  it("installs the exact signed MSI and dispatches only from protected-main version authority", () => {
+    const release = read(".github/workflows/release.yml");
+    const dispatcher = read(
+      ".github/workflows/release-on-version-authority.yml",
+    );
+
+    const signatureProof = release.indexOf(
+      "Verify local MSI and updater signature",
+    );
+    const installedProof = release.indexOf(
+      "Install and prove signed launch/reopen",
+    );
+    const evidenceRetention = release.indexOf(
+      "Retain signed candidate and evidence",
+    );
+
+    expect(signatureProof).toBeGreaterThan(-1);
+    expect(installedProof).toBeGreaterThan(signatureProof);
+    expect(evidenceRetention).toBeGreaterThan(installedProof);
+    expect(release).toContain(
+      "./scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH",
+    );
+    expect(release).toContain(
+      "${{ runner.temp }}/sahelflow-installed-e2e/**",
+    );
+
+    expect(dispatcher).toContain("branches:\n      - main");
+    expect(dispatcher).toContain("- sahelflow.version.json");
+    expect(dispatcher).toContain("actions: write");
+    expect(dispatcher).toContain("source_ref=\"${SOURCE_SHA}\"");
+    expect(dispatcher).toContain("gh workflow run release.yml");
   });
 });
