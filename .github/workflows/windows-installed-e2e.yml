@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
+      - "scripts/apply-main-window-shutdown-repair.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
@@ -49,13 +50,17 @@ jobs:
         with:
           components: rustfmt,clippy
 
-      - name: Format runtime probe under test
+      - name: Apply explicit main-window shutdown path under test
+        shell: pwsh
+        run: ./scripts/apply-main-window-shutdown-repair.ps1
+
+      - name: Format Rust source under test
         shell: pwsh
         run: |
           cargo fmt --manifest-path src-tauri/Cargo.toml --all
           if ($LASTEXITCODE -ne 0) { throw 'cargo fmt failed' }
           git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'formatted runtime probe has whitespace errors' }
+          if ($LASTEXITCODE -ne 0) { throw 'formatted Rust source has whitespace errors' }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
@@ -86,13 +91,21 @@ jobs:
       - name: Install and prove launch/reopen
         shell: pwsh
         run: |
-          $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
-          if ($msis.Count -ne 1) {
-            throw "expected exactly one MSI, found $($msis.Count)"
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+            if ($msis.Count -ne 1) {
+              throw "expected exactly one MSI, found $($msis.Count)"
+            }
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
+            throw
           }
-          ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
 
-      - name: Persist lifecycle-proven Rust formatting
+      - name: Persist lifecycle-proven desktop source
         if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' && github.head_ref == 'agent/windows-installed-runtime-e2e'
         shell: pwsh
         env:
@@ -100,15 +113,15 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- src-tauri/src/runtime_protocol.rs
+          git add -- src-tauri/src/lib.rs src-tauri/src/runtime_protocol.rs
           git diff --cached --check
-          if ($LASTEXITCODE -ne 0) { throw 'formatted runtime probe has whitespace errors' }
+          if ($LASTEXITCODE -ne 0) { throw 'lifecycle-proven desktop source has whitespace errors' }
           git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but runtime probe was already formatted' }
-          git commit -m 'style(rust): format installed readiness probe'
-          if ($LASTEXITCODE -ne 0) { throw 'failed to commit formatted runtime probe' }
+          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but produced no desktop source change' }
+          git commit -m 'fix(desktop): exit cleanly on main-window close'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to commit lifecycle-proven desktop source' }
           git push origin "HEAD:$env:HEAD_BRANCH"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to push formatted runtime probe' }
+          if ($LASTEXITCODE -ne 0) { throw 'failed to push lifecycle-proven desktop source' }
 
       - name: Collect installed Windows evidence
         if: always()
