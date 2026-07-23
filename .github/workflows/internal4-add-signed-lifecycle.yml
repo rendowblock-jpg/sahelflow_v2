@@ -1,0 +1,96 @@
+name: Add signed installed lifecycle gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/internal4-add-signed-lifecycle.yml"
+      - ".github/workflows/release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-release:
+    if: github.actor != 'github-actions[bot]' && github.head_ref == 'release/internal-4-authority'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact authority branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Add exact signed-MSI lifecycle proof
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/release.yml')
+          source = path.read_text(encoding='utf-8')
+
+          insertion_marker = '''      - name: Verify deterministic build source rewrites
+        run: bun run scripts/verify-release-source.ts
+'''
+          lifecycle = '''      - name: Install and prove signed launch/reopen
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'signed-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Upload signed installed lifecycle diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-installed-lifecycle-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/sahelflow-installed-e2e/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+'''
+          if 'Install and prove signed launch/reopen' not in source:
+              if source.count(insertion_marker) != 1:
+                  raise SystemExit('expected exactly one release source-rewrite marker')
+              source = source.replace(insertion_marker, lifecycle + insertion_marker, 1)
+
+          retention_marker = '''            .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+            ${{ env.SF_LATEST_JSON_PATH }}
+'''
+          retention = '''            .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+            ${{ runner.temp }}/sahelflow-installed-e2e/**
+            ${{ env.SF_LATEST_JSON_PATH }}
+'''
+          if '${{ runner.temp }}/sahelflow-installed-e2e/**' not in source.split('Retain signed candidate and evidence', 1)[-1]:
+              if source.count(retention_marker) != 1:
+                  raise SystemExit('expected exactly one signed evidence retention marker')
+              source = source.replace(retention_marker, retention, 1)
+
+          required = [
+              'Install and prove signed launch/reopen',
+              './scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH',
+              'signed-installed-lifecycle-diagnostics-${{ github.run_id }}',
+              '${{ runner.temp }}/sahelflow-installed-e2e/**',
+          ]
+          missing = [item for item in required if item not in source]
+          if missing:
+              raise SystemExit('signed lifecycle gate missing: ' + ', '.join(missing))
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+          git diff --check
+          git rm -- .github/workflows/internal4-add-signed-lifecycle.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- .github/workflows/release.yml
+          git commit -m 'ci(release): prove signed MSI installed lifecycle'
+          git push origin HEAD:release/internal-4-authority
