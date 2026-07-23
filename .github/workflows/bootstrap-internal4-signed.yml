@@ -142,7 +142,22 @@ jobs:
         run: bun run sf-audit
 
       - name: Verify TypeScript, lint, tests, and migrations
-        run: bun run sf-verify
+        shell: pwsh
+        run: |
+          & bun run sf-verify 2>&1 | Tee-Object -FilePath .sf-sf-verify.log
+          $verifyExit = $LASTEXITCODE
+          if ($verifyExit -ne 0) { exit $verifyExit }
+
+      - name: Upload signed verification diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-signed-sf-verify-diagnostics-${{ github.run_id }}
+          path: |
+            .sf-sf-verify.log
+            .sf-vitest-first-failure.txt
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Verify coverage threshold
         run: bunx vitest run --coverage
