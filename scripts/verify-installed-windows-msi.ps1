@@ -365,6 +365,11 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         activeShopId = $registry.activeShopId
         registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
     }
+    $closures += Close-SahelFlowNormally -Process $process
+
+    # Prisma owns the SQLite file while the packaged runtime is live. Hash only
+    # after the normal close has stopped the complete process tree and released
+    # the database handle.
     $currentDatabaseIdentity = [pscustomobject]@{
         path = $databasePath
         length = (Get-Item -LiteralPath $databasePath).Length
@@ -394,8 +399,6 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
             throw "Second launch reused the first runtime instance identity."
         }
     }
-
-    $closures += Close-SahelFlowNormally -Process $process
 }
 
 $result = [ordered]@{

@@ -219,12 +219,18 @@ impl RuntimeProtocol {
         let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500))
             .map_err(|error| format!("readiness connection failed: {}", error.kind()))?;
         let io_timeout = Some(Duration::from_secs(2));
-        stream
-            .set_read_timeout(io_timeout)
-            .map_err(|error| format!("could not configure readiness read timeout: {}", error.kind()))?;
-        stream
-            .set_write_timeout(io_timeout)
-            .map_err(|error| format!("could not configure readiness write timeout: {}", error.kind()))?;
+        stream.set_read_timeout(io_timeout).map_err(|error| {
+            format!(
+                "could not configure readiness read timeout: {}",
+                error.kind()
+            )
+        })?;
+        stream.set_write_timeout(io_timeout).map_err(|error| {
+            format!(
+                "could not configure readiness write timeout: {}",
+                error.kind()
+            )
+        })?;
 
         let request = format!(
             "GET {READY_PATH} HTTP/1.1\r\nHost: {LOOPBACK_HOST}:{}\r\nAuthorization: Bearer {}\r\nConnection: close\r\n\r\n",
@@ -242,7 +248,9 @@ impl RuntimeProtocol {
                 Ok(read) => {
                     response.extend_from_slice(&chunk[..read]);
                     if response.len() > MAX_RESPONSE_BYTES {
-                        return Err("readiness response exceeded the bounded size limit".to_string());
+                        return Err(
+                            "readiness response exceeded the bounded size limit".to_string()
+                        );
                     }
                     if let Some(expected_length) = declared_http_message_length(&response)? {
                         if response.len() >= expected_length {
@@ -420,7 +428,9 @@ fn declared_http_message_length(response: &[u8]) -> Result<Option<usize>, String
             .parse::<usize>()
             .map_err(|_| "readiness response declared an invalid Content-Length".to_string())?;
         if content_length.is_some_and(|current| current != parsed) {
-            return Err("readiness response declared conflicting Content-Length values".to_string());
+            return Err(
+                "readiness response declared conflicting Content-Length values".to_string(),
+            );
         }
         content_length = Some(parsed);
     }
@@ -589,35 +599,18 @@ mod tests {
         ]
         .concat();
 
-        assert!(validate_readiness_response(
-            &valid,
-            "instance-a",
-            49152,
-            "configured"
-        )
-        .is_ok());
+        assert!(validate_readiness_response(&valid, "instance-a", 49152, "configured").is_ok());
         assert!(validate_readiness_response(&valid, "instance-a", 49152, "setup").is_err());
-        assert!(validate_readiness_response(
-            &wrong_instance,
-            "instance-a",
-            49152,
-            "configured"
-        )
-        .is_err());
-        assert!(validate_readiness_response(
-            &unauthorized,
-            "instance-a",
-            49152,
-            "configured"
-        )
-        .is_err());
-        assert!(validate_readiness_response(
-            b"not http",
-            "instance-a",
-            49152,
-            "configured"
-        )
-        .is_err());
+        assert!(
+            validate_readiness_response(&wrong_instance, "instance-a", 49152, "configured")
+                .is_err()
+        );
+        assert!(
+            validate_readiness_response(&unauthorized, "instance-a", 49152, "configured").is_err()
+        );
+        assert!(
+            validate_readiness_response(b"not http", "instance-a", 49152, "configured").is_err()
+        );
     }
 
     #[test]
@@ -674,13 +667,8 @@ mod tests {
             body.to_vec(),
         ]
         .concat();
-        let failure = validate_readiness_response(
-            &response,
-            "instance-a",
-            49152,
-            "configured",
-        )
-        .expect_err("blocked readiness must fail");
+        let failure = validate_readiness_response(&response, "instance-a", 49152, "configured")
+            .expect_err("blocked readiness must fail");
         assert!(failure.contains("HTTP 503"));
         assert!(failure.contains("RUNTIME_AUTH_MISMATCH"));
     }
