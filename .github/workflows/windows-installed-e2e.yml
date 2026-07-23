@@ -57,53 +57,27 @@ jobs:
 
           path = Path("src-tauri/src/lib.rs")
           source = path.read_text(encoding="utf-8")
-          old = '''        .run(|app_handle, event| {
-              #[cfg(not(debug_assertions))]
-              {
-                  use tauri::Manager;
-                  let main_window_close = matches!(
-                      &event,
-                      tauri::RunEvent::WindowEvent {
-                          label,
-                          event: tauri::WindowEvent::CloseRequested { .. },
-                          ..
-                      } if label == "main"
-                  );
-                  let shutdown = main_window_close
-                      || matches!(
-                          event,
-                          tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
-                      );
-                  if shutdown {
-                      if let Some(state) = app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
-                      {
-                          if let Ok(mut children) = state.lock() {
-                              children.kill_all();
-                          }
-                      }
-                      if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
-                          runtime_protocol::remove_manifest(&app_data_dir);
-                      }
-                  }
-                  if main_window_close {
-                      // AppHandle::exit requests another event-loop transition. A
-                      // native close request is already executing on that loop, so
-                      // finish Tauri cleanup synchronously and exit immediately.
-                      app_handle.cleanup_before_exit();
-                      std::process::exit(0);
-                  }
-              }
-          });'''
-          new = old.replace("|app_handle, event|", "|_app_handle, _event|")
-          new = new.replace("&event,", "&_event,")
-          new = new.replace("\n                        event,\n", "\n                        _event,\n")
-          new = new.replace("app_handle.try_state", "_app_handle.try_state")
-          new = new.replace("app_handle.path()", "_app_handle.path()")
-          new = new.replace("app_handle.cleanup_before_exit()", "_app_handle.cleanup_before_exit()")
-
-          if source.count(old) != 1:
-              raise SystemExit(f"expected exactly one canonical event callback, found {source.count(old)}")
-          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          start_marker = ".run(|app_handle, event| {"
+          end_marker = "\n        });"
+          if source.count(start_marker) != 1:
+              raise SystemExit(f"expected one event callback start, found {source.count(start_marker)}")
+          start = source.index(start_marker)
+          end = source.index(end_marker, start) + len(end_marker)
+          block = source[start:end]
+          replacements = [
+              ("|app_handle, event|", "|_app_handle, _event|"),
+              ("&event,", "&_event,"),
+              ("\n                        event,\n", "\n                        _event,\n"),
+              ("app_handle.try_state", "_app_handle.try_state"),
+              ("app_handle.path()", "_app_handle.path()"),
+              ("app_handle.cleanup_before_exit()", "_app_handle.cleanup_before_exit()"),
+          ]
+          for old, new in replacements:
+              count = block.count(old)
+              if count != 1:
+                  raise SystemExit(f"expected one {old!r} in event callback, found {count}")
+              block = block.replace(old, new, 1)
+          path.write_text(source[:start] + block + source[end:], encoding="utf-8")
           '@ | python -
 
           if ($LASTEXITCODE -ne 0) { throw 'failed to apply exact debug-build lint fix' }
