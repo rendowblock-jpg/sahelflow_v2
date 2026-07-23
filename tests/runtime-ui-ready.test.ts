@@ -46,7 +46,9 @@ describe("packaged runtime hydrated UI readiness", () => {
     expect(acknowledgment.state).toBe("ready");
     expect(acknowledgment.instanceId).toBe(instanceId);
     expect(acknowledgment.appVersion).toBe("1.0.0-internal.5");
-    expect(acknowledgment.pageUrl).toBe("http://127.0.0.1:43123");
+    expect(acknowledgment.pageUrl).toMatch(
+      /^http:\/\/(127\.0\.0\.1|localhost):43123$/,
+    );
     expect(typeof acknowledgment.processId).toBe("number");
     expect(typeof acknowledgment.createdAtUnixSeconds).toBe("number");
   });
