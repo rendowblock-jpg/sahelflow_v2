@@ -1,0 +1,62 @@
+name: Dispatch signed internal version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - sahelflow.version.json
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: dispatch-signed-internal-version
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch exact protected-main candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact protected-main source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate and dispatch signed candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          authority = json.loads(Path('sahelflow.version.json').read_text(encoding='utf-8'))
+          version = authority.get('version')
+          channel = authority.get('channel')
+          updater = authority.get('updater') or {}
+          if not isinstance(version, str) or not version.startswith('1.0.0-internal.'):
+              raise SystemExit('version authority is not an internal candidate')
+          if channel != 'internal':
+              raise SystemExit(f'expected internal channel, found {channel!r}')
+          if updater.get('enabled') is not True or updater.get('approvalScope') != 'internal-lab':
+              raise SystemExit('internal updater authority is not approved')
+          print(version)
+          PY
+          )"
+
+          notes="SahelFlow ${version} immutable Windows candidate from protected main with installed launch, normal close, child teardown, reopen, cache reuse, and signed-artifact lifecycle verification."
+          gh workflow run release.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main \
+            -f source_ref="${SOURCE_SHA}" \
+            -f release_notes="${notes}"
+
+          echo "Dispatched signed ${version} from ${SOURCE_SHA}."
