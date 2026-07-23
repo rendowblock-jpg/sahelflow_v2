@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+const read = (path: string) =>
+  readFileSync(resolve(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 describe("installed Windows runtime contract", () => {
   it("hard-disables Next telemetry before hashing the packaged standalone tree", () => {
@@ -97,7 +98,7 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("actions: write");
     expect(dispatcher).toContain("issues: write");
     expect(dispatcher).toContain("pull-requests: read");
-    expect(dispatcher).toContain("source_ref=\"${SOURCE_SHA}\"");
+    expect(dispatcher).toContain('source_ref="${SOURCE_SHA}"');
     expect(dispatcher).toContain("gh workflow run release.yml");
     expect(dispatcher).toContain("gh run list");
     expect(dispatcher).toContain("signed workflow dispatch was accepted");
