@@ -9,6 +9,7 @@ import {
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
   RUNTIME_READY_PATH,
+  RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
 /**
@@ -61,8 +62,9 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // The bootstrap route exchanges the one-time URL credential for an
-  // HttpOnly launch cookie and performs its own constant-time validation.
+  // Backward-compatible fallback for older desktop builds. Current packaged
+  // builds inject the launch cookie directly into the native WebView store and
+  // never place the credential in browser navigation.
   if (pathname === RUNTIME_BOOTSTRAP_PATH) {
     return NextResponse.next();
   }
@@ -79,6 +81,14 @@ export async function proxy(request: NextRequest) {
         { status: 401, headers: { "Cache-Control": "no-store" } },
       );
     }
+  }
+
+  // The browser-side readiness beacon proves that the hidden WebView loaded
+  // and hydrated a real SahelFlow page with the native HttpOnly runtime cookie.
+  // It is independent of the seller's user-auth session and validates the
+  // cookie again inside the route before persisting its per-launch evidence.
+  if (pathname === RUNTIME_UI_READY_PATH) {
+    return NextResponse.next();
   }
 
   // Browser development retains its old no-secret setup behavior. Packaged
