@@ -19,7 +19,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     env:
-      SOURCE_SHA: 685ee164cc4ff17e33a57cd07d7937e6ebc81f65
+      SOURCE_SHA: fd8a5d92011b810dfa0f5f5cd47c1982a7b2986b
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
 
@@ -27,7 +27,7 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
         with:
-          ref: 685ee164cc4ff17e33a57cd07d7937e6ebc81f65
+          ref: fd8a5d92011b810dfa0f5f5cd47c1982a7b2986b
           fetch-depth: 0
           persist-credentials: false
 
@@ -100,11 +100,23 @@ jobs:
           & bunx vitest run --bail=1 2>&1 | Tee-Object -FilePath diagnose-vitest.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Capture production audit without masking advisories
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          & bun audit --prod --json 2>&1 | Tee-Object -FilePath diagnose-production-audit.json
+          $auditExit = $LASTEXITCODE
+          "exitCode=$auditExit" | Set-Content -LiteralPath diagnose-production-audit-exit.txt -Encoding UTF8
+          exit 0
+
       - name: Upload split verification diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: signed-internal4-split-verification-${{ github.run_id }}
-          path: diagnose-*.log
+          path: |
+            diagnose-*.log
+            diagnose-production-audit.json
+            diagnose-production-audit-exit.txt
           if-no-files-found: error
           retention-days: 7
