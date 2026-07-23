@@ -25,7 +25,6 @@ pub fn stage_standalone(
 ) -> Result<PathBuf, IoError> {
     ensure_directory(source_root, "packaged standalone source")?;
     let (manifest, manifest_bytes) = load_manifest(source_root, expected_app_version)?;
-    verify_tree(source_root, &manifest, &manifest_bytes, true)?;
 
     let cache_root = local_data_root.join("runtime-cache");
     fs::create_dir_all(&cache_root)?;
@@ -44,6 +43,11 @@ pub fn stage_standalone(
         })?;
         return server_path(&final_root);
     }
+
+    // The packaged source is used only when a cache must be created.
+    // Reused caches remain fully hashed on every launch, but the unused
+    // Program Files copy is not redundantly hashed as well.
+    verify_tree(source_root, &manifest, &manifest_bytes, true)?;
 
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -75,7 +79,8 @@ pub fn stage_standalone(
         let _ = fs::remove_dir_all(&staging_root);
         return Err(error);
     }
-    verify_tree(&final_root, &manifest, &manifest_bytes, false)?;
+    // The verified staging directory was atomically renamed; no file
+    // contents changed across that operation. Avoid a third full-tree hash.
     server_path(&final_root)
 }
 
@@ -150,11 +155,10 @@ fn copy_tree(source: &Path, destination: &Path, root_level: bool) -> Result<(), 
             fs::create_dir(&destination_path)?;
             copy_tree(&source_path, &destination_path, false)?;
         } else if metadata.is_file() {
+            // A complete SHA-256 tree verification follows the copy before
+            // atomic promotion. Per-file FlushFileBuffers made low-end
+            // Windows first launch take minutes without adding integrity.
             fs::copy(&source_path, &destination_path)?;
-            OpenOptions::new()
-                .write(true)
-                .open(&destination_path)?
-                .sync_all()?;
         } else {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
