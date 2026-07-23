@@ -63,7 +63,8 @@ if ($source.Contains($new)) {
     }
     $match = $found[0]
     $source = $source.Substring(0, $match.Index) + $new + $source.Substring($match.Index + $match.Length)
-    Set-Content -LiteralPath $harnessPath -Value $source -Encoding utf8NoBOM
+    $normalizedSource = $source.TrimEnd([char[]]"`r`n") + "`n"
+    Set-Content -LiteralPath $harnessPath -Value $normalizedSource -Encoding utf8NoBOM -NoNewline
     Write-Host "Moved database hashing after proven shutdown."
 }
 
