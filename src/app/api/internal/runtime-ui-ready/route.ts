@@ -9,8 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
 
@@ -32,8 +31,8 @@ function unavailable() {
   );
 }
 
-export async function POST(request: Request) {
-  const url = new URL(request.url);
+export async function POST(request: NextRequest) {
+  const url = request.nextUrl;
   const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost";
   const expectedToken = process.env.SF_RUNTIME_APP_TOKEN;
   const instanceId = process.env.SF_RUNTIME_INSTANCE_ID;
@@ -53,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   const ackPath = resolve(dataDir, "runtime-ui-ready.json");
-  const suppliedToken = (await cookies()).get(RUNTIME_COOKIE)?.value ?? "";
+  const suppliedToken = request.cookies.get(RUNTIME_COOKIE)?.value ?? "";
   if (!/^[0-9a-f]{64}$/i.test(suppliedToken) || !constantTimeEqual(suppliedToken, expectedToken)) {
     return NextResponse.json(
       { status: "rejected", code: "RUNTIME_SESSION_REQUIRED" },
