@@ -1,0 +1,139 @@
+name: Observe signed internal release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/signed-release-observer.yml
+  workflow_run:
+    workflows:
+      - Dispatch signed internal version
+      - Build Signed Internal Windows Update
+    types:
+      - requested
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  record:
+    name: Record signed release status
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Record exact workflow runs on their release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          OBSERVED_RUN_ID: ${{ github.event.workflow_run.id }}
+          OBSERVED_WORKFLOW: ${{ github.event.workflow_run.name }}
+          OBSERVED_STATUS: ${{ github.event.workflow_run.status }}
+          OBSERVED_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          OBSERVED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          OBSERVED_URL: ${{ github.event.workflow_run.html_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_pr_for_sha() {
+            local sha="$1"
+            gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/commits/${sha}/pulls" \
+              --jq '[.[] | select(.base.ref == "main")] | sort_by(.merged_at // .updated_at) | last | .number // empty'
+          }
+
+          post_run() {
+            local workflow="$1"
+            local run_id="$2"
+            local status="$3"
+            local conclusion="$4"
+            local head_sha="$5"
+            local run_url="$6"
+            local release_pr
+            release_pr="$(release_pr_for_sha "${head_sha}")"
+            if [[ -z "${release_pr}" ]]; then
+              echo "No merged release PR is associated with ${head_sha}; skipping comment."
+              return 0
+            fi
+
+            local body
+            body=$(cat <<EOF
+          <!-- sahelflow-signed-release-observer:${run_id} -->
+          **Signed release workflow update**
+
+          - Workflow: \`${workflow}\`
+          - Run ID: \`${run_id}\`
+          - Status: \`${status}\`
+          - Conclusion: \`${conclusion:-pending}\`
+          - Head SHA: \`${head_sha}\`
+          - Run: ${run_url}
+          EOF
+            )
+
+            gh api \
+              --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/issues/${release_pr}/comments" \
+              -f body="${body}"
+          }
+
+          if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
+            post_run \
+              "${OBSERVED_WORKFLOW}" \
+              "${OBSERVED_RUN_ID}" \
+              "${OBSERVED_STATUS}" \
+              "${OBSERVED_CONCLUSION:-pending}" \
+              "${OBSERVED_HEAD_SHA}" \
+              "${OBSERVED_URL}"
+          else
+            dispatch_json=$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release-on-version-authority.yml \
+              --branch main \
+              --limit 3 \
+              --json databaseId,status,conclusion,headSha,url)
+            release_json=$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release.yml \
+              --branch main \
+              --limit 3 \
+              --json databaseId,status,conclusion,headSha,url)
+
+            export DISPATCH_JSON="${dispatch_json}"
+            export RELEASE_JSON="${release_json}"
+            while IFS=$'\t' read -r workflow run_id status conclusion head_sha run_url; do
+              [[ -n "${run_id}" ]] || continue
+              post_run \
+                "${workflow}" \
+                "${run_id}" \
+                "${status}" \
+                "${conclusion}" \
+                "${head_sha}" \
+                "${run_url}"
+            done < <(python3 - <<'PY'
+          import json
+          import os
+
+          for label, variable in (
+              ("Dispatch signed internal version", "DISPATCH_JSON"),
+              ("Build Signed Internal Windows Update", "RELEASE_JSON"),
+          ):
+              for run in json.loads(os.environ[variable]):
+                  fields = (
+                      label,
+                      str(run["databaseId"]),
+                      run["status"],
+                      run.get("conclusion") or "pending",
+                      run["headSha"],
+                      run["url"],
+                  )
+                  print("\t".join(fields))
+          PY
+            )
+          fi
