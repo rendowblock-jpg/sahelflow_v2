@@ -11,6 +11,7 @@ on:
       - "scripts/prepare-libsodium-windows.ps1"
       - "package.json"
       - "bun.lock"
+      - ".github/release-requests/*.json"
       - ".github/workflows/release.yml"
       - ".github/workflows/windows-rust-release-parity.yml"
   push:
@@ -25,6 +26,7 @@ on:
       - "scripts/prepare-libsodium-windows.ps1"
       - "package.json"
       - "bun.lock"
+      - ".github/release-requests/*.json"
       - ".github/workflows/release.yml"
       - ".github/workflows/windows-rust-release-parity.yml"
 
