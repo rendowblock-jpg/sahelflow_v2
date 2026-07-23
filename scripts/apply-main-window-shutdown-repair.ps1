@@ -1,5 +1,13 @@
 $ErrorActionPreference = "Stop"
 
+$evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
+New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+trap {
+    $_ | Format-List * -Force | Out-String |
+        Set-Content -LiteralPath (Join-Path $evidenceRoot "shutdown-repair-error.txt") -Encoding UTF8
+    throw
+}
+
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $libPath = Join-Path $repositoryRoot "src-tauri\src\lib.rs"
 $source = (Get-Content -LiteralPath $libPath -Raw) -replace "`r`n", "`n"
@@ -45,11 +53,16 @@ if ($source.Contains($new)) {
     Write-Host "Explicit main-window shutdown path is already present."
 } else {
     $pattern = '(?ms)^        \.run\(\|_app_handle, _event\| \{.*?^        \}\);'
-    $matches = [regex]::Matches($source, $pattern)
-    if ($matches.Count -ne 1) {
-        throw "Expected exactly one canonical Tauri run-event callback, found $($matches.Count)."
+    $found = [regex]::Matches($source, $pattern)
+    [pscustomobject]@{
+        matchCount = $found.Count
+        sourceLength = $source.Length
+    } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidenceRoot "shutdown-repair-match.json") -Encoding UTF8
+    if ($found.Count -ne 1) {
+        throw "Expected exactly one canonical Tauri run-event callback, found $($found.Count)."
     }
-    $source = [regex]::Replace($source, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $new }, 1)
+    $match = $found[0]
+    $source = $source.Substring(0, $match.Index) + $new + $source.Substring($match.Index + $match.Length)
     Set-Content -LiteralPath $libPath -Value $source -Encoding utf8NoBOM
     Write-Host "Applied explicit main-window shutdown path."
 }
