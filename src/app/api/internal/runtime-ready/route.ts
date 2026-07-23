@@ -1,3 +1,5 @@
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { isAbsolute, resolve } from "node:path";
 import { NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import {
@@ -11,6 +13,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const INSTANCE_HEADER = "x-sahelflow-runtime-instance";
+const READINESS_DIAGNOSTIC_FILE = "runtime-readiness-diagnostic.json";
+let recordedFailureKey: string | null = null;
 
 type DatabaseAuthState =
   | { mode: typeof AUTH_MODE_SETUP }
@@ -18,11 +22,69 @@ type DatabaseAuthState =
 
 type CanonicalAuthRow = { id: unknown; pinHash: unknown; secret: unknown };
 type LegacyAuthRow = { key: unknown; value: unknown };
+type ReadinessChecks = Record<string, "ready" | "blocked">;
+type BlockedPayload = Readonly<{
+  status: "blocked";
+  code: string;
+  checks?: ReadinessChecks;
+}>;
 
 function bearerToken(request: Request): string | null {
   const authorization = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+([0-9a-f]{64})$/i.exec(authorization);
   return match?.[1] ?? null;
+}
+
+function readinessDiagnosticPath(): string | null {
+  const dataDir = process.env.SF_DATA_DIR;
+  if (!dataDir || !isAbsolute(dataDir)) return null;
+  return resolve(dataDir, READINESS_DIAGNOSTIC_FILE);
+}
+
+async function recordReadinessFailure(payload: BlockedPayload): Promise<void> {
+  const path = readinessDiagnosticPath();
+  if (!path) return;
+
+  const failureKey = `${process.pid}:${payload.code}`;
+  if (recordedFailureKey === failureKey) return;
+
+  const tempPath = `${path}.tmp`;
+  const dataDir = process.env.SF_DATA_DIR as string;
+  const diagnostic = {
+    formatVersion: 1,
+    state: "blocked",
+    code: payload.code,
+    checks: payload.checks ?? null,
+    appVersion: process.env.APP_VERSION ?? "unknown",
+    processId: process.pid,
+    createdAtUnixSeconds: Math.floor(Date.now() / 1000),
+  };
+
+  try {
+    await mkdir(dataDir, { recursive: true });
+    await writeFile(tempPath, `${JSON.stringify(diagnostic, null, 2)}\n`, "utf8");
+    await rm(path, { force: true });
+    await rename(tempPath, path);
+    recordedFailureKey = failureKey;
+  } catch {
+    // Diagnostic persistence must never change the readiness decision.
+    await rm(tempPath, { force: true }).catch(() => undefined);
+  }
+}
+
+async function clearReadinessFailure(): Promise<void> {
+  const path = readinessDiagnosticPath();
+  recordedFailureKey = null;
+  if (!path) return;
+  await rm(path, { force: true }).catch(() => undefined);
+}
+
+async function blocked(payload: BlockedPayload) {
+  await recordReadinessFailure(payload);
+  return NextResponse.json(payload, {
+    status: 503,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 async function databaseAuthState(): Promise<DatabaseAuthState> {
@@ -92,10 +154,7 @@ export async function GET(request: Request) {
     (authMode === AUTH_MODE_SETUP && !!authSecret) ||
     (authMode === AUTH_MODE_CONFIGURED && !authSecret)
   ) {
-    return NextResponse.json(
-      { status: "blocked", code: "RUNTIME_NOT_CONFIGURED" },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
+    return blocked({ status: "blocked", code: "RUNTIME_NOT_CONFIGURED" });
   }
 
   const suppliedToken = bearerToken(request);
@@ -110,14 +169,11 @@ export async function GET(request: Request) {
   try {
     databaseAuth = await databaseAuthState();
   } catch {
-    return NextResponse.json(
-      {
-        status: "blocked",
-        code: "RUNTIME_AUTH_DATABASE_INVALID",
-        checks: { app: "ready", database: "blocked", auth: "blocked" },
-      },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
+    return blocked({
+      status: "blocked",
+      code: "RUNTIME_AUTH_DATABASE_INVALID",
+      checks: { app: "ready", database: "blocked", auth: "blocked" },
+    });
   }
 
   const authMatches =
@@ -125,14 +181,11 @@ export async function GET(request: Request) {
     (databaseAuth.mode === AUTH_MODE_SETUP ||
       (!!authSecret && constantTimeEqual(databaseAuth.secret, authSecret)));
   if (!authMatches) {
-    return NextResponse.json(
-      {
-        status: "blocked",
-        code: "RUNTIME_AUTH_MISMATCH",
-        checks: { app: "ready", database: "ready", auth: "blocked" },
-      },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
+    return blocked({
+      status: "blocked",
+      code: "RUNTIME_AUTH_MISMATCH",
+      checks: { app: "ready", database: "ready", auth: "blocked" },
+    });
   }
 
   try {
@@ -140,21 +193,19 @@ export async function GET(request: Request) {
     const { dbRaw } = await import("@/lib/db");
     await dbRaw.$queryRaw`SELECT 1`;
   } catch {
-    return NextResponse.json(
-      {
-        status: "blocked",
-        code: "RUNTIME_DATABASE_NOT_READY",
-        checks: {
-          app: "ready",
-          database: "blocked",
-          migration: "ready",
-          auth: "ready",
-        },
+    return blocked({
+      status: "blocked",
+      code: "RUNTIME_DATABASE_NOT_READY",
+      checks: {
+        app: "ready",
+        database: "blocked",
+        migration: "ready",
+        auth: "ready",
       },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
+    });
   }
 
+  await clearReadinessFailure();
   const body = JSON.stringify({
     protocolVersion: RUNTIME_PROTOCOL_VERSION,
     status: "ready",

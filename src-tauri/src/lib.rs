@@ -283,10 +283,20 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
-                if matches!(
-                    _event,
-                    tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
-                ) {
+                let main_window_close = matches!(
+                    &_event,
+                    tauri::RunEvent::WindowEvent {
+                        label,
+                        event: tauri::WindowEvent::CloseRequested { .. },
+                        ..
+                    } if label == "main"
+                );
+                let shutdown = main_window_close
+                    || matches!(
+                        _event,
+                        tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+                    );
+                if shutdown {
                     if let Some(state) =
                         _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
                     {
@@ -297,6 +307,13 @@ pub fn run() {
                     if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
                         runtime_protocol::remove_manifest(&app_data_dir);
                     }
+                }
+                if main_window_close {
+                    // AppHandle::exit requests another event-loop transition. A
+                    // native close request is already executing on that loop, so
+                    // finish Tauri cleanup synchronously and exit immediately.
+                    _app_handle.cleanup_before_exit();
+                    std::process::exit(0);
                 }
             }
         });
