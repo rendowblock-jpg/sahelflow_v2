@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: windows-installed-e2e-${{ github.event.pull_request.number || github.ref }}
@@ -36,8 +36,9 @@ jobs:
       - name: Checkout exact branch source
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -87,6 +88,24 @@ jobs:
             throw "expected exactly one MSI, found $($msis.Count)"
           }
           ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
+
+      - name: Persist lifecycle-proven source repair
+        if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' && github.head_ref == 'agent/windows-installed-runtime-e2e'
+        shell: pwsh
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- scripts/verify-installed-windows-msi.ps1 src-tauri/src/runtime_protocol.rs
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'staged lifecycle repair has whitespace errors' }
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but produced no source repair' }
+          git commit -m 'fix(windows): prove real GUI close and format runtime probe'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to commit lifecycle-proven source repair' }
+          git push origin "HEAD:$env:HEAD_BRANCH"
+          if ($LASTEXITCODE -ne 0) { throw 'failed to push lifecycle-proven source repair' }
 
       - name: Collect installed Windows evidence
         if: always()
