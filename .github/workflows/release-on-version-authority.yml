@@ -6,10 +6,14 @@ on:
       - main
     paths:
       - sahelflow.version.json
+      - .github/release-requests/*.json
+  workflow_dispatch:
 
 permissions:
   actions: write
   contents: read
+  issues: write
+  pull-requests: read
 
 concurrency:
   group: dispatch-signed-internal-version
@@ -27,13 +31,14 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Validate and dispatch signed candidate
+      - name: Validate, dispatch, and record signed candidate
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
+
           version="$(python3 - <<'PY'
           import json
           from pathlib import Path
@@ -59,4 +64,55 @@ jobs:
             -f source_ref="${SOURCE_SHA}" \
             -f release_notes="${notes}"
 
-          echo "Dispatched signed ${version} from ${SOURCE_SHA}."
+          signed_run=""
+          for _ in $(seq 1 30); do
+            signed_run="$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release.yml \
+              --branch main \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha,status,url,createdAt \
+              --jq ".[] | select(.headSha == \"${SOURCE_SHA}\") | [.databaseId,.headSha,.status,.url,.createdAt] | @tsv" \
+              | head -n 1)"
+            [[ -n "${signed_run}" ]] && break
+            sleep 2
+          done
+          if [[ -z "${signed_run}" ]]; then
+            throw_message="signed workflow dispatch was accepted but no exact-source run appeared within 60 seconds"
+            echo "${throw_message}" >&2
+            exit 1
+          fi
+
+          IFS=$'\t' read -r signed_run_id signed_head_sha signed_status signed_url signed_created_at <<< "${signed_run}"
+          if [[ "${signed_head_sha}" != "${SOURCE_SHA}" ]]; then
+            echo "signed workflow head mismatch: ${signed_head_sha}" >&2
+            exit 1
+          fi
+
+          release_pr="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/commits/${SOURCE_SHA}/pulls" \
+            --jq '[.[] | select(.base.ref == "main")] | sort_by(.merged_at // .updated_at) | last | .number // empty')"
+          if [[ -n "${release_pr}" ]]; then
+            body=$(cat <<EOF
+          <!-- sahelflow-signed-release-dispatch:${signed_run_id} -->
+          **Protected signed candidate dispatched**
+
+          - Version: \`${version}\`
+          - Source SHA: \`${SOURCE_SHA}\`
+          - Dispatcher run: \`${GITHUB_RUN_ID}\`
+          - Signed updater run: \`${signed_run_id}\`
+          - Initial status: \`${signed_status}\`
+          - Created: \`${signed_created_at}\`
+          - Run: ${signed_url}
+          EOF
+            )
+            gh api \
+              --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/issues/${release_pr}/comments" \
+              -f body="${body}"
+          fi
+
+          echo "Dispatched signed ${version} from ${SOURCE_SHA} as run ${signed_run_id}."

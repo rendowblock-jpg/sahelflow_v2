@@ -64,7 +64,7 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("std::process::exit(0);");
   });
 
-  it("installs the exact signed MSI and dispatches only from protected-main version authority", () => {
+  it("installs the exact signed MSI and dispatches only from protected-main release authority", () => {
     const release = read(".github/workflows/release.yml");
     const dispatcher = read(
       ".github/workflows/release-on-version-authority.yml",
@@ -92,8 +92,15 @@ describe("installed Windows runtime contract", () => {
 
     expect(dispatcher).toContain("branches:\n      - main");
     expect(dispatcher).toContain("- sahelflow.version.json");
+    expect(dispatcher).toContain("- .github/release-requests/*.json");
+    expect(dispatcher).toContain("workflow_dispatch:");
     expect(dispatcher).toContain("actions: write");
+    expect(dispatcher).toContain("issues: write");
+    expect(dispatcher).toContain("pull-requests: read");
     expect(dispatcher).toContain("source_ref=\"${SOURCE_SHA}\"");
     expect(dispatcher).toContain("gh workflow run release.yml");
+    expect(dispatcher).toContain("gh run list");
+    expect(dispatcher).toContain("signed workflow dispatch was accepted");
+    expect(dispatcher).toContain("Protected signed candidate dispatched");
   });
 });
