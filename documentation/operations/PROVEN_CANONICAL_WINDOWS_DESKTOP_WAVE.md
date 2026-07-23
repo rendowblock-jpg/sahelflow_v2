@@ -1,7 +1,7 @@
 # Wave: Proven Canonical Windows Desktop
 
 > Started: 2026-07-17  
-> Current focus: immutable installed `.3` baseline and signed `.3`→`.4` updater proof  
+> Current focus: immutable installed `.4` replacement baseline and signed `.4`→`.5` updater proof  
 > Lead: ChatGPT / Codex Cloud; Codex Desktop for installed-Windows evidence
 
 ## Founder intent and outcome
@@ -26,25 +26,20 @@ The preferred routine is install once, then receive coherent signed in-app updat
 
 ## Current reality
 
-The original wave evidence remains listed for provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
+The original wave evidence remains provenance. PR #104 integrated the consolidated Windows source checkpoint into `main` at `d33890fe31836d9a982902dd469bcc3960c4c23c`; PR #105 integrated the reproducible development environment at `1a0469bb5384561d85178316d0cd6e94745b44a0`; PR #112 integrated the ChatGPT/Codex Cloud/Codex Desktop workflow at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 
-- GitHub Actions binds clean-checkout dependency installation, Prisma generation/deployment/status, documentation authority, TypeScript, ESLint, Vitest, coverage, production audit, Rust formatting and Tauri release compilation.
+- GitHub Actions binds clean-checkout dependency installation, Prisma generation/deployment/status, documentation authority, TypeScript, ESLint, Vitest, coverage, production audit, Rust formatting, Clippy and Tauri release compilation.
 - Tauri packaged startup fails closed for the mandatory server, uses OS-allocated loopback ports and per-launch credentials, binds authenticated readiness to exact process/app/shop/registry/migration/auth state, and starts degradable WhatsApp only after the required server is ready.
 - A hidden main window navigates only to an authenticated bootstrap URL or a seller-visible blocked document with redacted diagnostics. The supervisor bounds restart attempts, safe mode and shutdown registration.
 - Process-bound `ShopContext`, atomic registry authority, exact shop database identity, all-shop migration planning, verified snapshots, external journal, OS locking and interrupted recovery are implemented and tested.
 - PRs #115–#124 activated and hardened the signed internal updater through exact source-specific draft releases, protected signing authority, signature/key binding, `latest.json` verification and retained evidence. This remains internal-lab authority only.
-- Signed `1.0.0-internal.1` from `f977242924e98b4be0f147988b41504f0dbeba1b` was verified and installed. Registry revision 1, shop `default` and all eight migrations were correct, but Bun returned `EPERM` when Program Files `standalone/server.js` was the entry script. `.1` remains draft and unpublished.
-- PR #125 introduced a deterministic standalone manifest and atomic version/digest-bound LocalAppData runtime cache. Signed `1.0.0-internal.2` from `341711e5a3e6f2301197f1cf8c5fcc7da56e8ec4` was verified and installed over `.1` with AppData preserved.
-- Installed `.2` created and verified cache `1.0.0-internal.2-4ed75a71e6d72c06` with 3,981 files, but startup still blocked because the custom Windows GUI process launcher did not supply valid standard handles to Bun.
-- The exact final `.2` cache launched manually with the installed Bun, Prisma engine, shop database, registry revision, migration digest and runtime authentication returned HTTP 200 with all app/database/migration/registry/shop/auth checks ready. This proves the package data, staged tree and runtime itself are healthy.
-- PR #127 supplied explicit restricted `NUL` stdin/stdout/stderr handles while retaining suspended process creation, pre-resume Job Object assignment and kill-on-close tree containment. Windows CI proved HTTP through the actual Rust `ContainedChild` path and complete staged authenticated readiness. PR #128 added release-equivalent Rust formatting to normal CI.
-- PR #129 established immutable candidate `1.0.0-internal.3` / MSI `1.0.0.3` rather than rebuilding `.2` under the same version.
-- PR #130 replaced the remaining shell-dependent descendant observation with a deterministic Rust helper child/grandchild, added a permanent Windows Rust release-parity workflow, required five consecutive process-tree passes and fixed a real migration-snapshot collision by adding a secure per-run identity to filenames. It merged to `main` at `a79d4fc22a4b3d5e4b27604dac8e6be5d0aff957`.
-- The signed `.3` workflow from that exact source passed product authority, TypeScript, lint, tests, migrations, coverage and dependency audit, then stopped before signing or MSI creation because `libsodium-sys-stable v1.24.0` attempted a hidden network download and received `ConnectionRefused`. No `.3` artifact or draft release was produced.
-- PR #131 made Windows libsodium preparation hermetic. Before every Windows Cargo invocation, the pipeline downloads immutable libsodium `1.0.22` MSVC bytes over HTTPS, pins SHA-256 `3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279`, preserves the crate-bundled source/signature and official minisign public-key verification path, requires the exact x64 v143 debug/release static libraries, exposes the local distribution through `SODIUM_DIST_DIR` and retains a provenance manifest with the signed candidate.
-- PR #131 final head `6fbc3942db5a07a10dd0e2c129f015004337ad6a` passed an isolated Windows Cargo proof with no dependency build-script network fallback, normal CI and Windows release parity; it merged to protected `main` at `274cdb71406ff05cc98b732bf0fafc6547101a40`.
-- PR #132 is a documentation-only continuity checkpoint merged at `e4169a12745dfa1e6daf28ba1dbb579f99e876cd`. It changed the `main` tip at that checkpoint but did not supersede approved executable source `274cdb71406ff05cc98b732bf0fafc6547101a40` for the `.3` artifact.
-- No signed `.3` artifact exists at this checkpoint. Installed `.2` remains closed; do not uninstall it or delete either AppData directory.
+- Signed `1.0.0-internal.1` installed with registry revision 1, shop `default` and all eight migrations correct, but Bun returned `EPERM` when Program Files `standalone/server.js` was the entry script. `.1` remains draft/unpublished.
+- Signed `1.0.0-internal.2` installed over `.1` with AppData preserved and created its verified LocalAppData cache, but the GUI launcher did not provide usable standard handles to Bun. `.2` remains draft/unpublished.
+- PRs #125–#128 added manifest-bound LocalAppData staging, production dependency repair, valid restricted standard handles and canonical Rust formatting. PRs #129–#131 established immutable `.3`, deterministic descendant containment, collision-safe migration snapshots, Windows release parity and digest-pinned hermetic libsodium preparation.
+- Signed `1.0.0-internal.3` from source `274cdb71406ff05cc98b732bf0fafc6547101a40` installed over `.2` with Windows Installer exit `0`, preserved registry/shop/database/caches and created its exact verified final cache. Installed `.3` then failed closed with `SF-RUNTIME-STARTUP-BLOCKED` because the mandatory server failed authenticated readiness. `.3` remains draft/unpublished and is not rebuilt under the same version.
+- Issue #135 moved further reproduction away from the Founder workstation. PR #136 fixed the readiness client’s incorrect EOF dependency after a complete Content-Length response, retained bounded non-secret readiness diagnostics, embedded telemetry independence in the packaged bootstrap, added explicit main-window cleanup/termination and made database identity checks occur after Prisma releases the live file.
+- PR #136 exact final head `1b6a2c0204be9dad83903d6577b5a2af6d038417` passed CI `29974471798`, Windows Rust release parity `29974471817` and permanent installed-MSI lifecycle `29974471792`. The installed gate proved two authenticated launches, two normal closes, full SahelFlow/Bun/WhatsApp teardown, endpoint removal, distinct instances, exact cache reuse and unchanged registry/database identity.
+- PR #136 merged to protected `main` at `9b5fb46f4f8703c468ff19dee2cd0334851ada31`. The next signed replacement must be immutable `1.0.0-internal.4`, installed over existing `.3`; a later deliberately small `.5` is the updater-drill target.
 - Seller data remains in canonical roaming AppData. LocalAppData contains only verified immutable application-server cache content derived from the installed package.
 
 ## Target experience or system
@@ -60,7 +55,7 @@ The internal installed candidate must expose one deterministic startup state mac
 7. enter ready only after all required gates pass;
 8. otherwise enter a named blocked/degraded/recovery state with safe retry, diagnostics and no fallback to another shop or partial-ready shell.
 
-The Founder hands-on install/update path must remain lightweight:
+The Founder hands-on install/update path remains lightweight:
 
 1. obtain the exact internally approved updater-enabled Windows baseline from retained GitHub Actions output;
 2. verify artifact identity, digest, source and updater signature;
@@ -74,13 +69,15 @@ The Founder hands-on install/update path must remain lightweight:
 
 ## Deep-dive findings
 
-- Clean-checkout gates, Windows artifact production and installed-Windows behavior remain separate evidence layers.
-- The installed `.1` and `.2` failures are positive fail-closed evidence: the desktop did not open another shop or partial workspace.
+- Clean-checkout gates, produced artifacts and installed-Windows behavior are separate evidence layers.
+- The installed `.1`, `.2` and `.3` failures are positive fail-closed evidence: the desktop did not silently open another shop or partial workspace.
 - A readable packaged file does not guarantee Bun can use it as an entry script below Program Files; immutable resources therefore execute only after manifest-bound LocalAppData staging.
 - Writable staging must not become an unsigned injection path. Both packaged and cached trees are verified and altered bytes fail closed.
-- Seller databases, registry, migration journal/snapshots and key material must never enter the runtime cache.
-- A real bundled-Bun HTTP probe through the production Rust launcher is more representative than a shell timing test. Synthetic process-tree tests must be deterministic and cannot substitute for the real launcher gate.
-- Build dependencies that download artifacts during Cargo compilation create release-only failure and provenance gaps. Windows native dependencies must be prepared and verified before compilation, with immutable digest/signature evidence and the same path in PR CI and release.
+- Seller databases, registry, migration journal/snapshots and key material never enter the runtime cache.
+- A complete Content-Length HTTP response is complete without socket EOF. Raw readiness clients must parse message framing rather than equating a persistent connection with failure.
+- GUI close is part of the installed product contract: the main-window path must stop child trees, remove runtime authority, perform Tauri cleanup and terminate deterministically.
+- Live SQLite identity checks must occur after Prisma releases the file handle; an evidence harness must not block the shutdown it is supposed to test.
+- A real installed-MSI lifecycle gate is stronger than separate package, launcher and runtime smokes. The permanent workflow is read-only and proves launch, close, teardown, reopen, cache reuse and data authority together.
 - The low-storage constraint changes execution method, not evidence quality: local testing consumes signed prebuilt candidates and updates instead of rebuilding locally.
 - Normal product work should use two lanes after updater proof: PR CI for rapid implementation, and one immutable signed internal version for each Founder-approved feature slice tested in the installed app.
 
@@ -92,25 +89,25 @@ The Founder hands-on install/update path must remain lightweight:
 
 ### Phase: 0B — CI startup and shared-command repair
 
-- Status: complete for approved executable source `274cdb71406ff05cc98b732bf0fafc6547101a40`; later documentation-only continuity commits do not replace that artifact source.
-- Evidence: full quality, coverage, audit, migrations, Rust format/release, deterministic containment tree, actual contained Bun HTTP, staged authenticated readiness and hermetic libsodium preparation are green before signed release dispatch.
+- Status: complete through repaired protected-main source `9b5fb46f4f8703c468ff19dee2cd0334851ada31`.
+- Evidence: quality, coverage, audit, migrations, Rust format/release, Clippy, deterministic containment, actual contained Bun HTTP, staged authenticated readiness, hermetic libsodium and full installed-MSI lifecycle are green.
 
 ### Phase: 0C — Signed updater pipeline and installed Windows baseline
 
-- Status: `.1` and `.2` installed evidence complete; both blocked safely for distinct fixed causes. `.3` executable source is ready and reachable from protected `main`, but no `.3` artifact exists yet.
-- Exact next GitHub Actions work: manually dispatch **Build Signed Internal Windows Update** from branch `main` with `source_ref` `274cdb71406ff05cc98b732bf0fafc6547101a40` and the release notes recorded in Working Memory.
-- Exact next artifact work: after a green run, verify `.3` source/version/signing identity, MSI and signature hashes, standalone manifest, libsodium provenance and `latest.json` source-tag binding.
-- Exact next Windows work: install `.3` over `.2` without deleting AppData; prove first launch, close/reopen, active shop/database/migration preservation and verified LocalAppData cache creation/reuse.
-- Update drill: after `.3` passes, create one deliberately small `.4`, publish only approved `.4` metadata/assets and prove installed `.3`→`.4` update and restart.
+- Status: `.1`, `.2` and `.3` installed evidence complete; all remain unpublished. `.3` installed successfully but failed authenticated launch on the Founder machine. The repaired source is integrated and pre-proven by the permanent installed-MSI gate.
+- Exact next source work: create immutable `.4` version authority from main `9b5fb46f4f8703c468ff19dee2cd0334851ada31` and require CI, Windows release parity and installed-MSI lifecycle before merge.
+- Exact next artifact work: after merge, build signed `.4` from the exact protected-main SHA and verify version/source/signing/MSI/signature/manifest/libsodium/`latest.json` binding.
+- Exact next Windows work: install `.4` over `.3` without uninstalling or deleting AppData; prove intended workspace, close/reopen, active shop, registry, database, migrations and cache preservation.
+- Update drill: after `.4` passes, create one deliberately small `.5` and prove installed `.4`→`.5` in-app update, restart, preservation and failure recovery.
 
 ### Phase: 1A — Supervised authenticated local runtime
 
-- Status: source runtime/restart protocol, actual contained-Bun HTTP and exact staged readiness are verified; installed `.3` remains the final baseline gate.
+- Status: source runtime/restart protocol and installed lifecycle are verified in GitHub Actions; signed `.4` on the authorized Windows machine is the remaining baseline gate.
 - Next work after baseline: bounded child crash, failed restart, shutdown race, sleep/resume and reboot drills at appropriate feature milestones rather than per commit.
 
 ### Phase: 1B — Explicit shop authority and safe all-shop migration
 
-- Status: source write authority and migration-coordinator sub-gates are met; collision-safe snapshot identity is integrated. Installed `.3` preservation and `.3`→`.4` update evidence remain.
+- Status: source write authority and migration-coordinator sub-gates are met; collision-safe snapshot identity is integrated. Installed `.4` preservation and `.4`→`.5` update evidence remain.
 - Persisted shop-incarnation identity remains required for future restore/inbox/outbox work.
 
 ### Phase: 0D — Reference baseline
@@ -125,19 +122,20 @@ The Founder hands-on install/update path must remain lightweight:
 | Use ChatGPT as lead/reviewer, Codex Cloud as primary builder, GitHub Actions as exact artifact authority and Codex Desktop as installed-Windows laboratory. | Each environment has a distinct evidence boundary. | Founder/MAWS decision. | 2026-07-21 |
 | Keep the Founder PC as a low-storage installed-product observation device. | Hands-on testing needs the product, not compiler caches. | Founder constraint. | 2026-07-21 |
 | Activate only the signed internal-lab updater and require installed A→B proof before relying on it. | Signed source or artifacts alone are not installed-update evidence. | Founder decision; PR #115. | 2026-07-21 |
-| Keep `.1` and `.2` unpublished. | Both fail safely but do not reach the workspace. | Installed evidence. | 2026-07-22 |
+| Keep `.1`, `.2` and `.3` unpublished. | Each installed safely but did not reach the trusted seller baseline; `.3` specifically installed cleanly and failed authenticated launch. | Installed evidence and issue #135. | 2026-07-23 |
 | Stage a manifest-verified standalone tree in LocalAppData before Bun launch. | Program Files entry loading failed; writable execution must remain bound to packaged bytes. | Installed lab plus PR #125. | 2026-07-22 |
 | Give contained GUI children explicit restricted standard handles. | The exact cached server worked manually with valid stdio while the GUI-launched child exited before readiness. | Installed `.2` evidence and PR #127 Windows gate. | 2026-07-22 |
-| Use `.3` as a new immutable baseline rather than rebuilding `.2`. | Distinct binaries require monotonically increasing versions and unambiguous evidence/update ordering. | Founder best-practice direction; PR #129. | 2026-07-22 |
-| Require deterministic Rust helper descendants and full Windows release parity before signed workflow dispatch. | Release must not discover a broader Rust boundary than normal PR validation. | Failed signed run plus PR #130. | 2026-07-22 |
-| Add a secure per-run identity to migration snapshot filenames. | Consecutive upgrades within one second must not collide with retained snapshots. | Windows release-parity evidence; PR #130. | 2026-07-22 |
-| Prepare and verify libsodium before Cargo instead of allowing a dependency build script to download it. | Hidden build-time network access caused release-only failure and weak provenance. | Failed signed run plus PR #131. | 2026-07-22 |
-| After `.3`→`.4` proof, use PR CI for implementation and signed internal updates only for approved feature slices. | This preserves real installed testing without turning packaging into the development loop. | Founder workflow direction. | 2026-07-22 |
+| Treat complete Content-Length framing as readiness completion without waiting for socket EOF. | Next/Bun may keep an authenticated HTTP connection alive after sending the full response. | Issue #135 reproduction and PR #136. | 2026-07-23 |
+| Make main-window close an explicit supervised shutdown path. | Installed close must stop all child processes, remove endpoint authority and terminate the GUI deterministically. | Installed E2E evidence and PR #136. | 2026-07-23 |
+| Require the permanent read-only installed-MSI lifecycle workflow before signed replacement candidates. | Separate package/runtime checks did not prove the combined installed path. | PR #136 and runs `29971863101` / `29974471792`. | 2026-07-23 |
+| Use `.4` as the immutable signed replacement and `.5` as the updater-drill target. | Failed signed `.3` cannot be rebuilt or silently treated as a healthy updater baseline. | Immutable release discipline after PR #136. | 2026-07-23 |
+| After `.4`→`.5` proof, use PR CI for implementation and signed internal updates only for approved feature slices. | This preserves real installed testing without turning packaging into the development loop. | Founder workflow direction. | 2026-07-23 |
 
 ## Working notes and open questions
 
-- Keep `.1` and `.2` draft/unpublished. Keep `.3` draft until installed launch/restart/preservation passes.
-- Keep installed `.2` closed until `.3` is verified and ready to install. Do not uninstall it or delete Roaming/Local AppData.
+- Keep `.1`, `.2` and `.3` draft/unpublished. Keep `.4` draft until installed launch/restart/preservation passes.
+- Keep installed `.3` in place and closed until signed `.4` is verified and ready. Do not uninstall it or delete Roaming/Local AppData.
+- Do not ask the Founder for another iterative diagnostic loop. The next local action is one pre-proven `.4` install-over and launch/close/reopen confirmation.
 - Record updater private-key generation provenance, named custody, offline backup, recovery test, rotation and key-loss response outside Git.
 - Record the exact Windows machine profile for installed evidence; do not generalize one-machine observations.
 - Exact T470 and 4 GB reference datasets remain implementation-lab choices.
@@ -149,18 +147,18 @@ The Founder hands-on install/update path must remain lightweight:
 - Reproducible environment: PR #105 at `1a0469bb5384561d85178316d0cd6e94745b44a0`; MAWS transition: PR #112 at `11e6fa114dc257f8f686c9859d72886a034e1e50`.
 - Updater pipeline: PRs #115–#124 through `f977242924e98b4be0f147988b41504f0dbeba1b`.
 - Runtime staging and launcher repair: PRs #125–#128 through `abf2603fa9291615300ffe679e32c7861ff4375c`.
-- Immutable `.3` version authority: PR #129 at `e3ae19334bb8066039340820a3b90e745f8bee9f`.
-- Deterministic containment, Windows release parity and collision-safe snapshots: PR #130 at `a79d4fc22a4b3d5e4b27604dac8e6be5d0aff957`.
-- Hermetic digest-pinned Windows libsodium preparation: PR #131 at `274cdb71406ff05cc98b732bf0fafc6547101a40`.
-- Documentation-only resume checkpoint: PR #132 at `e4169a12745dfa1e6daf28ba1dbb579f99e876cd`.
-- Signed installed `.1`: source `f977242924e98b4be0f147988b41504f0dbeba1b`; MSI SHA-256 `e5e62f3e3faacf330565dbffde21db898a154c2dd2ce246599ec091742b8513f`; startup blocked before workspace.
+- Immutable `.3` authority, deterministic containment and hermetic native preparation: PRs #129–#131 through `274cdb71406ff05cc98b732bf0fafc6547101a40`.
+- Signed installed `.1`: source `f977242924e98b4be0f147988b41504f0dbeba1b`; startup blocked before workspace.
 - Signed installed `.2`: source `341711e5a3e6f2301197f1cf8c5fcc7da56e8ec4`; exact final cache HTTP 200 manually; GUI contained launch blocked before PR #127.
-- PR #131 exact final head `6fbc3942db5a07a10dd0e2c129f015004337ad6a`: isolated local-libsodium Cargo probe green; normal CI run `29950419410` green; Windows Rust release-parity run `29950419462` green.
-- Visual/RTL/accessibility evidence: the blocked recovery page was observed on installed `.1` and `.2`; broader ready/update-state evidence remains.
+- Signed installed `.3`: source `274cdb71406ff05cc98b732bf0fafc6547101a40`; signed run `29951527992`; MSI SHA-256 `6a5459d2564bccc905ddeeb51198c389daab476d28aceb617000b18e68fe55d8`; installation/preservation passed and authenticated launch failed closed.
+- Installed runtime repair: issue #135; PR #136 merged at `9b5fb46f4f8703c468ff19dee2cd0334851ada31`.
+- PR #136 final merge head `1b6a2c0204be9dad83903d6577b5a2af6d038417`: CI `29974471798`, Windows Rust release parity `29974471817` and permanent installed-MSI `29974471792` all green.
+- Successful installed lifecycle evidence: two ready launches with distinct instance IDs; two normal closes; process-tree and endpoint cleanup; cache `1.0.0-internal.3-085d9ea424bf9198`; 3,981 files; tree SHA-256 `085d9ea424bf9198771e5f569d389442c5f523496db16b8e2b7e9d7767cfe996`; registry revision 1 / shop `default`; unchanged database SHA-256 `EB84380F07E56A31E85B393308F2D7E705ADB2D7688D3996D727F27E5EA4B4E0`.
+- Visual/RTL/accessibility evidence: the blocked recovery page was observed on installed `.1`, `.2` and `.3`; broader ready/update-state evidence remains for signed `.4` and the updater drill.
 
 ## Current checkpoint
 
-- What is now true: the signed internal pipeline source includes verified staging, valid contained Bun stdio, deterministic Job Object tree validation, collision-safe snapshots and digest-pinned local libsodium preparation. Approved executable source for the `.3` artifact is `274cdb71406ff05cc98b732bf0fafc6547101a40`. PR #132 later moved `main` to `e4169a12745dfa1e6daf28ba1dbb579f99e876cd` with documentation only; later documentation-only merges likewise do not supersede the approved artifact source. No `.3` artifact has been produced yet.
-- What changed in the plan: release-only native dependency downloads are prohibited; Windows native build inputs are prepared and verified before Cargo, and the same boundary is enforced by normal CI, Windows release parity and signed release.
-- Current uncertainty: whether the next signed `.3` workflow completes artifact/signature/evidence production; installed `.3` launch/relaunch; `.3`→`.4` updater preservation/failure recovery; representative seller data and reference-device behavior.
-- Exact next move: manually dispatch **Build Signed Internal Windows Update** from exact source `274cdb71406ff05cc98b732bf0fafc6547101a40`; verify the retained signed `.3` candidate; install it over `.2` without deleting AppData; prove launch/relaunch and preservation; then build/publish a deliberately small signed `.4` for the installed updater drill.
+- What is now true: the repaired installed runtime lifecycle and permanent installed-MSI authority are merged into protected `main` at `9b5fb46f4f8703c468ff19dee2cd0334851ada31`. `.3` remains an unpublished installation-success / launch-failure artifact and is never rebuilt under the same version.
+- What changed in the plan: `.4`, not `.3`, is the next signed replacement baseline. After signed `.4` passes on the authorized Windows machine, `.5` is the deliberately small in-app updater target.
+- Current uncertainty: signed `.4` artifact/signature/evidence production; installed `.4` workspace and preservation on the Founder machine; `.4`→`.5` updater preservation/failure recovery; representative seller data and reference-device behavior.
+- Exact next move: create and merge immutable `.4` version authority from `9b5fb46f4f8703c468ff19dee2cd0334851ada31`, require the full PR and installed lifecycle gates, build the signed draft `.4` from the exact merged main SHA, verify its retained evidence, then perform one install-over `.3` and launch/close/reopen confirmation without deleting AppData.
