@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
       - "sahelflow.version.json"
+      - "scripts/install-founder-windows.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/verify-installed-windows-ui.ps1"
       - "scripts/prepare-runtime.ts"
@@ -62,6 +63,21 @@ jobs:
         run: |
           cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
           if ($LASTEXITCODE -ne 0) { throw 'Rust source is not canonically formatted' }
+
+      - name: Verify Founder handoff script under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          & $windowsPowerShell `
+            -NoLogo `
+            -NoProfile `
+            -NonInteractive `
+            -ExecutionPolicy Bypass `
+            -File '.\scripts\install-founder-windows.ps1' `
+            -SelfTest
+          if ($LASTEXITCODE -ne 0) {
+            throw "Founder handoff script failed Windows PowerShell 5.1 self-test with exit code $LASTEXITCODE"
+          }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
