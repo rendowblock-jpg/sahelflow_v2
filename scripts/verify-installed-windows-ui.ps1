@@ -126,7 +126,7 @@ function Wait-ForAuthenticatedUi {
         Start-Sleep -Milliseconds 250
         $Process.Refresh()
         if ($Process.HasExited) {
-            throw "$Phase: SahelFlow exited with code $($Process.ExitCode) before authenticated UI readiness."
+            throw "${Phase}: SahelFlow exited with code $($Process.ExitCode) before authenticated UI readiness."
         }
 
         if (Test-Path -LiteralPath $startupDiagnosticPath -PathType Leaf) {
@@ -137,7 +137,7 @@ function Wait-ForAuthenticatedUi {
                 $diagnostic.state -eq "blocked" -and
                 $diagnostic.appVersion -eq $expectedVersion
             ) {
-                throw "$Phase: SahelFlow reported $($diagnostic.code): $($diagnostic.detail)"
+                throw "${Phase}: SahelFlow reported $($diagnostic.code): $($diagnostic.detail)"
             }
         }
 
@@ -192,7 +192,7 @@ function Wait-ForAuthenticatedUi {
         }
     }
 
-    throw "$Phase: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within five minutes."
+    throw "${Phase}: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within five minutes."
 }
 
 function Close-SahelFlowNormally {
@@ -210,10 +210,10 @@ function Close-SahelFlowNormally {
         }
     )
     if ($posted.Count -eq 0) {
-        throw "$Phase: Windows rejected every normal GUI close request."
+        throw "${Phase}: Windows rejected every normal GUI close request."
     }
     if (-not $Process.WaitForExit(30000)) {
-        throw "$Phase: SahelFlow did not exit after a normal GUI close within 30 seconds."
+        throw "${Phase}: SahelFlow did not exit after a normal GUI close within 30 seconds."
     }
 
     $deadline = (Get-Date).AddSeconds(20)
@@ -233,7 +233,7 @@ function Close-SahelFlowNormally {
     } while ((Get-Date) -lt $deadline)
 
     $summary = ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
-    throw "$Phase: normal close left processes [$summary] or endpointPresent=$endpointPresent."
+    throw "${Phase}: normal close left processes [$summary] or endpointPresent=$endpointPresent."
 }
 
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
