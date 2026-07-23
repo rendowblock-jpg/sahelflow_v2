@@ -77,3 +77,24 @@ foreach ($required in @(
         throw "Post-shutdown database preservation proof is missing required source: $required"
     }
 }
+
+Push-Location $repositoryRoot
+try {
+    & cargo fmt --manifest-path src-tauri/Cargo.toml --all 2>&1 |
+        Tee-Object -FilePath (Join-Path $evidenceRoot "cargo-fmt.txt")
+    $formatExit = $LASTEXITCODE
+    if ($formatExit -ne 0) {
+        throw "cargo fmt failed with exit code $formatExit"
+    }
+
+    $diffOutput = @(& git diff --check 2>&1)
+    $diffExit = $LASTEXITCODE
+    $diffOutput | Set-Content -LiteralPath (Join-Path $evidenceRoot "git-diff-check.txt") -Encoding UTF8
+    if ($diffExit -ne 0) {
+        throw "git diff --check failed with exit code $diffExit"
+    }
+} finally {
+    Pop-Location
+}
+
+Write-Host "Database preservation repair and formatter diagnostics passed."
