@@ -1,0 +1,49 @@
+name: Diagnose internal.4 production audit
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/diagnose-internal4-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'ops/bootstrap-internal4-signed-build'
+    name: Exact Windows production audit
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact corrected source
+        uses: actions/checkout@v4
+        with:
+          ref: fd8a5d92011b810dfa0f5f5cd47c1982a7b2986b
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Capture production audit JSON
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          & bun audit --prod --json 2>&1 | Tee-Object -FilePath internal4-production-audit.json
+          $code = $LASTEXITCODE
+          "exitCode=$code" | Set-Content -LiteralPath internal4-production-audit-exit.txt -Encoding UTF8
+          exit 0
+
+      - name: Upload exact audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: internal4-production-audit-${{ github.run_id }}
+          path: |
+            internal4-production-audit.json
+            internal4-production-audit-exit.txt
+          if-no-files-found: error
+          retention-days: 7
