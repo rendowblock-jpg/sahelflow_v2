@@ -5,11 +5,19 @@ on:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
       - "sahelflow.version.json"
+      - "scripts/install-founder-windows.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
+      - "scripts/verify-installed-windows-ui.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
       - "src-tauri/**"
       - "src/app/api/internal/runtime-ready/**"
+      - "src/app/api/internal/runtime-bootstrap/**"
+      - "src/app/api/internal/runtime-ui-ready/**"
+      - "src/components/runtime/**"
+      - "src/app/layout.tsx"
+      - "src/lib/runtime-auth.ts"
+      - "src/proxy.ts"
       - "src/lib/db.ts"
       - "prisma/**"
       - "package.json"
@@ -56,6 +64,58 @@ jobs:
           cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
           if ($LASTEXITCODE -ne 0) { throw 'Rust source is not canonically formatted' }
 
+      - name: Verify Founder handoff script under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          & $windowsPowerShell `
+            -NoLogo `
+            -NoProfile `
+            -NonInteractive `
+            -ExecutionPolicy Bypass `
+            -File '.\scripts\install-founder-windows.ps1' `
+            -SelfTest
+          if ($LASTEXITCODE -ne 0) {
+            throw "Founder handoff script failed Windows PowerShell 5.1 self-test with exit code $LASTEXITCODE"
+          }
+
+      - name: Parse installed UI harness under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          $parserScript = Join-Path $env:RUNNER_TEMP 'parse-windows-powershell51.ps1'
+          @'
+          param([Parameter(Mandatory = $true)][string]$Path)
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+              $Path,
+              [ref]$tokens,
+              [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+              $errors | Format-List * -Force
+              exit 1
+          }
+          '@ | Set-Content -LiteralPath $parserScript -Encoding UTF8
+
+          foreach ($relative in @(
+              '.\scripts\install-founder-windows.ps1',
+              '.\scripts\verify-installed-windows-ui.ps1'
+          )) {
+              $resolved = (Resolve-Path -LiteralPath $relative).Path
+              & $windowsPowerShell `
+                -NoLogo `
+                -NoProfile `
+                -NonInteractive `
+                -ExecutionPolicy Bypass `
+                -File $parserScript `
+                -Path $resolved
+              if ($LASTEXITCODE -ne 0) {
+                throw "$relative failed Windows PowerShell 5.1 parsing."
+              }
+          }
+
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
         with:
@@ -82,7 +142,7 @@ jobs:
             Tee-Object -FilePath .sf-installed-e2e-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Install and prove launch/reopen
+      - name: Install and prove runtime launch/reopen
         shell: pwsh
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
@@ -99,6 +159,19 @@ jobs:
             throw
           }
 
+      - name: Prove authenticated hydrated WebView UI twice
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-ui.ps1
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'ui-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
       - name: Collect installed Windows evidence
         if: always()
         shell: pwsh
@@ -112,6 +185,7 @@ jobs:
             'runtime-probe-diagnostic.json',
             'runtime-readiness-diagnostic.json',
             'runtime-endpoint.json',
+            'runtime-ui-ready.json',
             'shop-registry.json',
             'migration-journal\current.json',
             'migration-journal\compatibility.json'
