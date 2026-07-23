@@ -151,13 +151,15 @@ fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
         ));
     }
 
-    Ok(Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
-        .domain(host.to_string())
-        .path("/")
-        .http_only(true)
-        .same_site(SameSite::Strict)
-        .secure(false)
-        .build())
+    Ok(
+        Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
+            .domain(host.to_string())
+            .path("/")
+            .http_only(true)
+            .same_site(SameSite::Lax)
+            .secure(false)
+            .build(),
+    )
 }
 
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
@@ -390,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn runtime_cookie_is_loopback_scoped_http_only_and_strict() {
+    fn runtime_cookie_is_loopback_scoped_http_only_and_lax() {
         let token = "b".repeat(64);
         let cookie = runtime_cookie("127.0.0.1", &token).unwrap();
 
@@ -399,7 +401,7 @@ mod tests {
         assert_eq!(cookie.domain(), Some("127.0.0.1"));
         assert_eq!(cookie.path(), Some("/"));
         assert_eq!(cookie.http_only(), Some(true));
-        assert_eq!(cookie.same_site(), Some(SameSite::Strict));
+        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
         assert_eq!(cookie.secure(), Some(false));
     }
 
