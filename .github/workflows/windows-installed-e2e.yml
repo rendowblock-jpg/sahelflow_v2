@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: windows-installed-e2e-${{ github.event.pull_request.number || github.ref }}
@@ -37,7 +37,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -49,46 +49,11 @@ jobs:
         with:
           components: rustfmt,clippy
 
-      - name: Apply exact debug-build lint fix under test
-        shell: pwsh
-        run: |
-          @'
-          from pathlib import Path
-
-          path = Path("src-tauri/src/lib.rs")
-          source = path.read_text(encoding="utf-8")
-          start_marker = ".run(|app_handle, event| {"
-          end_marker = "\n        });"
-          if source.count(start_marker) != 1:
-              raise SystemExit(f"expected one event callback start, found {source.count(start_marker)}")
-          start = source.index(start_marker)
-          end = source.index(end_marker, start) + len(end_marker)
-          block = source[start:end]
-          replacements = [
-              ("|app_handle, event|", "|_app_handle, _event|"),
-              ("&event,", "&_event,"),
-              ("\n                        event,\n", "\n                        _event,\n"),
-              ("app_handle.try_state", "_app_handle.try_state"),
-              ("app_handle.path()", "_app_handle.path()"),
-              ("app_handle.cleanup_before_exit()", "_app_handle.cleanup_before_exit()"),
-          ]
-          for old, new in replacements:
-              count = block.count(old)
-              if count != 1:
-                  raise SystemExit(f"expected one {old!r} in event callback, found {count}")
-              block = block.replace(old, new, 1)
-          path.write_text(source[:start] + block + source[end:], encoding="utf-8")
-          '@ | python -
-
-          if ($LASTEXITCODE -ne 0) { throw 'failed to apply exact debug-build lint fix' }
-
       - name: Verify canonical Rust formatting
         shell: pwsh
         run: |
-          cargo fmt --manifest-path src-tauri/Cargo.toml --all
-          if ($LASTEXITCODE -ne 0) { throw 'cargo fmt failed' }
-          git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'lint-fixed Rust source has whitespace errors' }
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+          if ($LASTEXITCODE -ne 0) { throw 'Rust source is not canonically formatted' }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
@@ -132,24 +97,6 @@ jobs:
               Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
             throw
           }
-
-      - name: Persist lifecycle-proven Clippy fix
-        if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' && github.head_ref == 'agent/windows-installed-runtime-e2e'
-        shell: pwsh
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- src-tauri/src/lib.rs
-          git diff --cached --check
-          if ($LASTEXITCODE -ne 0) { throw 'lifecycle-proven Clippy fix has whitespace errors' }
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but produced no Clippy source fix' }
-          git commit -m 'fix(rust): silence debug-only event parameter warnings'
-          if ($LASTEXITCODE -ne 0) { throw 'failed to commit lifecycle-proven Clippy fix' }
-          git push origin "HEAD:$env:HEAD_BRANCH"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to push lifecycle-proven Clippy fix' }
 
       - name: Collect installed Windows evidence
         if: always()
