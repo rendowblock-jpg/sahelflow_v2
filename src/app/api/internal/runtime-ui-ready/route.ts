@@ -39,7 +39,6 @@ export async function POST(request: Request) {
   const instanceId = process.env.SF_RUNTIME_INSTANCE_ID;
   const appVersion = process.env.APP_VERSION;
   const dataDir = process.env.SF_DATA_DIR;
-  const configuredAckPath = process.env.SF_RUNTIME_UI_READY_PATH;
 
   if (
     !loopback ||
@@ -48,18 +47,12 @@ export async function POST(request: Request) {
     !instanceId ||
     !/^[0-9a-f]{32}$/i.test(instanceId) ||
     !appVersion ||
-    !dataDir ||
-    !configuredAckPath
+    !dataDir
   ) {
     return unavailable();
   }
 
-  const ackPath = resolve(configuredAckPath);
-  const canonicalAckPath = resolve(dataDir, "runtime-ui-ready.json");
-  if (ackPath !== canonicalAckPath) {
-    return unavailable();
-  }
-
+  const ackPath = resolve(dataDir, "runtime-ui-ready.json");
   const suppliedToken = (await cookies()).get(RUNTIME_COOKIE)?.value ?? "";
   if (!/^[0-9a-f]{64}$/i.test(suppliedToken) || !constantTimeEqual(suppliedToken, expectedToken)) {
     return NextResponse.json(
