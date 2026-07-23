@@ -19,7 +19,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'ops/bootstrap-internal4-signed-build'
     name: Dispatch exact signed internal.4
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Dispatch and record exact signed run
         env:
@@ -29,49 +29,116 @@ jobs:
           RELEASE_TAG: sahelflow-v1.0.0-internal.4-685ee164cc4ff17e33a57cd07d7937e6ebc81f65
         shell: bash
         run: |
-          set -euo pipefail
+          set -u -o pipefail
+
+          post_comment() {
+            local body="$1"
+            gh api \
+              --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/issues/${RELEASE_PR}/comments" \
+              -f body="${body}" >/dev/null
+          }
 
           if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "Exact signed draft already exists: ${RELEASE_TAG}"
+            post_comment "<!-- sahelflow-internal4-bootstrap-existing -->
+          **Exact signed internal.4 draft already exists**
+
+          - Tag: \`${RELEASE_TAG}\`
+          - Exact source: \`${SOURCE_SHA}\`
+          - Bootstrap run: \`${GITHUB_RUN_ID}\`"
             exit 0
           fi
 
-          before_ids="$(gh run list \
+          runs_json="$(gh run list \
             --repo "${GITHUB_REPOSITORY}" \
             --workflow release.yml \
             --event workflow_dispatch \
             --limit 100 \
-            --json databaseId \
-            --jq '.[].databaseId')"
-
-          notes="SahelFlow internal.4 immutable Windows replacement candidate. Exact signed MSI must pass updater-signature verification, latest.json binding, installed launch, normal close, child teardown, reopen, runtime-cache reuse, and shop-data preservation."
-          gh workflow run release.yml \
-            --repo "${GITHUB_REPOSITORY}" \
-            --ref main \
-            -f source_ref="${SOURCE_SHA}" \
-            -f release_notes="${notes}"
-
-          signed_run_id=""
-          for _ in $(seq 1 60); do
-            while read -r candidate; do
-              [[ -n "${candidate}" ]] || continue
-              if ! grep -qx "${candidate}" <<< "${before_ids}"; then
-                signed_run_id="${candidate}"
-                break
-              fi
-            done < <(gh run list \
-              --repo "${GITHUB_REPOSITORY}" \
-              --workflow release.yml \
-              --event workflow_dispatch \
-              --limit 20 \
-              --json databaseId \
-              --jq '.[].databaseId')
-            [[ -n "${signed_run_id}" ]] && break
-            sleep 2
-          done
+            --json databaseId,headSha,status,conclusion,url,createdAt 2>/dev/null || echo '[]')"
+          signed_run_id="$(jq -r --arg sha "${SOURCE_SHA}" \
+            '[.[] | select(.headSha == $sha)] | first | .databaseId // empty' <<< "${runs_json}")"
+          dispatch_method="existing exact-source run"
+          dispatch_output=""
 
           if [[ -z "${signed_run_id}" ]]; then
-            echo "Signed workflow dispatch was accepted but no new run appeared within 120 seconds." >&2
+            before_ids="$(jq -r '.[].databaseId' <<< "${runs_json}")"
+            notes="SahelFlow internal.4 immutable Windows replacement candidate. Exact signed MSI must pass updater-signature verification, latest.json binding, installed launch, normal close, child teardown, reopen, runtime-cache reuse, and shop-data preservation."
+
+            set +e
+            dispatch_output="$(gh workflow run release.yml \
+              --repo "${GITHUB_REPOSITORY}" \
+              --ref main \
+              -f source_ref="${SOURCE_SHA}" \
+              -f release_notes="${notes}" 2>&1)"
+            dispatch_code=$?
+            set -e
+            dispatch_method="gh workflow run"
+
+            if [[ ${dispatch_code} -ne 0 ]]; then
+              set +e
+              rest_output="$(gh api \
+                --method POST \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/dispatches" \
+                -f ref=main \
+                -f "inputs[source_ref]=${SOURCE_SHA}" \
+                -f "inputs[release_notes]=${notes}" 2>&1)"
+              rest_code=$?
+              set -e
+              dispatch_method="REST workflow dispatch fallback"
+              dispatch_output="CLI response: ${dispatch_output}
+          REST response: ${rest_output}"
+              dispatch_code=${rest_code}
+            fi
+
+            if [[ ${dispatch_code} -ne 0 ]]; then
+              post_comment "<!-- sahelflow-internal4-bootstrap-failed:${GITHUB_RUN_ID} -->
+          **Signed internal.4 dispatch failed**
+
+          - Exact source: \`${SOURCE_SHA}\`
+          - Bootstrap run: \`${GITHUB_RUN_ID}\`
+          - Attempt: \`${dispatch_method}\`
+          - Response:
+
+          \`\`\`
+          ${dispatch_output}
+          \`\`\`"
+              echo "${dispatch_output}" >&2
+              exit ${dispatch_code}
+            fi
+
+            for _ in $(seq 1 90); do
+              while read -r candidate; do
+                [[ -n "${candidate}" ]] || continue
+                if ! grep -qx "${candidate}" <<< "${before_ids}"; then
+                  signed_run_id="${candidate}"
+                  break
+                fi
+              done < <(gh run list \
+                --repo "${GITHUB_REPOSITORY}" \
+                --workflow release.yml \
+                --event workflow_dispatch \
+                --limit 30 \
+                --json databaseId \
+                --jq '.[].databaseId')
+              [[ -n "${signed_run_id}" ]] && break
+              sleep 2
+            done
+          fi
+
+          if [[ -z "${signed_run_id}" ]]; then
+            post_comment "<!-- sahelflow-internal4-bootstrap-missing:${GITHUB_RUN_ID} -->
+          **Signed internal.4 dispatch was accepted but no run appeared**
+
+          - Exact source: \`${SOURCE_SHA}\`
+          - Bootstrap run: \`${GITHUB_RUN_ID}\`
+          - Attempt: \`${dispatch_method}\`
+          - Dispatch response:
+
+          \`\`\`
+          ${dispatch_output}
+          \`\`\`"
+            echo "Signed workflow dispatch was accepted but no new run appeared within 180 seconds." >&2
             exit 1
           fi
 
@@ -84,26 +151,17 @@ jobs:
           signed_url="$(jq -r '.url' <<< "${run_json}")"
           signed_created_at="$(jq -r '.createdAt' <<< "${run_json}")"
 
-          body=$(cat <<EOF
-          <!-- sahelflow-internal4-bootstrap:${signed_run_id} -->
-          **Exact signed internal.4 build dispatched**
+          post_comment "<!-- sahelflow-internal4-bootstrap:${signed_run_id} -->
+          **Exact signed internal.4 build located**
 
           - Version authority: \`1.0.0-internal.4\` / MSI \`1.0.0.4\`
           - Exact source input: \`${SOURCE_SHA}\`
           - Bootstrap run: \`${GITHUB_RUN_ID}\`
           - Signed updater run: \`${signed_run_id}\`
           - Workflow head: \`${signed_head_sha}\`
-          - Initial status: \`${signed_status}\` / \`${signed_conclusion}\`
+          - Current status: \`${signed_status}\` / \`${signed_conclusion}\`
           - Created: \`${signed_created_at}\`
-          - Run: ${signed_url}
-          EOF
-          )
+          - Dispatch path: \`${dispatch_method}\`
+          - Run: ${signed_url}"
 
-          gh api \
-            --method POST \
-            -H 'Accept: application/vnd.github+json' \
-            "repos/${GITHUB_REPOSITORY}/issues/${RELEASE_PR}/comments" \
-            -f body="${body}"
-
-          echo "SIGNED_RUN_ID=${signed_run_id}" >> "${GITHUB_ENV}"
           echo "Signed updater run ${signed_run_id}: ${signed_url}"
