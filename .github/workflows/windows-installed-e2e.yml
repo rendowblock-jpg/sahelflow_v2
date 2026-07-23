@@ -53,68 +53,10 @@ jobs:
       - name: Apply signed release installed lifecycle gate under test
         shell: pwsh
         run: |
-          @'
-          from pathlib import Path
-
-          path = Path('.github/workflows/release.yml')
-          source = path.read_text(encoding='utf-8')
-          run_id = '$' + '{{ github.run_id }}'
-          runner_temp = '$' + '{{ runner.temp }}'
-
-          insertion_marker = '''      - name: Verify deterministic build source rewrites
-        run: bun run scripts/verify-release-source.ts
-'''
-          lifecycle = f'''      - name: Install and prove signed launch/reopen
-        shell: pwsh
-        run: |
-          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
-          New-Item -ItemType Directory -Path $destination -Force | Out-Null
-          try {{
-            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH
-          }} catch {{
-            $_ | Format-List * -Force | Out-String |
-              Set-Content -LiteralPath (Join-Path $destination 'signed-lifecycle-error.txt') -Encoding UTF8
-            throw
-          }}
-
-      - name: Upload signed installed lifecycle diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: signed-installed-lifecycle-diagnostics-{run_id}
-          path: {runner_temp}/sahelflow-installed-e2e/**
-          if-no-files-found: ignore
-          retention-days: 7
-
-'''
-          if 'Install and prove signed launch/reopen' not in source:
-              if source.count(insertion_marker) != 1:
-                  raise SystemExit('expected exactly one release source-rewrite marker')
-              source = source.replace(insertion_marker, lifecycle + insertion_marker, 1)
-
-          retention_line = '            .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json\n'
-          retained_lifecycle = f'            {runner_temp}/sahelflow-installed-e2e/**\n'
-          retain_section = source.split('      - name: Retain signed candidate and evidence', 1)
-          if len(retain_section) != 2:
-              raise SystemExit('signed candidate retention step is missing')
-          if retained_lifecycle not in retain_section[1]:
-              if source.count(retention_line) != 1:
-                  raise SystemExit('expected exactly one signed evidence retention marker')
-              source = source.replace(retention_line, retention_line + retained_lifecycle, 1)
-
-          required = [
-              'Install and prove signed launch/reopen',
-              './scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH',
-              'signed-installed-lifecycle-diagnostics-',
-              '/sahelflow-installed-e2e/**',
-          ]
-          missing = [item for item in required if item not in source]
-          if missing:
-              raise SystemExit('signed lifecycle gate missing: ' + ', '.join(missing))
-
-          path.write_text(source, encoding='utf-8')
-          '@ | python -
+          python scripts/apply-signed-release-lifecycle.py
           if ($LASTEXITCODE -ne 0) { throw 'failed to apply signed installed lifecycle gate' }
+          git diff --quiet -- .github/workflows/release.yml
+          if ($LASTEXITCODE -eq 0) { throw 'signed release lifecycle patch produced no release workflow change' }
 
       - name: Verify canonical Rust formatting
         shell: pwsh
@@ -175,6 +117,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -- scripts/apply-signed-release-lifecycle.py
           git add -- .github/workflows/release.yml
           git diff --cached --check
           if ($LASTEXITCODE -ne 0) { throw 'lifecycle-proven signed release gate has whitespace errors' }
