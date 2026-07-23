@@ -43,7 +43,11 @@ $new = @'
                     }
                 }
                 if main_window_close {
-                    app_handle.exit(0);
+                    // AppHandle::exit requests another event-loop transition. A
+                    // native close request is already executing on that loop, so
+                    // finish Tauri cleanup synchronously and exit immediately.
+                    app_handle.cleanup_before_exit();
+                    std::process::exit(0);
                 }
             }
         });
@@ -72,7 +76,8 @@ foreach ($required in @(
     'tauri::RunEvent::WindowEvent',
     'tauri::WindowEvent::CloseRequested',
     'label == "main"',
-    'app_handle.exit(0)'
+    'app_handle.cleanup_before_exit()',
+    'std::process::exit(0)'
 )) {
     if (-not $repaired.Contains($required)) {
         throw "Main-window shutdown repair is missing required source: $required"
