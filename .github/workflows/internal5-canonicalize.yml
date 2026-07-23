@@ -1,0 +1,51 @@
+name: Canonicalize internal.5 Rust hotfix
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/internal5-canonicalize.yml
+      - src-tauri/Cargo.toml
+      - src-tauri/Cargo.lock
+      - src-tauri/src/startup_recovery.rs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: internal5-canonicalize-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  canonicalize:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Rust with rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format Rust and refresh local package lock identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --manifest-path src-tauri/Cargo.toml
+          cargo metadata --manifest-path src-tauri/Cargo.toml --format-version 1 >/dev/null
+          grep -A2 'name = "sahelflow"' src-tauri/Cargo.lock | grep 'version = "1.0.0-internal.5"'
+          cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Upload canonical generated files
+        uses: actions/upload-artifact@v4
+        with:
+          name: internal5-canonical-rust-${{ github.run_id }}
+          path: |
+            src-tauri/Cargo.lock
+            src-tauri/src/startup_recovery.rs
+          if-no-files-found: error
+          retention-days: 2
