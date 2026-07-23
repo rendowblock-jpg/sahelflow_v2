@@ -4,8 +4,6 @@ on:
   pull_request:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
-      - "scripts/apply-main-window-shutdown-repair.ps1"
-      - "scripts/apply-installed-db-preservation-repair.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
@@ -18,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: windows-installed-e2e-${{ github.event.pull_request.number || github.ref }}
@@ -39,7 +37,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -51,21 +49,11 @@ jobs:
         with:
           components: rustfmt,clippy
 
-      - name: Apply explicit main-window shutdown path under test
-        shell: pwsh
-        run: ./scripts/apply-main-window-shutdown-repair.ps1
-
-      - name: Apply post-shutdown database preservation proof
-        shell: pwsh
-        run: ./scripts/apply-installed-db-preservation-repair.ps1
-
-      - name: Format Rust source under test
+      - name: Verify canonical Rust formatting
         shell: pwsh
         run: |
-          cargo fmt --manifest-path src-tauri/Cargo.toml --all
-          if ($LASTEXITCODE -ne 0) { throw 'cargo fmt failed' }
-          git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'formatted Rust source has whitespace errors' }
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+          if ($LASTEXITCODE -ne 0) { throw 'Rust source is not canonically formatted' }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
@@ -109,24 +97,6 @@ jobs:
               Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
             throw
           }
-
-      - name: Persist lifecycle-proven desktop source
-        if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' && github.head_ref == 'agent/windows-installed-runtime-e2e'
-        shell: pwsh
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- scripts/verify-installed-windows-msi.ps1 src-tauri/src/lib.rs src-tauri/src/runtime_protocol.rs
-          git diff --cached --check
-          if ($LASTEXITCODE -ne 0) { throw 'lifecycle-proven desktop source has whitespace errors' }
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but produced no desktop source change' }
-          git commit -m 'fix(desktop): exit cleanly and preserve data on reopen'
-          if ($LASTEXITCODE -ne 0) { throw 'failed to commit lifecycle-proven desktop source' }
-          git push origin "HEAD:$env:HEAD_BRANCH"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to push lifecycle-proven desktop source' }
 
       - name: Collect installed Windows evidence
         if: always()
