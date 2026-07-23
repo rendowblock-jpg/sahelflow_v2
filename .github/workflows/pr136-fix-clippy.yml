@@ -1,0 +1,68 @@
+name: Apply PR 136 Clippy fix
+
+on:
+  push:
+    branches:
+      - agent/windows-installed-runtime-e2e
+    paths:
+      - .github/workflows/pr136-fix-clippy.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/windows-installed-runtime-e2e
+          fetch-depth: 0
+
+      - name: Setup Rust formatter
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Apply exact debug-build lint fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src-tauri/src/lib.rs')
+          source = path.read_text(encoding='utf-8')
+          replacements = [
+              ('.run(|app_handle, event| {', '.run(|_app_handle, _event| {'),
+              ('&_event,', '&_event,'),
+              ('&event,', '&_event,'),
+              ('\n                        event,\n', '\n                        _event,\n'),
+              ('app_handle.try_state', '_app_handle.try_state'),
+              ('app_handle.path()', '_app_handle.path()'),
+              ('app_handle.cleanup_before_exit()', '_app_handle.cleanup_before_exit()'),
+          ]
+
+          # The first tuple intentionally makes the operation idempotent after a
+          # partially completed run; all meaningful replacements must occur once.
+          meaningful = replacements[0:1] + replacements[2:]
+          for old, new in meaningful:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one occurrence of {old!r}, found {count}')
+              source = source.replace(old, new, 1)
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          git diff --check
+
+          git rm -- .github/workflows/pr136-fix-clippy.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- src-tauri/src/lib.rs
+          git commit -m 'fix(rust): silence debug-only event parameter warnings'
+          git push origin HEAD:agent/windows-installed-runtime-e2e
