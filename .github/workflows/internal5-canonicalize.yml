@@ -9,7 +9,7 @@ on:
       - src-tauri/src/startup_recovery.rs
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: internal5-canonicalize-${{ github.event.pull_request.number }}
@@ -21,10 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout exact PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Setup Rust with rustfmt
         uses: dtolnay/rust-toolchain@stable
@@ -39,6 +40,22 @@ jobs:
           cargo metadata --manifest-path src-tauri/Cargo.toml --format-version 1 >/dev/null
           grep -A2 'name = "sahelflow"' src-tauri/Cargo.lock | grep 'version = "1.0.0-internal.5"'
           cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Commit canonical generated files
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git add src-tauri/Cargo.lock src-tauri/src/startup_recovery.rs
+          if git diff --cached --quiet; then
+            echo 'Canonical Rust files already match.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: canonicalize internal.5 Rust files'
+          git push origin "HEAD:${HEAD_BRANCH}"
 
       - name: Upload canonical generated files
         uses: actions/upload-artifact@v4
