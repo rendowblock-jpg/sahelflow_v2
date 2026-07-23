@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
+      - "sahelflow.version.json"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"

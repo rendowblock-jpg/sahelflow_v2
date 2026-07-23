@@ -260,6 +260,28 @@ jobs:
           "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
           "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV
 
+      - name: Install and prove signed launch/reopen
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'signed-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Upload signed installed lifecycle diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-installed-lifecycle-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/sahelflow-installed-e2e/**
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Verify deterministic build source rewrites
         run: bun run scripts/verify-release-source.ts
 
@@ -307,6 +329,7 @@ jobs:
             src-tauri/resources/runtime/runtime-manifest.json
             src-tauri/resources/standalone/sahelflow-standalone-manifest.json
             .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+            ${{ runner.temp }}/sahelflow-installed-e2e/**
             ${{ env.SF_LATEST_JSON_PATH }}
           include-hidden-files: true
           if-no-files-found: error
@@ -323,5 +346,6 @@ jobs:
           - Source: `${{ inputs.source_ref }}`
           - Draft release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
           - Updater signature and `latest.json` matched.
+          - The exact signed MSI passed installed launch, normal close, teardown, and reopen.
           - Publish the verified draft release to make the configured updater endpoint live.
           "@ >> $env:GITHUB_STEP_SUMMARY
