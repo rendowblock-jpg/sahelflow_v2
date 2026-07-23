@@ -7,6 +7,21 @@ const read = (path: string) =>
   readFileSync(resolve(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 describe("installed Windows runtime contract", () => {
+  it("pins the audited Next.js baseline in package and lock authority", () => {
+    const packageJson = JSON.parse(read("package.json")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const lock = read("bun.lock");
+
+    expect(packageJson.dependencies?.next).toBe("16.2.11");
+    expect(packageJson.devDependencies?.["eslint-config-next"]).toBe("16.2.10");
+    expect(lock).toContain('"next": "16.2.11"');
+    expect(lock).toContain('"next@16.2.11"');
+    expect(lock).toContain('"eslint-config-next@16.2.10"');
+    expect(lock).not.toContain('"next@16.2.9"');
+  });
+
   it("hard-disables Next telemetry before hashing the packaged standalone tree", () => {
     const build = read("src-tauri/build-frontend.ts");
     const bootstrap = build.indexOf("SahelFlow desktop runtime bootstrap");
