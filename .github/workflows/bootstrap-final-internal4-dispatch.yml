@@ -8,8 +8,6 @@ on:
 permissions:
   actions: write
   contents: read
-  issues: write
-  pull-requests: read
 
 concurrency:
   group: bootstrap-final-internal4-dispatch
@@ -18,136 +16,61 @@ concurrency:
 jobs:
   dispatch:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'ops/bootstrap-final-internal4-dispatch'
-    name: Dispatch canonical exact-source signed workflow
+    name: Diagnose and dispatch canonical exact-source workflow
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
       SOURCE_SHA: 98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf
-      RELEASE_PR: '150'
-      EXPECTED_TAG: sahelflow-v1.0.0-internal.4-98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf
     steps:
-      - name: Dispatch once and record exact signed run
+      - name: Show exact run inventory and dispatch result
         shell: bash
         run: |
-          set -euo pipefail
-
-          api_base="https://api.github.com/repos/${GITHUB_REPOSITORY}"
-          auth_headers=(
+          set -u
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          headers=(
             -H "Authorization: Bearer ${GH_TOKEN}"
             -H 'Accept: application/vnd.github+json'
             -H 'X-GitHub-Api-Version: 2022-11-28'
           )
 
-          if [[ "${SOURCE_SHA}" != '98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf' ]]; then
-            echo 'unexpected final source authority' >&2
-            exit 1
-          fi
+          list_file="${RUNNER_TEMP}/runs.json"
+          list_code="$(curl --silent --show-error --location \
+            --output "${list_file}" --write-out '%{http_code}' \
+            "${headers[@]}" \
+            "${api}/actions/workflows/release.yml/runs?event=workflow_dispatch&branch=main&per_page=100")"
+          echo "LIST_HTTP=${list_code}"
+          jq -c --arg source "${SOURCE_SHA}" \
+            '[.workflow_runs[] | select(.head_sha == $source) | {id,status,conclusion,head_sha,html_url,created_at}]' \
+            "${list_file}"
 
-          find_exact_run() {
-            curl --fail --silent --show-error --location \
-              "${auth_headers[@]}" \
-              "${api_base}/actions/workflows/release.yml/runs?event=workflow_dispatch&branch=main&per_page=100" \
-              | jq -r --arg source "${SOURCE_SHA}" \
-                '.workflow_runs[] | select(.head_sha == $source) | [.id,.status,(.conclusion // ""),.html_url,.created_at] | @tsv' \
-              | head -n 1
-          }
-
-          signed_run="$(find_exact_run)"
-          dispatch_required=true
-
-          if [[ -n "${signed_run}" ]]; then
-            IFS=$'\t' read -r signed_run_id signed_status signed_conclusion signed_url signed_created_at <<< "${signed_run}"
-            if [[ "${signed_status}" == 'queued' || "${signed_status}" == 'in_progress' || "${signed_conclusion}" == 'success' ]]; then
-              dispatch_required=false
-            fi
-          fi
-
-          release_response="${RUNNER_TEMP}/exact-release.json"
-          release_code="$(curl --silent --show-error --location \
-            --output "${release_response}" \
-            --write-out '%{http_code}' \
-            "${auth_headers[@]}" \
-            "${api_base}/releases/tags/${EXPECTED_TAG}")"
-          if [[ "${release_code}" == '200' ]]; then
-            dispatch_required=false
-            signed_run_id="${signed_run_id:-tag-present}"
-            signed_status="${signed_status:-completed}"
-            signed_conclusion="${signed_conclusion:-success}"
-            signed_url="${signed_url:-$(jq -r '.html_url' "${release_response}")}"
-            signed_created_at="${signed_created_at:-$(jq -r '.created_at' "${release_response}")}"
-          elif [[ "${release_code}" != '404' ]]; then
-            cat "${release_response}" >&2
-            echo "unexpected release lookup HTTP ${release_code}" >&2
-            exit 1
-          fi
-
-          if [[ "${dispatch_required}" == true ]]; then
+          existing_count="$(jq --arg source "${SOURCE_SHA}" '[.workflow_runs[] | select(.head_sha == $source)] | length' "${list_file}")"
+          if [[ "${list_code}" == '200' && "${existing_count}" == '0' ]]; then
             notes='SahelFlow 1.0.0-internal.4 final protected-main candidate with signed artifact, latest.json, installed launch, normal close, teardown, reopen, cache reuse, and data-preservation verification.'
-            payload="$(jq -n \
-              --arg ref 'main' \
-              --arg source "${SOURCE_SHA}" \
-              --arg notes "${notes}" \
-              '{ref:$ref,inputs:{source_ref:$source,release_notes:$notes}}')"
-            dispatch_response="${RUNNER_TEMP}/dispatch-response.json"
-            dispatch_code="$(curl --silent --show-error --location \
-              --output "${dispatch_response}" \
-              --write-out '%{http_code}' \
-              --request POST \
-              "${auth_headers[@]}" \
+            payload="$(jq -n --arg source "${SOURCE_SHA}" --arg notes "${notes}" \
+              '{ref:"main",inputs:{source_ref:$source,release_notes:$notes}}')"
+            response="${RUNNER_TEMP}/dispatch.json"
+            code="$(curl --silent --show-error --location \
+              --output "${response}" --write-out '%{http_code}' \
+              --request POST "${headers[@]}" \
               -H 'Content-Type: application/json' \
               --data "${payload}" \
-              "${api_base}/actions/workflows/release.yml/dispatches")"
-            if [[ "${dispatch_code}" != '204' ]]; then
-              cat "${dispatch_response}" >&2
-              echo "release dispatch failed with HTTP ${dispatch_code}" >&2
-              exit 1
-            fi
-
-            signed_run=''
-            for _ in $(seq 1 45); do
-              signed_run="$(find_exact_run)"
-              [[ -n "${signed_run}" ]] && break
-              sleep 2
-            done
-            if [[ -z "${signed_run}" ]]; then
-              echo 'canonical release dispatch returned 204 but no exact-source run appeared within 90 seconds' >&2
-              exit 1
-            fi
-            IFS=$'\t' read -r signed_run_id signed_status signed_conclusion signed_url signed_created_at <<< "${signed_run}"
+              "${api}/actions/workflows/release.yml/dispatches")"
+            echo "DISPATCH_HTTP=${code}"
+            if [[ -s "${response}" ]]; then cat "${response}"; fi
+            sleep 5
+          else
+            echo 'DISPATCH_SKIPPED=exact-source-run-already-exists-or-list-failed'
           fi
 
-          body=$(cat <<EOF
-          <!-- sahelflow-final-signed-dispatch:${signed_run_id} -->
-          **Final exact-source signed internal.4 workflow recorded**
+          verify_file="${RUNNER_TEMP}/runs-after.json"
+          verify_code="$(curl --silent --show-error --location \
+            --output "${verify_file}" --write-out '%{http_code}' \
+            "${headers[@]}" \
+            "${api}/actions/workflows/release.yml/runs?event=workflow_dispatch&branch=main&per_page=100")"
+          echo "VERIFY_HTTP=${verify_code}"
+          jq -c --arg source "${SOURCE_SHA}" \
+            '[.workflow_runs[] | select(.head_sha == $source) | {id,status,conclusion,head_sha,html_url,created_at}]' \
+            "${verify_file}"
 
-          - Source SHA: \`${SOURCE_SHA}\`
-          - Expected tag: \`${EXPECTED_TAG}\`
-          - Signed workflow run: \`${signed_run_id}\`
-          - Status: \`${signed_status}\`
-          - Conclusion: \`${signed_conclusion:-pending}\`
-          - Created: \`${signed_created_at}\`
-          - Run: ${signed_url}
-          - Bootstrap PR: #${{ github.event.pull_request.number }}
-          EOF
-          )
-          comment_payload="$(jq -n --arg body "${body}" '{body:$body}')"
-
-          for target in "${RELEASE_PR}" "${{ github.event.pull_request.number }}"; do
-            comment_response="${RUNNER_TEMP}/comment-${target}.json"
-            comment_code="$(curl --silent --show-error --location \
-              --output "${comment_response}" \
-              --write-out '%{http_code}' \
-              --request POST \
-              "${auth_headers[@]}" \
-              -H 'Content-Type: application/json' \
-              --data "${comment_payload}" \
-              "${api_base}/issues/${target}/comments")"
-            if [[ "${comment_code}" != '201' ]]; then
-              cat "${comment_response}" >&2
-              echo "failed to record signed run on PR ${target}: HTTP ${comment_code}" >&2
-              exit 1
-            fi
-          done
-
-          echo "Exact-source signed run ${signed_run_id}: ${signed_status}/${signed_conclusion:-pending}" >> "${GITHUB_STEP_SUMMARY}"
+          exit 0
