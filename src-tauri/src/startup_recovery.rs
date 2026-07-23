@@ -151,6 +151,9 @@ fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
         ));
     }
 
+    // The initial workspace load is a top-level navigation from Tauri's
+    // configured data: document. Lax sends the host-scoped cookie on that GET
+    // while still withholding it from cross-site state-changing requests.
     Ok(
         Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
             .domain(host.to_string())
