@@ -22,16 +22,19 @@ describe("GET /api/internal/runtime-bootstrap", () => {
     expect(wrong.status).toBe(401);
   });
 
-  it("sets an HttpOnly launch cookie and consumes the bootstrap", async () => {
+  it("commits the fallback cookie before client-side navigation and consumes the bootstrap", async () => {
     const request = new Request(`http://127.0.0.1:49152/api/internal/runtime-bootstrap?token=${TOKEN}`);
     const accepted = await GET(request);
+    const body = await accepted.text();
     const replay = await GET(request);
 
-    expect(accepted.status).toBe(303);
-    expect(accepted.headers.get("location")).toBe("http://127.0.0.1:49152/");
+    expect(accepted.status).toBe(200);
+    expect(accepted.headers.get("location")).toBeNull();
+    expect(accepted.headers.get("content-type")).toContain("text/html");
     expect(accepted.headers.get("set-cookie")).toContain("sf_runtime=");
     expect(accepted.headers.get("set-cookie")?.toLowerCase()).toContain("httponly");
     expect(accepted.headers.get("set-cookie")?.toLowerCase()).toContain("samesite=strict");
+    expect(body).toContain('window.location.replace("/")');
     expect(replay.status).toBe(410);
   });
 
