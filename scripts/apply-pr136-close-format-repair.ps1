@@ -2,12 +2,13 @@ $ErrorActionPreference = "Stop"
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $harnessPath = Join-Path $repositoryRoot "scripts\verify-installed-windows-msi.ps1"
-$source = Get-Content -LiteralPath $harnessPath -Raw
+$source = (Get-Content -LiteralPath $harnessPath -Raw) -replace "`r`n", "`n"
 $updated = $source
 
-if ($source -notmatch 'class SahelFlowWindowCloser') {
-    $closePattern = '(?ms)^function Close-SahelFlowNormally \{.*?^\}\r?\n\r?\n\$existing ='
-    if (-not [regex]::IsMatch($source, $closePattern)) {
+if (-not $updated.Contains('class SahelFlowWindowCloser')) {
+    $closePattern = '(?ms)^function Close-SahelFlowNormally \{.*?^\}\n\n\$existing ='
+    $closeRegex = [regex]::new($closePattern)
+    if (-not $closeRegex.IsMatch($updated)) {
         throw "Could not locate the existing Close-SahelFlowNormally function."
     }
 
@@ -121,50 +122,51 @@ function Close-SahelFlowNormally {
 $existing =
 '@
 
-    $updated = [regex]::Replace($source, $closePattern, $closeReplacement, 1)
+    $updated = $closeRegex.Replace($updated, $closeReplacement, 1)
 } elseif (
-    $source -notmatch 'Posted WM_CLOSE' -or
-    $source -notmatch 'runtime endpoint present'
+    -not $updated.Contains('Posted WM_CLOSE') -or
+    -not $updated.Contains('runtime endpoint present')
 ) {
     throw "The existing SahelFlowWindowCloser block is incomplete or not the approved repair."
 }
 
-$firstLaunchCleanupPattern = '(?m)^    Remove-Item -LiteralPath \$runtimeEndpointPath -Force -ErrorAction SilentlyContinue$'
-if ([regex]::IsMatch($updated, $firstLaunchCleanupPattern)) {
-    $updated = [regex]::Replace(
-        $updated,
-        $firstLaunchCleanupPattern,
-        @'
+$oldCleanup = '    Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue'
+$newCleanup = @'
     if ($attempt -eq 1) {
         Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
     }
-'@,
-        1
-    )
+'@
+if ($updated.Contains($oldCleanup)) {
+    $updated = $updated.Replace($oldCleanup, $newCleanup.TrimEnd())
+} elseif (-not $updated.Contains('if ($attempt -eq 1)')) {
+    throw "Could not establish first-launch-only stale endpoint cleanup."
 }
 
-$registryPattern = '(?ms)        if \(\$currentRegistryIdentity\.revision -ne \$registryIdentity\.revision -or\r?\n            \$currentRegistryIdentity\.activeShopId -ne \$registryIdentity\.activeShopId\) \{\r?\n            throw "Second launch changed registry authority\."\r?\n        \}'
-if ([regex]::IsMatch($updated, $registryPattern)) {
-    $updated = [regex]::Replace(
-        $updated,
-        $registryPattern,
-        @'
+$oldRegistryProof = @'
+        if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
+            $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId) {
+            throw "Second launch changed registry authority."
+        }
+'@
+$newRegistryProof = @'
         if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
             $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
             $currentRegistryIdentity.registrySha256 -ne $registryIdentity.registrySha256) {
             throw "Second launch changed registry authority."
         }
-'@,
-        1
-    )
+'@
+if ($updated.Contains($oldRegistryProof)) {
+    $updated = $updated.Replace($oldRegistryProof, $newRegistryProof)
+} elseif (-not $updated.Contains('registrySha256 -ne $registryIdentity.registrySha256')) {
+    throw "Could not establish registry byte-preservation proof."
 }
 
-$databasePattern = '(?ms)        if \(\$currentDatabaseIdentity\.path -ne \$databaseIdentity\.path\) \{\r?\n            throw "Second launch switched the active shop database\."\r?\n        \}'
-if ([regex]::IsMatch($updated, $databasePattern)) {
-    $updated = [regex]::Replace(
-        $updated,
-        $databasePattern,
-        @'
+$oldDatabaseProof = @'
+        if ($currentDatabaseIdentity.path -ne $databaseIdentity.path) {
+            throw "Second launch switched the active shop database."
+        }
+'@
+$newDatabaseProof = @'
         if ($currentDatabaseIdentity.path -ne $databaseIdentity.path -or
             $currentDatabaseIdentity.length -ne $databaseIdentity.length -or
             $currentDatabaseIdentity.sha256 -ne $databaseIdentity.sha256) {
@@ -173,20 +175,23 @@ if ([regex]::IsMatch($updated, $databasePattern)) {
         if ($launches[1].endpoint.instanceId -eq $launches[0].endpoint.instanceId) {
             throw "Second launch reused the first runtime instance identity."
         }
-'@,
-        1
-    )
+'@
+if ($updated.Contains($oldDatabaseProof)) {
+    $updated = $updated.Replace($oldDatabaseProof, $newDatabaseProof)
+} elseif (-not $updated.Contains('sha256 -ne $databaseIdentity.sha256')) {
+    throw "Could not establish database byte-preservation proof."
 }
 
 foreach ($required in @(
     'class SahelFlowWindowCloser',
     'Posted WM_CLOSE',
     'runtime endpoint present',
+    'if ($attempt -eq 1)',
     'registrySha256 -ne $registryIdentity.registrySha256',
     'sha256 -ne $databaseIdentity.sha256',
     'Second launch reused the first runtime instance identity'
 )) {
-    if ($updated -notlike "*$required*") {
+    if (-not $updated.Contains($required)) {
         throw "The repaired harness is missing required proof: $required"
     }
 }
@@ -208,4 +213,4 @@ try {
     Pop-Location
 }
 
-Write-Host "Applied idempotent GUI close, endpoint cleanup, cache, registry, database, and runtime-instance proofs."
+Write-Host "Applied deterministic GUI close, endpoint cleanup, cache, registry, database, and runtime-instance proofs."
