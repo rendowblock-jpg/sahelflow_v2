@@ -279,12 +279,12 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building SahelFlow application")
-        .run(|app_handle, event| {
+        .run(|_app_handle, _event| {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
                 let main_window_close = matches!(
-                    &event,
+                    &_event,
                     tauri::RunEvent::WindowEvent {
                         label,
                         event: tauri::WindowEvent::CloseRequested { .. },
@@ -293,17 +293,18 @@ pub fn run() {
                 );
                 let shutdown = main_window_close
                     || matches!(
-                        event,
+                        _event,
                         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
                     );
                 if shutdown {
-                    if let Some(state) = app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
+                    if let Some(state) =
+                        _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
                     {
                         if let Ok(mut children) = state.lock() {
                             children.kill_all();
                         }
                     }
-                    if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
+                    if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
                         runtime_protocol::remove_manifest(&app_data_dir);
                     }
                 }
@@ -311,7 +312,7 @@ pub fn run() {
                     // AppHandle::exit requests another event-loop transition. A
                     // native close request is already executing on that loop, so
                     // finish Tauri cleanup synchronously and exit immediately.
-                    app_handle.cleanup_before_exit();
+                    _app_handle.cleanup_before_exit();
                     std::process::exit(0);
                 }
             }
