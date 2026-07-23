@@ -1,0 +1,105 @@
+name: Observe signed internal release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/signed-release-observer.yml
+  workflow_run:
+    workflows:
+      - Dispatch signed internal version
+      - Build Signed Internal Windows Update
+    types:
+      - requested
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  record:
+    name: Record signed release status
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Record exact workflow runs on PR 138
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          OBSERVED_RUN_ID: ${{ github.event.workflow_run.id }}
+          OBSERVED_WORKFLOW: ${{ github.event.workflow_run.name }}
+          OBSERVED_STATUS: ${{ github.event.workflow_run.status }}
+          OBSERVED_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          OBSERVED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          OBSERVED_URL: ${{ github.event.workflow_run.html_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
+            body=$(cat <<EOF
+          <!-- sahelflow-signed-release-observer -->
+          **Signed release workflow update**
+
+          - Workflow: \`${OBSERVED_WORKFLOW}\`
+          - Run ID: \`${OBSERVED_RUN_ID}\`
+          - Status: \`${OBSERVED_STATUS}\`
+          - Conclusion: \`${OBSERVED_CONCLUSION:-pending}\`
+          - Head SHA: \`${OBSERVED_HEAD_SHA}\`
+          - Run: ${OBSERVED_URL}
+          EOF
+          )
+          else
+            dispatch_json=$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release-on-version-authority.yml \
+              --branch main \
+              --limit 3 \
+              --json databaseId,status,conclusion,headSha,event,createdAt,url)
+            release_json=$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow release.yml \
+              --branch main \
+              --limit 3 \
+              --json databaseId,status,conclusion,headSha,event,createdAt,url)
+
+            export DISPATCH_JSON="${dispatch_json}"
+            export RELEASE_JSON="${release_json}"
+            body=$(python3 - <<'PY'
+          import json
+          import os
+
+          def rows(label: str, raw: str) -> list[str]:
+              runs = json.loads(raw)
+              if not runs:
+                  return [f"- {label}: no run found"]
+              output = []
+              for run in runs:
+                  conclusion = run.get("conclusion") or "pending"
+                  output.append(
+                      f"- {label} run `{run['databaseId']}`: "
+                      f"`{run['status']}` / `{conclusion}` — "
+                      f"head `{run['headSha']}` — {run['url']}"
+                  )
+              return output
+
+          lines = [
+              "<!-- sahelflow-signed-release-observer -->",
+              "**Signed release workflow inventory**",
+              "",
+              *rows("Dispatcher", os.environ["DISPATCH_JSON"]),
+              *rows("Signed updater", os.environ["RELEASE_JSON"]),
+          ]
+          print("\n".join(lines))
+          PY
+            )
+          fi
+
+          gh api \
+            --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/issues/138/comments" \
+            -f body="${body}"
