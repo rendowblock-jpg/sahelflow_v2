@@ -32,20 +32,24 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${SOURCE_SHA}" != "98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf" ]]; then
+          api_base="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          auth_headers=(
+            -H "Authorization: Bearer ${GH_TOKEN}"
+            -H 'Accept: application/vnd.github+json'
+            -H 'X-GitHub-Api-Version: 2022-11-28'
+          )
+
+          if [[ "${SOURCE_SHA}" != '98a9a8bab77ebdcab9ffc9854a5b63dfe62ceabf' ]]; then
             echo 'unexpected final source authority' >&2
             exit 1
           fi
 
           find_exact_run() {
-            gh run list \
-              --repo "${GITHUB_REPOSITORY}" \
-              --workflow release.yml \
-              --branch main \
-              --event workflow_dispatch \
-              --limit 100 \
-              --json databaseId,headSha,status,conclusion,url,createdAt \
-              --jq ".[] | select(.headSha == \"${SOURCE_SHA}\") | [.databaseId,.status,(.conclusion // \"\"),.url,.createdAt] | @tsv" \
+            curl --fail --silent --show-error --location \
+              "${auth_headers[@]}" \
+              "${api_base}/actions/workflows/release.yml/runs?event=workflow_dispatch&branch=main&per_page=100" \
+              | jq -r --arg source "${SOURCE_SHA}" \
+                '.workflow_runs[] | select(.head_sha == $source) | [.id,.status,(.conclusion // ""),.html_url,.created_at] | @tsv' \
               | head -n 1
           }
 
@@ -59,22 +63,46 @@ jobs:
             fi
           fi
 
-          if git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${EXPECTED_TAG}" >/dev/null 2>&1; then
+          release_response="${RUNNER_TEMP}/exact-release.json"
+          release_code="$(curl --silent --show-error --location \
+            --output "${release_response}" \
+            --write-out '%{http_code}' \
+            "${auth_headers[@]}" \
+            "${api_base}/releases/tags/${EXPECTED_TAG}")"
+          if [[ "${release_code}" == '200' ]]; then
             dispatch_required=false
             signed_run_id="${signed_run_id:-tag-present}"
             signed_status="${signed_status:-completed}"
             signed_conclusion="${signed_conclusion:-success}"
-            signed_url="${signed_url:-https://github.com/${GITHUB_REPOSITORY}/releases/tag/${EXPECTED_TAG}}"
-            signed_created_at="${signed_created_at:-unknown}"
+            signed_url="${signed_url:-$(jq -r '.html_url' "${release_response}")}"
+            signed_created_at="${signed_created_at:-$(jq -r '.created_at' "${release_response}")}"
+          elif [[ "${release_code}" != '404' ]]; then
+            cat "${release_response}" >&2
+            echo "unexpected release lookup HTTP ${release_code}" >&2
+            exit 1
           fi
 
           if [[ "${dispatch_required}" == true ]]; then
             notes='SahelFlow 1.0.0-internal.4 final protected-main candidate with signed artifact, latest.json, installed launch, normal close, teardown, reopen, cache reuse, and data-preservation verification.'
-            gh workflow run release.yml \
-              --repo "${GITHUB_REPOSITORY}" \
-              --ref main \
-              -f source_ref="${SOURCE_SHA}" \
-              -f release_notes="${notes}"
+            payload="$(jq -n \
+              --arg ref 'main' \
+              --arg source "${SOURCE_SHA}" \
+              --arg notes "${notes}" \
+              '{ref:$ref,inputs:{source_ref:$source,release_notes:$notes}}')"
+            dispatch_response="${RUNNER_TEMP}/dispatch-response.json"
+            dispatch_code="$(curl --silent --show-error --location \
+              --output "${dispatch_response}" \
+              --write-out '%{http_code}' \
+              --request POST \
+              "${auth_headers[@]}" \
+              -H 'Content-Type: application/json' \
+              --data "${payload}" \
+              "${api_base}/actions/workflows/release.yml/dispatches")"
+            if [[ "${dispatch_code}" != '204' ]]; then
+              cat "${dispatch_response}" >&2
+              echo "release dispatch failed with HTTP ${dispatch_code}" >&2
+              exit 1
+            fi
 
             signed_run=''
             for _ in $(seq 1 45); do
@@ -83,7 +111,7 @@ jobs:
               sleep 2
             done
             if [[ -z "${signed_run}" ]]; then
-              echo 'canonical release dispatch was accepted but no exact-source run appeared within 90 seconds' >&2
+              echo 'canonical release dispatch returned 204 but no exact-source run appeared within 90 seconds' >&2
               exit 1
             fi
             IFS=$'\t' read -r signed_run_id signed_status signed_conclusion signed_url signed_created_at <<< "${signed_run}"
@@ -103,13 +131,23 @@ jobs:
           - Bootstrap PR: #${{ github.event.pull_request.number }}
           EOF
           )
+          comment_payload="$(jq -n --arg body "${body}" '{body:$body}')"
 
           for target in "${RELEASE_PR}" "${{ github.event.pull_request.number }}"; do
-            gh api \
-              --method POST \
-              -H 'Accept: application/vnd.github+json' \
-              "repos/${GITHUB_REPOSITORY}/issues/${target}/comments" \
-              -f body="${body}"
+            comment_response="${RUNNER_TEMP}/comment-${target}.json"
+            comment_code="$(curl --silent --show-error --location \
+              --output "${comment_response}" \
+              --write-out '%{http_code}' \
+              --request POST \
+              "${auth_headers[@]}" \
+              -H 'Content-Type: application/json' \
+              --data "${comment_payload}" \
+              "${api_base}/issues/${target}/comments")"
+            if [[ "${comment_code}" != '201' ]]; then
+              cat "${comment_response}" >&2
+              echo "failed to record signed run on PR ${target}: HTTP ${comment_code}" >&2
+              exit 1
+            fi
           done
 
           echo "Exact-source signed run ${signed_run_id}: ${signed_status}/${signed_conclusion:-pending}" >> "${GITHUB_STEP_SUMMARY}"
