@@ -52,7 +52,15 @@ jobs:
 
       - name: Apply close and formatting repair under test
         shell: pwsh
-        run: ./scripts/apply-pr136-close-format-repair.ps1
+        run: |
+          try {
+            & ./scripts/apply-pr136-close-format-repair.ps1 *>&1 |
+              Tee-Object -FilePath .sf-pr136-repair.log
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Tee-Object -FilePath .sf-pr136-repair.log -Append
+            throw
+          }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
@@ -193,6 +201,7 @@ jobs:
           name: windows-installed-e2e-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/sahelflow-installed-e2e/**
+            .sf-pr136-repair.log
             .sf-installed-e2e-build.log
           if-no-files-found: warn
           retention-days: 7
