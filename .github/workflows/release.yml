@@ -24,7 +24,7 @@ jobs:
     name: Signed Windows updater draft
     environment: internal-updater
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
@@ -260,7 +260,7 @@ jobs:
           "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
           "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV
 
-      - name: Install and prove signed launch/reopen
+      - name: Install and prove signed runtime launch/reopen
         shell: pwsh
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
@@ -270,6 +270,19 @@ jobs:
           } catch {
             $_ | Format-List * -Force | Out-String |
               Set-Content -LiteralPath (Join-Path $destination 'signed-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Prove signed authenticated hydrated WebView UI twice
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-ui.ps1
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'signed-ui-lifecycle-error.txt') -Encoding UTF8
             throw
           }
 
@@ -329,6 +342,8 @@ jobs:
             src-tauri/resources/runtime/runtime-manifest.json
             src-tauri/resources/standalone/sahelflow-standalone-manifest.json
             .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+            scripts/install-founder-windows.ps1
+            scripts/verify-installed-windows-ui.ps1
             ${{ runner.temp }}/sahelflow-installed-e2e/**
             ${{ env.SF_LATEST_JSON_PATH }}
           include-hidden-files: true
@@ -346,6 +361,7 @@ jobs:
           - Source: `${{ inputs.source_ref }}`
           - Draft release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
           - Updater signature and `latest.json` matched.
-          - The exact signed MSI passed installed launch, normal close, teardown, and reopen.
+          - The exact signed MSI passed installed runtime launch, authenticated hydrated visible UI, normal close, teardown, and reopen twice.
+          - The retained artifact includes the PowerShell 5.1-safe Founder installer and UI acceptance evidence.
           - Publish the verified draft release to make the configured updater endpoint live.
           "@ >> $env:GITHUB_STEP_SUMMARY
