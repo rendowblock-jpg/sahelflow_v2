@@ -4,30 +4,6 @@ $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $libPath = Join-Path $repositoryRoot "src-tauri\src\lib.rs"
 $source = (Get-Content -LiteralPath $libPath -Raw) -replace "`r`n", "`n"
 
-$old = @'
-        .run(|_app_handle, _event| {
-            #[cfg(not(debug_assertions))]
-            {
-                use tauri::Manager;
-                if matches!(
-                    _event,
-                    tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
-                ) {
-                    if let Some(state) =
-                        _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
-                    {
-                        if let Ok(mut children) = state.lock() {
-                            children.kill_all();
-                        }
-                    }
-                    if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
-                        runtime_protocol::remove_manifest(&app_data_dir);
-                    }
-                }
-            }
-        });
-'@
-
 $new = @'
         .run(|app_handle, event| {
             #[cfg(not(debug_assertions))]
@@ -67,12 +43,27 @@ $new = @'
 
 if ($source.Contains($new)) {
     Write-Host "Explicit main-window shutdown path is already present."
-} elseif ($source.Contains($old)) {
-    $source = $source.Replace($old, $new)
+} else {
+    $pattern = '(?ms)^        \.run\(\|_app_handle, _event\| \{.*?^        \}\);'
+    $matches = [regex]::Matches($source, $pattern)
+    if ($matches.Count -ne 1) {
+        throw "Expected exactly one canonical Tauri run-event callback, found $($matches.Count)."
+    }
+    $source = [regex]::Replace($source, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $new }, 1)
     Set-Content -LiteralPath $libPath -Value $source -Encoding utf8NoBOM
     Write-Host "Applied explicit main-window shutdown path."
-} else {
-    throw "Could not locate the canonical Tauri run-event shutdown block."
+}
+
+$repaired = Get-Content -LiteralPath $libPath -Raw
+foreach ($required in @(
+    'tauri::RunEvent::WindowEvent',
+    'tauri::WindowEvent::CloseRequested',
+    'label == "main"',
+    'app_handle.exit(0)'
+)) {
+    if (-not $repaired.Contains($required)) {
+        throw "Main-window shutdown repair is missing required source: $required"
+    }
 }
 
 Push-Location $repositoryRoot
