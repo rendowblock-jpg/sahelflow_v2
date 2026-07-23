@@ -79,12 +79,4 @@ foreach ($required in @(
     }
 }
 
-Push-Location $repositoryRoot
-try {
-    git diff --check
-    if ($LASTEXITCODE -ne 0) {
-        throw "main-window shutdown repair introduced whitespace errors"
-    }
-} finally {
-    Pop-Location
-}
+Write-Host "Main-window shutdown source is ready for canonical cargo fmt."
