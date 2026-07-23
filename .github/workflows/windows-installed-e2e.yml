@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: windows-installed-e2e-${{ github.event.pull_request.number || github.ref }}
@@ -38,7 +38,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -50,22 +50,11 @@ jobs:
         with:
           components: rustfmt,clippy
 
-      - name: Apply signed release installed lifecycle gate under test
-        shell: pwsh
-        run: |
-          python scripts/apply-signed-release-lifecycle.py
-          if ($LASTEXITCODE -ne 0) { throw 'failed to apply signed installed lifecycle gate' }
-          git diff --quiet -- .github/workflows/release.yml
-          if ($LASTEXITCODE -eq 0) { throw 'signed release lifecycle patch produced no release workflow change' }
-          $global:LASTEXITCODE = 0
-
       - name: Verify canonical Rust formatting
         shell: pwsh
         run: |
           cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
           if ($LASTEXITCODE -ne 0) { throw 'Rust source is not canonically formatted' }
-          git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'signed lifecycle release patch has whitespace errors' }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
@@ -109,32 +98,6 @@ jobs:
               Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
             throw
           }
-
-      - name: Persist lifecycle-proven signed release gate
-        if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' && github.head_ref == 'release/internal-4-authority'
-        shell: pwsh
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm -- scripts/apply-signed-release-lifecycle.py
-          git add -- .github/workflows/release.yml
-          git diff --cached --check
-          if ($LASTEXITCODE -ne 0) { throw 'lifecycle-proven signed release gate has whitespace errors' }
-          $staged = @(git diff --cached --name-only)
-          if ($LASTEXITCODE -ne 0) { throw 'failed to inspect lifecycle-proven staged files' }
-          if ($staged.Count -ne 2) {
-            throw "expected exactly two lifecycle-proven staged files, found $($staged.Count): $($staged -join ', ')"
-          }
-          if ($staged -notcontains '.github/workflows/release.yml' -or
-              $staged -notcontains 'scripts/apply-signed-release-lifecycle.py') {
-            throw "unexpected lifecycle-proven staged files: $($staged -join ', ')"
-          }
-          git commit -m 'ci(release): prove signed MSI installed lifecycle'
-          if ($LASTEXITCODE -ne 0) { throw 'failed to commit signed release gate' }
-          git push origin "HEAD:$env:HEAD_BRANCH"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to push signed release gate' }
 
       - name: Collect installed Windows evidence
         if: always()
