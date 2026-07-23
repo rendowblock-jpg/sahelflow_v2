@@ -8,7 +8,6 @@ on:
 permissions:
   contents: write
   actions: read
-  issues: write
 
 concurrency:
   group: bootstrap-signed-internal-4
@@ -23,7 +22,6 @@ jobs:
     timeout-minutes: 120
     env:
       SOURCE_SHA: 685ee164cc4ff17e33a57cd07d7937e6ebc81f65
-      RELEASE_PR: "142"
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
 
@@ -48,18 +46,6 @@ jobs:
           if (-not $branch.protected) {
             throw 'origin/main is not protected; signed internal.4 build is blocked'
           }
-
-          $body = @"
-          <!-- sahelflow-internal4-signed-bootstrap:${{ github.run_id }} -->
-          **Protected signed internal.4 build started**
-
-          - Exact source: `$env:SOURCE_SHA`
-          - Workflow run: `${{ github.run_id }}`
-          - Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          - Publication: draft only
-          "@
-          gh api --method POST "repos/${{ github.repository }}/issues/$env:RELEASE_PR/comments" -f body="$body"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to record signed bootstrap run on release PR' }
 
       - name: Checkout exact source
         uses: actions/checkout@v4
@@ -346,24 +332,3 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
-
-      - name: Record signed candidate handoff on release PR
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $body = @"
-          <!-- sahelflow-internal4-signed-ready:${{ github.run_id }} -->
-          **Signed internal.4 draft and retained evidence are ready**
-
-          - Version: `$env:SF_RELEASE_VERSION`
-          - Tag: `$env:SF_RELEASE_TAG`
-          - Exact source: `$env:SF_SOURCE_COMMIT`
-          - Workflow run: `${{ github.run_id }}`
-          - Draft release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
-          - Updater signature and `latest.json` matched.
-          - The exact signed MSI passed installed launch, normal close, child teardown, reopen, cache reuse and data preservation.
-          - Publication remains blocked pending independent artifact verification and Founder install-over `.3` evidence.
-          "@
-          gh api --method POST "repos/${{ github.repository }}/issues/$env:RELEASE_PR/comments" -f body="$body"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to record signed candidate handoff' }
