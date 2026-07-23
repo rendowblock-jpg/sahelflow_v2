@@ -41,14 +41,12 @@ describe("packaged runtime hydrated UI readiness", () => {
     const acknowledgment = JSON.parse(
       readFileSync(join(dataDir, "runtime-ui-ready.json"), "utf8"),
     ) as Record<string, unknown>;
-    expect(acknowledgment).toMatchObject({
-      formatVersion: 1,
-      protocolVersion: 1,
-      state: "ready",
-      instanceId,
-      appVersion: "1.0.0-internal.5",
-      pageUrl: "http://127.0.0.1:43123",
-    });
+    expect(acknowledgment.formatVersion).toBe(1);
+    expect(acknowledgment.protocolVersion).toBe(1);
+    expect(acknowledgment.state).toBe("ready");
+    expect(acknowledgment.instanceId).toBe(instanceId);
+    expect(acknowledgment.appVersion).toBe("1.0.0-internal.5");
+    expect(acknowledgment.pageUrl).toBe("http://127.0.0.1:43123");
     expect(typeof acknowledgment.processId).toBe("number");
     expect(typeof acknowledgment.createdAtUnixSeconds).toBe("number");
   });
