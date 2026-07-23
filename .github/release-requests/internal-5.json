@@ -1,0 +1,24 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "version": "1.0.0-internal.5",
+  "windowsMsiVersion": "1.0.0.5",
+  "versionAuthorityCommit": "f07779a9328dc57f8a2a73a034587b44c31263d6",
+  "candidateBaseCommit": "f07779a9328dc57f8a2a73a034587b44c31263d6",
+  "requestRevision": 1,
+  "requestReason": "final signed Founder candidate after native WebView session correction, authenticated hydrated installed-UI acceptance, PowerShell 5.1 handoff validation, and fail-closed runtime-cache optimization",
+  "signedSourcePolicy": "protected-main-merge-commit-containing-this-request-and-signed-ui-workflow",
+  "publication": "draft-only",
+  "installation": "upgrade-over-internal.4-preserve-appdata",
+  "requiredEvidence": [
+    "exact protected-main request merge source",
+    "updater signature and latest.json exact-asset binding",
+    "signed MSI installed runtime launch and reopen",
+    "signed MSI authenticated hydrated visible responsive UI twice",
+    "normal close and complete child teardown",
+    "runtime cache verification and reuse",
+    "shop registry and active database preservation",
+    "PowerShell 5.1-safe Founder installer retained with signed artifact"
+  ],
+  "nextUpdaterDrill": "1.0.0-internal.5-to-1.0.0-internal.6"
+}

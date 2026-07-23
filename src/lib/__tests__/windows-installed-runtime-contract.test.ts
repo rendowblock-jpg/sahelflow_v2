@@ -74,22 +74,29 @@ describe("installed Windows runtime contract", () => {
     const signatureProof = release.indexOf(
       "Verify local MSI and updater signature",
     );
-    const installedProof = release.indexOf(
-      "Install and prove signed launch/reopen",
+    const installedRuntimeProof = release.indexOf(
+      "Install and prove signed runtime launch/reopen",
+    );
+    const installedUiProof = release.indexOf(
+      "Prove signed authenticated hydrated WebView UI twice",
     );
     const evidenceRetention = release.indexOf(
       "Retain signed candidate and evidence",
     );
 
     expect(signatureProof).toBeGreaterThan(-1);
-    expect(installedProof).toBeGreaterThan(signatureProof);
-    expect(evidenceRetention).toBeGreaterThan(installedProof);
+    expect(installedRuntimeProof).toBeGreaterThan(signatureProof);
+    expect(installedUiProof).toBeGreaterThan(installedRuntimeProof);
+    expect(evidenceRetention).toBeGreaterThan(installedUiProof);
     expect(release).toContain(
       "./scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH",
     );
+    expect(release).toContain("./scripts/verify-installed-windows-ui.ps1");
     expect(release).toContain(
       "${{ runner.temp }}/sahelflow-installed-e2e/**",
     );
+    expect(release).toContain("scripts/install-founder-windows.ps1");
+    expect(release).toContain("scripts/verify-installed-windows-ui.ps1");
 
     expect(dispatcher).toContain("branches:\n      - main");
     expect(dispatcher).toContain("- sahelflow.version.json");
