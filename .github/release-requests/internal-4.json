@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "version": "1.0.0-internal.4",
+  "windowsMsiVersion": "1.0.0.4",
+  "versionAuthorityCommit": "dd7a1b8738ce962a1a818b000ad248301a3fbfd4",
+  "signedSourcePolicy": "protected-main-merge-commit-containing-this-request",
+  "publication": "draft-only",
+  "installation": "upgrade-over-internal.3-preserve-appdata",
+  "requiredEvidence": [
+    "exact protected-main request merge source",
+    "updater signature and latest.json binding",
+    "signed MSI installed launch and reopen",
+    "normal close and child teardown",
+    "runtime cache reuse",
+    "shop registry and database preservation"
+  ],
+  "nextUpdaterDrill": "1.0.0-internal.4-to-1.0.0-internal.5"
+}
