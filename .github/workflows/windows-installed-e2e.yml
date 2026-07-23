@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - ".github/workflows/windows-installed-e2e.yml"
-      - "scripts/apply-pr136-close-format-repair.ps1"
       - "scripts/verify-installed-windows-msi.ps1"
       - "scripts/prepare-runtime.ts"
       - "scripts/prepare-libsodium-windows.ps1"
@@ -50,17 +49,13 @@ jobs:
         with:
           components: rustfmt,clippy
 
-      - name: Apply close and formatting repair under test
+      - name: Format runtime probe under test
         shell: pwsh
         run: |
-          try {
-            & ./scripts/apply-pr136-close-format-repair.ps1 *>&1 |
-              Tee-Object -FilePath .sf-pr136-repair.log
-          } catch {
-            $_ | Format-List * -Force | Out-String |
-              Tee-Object -FilePath .sf-pr136-repair.log -Append
-            throw
-          }
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          if ($LASTEXITCODE -ne 0) { throw 'cargo fmt failed' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'formatted runtime probe has whitespace errors' }
 
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
@@ -97,7 +92,7 @@ jobs:
           }
           ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
 
-      - name: Persist lifecycle-proven source repair
+      - name: Persist lifecycle-proven Rust formatting
         if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' && github.head_ref == 'agent/windows-installed-runtime-e2e'
         shell: pwsh
         env:
@@ -105,15 +100,15 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- scripts/verify-installed-windows-msi.ps1 src-tauri/src/runtime_protocol.rs
+          git add -- src-tauri/src/runtime_protocol.rs
           git diff --cached --check
-          if ($LASTEXITCODE -ne 0) { throw 'staged lifecycle repair has whitespace errors' }
+          if ($LASTEXITCODE -ne 0) { throw 'formatted runtime probe has whitespace errors' }
           git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but produced no source repair' }
-          git commit -m 'fix(windows): prove real GUI close and format runtime probe'
-          if ($LASTEXITCODE -ne 0) { throw 'failed to commit lifecycle-proven source repair' }
+          if ($LASTEXITCODE -eq 0) { throw 'installed lifecycle passed but runtime probe was already formatted' }
+          git commit -m 'style(rust): format installed readiness probe'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to commit formatted runtime probe' }
           git push origin "HEAD:$env:HEAD_BRANCH"
-          if ($LASTEXITCODE -ne 0) { throw 'failed to push lifecycle-proven source repair' }
+          if ($LASTEXITCODE -ne 0) { throw 'failed to push formatted runtime probe' }
 
       - name: Collect installed Windows evidence
         if: always()
@@ -201,7 +196,6 @@ jobs:
           name: windows-installed-e2e-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/sahelflow-installed-e2e/**
-            .sf-pr136-repair.log
             .sf-installed-e2e-build.log
           if-no-files-found: warn
           retention-days: 7
