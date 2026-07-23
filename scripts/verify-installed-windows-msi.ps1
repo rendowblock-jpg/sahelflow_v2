@@ -158,17 +158,85 @@ function Wait-ForLaunchOutcome {
     }
 }
 
+if (-not ("SahelFlowWindowCloser" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+public static class SahelFlowWindowCloser
+{
+    private delegate bool EnumWindowsProc(IntPtr window, IntPtr parameter);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr parameter);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+    public static long[] FindTopLevelWindows(uint processId)
+    {
+        var windows = new List<long>();
+        EnumWindows((window, parameter) =>
+        {
+            uint ownerProcessId;
+            GetWindowThreadProcessId(window, out ownerProcessId);
+            if (ownerProcessId == processId)
+            {
+                windows.Add(window.ToInt64());
+            }
+            return true;
+        }, IntPtr.Zero);
+        return windows.ToArray();
+    }
+
+    public static bool RequestClose(long handle)
+    {
+        const uint WM_CLOSE = 0x0010;
+        return PostMessage(new IntPtr(handle), WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+    }
+}
+"@
+}
+
 function Close-SahelFlowNormally {
     param([System.Diagnostics.Process]$Process)
 
     $Process.Refresh()
     if ($Process.HasExited) {
-        return
+        throw "SahelFlow exited before the normal close request could be proven."
     }
 
-    $null = $Process.CloseMainWindow()
+    $handles = @(
+        [SahelFlowWindowCloser]::FindTopLevelWindows([uint32]$Process.Id)
+    )
+    if ($handles.Count -eq 0) {
+        $Process.Refresh()
+        if ($Process.MainWindowHandle -ne [IntPtr]::Zero) {
+            $handles = @($Process.MainWindowHandle.ToInt64())
+        }
+    }
+    if ($handles.Count -eq 0) {
+        throw "SahelFlow exposed no top-level window for a normal close request."
+    }
+
+    $posted = @(
+        foreach ($handle in $handles) {
+            if ([SahelFlowWindowCloser]::RequestClose([int64]$handle)) {
+                $handle
+            }
+        }
+    )
+    if ($posted.Count -eq 0) {
+        throw "Windows rejected every SahelFlow WM_CLOSE request."
+    }
+    Write-Host "Posted WM_CLOSE to $($posted.Count) SahelFlow top-level window(s)."
+
     if (-not $Process.WaitForExit(30000)) {
-        throw "SahelFlow did not close normally within 30 seconds."
+        throw "SahelFlow did not exit after a real GUI close request within 30 seconds."
     }
 
     $deadline = (Get-Date).AddSeconds(20)
@@ -181,13 +249,24 @@ function Close-SahelFlowNormally {
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
-        if ($remaining.Count -eq 0) {
-            return
+        $endpointPresent = Test-Path -LiteralPath $runtimeEndpointPath -PathType Leaf
+        if ($remaining.Count -eq 0 -and -not $endpointPresent) {
+            return [pscustomobject]@{
+                processId = $Process.Id
+                windowHandles = @($posted)
+                processTreeStopped = $true
+                runtimeEndpointRemoved = $true
+            }
         }
         Start-Sleep -Milliseconds 250
     } while ((Get-Date) -lt $deadline)
 
-    throw "SahelFlow or a bundled child process remained after normal close."
+    $remainingSummary = if ($remaining.Count -eq 0) {
+        "none"
+    } else {
+        ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
+    }
+    throw "Normal close was incomplete; remaining processes: $remainingSummary; runtime endpoint present: $endpointPresent"
 }
 
 $existing = Get-InstalledSahelFlow
@@ -224,12 +303,15 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
 }
 
 $launches = @()
+$closures = @()
 $cacheIdentity = $null
 $registryIdentity = $null
 $databaseIdentity = $null
 
 for ($attempt = 1; $attempt -le 2; $attempt++) {
-    Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
+    if ($attempt -eq 1) {
+        Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
+    }
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
     $launch = Wait-ForLaunchOutcome -Process $process -StartedAt $startedAt -Phase "launch-$attempt"
@@ -299,15 +381,21 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
             throw "Second launch did not reuse the verified runtime cache."
         }
         if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
-            $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId) {
+            $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
+            $currentRegistryIdentity.registrySha256 -ne $registryIdentity.registrySha256) {
             throw "Second launch changed registry authority."
         }
-        if ($currentDatabaseIdentity.path -ne $databaseIdentity.path) {
-            throw "Second launch switched the active shop database."
+        if ($currentDatabaseIdentity.path -ne $databaseIdentity.path -or
+            $currentDatabaseIdentity.length -ne $databaseIdentity.length -or
+            $currentDatabaseIdentity.sha256 -ne $databaseIdentity.sha256) {
+            throw "Second launch changed the active shop database identity."
+        }
+        if ($launches[1].endpoint.instanceId -eq $launches[0].endpoint.instanceId) {
+            throw "Second launch reused the first runtime instance identity."
         }
     }
 
-    Close-SahelFlowNormally -Process $process
+    $closures += Close-SahelFlowNormally -Process $process
 }
 
 $result = [ordered]@{
@@ -319,6 +407,7 @@ $result = [ordered]@{
     installerExitCode = $installer.ExitCode
     installedDisplayVersion = $installed[0].DisplayVersion
     launches = $launches
+    closures = $closures
     cache = $cacheIdentity
     registry = $registryIdentity
     database = $databaseIdentity
@@ -339,8 +428,8 @@ if ($failed.Count -gt 0) {
     throw "Installed SahelFlow did not reach ready state: $($failed[0].outcome)."
 }
 
-if ($launches.Count -ne 2) {
-    throw "Installed SahelFlow did not complete both launch passes."
+if ($launches.Count -ne 2 -or $closures.Count -ne 2) {
+    throw "Installed SahelFlow did not complete both launch and normal-close passes."
 }
 
 Write-Host "Installed MSI launch/reopen proof passed for $expectedVersion."
