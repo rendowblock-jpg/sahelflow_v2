@@ -79,6 +79,43 @@ jobs:
             throw "Founder handoff script failed Windows PowerShell 5.1 self-test with exit code $LASTEXITCODE"
           }
 
+      - name: Parse installed UI harness under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          $parserScript = Join-Path $env:RUNNER_TEMP 'parse-windows-powershell51.ps1'
+          @'
+          param([Parameter(Mandatory = $true)][string]$Path)
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+              $Path,
+              [ref]$tokens,
+              [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+              $errors | Format-List * -Force
+              exit 1
+          }
+          '@ | Set-Content -LiteralPath $parserScript -Encoding UTF8
+
+          foreach ($relative in @(
+              '.\scripts\install-founder-windows.ps1',
+              '.\scripts\verify-installed-windows-ui.ps1'
+          )) {
+              $resolved = (Resolve-Path -LiteralPath $relative).Path
+              & $windowsPowerShell `
+                -NoLogo `
+                -NoProfile `
+                -NonInteractive `
+                -ExecutionPolicy Bypass `
+                -File $parserScript `
+                -Path $resolved
+              if ($LASTEXITCODE -ne 0) {
+                throw "$relative failed Windows PowerShell 5.1 parsing."
+              }
+          }
+
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
         with:
@@ -156,7 +193,7 @@ jobs:
           foreach ($relative in $evidenceFiles) {
             $source = Join-Path $roaming $relative
             if (Test-Path -LiteralPath $source -PathType Leaf) {
-              $safeName = $relative -replace '[\/:*?"<>|]', '_'
+              $safeName = $relative -replace '[\\/:*?"<>|]', '_'
               Copy-Item -LiteralPath $source -Destination (Join-Path $destination $safeName) -Force
             }
           }
