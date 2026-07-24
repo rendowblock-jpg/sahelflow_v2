@@ -96,9 +96,8 @@ jobs:
         run: bunx vitest run --coverage
 
       # PROD-021: Audit dependencies for known vulnerabilities
-      - name: Security audit
+      - name: Blocking production dependency audit
         run: bun audit --production
-        continue-on-error: true # dev-dep vulns are non-blocking; prod-dep vulns are blocking
 
       # PROD-001: Verify migrations are in sync with schema
       - name: Migration status

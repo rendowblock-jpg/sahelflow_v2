@@ -223,6 +223,77 @@ for (const [relativePath, markers] of entrypointChecks) {
   }
 }
 
+const semanticRequirements: Array<[string, string[]]> = [
+  [
+    "AGENTS.md",
+    [
+      "Documentation-reset merge checkpoint",
+      "Internal.5 executable source",
+      "Does not run source builds, automated tests",
+    ],
+  ],
+  [
+    "documentation/README.md",
+    ["Documentation-reset merge", "Internal.5 executable baseline"],
+  ],
+  [
+    "documentation/system/ROADMAP.md",
+    ["**Current phase:** Phase 1", "**Status:** Complete in PR #154"],
+  ],
+  [
+    "documentation/system/CURRENT_STATE.md",
+    [
+      "**Current installed status:** startup reliability regressed",
+      "Post-acceptance startup incident",
+      "Restore reliable authenticated startup on the Founder T470",
+    ],
+  ],
+  [
+    "documentation/operations/WORKFLOW.md",
+    [
+      "Does not run source builds, automated tests",
+      "GitHub Actions on the exact pushed commit",
+    ],
+  ],
+];
+
+for (const [relativePath, markers] of semanticRequirements) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) continue;
+  const content = readFileSync(absolutePath, "utf8");
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      findings.push({
+        kind: "drift",
+        file: relativePath,
+        detail: `semantic continuity marker is missing: ${marker}`,
+      });
+    }
+  }
+}
+
+const staleContinuityMarkers: Array<[string, string]> = [
+  ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
+  ["documentation/operations/WORKING_MEMORY.md", "Publication is the only remaining step"],
+  ["documentation/system/ROADMAP.md", "**Current phase:** Phase 0"],
+  [
+    "AGENTS.md",
+    "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
+  ],
+];
+
+for (const [relativePath, marker] of staleContinuityMarkers) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) continue;
+  if (readFileSync(absolutePath, "utf8").includes(marker)) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `stale continuity marker remains active: ${marker}`,
+    });
+  }
+}
+
 console.log(
   `SahelFlow authority audit: ${activeDocumentationFiles.length} active documentation files; ${markdownFiles.length} active repository Markdown files scanned.`,
 );

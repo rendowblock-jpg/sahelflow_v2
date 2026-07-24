@@ -58,9 +58,9 @@ This proves the Internal.5 installed runtime chain. It does not prove Stable
 product completeness, provider certification, low-end performance targets or
 the future connected platform.
 
-## Development
+## GitHub Actions validation
 
-Common commands:
+The source workflow uses these commands in GitHub Actions:
 
 ```bash
 bun install --frozen-lockfile
@@ -71,6 +71,11 @@ bun run test
 bun run sf-audit
 bun run sf-verify --fast
 ```
+
+The storage-constrained Founder/Desktop machine does not run builds, automated
+tests, coverage, dependency installation or other heavy validation. Desktop
+work is pushed first; GitHub Actions validates the exact commit and produces any
+required Windows artifact.
 
 `prisma db push` is development-only and is not a production migration
 mechanism.

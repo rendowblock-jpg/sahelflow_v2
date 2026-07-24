@@ -10,7 +10,8 @@ SahelFlow 1.0 Stable has not been released.
 
 ### Documentation truth reset
 
-- Consolidating the active documentation into ten authoritative documents.
+- Consolidated the active documentation into ten authoritative documents in
+  PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
 - Binding current state to accepted Internal.5 instead of stale pre-runtime
   baselines.
 - Preserving five detailed research reports as non-authoritative archive
@@ -26,6 +27,18 @@ SahelFlow 1.0 Stable has not been released.
 
 This documentation-only reset does not change installed app behavior and does
 not require a new Internal MSI.
+
+### Continuity and installed-startup triage
+
+- Closed the stale pre-merge documentation-reset working state and marked
+  Phase 1 active.
+- Distinguished the PR #154 documentation checkpoint from the Internal.5
+  executable source.
+- Moved all builds, automated tests, coverage and heavy validation for
+  Desktop-owned work to GitHub Actions.
+- Recorded the preserved-AppData Internal.5 `SF-RUNTIME-UI-BLOCKED` incident as
+  the immediate execution gate before Phase 1A.
+- Made the production dependency audit blocking in normal pull-request CI.
 
 ## [1.0.0-internal.5] — 2026-07-24
 
