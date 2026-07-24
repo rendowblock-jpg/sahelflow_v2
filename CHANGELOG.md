@@ -40,6 +40,20 @@ not require a new Internal MSI.
   the immediate execution gate before Phase 1A.
 - Made the production dependency audit blocking in normal pull-request CI.
 
+### Internal.6 startup reliability candidate
+
+- Keeps a safe non-business startup screen responsive while migrations,
+  runtime verification and mandatory services prepare off the Tauri event loop.
+- Reuses one verified standalone tree across bounded initial server attempts
+  instead of re-hashing the full tree on every same-launch retry.
+- Aligns browser UI-ready retries with the native readiness deadline and adds a
+  per-request timeout instead of silently giving up after about three seconds.
+- Persists bounded redacted startup-stage and UI-ready outcome evidence so a
+  future block distinguishes missing hydration, session rejection, route
+  unavailability, persistence failure and acknowledgment mismatch.
+- Preserves the authenticated fail-closed workspace boundary and requires an
+  in-place update over Internal.5 without deleting AppData.
+
 ## [1.0.0-internal.5] — 2026-07-24
 
 ### Runtime and installed UI
