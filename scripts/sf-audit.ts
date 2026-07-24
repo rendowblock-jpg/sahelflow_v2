@@ -241,6 +241,14 @@ const semanticRequirements: Array<[string, string[]]> = [
     ["**Current phase:** Phase 1", "**Status:** Complete in PR #154"],
   ],
   [
+    "documentation/system/CURRENT_STATE.md",
+    [
+      "**Current installed status:** startup reliability regressed",
+      "Post-acceptance startup incident",
+      "Restore reliable authenticated startup on the Founder T470",
+    ],
+  ],
+  [
     "documentation/operations/WORKFLOW.md",
     [
       "Does not run source builds, automated tests",

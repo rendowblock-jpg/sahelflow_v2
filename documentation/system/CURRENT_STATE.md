@@ -5,6 +5,8 @@
 > **Source version:** `1.0.0-internal.5` / MSI `1.0.0.5`
 > **Latest signed candidate:** `1.0.0-internal.5`, run `30055297869`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
+> **Current installed status:** startup reliability regressed on 2026-07-24;
+> recovery is required before product-foundation work resumes
 > **Observed machine:** Founder ThinkPad T470
 > **Last assessed:** 2026-07-24
 
@@ -15,14 +17,16 @@ or planned scope into a readiness claim. Unmerged work belongs in
 
 ## Executive truth
 
-SahelFlow is a broad internal Windows application with a newly proven installed
-runtime foundation. It is not an empty prototype, but it is not yet a
-commercially complete or AAA SahelFlow 1.0 product.
+SahelFlow is a broad internal Windows application with a previously proven
+installed runtime chain and a later observed startup regression. It is not an
+empty prototype, but it is not yet a commercially complete or AAA SahelFlow
+1.0 product.
 
-The strongest layer is now the protected-main → signed MSI → installed Founder
-machine chain. The source contains substantial catalog, customer, order,
-delivery, return/refund, COD, accounting, risk, automation, WhatsApp, AI,
-integration, storefront, multilingual UI and test work.
+The protected-main → signed MSI → installed Founder-machine chain remains
+strong historical evidence for the accepted run, but it no longer proves
+reliable current startup on the T470. The source contains substantial catalog,
+customer, order, delivery, return/refund, COD, accounting, risk, automation,
+WhatsApp, AI, integration, storefront, multilingual UI and test work.
 
 The main remaining discontinuity is product coherence and authority:
 
@@ -42,8 +46,9 @@ The main remaining discontinuity is product coherence and authority:
 
 The correct characterization is:
 
-> **Proven Windows internal baseline; broad partial desktop product; commercial
-> and connected platform still largely ahead.**
+> **Previously accepted Windows internal baseline with a current startup gate;
+> broad partial desktop product; commercial and connected platform still
+> largely ahead.**
 
 ## Evidence ledger
 
@@ -59,9 +64,12 @@ The correct characterization is:
 | Founder install | Internal.4 → Internal.5 in-place upgrade | MSI hash and AppData preservation passed |
 | Founder UI | Installed Internal.5 | Real authenticated hydrated setup/login/workspace UI visible and responsive |
 | Founder lifecycle | Installed Internal.5 | Normal close and successful reopen passed |
+| Post-acceptance startup incident | Installed Internal.5 on 2026-07-24 | Multi-minute hidden launch, brief dashboard, then `SF-RUNTIME-UI-BLOCKED`; AppData preserved and cause not yet proven |
 
-The reopen was slower than a lightweight desktop target. It is accepted for the
-Internal.5 functional baseline and remains explicit performance debt.
+The earlier accepted reopen proves that exact historical attempt only. The
+later `SF-RUNTIME-UI-BLOCKED` incident invalidates any claim that Internal.5 is
+a reliably usable current startup baseline. Startup correctness and performance
+are now blocking recovery work, not deferred performance debt.
 
 ## Repository shape
 
@@ -205,14 +213,15 @@ connected planes without replacing the canonical desktop.
 
 ## Immediate next boundary
 
-Internal.5 closes the runtime acceptance loop. The next implementation boundary
-after this documentation reset is:
+Internal.5 previously closed one runtime acceptance loop, but the later
+Founder-machine incident reopened it. The immediate implementation boundary is:
 
-> Establish trusted workspace/shop context and the transactional business
-> integrity foundation required by the Golden COD Journey.
+> Restore reliable authenticated startup on the Founder T470 without deleting
+> AppData, weakening fail-closed runtime/shop authority or loading a fallback
+> workspace.
 
-The first implementation wave must introduce the minimal compatible
-workspace/shop authority, separate state contracts, inventory/financial
-movements, trusted audit and idempotency boundaries without destroying existing
-Founder data. The exact sequence and exit gates are in
-[`ROADMAP.md`](ROADMAP.md).
+The startup package must retain bounded redacted attempt evidence, pass exact
+source checks and Windows packaging in GitHub Actions, ship as a new signed
+Internal update, and pass preserved-AppData launch plus close/reopen acceptance
+on the T470. Only then may the workspace/shop and business-integrity boundary
+resume. The exact sequence and exit gates are in [`ROADMAP.md`](ROADMAP.md).

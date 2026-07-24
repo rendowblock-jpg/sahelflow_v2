@@ -34,6 +34,13 @@ This branch is a small continuity and CI-governance package. It:
 
 It does not change installed application behavior and does not require an MSI.
 
+Temporary Founder execution instruction on 2026-07-24: the Desktop Agent owns
+implementation, review follow-up, PR coordination and release work end to end
+for now. Do not wait for the Web Agent. GitHub Actions remains the independent
+clean-checkout/build evidence authority, and every app-changing package still
+uses a branch, PR, exact-source signed Internal release and Founder-installed
+acceptance.
+
 ## Installed Windows incident — immediate gate
 
 Environment: installed local Windows on the Founder ThinkPad T470, exact
@@ -104,8 +111,9 @@ update installed over Internal.5 with AppData preserved.
 
 ## Exact next execution order
 
-1. Merge the small continuity/CI-governance PR after GitHub Actions and Web
-   Agent review.
+1. Address all actionable PR #155 review feedback, revalidate in GitHub Actions
+   and merge the continuity/CI-governance PR under the temporary Founder
+   single-agent instruction.
 2. Create a separate app-changing startup-reliability package based on the
    merged protected `main`.
 3. Validate its source, tests, Windows build and installed lifecycle in GitHub
