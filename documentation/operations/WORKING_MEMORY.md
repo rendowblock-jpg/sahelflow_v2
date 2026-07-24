@@ -99,8 +99,8 @@ update installed over Internal.5 with AppData preserved.
 - [x] Make the production dependency audit blocking in PR CI.
 - [x] Add semantic continuity assertions to `sf-audit`.
 - [x] Review the exact branch diff for authority conflicts and unrelated work.
-- [ ] Push the branch, open a draft PR and let GitHub Actions validate it.
-- [ ] Close obsolete PRs #74, #83 and #103 as superseded.
+- [x] Push the branch and open draft PR #155; GitHub Actions owns validation.
+- [x] Close obsolete PRs #74, #83 and #103 as superseded.
 
 ## Exact next execution order
 
