@@ -8,8 +8,9 @@
 
 ## Current outcome
 
-Complete the one-time documentation and truth reset before beginning the next
-application implementation wave.
+The one-time documentation and truth reset is consolidated, preservation-reviewed
+and validated locally. Publication is the only remaining step before review and
+merge.
 
 Active branch:
 
@@ -119,7 +120,10 @@ in Git history and PRs rather than live files.
 - [x] Scan for stale references and broken links.
 - [x] Run authority audit and relevant repository checks.
 - [x] Review the complete diff for lost unique requirements.
-- [ ] Commit, push and open a draft PR when publication tooling permits.
+- [x] Commit the validated reset locally as `3df44c4`.
+- [ ] Push the branch and open a draft PR. The connected GitHub app can create
+  the PR, but this checkout currently has no authenticated Git transport for
+  uploading the coherent local commit.
 
 ## Documentation-reset exit gate
 
