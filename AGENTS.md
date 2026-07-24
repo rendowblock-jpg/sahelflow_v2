@@ -73,14 +73,19 @@ the owning active document before dependent implementation continues.
 ### Desktop Agent
 
 - Codes in the local checkout on a normal branch and pushes through GitHub.
-- Runs targeted local checks appropriate to the machine.
+- Does not run source builds, automated tests, coverage, dependency installation
+  or other heavy validation on the Founder machine. Required source checks run
+  from the exact pushed commit in GitHub Actions.
+- Limits local repository work to lightweight inspection, focused source edits
+  and Git operations; installed-app work is limited to non-destructive Windows,
+  WebView, AppData-preservation and real-UI observation.
 - Owns installed MSI, updater, WebView, AppData preservation, real UI,
   close/reopen and reference-hardware observations.
 - Does not delete canonical AppData or rebuild the environment destructively to
   make a test pass.
 
-The Founder machine is storage-constrained. Prefer GitHub Actions for heavy
-clean builds, full matrices and signed artifacts. Do not require permanent
+The Founder machine is storage-constrained. GitHub Actions owns builds, tests,
+coverage, full matrices and signed artifacts. Do not require permanent
 `node_modules`, `.next`, Rust `target` or repeated installer caches locally.
 
 ## Continuous Internal delivery
@@ -110,12 +115,19 @@ bun run sf-verify --fast
 ```
 
 These commands provide only the evidence they actually execute. Linux/source
-checks cannot prove installed Windows behavior.
+checks cannot prove installed Windows behavior. The Desktop Agent does not run
+them locally; GitHub Actions runs the required commands from the pushed commit.
 
 ## Current baseline
 
-- Protected main:
+- Documentation-reset merge checkpoint: PR #154 at
+  `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
+- Internal.5 executable source:
   `d1fb321ea213b0bfbb10042144c4c9b8019254eb`.
 - Founder-accepted installed release: `1.0.0-internal.5`.
-- Active program: documentation truth reset, then workspace/shop and
-  business-integrity foundation for the Golden COD Journey.
+- Phase 0 documentation truth reset is complete; Phase 1 workspace/shop and
+  business-integrity work is active.
+- A 2026-07-24 installed Internal.5 startup incident is the immediate execution
+  gate: the dashboard briefly rendered after a multi-minute launch, then the
+  desktop replaced it with `SF-RUNTIME-UI-BLOCKED`. Preserve AppData and resolve
+  this through an exact-source signed Internal update before Phase 1A proceeds.

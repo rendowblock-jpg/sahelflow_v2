@@ -38,7 +38,13 @@ the active workflow.
 - Works in the local SahelFlow checkout on a branch from current protected
   `main`.
 - Designs and implements complete work packages and pushes them to GitHub.
-- Runs targeted local checks that fit the machine.
+- Does not run source builds, automated tests, coverage, dependency
+  installation or other heavy validation on the Founder machine.
+- Uses GitHub Actions on the exact pushed commit for required source, test,
+  build and packaging evidence.
+- Uses the local machine for lightweight source inspection and editing plus
+  non-destructive installed-Windows, WebView, UI, AppData-preservation and
+  reference-hardware observation.
 - Reviews Web Agent PRs.
 - Installs exact signed artifacts and records Windows/runtime/UI/preservation
   evidence.
@@ -52,6 +58,8 @@ GitHub is infrastructure and durable authority, not a third coding agent.
 - Protected `main` is integrated source truth.
 - Branches/PRs are proposed work.
 - Actions is clean-checkout verification and artifact production authority.
+- Actions runs all required builds, automated tests, coverage and heavy
+  validation for Desktop-owned work; a local Desktop run is not a prerequisite.
 - Releases bind exact source, versions, signatures, artifacts and evidence.
 - PR comments/checks carry review and acceptance facts.
 
@@ -322,11 +330,13 @@ sellers.
 
 ## Low-storage Founder machine
 
-- The Desktop Agent may code locally, but heavy clean builds, full matrices and
-  repeated Windows packaging belong in GitHub Actions where possible.
+- The Desktop Agent may inspect and edit source locally, but does not run builds,
+  automated tests, coverage, dependency installation or heavy validation.
+- Clean source checks, builds, full matrices and Windows packaging belong in
+  GitHub Actions.
 - Do not require permanent `node_modules`, `.next`, Rust `target` or repeated
   installer caches on the Founder machine.
-- Use targeted checks locally and exact prebuilt artifacts for installation.
+- Use exact prebuilt artifacts for local installation and acceptance.
 - Do not delete canonical Roaming/Local AppData, registry, database, migration
   records or master keys during routine work.
 - Clean temporary artifacts only with explicit validated paths.

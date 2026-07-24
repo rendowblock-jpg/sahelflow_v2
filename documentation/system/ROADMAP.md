@@ -3,7 +3,9 @@
 > **Status:** Active dependency order
 > **Starting source:** accepted Internal.5 protected-main baseline
 > `d1fb321ea213b0bfbb10042144c4c9b8019254eb`
-> **Current phase:** Phase 0 — documentation and truth reset
+> **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
+> **Immediate gate:** resolve the observed Internal.5 startup/UI-readiness
+> failure without deleting Founder AppData
 > **Last consolidated:** 2026-07-24
 
 This is the shortest safe path from the current application to the complete
@@ -67,6 +69,9 @@ Every phase carries:
 
 ## Phase 0 — Documentation and truth reset
 
+**Status:** Complete in PR #154 at
+`5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
+
 ### Outcome
 
 Every agent can determine the final product, current implementation, complete
@@ -100,6 +105,15 @@ without reading contradictory plans or relying on chat history.
 Documentation-only completion does not create an MSI.
 
 ## Phase 1 — Workspace/shop and business-integrity foundation
+
+Before Phase 1A changes the installed application, the accepted Internal.5
+baseline must regain reliable startup. The 2026-07-24 Founder-machine launch
+took multiple minutes, briefly rendered the dashboard and then failed closed as
+`SF-RUNTIME-UI-BLOCKED` because no matching authenticated UI-ready
+acknowledgment was persisted. Diagnose and repair this through the normal
+source → GitHub Actions → signed Internal update → preserved-AppData Founder
+acceptance path. Do not bypass it by deleting AppData, rebuilding locally or
+weakening the fail-closed shop/runtime boundary.
 
 ### Outcome
 

@@ -1,7 +1,8 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Executable baseline:** protected `main` at `d1fb321ea213b0bfbb10042144c4c9b8019254eb`
+> **Documentation-reset merge:** PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`
+> **Internal.5 executable baseline:** `d1fb321ea213b0bfbb10042144c4c9b8019254eb`
 > **Accepted installed release:** `1.0.0-internal.5`
 > **Last reset:** 2026-07-24
 
