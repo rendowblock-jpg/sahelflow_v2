@@ -23,7 +23,6 @@
     "sf-evidence": "bun run scripts/generate-evidence-manifest.ts",
     "sf-browser": "bun run sf-browser/index.ts",
     "sf-seed": "bun run sf-seed/index.ts",
-    "glm:bootstrap": "bash scripts/agents/bootstrap-glm.sh",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",

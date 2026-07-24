@@ -1,47 +1,59 @@
 # Changelog
 
-All notable integrated changes on the path to SahelFlow 1.0 are recorded here.
+Integrated changes on the path to SahelFlow 1.0 are summarized here. Complete
+chronology and evidence remain in Git commits, pull requests, Actions runs and
+releases.
 
-> **Current truth:** SahelFlow 1.0 Stable has not been released. Historical session, v3/v4, test-count and production-readiness language describes earlier implementation history only; it is not current product or readiness authority. The full former chronology is preserved in [`documentation/history/LEGACY_SESSION_CHANGELOG.md`](documentation/history/LEGACY_SESSION_CHANGELOG.md).
+SahelFlow 1.0 Stable has not been released.
 
-The format follows Keep a Changelog. Public semantic version authority will be generated from the Phase 0 version/evidence manifest. Until that migration is complete, package, Cargo and Tauri 4.x values are current-code metadata, not the public SahelFlow product version.
+## [Unreleased]
 
-## [Unreleased] — SahelFlow 1.0 migration
+### Documentation truth reset
 
-### Documentation authority
+- Consolidating the active documentation into ten authoritative documents.
+- Binding current state to accepted Internal.5 instead of stale pre-runtime
+  baselines.
+- Preserving five detailed research reports as non-authoritative archive
+  evidence.
+- Replacing duplicate product, experience, architecture, gap, roadmap, prompt,
+  wave and history documents.
+- Installing the two-agent Web/Desktop GitHub workflow.
+- Removing GLM, Codex Cloud, MAWS and `agent-handoff` from active coordination.
+- Recording the continuous source → signed Internal update →
+  Founder-installed acceptance loop.
+- Establishing the business-integrity foundation and Golden COD Journey as the
+  next application program.
 
-- Consolidated Founder-approved product authority around the Launch Constitution, Founder Decisions and Launch Scope/Entitlements.
-- Added the source-grounded Current-to-Target Analysis and one seven-phase Implementation Roadmap.
-- Restored the Maze Map’s unique Experience and Frontend Constitution, Functional Capability Atlas and Journey/State Atlas as active authority.
-- Established explicit precedence: Founder/product → experience → engineering → current-state analysis → roadmap/workflow → active wave/evidence.
-- Added scope classes so rich historical depth cannot silently expand Stable: Required, Conditional, Depth requirement, Candidate and Excluded.
-- Corrected provider scope so adapter code and live certification cannot create a Founder promise by themselves.
-- Reconciled storefront durable-receipt success with canonical desktop command and order commitment.
-- Aligned performance, Windows compatibility, licensing, backup/recovery, teams, legal, continuity and release requirements across the active documents.
-- Moved session/v3/v4 chronology to the legacy history record.
-- Realigned the `agent-handoff` orphan ref as GLM continuity only and centralized bootstrap, verification and authority auditing on `main`.
+This documentation-only reset does not change installed app behavior and does
+not require a new Internal MSI.
 
-### Shared agent tooling
+## [1.0.0-internal.5] — 2026-07-24
 
-- Added `bun run glm:bootstrap` as the current GLM environment bootstrap.
-- Added the shared `bun run sf-verify` gate, including `--fast` and `--skip-tests` modes.
-- Added `bun run sf-audit` for required-authority and relative-link validation.
-- Exposed the retained `sf-seed` and `sf-browser` development helpers through package scripts.
-- Retired orphan-only copies of the old database CLI, license signer, v2→v3 porter and Supabase mutation CLI.
-- Added the authority audit to CI before the shared verification gate.
+### Runtime and installed UI
 
-### Current implementation status
+- Added a desktop-owned WebView authentication handoff without exposing the
+  credential through browser navigation.
+- Kept the window hidden until authenticated hydrated UI readiness.
+- Added exact installed visible/responsive UI acceptance with normal
+  close/teardown/reopen.
+- Reduced first-launch cache work while preserving deterministic verification.
+- Added the source-controlled Founder installer and installed UI harness.
 
-- The repository contains substantial reusable application and frontend work.
-- The application is not a Stable SahelFlow 1.0 release.
-- The documentation waves did not change application behavior; the GLM realignment changes coordination tooling and CI commands only.
-- The next implementation wave is **Proven Canonical Windows Desktop** after the first clean-checkout audit and inventory.
+### Signed acceptance
 
-### Known blockers before implementation evidence can advance
+- Protected-main source:
+  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`.
+- Signed run: `30055297869`.
+- Independent retained-artifact verification: 54/54.
+- Founder upgraded over Internal.4 without uninstall or AppData loss.
+- Real setup/login/workspace UI was visible and responsive.
+- Normal close and successful reopen passed.
 
-- GitHub Actions has previously failed before executing workflow steps; successful runner execution remains unproven.
-- No current installed Windows candidate, compatibility matrix, provider certification, recovery drill, low-end report, independent review or seller beta evidence exists.
+The slower reopen remains tracked performance debt; it did not block the
+Internal.5 functional acceptance.
 
-## Historical implementation chronology
+## Earlier internal history
 
-See [`documentation/history/LEGACY_SESSION_CHANGELOG.md`](documentation/history/LEGACY_SESSION_CHANGELOG.md). Historical entries are preserved verbatim for provenance and must be interpreted under the current product, experience, engineering and evidence authorities.
+Earlier Internal versions, session labels and v3/v4-era implementation history
+remain available in Git history and the corresponding PRs/releases. They do not
+define current product scope or readiness.

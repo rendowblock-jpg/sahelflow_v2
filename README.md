@@ -1,60 +1,66 @@
-# SahelFlow 1.0
+# SahelFlow
 
-SahelFlow is a Windows-first, desktop-authoritative operations platform for Algerian COD sellers.
+SahelFlow is a Windows-first operations system for Algerian
+cash-on-delivery sellers.
 
-> **Repository status:** The current codebase contains a broad, valuable operational application, but it is not yet a Stable SahelFlow 1.0 release. The active work is a controlled migration from the current local single-owner foundations to the Founder-approved identity, durability, recovery, connected-system and page-complete experience architecture.
+> **Repository status:** `1.0.0-internal.5` is the accepted installed Windows
+> baseline. SahelFlow 1.0 Stable has not been released. The repository contains
+> a broad operational application, but core journey, commercial, connected and
+> AAA completion work remains.
 
-## Start here
+## Documentation
 
-1. [`documentation/product/README.md`](documentation/product/README.md) — Founder-approved product contract and Stable scope.
-2. [`documentation/experience/README.md`](documentation/experience/README.md) — capability depth, journeys/states, UI/UX, frontend, Arabic/RTL and accessibility authority.
-3. [`documentation/architecture/README.md`](documentation/architecture/README.md) — target engineering system, current-to-target model and execution path.
-4. [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md) — current wave, checkpoint and exact next move.
+Start with [`documentation/README.md`](documentation/README.md).
 
-## Authority and conflict rule
+The active authority contains ten documents:
 
-Use this order when documents overlap:
+1. [`PRODUCT.md`](documentation/product/PRODUCT.md)
+2. [`EXPERIENCE.md`](documentation/product/EXPERIENCE.md)
+3. [`DECISIONS.md`](documentation/product/DECISIONS.md)
+4. [`ARCHITECTURE.md`](documentation/system/ARCHITECTURE.md)
+5. [`CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
+6. [`ROADMAP.md`](documentation/system/ROADMAP.md)
+7. [`WORKFLOW.md`](documentation/operations/WORKFLOW.md)
+8. [`WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
+9. [`RESEARCH.md`](documentation/research/RESEARCH.md)
+10. [`documentation/README.md`](documentation/README.md)
 
-1. a newer explicit numbered Founder decision that states what it changes;
-2. the Founder-approved product contract;
-3. the experience package for included capabilities, journeys and frontend quality;
-4. the Engineering Specification and accepted superseding ADRs for system boundaries and invariants;
-5. the Current-to-Target Analysis for source-grounded implementation status and migration disposition;
-6. the Implementation Roadmap and Coding Workflow for sequence, review and evidence;
-7. Working Memory and the active wave for current progress.
+Detailed dated research is retained under `documentation/archive/research/`
+and is not current authority.
 
-A lower layer cannot silently weaken a higher layer. Current code, research, a test count, a historical plan or an implementation convenience never overrides the target. When experience and engineering requirements appear to conflict, stop and reconcile the owning documents; preserve the product contract, security, data integrity, accessibility and recoverability rather than allowing one document to drift.
+## Product shape
 
-## Documentation classes
+- Windows x64 desktop is canonical for operational business mutations.
+- One-time 35,000 DZD complete edition.
+- Five included shops and up to five paid expansions.
+- Owner plus ten active members under the approved device limits.
+- Arabic, French and English.
+- 4 GB dual-core functional floor and ThinkPad T470 reference machine.
+- Optional bounded shared cloud, PWA, hosted storefront and zero-knowledge
+  backup after their dependency and economics gates.
+- Seller-owned Gemini key for optional privacy-controlled AI.
+- Internal, Beta and Stable signed update channels.
 
-- `documentation/product/`, `documentation/experience/` and `documentation/architecture/` contain active durable authority.
-- `documentation/operations/` coordinates current work and does not redefine the product.
-- `documentation/research/` is reference material and must be revalidated before use; it is not current authority.
-- `CHANGELOG.md` records the current SahelFlow 1.0 migration. The former session/v3/v4 chronology is preserved separately as history.
-- Component-local READMEs describe their code boundary only. They cannot make product, provider, platform or readiness claims beyond the active authorities and evidence.
+The first product-completion epic after the documentation reset is the Golden
+COD Journey: order intake → confirmation → stock reservation → shipment →
+delivery/return → COD reconciliation → refund/compensation → preserved
+inventory/financial truth.
 
-## Approved launch shape
+## Current proven baseline
 
-- **Platform:** Windows x64 desktop; capability-based compatibility across the approved Windows matrix; 4 GB dual-core floor and ThinkPad T470 reference.
-- **Authority:** one canonical desktop installation; one operational SQLite database per shop; desktop remains final authority for canonical business mutations.
-- **Connected plane:** bounded Cloudflare control plane, encrypted relay/projections, zero-knowledge backup and hosted storefronts.
-- **Commercial model:** 35,000 DZD one-time complete edition; five included shops; up to five paid extra shops; owner plus ten active members under the approved device limits.
-- **Trial:** one signed online machine-bound seven-day trial with complete lockout after expiry and preserved data.
-- **AI:** seller-owned Google AI Studio key; typed, privacy-controlled workflows and explicit bound approval for consequential actions.
-- **Synchronization:** durable hybrid webhook plus scheduled reconciliation; checkpoints never pass untracked failure.
-- **Experience:** quiet-power operational UX, page-complete behavior, Arabic/French/English parity, rigorous RTL, WCAG 2.2 AA, keyboard fluency and low-end responsiveness.
-- **Storefront receipt:** public checkout success means a durable tenant/shop receipt exists; it does not claim the canonical desktop has committed the order yet.
-- **Release:** signed Windows artifacts promoted through internal, beta and stable channels only after evidence exists.
+Protected-main source
+`d1fb321ea213b0bfbb10042144c4c9b8019254eb` produced signed
+`1.0.0-internal.5`. Exact-source artifact/signature/runtime/visible-UI gates
+passed, and the Founder ThinkPad upgraded over Internal.4 with AppData
+preserved, real UI visible, normal close and successful reopen.
 
-## Current implementation conclusion
+This proves the Internal.5 installed runtime chain. It does not prove Stable
+product completeness, provider certification, low-end performance targets or
+the future connected platform.
 
-The existing Tauri, Next.js, Prisma, SQLite, domain, UI, WhatsApp, provider, AI and test work is a strong migration base. The main gaps are trusted shop/member/device/entitlement authority, safe migrations and key recovery, durable audit/inbox/outbox/compensation, real connected-system boundaries, provider certification, complete journey/state depth, packaged low-end evidence and artifact-first release authority.
+## Development
 
-Do not add visible connected features around those missing foundations. Preserve useful code and migrate it through the active roadmap. Product work must satisfy its governing scope class, capability, journey states, experience dimensions, architecture invariants and evidence—not only the happy-path screen.
-
-## Development commands
-
-The package scripts currently available include:
+Common commands:
 
 ```bash
 bun install --frozen-lockfile
@@ -62,19 +68,21 @@ bun run db:generate
 bun run typecheck
 bun run lint
 bun run test
-bun run build
+bun run sf-audit
+bun run sf-verify --fast
 ```
 
-These are development checks, not release evidence. The current CI command drift and packaged-candidate gaps are tracked in the Current-to-Target Analysis and Phase 0 roadmap.
+`prisma db push` is development-only and is not a production migration
+mechanism.
 
-`prisma db push` is development-only and is not a production migration mechanism.
-
-### Codespaces
-
-The checked-in dev container is the normal remote coding-agent environment. Select the 2-core/8 GB machine for routine work; use 4 cores only for a bounded heavy command. Creation installs pinned Bun, Node and Rust tooling, frozen dependencies, Prisma and a disposable test sandbox automatically.
-
-Codespaces provides Linux development evidence only. GitHub Actions builds the Windows candidate, and installed Windows behavior is verified separately on an authorized machine. Keep ports private, use synthetic data, push intended work before stopping and delete obsolete Codespaces to limit storage use.
+Follow [`AGENTS.md`](AGENTS.md) and the
+[`WORKFLOW.md`](documentation/operations/WORKFLOW.md) contract. One agent owns
+each branch/PR, the other reviews, GitHub Actions supplies clean-checkout
+evidence, and every installed-app change reaches the Founder through a unique
+exact-source signed Internal update.
 
 ## Evidence rule
 
-A claim such as “verified,” “supported,” “production-ready,” or “Stable” must identify the exact source commit, artifact, environment/provider/device, procedure and result. Source code, mocks, historical test counts and version labels are not substitutes.
+“Verified,” “supported,” “production-ready” and “Stable” require the exact
+source, artifact, environment/provider/device, procedure and result. Source
+presence, mocks, historical test counts and version labels are not substitutes.
