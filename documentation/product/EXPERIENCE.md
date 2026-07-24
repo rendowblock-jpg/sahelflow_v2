@@ -1,9 +1,24 @@
-# SahelFlow 1.0 — Functional Capability Atlas
+# SahelFlow 1.0 — Experience and Capability Contract
 
-> **Status:** Active launch-capability map  
-> **Purpose:** Preserve every approved or durable planned function and map it to the complete product structure.
+> **Status:** Active experience authority
+> **Last consolidated:** 2026-07-24
+> **Purpose:** Define every required capability, journey, operational state and
+> AAA user-experience standard in one place.
 
 A capability may be reused, hardened, migrated, replaced or newly implemented. Its presence in this atlas does not claim the current code is ready.
+
+## Experience thesis — quiet power
+
+SahelFlow should feel powerful without feeling heavy. The seller experiences a
+clear command center rather than a maze of modules, dense operational
+information without noise, immediate feedback without distracting motion, and
+human recovery guidance instead of developer jargon. Money, stock, authority,
+sync and failure states remain explicit. Arabic, French and English receive the
+same product depth.
+
+“Premium” means intentional states, trustworthy numbers, fast common paths,
+discoverable advanced paths and graceful recovery. It does not mean decorative
+gradients, excessive cards or animation.
 
 ## 1. Product surfaces
 
@@ -598,3 +613,191 @@ It must be FR/AR/EN, mobile-first, accessible, fast, evidence-honest and consist
 - security/privacy review;
 - SBOM/dependency review;
 - controlled beta and launch report.
+
+## 24. Universal operational state vocabulary
+
+Every surface uses the same language. A generic “success” message is
+insufficient when several authorities are involved.
+
+| State | Meaning |
+|---|---|
+| Draft | Local work not yet committed as the intended business action |
+| Pending | Accepted for review or execution, not complete |
+| Queued | Durably stored for later execution |
+| Processing | An executor is actively working |
+| Committed | Canonical desktop transaction succeeded |
+| Rejected | Validation, permission, policy or current state prevented commit |
+| Conflict | Current state differs and needs explicit resolution |
+| Retrying | A safe automatic retry is scheduled |
+| Degraded | Capability remains partly usable with a known limitation |
+| Offline | A required network is unavailable |
+| Stale | A displayed projection may not reflect current desktop state |
+| Blocked | Human action, approval, entitlement or recovery is required |
+| Failed | The attempt ended without success; preservation/recovery is stated |
+| Reconciled | External and canonical records were compared and resolved |
+| Verified | Required integrity or evidence checks passed |
+| Revoked | Identity, session, device, entitlement or key is no longer valid |
+
+The order, delivery, inventory, COD/financial and return/refund state machines
+are separate. For example, an order may be delivered while its COD remains
+awaiting carrier remittance.
+
+## 25. Required journey coverage
+
+Every Required capability defines and tests:
+
+- happy path;
+- interrupted and resumed path;
+- validation denial;
+- permission denial;
+- offline/provider/cloud degradation;
+- duplicate/replay behavior;
+- stale/conflict behavior;
+- cancellation or compensation;
+- recovery and support path;
+- audit/history result.
+
+The Stable journey inventory is:
+
+1. acquire, install and explore the safe demo;
+2. create identity/workspace and start the signed trial;
+3. purchase, verify payment and activate permanently;
+4. handle trial expiry without data loss or bypass;
+5. complete first-shop onboarding;
+6. use the daily owner command center;
+7. receive/import a manual, WhatsApp, storefront or commerce order;
+8. extract a WhatsApp message into a reviewed order;
+9. confirm/reject an order and reserve/release stock;
+10. prepare, fulfill and ship;
+11. track delivery and exceptions;
+12. return, exchange and refund;
+13. reconcile COD receivables, fees and remittance;
+14. manage catalog, reservations, movements and physical stock;
+15. invite, authorize, assign and revoke team members;
+16. request/complete configured high-risk approval;
+17. create, dry-run, execute and recover an automation;
+18. connect, test, degrade and disconnect a provider;
+19. synchronize and reconcile commerce events;
+20. build, preview, publish and roll back a storefront;
+21. durably accept and later canonically import storefront checkout;
+22. submit and observe a remote PWA command;
+23. create, verify and restore backup;
+24. replace a machine or transfer ownership;
+25. update, migrate, fail safely and recover;
+26. gather privacy-safe diagnostics and resolve an incident;
+27. complete controlled beta and Stable promotion.
+
+### Golden COD Journey
+
+The first product-completion epic is the binding cross-module journey:
+
+```text
+Create/import product
+→ receive/create customer order
+→ validate customer and risk
+→ confirm or reject
+→ reserve stock
+→ create and track shipment
+→ delivered / failed / physically returned
+→ create and reconcile COD receivable
+→ refund/exchange when required
+→ update inventory, customer, finance and analytics
+→ preserve through restart, update, backup and restore
+```
+
+It is incomplete if any screen, route, provider callback or automation can
+bypass the canonical transition, movement, audit or compensation rules.
+
+## 26. Twelve required quality dimensions
+
+Every page and major component is evaluated independently on:
+
+1. **Motion** — tokenized, interruptible, reduced-motion-safe and optional on
+   low-resource paths.
+2. **Density/layout** — compact operational hierarchy, stable scroll behavior,
+   1366×768 usability and 100–200% zoom.
+3. **Typography** — coherent Latin/Arabic families, tabular numerals and
+   locale-correct formatting without broken Arabic joining.
+4. **Color/hierarchy** — semantic tokens, WCAG AA contrast and no
+   color-only meaning.
+5. **Empty states** — distinguish first use, no data, no results, successful
+   empty queue, permission denial, offline/provider unavailability and archive.
+6. **Error/degraded states** — explain failure, preservation, safe retry,
+   recovery and support; never rely on a generic toast.
+7. **Micro-interactions** — clear focus, pressed, selected, pending, committed,
+   failed and undo behavior with keyboard parity.
+8. **Perceived performance** — structure-matching skeletons, honest progress,
+   bounded prefetch and immediate acknowledgement distinct from commit.
+9. **Data UX** — search, filters, sort, saved views, bulk actions, selection,
+   pagination/virtualization, export and record history where appropriate.
+10. **Onboarding/disclosure** — progressive guidance, resumable setup and
+    advanced controls without hiding essential truth.
+11. **Trust** — visible shop, actor, source, time, sync, backup, permission,
+    money and stock authority.
+12. **Polish/fluency** — consistent copy, shortcuts, command palette,
+    responsive details and no prototype placeholders.
+
+## 27. Frontend and design-system rules
+
+- Shared tokens and primitives precede page-local styling.
+- Server data has one query/cache authority; UI preference state does not
+  impersonate business authority.
+- Forms use shared validation, dirty-state protection, draft/recovery rules and
+  explicit destructive-action ceremonies.
+- Tables and list/detail layouts use shared interaction contracts.
+- Loading, empty, error, permission, offline, stale, pending and conflict
+  states are designed, not patched later.
+- Optimistic UI is allowed only when rollback and canonical authority are
+  explicit.
+- Animation uses transform/opacity on hot paths and never delays business work.
+- Mobile/PWA layouts are redesigned for their context, not squeezed desktop
+  pages.
+- Localized copy is semantic, not concatenated fragments.
+- RTL affects layout, navigation, icons, tables, charts, shortcuts and mixed
+  content—not only `dir="rtl"`.
+- Keyboard access, focus order, screen readers, zoom and reduced motion are
+  release requirements.
+
+## 28. Page-completion contract
+
+A page is complete only when it has:
+
+- correct information architecture and capability scope;
+- real data authority and permission filtering;
+- happy, loading, empty, filtered-empty, degraded, offline, stale, error,
+  conflict and recovery states as applicable;
+- safe create/edit/delete/bulk behavior;
+- responsive and RTL/LTR behavior;
+- keyboard, focus, screen-reader and zoom coverage;
+- representative-data performance;
+- audit/history and trust cues;
+- copy in Arabic, French and English;
+- automated evidence plus installed-Founder observation for material UI work.
+
+A screenshot, route, component, mocked happy path or attractive shell does not
+complete a page.
+
+## 29. Experience anti-patterns
+
+Do not ship:
+
+- decorative dashboards without actionable operational truth;
+- one generic status for order, delivery, stock and money;
+- inaccessible icon-only actions;
+- critical instructions only in transient toasts;
+- hidden destructive behavior or irreversible actions without reason/audit;
+- fake real-time behavior, fake provider support or fake success;
+- untranslated or left-to-right-only fallback;
+- large unvirtualized operational tables;
+- “AI” copy or animation that masks weak workflow depth;
+- silent fallback to another shop, cached projection or stale record;
+- remote acknowledgement presented as canonical desktop commit.
+
+## Consolidation provenance
+
+The full pre-consolidation
+[Experience and Frontend Constitution](../archive/experience/EXPERIENCE_FRONTEND_CONSTITUTION-2026-07-15.md)
+and
+[Journey and State Atlas](../archive/experience/JOURNEY_STATE_ATLAS-2026-07-15.md)
+are retained as dated design evidence. This document adopts their durable
+requirements and is the current authority when wording or scope differs.

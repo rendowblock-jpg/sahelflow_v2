@@ -1,7 +1,7 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative founder-approved register  
-> **Consolidated:** 2026-07-15  
+> **Status:** Authoritative founder-approved register
+> **Consolidated:** 2026-07-24
 > **Supersedes:** scattered Excellence Reset addenda and conflicting provisional product policies
 
 This register consolidates the approved product decisions. Detailed engineering mechanisms remain subject to the Architecture Reset, security review, provider certification, and evidence gates, but engineering may not contradict these product policies without a new founder decision.
@@ -196,6 +196,97 @@ Base license includes:
 - Release channels: Internal, Beta, Stable.
 - One generated version manifest feeds all official surfaces; CI fails on drift.
 - Five-year support begins on the official Stable launch date, not internal or beta dates.
+
+## FD-019 — Shared SahelFlow cloud; default seller BYOC rejected
+
+- SahelFlow retains one shared, multi-tenant Cloudflare architecture for the
+  control plane, relay, storefront and encrypted backup services.
+- A separate seller-owned Cloudflare account/deployment is not the default
+  product architecture.
+- The BYOC alternative was examined and rejected because onboarding,
+  cross-account routing, version drift, security authority and support cost
+  would damage the seller experience and operational reliability.
+- Shared connected services remain provisional until a unit-economics gate
+  validates p50, p95 and maximum cost at 10, 100, 1,000 and 10,000 sellers.
+- Every license requires metering, quotas, rate limits, storage ceilings,
+  abuse controls and cost alarms before public connected entitlements are
+  finalized.
+- The 7,000 DZD base-sale continuity reserve must be validated against the
+  five-year promise; product limits may not be invented merely to hide an
+  unmeasured cost model.
+
+This decision narrows the deployment choice in FD-005 without weakening its
+desktop-authority, encryption, outage-survival or continuity requirements.
+
+## FD-020 — Private Founder Console
+
+- SahelFlow includes a separate private web control plane for seller accounts,
+  signups, trials, payment review, licenses, entitlements, devices, transfers,
+  usage, infrastructure cost, support, incidents, providers and releases.
+- It is Founder-only at launch but its authorization model may support future
+  trusted finance, support, release and audit roles.
+- Every sensitive action is strongly authenticated and immutably audited.
+- The console may access bounded control/support metadata only. It does not
+  expose seller orders, customer messages, accounting records or decrypted
+  backups.
+- The permanent license-signing private key never enters the online console.
+  The console records approval/authorization; permanent signing stays offline.
+- The console cannot mutate canonical seller operations.
+
+## FD-021 — Person, workspace and license are separate
+
+- A person has one durable internal identity independent of changeable email,
+  phone and device details.
+- A seller workspace represents one independently licensed business and owns
+  its shops, members, devices, entitlements, cloud limits and support history.
+- A person may own multiple seller workspaces.
+- Each workspace requires its own base license; ownership of several
+  workspaces never turns one license into an unlimited multi-business license.
+- Shops belong to a workspace, not directly to an email, device or Windows
+  installation.
+
+## FD-022 — Safe demo before the signed trial
+
+- A prospective seller may explore an isolated sample-data demo without
+  creating an account.
+- The demo cannot become a real production workspace, accept real customer
+  operations or bypass trial/licensing controls.
+- A verified owner account and seller workspace are required to start the real
+  seven-day signed trial.
+- Trial and permanent activation do not make normal local desktop operation
+  permanently internet-dependent.
+
+## FD-023 — Founder continuous internal-update acceptance
+
+- Every completed work package that changes the installed application receives
+  a new immutable Internal version after merge to protected `main`.
+- The exact-source signed artifact must pass automated release, signature,
+  runtime and visible-UI gates before it reaches the Founder update channel.
+- The Founder installs the update over the existing version without deleting
+  AppData, reopens the real application and verifies the intended change.
+- App-changing work is not finally complete until source integration, signed
+  release and Founder-installed acceptance all pass.
+- Documentation-only changes do not manufacture a pointless MSI unless they
+  alter packaging, updater or release authority.
+- Pilot and Stable channels remain separate from the frequent Founder-only
+  Internal channel.
+
+## FD-024 — Two coding agents with GitHub as durable truth
+
+- The active coding system contains the ChatGPT Web Agentic Coding Agent and
+  the Desktop Agent.
+- GLM and Codex Cloud are removed from the active workflow and are not fallback
+  authorities.
+- Either active agent may implement; one agent owns each task/branch and the
+  other reviews.
+- Both agents branch, commit, push, test and review through GitHub. Neither
+  works directly on protected `main`.
+- The Desktop Agent codes in the local checkout and additionally owns
+  installed-Windows, MSI, preservation, UI and reference-hardware evidence.
+- GitHub Actions is infrastructure and clean-checkout/artifact authority, not
+  a third coding agent.
+- Heavy builds and repeated dependency caches remain off the storage-constrained
+  Founder machine whenever GitHub Actions can perform them.
 
 ---
 

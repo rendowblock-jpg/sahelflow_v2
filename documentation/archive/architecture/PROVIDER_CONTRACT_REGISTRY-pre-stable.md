@@ -1,8 +1,15 @@
-# SahelFlow — Provider Contract and Certification Registry
+# SahelFlow — Provider Contract and Certification Registry (archived snapshot)
 
-> **Status:** Active claim authority for external integrations  
-> **Source-code baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e`  
-> **Rule:** Source files, mocks and unit tests do not make a provider publicly supported. Only a current live certification record can promote a provider capability to `Certified`.
+> **Status:** Archived, non-authoritative evidence template
+> **Source-code baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e`
+> **Current authority:** [`../../system/ARCHITECTURE.md`](../../system/ARCHITECTURE.md)
+> and [`../../system/CURRENT_STATE.md`](../../system/CURRENT_STATE.md)
+
+This snapshot preserves the detailed declaration, matrix and certification
+record format for future provider work. Its provider statuses and
+implementation claims are historical and must be revalidated before use.
+
+> **Historical rule retained:** Source files, mocks and unit tests do not make a provider publicly supported. Only a current live certification record can promote a provider capability to `Certified`.
 
 The source baseline remains valid across later documentation-only commits. Refresh it after executable provider code changes.
 

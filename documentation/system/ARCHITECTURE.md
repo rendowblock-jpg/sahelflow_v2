@@ -1,11 +1,14 @@
-# SahelFlow 1.0 — Engineering Specification
+# SahelFlow 1.0 — Architecture
 
-> **Status:** Active target engineering authority  
-> **Product authority:** `../product/`  
-> **Experience authority:** `../experience/`  
-> **Current source-code audit baseline:** `fd9fa97dfcf96e08ffa1273070e74c4bb6db980e`
+> **Status:** Active target engineering authority
+> **Product authority:** [`../product/PRODUCT.md`](../product/PRODUCT.md)
+> **Experience authority:** [`../product/EXPERIENCE.md`](../product/EXPERIENCE.md)
+> **Current-state authority:** [`CURRENT_STATE.md`](CURRENT_STATE.md)
+> **Last consolidated:** 2026-07-24
 
-The audit baseline identifies the executable code studied by the Current-to-Target Analysis. Later documentation-only commits do not change that source assessment. Refresh the baseline after executable source changes materially alter the model.
+This document defines the final target and invariants. It does not claim the
+current implementation already satisfies them; source and evidence status
+belongs in `CURRENT_STATE.md`.
 
 ## 1. Purpose and precedence
 
@@ -32,8 +35,13 @@ A cloud receipt, queue acknowledgement or projection is not a canonical desktop 
 
 - Holds only licensing, entitlement, tenant/member/device/session, routing, payment/support/release and bounded operational metadata.
 - Uses Workers, D1, Queues, hibernating Durable Objects, R2 and approved custom-hostname infrastructure according to measured need.
+- Uses one SahelFlow-operated multi-tenant deployment. Seller-owned Cloudflare
+  accounts are not the default architecture.
 - Does not become the seller's operational business database.
 - Enforces environment separation, migrations, quotas, cost alarms, incident controls and data classification.
+- Does not proceed to public entitlements until unit economics are measured at
+  10, 100, 1,000 and 10,000 sellers, including p50, p95 and maximum
+  per-license cost against the continuity reserve.
 
 ### 2.3 Encrypted relay and projection plane
 
@@ -72,6 +80,12 @@ A cloud receipt, queue acknowledgement or projection is not a canonical desktop 
 ### 2.8 Founder administration and public/support surfaces
 
 - Founder administration handles payment verification, offline signing workflow, entitlement expansion, transfer/recovery, incidents, provider state, release holds and support metadata without seller operational plaintext.
+- The Founder Console is a separate strongly authenticated and audited web
+  application. It is Founder-only at launch while retaining a least-privilege
+  role model for future trusted operators.
+- The online console records approval and authorization but never contains the
+  permanent license-signing private key and never mutates canonical seller
+  operations.
 - Marketing/help/download surfaces are multilingual, accessible, evidence-honest and consistent with the product and experience authorities.
 
 ## 3. Data ownership, privacy and legal classes
@@ -339,9 +353,20 @@ Executable entitlement enforcement represents the Founder matrix:
 
 ## 8. Durable event, effect and compensation architecture
 
+SahelFlow uses a hybrid transactional model. Current-state tables remain the
+fast read authority for the desktop UI; append-only business records preserve
+how consequential state changed. Full event sourcing is not required.
+
+Order, confirmation, delivery, inventory, financial/COD and return/refund state
+machines are separate. A single generic order status must not impersonate all
+of them.
+
 ### 8.1 Required records
 
 - Domain event
+- Inventory movement and reservation
+- Financial/COD movement and settlement
+- Delivery/provider raw event
 - Inbox event
 - Outbox intent
 - Effect attempt
@@ -372,6 +397,27 @@ Committed intents are executed by bounded workers. Each effect has a stable key,
 ### 8.5 Compensation
 
 Money, stock, status and external effects reverse through explicit append-only facts. Boolean reversal flags or heuristic reconstruction alone are insufficient.
+
+### 8.6 Golden COD transaction rules
+
+- Order creation does not silently reduce physical stock.
+- Confirmation reserves stock; pre-shipment cancellation releases it.
+- Shipment transfers reserved stock to an outbound/in-transit position.
+- Delivery creates a carrier COD receivable; it does not prove remittance.
+- Failed delivery does not make stock available before physical return.
+- Returned goods enter available, damaged or quarantine stock only after
+  receipt and inspection.
+- Carrier remittance settles explicit receivables, fees and discrepancies.
+- Refunds, partial refunds, corrections and reversals create append-only
+  financial facts.
+- Manual overrides require permission, reason, actor/device attribution and
+  audit.
+- A provider replay produces the original effect or a safe no-op, never
+  duplicate stock, money, shipment or timeline changes.
+
+Every consequential command validates trusted context and transition rules,
+updates current state, writes required movements/audit/events and commits its
+outbox intent in one database transaction.
 
 ## 9. Encrypted relay and PWA command protocol
 
@@ -482,6 +528,35 @@ Each courier declares independently:
 - provider idempotency and ambiguous success;
 - webhook/list-since/reconciliation;
 - rate limits and sandbox/live environment.
+
+### 11.4 Common provider declaration
+
+Every provider adapter/worker records:
+
+- scope class and controlling decision;
+- provider/API/version/environment;
+- authentication and minimum permissions;
+- secret purpose and workspace/shop scope;
+- supported and explicitly unsupported capabilities;
+- normalized request/response/event schemas;
+- provider resource/event/version identity;
+- idempotency, deduplication and ambiguous-success behavior;
+- pagination, ordering, overlap, cursor and reconciliation semantics;
+- webhook authentication/replay behavior where applicable;
+- rate limits, quotas, retries, timeout and backoff;
+- status/error mapping, currency/time-zone/locale assumptions;
+- transmitted data classes and retention;
+- health, degradation, kill switch and seller recovery UX;
+- terms/policy/legal review date and recertification triggers.
+
+Certification is capability-specific. A provider may be certified for tracking
+while create, edit or cancellation remains unsupported. A material provider
+contract/version change invalidates the affected certification.
+
+Each certification record names the adapter commit, signed artifact, real
+environment/account, tester/reviewer, capabilities tested, failures,
+duplicate/replay, paging/checkpoint/reconciliation, rate-limit/outage/recovery,
+sanitized evidence, limitations and Founder launch-set decision.
 
 No specific courier is a locked Founder promise merely because current code or an ADR names it. Current candidates are certified first and the Founder confirms the public launch set.
 
@@ -636,6 +711,31 @@ Package, Cargo, Tauri, updater, About UI, payment/support surfaces and release n
 
 Release channels are `internal`, `beta`, `stable`. Stable is Windows x64 only at launch. Candidate build/sign/test/evidence occurs before publication. Updater accepts only signed compatible artifacts and supports staged rollout/hold. Data rollback is normally compatible forward repair, not destructive down-migration.
 
+Every merged work package that changes the installed product receives a unique
+monotonically increasing Internal version. Its exact protected-main source is
+bound to the signed MSI, signature, update manifest and retained evidence.
+
+The installed client exposes explicit states: `Checking`, `Current`,
+`Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,
+`Installing`, `Restart required`, `Restarting`, `Completed`, `Offline`,
+`Rejected`, `Failed` and `Retrying`. Failure copy identifies preservation,
+safe retry and recovery. A workflow artifact, draft release and published
+channel update are distinct states.
+
+An app-changing task moves through three distinct states:
+
+1. **Source-complete** — reviewed and merged into protected `main`.
+2. **Release-complete** — exact-source signed artifact passes automated
+   release, runtime and visible-UI gates.
+3. **Founder-accepted** — installed over the prior accepted version with
+   AppData preserved, reopened successfully and the intended real change
+   observed.
+
+Only the third state is final completion for an installed-app change. At most
+one unaccepted Founder Internal update is in flight. Documentation-only changes
+do not create an MSI unless they alter executable packaging, updater or release
+authority.
+
 ## 18. System invariants
 
 | ID | Invariant |
@@ -678,6 +778,10 @@ Release channels are `internal`, `beta`, `stable`. Stable is Windows x64 only at
 | INV-036 | Continuity reserve/coverage and support-horizon promises are validated before public payment. |
 | INV-037 | Every product/readiness claim links to exact current evidence. |
 | INV-038 | Included pages and journeys satisfy their experience/page-completion contract. |
+| INV-039 | Source-complete, signed-release-complete and Founder-installed acceptance are recorded as distinct facts. |
+| INV-040 | One seller workspace has one independent base license; a person may own several separately licensed workspaces. |
+| INV-041 | Founder control-plane access cannot expose seller operational plaintext or permanent signing material. |
+| INV-042 | Shared connected-service entitlements cannot become public before measured unit economics, quotas and alarms exist. |
 
 Every invariant maps to automated tests, packaged/provider/device/recovery evidence and observable recovery in the implementation wave that introduces it.
 
@@ -718,4 +822,14 @@ This specification does not authorize:
 - unlimited included resources;
 - product-funded general Gemini inference;
 - provider scope merely because adapter code exists;
+
+## Consolidation provenance
+
+The detailed pre-consolidation
+[superseding ADR register](../archive/architecture/SUPERSEDING_ADRS-2026-07-15.md)
+and
+[Internal.5-era updater trust contract](../archive/architecture/UPDATER_RELEASE_CONTRACT-internal5-era.md)
+remain available as dated rationale/evidence. This document incorporates the
+governing decisions and supersedes those snapshots when wording or current
+state differs.
 - security-equivalence claims for modified Windows without evidence.

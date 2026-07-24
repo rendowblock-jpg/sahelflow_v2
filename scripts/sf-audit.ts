@@ -21,19 +21,18 @@ const requiredFiles = [
   "README.md",
   "AGENTS.md",
   "CHANGELOG.md",
-  "documentation/product/README.md",
-  "documentation/experience/README.md",
-  "documentation/architecture/README.md",
-  "documentation/architecture/ENGINEERING_SPECIFICATION.md",
-  "documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md",
-  "documentation/architecture/IMPLEMENTATION_ROADMAP.md",
-  "documentation/architecture/CODING_WORKFLOW.md",
-  "documentation/operations/README.md",
+  "documentation/README.md",
+  "documentation/product/PRODUCT.md",
+  "documentation/product/EXPERIENCE.md",
+  "documentation/product/DECISIONS.md",
+  "documentation/system/ARCHITECTURE.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKFLOW.md",
   "documentation/operations/WORKING_MEMORY.md",
-  "documentation/operations/GLM_CONTINUITY_PROTOCOL.md",
+  "documentation/research/RESEARCH.md",
   "scripts/sf-verify.ts",
   "scripts/sf-audit.ts",
-  "scripts/agents/bootstrap-glm.sh",
 ];
 
 for (const relativePath of requiredFiles) {
@@ -56,8 +55,7 @@ function walk(directory: string): string[] {
     const relativePath = absolutePath.slice(repoRoot.length + 1).replaceAll("\\", "/");
 
     if (
-      relativePath.startsWith("documentation/history/") ||
-      relativePath.startsWith("documentation/research/")
+      relativePath.startsWith("documentation/archive/")
     ) {
       continue;
     }
@@ -100,6 +98,7 @@ function normalizeLink(rawTarget: string): string | null {
 }
 
 const markdownFiles = walk(repoRoot);
+const activeDocumentationFiles = walk(resolve(repoRoot, "documentation"));
 const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
 
 for (const absoluteFile of markdownFiles) {
@@ -133,7 +132,7 @@ if (existsSync(packagePath)) {
   const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
     scripts?: Record<string, string>;
   };
-  for (const scriptName of ["sf-verify", "sf-audit", "glm:bootstrap"]) {
+  for (const scriptName of ["sf-verify", "sf-audit", "sf-inventory"]) {
     if (!packageJson.scripts?.[scriptName]) {
       findings.push({
         kind: "drift",
@@ -144,41 +143,67 @@ if (existsSync(packagePath)) {
   }
 }
 
-const bootstrapPath = resolve(repoRoot, "bootstrap.sh");
-if (existsSync(bootstrapPath)) {
-  const bootstrap = readFileSync(bootstrapPath, "utf8");
-  for (const obsoleteMarker of [
-    "PROJECT_STATE.md",
-    "NEXT_SESSION_PREP.md",
-    "engineering/maze-map",
-    "session-40/master",
-    "GITHUB_PAT=",
-  ]) {
-    if (bootstrap.includes(obsoleteMarker)) {
-      findings.push({
-        kind: "drift",
-        file: "bootstrap.sh",
-        detail: `obsolete bootstrap authority or credential marker: ${obsoleteMarker}`,
-      });
-    }
+const forbiddenActivePaths = [
+  "bootstrap.sh",
+  "scripts/agents/bootstrap-glm.sh",
+  "documentation/product/README.md",
+  "documentation/product/LAUNCH_CONSTITUTION.md",
+  "documentation/product/LAUNCH_SCOPE_AND_ENTITLEMENTS.md",
+  "documentation/product/FOUNDER_DECISIONS.md",
+  "documentation/experience/README.md",
+  "documentation/experience/EXPERIENCE_FRONTEND_CONSTITUTION.md",
+  "documentation/experience/FUNCTIONAL_CAPABILITY_ATLAS.md",
+  "documentation/experience/JOURNEY_STATE_ATLAS.md",
+  "documentation/architecture/README.md",
+  "documentation/architecture/ENGINEERING_SPECIFICATION.md",
+  "documentation/architecture/CURRENT_TO_TARGET_ANALYSIS.md",
+  "documentation/architecture/IMPLEMENTATION_ROADMAP.md",
+  "documentation/architecture/CODING_WORKFLOW.md",
+  "documentation/operations/README.md",
+  "documentation/operations/AGENT_PROMPTS.md",
+  "documentation/operations/GLM_CONTINUITY_PROTOCOL.md",
+  "documentation/operations/MAWS_STRUCTURE_AND_WORKFLOW.md",
+  "documentation/operations/PROVEN_CANONICAL_WINDOWS_DESKTOP_WAVE.md",
+  "documentation/operations/WAVE_TEMPLATE.md",
+  "documentation/history/README.md",
+  "documentation/history/LEGACY_SESSION_CHANGELOG.md",
+  "documentation/research/MASTER_GAP_ANALYSIS.md",
+];
+
+for (const relativePath of forbiddenActivePaths) {
+  if (existsSync(resolve(repoRoot, relativePath))) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: "superseded authority or removed workflow remains active",
+    });
   }
+}
+
+if (activeDocumentationFiles.length !== 10) {
+  findings.push({
+    kind: "drift",
+    file: "documentation/",
+    detail: `expected 10 active Markdown files, found ${activeDocumentationFiles.length}`,
+  });
 }
 
 const entrypointChecks: Array<[string, string[]]> = [
   [
     "README.md",
     [
-      "documentation/product/README.md",
-      "documentation/experience/README.md",
-      "documentation/architecture/README.md",
+      "documentation/README.md",
+      "documentation/product/PRODUCT.md",
+      "documentation/system/CURRENT_STATE.md",
       "documentation/operations/WORKING_MEMORY.md",
     ],
   ],
   [
     "AGENTS.md",
     [
+      "documentation/README.md",
       "documentation/operations/WORKING_MEMORY.md",
-      "documentation/operations/GLM_CONTINUITY_PROTOCOL.md",
+      "documentation/operations/WORKFLOW.md",
     ],
   ],
 ];
@@ -198,7 +223,9 @@ for (const [relativePath, markers] of entrypointChecks) {
   }
 }
 
-console.log(`SahelFlow authority audit: ${markdownFiles.length} active Markdown files scanned.`);
+console.log(
+  `SahelFlow authority audit: ${activeDocumentationFiles.length} active documentation files; ${markdownFiles.length} active repository Markdown files scanned.`,
+);
 
 if (findings.length === 0) {
   console.log("PASS: required authorities, shared scripts and relative links are coherent.");

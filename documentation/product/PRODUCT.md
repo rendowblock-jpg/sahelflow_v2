@@ -1,13 +1,16 @@
-# SahelFlow 1.0 Launch Constitution
+# SahelFlow 1.0 — Product Contract
 
-> **Status:** Founder-approved product baseline  
-> **Date:** 2026-07-15  
-> **Public release:** SahelFlow 1.0 / app version 1.0.0  
+> **Status:** Founder-approved product baseline
+> **Last consolidated:** 2026-07-24
+> **Public release:** SahelFlow 1.0 / app version 1.0.0
 > **Commercial edition:** One complete edition
 
 ## 1. Product identity
 
-SahelFlow is the AI-powered operating system for Algerian cash-on-delivery sellers.
+SahelFlow is the complete Windows-first operations system for Algerian
+cash-on-delivery sellers. Public copy may describe it as an all-in-one COD
+operations app; it must not imply generic ERP scope or claim capabilities that
+have not passed their release evidence.
 
 It is:
 
@@ -20,6 +23,19 @@ It is:
 - rigorous about money, stock, customer data, authorization, recovery, and auditability.
 
 SahelFlow is not a generic CRM, a website-builder template pack, a cloud database with a desktop shell, or an MVP released under premium marketing language.
+
+### Scope classes
+
+- **Required** — part of the Founder-approved SahelFlow 1.0 Stable promise.
+- **Conditional** — named capability that remains hidden, experimental or
+  narrowly described until certification.
+- **Depth requirement** — behavior and states required to make a Required
+  capability professionally complete.
+- **Candidate** — useful idea or recovered capability that is not yet a launch
+  promise.
+- **Excluded** — explicitly outside SahelFlow 1.0.
+
+Ambiguous scope defaults to Candidate.
 
 ## 2. Product authority model
 
@@ -249,3 +265,131 @@ Unless separately amended and certified, the first release excludes:
 ## 17. Public truth rule
 
 Every public statement must match verified behavior at a named release and commit. Historical plans, internal versions, prototypes, placeholders, adapter existence, or test counts cannot be converted into product claims without current evidence.
+
+## 18. Stable capability contract
+
+Stable requires complete, integrated behavior for the following systems. The
+capability detail and journey/state requirements are owned by
+[`EXPERIENCE.md`](EXPERIENCE.md).
+
+| System | Required launch outcome |
+|---|---|
+| Installation and onboarding | Signed Windows installer, capability preflight, safe demo, signed trial, shop/recovery setup and guided first operation |
+| Licensing and payment | Seven-day signed trial, complete expiry lockout, professional BaridiMob/CCP review, offline permanent signing, transfer/recovery and entitlement visibility |
+| Multi-shop | Five included isolated shops, safe live switching, slot accounting, restore/replacement rules and paid expansion to ten |
+| Teams | Owner plus ten active members, individual identities, roles, custom permissions, assignments, revocation and trusted audit |
+| Catalog and inventory | Products, variants, stock reservations/movements, adjustments, history, low-stock work and safe import/export |
+| Customers and risk | Search, history, duplicate handling, blacklist/risk factors, protected PII and audit |
+| Orders | Manual, WhatsApp, storefront, commerce and import intake; confirmation, explicit state machines, stock effects, idempotency and history |
+| WhatsApp | Connection, inbox/history, extraction review, sending, delivery states, reconnect/recovery and bounded resource use |
+| AI | Seller-owned Gemini key, privacy-safe policy, typed results, explicit approvals, health/error states and deterministic/manual fallbacks |
+| Delivery and returns | Certified shipment lifecycle, tracking, cancellation, delivery failure, physical return, exchange/refund compensation and audit |
+| COD and accounting | Collected/remitted state, carrier receivables, fees, discrepancies, expenses, corrections, realized economics and export |
+| Analytics | Operational, financial, confirmation, delivery, return and team metrics with bounded indexed aggregation |
+| Automations | Conditions, multi-step actions, dry run, durable outbox, retries, permissions, approvals, receipts and audit |
+| Storefronts | Shared hosted platform, three templates, preview/publish/rollback, delegated allocation and durable COD receipt |
+| PWA/browser companion | Permission-filtered projections, signed commands, queues and honest offline/stale/pending/conflict states |
+| Backup/recovery | Local encrypted bundles, zero-knowledge cloud history, verification, clean-install restore, migration rollback and service-exit portability |
+| Diagnostics and Founder operations | Privacy-safe health/support evidence plus licensing, payment, transfer, incident, usage and release administration |
+| Updates and migrations | Exact-source signed channels, verified pre-migration backup, compatibility refusal, rollback/forward-fix and recovery |
+
+## 19. Certified data profiles
+
+The launch performance guarantee is validated per active shop.
+
+### Low-end profile
+
+- 50,000 orders and 250,000 order items;
+- 50,000 customers;
+- 5,000 products and 25,000 variants;
+- 50,000 conversations and 250,000 messages;
+- approximately 2 GB active SQLite database excluding external media.
+
+### Recommended-hardware high-volume profile
+
+- 100,000 orders and 500,000 order items;
+- 75,000 customers;
+- 10,000 products and 50,000 variants;
+- 100,000 conversations and 1,000,000 messages;
+- 2,000,000 audit/history/outbox records;
+- approximately 5 GB active SQLite database excluding external media.
+
+Larger datasets remain owned and accessible but are outside the first-release
+performance guarantee until separately certified.
+
+## 20. Cloud fair-use validation envelope
+
+Before connected entitlements become final or public, the shared architecture
+and continuity reserve must be validated at 10, 100, 1,000 and 10,000 seller
+workspaces. At minimum, tests model the existing per-permanent-license monthly
+envelope:
+
+- 250,000 remote commands;
+- 100,000 operational notifications;
+- 250,000 storefront sessions across all stores;
+- 25,000 durable COD submissions;
+- associated provider, reconciliation, release, domain, media and backup work.
+
+Crossing a published boundary triggers capacity/abuse review, not silent local
+lockout, destructive retention changes or a hidden recurring charge.
+
+## 21. Measurable launch targets
+
+### Low-end desktop
+
+On the 4 GB dual-core floor device with representative data:
+
+- cold usable shell no slower than 15 seconds p95 on entry SSD and 25 seconds
+  on HDD;
+- ordinary navigation acknowledges input within 100 ms and becomes usable
+  within 1.5 seconds p95;
+- indexed order/customer search within 750 ms p95;
+- ordinary local mutation within 1 second p95, excluding provider latency;
+- no ordinary interaction freeze longer than 200 ms;
+- steady working-set target no greater than 750 MB with WhatsApp connected and
+  no heavy job;
+- no sustained memory growth over an eight-hour session.
+
+On the Founder ThinkPad T470 class:
+
+- cold launch within 8 seconds p95;
+- ordinary navigation within 700 ms p95;
+- indexed search within 350 ms p95;
+- ordinary local mutation within 500 ms p95.
+
+The accepted Internal.5 reopen is functionally proven but slower than desired;
+it creates performance work and does not waive these Stable targets.
+
+### Hosted storefront
+
+- mobile LCP p75 no greater than 1.8 seconds;
+- mobile INP p75 no greater than 150 ms;
+- CLS p75 no greater than 0.05;
+- checkout API p95 no greater than 500 ms under approved regional tests;
+- availability objective at least 99.95%;
+- accepted checkout without durable receipt: zero;
+- duplicate canonical effect under retry: zero;
+- cross-tenant leakage: zero;
+- displayed/canonical price mismatch: zero;
+- WCAG 2.2 AA on launch-critical journeys.
+
+These are target evidence requirements, never claims about the current
+implementation.
+
+## 22. Conditional capabilities
+
+The following remain hidden, experimental or narrowly described until their
+named certification gate passes:
+
+- each individual courier provider and exact action;
+- Shopify, WooCommerce and YouCan event/update behavior;
+- YouCan order-update/cancellation hooks;
+- universal apex/root custom domains;
+- Tiny11/modified-Windows security equivalence (functional compatibility
+  remains capability-based);
+- ARM64 Windows and Wine/Linux builds;
+- sensitive-data Gemini mode using a seller-owned paid project;
+- automated remote wipe where platform capabilities are insufficient;
+- any AI model replacing the currently certified default.
+
+Conditional evidence does not silently expand Founder-approved scope.
