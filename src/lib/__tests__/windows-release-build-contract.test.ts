@@ -145,7 +145,9 @@ describe("Windows signed release build contract", () => {
 
   it("pins an official Node.js production runtime and retires packaged Bun", () => {
     const prepareRuntime = read("scripts/prepare-runtime.ts");
+    const sidecarBuild = read("scripts/build-sidecar.ts");
     const desktop = read("src-tauri/src/lib.rs");
+    const release = read(".github/workflows/release.yml");
 
     expect(prepareRuntime).toContain('const NODE_VERSION = "22.23.1"');
     expect(prepareRuntime).toContain(
@@ -157,6 +159,19 @@ describe("Windows signed release build contract", () => {
     expect(prepareRuntime).toContain('licenseFile: "NODE-LICENSE.txt"');
     expect(prepareRuntime).toContain(
       'rmSync(resolve(runtimeDir, "bun.exe"), { force: true })',
+    );
+    expect(prepareRuntime).toContain(
+      'role: "build-only-sidecar-compiler"',
+    );
+    expect(prepareRuntime).toContain("packaged: false");
+    expect(prepareRuntime).toContain(
+      'const BUN_COMPILER_EXECUTABLE_SHA256 = "9005d0d585d80425e9b715690de3e614651124c94458ef3d3a302ca1a6d3d813"',
+    );
+    expect(sidecarBuild).toContain(".sf-build");
+    expect(sidecarBuild).toContain("--compile-executable-path");
+    expect(sidecarBuild).not.toContain('"resources"');
+    expect(release).toContain(
+      ".sf-build/tools/bun-compiler-manifest.json",
     );
     expect(desktop).toContain("fn bundled_node");
     expect(desktop).toContain('"node.exe"');

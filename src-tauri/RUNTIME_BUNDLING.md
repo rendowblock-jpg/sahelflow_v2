@@ -11,6 +11,11 @@ Windows x64**, the production runtime officially supported by Next.js. Bun
 1.3.14 remains the frozen package manager, build tool and WhatsApp sidecar
 compiler, but it is not the installed Next.js process.
 
+The checksum-pinned Bun baseline executable used to compile the sidecar is
+staged only under ignored `.sf-build/tools`, passed explicitly through Bun's
+`--compile-executable-path`, and retained as build provenance. It is outside
+Tauri resources and never enters the installed application.
+
 The MSI bundles Node.js and the Prisma `libquery_engine` through
 `tauri.conf.json` -> `bundle.resources` -> `resources/runtime/**/*`.
 `prepare-runtime.ts` downloads the official Node.js release archive, verifies

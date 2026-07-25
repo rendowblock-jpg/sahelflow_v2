@@ -23,11 +23,23 @@ const NODE_URL = `https://nodejs.org/download/release/${NODE_RELEASE}/${NODE_ASS
 const NODE_CHECKSUM_URL = `https://nodejs.org/download/release/${NODE_RELEASE}/SHASUMS256.txt`;
 const NODE_ARCHIVE_SHA256 = "7df0bc9375723f4a86b3aa1b7cc73342423d9677a8df4538aca31a049e309c29";
 const NODE_EXECUTABLE_SHA256 = "f8d162c0641dcee512132f3bcf8a68169c7ecb852efd8e1a46c9fec5a0f469ed";
+const BUN_COMPILER_VERSION = "1.3.14";
+const BUN_COMPILER_RELEASE = `bun-v${BUN_COMPILER_VERSION}`;
+const BUN_COMPILER_ASSET = "bun-windows-x64-baseline.zip";
+const BUN_COMPILER_URL = `https://github.com/oven-sh/bun/releases/download/${BUN_COMPILER_RELEASE}/${BUN_COMPILER_ASSET}`;
+const BUN_COMPILER_CHECKSUM_URL = `https://github.com/oven-sh/bun/releases/download/${BUN_COMPILER_RELEASE}/SHASUMS256.txt`;
+const BUN_COMPILER_ARCHIVE_SHA256 = "538f9c846355d9e847b2671bc00c47da4229a0befb24df3282b739770f3b475f";
+const BUN_COMPILER_EXECUTABLE_SHA256 = "9005d0d585d80425e9b715690de3e614651124c94458ef3d3a302ca1a6d3d813";
 
 const root = resolve(fileURLToPath(import.meta.url), "..", "..");
 const runtimeDir = resolve(root, "src-tauri", "resources", "runtime");
 const nodeTarget = resolve(runtimeDir, "node.exe");
 const nodeLicenseTarget = resolve(runtimeDir, "NODE-LICENSE.txt");
+const buildToolsDir = resolve(root, ".sf-build", "tools");
+const bunCompilerTarget = resolve(
+  buildToolsDir,
+  "bun-windows-x64-baseline.exe",
+);
 const engineSource = resolve(
   root,
   "node_modules",
@@ -103,11 +115,73 @@ try {
     );
   }
 
+  const bunArchivePath = resolve(tempDir, BUN_COMPILER_ASSET);
+  const bunExtractDir = resolve(tempDir, "bun-compiler");
+  const bunResponse = await fetch(BUN_COMPILER_URL, { redirect: "follow" });
+  if (!bunResponse.ok) {
+    throw new Error(
+      `Bun compiler download failed with HTTP ${bunResponse.status}`,
+    );
+  }
+  writeFileSync(
+    bunArchivePath,
+    Buffer.from(await bunResponse.arrayBuffer()),
+  );
+  const bunArchiveSha256 = sha256(bunArchivePath);
+  if (bunArchiveSha256 !== BUN_COMPILER_ARCHIVE_SHA256) {
+    throw new Error(
+      `Bun compiler archive checksum mismatch: expected ${BUN_COMPILER_ARCHIVE_SHA256}, found ${bunArchiveSha256}`,
+    );
+  }
+
+  mkdirSync(bunExtractDir);
+  const bunExtraction = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "Expand-Archive -LiteralPath $env:SF_BUN_COMPILER_ARCHIVE -DestinationPath $env:SF_BUN_COMPILER_EXTRACT -Force",
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        SF_BUN_COMPILER_ARCHIVE: bunArchivePath,
+        SF_BUN_COMPILER_EXTRACT: bunExtractDir,
+      },
+    },
+  );
+  if (bunExtraction.status !== 0) {
+    throw new Error(
+      bunExtraction.stderr || "Failed to extract the pinned Bun compiler",
+    );
+  }
+
+  const bunCompilerSource = resolve(
+    bunExtractDir,
+    BUN_COMPILER_ASSET.replace(/\.zip$/, ""),
+    "bun.exe",
+  );
+  if (!existsSync(bunCompilerSource)) {
+    throw new Error(
+      `Pinned Bun compiler executable is missing at ${bunCompilerSource}`,
+    );
+  }
+  const bunCompilerSha256 = sha256(bunCompilerSource);
+  if (bunCompilerSha256 !== BUN_COMPILER_EXECUTABLE_SHA256) {
+    throw new Error(
+      `Bun compiler executable checksum mismatch: expected ${BUN_COMPILER_EXECUTABLE_SHA256}, found ${bunCompilerSha256}`,
+    );
+  }
+
   mkdirSync(runtimeDir, { recursive: true });
+  mkdirSync(buildToolsDir, { recursive: true });
   rmSync(resolve(runtimeDir, "bun.exe"), { force: true });
   copyFileSync(nodeSource, nodeTarget);
   copyFileSync(nodeLicenseSource, nodeLicenseTarget);
   copyFileSync(engineSource, engineTarget);
+  copyFileSync(bunCompilerSource, bunCompilerTarget);
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }
@@ -141,7 +215,35 @@ writeFileSync(
   `${JSON.stringify(manifest, null, 2)}\n`,
   "utf8",
 );
+const bunCompilerManifest = {
+  formatVersion: 1,
+  role: "build-only-sidecar-compiler",
+  packaged: false,
+  bun: {
+    version: BUN_COMPILER_VERSION,
+    variant: "baseline",
+    compileTarget: "bun-windows-x64-baseline",
+    file: "bun-windows-x64-baseline.exe",
+    sha256: sha256(bunCompilerTarget),
+    provenance: {
+      repository: "oven-sh/bun",
+      release: BUN_COMPILER_RELEASE,
+      asset: BUN_COMPILER_ASSET,
+      url: BUN_COMPILER_URL,
+      archiveSha256: BUN_COMPILER_ARCHIVE_SHA256,
+      checksumUrl: BUN_COMPILER_CHECKSUM_URL,
+    },
+  },
+};
+writeFileSync(
+  resolve(buildToolsDir, "bun-compiler-manifest.json"),
+  `${JSON.stringify(bunCompilerManifest, null, 2)}\n`,
+  "utf8",
+);
 
 console.log(`Prepared pinned Windows runtime in ${runtimeDir}`);
 console.log(`Node.js ${manifest.node.version}: ${manifest.node.sha256}`);
 console.log(`Prisma engine: ${manifest.prismaQueryEngine.sha256}`);
+console.log(
+  `Build-only Bun compiler ${bunCompilerManifest.bun.version}: ${bunCompilerManifest.bun.sha256}`,
+);

@@ -17,6 +17,12 @@ import { resolve } from "path";
 const ROOT = process.cwd();
 const SIDECAR_SRC = resolve(ROOT, "sidecars/whatsapp/index.ts");
 const SIDECAR_DIR = resolve(ROOT, "src-tauri", "binaries");
+const PINNED_BUN_COMPILER = resolve(
+  ROOT,
+  ".sf-build",
+  "tools",
+  "bun-windows-x64-baseline.exe",
+);
 
 // ── 1. Detect the target triple ──────────────────────────────────────────────
 // Tauri names externalBin as <name>-<target-triple>[.exe]
@@ -45,6 +51,9 @@ const sidecarName = `sahelflow-whatsapp-${triple}${isWindows ? ".exe" : ""}`;
 const sidecarOut = resolve(SIDECAR_DIR, sidecarName);
 const compileTarget = isWindows && triple === "x86_64-pc-windows-msvc"
   ? "--target=bun-windows-x64-baseline "
+  : "";
+const compileExecutable = compileTarget
+  ? `--compile-executable-path="${PINNED_BUN_COMPILER}" `
   : "";
 
 // ── 2. Check if the source exists ────────────────────────────────────────────
@@ -101,11 +110,17 @@ if (skipBuild) {
   console.log(`✅ Sidecar binary up-to-date (cached) → src-tauri/binaries/${sidecarName}`);
   console.log("   (skipped 70s rebuild — source unchanged. Run with SF_FORCE_SIDECAR=1 to force.)");
 } else {
+  if (compileTarget && !existsSync(PINNED_BUN_COMPILER)) {
+    throw new Error(
+      `Pinned build-only Bun compiler is missing at ${PINNED_BUN_COMPILER}; run bun run scripts/prepare-runtime.ts first`,
+    );
+  }
   console.log(`── Compiling WhatsApp sidecar → ${sidecarName} ──`);
   try {
     execSync(
       "bun build --compile " +
       compileTarget +
+      compileExecutable +
       "--conditions=module-sync " +
       "--external jimp --external link-preview-js --external sharp " +
       "--external qrcode-terminal --external pino-pretty " +

@@ -378,6 +378,7 @@ jobs:
             src-tauri/resources/runtime/runtime-manifest.json
             src-tauri/resources/standalone/sahelflow-standalone-manifest.json
             .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+            .sf-build/tools/bun-compiler-manifest.json
             scripts/install-founder-windows.ps1
             scripts/verify-installed-windows-ui.ps1
             ${{ runner.temp }}/sahelflow-installed-e2e/**
