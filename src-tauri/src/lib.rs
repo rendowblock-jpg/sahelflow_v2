@@ -692,18 +692,16 @@ fn spawn_runtime_generation(
 fn prepare_runtime(app: &tauri::AppHandle) -> Result<PreparedRuntime, Box<dyn std::error::Error>> {
     use tauri::Manager;
 
-    let app_local_data_dir = app.path().app_local_data_dir()?;
     let resource_dir = app.path().resource_dir()?;
     let packaged_standalone = resource_dir.join("standalone");
-    let server_js = packaged_runtime::stage_standalone(
+    let server_js = packaged_runtime::resolve_installed_standalone(
         &packaged_standalone,
-        &app_local_data_dir,
         env!("CARGO_PKG_VERSION"),
     )
     .map_err(|error| {
         IoError::new(
             ErrorKind::InvalidData,
-            format!("failed to stage the verified standalone runtime: {error}"),
+            format!("failed to resolve the installed standalone runtime: {error}"),
         )
     })?;
     let runtime_path = bundled_bun(&resource_dir).ok_or_else(|| {

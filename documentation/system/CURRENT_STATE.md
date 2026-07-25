@@ -1,14 +1,15 @@
 # SahelFlow — Current State
 
 > **Authority:** merged protected `main` only
-> **Executable source baseline:** `d1fb321ea213b0bfbb10042144c4c9b8019254eb`
-> **Source version:** `1.0.0-internal.5` / MSI `1.0.0.5`
-> **Latest signed candidate:** `1.0.0-internal.5`, run `30055297869`
+> **Executable source baseline:** `772d09c3b2ada4668f8c872bfd469cabb839d82a`
+> **Source version:** `1.0.0-internal.6` / MSI `1.0.0.6`
+> **Latest signed candidate:** `1.0.0-internal.6`, run `30136644587`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
-> **Current installed status:** startup reliability regressed on 2026-07-24;
-> recovery is required before product-foundation work resumes
+> **Current installed status:** Internal.6 is installed and responsive during
+> startup but not accepted; runtime preparation took about 14 minutes on the
+> Founder SSD
 > **Observed machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-24
+> **Last assessed:** 2026-07-25
 
 This document describes what integrated source and named evidence prove now. It
 does not convert target architecture, adapter presence, test count, mock output
@@ -17,16 +18,18 @@ or planned scope into a readiness claim. Unmerged work belongs in
 
 ## Executive truth
 
-SahelFlow is a broad internal Windows application with a previously proven
-installed runtime chain and a later observed startup regression. It is not an
-empty prototype, but it is not yet a commercially complete or AAA SahelFlow
-1.0 product.
+SahelFlow is a broad internal Windows application with a proven Internal.5
+installed runtime chain and a signed-release-complete but unaccepted Internal.6
+startup correction. It is not an empty prototype, but it is not yet a
+commercially complete or AAA SahelFlow 1.0 product.
 
 The protected-main → signed MSI → installed Founder-machine chain remains
-strong historical evidence for the accepted run, but it no longer proves
-reliable current startup on the T470. The source contains substantial catalog,
-customer, order, delivery, return/refund, COD, accounting, risk, automation,
-WhatsApp, AI, integration, storefront, multilingual UI and test work.
+strong historical evidence for Internal.5. Internal.6 proved a responsive safe
+startup surface and passed automated installed runtime/UI gates, but its
+interactive runtime preparation still took about 14 minutes on the Founder
+SSD. The source contains substantial catalog, customer, order, delivery,
+return/refund, COD, accounting, risk, automation, WhatsApp, AI, integration,
+storefront, multilingual UI and test work.
 
 The main remaining discontinuity is product coherence and authority:
 
@@ -46,9 +49,9 @@ The main remaining discontinuity is product coherence and authority:
 
 The correct characterization is:
 
-> **Previously accepted Windows internal baseline with a current startup gate;
-> broad partial desktop product; commercial and connected platform still
-> largely ahead.**
+> **Accepted Internal.5 baseline plus installed-but-unaccepted Internal.6;
+> current runtime-performance gate; broad partial desktop product; commercial
+> and connected platform still largely ahead.**
 
 ## Evidence ledger
 
@@ -65,11 +68,17 @@ The correct characterization is:
 | Founder UI | Installed Internal.5 | Real authenticated hydrated setup/login/workspace UI visible and responsive |
 | Founder lifecycle | Installed Internal.5 | Normal close and successful reopen passed |
 | Post-acceptance startup incident | Installed Internal.5 on 2026-07-24 | Multi-minute hidden launch, brief dashboard, then `SF-RUNTIME-UI-BLOCKED`; AppData preserved and cause not yet proven |
+| Responsive startup correction | PR #156, merge `772d09c3b2ada4668f8c872bfd469cabb839d82a` | Safe startup runs off the event loop; bounded authenticated UI diagnostics integrated |
+| Signed Internal.6 build | Actions run `30136644587` | Signature, signed installed runtime/UI, deterministic-source and candidate-evidence gates passed |
+| Founder Internal.6 install | Internal.5 to Internal.6 in-place upgrade | Exact release MSI installed as display version `1.0.0.6`; AppData was not deleted |
+| Founder Internal.6 startup | Installed Internal.6 on 2026-07-25, SSD | Safe window responsive; runtime prepare began about 02:36:20 and staging about 02:50:18; authenticated UI missed the installer bound; not accepted |
 
-The earlier accepted reopen proves that exact historical attempt only. The
-later `SF-RUNTIME-UI-BLOCKED` incident invalidates any claim that Internal.5 is
-a reliably usable current startup baseline. Startup correctness and performance
-are now blocking recovery work, not deferred performance debt.
+The earlier accepted reopen proves that exact historical attempt only.
+Internal.6 corrected UI responsiveness and diagnostic visibility, then exposed
+the remaining dominant mechanism: the desktop recursively hashes/copies a
+3,985-file runtime before service startup and still fully hashes an existing
+cache on every launch. The SSD evidence rules out disk class as an adequate
+explanation. Startup performance is blocking recovery work, not deferred debt.
 
 ## Repository shape
 
@@ -126,9 +135,9 @@ separate evidence result.
 | CAP-027 | Localization/RTL | **Partial/unverified** | i18n hooks, locale-aware UI and RTL foundations | Complete copy/state parity and systematic AR/FR/EN/RTL evidence |
 | CAP-028 | Accessibility/keyboard | **Partial/unverified** | Radix primitives, shortcuts, focus-related components | Whole-journey WCAG, zoom, screen-reader and keyboard evidence |
 | CAP-029 | AAA design system/page depth | **Partial** | Strong shared UI primitives and broad pages | One coherent system and complete loading/empty/error/degraded/recovery states |
-| CAP-030 | Low-end performance | **Unverified; known debt** | Some query/index/runtime optimization | T470/4 GB/HDD datasets, budgets, traces and eight-hour stability |
+| CAP-030 | Low-end performance | **Unverified; blocking startup defect** | Internal.6 trace proves about 14 minutes of runtime preparation on the Founder T470 SSD | Internal.7 startup acceptance, representative datasets, budgets and eight-hour stability |
 | CAP-031 | Security/privacy/legal | **Partial/unverified** | Crypto, PIN, secrets, loopback auth and redaction pieces | Full threat models, key recovery, tenant boundaries, Law 18-07 and review |
-| CAP-032 | Release/operational evidence | **Proven for Internal.5 baseline** | Exact-source signing, runtime/UI gates and Founder acceptance | Generalize the same discipline to every app-changing work package |
+| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.6 release-complete** | Exact-source signing, runtime/UI gates, distinct release/Founder acceptance records | Complete Internal.7 Founder acceptance and retain the discipline for every app-changing package |
 
 ## Provider status
 
@@ -150,7 +159,7 @@ alone.
 | Google Sheets | Service-account export/batching | Architecture candidate | Founder scope, field/privacy/idempotency/quota/live proof |
 | Cloudflare | Target control/relay/backup/storefront architecture | Planned | Phase 6 implementation, tenant/security/recovery and economics evidence |
 | Sentry | Environment-gated diagnostics/redaction hooks | Optional internal candidate | Consent, minimization, retention, canary/outage/deletion proof |
-| GitHub Releases/Tauri updater | Signed internal workflow and installed proof | Proven for Internal.5 | Repeatable continuous Internal delivery; Beta/Stable promotion remains separate |
+| GitHub Releases/Tauri updater | Signed internal workflow and installed proof | Internal.5 accepted; Internal.6 signed and installed but not accepted | Internal.7 performance acceptance; Beta/Stable promotion remains separate |
 
 ## Current implementation map
 
@@ -213,15 +222,17 @@ connected planes without replacing the canonical desktop.
 
 ## Immediate next boundary
 
-Internal.5 previously closed one runtime acceptance loop, but the later
-Founder-machine incident reopened it. The immediate implementation boundary is:
+Internal.6 fixed the hidden/unresponsive preparation surface but did not close
+the acceptance loop because recursive runtime verification remained far beyond
+an interactive startup budget. The immediate implementation boundary is:
 
-> Restore reliable authenticated startup on the Founder T470 without deleting
-> AppData, weakening fail-closed runtime/shop authority or loading a fallback
-> workspace.
+> Launch from the release-verified, MSI-protected installed runtime promptly on
+> the Founder T470 without deleting AppData, weakening fail-closed runtime/shop
+> authority or loading a fallback workspace.
 
-The startup package must retain bounded redacted attempt evidence, pass exact
-source checks and Windows packaging in GitHub Actions, ship as a new signed
-Internal update, and pass preserved-AppData launch plus close/reopen acceptance
-on the T470. Only then may the workspace/shop and business-integrity boundary
-resume. The exact sequence and exit gates are in [`ROADMAP.md`](ROADMAP.md).
+Internal.7 must retain bounded redacted attempt evidence, pass exact-source
+checks and installed Windows packaging in GitHub Actions, prove no new
+user-writable runtime copy is created, ship as a new signed Internal update,
+and pass preserved-AppData launch plus close/reopen acceptance on the T470.
+Only then may the workspace/shop and business-integrity boundary resume. The
+exact sequence and exit gates are in [`ROADMAP.md`](ROADMAP.md).

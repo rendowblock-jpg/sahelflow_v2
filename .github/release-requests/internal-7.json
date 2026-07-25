@@ -1,0 +1,26 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "version": "1.0.0-internal.7",
+  "windowsMsiVersion": "1.0.0.7",
+  "versionAuthorityCommit": "772d09c3b2ada4668f8c872bfd469cabb839d82a",
+  "candidateBaseCommit": "772d09c3b2ada4668f8c872bfd469cabb839d82a",
+  "requestRevision": 1,
+  "requestReason": "remove the multi-minute startup copy and full-tree hash by launching the release-verified standalone runtime directly from its signed MSI-protected Program Files installation",
+  "signedSourcePolicy": "protected-main-merge-commit-containing-this-request-and-installed-runtime-performance-work",
+  "publication": "draft-only",
+  "installation": "upgrade-over-internal.6-preserve-appdata",
+  "requiredEvidence": [
+    "exact protected-main request merge source",
+    "updater signature and latest.json exact-asset binding",
+    "signed MSI in-place update over installed Internal.6",
+    "Roaming and Local AppData plus active shop database preservation",
+    "protected Program Files standalone manifest and server exact candidate binding",
+    "no AppData runtime cache or staging entry on either clean-runner launch",
+    "prompt safe startup visibility and bounded runtime preparation trace",
+    "authenticated hydrated workspace readiness without fallback shop",
+    "normal close, complete child teardown, and successful reopen",
+    "Founder T470 visible dashboard acceptance"
+  ],
+  "nextUpdaterDrill": "1.0.0-internal.7-to-next-approved-internal"
+}

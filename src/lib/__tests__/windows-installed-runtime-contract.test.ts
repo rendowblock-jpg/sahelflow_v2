@@ -7,7 +7,7 @@ const read = (path: string) =>
   readFileSync(resolve(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 describe("installed Windows runtime contract", () => {
-  it("hard-disables Next telemetry before hashing the packaged standalone tree", () => {
+  it("hard-disables Next telemetry before sealing the packaged standalone tree", () => {
     const build = read("src-tauri/build-frontend.ts");
     const bootstrap = build.indexOf("SahelFlow desktop runtime bootstrap");
     const disableTelemetry = build.indexOf(
@@ -102,8 +102,18 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).toContain("$workspaceWindows.Count -ne 1");
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
+    expect(uiHarness).toContain("$maxRuntimePrepareMilliseconds = 15000");
+    expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");
-    expect(harness).toContain("Second launch did not reuse the verified runtime cache");
+    expect(harness).toContain("$installedRuntimeRoot");
+    expect(harness).toContain(
+      "appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count",
+    );
+    expect(harness).toContain(
+      "Second launch changed the protected installed runtime or staged an AppData copy",
+    );
+    expect(desktop).toContain("resolve_installed_standalone");
+    expect(desktop).not.toContain("stage_standalone");
     expect(desktop).toContain(".run(|_app_handle, _event| {");
     expect(desktop).toContain("_app_handle.cleanup_before_exit();");
     expect(desktop).toContain("std::process::exit(0);");
