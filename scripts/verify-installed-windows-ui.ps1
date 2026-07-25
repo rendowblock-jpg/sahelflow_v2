@@ -19,6 +19,8 @@ $startupTracePath = Join-Path $roamingRoot "startup-trace.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
 $exe = "C:\Program Files\SahelFlow\sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
+$safeStartupWindowTitle = "SahelFlow - Safe startup"
+$workspaceWindowTitle = "SahelFlow"
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -51,6 +53,7 @@ if (-not ("SahelFlowUiWindow" -as [type])) {
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 public static class SahelFlowUiWindow
 {
@@ -64,6 +67,12 @@ public static class SahelFlowUiWindow
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool IsWindowVisible(IntPtr window);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetWindowTextLength(IntPtr window);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetWindowText(IntPtr window, StringBuilder text, int maximumCount);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
@@ -82,6 +91,15 @@ public static class SahelFlowUiWindow
             return true;
         }, IntPtr.Zero);
         return windows.ToArray();
+    }
+
+    public static string GetWindowTitle(long handle)
+    {
+        var window = new IntPtr(handle);
+        var length = GetWindowTextLength(window);
+        var text = new StringBuilder(length + 1);
+        GetWindowText(window, text, text.Capacity);
+        return text.ToString();
     }
 
     public static bool RequestClose(long handle)
@@ -130,15 +148,26 @@ function Wait-ForPromptVisibleWindow {
             throw "${Phase}: SahelFlow exited before presenting a prompt startup window."
         }
         $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
-        if ($handles.Count -gt 0 -and $Process.Responding) {
+        $safeStartupWindows = @(
+            foreach ($handle in $handles) {
+                $title = [SahelFlowUiWindow]::GetWindowTitle([int64]$handle)
+                if ($title -ceq $safeStartupWindowTitle) {
+                    [pscustomobject]@{
+                        handle = [int64]$handle
+                        title = $title
+                    }
+                }
+            }
+        )
+        if ($safeStartupWindows.Count -gt 0 -and $Process.Responding) {
             return [pscustomobject]@{
-                outcome = "prompt-responsive-window"
+                outcome = "prompt-responsive-safe-startup-window"
                 elapsedMilliseconds = [int64]((Get-Date) - $Process.StartTime).TotalMilliseconds
-                visibleWindowHandles = @($handles)
+                safeStartupWindows = @($safeStartupWindows)
             }
         }
     }
-    throw "${Phase}: SahelFlow did not present a responsive visible window within 15 seconds."
+    throw "${Phase}: SahelFlow did not present its marked responsive safe startup window within 15 seconds."
 }
 
 function Wait-ForAuthenticatedUi {
@@ -203,7 +232,21 @@ function Wait-ForAuthenticatedUi {
 
         $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
         $Process.Refresh()
-        if ($handles.Count -eq 0 -or -not $Process.Responding) {
+        $visibleWindows = @(
+            foreach ($handle in $handles) {
+                [pscustomobject]@{
+                    handle = [int64]$handle
+                    title = [SahelFlowUiWindow]::GetWindowTitle([int64]$handle)
+                }
+            }
+        )
+        $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
+        $safeStartupWindows = @($visibleWindows | Where-Object { $_.title -ceq $safeStartupWindowTitle })
+        if (
+            $workspaceWindows.Count -ne 1 -or
+            $safeStartupWindows.Count -ne 0 -or
+            -not $Process.Responding
+        ) {
             continue
         }
 
@@ -212,7 +255,8 @@ function Wait-ForAuthenticatedUi {
             outcome = "authenticated-ui-ready"
             processId = $Process.Id
             responding = $Process.Responding
-            visibleWindowHandles = @($handles)
+            visibleWindowHandles = @($workspaceWindows | ForEach-Object { $_.handle })
+            visibleWindows = @($visibleWindows)
             endpoint = $endpoint
             uiReady = $uiReady
             processTree = Get-SahelFlowProcesses

@@ -201,6 +201,18 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             use tauri::Manager;
             if let Some(window) = app.get_webview_window("main") {
+                if window.is_visible().unwrap_or(false) {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    return;
+                }
+            }
+            if let Some(window) = app.get_webview_window("startup") {
+                let _ = window.show();
+                let _ = window.set_focus();
+                return;
+            }
+            if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
             }
@@ -341,15 +353,15 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
-                let main_window_close = matches!(
+                let app_window_close = matches!(
                     &_event,
                     tauri::RunEvent::WindowEvent {
                         label,
                         event: tauri::WindowEvent::CloseRequested { .. },
                         ..
-                    } if label == "main"
+                    } if label == "main" || label == "startup"
                 );
-                let shutdown = main_window_close
+                let shutdown = app_window_close
                     || matches!(
                         _event,
                         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
@@ -366,7 +378,7 @@ pub fn run() {
                         runtime_protocol::remove_manifest(&app_data_dir);
                     }
                 }
-                if main_window_close {
+                if app_window_close {
                     // AppHandle::exit requests another event-loop transition. A
                     // native close request is already executing on that loop, so
                     // finish Tauri cleanup synchronously and exit immediately.

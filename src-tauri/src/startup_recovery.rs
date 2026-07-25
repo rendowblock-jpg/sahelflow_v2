@@ -15,6 +15,11 @@ const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const RUNTIME_UI_DIAGNOSTIC_FILE: &str = "runtime-ui-diagnostic.json";
 const STARTUP_DIAGNOSTIC_FILE: &str = "startup-diagnostic.json";
 const STARTUP_TRACE_FILE: &str = "startup-trace.json";
+const MAIN_WINDOW_LABEL: &str = "main";
+const MAIN_WINDOW_TITLE: &str = "SahelFlow";
+const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
+const STARTUP_WINDOW_LABEL: &str = "startup";
+const STARTUP_WINDOW_TITLE: &str = "SahelFlow - Safe startup";
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -90,12 +95,13 @@ struct PackagedHandoff {
 /// UI acknowledgment matching the current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
-    let window = app.get_webview_window("main").ok_or_else(|| {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "the configured main desktop window was not created",
         )
     })?;
+    window.set_title(MAIN_WINDOW_TITLE)?;
 
     let Some(handoff) = packaged_handoff(&requested_url)? else {
         window.navigate(requested_url)?;
@@ -110,9 +116,10 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
-    // A safe native startup document may already be visible. Keep the real
-    // workspace hidden until the authenticated hydrated-page acknowledgment
-    // matches this exact runtime instance.
+    // Keep a separate safe startup surface visible while the real workspace
+    // navigates and hydrates. This also restores the surface during an
+    // automatic runtime recovery where the main window was showing an error.
+    show_starting(app)?;
     window.hide()?;
     window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
     window.navigate(handoff.workspace_url)?;
@@ -125,16 +132,19 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
 /// runtime preparation and mandatory service readiness continue off the event
 /// loop. It never loads a shop, user session or partial workspace.
 pub fn show_starting(app: &tauri::AppHandle) -> Result<(), Box<dyn Error>> {
-    let window = app.get_webview_window("main").ok_or_else(|| {
-        IoError::new(
-            ErrorKind::NotFound,
-            "the configured main desktop window was not created",
-        )
-    })?;
+    let window = app
+        .get_webview_window(STARTUP_WINDOW_LABEL)
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::NotFound,
+                "the configured safe startup window was not created",
+            )
+        })?;
     let data_url = format!(
         "data:text/html;charset=utf-8,{}",
         urlencoding::encode(&starting_html())
     );
+    window.set_title(STARTUP_WINDOW_TITLE)?;
     window.navigate(tauri::Url::parse(&data_url)?)?;
     window.show()?;
     window.set_focus()?;
@@ -298,6 +308,12 @@ fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_di
                 let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
+                return;
+            }
+            if let Some(startup_window) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
+                if let Err(error) = startup_window.hide() {
+                    eprintln!("[sahelflow] authenticated workspace is visible but the safe startup window could not be hidden: {error}");
+                }
             }
             return;
         }
@@ -492,14 +508,18 @@ pub fn show_blocked(
     );
     let url = tauri::Url::parse(&data_url)?;
 
-    let window = app.get_webview_window("main").ok_or_else(|| {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "the configured main desktop window was not created",
         )
     })?;
     window.navigate(url)?;
+    window.set_title(BLOCKED_WINDOW_TITLE)?;
     window.show()?;
+    if let Some(startup_window) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
+        let _ = startup_window.hide();
+    }
     window.set_focus()?;
     Ok(())
 }
@@ -560,7 +580,7 @@ fn starting_html() -> String {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SahelFlow - Demarrage</title>
+  <title>SahelFlow - Safe startup</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, Segoe UI, system-ui, sans-serif; }
     * { box-sizing: border-box; }
