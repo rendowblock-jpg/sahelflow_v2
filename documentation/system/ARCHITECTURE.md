@@ -718,12 +718,12 @@ bound to the signed MSI, signature, update manifest and retained evidence.
 The packaged standalone runtime executes directly from the MSI installation
 under protected `Program Files`. Clean build and release gates generate and
 verify its complete deterministic tree identity before signing; installed
-Windows gates bind the protected manifest and entrypoint to that exact
-candidate and exercise launch plus reopen. User-writable AppData may retain
-business state, diagnostics and legacy caches, but it is not executable runtime
-authority. Interactive startup validates the installed manifest/version and
-required regular-file entrypoint without recursively copying or hashing the
-complete runtime tree.
+Windows gates independently recompute the complete protected tree, bind its
+manifest and entrypoint to that exact candidate, and exercise launch plus
+reopen. User-writable AppData may retain business state, diagnostics and legacy
+caches, but it is not executable runtime authority. Interactive startup
+validates the installed manifest/version and required regular-file entrypoint
+without recursively copying or hashing the complete runtime tree.
 
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,

@@ -36,9 +36,9 @@ This is an app-changing `1.0.0-internal.7` candidate. It:
   each installed launch;
 - preserves all existing Roaming and Local AppData, including legacy runtime
   caches, without reading them as executable authority;
-- requires the installed Windows gate to bind the protected manifest and
-  `server.js` to the exact candidate, prove no Internal.7 AppData runtime cache
-  is created, and pass authenticated launch/close/reopen twice.
+- requires the installed Windows gate to recompute and bind the complete
+  protected runtime tree to the exact candidate, prove no Internal.7 AppData
+  runtime cache is created, and pass authenticated launch/close/reopen twice.
 
 The package requires GitHub Actions validation, merge to protected `main`, an
 exact-source signed Internal.7 artifact and an in-place Founder update over

@@ -83,6 +83,7 @@ describe("installed Windows runtime contract", () => {
   it("builds and launches the installed executable twice on an ephemeral Windows runner", () => {
     const workflow = read(".github/workflows/windows-installed-e2e.yml");
     const harness = read("scripts/verify-installed-windows-msi.ps1");
+    const treeVerifier = read("scripts/verify-installed-standalone.ts");
     const uiHarness = read("scripts/verify-installed-windows-ui.ps1");
     const desktop = read("src-tauri/src/lib.rs");
 
@@ -91,6 +92,7 @@ describe("installed Windows runtime contract", () => {
     expect(workflow).not.toContain("Persist lifecycle-proven");
     expect(workflow).toContain("bunx tauri build --bundles msi");
     expect(workflow).toContain("verify-installed-windows-msi.ps1");
+    expect(workflow).toContain('      - "scripts/standalone-manifest.ts"');
     expect(workflow).toContain("runtime-probe-diagnostic.json");
     expect(harness).toContain('$env:GITHUB_ACTIONS -cne "true"');
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
@@ -106,6 +108,9 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");
     expect(harness).toContain("$installedRuntimeRoot");
+    expect(harness).toContain("verify-installed-standalone.ts");
+    expect(harness).toContain("completeTreeVerified");
+    expect(treeVerifier).toContain("verifyStandaloneManifest");
     expect(harness).toContain(
       "appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count",
     );

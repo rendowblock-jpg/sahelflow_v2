@@ -10,6 +10,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   STANDALONE_MANIFEST_FILE,
+  verifyStandaloneManifest,
   writeStandaloneManifest,
 } from "../../../scripts/standalone-manifest";
 
@@ -61,5 +62,19 @@ describe("standalone runtime manifest", () => {
     expect(() => writeStandaloneManifest(root, "1.0.0-internal.2")).toThrow(
       "do not contain server.js",
     );
+  });
+
+  it("rejects a nested installed file that differs from the sealed manifest", () => {
+    const root = fixture();
+    writeStandaloneManifest(root, "1.0.0-internal.7");
+    writeFileSync(
+      resolve(root, ".next", "server", "app.js"),
+      "module.exports = 'stale chunk'\n",
+      "utf8",
+    );
+
+    expect(() =>
+      verifyStandaloneManifest(root, "1.0.0-internal.7"),
+    ).toThrow("Standalone tree mismatch");
   });
 });

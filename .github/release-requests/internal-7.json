@@ -15,7 +15,7 @@
     "updater signature and latest.json exact-asset binding",
     "signed MSI in-place update over installed Internal.6",
     "Roaming and Local AppData plus active shop database preservation",
-    "protected Program Files standalone manifest and server exact candidate binding",
+    "protected Program Files complete standalone tree exact candidate binding",
     "no AppData runtime cache or staging entry on either clean-runner launch",
     "prompt safe startup visibility and bounded runtime preparation trace",
     "authenticated hydrated workspace readiness without fallback shop",

@@ -70,9 +70,10 @@ not require a new Internal MSI.
   from interactive startup.
 - Leaves every existing Roaming/Local AppData file and legacy runtime cache
   untouched.
-- Extends the installed Windows gate to bind the protected manifest and
-  `server.js` to the exact built candidate, reject a new Internal.7 AppData
-  runtime cache, and prove authenticated launch/normal-close/reopen twice.
+- Extends the installed Windows gate to recompute and bind the complete
+  protected runtime tree to the exact built candidate, reject a new Internal.7
+  AppData runtime cache, and prove authenticated launch/normal-close/reopen
+  twice.
 
 ## [1.0.0-internal.5] — 2026-07-24
 

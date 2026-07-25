@@ -317,6 +317,25 @@ if (-not (Test-Path -LiteralPath $installedServerPath -PathType Leaf)) {
     throw "Installed standalone server is missing: $installedServerPath"
 }
 
+$treeVerifierPath = Join-Path $repositoryRoot "scripts\verify-installed-standalone.ts"
+$treeVerificationOutput = @(
+    & bun $treeVerifierPath $installedRuntimeRoot $expectedVersion 2>&1
+)
+if ($LASTEXITCODE -ne 0) {
+    throw "Complete installed standalone verification failed: $($treeVerificationOutput -join [Environment]::NewLine)"
+}
+$installedTreeVerification = ($treeVerificationOutput -join [Environment]::NewLine) |
+    ConvertFrom-Json
+if (
+    $installedTreeVerification.verified -ne $true -or
+    $installedTreeVerification.root -ne $installedRuntimeRoot -or
+    $installedTreeVerification.appVersion -ne $expectedVersion -or
+    $installedTreeVerification.treeSha256 -ne $expectedTree -or
+    [int64]$installedTreeVerification.fileCount -ne $expectedFileCount
+) {
+    throw "Complete installed standalone verification did not match the built candidate."
+}
+
 $launches = @()
 $closures = @()
 $installedRuntimeIdentity = $null
@@ -359,6 +378,7 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         appVersion = $manifest.appVersion
         treeSha256 = $manifest.treeSha256
         fileCount = $manifest.fileCount
+        completeTreeVerified = [bool]$installedTreeVerification.verified
         appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count
     }
     if (
@@ -434,6 +454,7 @@ $result = [ordered]@{
     installedDisplayVersion = $installed[0].DisplayVersion
     launches = $launches
     closures = $closures
+    installedTreeVerification = $installedTreeVerification
     installedRuntime = $installedRuntimeIdentity
     registry = $registryIdentity
     database = $databaseIdentity
