@@ -89,8 +89,9 @@ describe("installed Windows runtime contract", () => {
       "scripts/verify-windows-packaged-runtime.ts",
     );
     const desktop = read("src-tauri/src/lib.rs");
+    const containment = read("src-tauri/src/child_containment.rs");
     const expectedNodeBootstrap =
-      "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
+      "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
     expect(workflow).toContain("contents: read");
     expect(workflow).toContain('      - "sahelflow.version.json"');
@@ -126,9 +127,18 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("spawn_in_capturing_stderr");
     expect(desktop).toContain("redact_runtime_stderr");
     expect(desktop).toContain('NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT"');
+    expect(desktop).toContain("node_entrypoint_environment_value");
+    expect(desktop).toContain('raw.strip_prefix(r"\\\\?\\")');
     expect(desktop).toContain('OsString::from("--eval")');
     expect(desktop).toContain(expectedNodeBootstrap);
-    expect(packagedRuntimeHarness).toContain("SF_NODE_ENTRYPOINT: stagedServer");
+    expect(containment).toContain("std::fs::canonicalize(&script)");
+    expect(containment).toContain("crate::node_entrypoint_environment_value");
+    expect(containment).toContain("crate::NODE_ENTRYPOINT_ENV");
+    expect(containment).toContain("crate::NODE_ENTRYPOINT_BOOTSTRAP");
+    expect(packagedRuntimeHarness).toContain("nodeEntrypointPath");
+    expect(packagedRuntimeHarness).toContain(
+      "SF_NODE_ENTRYPOINT: stagedNodeEntrypoint",
+    );
     expect(packagedRuntimeHarness).toContain(expectedNodeBootstrap);
     expect(packagedRuntimeHarness).toContain(
       '[stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP]',

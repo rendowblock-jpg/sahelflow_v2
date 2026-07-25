@@ -735,11 +735,14 @@ non-executable Local AppData directory so runtime libraries never need to write
 under the installation root. The signed desktop invokes Node with a fixed
 embedded bootstrap; the already validated absolute protected entrypoint is
 carried in the explicit sanitized child environment instead of across the raw
-Windows command-line argument boundary. The bootstrap neither copies nor loads
-code from AppData. The containment layer continuously drains stderr into a
-fixed-size in-memory buffer; an early-exit diagnostic is length-bounded and has
-every explicitly injected token or secret redacted before persistence or
-display.
+Windows command-line argument boundary. After regular-file validation, any
+Win32 verbatim disk prefix is removed and the environment carries a
+conventional forward-slash absolute drive path; network, device and
+drive-relative representations fail closed. The bootstrap validates that
+post-transport representation and neither copies nor loads code from AppData.
+The containment layer continuously drains stderr into a fixed-size in-memory
+buffer; an early-exit diagnostic is length-bounded and has every explicitly
+injected token or secret redacted before persistence or display.
 
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,

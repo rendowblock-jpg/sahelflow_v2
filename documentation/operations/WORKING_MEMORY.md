@@ -39,7 +39,7 @@ Branch:
 agent/windows-node-runtime-internal-8
 ```
 
-PR #158 is open. Exact remote head `05fffb0ac0885a8f9d5ef56870b026b744233e7d`
+PR #158 is open. Last executed head `05fffb0ac0885a8f9d5ef56870b026b744233e7d`
 passed complete CI in run `30176167237` and Windows Rust release parity in run
 `30176167229`. The CI Windows job proved the staged packaged runtime through
 Node, Prisma and authenticated readiness with paths containing spaces. Its MSI
@@ -53,10 +53,17 @@ This second result narrows the remaining gap. The command-line bootstrap is no
 longer the failing boundary, and installer content, runtime identity, migration,
 AppData and disk speed remain ruled out. The staged harness uses Bun's spawn
 environment, while the installed desktop uses the custom contained
-`CreateProcessW` environment block. The current Rust contained-Node test still
-passes the script as a direct argument, so it does not exercise the installed
-bootstrap-plus-environment path. No further correction was published in this
-session.
+`CreateProcessW` environment block.
+
+The focused source correction now makes the real Windows contained-Node test
+canonicalize its spaced script into the same Win32 verbatim path shape exposed
+by installed Tauri resources, normalize that already validated local-drive
+path into a conventional forward-slash representation, and launch it through
+the production fixed bootstrap plus `SF_NODE_ENTRYPOINT` custom environment.
+The desktop rejects network, device and drive-relative representations; the
+staged harness and source contract use the same representation, and the
+bootstrap validates the value after process transport. This correction has no
+executable evidence until its exact published PR head passes every named gate.
 
 This is one coherent installed-platform correction. It:
 
@@ -105,6 +112,8 @@ all clean-checkout build/test evidence.
 - [x] Review the initial complete diff, commit and push without local heavy
   runs.
 - [x] Open one coherent PR and let GitHub Actions validate the exact heads.
+- [x] Close the installed bootstrap/environment regression gap in source with
+  fail-closed path normalization and native contained-launcher coverage.
 - [ ] Address all actionable review/CI findings and revalidate the exact head.
 - [ ] Merge, build/sign from exact protected main, and publish only after every
   automated installed runtime/UI gate passes.
@@ -113,20 +122,17 @@ all clean-checkout build/test evidence.
 
 ## Exact next execution order
 
-1. Start from exact remote head
-   `05fffb0ac0885a8f9d5ef56870b026b744233e7d` and run no local build, test or
-   dependency installation.
-2. Close the regression gap first: make the real Windows `ContainedChild` Node
-   test invoke `--eval` with the production fixed bootstrap and receive the
-   spaced script path through `SF_NODE_ENTRYPOINT` in the custom environment.
-3. Normalize the already validated Windows entrypoint into a Node-compatible
-   absolute representation only if that native regression proves the same
-   boundary; forward-slash form is the current focused candidate, not accepted
-   evidence. Mirror the exact representation in the staged harness and source
-   contract.
-4. Update this evidence, commit and publish one focused correction to PR #158,
-   then require clean CI, Windows Rust, MSI install, launch/reopen and
-   authenticated visible UI twice. Do not weaken or bypass any gate.
+1. Preserve the focused source boundary: the real Windows `ContainedChild`
+   test uses `--eval`, the production bootstrap, the custom environment and a
+   canonicalized spaced verbatim path; production and staged launch normalize
+   only an already validated local-drive entrypoint and reject other authority.
+2. Commit and publish this one focused correction to PR #158 without a local
+   build, automated test, dependency installation or MSI attempt.
+3. Bind all following evidence to the new exact PR head and require clean CI,
+   Windows Rust, MSI install, launch/reopen and authenticated visible UI twice.
+   Do not weaken or bypass any gate.
+4. If any gate fails, use the bounded redacted evidence to correct the proven
+   boundary in the same PR; do not stack Phase 1A work or speculate around it.
 5. Resolve every review/CI finding on the exact PR head before merge; a server
    exit without its bounded redacted reason is itself a failing diagnostic
    contract.

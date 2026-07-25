@@ -196,7 +196,50 @@ const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const MAX_RUNTIME_STDERR_CHARACTERS: usize = 4_096;
 const NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT";
-const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
+const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
+
+fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
+    let raw = path.to_str().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidData,
+            "the installed Node entrypoint is not valid Unicode",
+        )
+    })?;
+
+    #[cfg(windows)]
+    {
+        // Tauri may return an MSI resource path in Win32 verbatim form
+        // (`\\?\C:\...`). Node's CommonJS realpath resolver does not accept
+        // that namespace reliably. Keep the already validated protected file,
+        // but transport it as an ordinary absolute drive path with separators
+        // that do not cross another Windows escaping boundary.
+        let conventional = raw.strip_prefix(r"\\?\").unwrap_or(raw);
+        let normalized = conventional.replace('\\', "/");
+        let bytes = normalized.as_bytes();
+        if bytes.len() < 3
+            || !bytes[0].is_ascii_alphabetic()
+            || bytes[1] != b':'
+            || bytes[2] != b'/'
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "the installed Node entrypoint is not an absolute local drive path",
+            ));
+        }
+        return Ok(normalized);
+    }
+
+    #[cfg(not(windows))]
+    {
+        if !path.is_absolute() {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "the installed Node entrypoint is not absolute",
+            ));
+        }
+        Ok(raw.to_owned())
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -613,7 +656,7 @@ fn spawn_runtime_generation(
     let mut env = server_env(app, &runtime_protocol, &authority, &auth)?;
     env.push((
         NODE_ENTRYPOINT_ENV.to_string(),
-        prepared.server_js.to_string_lossy().into_owned(),
+        node_entrypoint_environment_value(&prepared.server_js)?,
     ));
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
     let process_environment = process_environment(&env);
@@ -1442,8 +1485,40 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
 
 #[cfg(test)]
 mod child_environment_tests {
-    use super::{is_windows_safe_parent_environment_key, redact_runtime_stderr};
+    use super::{
+        is_windows_safe_parent_environment_key, node_entrypoint_environment_value,
+        redact_runtime_stderr,
+    };
     use std::ffi::OsStr;
+    use std::path::Path;
+
+    #[cfg(windows)]
+    #[test]
+    fn node_entrypoint_uses_a_conventional_absolute_drive_path() {
+        let normalized = node_entrypoint_environment_value(Path::new(
+            r"\\?\C:\Program Files\SahelFlow\standalone\server.js",
+        ))
+        .expect("normalize installed entrypoint");
+        assert_eq!(
+            normalized,
+            "C:/Program Files/SahelFlow/standalone/server.js"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn node_entrypoint_rejects_non_local_or_drive_relative_paths() {
+        for invalid in [
+            r"\\server\share\server.js",
+            r"\\?\UNC\server\share\server.js",
+            r"C:standalone\server.js",
+            r"standalone\server.js",
+        ] {
+            let error = node_entrypoint_environment_value(Path::new(invalid))
+                .expect_err("reject unsupported Node entrypoint authority");
+            assert!(error.to_string().contains("absolute local drive path"));
+        }
+    }
 
     #[test]
     fn child_environment_allowlist_excludes_ambient_credentials_and_configuration() {

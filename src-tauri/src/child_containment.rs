@@ -875,15 +875,37 @@ http.createServer((_request, response) => {
             )
             .expect("write contained Node.js test server");
 
+            // `canonicalize` returns the same Win32 verbatim disk-path shape
+            // that Tauri can supply for installed resources. Exercise the
+            // production normalization, fixed bootstrap, custom environment
+            // block, spaced path and contained launcher together.
+            let installed_script =
+                std::fs::canonicalize(&script).expect("resolve contained Node.js test entrypoint");
+            assert!(
+                installed_script.to_string_lossy().starts_with(r"\\?\"),
+                "Windows canonicalization did not produce the installed verbatim path shape"
+            );
+            let node_entrypoint = crate::node_entrypoint_environment_value(&installed_script)
+                .expect("normalize contained Node.js entrypoint");
+            assert!(!node_entrypoint.contains('\\'));
+            assert!(!node_entrypoint.starts_with("//?/"));
+
             let mut environment = ["SystemRoot", "WINDIR", "TEMP", "TMP"]
                 .into_iter()
                 .filter_map(|key| std::env::var_os(key).map(|value| (OsString::from(key), value)))
                 .collect::<Vec<_>>();
             environment.push((OsString::from("PORT"), OsString::from(port.to_string())));
+            environment.push((
+                OsString::from(crate::NODE_ENTRYPOINT_ENV),
+                OsString::from(node_entrypoint),
+            ));
 
             let child = ContainedChild::spawn_in_capturing_stderr(
                 &node_path,
-                &[script.as_os_str().to_os_string()],
+                &[
+                    OsString::from("--eval"),
+                    OsString::from(crate::NODE_ENTRYPOINT_BOOTSTRAP),
+                ],
                 &environment,
                 Some(&test_root),
             )

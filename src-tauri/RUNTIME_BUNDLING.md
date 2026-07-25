@@ -63,6 +63,11 @@ PATH or user-writable executable fallback.
 
 The server runs in a kill-on-close Windows job. Its pre-readiness exit is
 observed immediately, so a runtime crash cannot consume the full readiness
-deadline. GitHub's Windows gates verify the pinned runtime through the real
-contained launcher, install the exact MSI, recompute the complete installed
-standalone identity, and prove launch, normal close and reopen.
+deadline. Tauri may expose protected MSI resources with a Win32 verbatim
+`\\?\C:\...` prefix; after validating the installed regular file, the desktop
+removes only that namespace prefix and supplies Node a conventional
+forward-slash absolute drive path through the sanitized child environment.
+GitHub's Windows gate exercises that same fixed bootstrap and environment
+through the real contained launcher, installs the exact MSI, recomputes the
+complete installed standalone identity, and proves launch, normal close and
+reopen.

@@ -37,7 +37,17 @@ type BunRuntime = Readonly<{
 
 const bunRuntime = (globalThis as unknown as { Bun: BunRuntime }).Bun;
 const NODE_ENTRYPOINT_BOOTSTRAP =
-  "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
+  "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
+
+function nodeEntrypointPath(value: string): string {
+  const conventional = value.startsWith("\\\\?\\") ? value.slice(4) : value;
+  const normalized = conventional.replaceAll("\\", "/");
+  if (!/^[A-Za-z]:\//.test(normalized)) {
+    throw new Error("staged Node entrypoint is not an absolute local drive path");
+  }
+  return normalized;
+}
+
 const root = process.cwd();
 const dataDir = process.env.SF_DATA_DIR;
 const databaseUrl = process.env.DATABASE_URL;
@@ -171,6 +181,7 @@ try {
   if (!existsSync(stagedServer)) {
     throw new Error("staged server.js is missing");
   }
+  const stagedNodeEntrypoint = nodeEntrypointPath(stagedServer);
 
   const port = await availablePort();
   const sidecarPort = await availablePort();
@@ -234,7 +245,7 @@ try {
     APP_VERSION: authority.version,
     NODE_ENV: "production",
     SF_AUTH_MODE: "setup",
-    SF_NODE_ENTRYPOINT: stagedServer,
+    SF_NODE_ENTRYPOINT: stagedNodeEntrypoint,
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
