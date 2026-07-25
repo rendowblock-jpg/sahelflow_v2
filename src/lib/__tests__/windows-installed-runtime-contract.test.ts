@@ -7,7 +7,7 @@ const read = (path: string) =>
   readFileSync(resolve(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 describe("installed Windows runtime contract", () => {
-  it("hard-disables Next telemetry before hashing the packaged standalone tree", () => {
+  it("hard-disables Next telemetry before sealing the packaged standalone tree", () => {
     const build = read("src-tauri/build-frontend.ts");
     const bootstrap = build.indexOf("SahelFlow desktop runtime bootstrap");
     const disableTelemetry = build.indexOf(
@@ -83,6 +83,7 @@ describe("installed Windows runtime contract", () => {
   it("builds and launches the installed executable twice on an ephemeral Windows runner", () => {
     const workflow = read(".github/workflows/windows-installed-e2e.yml");
     const harness = read("scripts/verify-installed-windows-msi.ps1");
+    const treeVerifier = read("scripts/verify-installed-standalone.ts");
     const uiHarness = read("scripts/verify-installed-windows-ui.ps1");
     const desktop = read("src-tauri/src/lib.rs");
 
@@ -91,6 +92,7 @@ describe("installed Windows runtime contract", () => {
     expect(workflow).not.toContain("Persist lifecycle-proven");
     expect(workflow).toContain("bunx tauri build --bundles msi");
     expect(workflow).toContain("verify-installed-windows-msi.ps1");
+    expect(workflow).toContain('      - "scripts/standalone-manifest.ts"');
     expect(workflow).toContain("runtime-probe-diagnostic.json");
     expect(harness).toContain('$env:GITHUB_ACTIONS -cne "true"');
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
@@ -102,8 +104,21 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).toContain("$workspaceWindows.Count -ne 1");
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
+    expect(uiHarness).toContain("$maxRuntimePrepareMilliseconds = 15000");
+    expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");
-    expect(harness).toContain("Second launch did not reuse the verified runtime cache");
+    expect(harness).toContain("$installedRuntimeRoot");
+    expect(harness).toContain("verify-installed-standalone.ts");
+    expect(harness).toContain("completeTreeVerified");
+    expect(treeVerifier).toContain("verifyStandaloneManifest");
+    expect(harness).toContain(
+      "appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count",
+    );
+    expect(harness).toContain(
+      "Second launch changed the protected installed runtime or staged an AppData copy",
+    );
+    expect(desktop).toContain("resolve_installed_standalone");
+    expect(desktop).not.toContain("stage_standalone");
     expect(desktop).toContain(".run(|_app_handle, _event| {");
     expect(desktop).toContain("_app_handle.cleanup_before_exit();");
     expect(desktop).toContain("std::process::exit(0);");

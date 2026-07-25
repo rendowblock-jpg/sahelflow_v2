@@ -13,12 +13,17 @@ $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $authority = Get-Content -LiteralPath (Join-Path $repositoryRoot "sahelflow.version.json") -Raw |
     ConvertFrom-Json
 $expectedVersion = [string]$authority.version
-$standaloneManifestPath = Join-Path $repositoryRoot `
-    "src-tauri\resources\standalone\sahelflow-standalone-manifest.json"
+$builtStandaloneRoot = Join-Path $repositoryRoot "src-tauri\resources\standalone"
+$standaloneManifestPath = Join-Path $builtStandaloneRoot `
+    "sahelflow-standalone-manifest.json"
 $standaloneManifest = Get-Content -LiteralPath $standaloneManifestPath -Raw |
     ConvertFrom-Json
 $expectedTree = [string]$standaloneManifest.treeSha256
 $expectedFileCount = [int64]$standaloneManifest.fileCount
+$expectedManifestSha256 = (Get-FileHash -LiteralPath $standaloneManifestPath -Algorithm SHA256).Hash
+$expectedServerSha256 = (
+    Get-FileHash -LiteralPath (Join-Path $builtStandaloneRoot "server.js") -Algorithm SHA256
+).Hash
 
 $resolvedMsi = (Resolve-Path -LiteralPath $MsiPath).Path
 $evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
@@ -30,6 +35,10 @@ $runtimeCacheRoot = Join-Path $localRoot "runtime-cache"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
+$installedRuntimeRoot = "C:\Program Files\SahelFlow\standalone"
+$installedRuntimeManifestPath = Join-Path $installedRuntimeRoot `
+    "sahelflow-standalone-manifest.json"
+$installedServerPath = Join-Path $installedRuntimeRoot "server.js"
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -301,10 +310,35 @@ $exe = "C:\Program Files\SahelFlow\sahelflow.exe"
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Installed executable is missing: $exe"
 }
+if (-not (Test-Path -LiteralPath $installedRuntimeManifestPath -PathType Leaf)) {
+    throw "Installed standalone manifest is missing: $installedRuntimeManifestPath"
+}
+if (-not (Test-Path -LiteralPath $installedServerPath -PathType Leaf)) {
+    throw "Installed standalone server is missing: $installedServerPath"
+}
+
+$treeVerifierPath = Join-Path $repositoryRoot "scripts\verify-installed-standalone.ts"
+$treeVerificationOutput = @(
+    & bun $treeVerifierPath $installedRuntimeRoot $expectedVersion 2>&1
+)
+if ($LASTEXITCODE -ne 0) {
+    throw "Complete installed standalone verification failed: $($treeVerificationOutput -join [Environment]::NewLine)"
+}
+$installedTreeVerification = ($treeVerificationOutput -join [Environment]::NewLine) |
+    ConvertFrom-Json
+if (
+    $installedTreeVerification.verified -ne $true -or
+    $installedTreeVerification.root -ne $installedRuntimeRoot -or
+    $installedTreeVerification.appVersion -ne $expectedVersion -or
+    $installedTreeVerification.treeSha256 -ne $expectedTree -or
+    [int64]$installedTreeVerification.fileCount -ne $expectedFileCount
+) {
+    throw "Complete installed standalone verification did not match the built candidate."
+}
 
 $launches = @()
 $closures = @()
-$cacheIdentity = $null
+$installedRuntimeIdentity = $null
 $registryIdentity = $null
 $databaseIdentity = $null
 
@@ -321,30 +355,37 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         break
     }
 
-    $caches = @(
-        Get-ChildItem -LiteralPath $runtimeCacheRoot -Directory -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -like "$expectedVersion-*" }
+    $runtimeCacheEntries = @(
+        Get-ChildItem -LiteralPath $runtimeCacheRoot -Force -ErrorAction SilentlyContinue
     )
-    if ($caches.Count -ne 1) {
-        throw "Expected exactly one final cache for $expectedVersion, found $($caches.Count)."
+    if ($runtimeCacheEntries.Count -ne 0) {
+        throw "Installed launch created $($runtimeCacheEntries.Count) AppData runtime-cache entry or staging path."
     }
 
-    $manifestPath = Join-Path $caches[0].FullName "sahelflow-standalone-manifest.json"
-    $manifest = Read-JsonFile $manifestPath
+    $manifest = Read-JsonFile $installedRuntimeManifestPath
     if (
         $manifest.appVersion -ne $expectedVersion -or
         $manifest.treeSha256 -ne $expectedTree -or
         [int64]$manifest.fileCount -ne $expectedFileCount
     ) {
-        throw "Installed runtime cache identity does not match the built candidate."
+        throw "Protected installed runtime identity does not match the built candidate."
     }
 
-    $currentCacheIdentity = [pscustomobject]@{
-        directory = $caches[0].Name
-        manifestSha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
+    $currentInstalledRuntimeIdentity = [pscustomobject]@{
+        directory = $installedRuntimeRoot
+        manifestSha256 = (Get-FileHash -LiteralPath $installedRuntimeManifestPath -Algorithm SHA256).Hash
+        serverSha256 = (Get-FileHash -LiteralPath $installedServerPath -Algorithm SHA256).Hash
         appVersion = $manifest.appVersion
         treeSha256 = $manifest.treeSha256
         fileCount = $manifest.fileCount
+        completeTreeVerified = [bool]$installedTreeVerification.verified
+        appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count
+    }
+    if (
+        $currentInstalledRuntimeIdentity.manifestSha256 -ne $expectedManifestSha256 -or
+        $currentInstalledRuntimeIdentity.serverSha256 -ne $expectedServerSha256
+    ) {
+        throw "Protected installed runtime files do not match the built candidate."
     }
 
     $registry = Read-JsonFile $registryPath
@@ -377,13 +418,15 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     }
 
     if ($attempt -eq 1) {
-        $cacheIdentity = $currentCacheIdentity
+        $installedRuntimeIdentity = $currentInstalledRuntimeIdentity
         $registryIdentity = $currentRegistryIdentity
         $databaseIdentity = $currentDatabaseIdentity
     } else {
-        if ($currentCacheIdentity.directory -ne $cacheIdentity.directory -or
-            $currentCacheIdentity.manifestSha256 -ne $cacheIdentity.manifestSha256) {
-            throw "Second launch did not reuse the verified runtime cache."
+        if ($currentInstalledRuntimeIdentity.directory -ne $installedRuntimeIdentity.directory -or
+            $currentInstalledRuntimeIdentity.manifestSha256 -ne $installedRuntimeIdentity.manifestSha256 -or
+            $currentInstalledRuntimeIdentity.serverSha256 -ne $installedRuntimeIdentity.serverSha256 -or
+            $currentInstalledRuntimeIdentity.appDataRuntimeCacheEntryCount -ne 0) {
+            throw "Second launch changed the protected installed runtime or staged an AppData copy."
         }
         if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
             $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
@@ -411,7 +454,8 @@ $result = [ordered]@{
     installedDisplayVersion = $installed[0].DisplayVersion
     launches = $launches
     closures = $closures
-    cache = $cacheIdentity
+    installedTreeVerification = $installedTreeVerification
+    installedRuntime = $installedRuntimeIdentity
     registry = $registryIdentity
     database = $databaseIdentity
     finalProcesses = Get-SahelFlowProcessTree

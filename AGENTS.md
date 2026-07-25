@@ -122,12 +122,14 @@ them locally; GitHub Actions runs the required commands from the pushed commit.
 
 - Documentation-reset merge checkpoint: PR #154 at
   `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
-- Internal.5 executable source:
-  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`.
+- Protected-main Internal.6 executable source:
+  `772d09c3b2ada4668f8c872bfd469cabb839d82a`.
 - Founder-accepted installed release: `1.0.0-internal.5`.
+- Internal.6 is signed-release-complete and installed but not Founder-accepted;
+  runtime preparation took about 14 minutes on the Founder SSD.
 - Phase 0 documentation truth reset is complete; Phase 1 workspace/shop and
   business-integrity work is active.
-- A 2026-07-24 installed Internal.5 startup incident is the immediate execution
-  gate: the dashboard briefly rendered after a multi-minute launch, then the
-  desktop replaced it with `SF-RUNTIME-UI-BLOCKED`. Preserve AppData and resolve
-  this through an exact-source signed Internal update before Phase 1A proceeds.
+- Internal.7 runtime-preparation performance is the immediate execution gate.
+  Preserve AppData and legacy caches, execute only the release-verified
+  MSI-installed runtime, and resolve this through an exact-source signed
+  Internal update before Phase 1A proceeds.

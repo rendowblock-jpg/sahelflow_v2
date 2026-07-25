@@ -21,7 +21,7 @@ describe("packaged runtime hydrated UI readiness", () => {
     dataDir = mkdtempSync(join(tmpdir(), "sahelflow-ui-ready-"));
     process.env.SF_RUNTIME_APP_TOKEN = token;
     process.env.SF_RUNTIME_INSTANCE_ID = instanceId;
-    process.env.APP_VERSION = "1.0.0-internal.6";
+    process.env.APP_VERSION = "1.0.0-internal.7";
     process.env.SF_DATA_DIR = dataDir;
   });
 
@@ -45,7 +45,7 @@ describe("packaged runtime hydrated UI readiness", () => {
     expect(acknowledgment.protocolVersion).toBe(1);
     expect(acknowledgment.state).toBe("ready");
     expect(acknowledgment.instanceId).toBe(instanceId);
-    expect(acknowledgment.appVersion).toBe("1.0.0-internal.6");
+    expect(acknowledgment.appVersion).toBe("1.0.0-internal.7");
     expect(acknowledgment.pageUrl).toMatch(
       /^http:\/\/(127\.0\.0\.1|localhost):43123$/,
     );
@@ -58,7 +58,7 @@ describe("packaged runtime hydrated UI readiness", () => {
     expect(diagnostic.state).toBe("ready");
     expect(diagnostic.code).toBe("RUNTIME_UI_READY_PERSISTED");
     expect(diagnostic.instanceId).toBe(instanceId);
-    expect(diagnostic.appVersion).toBe("1.0.0-internal.6");
+    expect(diagnostic.appVersion).toBe("1.0.0-internal.7");
     expect(typeof diagnostic.attempt).toBe("number");
   });
 

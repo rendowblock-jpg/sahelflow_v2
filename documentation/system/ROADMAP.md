@@ -1,12 +1,13 @@
 # SahelFlow — Completion Roadmap
 
 > **Status:** Active dependency order
-> **Starting source:** accepted Internal.5 protected-main baseline
-> `d1fb321ea213b0bfbb10042144c4c9b8019254eb`
+> **Current protected-main source:** Internal.6 at
+> `772d09c3b2ada4668f8c872bfd469cabb839d82a`
+> **Latest Founder-accepted baseline:** Internal.5
 > **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
-> **Immediate gate:** resolve the observed Internal.5 startup/UI-readiness
-> failure without deleting Founder AppData
-> **Last consolidated:** 2026-07-24
+> **Immediate gate:** replace Internal.6 multi-minute recursive runtime
+> preparation without deleting Founder AppData or weakening runtime authority
+> **Last consolidated:** 2026-07-25
 
 This is the shortest safe path from the current application to the complete
 SahelFlow 1.0 product. It controls dependency order, not calendar promises.
@@ -106,14 +107,14 @@ Documentation-only completion does not create an MSI.
 
 ## Phase 1 — Workspace/shop and business-integrity foundation
 
-Before Phase 1A changes the installed application, the accepted Internal.5
-baseline must regain reliable startup. The 2026-07-24 Founder-machine launch
-took multiple minutes, briefly rendered the dashboard and then failed closed as
-`SF-RUNTIME-UI-BLOCKED` because no matching authenticated UI-ready
-acknowledgment was persisted. Diagnose and repair this through the normal
-source → GitHub Actions → signed Internal update → preserved-AppData Founder
-acceptance path. Do not bypass it by deleting AppData, rebuilding locally or
-weakening the fail-closed shop/runtime boundary.
+Before Phase 1A changes the installed application, the runtime acceptance loop
+must close. Internal.6 corrected the hidden/unresponsive startup surface and
+passed exact-source signed release gates, but its Founder-machine launch spent
+about 14 minutes recursively verifying and staging a 3,985-file runtime on an
+SSD. Internal.7 must use the release-verified protected installation directly
+and follow the normal source → GitHub Actions → signed Internal update →
+preserved-AppData Founder acceptance path. Do not bypass it by deleting AppData,
+running local builds or weakening the fail-closed shop/runtime boundary.
 
 ### Outcome
 

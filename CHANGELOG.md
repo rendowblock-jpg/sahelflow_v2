@@ -40,7 +40,7 @@ not require a new Internal MSI.
   the immediate execution gate before Phase 1A.
 - Made the production dependency audit blocking in normal pull-request CI.
 
-### Internal.6 startup reliability candidate
+### Internal.6 startup reliability result
 
 - Keeps a safe non-business startup screen responsive while migrations,
   runtime verification and mandatory services prepare off the Tauri event loop.
@@ -53,6 +53,27 @@ not require a new Internal MSI.
   unavailability, persistence failure and acknowledgment mismatch.
 - Preserves the authenticated fail-closed workspace boundary and requires an
   in-place update over Internal.5 without deleting AppData.
+- Merged as PR #156 at
+  `772d09c3b2ada4668f8c872bfd469cabb839d82a`, passed exact-source signed run
+  `30136644587`, and was installed over Internal.5 with AppData preserved.
+- Proved the safe startup window remained responsive, but was not
+  Founder-accepted because recursive standalone verification took about 14
+  minutes before staging began on the Founder SSD.
+
+### Internal.7 installed-runtime performance candidate
+
+- Uses the standalone runtime directly from its signed MSI-protected
+  `Program Files` installation instead of copying it into user-writable Local
+  AppData.
+- Keeps full deterministic tree identity generation and verification in clean
+  GitHub build/release evidence while removing 3,985-file recursive hashing
+  from interactive startup.
+- Leaves every existing Roaming/Local AppData file and legacy runtime cache
+  untouched.
+- Extends the installed Windows gate to recompute and bind the complete
+  protected runtime tree to the exact built candidate, reject a new Internal.7
+  AppData runtime cache, and prove authenticated launch/normal-close/reopen
+  twice.
 
 ## [1.0.0-internal.5] — 2026-07-24
 

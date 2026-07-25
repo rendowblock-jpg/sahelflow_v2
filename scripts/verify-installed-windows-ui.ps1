@@ -21,6 +21,7 @@ $exe = "C:\Program Files\SahelFlow\sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
 $safeStartupWindowTitle = "SahelFlow - Safe startup"
 $workspaceWindowTitle = "SahelFlow"
+$maxRuntimePrepareMilliseconds = 15000
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -350,6 +351,26 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
             throw "ui-launch-$attempt startup trace omitted stage $requiredStage."
         }
     }
+    $prepareStartedEvents = @(
+        $startupTrace.events |
+            Where-Object { $_.stage -eq 'runtime-prepare-started' }
+    )
+    $prepareCompleteEvents = @(
+        $startupTrace.events |
+            Where-Object { $_.stage -eq 'runtime-prepare-complete' }
+    )
+    if ($prepareStartedEvents.Count -ne 1 -or $prepareCompleteEvents.Count -ne 1) {
+        throw "ui-launch-$attempt did not retain exactly one runtime preparation interval."
+    }
+    $prepareCompleteMilliseconds = [int64]$prepareCompleteEvents[0].createdAtUnixMilliseconds
+    $prepareStartedMilliseconds = [int64]$prepareStartedEvents[0].createdAtUnixMilliseconds
+    $runtimePrepareMilliseconds = $prepareCompleteMilliseconds - $prepareStartedMilliseconds
+    if (
+        $runtimePrepareMilliseconds -lt 0 -or
+        $runtimePrepareMilliseconds -gt $maxRuntimePrepareMilliseconds
+    ) {
+        throw "ui-launch-$attempt runtime preparation took $runtimePrepareMilliseconds ms; maximum is $maxRuntimePrepareMilliseconds ms."
+    }
     if (
         $null -eq $uiDiagnostic -or
         $uiDiagnostic.state -ne 'ready' -or
@@ -360,6 +381,8 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
     $launch | Add-Member -NotePropertyName promptWindow -NotePropertyValue $promptWindow
+    $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
+        -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
     $launch | Add-Member -NotePropertyName uiDiagnostic -NotePropertyValue $uiDiagnostic
     $launches += $launch

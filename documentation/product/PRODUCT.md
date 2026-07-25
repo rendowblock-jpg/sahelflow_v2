@@ -357,8 +357,10 @@ On the Founder ThinkPad T470 class:
 - indexed search within 350 ms p95;
 - ordinary local mutation within 500 ms p95.
 
-The accepted Internal.5 reopen is functionally proven but slower than desired;
-it creates performance work and does not waive these Stable targets.
+The accepted Internal.5 reopen is functionally proven. Internal.6 made the safe
+startup surface responsive but then spent about 14 minutes preparing its
+runtime on the Founder SSD and was not accepted. This is a blocking performance
+defect and does not waive these Stable targets.
 
 ### Hosted storefront
 

@@ -228,13 +228,13 @@ const semanticRequirements: Array<[string, string[]]> = [
     "AGENTS.md",
     [
       "Documentation-reset merge checkpoint",
-      "Internal.5 executable source",
+      "Protected-main Internal.6 executable source",
       "Does not run source builds, automated tests",
     ],
   ],
   [
     "documentation/README.md",
-    ["Documentation-reset merge", "Internal.5 executable baseline"],
+    ["Documentation-reset merge", "Protected-main Internal.6 source"],
   ],
   [
     "documentation/system/ROADMAP.md",
@@ -243,9 +243,9 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/system/CURRENT_STATE.md",
     [
-      "**Current installed status:** startup reliability regressed",
+      "**Current installed status:** Internal.6 is installed",
       "Post-acceptance startup incident",
-      "Restore reliable authenticated startup on the Founder T470",
+      "Launch from the release-verified, MSI-protected installed runtime promptly",
     ],
   ],
   [

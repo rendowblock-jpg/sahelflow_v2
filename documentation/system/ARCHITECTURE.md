@@ -715,6 +715,16 @@ Every merged work package that changes the installed product receives a unique
 monotonically increasing Internal version. Its exact protected-main source is
 bound to the signed MSI, signature, update manifest and retained evidence.
 
+The packaged standalone runtime executes directly from the MSI installation
+under protected `Program Files`. Clean build and release gates generate and
+verify its complete deterministic tree identity before signing; installed
+Windows gates independently recompute the complete protected tree, bind its
+manifest and entrypoint to that exact candidate, and exercise launch plus
+reopen. User-writable AppData may retain business state, diagnostics and legacy
+caches, but it is not executable runtime authority. Interactive startup
+validates the installed manifest/version and required regular-file entrypoint
+without recursively copying or hashing the complete runtime tree.
+
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,
 `Installing`, `Restart required`, `Restarting`, `Completed`, `Offline`,
@@ -782,6 +792,7 @@ authority.
 | INV-040 | One seller workspace has one independent base license; a person may own several separately licensed workspaces. |
 | INV-041 | Founder control-plane access cannot expose seller operational plaintext or permanent signing material. |
 | INV-042 | Shared connected-service entitlements cannot become public before measured unit economics, quotas and alarms exist. |
+| INV-043 | The desktop executes the release-verified MSI-installed runtime from the protected installation; user-writable runtime copies are not executable authority. |
 
 Every invariant maps to automated tests, packaged/provider/device/recovery evidence and observable recovery in the implementation wave that introduces it.
 
