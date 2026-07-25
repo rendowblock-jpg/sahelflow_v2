@@ -114,6 +114,8 @@ describe("installed Windows runtime contract", () => {
       '$installedNodePath = Join-Path $installedJavascriptRuntimeRoot "node.exe"',
     );
     expect(harness).toContain("expectedNodeSha256");
+    expect(harness).toContain("ToLowerInvariant");
+    expect(harness).toContain("runtimeIdentityProblems");
     expect(harness).toContain("bunProductionRuntimePresent");
     expect(harness).toContain("Installed Node.js runtime identity does not match");
     expect(harness).toContain("currentNodeSha256");

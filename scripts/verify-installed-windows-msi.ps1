@@ -34,9 +34,11 @@ if (
 ) {
     throw "Built Node.js runtime manifest is invalid."
 }
-$expectedRuntimeManifestSha256 = (Get-FileHash -LiteralPath $runtimeManifestPath -Algorithm SHA256).Hash
-$expectedNodeSha256 = [string]$runtimeManifest.node.sha256
-$expectedNodeLicenseSha256 = [string]$runtimeManifest.node.licenseSha256
+$expectedRuntimeManifestSha256 = (
+    Get-FileHash -LiteralPath $runtimeManifestPath -Algorithm SHA256
+).Hash.ToLowerInvariant()
+$expectedNodeSha256 = ([string]$runtimeManifest.node.sha256).ToLowerInvariant()
+$expectedNodeLicenseSha256 = ([string]$runtimeManifest.node.licenseSha256).ToLowerInvariant()
 
 $resolvedMsi = (Resolve-Path -LiteralPath $MsiPath).Path
 $evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
@@ -343,22 +345,40 @@ if (Test-Path -LiteralPath $forbiddenInstalledBunPath) {
 $installedRuntimeManifest = Read-JsonFile $installedJavascriptRuntimeManifestPath
 $installedRuntimeManifestSha256 = (
     Get-FileHash -LiteralPath $installedJavascriptRuntimeManifestPath -Algorithm SHA256
-).Hash
-$installedNodeSha256 = (Get-FileHash -LiteralPath $installedNodePath -Algorithm SHA256).Hash
+).Hash.ToLowerInvariant()
+$installedNodeSha256 = (
+    Get-FileHash -LiteralPath $installedNodePath -Algorithm SHA256
+).Hash.ToLowerInvariant()
 $installedNodeLicenseSha256 = (
     Get-FileHash -LiteralPath $installedNodeLicensePath -Algorithm SHA256
-).Hash
-if (
-    [int]$installedRuntimeManifest.formatVersion -ne 3 -or
-    $installedRuntimeManifest.node.file -cne "node.exe" -or
-    $installedRuntimeManifest.node.sha256 -cne $expectedNodeSha256 -or
-    $installedRuntimeManifest.node.licenseFile -cne "NODE-LICENSE.txt" -or
-    $installedRuntimeManifest.node.licenseSha256 -cne $expectedNodeLicenseSha256 -or
-    $installedRuntimeManifestSha256 -cne $expectedRuntimeManifestSha256 -or
-    $installedNodeSha256 -cne $expectedNodeSha256 -or
-    $installedNodeLicenseSha256 -cne $expectedNodeLicenseSha256
-) {
-    throw "Installed Node.js runtime identity does not match the built candidate."
+).Hash.ToLowerInvariant()
+$runtimeIdentityProblems = [System.Collections.Generic.List[string]]::new()
+if ([int]$installedRuntimeManifest.formatVersion -ne 3) {
+    $runtimeIdentityProblems.Add("manifest-format")
+}
+if ($installedRuntimeManifest.node.file -cne "node.exe") {
+    $runtimeIdentityProblems.Add("node-file")
+}
+if ([string]$installedRuntimeManifest.node.sha256 -cne $expectedNodeSha256) {
+    $runtimeIdentityProblems.Add("manifest-node-digest")
+}
+if ($installedRuntimeManifest.node.licenseFile -cne "NODE-LICENSE.txt") {
+    $runtimeIdentityProblems.Add("license-file")
+}
+if ([string]$installedRuntimeManifest.node.licenseSha256 -cne $expectedNodeLicenseSha256) {
+    $runtimeIdentityProblems.Add("manifest-license-digest")
+}
+if ($installedRuntimeManifestSha256 -cne $expectedRuntimeManifestSha256) {
+    $runtimeIdentityProblems.Add("runtime-manifest-file-digest")
+}
+if ($installedNodeSha256 -cne $expectedNodeSha256) {
+    $runtimeIdentityProblems.Add("installed-node-digest")
+}
+if ($installedNodeLicenseSha256 -cne $expectedNodeLicenseSha256) {
+    $runtimeIdentityProblems.Add("installed-license-digest")
+}
+if ($runtimeIdentityProblems.Count -ne 0) {
+    throw "Installed Node.js runtime identity does not match the built candidate: $($runtimeIdentityProblems -join ', ')."
 }
 
 $treeVerifierPath = Join-Path $repositoryRoot "scripts\verify-installed-standalone.ts"
