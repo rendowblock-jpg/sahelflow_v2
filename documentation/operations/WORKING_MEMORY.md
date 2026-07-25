@@ -39,13 +39,15 @@ Branch:
 agent/windows-node-runtime-internal-8
 ```
 
-PR #158 is open. Exact remote head `7134b001dc62cc1de6f939d340e7f6f967de6fe4`
-passed the quality gate, Linux Rust release check, Windows Rust release parity,
-Windows database suite, exact standalone build, contained Node launcher and
-authenticated staged-runtime proof. Its MSI then installed successfully on the
+PR #158 is open. Exact remote head `7e7ba2e3f24e9f85ab2fbc01309dc30557297a21`
+passed CI and Windows Rust release parity. Its MSI built and installed on the
 clean Windows runner, and the complete 3,985-file protected standalone tree
-matched the build. The installed Node process exited with code 1 before
-readiness; the old launcher discarded stderr, so that head is not mergeable.
+matched the build. The new bounded diagnostic then proved Node received the
+installed entrypoint as `C:` instead of the protected path under
+`C:\Program Files\SahelFlow`. Run `30174665811` therefore failed the real
+installed launch gate. This is an installed Windows argument-boundary defect;
+it is not missing content, failed migration, AppData, disk or runtime identity.
+That head is not mergeable.
 
 This is one coherent installed-platform correction. It:
 
@@ -60,6 +62,9 @@ This is one coherent installed-platform correction. It:
   reported in seconds rather than after repeated 90-second deadlines;
 - gives the protected server a non-executable Local AppData working directory
   instead of using protected `Program Files` as writable process state;
+- keeps the absolute protected entrypoint out of the Windows command line and
+  supplies it through the launcher's explicit sanitized environment to a fixed
+  bootstrap embedded in the signed desktop executable;
 - continuously drains server stderr into a fixed-size in-memory buffer,
   redacts every injected token/secret, and retains only a bounded startup
   failure detail;
@@ -99,9 +104,9 @@ all clean-checkout build/test evidence.
 
 ## Exact next execution order
 
-1. Finish the writable working-directory, bounded redacted stderr, installed
-   performance gate and current evidence correction prompted by run
-   `30149740801`.
+1. Finish the fixed Node bootstrap and exact installed-path regression prompted
+   by run `30174665811`; keep the validated protected entrypoint out of the raw
+   Windows argument boundary.
 2. Run lightweight formatting, parser and diff inspection only; do not build or
    test locally.
 3. Commit and push the focused correction to PR #158. Use GitHub Actions for

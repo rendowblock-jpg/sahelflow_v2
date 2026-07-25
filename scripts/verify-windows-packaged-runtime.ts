@@ -36,6 +36,8 @@ type BunRuntime = Readonly<{
 }>;
 
 const bunRuntime = (globalThis as unknown as { Bun: BunRuntime }).Bun;
+const NODE_ENTRYPOINT_BOOTSTRAP =
+  "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 const root = process.cwd();
 const dataDir = process.env.SF_DATA_DIR;
 const databaseUrl = process.env.DATABASE_URL;
@@ -232,10 +234,11 @@ try {
     APP_VERSION: authority.version,
     NODE_ENV: "production",
     SF_AUTH_MODE: "setup",
+    SF_NODE_ENTRYPOINT: stagedServer,
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
-  child = bunRuntime.spawn([stagedNode, stagedServer], {
+  child = bunRuntime.spawn([stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP], {
     cwd: stagedWork,
     env: environment,
     stdout: "pipe",

@@ -121,6 +121,12 @@ running local builds or weakening the fail-closed shop/runtime boundary.
 The clean installed gate must also prove the authenticated workspace twice
 within the bounded day-to-day startup ceiling; a successful package that waits
 minutes or discards the server failure reason does not pass.
+Run `30174665811` proved the bounded diagnostic contract and isolated the next
+correction: the installed Windows launch reduced the spaced protected
+`server.js` path to `C:` at Node's main-module argument boundary. The signed
+launcher must keep that absolute path out of raw argv, transfer only the
+validated path through its explicit child environment, and re-prove the same
+installed MSI/UI gate before Phase 1A starts.
 
 ### Outcome
 

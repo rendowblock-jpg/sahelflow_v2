@@ -85,7 +85,12 @@ describe("installed Windows runtime contract", () => {
     const harness = read("scripts/verify-installed-windows-msi.ps1");
     const treeVerifier = read("scripts/verify-installed-standalone.ts");
     const uiHarness = read("scripts/verify-installed-windows-ui.ps1");
+    const packagedRuntimeHarness = read(
+      "scripts/verify-windows-packaged-runtime.ts",
+    );
     const desktop = read("src-tauri/src/lib.rs");
+    const expectedNodeBootstrap =
+      "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
     expect(workflow).toContain("contents: read");
     expect(workflow).toContain('      - "sahelflow.version.json"');
@@ -120,6 +125,14 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain('app_local_data_dir()?.join("runtime-work")');
     expect(desktop).toContain("spawn_in_capturing_stderr");
     expect(desktop).toContain("redact_runtime_stderr");
+    expect(desktop).toContain('NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT"');
+    expect(desktop).toContain('OsString::from("--eval")');
+    expect(desktop).toContain(expectedNodeBootstrap);
+    expect(packagedRuntimeHarness).toContain("SF_NODE_ENTRYPOINT: stagedServer");
+    expect(packagedRuntimeHarness).toContain(expectedNodeBootstrap);
+    expect(packagedRuntimeHarness).toContain(
+      '[stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP]',
+    );
     expect(harness).toContain("runtimeWorkExecutables");
     expect(harness).toContain("bunProductionRuntimePresent");
     expect(harness).toContain("Installed Node.js runtime identity does not match");

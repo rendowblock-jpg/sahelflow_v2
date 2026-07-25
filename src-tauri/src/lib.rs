@@ -195,6 +195,8 @@ const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const MAX_RUNTIME_STDERR_CHARACTERS: usize = 4_096;
+const NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT";
+const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -608,12 +610,19 @@ fn spawn_runtime_generation(
     let authority = current_shop_authority(app)?;
     let auth = packaged_auth::load(&authority.database_path)?;
     let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str())?;
-    let env = server_env(app, &runtime_protocol, &authority, &auth)?;
+    let mut env = server_env(app, &runtime_protocol, &authority, &auth)?;
+    env.push((
+        NODE_ENTRYPOINT_ENV.to_string(),
+        prepared.server_js.to_string_lossy().into_owned(),
+    ));
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
     let process_environment = process_environment(&env);
     let server_child = child_containment::ContainedChild::spawn_in_capturing_stderr(
         Path::new(&prepared.runtime_path),
-        &[prepared.server_js.as_os_str().to_os_string()],
+        &[
+            OsString::from("--eval"),
+            OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
+        ],
         &process_environment,
         Some(&server_working_dir),
     )

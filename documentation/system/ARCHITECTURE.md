@@ -732,10 +732,14 @@ readiness immediately when the contained server process exits.
 The installed server's executable, entrypoint, dependencies and native engine
 remain under protected `Program Files`. Its process working directory is a
 non-executable Local AppData directory so runtime libraries never need to write
-under the installation root. The containment layer continuously drains stderr
-into a fixed-size in-memory buffer; an early-exit diagnostic is length-bounded
-and has every explicitly injected token or secret redacted before persistence
-or display.
+under the installation root. The signed desktop invokes Node with a fixed
+embedded bootstrap; the already validated absolute protected entrypoint is
+carried in the explicit sanitized child environment instead of across the raw
+Windows command-line argument boundary. The bootstrap neither copies nor loads
+code from AppData. The containment layer continuously drains stderr into a
+fixed-size in-memory buffer; an early-exit diagnostic is length-bounded and has
+every explicitly injected token or secret redacted before persistence or
+display.
 
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,
