@@ -226,7 +226,7 @@ fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
                 "the installed Node entrypoint is not an absolute local drive path",
             ));
         }
-        return Ok(normalized);
+        Ok(normalized)
     }
 
     #[cfg(not(windows))]
