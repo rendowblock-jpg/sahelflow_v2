@@ -39,15 +39,24 @@ Branch:
 agent/windows-node-runtime-internal-8
 ```
 
-PR #158 is open. Exact remote head `7e7ba2e3f24e9f85ab2fbc01309dc30557297a21`
-passed CI and Windows Rust release parity. Its MSI built and installed on the
-clean Windows runner, and the complete 3,985-file protected standalone tree
-matched the build. The new bounded diagnostic then proved Node received the
-installed entrypoint as `C:` instead of the protected path under
-`C:\Program Files\SahelFlow`. Run `30174665811` therefore failed the real
-installed launch gate. This is an installed Windows argument-boundary defect;
-it is not missing content, failed migration, AppData, disk or runtime identity.
-That head is not mergeable.
+PR #158 is open. Exact remote head `05fffb0ac0885a8f9d5ef56870b026b744233e7d`
+passed complete CI in run `30176167237` and Windows Rust release parity in run
+`30176167229`. The CI Windows job proved the staged packaged runtime through
+Node, Prisma and authenticated readiness with paths containing spaces. Its MSI
+then built and installed in run `30176167233`, and the complete 3,985-file
+protected standalone tree matched the build. The real installed launch still
+failed: the fixed bootstrap executed, but `require(entry)` reached Node's
+CommonJS resolver with an unusable Windows drive path and failed with `EISDIR`
+while `lstat` processed `C:`. That head is not mergeable.
+
+This second result narrows the remaining gap. The command-line bootstrap is no
+longer the failing boundary, and installer content, runtime identity, migration,
+AppData and disk speed remain ruled out. The staged harness uses Bun's spawn
+environment, while the installed desktop uses the custom contained
+`CreateProcessW` environment block. The current Rust contained-Node test still
+passes the script as a direct argument, so it does not exercise the installed
+bootstrap-plus-environment path. No further correction was published in this
+session.
 
 This is one coherent installed-platform correction. It:
 
@@ -104,23 +113,29 @@ all clean-checkout build/test evidence.
 
 ## Exact next execution order
 
-1. Finish the fixed Node bootstrap and exact installed-path regression prompted
-   by run `30174665811`; keep the validated protected entrypoint out of the raw
-   Windows argument boundary.
-2. Run lightweight formatting, parser and diff inspection only; do not build or
-   test locally.
-3. Commit and push the focused correction to PR #158. Use GitHub Actions for
-   source, Rust, Windows build, MSI install, authenticated visible UI, normal
-   close and reopen.
-4. Resolve every review/CI finding on the exact PR head before merge; a server
+1. Start from exact remote head
+   `05fffb0ac0885a8f9d5ef56870b026b744233e7d` and run no local build, test or
+   dependency installation.
+2. Close the regression gap first: make the real Windows `ContainedChild` Node
+   test invoke `--eval` with the production fixed bootstrap and receive the
+   spaced script path through `SF_NODE_ENTRYPOINT` in the custom environment.
+3. Normalize the already validated Windows entrypoint into a Node-compatible
+   absolute representation only if that native regression proves the same
+   boundary; forward-slash form is the current focused candidate, not accepted
+   evidence. Mirror the exact representation in the staged harness and source
+   contract.
+4. Update this evidence, commit and publish one focused correction to PR #158,
+   then require clean CI, Windows Rust, MSI install, launch/reopen and
+   authenticated visible UI twice. Do not weaken or bypass any gate.
+5. Resolve every review/CI finding on the exact PR head before merge; a server
    exit without its bounded redacted reason is itself a failing diagnostic
    contract.
-5. After merge, let the optimized exact-main signed workflow attest the
+6. After merge, let the optimized exact-main signed workflow attest the
    reviewed tree/checks, build/sign once, and repeat installed MSI/UI proof.
-6. Publish and install that one candidate over Internal.7. Acceptance requires
+7. Publish and install that one candidate over Internal.7. Acceptance requires
    preserved AppData, bounded startup, real authenticated workspace, normal
    close and successful reopen.
-7. Resume Phase 1A only after Founder acceptance.
+8. Resume Phase 1A only after Founder acceptance.
 
 ## Preservation constraints
 

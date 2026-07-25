@@ -127,6 +127,12 @@ correction: the installed Windows launch reduced the spaced protected
 launcher must keep that absolute path out of raw argv, transfer only the
 validated path through its explicit child environment, and re-prove the same
 installed MSI/UI gate before Phase 1A starts.
+Exact head `05fffb0ac0885a8f9d5ef56870b026b744233e7d` then proved the fixed
+bootstrap in staged runtime but failed installed run `30176167233` when
+`require(entry)` processed the environment-supplied Windows path as `C:`. The
+next correction must first add a native `ContainedChild` regression for that
+same bootstrap/environment path, then prove a Node-compatible absolute-path
+representation through the installed MSI gate.
 
 ### Outcome
 

@@ -35,16 +35,17 @@ source also contains substantial catalog, customer, order, delivery,
 return/refund, COD, accounting, risk, automation, WhatsApp, AI, integration,
 storefront, multilingual UI and test work.
 
-PR #158 exact head `7e7ba2e3f24e9f85ab2fbc01309dc30557297a21`
-subsequently passed complete CI and Windows Rust release parity. Its clean
-Windows MSI built, installed and matched the complete 3,985-file protected
-standalone tree. Bounded redacted stderr then identified the remaining real
-installed failure precisely: Node received `C:` as its main-module argument
-instead of the protected `server.js` path under `C:\Program Files\SahelFlow`.
-The in-flight correction uses a fixed bootstrap embedded in the signed desktop
-binary and supplies the already validated protected entrypoint through the
-explicit sanitized child environment, while retaining non-executable Local
-AppData working state. This is not yet installed or Founder-accepted evidence.
+PR #158 exact head `05fffb0ac0885a8f9d5ef56870b026b744233e7d`
+passed complete CI and Windows Rust release parity. Its clean Windows MSI built,
+installed and matched the complete 3,985-file protected standalone tree. The
+fixed signed bootstrap executed on the real installed launch, but its
+environment-supplied protected entrypoint still failed in Node's CommonJS
+resolver with `EISDIR` while processing `C:`. This isolates the remaining gap
+to the native contained-process entrypoint representation/transport rather than
+package content, runtime identity, migration, AppData or disk speed. The staged
+runtime passed, but it uses Bun's spawn environment and therefore does not prove
+the custom `CreateProcessW` environment boundary. This is not yet signed,
+installed on the Founder machine or Founder-accepted evidence.
 
 The main remaining discontinuity is product coherence and authority:
 
