@@ -35,6 +35,18 @@ source also contains substantial catalog, customer, order, delivery,
 return/refund, COD, accounting, risk, automation, WhatsApp, AI, integration,
 storefront, multilingual UI and test work.
 
+PR #158 exact head `7134b001dc62cc1de6f939d340e7f6f967de6fe4`
+subsequently proved the pinned Node runtime through all source, Rust,
+database, contained-launcher and staged authenticated-runtime gates. Its clean
+Windows MSI installed and matched the complete 3,985-file protected standalone
+tree, then the real installed Node server exited with code 1 before readiness.
+That head exposed two remaining contract gaps: the server used protected
+`Program Files` as its process working directory, and the contained launcher
+discarded stderr. The in-flight correction keeps executable authority in
+`Program Files`, moves only writable working state to Local AppData, and drains
+stderr into bounded in-memory redacted evidence. This is not yet installed or
+Founder-accepted evidence.
+
 The main remaining discontinuity is product coherence and authority:
 
 - operational pages exist without one fully proven cross-module COD journey;

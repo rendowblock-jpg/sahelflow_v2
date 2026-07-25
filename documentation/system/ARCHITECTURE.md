@@ -729,6 +729,14 @@ validates the installed manifest/version and required regular-file entrypoint
 without recursively copying or hashing the complete runtime tree, and aborts
 readiness immediately when the contained server process exits.
 
+The installed server's executable, entrypoint, dependencies and native engine
+remain under protected `Program Files`. Its process working directory is a
+non-executable Local AppData directory so runtime libraries never need to write
+under the installation root. The containment layer continuously drains stderr
+into a fixed-size in-memory buffer; an early-exit diagnostic is length-bounded
+and has every explicitly injected token or secret redacted before persistence
+or display.
+
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,
 `Installing`, `Restart required`, `Restarting`, `Completed`, `Offline`,

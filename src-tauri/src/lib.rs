@@ -194,6 +194,7 @@ struct PreparedRuntime {
 const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
+const MAX_RUNTIME_STDERR_CHARACTERS: usize = 4_096;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -601,23 +602,20 @@ fn spawn_runtime_generation(
     use tauri::Manager;
 
     let app_data_dir = app.path().app_data_dir()?;
-    let server_working_dir = prepared.server_js.parent().ok_or_else(|| {
-        IoError::new(
-            ErrorKind::InvalidData,
-            "staged standalone server has no working directory",
-        )
-    })?;
+    let server_working_dir = app.path().app_local_data_dir()?.join("runtime-work");
+    std::fs::create_dir_all(&server_working_dir)?;
 
     let authority = current_shop_authority(app)?;
     let auth = packaged_auth::load(&authority.database_path)?;
     let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str())?;
     let env = server_env(app, &runtime_protocol, &authority, &auth)?;
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
-    let server_child = child_containment::ContainedChild::spawn_in(
+    let process_environment = process_environment(&env);
+    let server_child = child_containment::ContainedChild::spawn_in_capturing_stderr(
         Path::new(&prepared.runtime_path),
         &[prepared.server_js.as_os_str().to_os_string()],
-        &process_environment(&env),
-        Some(server_working_dir),
+        &process_environment,
+        Some(&server_working_dir),
     )
     .map_err(|error| {
         if error.containment_uncertain() {
@@ -641,8 +639,15 @@ fn spawn_runtime_generation(
         runtime_protocol::ReadinessOutcome::ProcessExited(code) => {
             stop_runtime_launch(app, generation, &server_child, "exited Next.js server")?;
             runtime_protocol::remove_manifest(&app_data_dir);
+            let captured = server_child
+                .stderr_snapshot(Duration::from_secs(1))
+                .ok()
+                .and_then(|raw| redact_runtime_stderr(&raw, &env));
+            let captured = captured
+                .map(|detail| format!("; redacted stderr: {detail}"))
+                .unwrap_or_default();
             return Err(IoError::other(format!(
-                "the mandatory local server exited before authenticated readiness (exit code {code})"
+                "the mandatory local server exited before authenticated readiness (exit code {code}){captured}"
             ))
             .into());
         }
@@ -1347,6 +1352,31 @@ fn process_environment(values: &[(String, String)]) -> Vec<(OsString, OsString)>
     environment
 }
 
+fn redact_runtime_stderr(raw: &str, environment: &[(String, String)]) -> Option<String> {
+    let mut safe = raw.replace('\0', "");
+    for (key, value) in environment {
+        let upper = key.to_ascii_uppercase();
+        if (upper.contains("TOKEN") || upper.contains("SECRET")) && !value.is_empty() {
+            safe = safe.replace(value, "[redacted]");
+        }
+    }
+    let compact = safe
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join(" | ");
+    if compact.is_empty() {
+        return None;
+    }
+    Some(
+        compact
+            .chars()
+            .take(MAX_RUNTIME_STDERR_CHARACTERS)
+            .collect(),
+    )
+}
+
 fn stop_process_tree(
     child: &child_containment::ContainedChild,
     label: &str,
@@ -1403,7 +1433,7 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
 
 #[cfg(test)]
 mod child_environment_tests {
-    use super::is_windows_safe_parent_environment_key;
+    use super::{is_windows_safe_parent_environment_key, redact_runtime_stderr};
     use std::ffi::OsStr;
 
     #[test]
@@ -1419,5 +1449,27 @@ mod child_environment_tests {
             "DATABASE_URL"
         )));
         assert!(!is_windows_safe_parent_environment_key(OsStr::new("PATH")));
+    }
+
+    #[test]
+    fn runtime_stderr_is_bounded_and_redacts_every_injected_secret() {
+        let token = "runtime-token-that-must-never-escape";
+        let secret = "auth-secret-that-must-never-escape";
+        let environment = vec![
+            ("SF_RUNTIME_TOKEN".to_string(), token.to_string()),
+            ("AUTH_SECRET".to_string(), secret.to_string()),
+            (
+                "DATABASE_URL".to_string(),
+                "file:C:\\seller\\shop.db".to_string(),
+            ),
+        ];
+        let raw = format!("fatal {token}\0 {secret} {}", "x".repeat(8_192));
+        let captured = redact_runtime_stderr(&raw, &environment).expect("capture stderr");
+
+        assert!(!captured.contains(token));
+        assert!(!captured.contains(secret));
+        assert!(!captured.contains('\0'));
+        assert!(captured.contains("[redacted]"));
+        assert!(captured.chars().count() <= super::MAX_RUNTIME_STDERR_CHARACTERS);
     }
 }

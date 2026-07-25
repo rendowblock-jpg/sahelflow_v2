@@ -143,8 +143,10 @@ const stageParent = process.env.TEMP ?? process.env.TMP;
 if (!stageParent || !isAbsolute(stageParent)) {
   throw new Error("Windows temporary directory is unavailable");
 }
-const stage = mkdtempSync(resolve(stageParent, "sahelflow-packaged-runtime-smoke-"));
+const stage = mkdtempSync(resolve(stageParent, "SahelFlow Program Files runtime smoke-"));
 const stagedStandalone = resolve(stage, "standalone");
+const stagedRuntime = resolve(stage, "runtime");
+const stagedWork = resolve(stage, "runtime-work");
 const logPath = resolve(root, ".sf-windows-runtime-smoke.log");
 let child: BunSubprocess | null = null;
 let stdoutPromise: Promise<string> | null = null;
@@ -154,7 +156,16 @@ let stderr = "";
 
 try {
   cpSync(sourceStandalone, stagedStandalone, { recursive: true });
+  cpSync(resolve(root, "src-tauri", "resources", "runtime"), stagedRuntime, {
+    recursive: true,
+  });
+  mkdirSync(stagedWork);
   const stagedServer = resolve(stagedStandalone, "server.js");
+  const stagedNode = resolve(stagedRuntime, "node.exe");
+  const stagedQueryEngine = resolve(
+    stagedRuntime,
+    "query_engine-windows.dll.node",
+  );
   if (!existsSync(stagedServer)) {
     throw new Error("staged server.js is missing");
   }
@@ -203,7 +214,7 @@ try {
     SIDECAR_TOKEN: sidecarToken,
     SIDECAR_TOKEN_FILE: resolve(stage, "sidecar-token"),
     PRISMA_MIGRATIONS_DIR: migrations,
-    PRISMA_QUERY_ENGINE_LIBRARY: queryEngine,
+    PRISMA_QUERY_ENGINE_LIBRARY: stagedQueryEngine,
     HOSTNAME: "127.0.0.1",
     PORT: String(port),
     SF_APP_URL: `http://127.0.0.1:${port}`,
@@ -224,8 +235,8 @@ try {
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
-  child = bunRuntime.spawn([bundledNode, stagedServer], {
-    cwd: stagedStandalone,
+  child = bunRuntime.spawn([stagedNode, stagedServer], {
+    cwd: stagedWork,
     env: environment,
     stdout: "pipe",
     stderr: "pipe",

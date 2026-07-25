@@ -6,8 +6,9 @@
 > **Latest Founder-accepted baseline:** Internal.5
 > **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
 > **Immediate gate:** replace the failing Bun production server with pinned
-> Node.js and observe child exit promptly without deleting Founder AppData or
-> weakening runtime authority
+> Node.js, use writable non-executable AppData process state, retain bounded
+> redacted early-exit evidence and observe child exit promptly without deleting
+> Founder AppData or weakening runtime authority
 > **Last consolidated:** 2026-07-25
 
 This is the shortest safe path from the current application to the complete
@@ -117,6 +118,9 @@ pinned Node.js LTS, detects pre-readiness process exit immediately, and follows
 the normal source → reviewed GitHub checks → signed Internal update →
 preserved-AppData Founder acceptance path. Do not bypass it by deleting AppData,
 running local builds or weakening the fail-closed shop/runtime boundary.
+The clean installed gate must also prove the authenticated workspace twice
+within the bounded day-to-day startup ceiling; a successful package that waits
+minutes or discards the server failure reason does not pass.
 
 ### Outcome
 

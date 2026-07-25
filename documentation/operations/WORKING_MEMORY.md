@@ -39,6 +39,14 @@ Branch:
 agent/windows-node-runtime-internal-8
 ```
 
+PR #158 is open. Exact remote head `7134b001dc62cc1de6f939d340e7f6f967de6fe4`
+passed the quality gate, Linux Rust release check, Windows Rust release parity,
+Windows database suite, exact standalone build, contained Node launcher and
+authenticated staged-runtime proof. Its MSI then installed successfully on the
+clean Windows runner, and the complete 3,985-file protected standalone tree
+matched the build. The installed Node process exited with code 1 before
+readiness; the old launcher discarded stderr, so that head is not mergeable.
+
 This is one coherent installed-platform correction. It:
 
 - keeps Bun 1.3.14 as the frozen development/build tool and baseline WhatsApp
@@ -50,6 +58,14 @@ This is one coherent installed-platform correction. It:
   protected `Program Files`, with no PATH or AppData executable fallback;
 - observes contained child exit during readiness so a fast runtime failure is
   reported in seconds rather than after repeated 90-second deadlines;
+- gives the protected server a non-executable Local AppData working directory
+  instead of using protected `Program Files` as writable process state;
+- continuously drains server stderr into a fixed-size in-memory buffer,
+  redacts every injected token/secret, and retains only a bounded startup
+  failure detail;
+- exercises staged Node, Prisma engine and standalone paths containing spaces
+  from the same writable-working-directory model;
+- caps clean-runner day-to-day authenticated UI readiness at 45 seconds;
 - updates clean Windows, installed MSI, process and runtime-manifest evidence;
 - fixes dispatcher/observer PR-comment permissions;
 - shortens signed delivery by attesting that protected main has the identical
@@ -72,8 +88,9 @@ all clean-checkout build/test evidence.
 - [ ] Complete source, tests, installed evidence and active authority updates.
 - [x] Assign unique candidate `1.0.0-internal.8` / MSI `1.0.0.8` across
   version authorities.
-- [ ] Review the complete diff, commit and push without local heavy runs.
-- [ ] Open one coherent PR and let GitHub Actions validate the exact head.
+- [x] Review the initial complete diff, commit and push without local heavy
+  runs.
+- [x] Open one coherent PR and let GitHub Actions validate the exact heads.
 - [ ] Address all actionable review/CI findings and revalidate the exact head.
 - [ ] Merge, build/sign from exact protected main, and publish only after every
   automated installed runtime/UI gate passes.
@@ -82,13 +99,17 @@ all clean-checkout build/test evidence.
 
 ## Exact next execution order
 
-1. Finish the Node runtime manifest, launcher, fail-fast readiness, installed
-   harness, release attestation and documentation diff.
-2. Assign the single next version and run lightweight source/diff inspection
-   only; do not build or test locally.
-3. Commit, push and open the PR. Use GitHub Actions for source, Rust, Windows
-   build, MSI install, authenticated visible UI, normal close and reopen.
-4. Resolve every review/CI finding on the exact PR head before merge.
+1. Finish the writable working-directory, bounded redacted stderr, installed
+   performance gate and current evidence correction prompted by run
+   `30149740801`.
+2. Run lightweight formatting, parser and diff inspection only; do not build or
+   test locally.
+3. Commit and push the focused correction to PR #158. Use GitHub Actions for
+   source, Rust, Windows build, MSI install, authenticated visible UI, normal
+   close and reopen.
+4. Resolve every review/CI finding on the exact PR head before merge; a server
+   exit without its bounded redacted reason is itself a failing diagnostic
+   contract.
 5. After merge, let the optimized exact-main signed workflow attest the
    reviewed tree/checks, build/sign once, and repeat installed MSI/UI proof.
 6. Publish and install that one candidate over Internal.7. Acceptance requires

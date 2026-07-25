@@ -23,6 +23,7 @@ $resultPath = Join-Path $evidenceRoot "ui-result.json"
 $safeStartupWindowTitle = "SahelFlow - Safe startup"
 $workspaceWindowTitle = "SahelFlow"
 $maxRuntimePrepareMilliseconds = 15000
+$maxAuthenticatedUiMilliseconds = 45000
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -179,7 +180,7 @@ function Wait-ForAuthenticatedUi {
         [Parameter(Mandatory = $true)][string]$Phase
     )
 
-    $deadline = (Get-Date).AddMinutes(5)
+    $deadline = $StartedAt.AddMilliseconds($maxAuthenticatedUiMilliseconds)
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
         $Process.Refresh()
@@ -262,10 +263,11 @@ function Wait-ForAuthenticatedUi {
             endpoint = $endpoint
             uiReady = $uiReady
             processTree = Get-SahelFlowProcesses
+            elapsedMilliseconds = [int64]((Get-Date) - $StartedAt).TotalMilliseconds
         }
     }
 
-    throw "${Phase}: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within five minutes."
+    throw "${Phase}: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within $maxAuthenticatedUiMilliseconds ms."
 }
 
 function Close-SahelFlowNormally {

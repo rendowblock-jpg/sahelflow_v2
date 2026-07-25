@@ -105,6 +105,7 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
     expect(uiHarness).toContain("$maxRuntimePrepareMilliseconds = 15000");
+    expect(uiHarness).toContain("$maxAuthenticatedUiMilliseconds = 45000");
     expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");
     expect(harness).toContain("$installedRuntimeRoot");
@@ -116,6 +117,10 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain("expectedNodeSha256");
     expect(harness).toContain("ToLowerInvariant");
     expect(harness).toContain("runtimeIdentityProblems");
+    expect(desktop).toContain('app_local_data_dir()?.join("runtime-work")');
+    expect(desktop).toContain("spawn_in_capturing_stderr");
+    expect(desktop).toContain("redact_runtime_stderr");
+    expect(harness).toContain("runtimeWorkExecutables");
     expect(harness).toContain("bunProductionRuntimePresent");
     expect(harness).toContain("Installed Node.js runtime identity does not match");
     expect(harness).toContain("currentNodeSha256");

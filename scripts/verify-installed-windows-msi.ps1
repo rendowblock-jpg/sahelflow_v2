@@ -47,6 +47,7 @@ $resultPath = Join-Path $evidenceRoot "result.json"
 $roamingRoot = Join-Path $env:APPDATA "com.sahelflow.desktop"
 $localRoot = Join-Path $env:LOCALAPPDATA "com.sahelflow.desktop"
 $runtimeCacheRoot = Join-Path $localRoot "runtime-cache"
+$runtimeWorkRoot = Join-Path $localRoot "runtime-work"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
@@ -424,6 +425,19 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     )
     if ($runtimeCacheEntries.Count -ne 0) {
         throw "Installed launch created $($runtimeCacheEntries.Count) AppData runtime-cache entry or staging path."
+    }
+    $runtimeWorkExecutables = @(
+        if (Test-Path -LiteralPath $runtimeWorkRoot) {
+            Get-ChildItem -LiteralPath $runtimeWorkRoot -Recurse -File -ErrorAction Stop |
+                Where-Object {
+                    $_.Name -ieq "node.exe" -or
+                    $_.Name -ieq "server.js" -or
+                    $_.Name -ieq "runtime-manifest.json"
+                }
+        }
+    )
+    if ($runtimeWorkExecutables.Count -ne 0) {
+        throw "Installed launch copied executable runtime authority into the writable working directory."
     }
 
     $manifest = Read-JsonFile $installedRuntimeManifestPath

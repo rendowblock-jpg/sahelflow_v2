@@ -1,8 +1,68 @@
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::io::Error as IoError;
+use std::io::{Error as IoError, Read};
 use std::path::Path;
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
+
+const MAX_CAPTURED_STDERR_BYTES: usize = 16 * 1024;
+
+#[derive(Default)]
+struct StderrCapture {
+    bytes: Vec<u8>,
+    finished: bool,
+}
+
+type SharedStderr = Arc<(Mutex<StderrCapture>, Condvar)>;
+
+fn completed_stderr_capture() -> SharedStderr {
+    Arc::new((
+        Mutex::new(StderrCapture {
+            bytes: Vec::new(),
+            finished: true,
+        }),
+        Condvar::new(),
+    ))
+}
+
+fn start_stderr_reader<R>(mut reader: R) -> SharedStderr
+where
+    R: Read + Send + 'static,
+{
+    let capture = Arc::new((Mutex::new(StderrCapture::default()), Condvar::new()));
+    let thread_capture = capture.clone();
+    std::thread::spawn(move || {
+        let mut chunk = [0_u8; 2_048];
+        loop {
+            match reader.read(&mut chunk) {
+                Ok(0) | Err(_) => break,
+                Ok(read) => {
+                    if let Ok(mut state) = thread_capture.0.lock() {
+                        let remaining = MAX_CAPTURED_STDERR_BYTES.saturating_sub(state.bytes.len());
+                        state.bytes.extend_from_slice(&chunk[..read.min(remaining)]);
+                    }
+                }
+            }
+        }
+        if let Ok(mut state) = thread_capture.0.lock() {
+            state.finished = true;
+            thread_capture.1.notify_all();
+        }
+    });
+    capture
+}
+
+fn stderr_snapshot(capture: &SharedStderr, timeout: Duration) -> Result<String, IoError> {
+    let state = capture
+        .0
+        .lock()
+        .map_err(|_| IoError::other("contained stderr capture is poisoned"))?;
+    let (state, _) = capture
+        .1
+        .wait_timeout_while(state, timeout, |state| !state.finished)
+        .map_err(|_| IoError::other("contained stderr capture is poisoned"))?;
+    Ok(String::from_utf8_lossy(&state.bytes).into_owned())
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct ProcessExit {
@@ -49,10 +109,15 @@ impl std::error::Error for SpawnError {
 
 #[cfg(windows)]
 mod platform {
-    use super::{Duration, IoError, OsStr, OsString, Path, ProcessExit, SpawnError};
+    use super::{
+        completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError, OsStr,
+        OsString, Path, ProcessExit, SharedStderr, SpawnError,
+    };
     use std::collections::BTreeMap;
+    use std::fs::File;
     use std::mem::{size_of, zeroed};
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    use std::os::windows::io::FromRawHandle;
     use std::sync::Arc;
     use std::time::Instant;
     use windows_sys::Win32::Foundation::{
@@ -69,6 +134,7 @@ mod platform {
         TerminateJobObject, JOBOBJECT_BASIC_ACCOUNTING_INFORMATION,
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     };
+    use windows_sys::Win32::System::Pipes::CreatePipe;
     use windows_sys::Win32::System::Threading::{
         CreateProcessW, DeleteProcThreadAttributeList, GetExitCodeProcess,
         InitializeProcThreadAttributeList, ResumeThread, TerminateProcess,
@@ -82,6 +148,7 @@ mod platform {
         job: HANDLE,
         process: HANDLE,
         pid: u32,
+        stderr: SharedStderr,
     }
 
     // Windows process and job handles are kernel objects that support
@@ -90,6 +157,14 @@ mod platform {
     unsafe impl Sync for ProcessHandles {}
 
     struct OwnedHandle(HANDLE);
+
+    impl OwnedHandle {
+        fn into_raw(mut self) -> HANDLE {
+            let handle = self.0;
+            self.0 = std::ptr::null_mut();
+            handle
+        }
+    }
 
     impl Drop for OwnedHandle {
         fn drop(&mut self) {
@@ -105,14 +180,22 @@ mod platform {
         stdin: OwnedHandle,
         stdout: OwnedHandle,
         stderr: OwnedHandle,
+        stderr_reader: Option<OwnedHandle>,
     }
 
     impl ChildStdio {
-        fn open() -> Result<Self, IoError> {
+        fn open(capture_stderr: bool) -> Result<Self, IoError> {
+            let (stderr, stderr_reader) = if capture_stderr {
+                let (writer, reader) = open_stderr_pipe()?;
+                (writer, Some(reader))
+            } else {
+                (OwnedHandle(open_nul(GENERIC_WRITE)?), None)
+            };
             Ok(Self {
                 stdin: OwnedHandle(open_nul(GENERIC_READ)?),
                 stdout: OwnedHandle(open_nul(GENERIC_WRITE)?),
-                stderr: OwnedHandle(open_nul(GENERIC_WRITE)?),
+                stderr,
+                stderr_reader,
             })
         }
 
@@ -207,6 +290,25 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
         ) -> Result<Self, SpawnError> {
+            Self::spawn_in_internal(program, args, environment, current_directory, false)
+        }
+
+        pub fn spawn_in_capturing_stderr(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+        ) -> Result<Self, SpawnError> {
+            Self::spawn_in_internal(program, args, environment, current_directory, true)
+        }
+
+        fn spawn_in_internal(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+            capture_stderr: bool,
+        ) -> Result<Self, SpawnError> {
             let application = wide_null(program.as_os_str()).map_err(SpawnError::before_process)?;
             let mut command_line =
                 command_line(program.as_os_str(), args).map_err(SpawnError::before_process)?;
@@ -216,7 +318,7 @@ mod platform {
                 .map(|path| wide_null(path.as_os_str()))
                 .transpose()
                 .map_err(SpawnError::before_process)?;
-            let stdio = ChildStdio::open().map_err(SpawnError::before_process)?;
+            let stdio = ChildStdio::open(capture_stderr).map_err(SpawnError::before_process)?;
             let job = create_kill_on_close_job().map_err(SpawnError::before_process)?;
             let handles = stdio.handles();
             let attributes = match ProcessAttributeList::with_handles(&handles) {
@@ -278,11 +380,27 @@ mod platform {
                 CloseHandle(process.hThread);
             }
 
+            let ChildStdio {
+                stdin,
+                stdout,
+                stderr,
+                stderr_reader,
+            } = stdio;
+            drop((stdin, stdout, stderr));
+            let stderr = match stderr_reader {
+                Some(reader) => {
+                    let reader = unsafe { File::from_raw_handle(reader.into_raw()) };
+                    start_stderr_reader(reader)
+                }
+                None => completed_stderr_capture(),
+            };
+
             Ok(Self {
                 inner: Arc::new(ProcessHandles {
                     job,
                     process: process.hProcess,
                     pid: process.dwProcessId,
+                    stderr,
                 }),
             })
         }
@@ -303,6 +421,10 @@ mod platform {
                 WAIT_TIMEOUT => Ok(None),
                 _ => Err(IoError::last_os_error()),
             }
+        }
+
+        pub fn stderr_snapshot(&self, timeout: Duration) -> Result<String, IoError> {
+            stderr_snapshot(&self.inner.stderr, timeout)
         }
 
         pub fn terminate_tree_and_wait(&self, timeout: Duration) -> Result<(), IoError> {
@@ -398,6 +520,20 @@ mod platform {
         } else {
             Ok(handle)
         }
+    }
+
+    fn open_stderr_pipe() -> Result<(OwnedHandle, OwnedHandle), IoError> {
+        let security = SECURITY_ATTRIBUTES {
+            nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: std::ptr::null_mut(),
+            bInheritHandle: 1,
+        };
+        let mut reader = std::ptr::null_mut();
+        let mut writer = std::ptr::null_mut();
+        if unsafe { CreatePipe(&mut reader, &mut writer, &security, 0) } == 0 {
+            return Err(IoError::last_os_error());
+        }
+        Ok((OwnedHandle(writer), OwnedHandle(reader)))
     }
 
     fn failed_before_job_assignment(
@@ -718,7 +854,7 @@ mod platform {
             drop(listener);
 
             let test_root = std::env::temp_dir().join(format!(
-                "sahelflow-contained-node-{}-{}",
+                "SahelFlow contained Node {}-{}",
                 std::process::id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -745,7 +881,7 @@ http.createServer((_request, response) => {
                 .collect::<Vec<_>>();
             environment.push((OsString::from("PORT"), OsString::from(port.to_string())));
 
-            let child = ContainedChild::spawn_in(
+            let child = ContainedChild::spawn_in_capturing_stderr(
                 &node_path,
                 &[script.as_os_str().to_os_string()],
                 &environment,
@@ -783,6 +919,10 @@ http.createServer((_request, response) => {
             child
                 .terminate_tree_and_wait(Duration::from_secs(5))
                 .expect("terminate contained Node.js tree");
+            let stderr = child
+                .stderr_snapshot(Duration::from_secs(2))
+                .expect("read bounded contained stderr");
+            assert!(stderr.contains("contained stderr ready"));
             std::fs::remove_dir_all(test_root).expect("remove contained Node.js test directory");
         }
 
@@ -810,14 +950,18 @@ http.createServer((_request, response) => {
 
 #[cfg(not(windows))]
 mod platform {
-    use super::{Duration, IoError, OsString, Path, ProcessExit, SpawnError};
-    use std::process::{Child, Command};
+    use super::{
+        completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError,
+        OsString, Path, ProcessExit, SharedStderr, SpawnError,
+    };
+    use std::process::{Child, Command, Stdio};
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
 
     struct ProcessState {
         child: Mutex<Child>,
         pid: u32,
+        stderr: SharedStderr,
     }
 
     #[derive(Clone)]
@@ -840,6 +984,25 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
         ) -> Result<Self, SpawnError> {
+            Self::spawn_in_internal(program, args, environment, current_directory, false)
+        }
+
+        pub fn spawn_in_capturing_stderr(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+        ) -> Result<Self, SpawnError> {
+            Self::spawn_in_internal(program, args, environment, current_directory, true)
+        }
+
+        fn spawn_in_internal(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+            capture_stderr: bool,
+        ) -> Result<Self, SpawnError> {
             let mut command = Command::new(program);
             command
                 .args(args)
@@ -848,12 +1011,21 @@ mod platform {
             if let Some(directory) = current_directory {
                 command.current_dir(directory);
             }
-            let child = command.spawn().map_err(SpawnError::before_process)?;
+            if capture_stderr {
+                command.stderr(Stdio::piped());
+            }
+            let mut child = command.spawn().map_err(SpawnError::before_process)?;
             let pid = child.id();
+            let stderr = child
+                .stderr
+                .take()
+                .map(start_stderr_reader)
+                .unwrap_or_else(completed_stderr_capture);
             Ok(Self {
                 inner: Arc::new(ProcessState {
                     child: Mutex::new(child),
                     pid,
+                    stderr,
                 }),
             })
         }
@@ -872,6 +1044,10 @@ mod platform {
             Ok(status.map(|status| ProcessExit {
                 code: status.code().unwrap_or(1) as u32,
             }))
+        }
+
+        pub fn stderr_snapshot(&self, timeout: Duration) -> Result<String, IoError> {
+            stderr_snapshot(&self.inner.stderr, timeout)
         }
 
         pub fn terminate_tree_and_wait(&self, timeout: Duration) -> Result<(), IoError> {
