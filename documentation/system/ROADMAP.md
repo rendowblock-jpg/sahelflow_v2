@@ -1,12 +1,13 @@
 # SahelFlow — Completion Roadmap
 
 > **Status:** Active dependency order
-> **Current protected-main source:** Internal.6 at
-> `772d09c3b2ada4668f8c872bfd469cabb839d82a`
+> **Current protected-main source:** Internal.7 at
+> `3db7e4072f403f39632b7134be841047767a2e6d`
 > **Latest Founder-accepted baseline:** Internal.5
 > **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
-> **Immediate gate:** replace Internal.6 multi-minute recursive runtime
-> preparation without deleting Founder AppData or weakening runtime authority
+> **Immediate gate:** replace the failing Bun production server with pinned
+> Node.js and observe child exit promptly without deleting Founder AppData or
+> weakening runtime authority
 > **Last consolidated:** 2026-07-25
 
 This is the shortest safe path from the current application to the complete
@@ -108,11 +109,12 @@ Documentation-only completion does not create an MSI.
 ## Phase 1 — Workspace/shop and business-integrity foundation
 
 Before Phase 1A changes the installed application, the runtime acceptance loop
-must close. Internal.6 corrected the hidden/unresponsive startup surface and
-passed exact-source signed release gates, but its Founder-machine launch spent
-about 14 minutes recursively verifying and staging a 3,985-file runtime on an
-SSD. Internal.7 must use the release-verified protected installation directly
-and follow the normal source → GitHub Actions → signed Internal update →
+must close. Internal.7 eliminated the 14-minute recursive staging path and
+prepared the protected runtime in 271 ms on the Founder SSD, but bundled Bun
+then exited with `EPERM` while loading the installed Next.js entrypoint. The
+next coherent candidate replaces only that production server runtime with
+pinned Node.js LTS, detects pre-readiness process exit immediately, and follows
+the normal source → reviewed GitHub checks → signed Internal update →
 preserved-AppData Founder acceptance path. Do not bypass it by deleting AppData,
 running local builds or weakening the fail-closed shop/runtime boundary.
 

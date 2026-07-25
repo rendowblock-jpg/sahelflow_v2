@@ -17,7 +17,8 @@ $runtimeUiDiagnosticPath = Join-Path $roamingRoot "runtime-ui-diagnostic.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $startupTracePath = Join-Path $roamingRoot "startup-trace.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
-$exe = "C:\Program Files\SahelFlow\sahelflow.exe"
+$installRoot = "C:\Program Files\SahelFlow"
+$exe = Join-Path $installRoot "sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
 $safeStartupWindowTitle = "SahelFlow - Safe startup"
 $workspaceWindowTitle = "SahelFlow"
@@ -41,9 +42,9 @@ function Get-SahelFlowProcesses {
     return @(
         Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
             Where-Object {
-                $_.Name -ieq "sahelflow.exe" -or
-                $_.Name -ieq "bun.exe" -or
-                $_.Name -ieq "sahelflow-whatsapp.exe"
+                $path = [string]$_.ExecutablePath
+                -not [string]::IsNullOrWhiteSpace($path) -and
+                $path.StartsWith("$installRoot\", [System.StringComparison]::OrdinalIgnoreCase)
             } |
             Select-Object Name, ProcessId, ParentProcessId, ExecutablePath, CommandLine, CreationDate
     )

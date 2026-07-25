@@ -24,6 +24,19 @@ $expectedManifestSha256 = (Get-FileHash -LiteralPath $standaloneManifestPath -Al
 $expectedServerSha256 = (
     Get-FileHash -LiteralPath (Join-Path $builtStandaloneRoot "server.js") -Algorithm SHA256
 ).Hash
+$builtRuntimeRoot = Join-Path $repositoryRoot "src-tauri\resources\runtime"
+$runtimeManifestPath = Join-Path $builtRuntimeRoot "runtime-manifest.json"
+$runtimeManifest = Get-Content -LiteralPath $runtimeManifestPath -Raw | ConvertFrom-Json
+if (
+    [int]$runtimeManifest.formatVersion -ne 3 -or
+    $runtimeManifest.node.file -cne "node.exe" -or
+    $runtimeManifest.node.licenseFile -cne "NODE-LICENSE.txt"
+) {
+    throw "Built Node.js runtime manifest is invalid."
+}
+$expectedRuntimeManifestSha256 = (Get-FileHash -LiteralPath $runtimeManifestPath -Algorithm SHA256).Hash
+$expectedNodeSha256 = [string]$runtimeManifest.node.sha256
+$expectedNodeLicenseSha256 = [string]$runtimeManifest.node.licenseSha256
 
 $resolvedMsi = (Resolve-Path -LiteralPath $MsiPath).Path
 $evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
@@ -35,10 +48,16 @@ $runtimeCacheRoot = Join-Path $localRoot "runtime-cache"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
-$installedRuntimeRoot = "C:\Program Files\SahelFlow\standalone"
+$installedProductRoot = "C:\Program Files\SahelFlow"
+$installedRuntimeRoot = Join-Path $installedProductRoot "standalone"
 $installedRuntimeManifestPath = Join-Path $installedRuntimeRoot `
     "sahelflow-standalone-manifest.json"
 $installedServerPath = Join-Path $installedRuntimeRoot "server.js"
+$installedJavascriptRuntimeRoot = "C:\Program Files\SahelFlow\runtime"
+$installedJavascriptRuntimeManifestPath = Join-Path $installedJavascriptRuntimeRoot "runtime-manifest.json"
+$installedNodePath = Join-Path $installedJavascriptRuntimeRoot "node.exe"
+$installedNodeLicensePath = Join-Path $installedJavascriptRuntimeRoot "NODE-LICENSE.txt"
+$forbiddenInstalledBunPath = Join-Path $installedJavascriptRuntimeRoot "bun.exe"
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -56,23 +75,16 @@ function Get-InstalledSahelFlow {
 }
 
 function Get-SahelFlowProcessTree {
-    $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
-    $roots = @($all | Where-Object { $_.Name -ieq "sahelflow.exe" })
-    $ids = @($roots.ProcessId)
-    $changed = $true
-    while ($changed) {
-        $changed = $false
-        foreach ($child in @($all | Where-Object { $ids -contains $_.ParentProcessId })) {
-            if ($ids -notcontains $child.ProcessId) {
-                $ids += $child.ProcessId
-                $changed = $true
-            }
-        }
-    }
-
     return @(
-        $all |
-            Where-Object { $ids -contains $_.ProcessId } |
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $path = [string]$_.ExecutablePath
+                -not [string]::IsNullOrWhiteSpace($path) -and
+                $path.StartsWith(
+                    "$installedProductRoot\",
+                    [System.StringComparison]::OrdinalIgnoreCase
+                )
+            } |
             Select-Object Name, ProcessId, ParentProcessId, ExecutablePath, CommandLine, CreationDate
     )
 }
@@ -254,7 +266,7 @@ function Close-SahelFlowNormally {
             Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
                 Where-Object {
                     $_.Name -ieq "sahelflow.exe" -or
-                    $_.Name -ieq "bun.exe" -or
+                    $_.Name -ieq "node.exe" -or
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
@@ -316,6 +328,38 @@ if (-not (Test-Path -LiteralPath $installedRuntimeManifestPath -PathType Leaf)) 
 if (-not (Test-Path -LiteralPath $installedServerPath -PathType Leaf)) {
     throw "Installed standalone server is missing: $installedServerPath"
 }
+foreach ($requiredRuntimePath in @(
+    $installedJavascriptRuntimeManifestPath,
+    $installedNodePath,
+    $installedNodeLicensePath
+)) {
+    if (-not (Test-Path -LiteralPath $requiredRuntimePath -PathType Leaf)) {
+        throw "Installed Node.js runtime file is missing: $requiredRuntimePath"
+    }
+}
+if (Test-Path -LiteralPath $forbiddenInstalledBunPath) {
+    throw "Installed runtime still contains the retired Bun production executable."
+}
+$installedRuntimeManifest = Read-JsonFile $installedJavascriptRuntimeManifestPath
+$installedRuntimeManifestSha256 = (
+    Get-FileHash -LiteralPath $installedJavascriptRuntimeManifestPath -Algorithm SHA256
+).Hash
+$installedNodeSha256 = (Get-FileHash -LiteralPath $installedNodePath -Algorithm SHA256).Hash
+$installedNodeLicenseSha256 = (
+    Get-FileHash -LiteralPath $installedNodeLicensePath -Algorithm SHA256
+).Hash
+if (
+    [int]$installedRuntimeManifest.formatVersion -ne 3 -or
+    $installedRuntimeManifest.node.file -cne "node.exe" -or
+    $installedRuntimeManifest.node.sha256 -cne $expectedNodeSha256 -or
+    $installedRuntimeManifest.node.licenseFile -cne "NODE-LICENSE.txt" -or
+    $installedRuntimeManifest.node.licenseSha256 -cne $expectedNodeLicenseSha256 -or
+    $installedRuntimeManifestSha256 -cne $expectedRuntimeManifestSha256 -or
+    $installedNodeSha256 -cne $expectedNodeSha256 -or
+    $installedNodeLicenseSha256 -cne $expectedNodeLicenseSha256
+) {
+    throw "Installed Node.js runtime identity does not match the built candidate."
+}
 
 $treeVerifierPath = Join-Path $repositoryRoot "scripts\verify-installed-standalone.ts"
 $treeVerificationOutput = @(
@@ -371,6 +415,14 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         throw "Protected installed runtime identity does not match the built candidate."
     }
 
+    $currentJavascriptRuntimeManifestSha256 = (
+        Get-FileHash -LiteralPath $installedJavascriptRuntimeManifestPath -Algorithm SHA256
+    ).Hash
+    $currentNodeSha256 = (Get-FileHash -LiteralPath $installedNodePath -Algorithm SHA256).Hash
+    $currentNodeLicenseSha256 = (
+        Get-FileHash -LiteralPath $installedNodeLicensePath -Algorithm SHA256
+    ).Hash
+
     $currentInstalledRuntimeIdentity = [pscustomobject]@{
         directory = $installedRuntimeRoot
         manifestSha256 = (Get-FileHash -LiteralPath $installedRuntimeManifestPath -Algorithm SHA256).Hash
@@ -380,6 +432,11 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         fileCount = $manifest.fileCount
         completeTreeVerified = [bool]$installedTreeVerification.verified
         appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count
+        javascriptRuntimeDirectory = $installedJavascriptRuntimeRoot
+        javascriptRuntimeManifestSha256 = $currentJavascriptRuntimeManifestSha256
+        nodeSha256 = $currentNodeSha256
+        nodeLicenseSha256 = $currentNodeLicenseSha256
+        bunProductionRuntimePresent = Test-Path -LiteralPath $forbiddenInstalledBunPath
     }
     if (
         $currentInstalledRuntimeIdentity.manifestSha256 -ne $expectedManifestSha256 -or
@@ -425,6 +482,10 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         if ($currentInstalledRuntimeIdentity.directory -ne $installedRuntimeIdentity.directory -or
             $currentInstalledRuntimeIdentity.manifestSha256 -ne $installedRuntimeIdentity.manifestSha256 -or
             $currentInstalledRuntimeIdentity.serverSha256 -ne $installedRuntimeIdentity.serverSha256 -or
+            $currentInstalledRuntimeIdentity.javascriptRuntimeManifestSha256 -ne $installedRuntimeIdentity.javascriptRuntimeManifestSha256 -or
+            $currentInstalledRuntimeIdentity.nodeSha256 -ne $installedRuntimeIdentity.nodeSha256 -or
+            $currentInstalledRuntimeIdentity.nodeLicenseSha256 -ne $installedRuntimeIdentity.nodeLicenseSha256 -or
+            $currentInstalledRuntimeIdentity.bunProductionRuntimePresent -or
             $currentInstalledRuntimeIdentity.appDataRuntimeCacheEntryCount -ne 0) {
             throw "Second launch changed the protected installed runtime or staged an AppData copy."
         }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -54,7 +54,14 @@ if (!isAbsolute(databasePath)) {
   throw new Error("DATABASE_URL must contain an absolute SQLite path");
 }
 const sourceStandalone = resolve(root, "src-tauri", "resources", "standalone");
-const bundledBun = resolve(root, "src-tauri", "resources", "runtime", "bun.exe");
+const bundledNode = resolve(root, "src-tauri", "resources", "runtime", "node.exe");
+const runtimeManifestPath = resolve(
+  root,
+  "src-tauri",
+  "resources",
+  "runtime",
+  "runtime-manifest.json",
+);
 const queryEngine = resolve(
   root,
   "src-tauri",
@@ -69,10 +76,32 @@ const authority = JSON.parse(
 if (typeof authority.version !== "string") {
   throw new Error("version authority is missing");
 }
-for (const required of [sourceStandalone, bundledBun, queryEngine, databasePath]) {
+for (const required of [
+  sourceStandalone,
+  bundledNode,
+  runtimeManifestPath,
+  queryEngine,
+  databasePath,
+]) {
   if (!existsSync(required)) {
     throw new Error(`Packaged runtime smoke input is missing: ${required}`);
   }
+}
+const runtimeManifest = JSON.parse(readFileSync(runtimeManifestPath, "utf8")) as {
+  formatVersion?: unknown;
+  node?: { file?: unknown; sha256?: unknown; licenseFile?: unknown };
+};
+const nodeSha256 = createHash("sha256")
+  .update(readFileSync(bundledNode))
+  .digest("hex");
+if (
+  runtimeManifest.formatVersion !== 3 ||
+  runtimeManifest.node?.file !== "node.exe" ||
+  runtimeManifest.node?.sha256 !== nodeSha256 ||
+  runtimeManifest.node?.licenseFile !== "NODE-LICENSE.txt" ||
+  !existsSync(resolve(root, "src-tauri", "resources", "runtime", "NODE-LICENSE.txt"))
+) {
+  throw new Error("packaged Node.js runtime manifest is invalid or incomplete");
 }
 const packagedManifest = JSON.parse(
   readFileSync(resolve(sourceStandalone, STANDALONE_MANIFEST_FILE), "utf8"),
@@ -195,7 +224,7 @@ try {
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
-  child = bunRuntime.spawn([bundledBun, stagedServer], {
+  child = bunRuntime.spawn([bundledNode, stagedServer], {
     cwd: stagedStandalone,
     env: environment,
     stdout: "pipe",

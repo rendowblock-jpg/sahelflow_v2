@@ -357,10 +357,11 @@ On the Founder ThinkPad T470 class:
 - indexed search within 350 ms p95;
 - ordinary local mutation within 500 ms p95.
 
-The accepted Internal.5 reopen is functionally proven. Internal.6 made the safe
-startup surface responsive but then spent about 14 minutes preparing its
-runtime on the Founder SSD and was not accepted. This is a blocking performance
-defect and does not waive these Stable targets.
+The accepted Internal.5 reopen is functionally proven. Internal.7 reduced
+runtime preparation from about 14 minutes to 271 ms on the Founder SSD, then
+its bundled Bun process exited while loading the protected Next.js entrypoint
+and was not accepted. Startup correctness remains blocking and does not waive
+these Stable targets.
 
 ### Hosted storefront
 

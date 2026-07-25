@@ -3,8 +3,8 @@ param(
     [switch]$SelfTest,
     [string]$MsiPath,
     [string]$ExpectedMsiSha256,
-    [string]$ExpectedDisplayVersion = '1.0.0.7',
-    [string]$ExpectedAppVersion = '1.0.0-internal.7'
+    [string]$ExpectedDisplayVersion = '1.0.0.8',
+    [string]$ExpectedAppVersion = '1.0.0-internal.8'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -105,7 +105,14 @@ if (-not (Test-Path -LiteralPath $MsiPath -PathType Leaf)) {
     throw "MSI not found: $MsiPath"
 }
 
-$running = @(Get-Process -Name 'sahelflow', 'bun', 'sahelflow-whatsapp' -ErrorAction SilentlyContinue)
+$running = @(
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $path = [string]$_.ExecutablePath
+            -not [string]::IsNullOrWhiteSpace($path) -and
+            $path.StartsWith("$InstallDirectory\", [System.StringComparison]::OrdinalIgnoreCase)
+        }
+)
 if ($running.Count -ne 0) {
     throw 'SahelFlow or one of its runtime children is running. Close SahelFlow normally before installing.'
 }

@@ -110,6 +110,14 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain("$installedRuntimeRoot");
     expect(harness).toContain("verify-installed-standalone.ts");
     expect(harness).toContain("completeTreeVerified");
+    expect(harness).toContain(
+      '$installedNodePath = Join-Path $installedJavascriptRuntimeRoot "node.exe"',
+    );
+    expect(harness).toContain("expectedNodeSha256");
+    expect(harness).toContain("bunProductionRuntimePresent");
+    expect(harness).toContain("Installed Node.js runtime identity does not match");
+    expect(harness).toContain("currentNodeSha256");
+    expect(uiHarness).toContain("$path.StartsWith");
     expect(treeVerifier).toContain("verifyStandaloneManifest");
     expect(harness).toContain(
       "appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count",
@@ -129,6 +137,7 @@ describe("installed Windows runtime contract", () => {
     const dispatcher = read(
       ".github/workflows/release-on-version-authority.yml",
     );
+    const observer = read(".github/workflows/signed-release-observer.yml");
 
     const signatureProof = release.indexOf(
       "Verify local MSI and updater signature",
@@ -163,7 +172,8 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("workflow_dispatch:");
     expect(dispatcher).toContain("actions: write");
     expect(dispatcher).toContain("issues: write");
-    expect(dispatcher).toContain("pull-requests: read");
+    expect(dispatcher).toContain("pull-requests: write");
+    expect(observer).toContain("pull-requests: write");
     expect(dispatcher).toContain('source_ref="${SOURCE_SHA}"');
     expect(dispatcher).toContain("gh workflow run release.yml");
     expect(dispatcher).toContain("gh run list");

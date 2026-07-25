@@ -628,18 +628,33 @@ fn spawn_runtime_generation(
         ))
     })?;
     eprintln!(
-        "[sahelflow] contained Next.js server spawned with bundled Bun at {}",
+        "[sahelflow] contained Next.js server spawned with bundled Node.js at {}",
         runtime_protocol.app_url()
     );
 
-    if !runtime_protocol.wait_until_ready(MANDATORY_RUNTIME_READY_TIMEOUT) {
-        stop_runtime_launch(app, generation, &server_child, "unready Next.js server")?;
-        runtime_protocol::remove_manifest(&app_data_dir);
-        return Err(IoError::new(
-            ErrorKind::TimedOut,
-            "the mandatory local server failed its authenticated readiness attempt",
-        )
-        .into());
+    match runtime_protocol.wait_until_ready(MANDATORY_RUNTIME_READY_TIMEOUT, || {
+        server_child
+            .try_wait()
+            .map(|exit| exit.map(|exit| exit.code))
+    })? {
+        runtime_protocol::ReadinessOutcome::Ready => {}
+        runtime_protocol::ReadinessOutcome::ProcessExited(code) => {
+            stop_runtime_launch(app, generation, &server_child, "exited Next.js server")?;
+            runtime_protocol::remove_manifest(&app_data_dir);
+            return Err(IoError::other(format!(
+                "the mandatory local server exited before authenticated readiness (exit code {code})"
+            ))
+            .into());
+        }
+        runtime_protocol::ReadinessOutcome::TimedOut => {
+            stop_runtime_launch(app, generation, &server_child, "unready Next.js server")?;
+            runtime_protocol::remove_manifest(&app_data_dir);
+            return Err(IoError::new(
+                ErrorKind::TimedOut,
+                "the mandatory local server failed its authenticated readiness attempt",
+            )
+            .into());
+        }
     }
 
     if let Err(error) = runtime_protocol.publish_manifest(env!("CARGO_PKG_VERSION")) {
@@ -704,7 +719,7 @@ fn prepare_runtime(app: &tauri::AppHandle) -> Result<PreparedRuntime, Box<dyn st
             format!("failed to resolve the installed standalone runtime: {error}"),
         )
     })?;
-    let runtime_path = bundled_bun(&resource_dir).ok_or_else(|| {
+    let runtime_path = bundled_node(&resource_dir).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "The bundled JavaScript runtime is missing. Reinstall SahelFlow.",
@@ -1290,11 +1305,11 @@ fn schedule_sidecar_respawn(
     });
 }
 
-fn bundled_bun(resource_dir: &std::path::Path) -> Option<String> {
+fn bundled_node(resource_dir: &std::path::Path) -> Option<String> {
     let executable = if cfg!(target_os = "windows") {
-        "bun.exe"
+        "node.exe"
     } else {
-        "bun"
+        "node"
     };
     let candidate = resource_dir.join("runtime").join(executable);
     candidate

@@ -15,17 +15,19 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const BUN_VERSION = "1.3.14";
-const BUN_RELEASE = `bun-v${BUN_VERSION}`;
-const BUN_ASSET = "bun-windows-x64-baseline.zip";
-const BUN_URL = `https://github.com/oven-sh/bun/releases/download/${BUN_RELEASE}/${BUN_ASSET}`;
-const BUN_CHECKSUM_URL = `https://github.com/oven-sh/bun/releases/download/${BUN_RELEASE}/SHASUMS256.txt`;
-const BUN_ARCHIVE_SHA256 = "538f9c846355d9e847b2671bc00c47da4229a0befb24df3282b739770f3b475f";
-const BUN_EXECUTABLE_SHA256 = "9005d0d585d80425e9b715690de3e614651124c94458ef3d3a302ca1a6d3d813";
+const NODE_VERSION = "22.23.1";
+const NODE_RELEASE = `v${NODE_VERSION}`;
+const NODE_DIRECTORY = `node-v${NODE_VERSION}-win-x64`;
+const NODE_ASSET = `${NODE_DIRECTORY}.zip`;
+const NODE_URL = `https://nodejs.org/download/release/${NODE_RELEASE}/${NODE_ASSET}`;
+const NODE_CHECKSUM_URL = `https://nodejs.org/download/release/${NODE_RELEASE}/SHASUMS256.txt`;
+const NODE_ARCHIVE_SHA256 = "7df0bc9375723f4a86b3aa1b7cc73342423d9677a8df4538aca31a049e309c29";
+const NODE_EXECUTABLE_SHA256 = "f55db97c9924b0b37b05e8cf1be4e04c72aec01dc1c22420b5c31ab9cd118b89";
 
 const root = resolve(fileURLToPath(import.meta.url), "..", "..");
 const runtimeDir = resolve(root, "src-tauri", "resources", "runtime");
-const bunTarget = resolve(runtimeDir, "bun.exe");
+const nodeTarget = resolve(runtimeDir, "node.exe");
+const nodeLicenseTarget = resolve(runtimeDir, "NODE-LICENSE.txt");
 const engineSource = resolve(
   root,
   "node_modules",
@@ -50,17 +52,17 @@ if (!existsSync(engineSource)) {
 
 const tempDir = mkdtempSync(resolve(tmpdir(), "sahelflow-runtime-"));
 try {
-  const archivePath = resolve(tempDir, BUN_ASSET);
+  const archivePath = resolve(tempDir, NODE_ASSET);
   const extractDir = resolve(tempDir, "extracted");
-  const response = await fetch(BUN_URL, { redirect: "follow" });
+  const response = await fetch(NODE_URL, { redirect: "follow" });
   if (!response.ok) {
-    throw new Error(`Bun download failed with HTTP ${response.status}`);
+    throw new Error(`Node.js download failed with HTTP ${response.status}`);
   }
   writeFileSync(archivePath, Buffer.from(await response.arrayBuffer()));
   const archiveSha256 = sha256(archivePath);
-  if (archiveSha256 !== BUN_ARCHIVE_SHA256) {
+  if (archiveSha256 !== NODE_ARCHIVE_SHA256) {
     throw new Error(
-      `Bun archive checksum mismatch: expected ${BUN_ARCHIVE_SHA256}, found ${archiveSha256}`,
+      `Node.js archive checksum mismatch: expected ${NODE_ARCHIVE_SHA256}, found ${archiveSha256}`,
     );
   }
 
@@ -71,59 +73,61 @@ try {
       "-NoProfile",
       "-NonInteractive",
       "-Command",
-      "Expand-Archive -LiteralPath $env:SF_BUN_ARCHIVE -DestinationPath $env:SF_BUN_EXTRACT -Force",
+      "Expand-Archive -LiteralPath $env:SF_NODE_ARCHIVE -DestinationPath $env:SF_NODE_EXTRACT -Force",
     ],
     {
       encoding: "utf8",
       env: {
         ...process.env,
-        SF_BUN_ARCHIVE: archivePath,
-        SF_BUN_EXTRACT: extractDir,
+        SF_NODE_ARCHIVE: archivePath,
+        SF_NODE_EXTRACT: extractDir,
       },
     },
   );
   if (extraction.status !== 0) {
-    throw new Error(extraction.stderr || "Failed to extract the pinned Bun archive");
+    throw new Error(extraction.stderr || "Failed to extract the pinned Node.js archive");
   }
 
-  const bunSource = resolve(
-    extractDir,
-    BUN_ASSET.replace(/\.zip$/, ""),
-    "bun.exe",
-  );
-  if (!existsSync(bunSource)) {
-    throw new Error(`Pinned Bun executable is missing at ${bunSource}`);
+  const nodeSource = resolve(extractDir, NODE_DIRECTORY, "node.exe");
+  const nodeLicenseSource = resolve(extractDir, NODE_DIRECTORY, "LICENSE");
+  if (!existsSync(nodeSource)) {
+    throw new Error(`Pinned Node.js executable is missing at ${nodeSource}`);
   }
-  const executableSha256 = sha256(bunSource);
-  if (executableSha256 !== BUN_EXECUTABLE_SHA256) {
+  if (!existsSync(nodeLicenseSource)) {
+    throw new Error(`Pinned Node.js license is missing at ${nodeLicenseSource}`);
+  }
+  const executableSha256 = sha256(nodeSource);
+  if (executableSha256 !== NODE_EXECUTABLE_SHA256) {
     throw new Error(
-      `Bun executable checksum mismatch: expected ${BUN_EXECUTABLE_SHA256}, found ${executableSha256}`,
+      `Node.js executable checksum mismatch: expected ${NODE_EXECUTABLE_SHA256}, found ${executableSha256}`,
     );
   }
 
   mkdirSync(runtimeDir, { recursive: true });
-  copyFileSync(bunSource, bunTarget);
+  rmSync(resolve(runtimeDir, "bun.exe"), { force: true });
+  copyFileSync(nodeSource, nodeTarget);
+  copyFileSync(nodeLicenseSource, nodeLicenseTarget);
   copyFileSync(engineSource, engineTarget);
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }
 
 const manifest = {
-  formatVersion: 2,
-  platform: "windows-x64-baseline",
-  bun: {
-    version: BUN_VERSION,
-    variant: "baseline",
-    compileTarget: "bun-windows-x64-baseline",
-    file: "bun.exe",
-    sha256: sha256(bunTarget),
+  formatVersion: 3,
+  platform: "windows-x64",
+  node: {
+    version: NODE_VERSION,
+    file: "node.exe",
+    sha256: sha256(nodeTarget),
+    licenseFile: "NODE-LICENSE.txt",
+    licenseSha256: sha256(nodeLicenseTarget),
     provenance: {
-      repository: "oven-sh/bun",
-      release: BUN_RELEASE,
-      asset: BUN_ASSET,
-      url: BUN_URL,
-      archiveSha256: BUN_ARCHIVE_SHA256,
-      checksumUrl: BUN_CHECKSUM_URL,
+      project: "nodejs/node",
+      release: NODE_RELEASE,
+      asset: NODE_ASSET,
+      url: NODE_URL,
+      archiveSha256: NODE_ARCHIVE_SHA256,
+      checksumUrl: NODE_CHECKSUM_URL,
     },
   },
   prismaQueryEngine: {
@@ -139,5 +143,5 @@ writeFileSync(
 );
 
 console.log(`Prepared pinned Windows runtime in ${runtimeDir}`);
-console.log(`Bun ${manifest.bun.version}: ${manifest.bun.sha256}`);
+console.log(`Node.js ${manifest.node.version}: ${manifest.node.sha256}`);
 console.log(`Prisma engine: ${manifest.prismaQueryEngine.sha256}`);

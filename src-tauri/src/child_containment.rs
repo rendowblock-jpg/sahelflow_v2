@@ -291,6 +291,20 @@ mod platform {
             self.inner.pid
         }
 
+        pub fn try_wait(&self) -> Result<Option<ProcessExit>, IoError> {
+            match unsafe { WaitForSingleObject(self.inner.process, 0) } {
+                WAIT_OBJECT_0 => {
+                    let mut code = 0_u32;
+                    if unsafe { GetExitCodeProcess(self.inner.process, &mut code) } == 0 {
+                        return Err(IoError::last_os_error());
+                    }
+                    Ok(Some(ProcessExit { code }))
+                }
+                WAIT_TIMEOUT => Ok(None),
+                _ => Err(IoError::last_os_error()),
+            }
+        }
+
         pub fn terminate_tree_and_wait(&self, timeout: Duration) -> Result<(), IoError> {
             let terminated = unsafe { TerminateJobObject(self.inner.job, 1) };
             if terminated == 0 {
@@ -625,8 +639,37 @@ mod platform {
                     let _ = grandchild.wait();
                 }
                 "grandchild" => std::thread::sleep(Duration::from_secs(60)),
+                "exit" => {}
                 other => panic!("unexpected containment helper mode: {other}"),
             }
+        }
+
+        #[test]
+        fn contained_child_exit_is_observable_without_waiting_for_a_deadline() {
+            let executable = std::env::current_exe().expect("resolve current Rust test executable");
+            let child = ContainedChild::spawn(
+                &executable,
+                &[
+                    OsString::from("--exact"),
+                    OsString::from(DESCENDANT_HELPER_TEST),
+                    OsString::from("--nocapture"),
+                ],
+                &helper_environment("exit"),
+            )
+            .expect("spawn deterministic exiting child");
+
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let exit = loop {
+                if let Some(exit) = child.try_wait().expect("observe child status") {
+                    break exit;
+                }
+                assert!(Instant::now() < deadline, "child exit was not observed");
+                std::thread::sleep(Duration::from_millis(10));
+            };
+            assert_eq!(exit.code, 0);
+            child
+                .terminate_tree_and_wait(Duration::from_secs(5))
+                .expect("prove exiting child tree is empty");
         }
 
         #[test]
@@ -659,43 +702,42 @@ mod platform {
         }
 
         #[test]
-        fn contained_bun_runs_with_explicit_stdio_handles() {
+        fn contained_node_runs_with_explicit_stdio_handles() {
             use std::io::{Read, Write};
             use std::net::{TcpListener, TcpStream};
             use std::path::PathBuf;
 
-            let Some(bun_path) = std::env::var_os("SF_CONTAINED_BUN_PATH").map(PathBuf::from)
+            let Some(node_path) = std::env::var_os("SF_CONTAINED_NODE_PATH").map(PathBuf::from)
             else {
                 return;
             };
-            assert!(bun_path.is_file(), "bundled Bun test path is missing");
+            assert!(node_path.is_file(), "bundled Node.js test path is missing");
 
             let listener = TcpListener::bind(("127.0.0.1", 0)).expect("reserve loopback port");
             let port = listener.local_addr().expect("loopback address").port();
             drop(listener);
 
             let test_root = std::env::temp_dir().join(format!(
-                "sahelflow-contained-bun-{}-{}",
+                "sahelflow-contained-node-{}-{}",
                 std::process::id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .expect("system time")
                     .as_nanos()
             ));
-            std::fs::create_dir(&test_root).expect("create contained Bun test directory");
+            std::fs::create_dir(&test_root).expect("create contained Node.js test directory");
             let script = test_root.join("server.js");
             std::fs::write(
                 &script,
-                r#"console.log('contained stdout ready');
+                r#"const http = require('node:http');
+console.log('contained stdout ready');
 console.error('contained stderr ready');
-Bun.serve({
-  hostname: '127.0.0.1',
-  port: Number(process.env.PORT),
-  fetch() { return new Response('contained-ready'); }
-});
+http.createServer((_request, response) => {
+  response.end('contained-ready');
+}).listen(Number(process.env.PORT), '127.0.0.1');
 "#,
             )
-            .expect("write contained Bun test server");
+            .expect("write contained Node.js test server");
 
             let mut environment = ["SystemRoot", "WINDIR", "TEMP", "TMP"]
                 .into_iter()
@@ -704,12 +746,12 @@ Bun.serve({
             environment.push((OsString::from("PORT"), OsString::from(port.to_string())));
 
             let child = ContainedChild::spawn_in(
-                &bun_path,
+                &node_path,
                 &[script.as_os_str().to_os_string()],
                 &environment,
                 Some(&test_root),
             )
-            .expect("spawn bundled Bun through the real contained launcher");
+            .expect("spawn bundled Node.js through the real contained launcher");
 
             let deadline = Instant::now() + Duration::from_secs(15);
             let mut response = String::new();
@@ -736,12 +778,12 @@ Bun.serve({
             }
             assert!(
                 response.contains("contained-ready"),
-                "contained Bun did not become ready: {response}"
+                "contained Node.js did not become ready: {response}"
             );
             child
                 .terminate_tree_and_wait(Duration::from_secs(5))
-                .expect("terminate contained Bun tree");
-            std::fs::remove_dir_all(test_root).expect("remove contained Bun test directory");
+                .expect("terminate contained Node.js tree");
+            std::fs::remove_dir_all(test_root).expect("remove contained Node.js test directory");
         }
 
         #[test]
@@ -818,6 +860,18 @@ mod platform {
 
         pub fn pid(&self) -> u32 {
             self.inner.pid
+        }
+
+        pub fn try_wait(&self) -> Result<Option<ProcessExit>, IoError> {
+            let status = self
+                .inner
+                .child
+                .lock()
+                .map_err(|_| IoError::other("contained process state is poisoned"))?
+                .try_wait()?;
+            Ok(status.map(|status| ProcessExit {
+                code: status.code().unwrap_or(1) as u32,
+            }))
         }
 
         pub fn terminate_tree_and_wait(&self, timeout: Duration) -> Result<(), IoError> {

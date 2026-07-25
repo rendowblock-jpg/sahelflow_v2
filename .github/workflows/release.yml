@@ -14,6 +14,8 @@ on:
 permissions:
   contents: write
   actions: read
+  checks: read
+  pull-requests: read
 
 concurrency:
   group: sahelflow-internal-updater
@@ -102,6 +104,73 @@ jobs:
           "SF_SOURCE_COMMIT=$commit" >> $env:GITHUB_ENV
           "SF_SOURCE_TREE=$tree" >> $env:GITHUB_ENV
 
+      - name: Attest reviewed identical PR tree and required checks
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          $repository = '${{ github.repository }}'
+          $pulls = @(
+            gh api `
+              -H 'Accept: application/vnd.github+json' `
+              "repos/$repository/commits/$env:SOURCE_SHA/pulls" |
+              ConvertFrom-Json
+          )
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the merged source PR' }
+          $pull = @(
+            $pulls |
+              Where-Object {
+                $_.base.ref -ceq 'main' -and
+                $null -ne $_.merged_at -and
+                $_.merge_commit_sha -ceq $env:SOURCE_SHA
+              } |
+              Sort-Object -Property merged_at -Descending
+          ) | Select-Object -First 1
+          if ($null -eq $pull) {
+            throw 'protected-main source is not bound to an exact merged PR'
+          }
+          if ($pull.head.repo.full_name -cne $repository) {
+            throw 'signed internal release requires a reviewed branch from this repository'
+          }
+
+          $sourceCommit = gh api "repos/$repository/git/commits/$env:SOURCE_SHA" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve protected-main tree identity' }
+          $headCommit = gh api "repos/$repository/git/commits/$($pull.head.sha)" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve reviewed PR tree identity' }
+          if ($sourceCommit.tree.sha -cne $headCommit.tree.sha) {
+            throw "protected-main tree $($sourceCommit.tree.sha) differs from reviewed PR tree $($headCommit.tree.sha)"
+          }
+          if ($sourceCommit.tree.sha -cne $env:SF_SOURCE_TREE) {
+            throw 'GitHub tree identity does not match the exact local checkout'
+          }
+
+          $checks = gh api `
+            -H 'Accept: application/vnd.github+json' `
+            "repos/$repository/commits/$($pull.head.sha)/check-runs?per_page=100" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve reviewed PR checks' }
+          $requiredChecks = @(
+            'Quality Gate (authority + sf-verify + coverage + audit)',
+            'Windows database + standalone + contained launcher',
+            'Tauri Rust smoke (cargo check --release)',
+            'Windows Rust release parity',
+            'Build, install, launch, close, and reopen MSI'
+          )
+          foreach ($name in $requiredChecks) {
+            $latest = @(
+              $checks.check_runs |
+                Where-Object { $_.name -ceq $name } |
+                Sort-Object -Property id -Descending
+            ) | Select-Object -First 1
+            if ($null -eq $latest) { throw "reviewed PR is missing required check: $name" }
+            if ($latest.status -cne 'completed' -or $latest.conclusion -cne 'success') {
+              throw "reviewed PR check is not successful: $name ($($latest.status)/$($latest.conclusion))"
+            }
+          }
+          "SF_REVIEWED_PR=$($pull.number)" >> $env:GITHUB_ENV
+          "SF_REVIEWED_HEAD=$($pull.head.sha)" >> $env:GITHUB_ENV
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -111,6 +180,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
+
+      - name: Cache signed-build Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-signed-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-signed-
 
       - name: Configure disposable test sandbox
         shell: pwsh
@@ -129,12 +207,6 @@ jobs:
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile --linker=hoisted
 
-      - name: Prepare pinned Windows runtime
-        run: bun run scripts/prepare-runtime.ts
-
-      - name: Build bundled WhatsApp sidecar
-        run: bun run build:sidecar
-
       - name: Prepare signed local libsodium distribution
         shell: pwsh
         run: ./scripts/prepare-libsodium-windows.ps1
@@ -145,42 +217,6 @@ jobs:
 
       - name: Verify product, protocol, and updater authority
         run: bun run sf-version
-
-      - name: Verify documentation authority
-        run: bun run sf-audit
-
-      - name: Verify TypeScript, lint, tests, and migrations
-        run: bun run sf-verify
-
-      - name: Verify coverage threshold
-        run: bunx vitest run --coverage
-
-      - name: Blocking production dependency audit
-        run: bun audit --production
-
-      - name: Verify Rust runtime and actual contained Bun launcher
-        shell: pwsh
-        env:
-          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
-        run: |
-          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture 2>&1 |
-            Tee-Object -FilePath .sf-contained-bun-release.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo check --manifest-path src-tauri/Cargo.toml --release --locked
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Upload contained Bun release diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: signed-contained-bun-diagnostics-${{ github.run_id }}
-          path: .sf-contained-bun-release.log
-          if-no-files-found: ignore
-          retention-days: 2
 
       - name: Resolve exact internal release identity
         shell: pwsh
@@ -356,11 +392,13 @@ jobs:
           @"
           ## Signed internal updater draft is ready
 
-          - Version: `$env:SF_RELEASE_VERSION`
-          - Tag: `$env:SF_RELEASE_TAG`
-          - Source: `${{ inputs.source_ref }}`
+          - Version: $env:SF_RELEASE_VERSION
+          - Tag: $env:SF_RELEASE_TAG
+          - Source: ${{ inputs.source_ref }}
+          - Reviewed PR/head: #$env:SF_REVIEWED_PR / $env:SF_REVIEWED_HEAD
+          - Protected-main and reviewed PR Git trees matched; all required PR checks were successful.
           - Draft release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
-          - Updater signature and `latest.json` matched.
+          - Updater signature and latest.json matched.
           - The exact signed MSI passed installed runtime launch, authenticated hydrated visible UI, normal close, teardown, and reopen twice.
           - The retained artifact includes the PowerShell 5.1-safe Founder installer and UI acceptance evidence.
           - Publish the verified draft release to make the configured updater endpoint live.

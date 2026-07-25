@@ -122,14 +122,15 @@ them locally; GitHub Actions runs the required commands from the pushed commit.
 
 - Documentation-reset merge checkpoint: PR #154 at
   `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
-- Protected-main Internal.6 executable source:
-  `772d09c3b2ada4668f8c872bfd469cabb839d82a`.
+- Protected-main Internal.7 executable source:
+  `3db7e4072f403f39632b7134be841047767a2e6d`.
 - Founder-accepted installed release: `1.0.0-internal.5`.
-- Internal.6 is signed-release-complete and installed but not Founder-accepted;
-  runtime preparation took about 14 minutes on the Founder SSD.
+- Internal.7 is signed-release-complete and installed but not Founder-accepted;
+  runtime preparation completed in 271 ms, then bundled Bun exited while
+  loading the protected Next.js entrypoint.
 - Phase 0 documentation truth reset is complete; Phase 1 workspace/shop and
   business-integrity work is active.
-- Internal.7 runtime-preparation performance is the immediate execution gate.
-  Preserve AppData and legacy caches, execute only the release-verified
-  MSI-installed runtime, and resolve this through an exact-source signed
-  Internal update before Phase 1A proceeds.
+- Internal.8 Node production-runtime compatibility and fail-fast child exit is
+  the immediate execution gate. Preserve AppData and legacy caches, execute
+  only the release-verified MSI-installed runtime, and resolve this through one
+  exact-source signed Internal update before Phase 1A proceeds.
