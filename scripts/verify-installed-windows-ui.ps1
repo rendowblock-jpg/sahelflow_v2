@@ -13,10 +13,14 @@ $evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
 $roamingRoot = Join-Path $env:APPDATA "com.sahelflow.desktop"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $runtimeUiReadyPath = Join-Path $roamingRoot "runtime-ui-ready.json"
+$runtimeUiDiagnosticPath = Join-Path $roamingRoot "runtime-ui-diagnostic.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
+$startupTracePath = Join-Path $roamingRoot "startup-trace.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
 $exe = "C:\Program Files\SahelFlow\sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
+$safeStartupWindowTitle = "SahelFlow - Safe startup"
+$workspaceWindowTitle = "SahelFlow"
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -49,6 +53,7 @@ if (-not ("SahelFlowUiWindow" -as [type])) {
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 public static class SahelFlowUiWindow
 {
@@ -62,6 +67,12 @@ public static class SahelFlowUiWindow
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool IsWindowVisible(IntPtr window);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetWindowTextLength(IntPtr window);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetWindowText(IntPtr window, StringBuilder text, int maximumCount);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
@@ -80,6 +91,15 @@ public static class SahelFlowUiWindow
             return true;
         }, IntPtr.Zero);
         return windows.ToArray();
+    }
+
+    public static string GetWindowTitle(long handle)
+    {
+        var window = new IntPtr(handle);
+        var length = GetWindowTextLength(window);
+        var text = new StringBuilder(length + 1);
+        GetWindowText(window, text, text.Capacity);
+        return text.ToString();
     }
 
     public static bool RequestClose(long handle)
@@ -112,6 +132,42 @@ function Get-BusinessIdentity {
         databaseLength = (Get-Item -LiteralPath $databasePath).Length
         databaseSha256 = (Get-FileHash -LiteralPath $databasePath -Algorithm SHA256).Hash
     }
+}
+
+function Wait-ForPromptVisibleWindow {
+    param(
+        [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process,
+        [Parameter(Mandatory = $true)][string]$Phase
+    )
+
+    $deadline = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 100
+        $Process.Refresh()
+        if ($Process.HasExited) {
+            throw "${Phase}: SahelFlow exited before presenting a prompt startup window."
+        }
+        $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
+        $safeStartupWindows = @(
+            foreach ($handle in $handles) {
+                $title = [SahelFlowUiWindow]::GetWindowTitle([int64]$handle)
+                if ($title -ceq $safeStartupWindowTitle) {
+                    [pscustomobject]@{
+                        handle = [int64]$handle
+                        title = $title
+                    }
+                }
+            }
+        )
+        if ($safeStartupWindows.Count -gt 0 -and $Process.Responding) {
+            return [pscustomobject]@{
+                outcome = "prompt-responsive-safe-startup-window"
+                elapsedMilliseconds = [int64]((Get-Date) - $Process.StartTime).TotalMilliseconds
+                safeStartupWindows = @($safeStartupWindows)
+            }
+        }
+    }
+    throw "${Phase}: SahelFlow did not present its marked responsive safe startup window within 15 seconds."
 }
 
 function Wait-ForAuthenticatedUi {
@@ -176,7 +232,21 @@ function Wait-ForAuthenticatedUi {
 
         $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
         $Process.Refresh()
-        if ($handles.Count -eq 0 -or -not $Process.Responding) {
+        $visibleWindows = @(
+            foreach ($handle in $handles) {
+                [pscustomobject]@{
+                    handle = [int64]$handle
+                    title = [SahelFlowUiWindow]::GetWindowTitle([int64]$handle)
+                }
+            }
+        )
+        $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
+        $safeStartupWindows = @($visibleWindows | Where-Object { $_.title -ceq $safeStartupWindowTitle })
+        if (
+            $workspaceWindows.Count -ne 1 -or
+            $safeStartupWindows.Count -ne 0 -or
+            -not $Process.Responding
+        ) {
             continue
         }
 
@@ -185,7 +255,8 @@ function Wait-ForAuthenticatedUi {
             outcome = "authenticated-ui-ready"
             processId = $Process.Id
             responding = $Process.Responding
-            visibleWindowHandles = @($handles)
+            visibleWindowHandles = @($workspaceWindows | ForEach-Object { $_.handle })
+            visibleWindows = @($visibleWindows)
             endpoint = $endpoint
             uiReady = $uiReady
             processTree = Get-SahelFlowProcesses
@@ -248,18 +319,59 @@ $launches = @()
 $closures = @()
 
 for ($attempt = 1; $attempt -le 2; $attempt++) {
-    Remove-Item -LiteralPath $runtimeEndpointPath, $runtimeUiReadyPath, $startupDiagnosticPath `
+    Remove-Item -LiteralPath $runtimeEndpointPath, $runtimeUiReadyPath, `
+        $runtimeUiDiagnosticPath, $startupDiagnosticPath, $startupTracePath `
         -Force -ErrorAction SilentlyContinue
 
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
+    $promptWindow = Wait-ForPromptVisibleWindow -Process $process -Phase "ui-launch-$attempt"
     $launch = Wait-ForAuthenticatedUi -Process $process -StartedAt $startedAt -Phase "ui-launch-$attempt"
+    $startupTrace = Read-JsonFile -Path $startupTracePath
+    $uiDiagnostic = Read-JsonFile -Path $runtimeUiDiagnosticPath
+    if ($null -eq $startupTrace -or [int]$startupTrace.formatVersion -ne 1) {
+        throw "ui-launch-$attempt did not retain a valid startup trace."
+    }
+    $requiredStages = @(
+        'native-started',
+        'startup-screen-visible',
+        'migration-started',
+        'migration-complete',
+        'runtime-prepare-started',
+        'runtime-prepare-complete',
+        'runtime-attempt-started',
+        'runtime-ready',
+        'ui-navigation-started',
+        'ui-ready'
+    )
+    $observedStages = @($startupTrace.events | ForEach-Object { [string]$_.stage })
+    foreach ($requiredStage in $requiredStages) {
+        if ($observedStages -notcontains $requiredStage) {
+            throw "ui-launch-$attempt startup trace omitted stage $requiredStage."
+        }
+    }
+    if (
+        $null -eq $uiDiagnostic -or
+        $uiDiagnostic.state -ne 'ready' -or
+        $uiDiagnostic.code -ne 'RUNTIME_UI_READY_PERSISTED' -or
+        $uiDiagnostic.instanceId -ne $launch.endpoint.instanceId -or
+        $uiDiagnostic.appVersion -ne $expectedVersion
+    ) {
+        throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
+    }
+    $launch | Add-Member -NotePropertyName promptWindow -NotePropertyValue $promptWindow
+    $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
+    $launch | Add-Member -NotePropertyName uiDiagnostic -NotePropertyValue $uiDiagnostic
     $launches += $launch
 
     $endpointEvidence = Join-Path $evidenceRoot "runtime-endpoint-ui-launch-$attempt.json"
     $uiEvidence = Join-Path $evidenceRoot "runtime-ui-ready-launch-$attempt.json"
+    $uiDiagnosticEvidence = Join-Path $evidenceRoot "runtime-ui-diagnostic-launch-$attempt.json"
+    $startupTraceEvidence = Join-Path $evidenceRoot "startup-trace-launch-$attempt.json"
     Copy-Item -LiteralPath $runtimeEndpointPath -Destination $endpointEvidence -Force
     Copy-Item -LiteralPath $runtimeUiReadyPath -Destination $uiEvidence -Force
+    Copy-Item -LiteralPath $runtimeUiDiagnosticPath -Destination $uiDiagnosticEvidence -Force
+    Copy-Item -LiteralPath $startupTracePath -Destination $startupTraceEvidence -Force
 
     $closures += Close-SahelFlowNormally `
         -Process $process `

@@ -16,6 +16,9 @@ import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json";
+let uiReadyAttempt = 0;
+
 function noStoreHeaders(): Record<string, string> {
   return {
     "Cache-Control": "no-store",
@@ -31,7 +34,60 @@ function unavailable() {
   );
 }
 
+function writeJsonAtomically(path: string, payload: unknown) {
+  const parent = dirname(path);
+  const temporaryPath = `${path}.tmp`;
+  let handle: number | undefined;
+  try {
+    mkdirSync(parent, { recursive: true });
+    handle = openSync(temporaryPath, "w", 0o600);
+    writeFileSync(handle, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+    fsyncSync(handle);
+    closeSync(handle);
+    handle = undefined;
+    if (existsSync(path)) {
+      rmSync(path, { force: true });
+    }
+    renameSync(temporaryPath, path);
+  } catch (error) {
+    if (handle !== undefined) {
+      try {
+        closeSync(handle);
+      } catch {
+        // Preserve the original persistence failure.
+      }
+    }
+    rmSync(temporaryPath, { force: true });
+    throw error;
+  }
+}
+
+function recordUiDiagnostic(
+  dataDir: string | undefined,
+  payload: {
+    state: "received" | "blocked" | "ready";
+    code: string;
+    attempt: number;
+    instanceId?: string;
+    appVersion?: string;
+  },
+) {
+  if (!dataDir) return false;
+  try {
+    writeJsonAtomically(resolve(dataDir, UI_DIAGNOSTIC_FILE), {
+      formatVersion: 1,
+      ...payload,
+      processId: process.pid,
+      createdAtUnixSeconds: Math.floor(Date.now() / 1000),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const attempt = ++uiReadyAttempt;
   const url = request.nextUrl;
   const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost";
   const expectedToken = process.env.SF_RUNTIME_APP_TOKEN;
@@ -48,12 +104,26 @@ export async function POST(request: NextRequest) {
     !appVersion ||
     !dataDir
   ) {
+    recordUiDiagnostic(dataDir, {
+      state: "blocked",
+      code: "RUNTIME_UI_READY_UNAVAILABLE",
+      attempt,
+      instanceId,
+      appVersion,
+    });
     return unavailable();
   }
 
   const ackPath = resolve(dataDir, "runtime-ui-ready.json");
   const suppliedToken = request.cookies.get(RUNTIME_COOKIE)?.value ?? "";
   if (!/^[0-9a-f]{64}$/i.test(suppliedToken) || !constantTimeEqual(suppliedToken, expectedToken)) {
+    recordUiDiagnostic(dataDir, {
+      state: "blocked",
+      code: "RUNTIME_SESSION_REQUIRED",
+      attempt,
+      instanceId,
+      appVersion,
+    });
     return NextResponse.json(
       { status: "rejected", code: "RUNTIME_SESSION_REQUIRED" },
       { status: 401, headers: noStoreHeaders() },
@@ -71,31 +141,40 @@ export async function POST(request: NextRequest) {
     createdAtUnixSeconds: Math.floor(Date.now() / 1000),
   };
 
-  const parent = dirname(ackPath);
-  const temporaryPath = `${ackPath}.tmp`;
-  let handle: number | undefined;
+  recordUiDiagnostic(dataDir, {
+    state: "received",
+    code: "RUNTIME_UI_READY_REQUEST_RECEIVED",
+    attempt,
+    instanceId,
+    appVersion,
+  });
   try {
-    mkdirSync(parent, { recursive: true });
-    handle = openSync(temporaryPath, "w", 0o600);
-    writeFileSync(handle, `${JSON.stringify(acknowledgment, null, 2)}\n`, "utf8");
-    fsyncSync(handle);
-    closeSync(handle);
-    handle = undefined;
-    if (existsSync(ackPath)) {
-      rmSync(ackPath, { force: true });
-    }
-    renameSync(temporaryPath, ackPath);
+    writeJsonAtomically(ackPath, acknowledgment);
   } catch {
-    if (handle !== undefined) {
-      try {
-        closeSync(handle);
-      } catch {
-        // Best-effort close; the response remains fail-closed.
-      }
-    }
-    rmSync(temporaryPath, { force: true });
+    recordUiDiagnostic(dataDir, {
+      state: "blocked",
+      code: "RUNTIME_UI_READY_PERSIST_FAILED",
+      attempt,
+      instanceId,
+      appVersion,
+    });
     return NextResponse.json(
       { status: "blocked", code: "RUNTIME_UI_READY_PERSIST_FAILED" },
+      { status: 500, headers: noStoreHeaders() },
+    );
+  }
+
+  const diagnosticPersisted = recordUiDiagnostic(dataDir, {
+    state: "ready",
+    code: "RUNTIME_UI_READY_PERSISTED",
+    attempt,
+    instanceId,
+    appVersion,
+  });
+  if (!diagnosticPersisted) {
+    rmSync(ackPath, { force: true });
+    return NextResponse.json(
+      { status: "blocked", code: "RUNTIME_UI_DIAGNOSTIC_PERSIST_FAILED" },
       { status: 500, headers: noStoreHeaders() },
     );
   }

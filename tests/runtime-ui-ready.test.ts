@@ -21,7 +21,7 @@ describe("packaged runtime hydrated UI readiness", () => {
     dataDir = mkdtempSync(join(tmpdir(), "sahelflow-ui-ready-"));
     process.env.SF_RUNTIME_APP_TOKEN = token;
     process.env.SF_RUNTIME_INSTANCE_ID = instanceId;
-    process.env.APP_VERSION = "1.0.0-internal.5";
+    process.env.APP_VERSION = "1.0.0-internal.6";
     process.env.SF_DATA_DIR = dataDir;
   });
 
@@ -45,12 +45,21 @@ describe("packaged runtime hydrated UI readiness", () => {
     expect(acknowledgment.protocolVersion).toBe(1);
     expect(acknowledgment.state).toBe("ready");
     expect(acknowledgment.instanceId).toBe(instanceId);
-    expect(acknowledgment.appVersion).toBe("1.0.0-internal.5");
+    expect(acknowledgment.appVersion).toBe("1.0.0-internal.6");
     expect(acknowledgment.pageUrl).toMatch(
       /^http:\/\/(127\.0\.0\.1|localhost):43123$/,
     );
     expect(typeof acknowledgment.processId).toBe("number");
     expect(typeof acknowledgment.createdAtUnixSeconds).toBe("number");
+
+    const diagnostic = JSON.parse(
+      readFileSync(join(dataDir, "runtime-ui-diagnostic.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(diagnostic.state).toBe("ready");
+    expect(diagnostic.code).toBe("RUNTIME_UI_READY_PERSISTED");
+    expect(diagnostic.instanceId).toBe(instanceId);
+    expect(diagnostic.appVersion).toBe("1.0.0-internal.6");
+    expect(typeof diagnostic.attempt).toBe("number");
   });
 
   it("fails closed without the WebView runtime cookie", async () => {
@@ -61,5 +70,12 @@ describe("packaged runtime hydrated UI readiness", () => {
       code: "RUNTIME_SESSION_REQUIRED",
     });
     expect(() => readFileSync(join(dataDir, "runtime-ui-ready.json"))).toThrow();
+
+    const diagnostic = JSON.parse(
+      readFileSync(join(dataDir, "runtime-ui-diagnostic.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(diagnostic.state).toBe("blocked");
+    expect(diagnostic.code).toBe("RUNTIME_SESSION_REQUIRED");
+    expect(diagnostic.instanceId).toBe(instanceId);
   });
 });

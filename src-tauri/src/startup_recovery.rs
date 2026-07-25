@@ -12,8 +12,15 @@ const RUNTIME_BOOTSTRAP_PATH: &str = "/api/internal/runtime-bootstrap";
 const RUNTIME_COOKIE: &str = "sf_runtime";
 const RUNTIME_ENDPOINT_FILE: &str = "runtime-endpoint.json";
 const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
+const RUNTIME_UI_DIAGNOSTIC_FILE: &str = "runtime-ui-diagnostic.json";
 const STARTUP_DIAGNOSTIC_FILE: &str = "startup-diagnostic.json";
-const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(60);
+const STARTUP_TRACE_FILE: &str = "startup-trace.json";
+const MAIN_WINDOW_LABEL: &str = "main";
+const MAIN_WINDOW_TITLE: &str = "SahelFlow";
+const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
+const STARTUP_WINDOW_LABEL: &str = "startup";
+const STARTUP_WINDOW_TITLE: &str = "SahelFlow - Safe startup";
+const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
 
@@ -46,6 +53,33 @@ struct RuntimeUiReady {
     page_url: String,
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StartupTrace {
+    format_version: u8,
+    app_version: String,
+    events: Vec<StartupTraceEvent>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StartupTraceEvent {
+    stage: String,
+    attempt: Option<u8>,
+    created_at_unix_milliseconds: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeUiDiagnostic {
+    format_version: u8,
+    state: String,
+    code: String,
+    attempt: u64,
+    instance_id: Option<String>,
+    app_version: Option<String>,
+}
+
 struct PackagedHandoff {
     workspace_url: tauri::Url,
     host: String,
@@ -61,12 +95,13 @@ struct PackagedHandoff {
 /// UI acknowledgment matching the current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
-    let window = app.get_webview_window("main").ok_or_else(|| {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "the configured main desktop window was not created",
         )
     })?;
+    window.set_title(MAIN_WINDOW_TITLE)?;
 
     let Some(handoff) = packaged_handoff(&requested_url)? else {
         window.navigate(requested_url)?;
@@ -77,13 +112,113 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
 
     let app_data_dir = app.path().app_data_dir()?;
     clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
+    clear_file(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE))?;
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
+    record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
+    // Keep a separate safe startup surface visible while the real workspace
+    // navigates and hydrates. This also restores the surface during an
+    // automatic runtime recovery where the main window was showing an error.
+    show_starting(app)?;
+    window.hide()?;
     window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
     window.navigate(handoff.workspace_url)?;
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
+}
+
+/// Show a non-business startup document immediately while migration, verified
+/// runtime preparation and mandatory service readiness continue off the event
+/// loop. It never loads a shop, user session or partial workspace.
+pub fn show_starting(app: &tauri::AppHandle) -> Result<(), Box<dyn Error>> {
+    let window = app
+        .get_webview_window(STARTUP_WINDOW_LABEL)
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::NotFound,
+                "the configured safe startup window was not created",
+            )
+        })?;
+    let data_url = format!(
+        "data:text/html;charset=utf-8,{}",
+        urlencoding::encode(&starting_html())
+    );
+    window.set_title(STARTUP_WINDOW_TITLE)?;
+    window.navigate(tauri::Url::parse(&data_url)?)?;
+    window.show()?;
+    window.set_focus()?;
+    Ok(())
+}
+
+pub fn reset_startup_trace(app_data_dir: &Path) {
+    let trace = StartupTrace {
+        format_version: 1,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
+        events: vec![StartupTraceEvent {
+            stage: "native-started".to_string(),
+            attempt: None,
+            created_at_unix_milliseconds: unix_milliseconds(),
+        }],
+    };
+    let _ = write_startup_trace(app_data_dir, &trace);
+}
+
+pub fn record_startup_stage(app_data_dir: &Path, stage: &str, attempt: Option<u8>) {
+    if stage.is_empty()
+        || stage.len() > 64
+        || !stage
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    {
+        return;
+    }
+    let path = app_data_dir.join(STARTUP_TRACE_FILE);
+    let mut trace = fs::read(&path)
+        .ok()
+        .filter(|bytes| bytes.len() <= 64 * 1024)
+        .and_then(|bytes| serde_json::from_slice::<StartupTrace>(&bytes).ok())
+        .filter(|trace| trace.format_version == 1 && trace.app_version == env!("CARGO_PKG_VERSION"))
+        .unwrap_or_else(|| StartupTrace {
+            format_version: 1,
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
+            events: Vec::new(),
+        });
+    if trace.events.len() >= 32 {
+        return;
+    }
+    trace.events.push(StartupTraceEvent {
+        stage: stage.to_string(),
+        attempt,
+        created_at_unix_milliseconds: unix_milliseconds(),
+    });
+    let _ = write_startup_trace(app_data_dir, &trace);
+}
+
+fn write_startup_trace(app_data_dir: &Path, trace: &StartupTrace) -> Result<(), IoError> {
+    fs::create_dir_all(app_data_dir)?;
+    let path = app_data_dir.join(STARTUP_TRACE_FILE);
+    let temporary_path = app_data_dir.join("startup-trace.json.tmp");
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(&temporary_path)?;
+    serde_json::to_writer_pretty(&mut file, trace)
+        .map_err(|error| IoError::new(ErrorKind::InvalidData, error))?;
+    file.write_all(b"\n")?;
+    file.sync_all()?;
+    if path.exists() {
+        fs::remove_file(&path)?;
+    }
+    fs::rename(temporary_path, path)
+}
+
+fn unix_milliseconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis().min(u128::from(u64::MAX)) as u64)
+        .unwrap_or(0)
 }
 
 fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError> {
@@ -168,27 +303,110 @@ fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
     thread::spawn(move || {
         if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
+            record_startup_stage(&app_data_dir, "ui-ready", None);
             if let Err(error) = window.show().and_then(|_| window.set_focus()) {
                 let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
+                return;
+            }
+            if let Some(startup_window) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
+                if let Err(error) = startup_window.hide() {
+                    eprintln!("[sahelflow] authenticated workspace is visible but the safe startup window could not be hidden: {error}");
+                }
             }
             return;
         }
 
-        let detail = "the hidden desktop WebView did not produce a matching authenticated UI-ready acknowledgment";
+        let (code, detail) = ui_ready_failure(&app_data_dir);
+        record_startup_stage(&app_data_dir, "ui-blocked", None);
         eprintln!("[sahelflow] FATAL: {detail}");
-        let _ = show_blocked(&app, "SF-RUNTIME-UI-BLOCKED", detail);
+        let _ = show_blocked(&app, code, &detail);
     });
+}
+
+fn ui_ready_failure(app_data_dir: &Path) -> (&'static str, String) {
+    let diagnostic_path = app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE);
+    let endpoint_path = app_data_dir.join(RUNTIME_ENDPOINT_FILE);
+    let Ok(bytes) = fs::read(&diagnostic_path) else {
+        return (
+            "SF-RUNTIME-UI-BEACON-MISSING",
+            "the desktop page did not reach the authenticated UI-ready route before the bounded startup deadline".to_string(),
+        );
+    };
+    if bytes.len() > 64 * 1024 {
+        return (
+            "SF-RUNTIME-UI-DIAGNOSTIC-INVALID",
+            "the UI-ready diagnostic exceeded its bounded size limit".to_string(),
+        );
+    }
+    let Ok(diagnostic) = serde_json::from_slice::<RuntimeUiDiagnostic>(&bytes) else {
+        return (
+            "SF-RUNTIME-UI-DIAGNOSTIC-INVALID",
+            "the UI-ready diagnostic was not valid structured evidence".to_string(),
+        );
+    };
+    let safe_code = !diagnostic.code.is_empty()
+        && diagnostic.code.len() <= 64
+        && diagnostic
+            .code
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_');
+    let safe_state = !diagnostic.state.is_empty()
+        && diagnostic.state.len() <= 16
+        && diagnostic
+            .state
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase());
+    if diagnostic.format_version != 1 || diagnostic.attempt == 0 || !safe_code || !safe_state {
+        return (
+            "SF-RUNTIME-UI-DIAGNOSTIC-INVALID",
+            "the UI-ready diagnostic contained an invalid code or state".to_string(),
+        );
+    }
+    let endpoint = fs::read(endpoint_path)
+        .ok()
+        .filter(|value| value.len() <= 64 * 1024)
+        .and_then(|value| serde_json::from_slice::<RuntimeEndpoint>(&value).ok());
+    let diagnostic_matches = endpoint.as_ref().is_some_and(|current| {
+        current.state == "ready"
+            && current.app_version == env!("CARGO_PKG_VERSION")
+            && diagnostic.instance_id.as_deref() == Some(current.instance_id.as_str())
+            && diagnostic.app_version.as_deref() == Some(env!("CARGO_PKG_VERSION"))
+    });
+    if !diagnostic_matches {
+        return (
+            "SF-RUNTIME-UI-INSTANCE-MISMATCH",
+            "the UI-ready diagnostic did not bind the current runtime instance and app version"
+                .to_string(),
+        );
+    }
+
+    let detail = format!(
+        "the UI-ready route reported {} state {} on attempt {}, but no matching durable acknowledgment was accepted",
+        diagnostic.code, diagnostic.state, diagnostic.attempt
+    );
+    match diagnostic.code.as_str() {
+        "RUNTIME_SESSION_REQUIRED" => ("SF-RUNTIME-UI-SESSION-BLOCKED", detail),
+        "RUNTIME_UI_READY_UNAVAILABLE" => ("SF-RUNTIME-UI-ROUTE-BLOCKED", detail),
+        "RUNTIME_UI_READY_PERSIST_FAILED" => ("SF-RUNTIME-UI-PERSIST-BLOCKED", detail),
+        "RUNTIME_UI_DIAGNOSTIC_PERSIST_FAILED" => {
+            ("SF-RUNTIME-UI-DIAGNOSTIC-PERSIST-BLOCKED", detail)
+        }
+        "RUNTIME_UI_READY_PERSISTED" => ("SF-RUNTIME-UI-ACK-MISMATCH", detail),
+        "RUNTIME_UI_READY_REQUEST_RECEIVED" => ("SF-RUNTIME-UI-ACK-INCOMPLETE", detail),
+        _ => ("SF-RUNTIME-UI-BLOCKED", detail),
+    }
 }
 
 fn wait_for_matching_ui_ready(app_data_dir: &Path, timeout: Duration) -> bool {
     let endpoint_path = app_data_dir.join(RUNTIME_ENDPOINT_FILE);
     let ui_ready_path = app_data_dir.join(RUNTIME_UI_READY_FILE);
+    let diagnostic_path = app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE);
     let started_at = Instant::now();
 
     while started_at.elapsed() < timeout {
-        if matching_ui_ready(&endpoint_path, &ui_ready_path) {
+        if matching_ui_ready(&endpoint_path, &ui_ready_path, &diagnostic_path) {
             return true;
         }
         thread::sleep(UI_READY_POLL_INTERVAL);
@@ -196,14 +414,20 @@ fn wait_for_matching_ui_ready(app_data_dir: &Path, timeout: Duration) -> bool {
     false
 }
 
-fn matching_ui_ready(endpoint_path: &Path, ui_ready_path: &Path) -> bool {
+fn matching_ui_ready(endpoint_path: &Path, ui_ready_path: &Path, diagnostic_path: &Path) -> bool {
     let Ok(endpoint_bytes) = fs::read(endpoint_path) else {
         return false;
     };
     let Ok(ui_ready_bytes) = fs::read(ui_ready_path) else {
         return false;
     };
-    if endpoint_bytes.len() > 64 * 1024 || ui_ready_bytes.len() > 64 * 1024 {
+    let Ok(diagnostic_bytes) = fs::read(diagnostic_path) else {
+        return false;
+    };
+    if endpoint_bytes.len() > 64 * 1024
+        || ui_ready_bytes.len() > 64 * 1024
+        || diagnostic_bytes.len() > 64 * 1024
+    {
         return false;
     }
 
@@ -211,6 +435,9 @@ fn matching_ui_ready(endpoint_path: &Path, ui_ready_path: &Path) -> bool {
         return false;
     };
     let Ok(ui_ready) = serde_json::from_slice::<RuntimeUiReady>(&ui_ready_bytes) else {
+        return false;
+    };
+    let Ok(diagnostic) = serde_json::from_slice::<RuntimeUiDiagnostic>(&diagnostic_bytes) else {
         return false;
     };
 
@@ -222,6 +449,12 @@ fn matching_ui_ready(endpoint_path: &Path, ui_ready_path: &Path) -> bool {
         && ui_ready.state == "ready"
         && ui_ready.app_version == env!("CARGO_PKG_VERSION")
         && ui_ready.instance_id == endpoint.instance_id
+        && diagnostic.format_version == 1
+        && diagnostic.state == "ready"
+        && diagnostic.code == "RUNTIME_UI_READY_PERSISTED"
+        && diagnostic.attempt > 0
+        && diagnostic.app_version.as_deref() == Some(env!("CARGO_PKG_VERSION"))
+        && diagnostic.instance_id.as_deref() == Some(endpoint.instance_id.as_str())
         && (ui_ready.page_url.starts_with("http://127.0.0.1:")
             || ui_ready.page_url.starts_with("http://localhost:"))
 }
@@ -275,14 +508,18 @@ pub fn show_blocked(
     );
     let url = tauri::Url::parse(&data_url)?;
 
-    let window = app.get_webview_window("main").ok_or_else(|| {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "the configured main desktop window was not created",
         )
     })?;
     window.navigate(url)?;
+    window.set_title(BLOCKED_WINDOW_TITLE)?;
     window.show()?;
+    if let Some(startup_window) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
+        let _ = startup_window.hide();
+    }
     window.set_focus()?;
     Ok(())
 }
@@ -335,6 +572,41 @@ fn recovery_html(code: &str, detail: &str, report_path: &str) -> String {
 </body>
 </html>"#
     )
+}
+
+fn starting_html() -> String {
+    r#"<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SahelFlow - Safe startup</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, Segoe UI, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0d1117; color: #f4f4f5; padding: 24px; }
+    main { width: min(640px, 100%); text-align: center; }
+    .mark { width: 64px; height: 64px; display: grid; place-items: center; margin: 0 auto 24px; border-radius: 18px; background: #064e3b; color: #a7f3d0; font-size: 24px; font-weight: 800; }
+    h1 { margin: 0 0 12px; font-size: clamp(28px, 5vw, 42px); }
+    p { margin: 0 auto; max-width: 560px; color: #d4d4d8; line-height: 1.65; }
+    .status { display: inline-flex; align-items: center; gap: 10px; margin-top: 28px; padding: 10px 14px; border: 1px solid #334155; border-radius: 999px; background: #111827; color: #d1fae5; font-size: 14px; }
+    .pulse { width: 10px; height: 10px; border-radius: 999px; background: #34d399; animation: pulse 1.4s ease-in-out infinite; }
+    .note { margin-top: 18px; color: #a1a1aa; font-size: 13px; }
+    @keyframes pulse { 50% { opacity: .3; transform: scale(.75); } }
+    @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+  </style>
+</head>
+<body>
+  <main role="status" aria-live="polite">
+    <div class="mark" aria-hidden="true">SF</div>
+    <h1>SahelFlow demarre en toute securite</h1>
+    <p>Preparation de votre espace de travail local. Le premier demarrage apres une mise a jour peut prendre plus de temps sur un disque lent.</p>
+    <div class="status"><span class="pulse" aria-hidden="true"></span>Verification des donnees et des services locaux</div>
+    <p class="note">Vos donnees ne sont ni supprimees ni reinitialisees.</p>
+  </main>
+</body>
+</html>"#
+        .to_string()
 }
 
 fn escape_html(value: &str) -> String {
@@ -421,6 +693,7 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         let endpoint_path = root.join(RUNTIME_ENDPOINT_FILE);
         let ui_ready_path = root.join(RUNTIME_UI_READY_FILE);
+        let diagnostic_path = root.join(RUNTIME_UI_DIAGNOSTIC_FILE);
         fs::write(
             &endpoint_path,
             format!(
@@ -437,7 +710,19 @@ mod tests {
             ),
         )
         .unwrap();
-        assert!(!matching_ui_ready(&endpoint_path, &ui_ready_path));
+        fs::write(
+            &diagnostic_path,
+            format!(
+                r#"{{"formatVersion":1,"state":"ready","code":"RUNTIME_UI_READY_PERSISTED","attempt":1,"instanceId":"instance-a","appVersion":"{}"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        assert!(!matching_ui_ready(
+            &endpoint_path,
+            &ui_ready_path,
+            &diagnostic_path
+        ));
 
         fs::write(
             &ui_ready_path,
@@ -447,7 +732,48 @@ mod tests {
             ),
         )
         .unwrap();
-        assert!(matching_ui_ready(&endpoint_path, &ui_ready_path));
+        assert!(matching_ui_ready(
+            &endpoint_path,
+            &ui_ready_path,
+            &diagnostic_path
+        ));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn ui_ready_timeout_distinguishes_missing_beacon_and_session_rejection() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-ui-diagnostic-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let (code, _) = ui_ready_failure(&root);
+        assert_eq!(code, "SF-RUNTIME-UI-BEACON-MISSING");
+
+        fs::write(
+            root.join(RUNTIME_ENDPOINT_FILE),
+            format!(
+                r#"{{"state":"ready","instanceId":"instance-a","appVersion":"{}"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join(RUNTIME_UI_DIAGNOSTIC_FILE),
+            format!(
+                r#"{{"formatVersion":1,"state":"blocked","code":"RUNTIME_SESSION_REQUIRED","attempt":3,"instanceId":"instance-a","appVersion":"{}"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        let (code, detail) = ui_ready_failure(&root);
+        assert_eq!(code, "SF-RUNTIME-UI-SESSION-BLOCKED");
+        assert!(detail.contains("attempt 3"));
+        assert!(!detail.contains("sf_runtime"));
         fs::remove_dir_all(root).unwrap();
     }
 

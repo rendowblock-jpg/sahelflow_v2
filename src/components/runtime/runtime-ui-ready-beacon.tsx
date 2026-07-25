@@ -3,20 +3,23 @@
 import { useEffect } from "react";
 import { RUNTIME_UI_READY_PATH } from "@/lib/runtime-auth";
 
-const MAX_ATTEMPTS = 12;
-const RETRY_DELAY_MS = 250;
+const RETRY_WINDOW_MS = 75_000;
+const REQUEST_TIMEOUT_MS = 5_000;
+const RETRY_DELAY_MS = 500;
 
 function delay(milliseconds: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    const timer = window.setTimeout(resolve, milliseconds);
-    signal.addEventListener(
-      "abort",
-      () => {
-        window.clearTimeout(timer);
-        resolve();
-      },
-      { once: true },
-    );
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timer = window.setTimeout(finish, milliseconds);
+    signal.addEventListener("abort", finish, { once: true });
+    if (signal.aborted) finish();
   });
 }
 
@@ -34,20 +37,34 @@ export function RuntimeUiReadyBeacon() {
     const controller = new AbortController();
 
     void (async () => {
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS && !controller.signal.aborted; attempt += 1) {
+      const deadline = Date.now() + RETRY_WINDOW_MS;
+      while (!controller.signal.aborted && Date.now() < deadline) {
+        const requestController = new AbortController();
+        const abortRequest = () => requestController.abort();
+        controller.signal.addEventListener("abort", abortRequest, { once: true });
+        if (controller.signal.aborted) abortRequest();
+        const requestTimeout = window.setTimeout(
+          () => requestController.abort(),
+          REQUEST_TIMEOUT_MS,
+        );
         try {
           const response = await fetch(RUNTIME_UI_READY_PATH, {
             method: "POST",
             cache: "no-store",
             credentials: "same-origin",
             headers: { "X-SahelFlow-UI-Ready": "1" },
-            signal: controller.signal,
+            signal: requestController.signal,
           });
           if (response.ok) return;
         } catch {
           if (controller.signal.aborted) return;
+        } finally {
+          window.clearTimeout(requestTimeout);
+          controller.signal.removeEventListener("abort", abortRequest);
         }
-        await delay(RETRY_DELAY_MS, controller.signal);
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return;
+        await delay(Math.min(RETRY_DELAY_MS, remaining), controller.signal);
       }
     })();
 

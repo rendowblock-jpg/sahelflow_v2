@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "version": "1.0.0-internal.6",
+  "windowsMsiVersion": "1.0.0.6",
+  "versionAuthorityCommit": "c459ac46e86a8ec4f436249d3764a174c994bf1c",
+  "candidateBaseCommit": "c459ac46e86a8ec4f436249d3764a174c994bf1c",
+  "requestRevision": 1,
+  "requestReason": "restore Founder T470 startup reliability with a responsive safe startup state, bounded reusable runtime preparation, aligned authenticated UI-ready retries, and redacted stage-specific diagnostics",
+  "signedSourcePolicy": "protected-main-merge-commit-containing-this-request-and-startup-reliability-work",
+  "publication": "draft-only",
+  "installation": "upgrade-over-internal.5-preserve-appdata",
+  "requiredEvidence": [
+    "exact protected-main request merge source",
+    "updater signature and latest.json exact-asset binding",
+    "signed MSI in-place update over accepted Internal.5",
+    "Roaming and Local AppData plus active shop database preservation",
+    "safe startup screen visible while native preparation remains responsive",
+    "authenticated hydrated workspace readiness without fallback shop",
+    "bounded redacted startup trace and UI-ready outcome evidence",
+    "normal close, complete child teardown, and successful reopen",
+    "Founder T470 visible dashboard acceptance"
+  ],
+  "nextUpdaterDrill": "1.0.0-internal.6-to-next-approved-internal"
+}

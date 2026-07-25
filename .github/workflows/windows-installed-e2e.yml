@@ -186,6 +186,8 @@ jobs:
             'runtime-readiness-diagnostic.json',
             'runtime-endpoint.json',
             'runtime-ui-ready.json',
+            'runtime-ui-diagnostic.json',
+            'startup-trace.json',
             'shop-registry.json',
             'migration-journal\current.json',
             'migration-journal\compatibility.json'

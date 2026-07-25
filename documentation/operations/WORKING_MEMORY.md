@@ -5,34 +5,41 @@
 > **Last updated:** 2026-07-24
 > **Integrated documentation checkpoint:** PR #154 at
 > `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`
+> **Protected-main continuity checkpoint:** PR #155 at
+> `c459ac46e86a8ec4f436249d3764a174c994bf1c`
 > **Internal.5 executable source:**
 > `d1fb321ea213b0bfbb10042144c4c9b8019254eb`
 > **Latest Founder-accepted installation:** `1.0.0-internal.5`
 
 ## Current outcome
 
-Phase 0, the one-time documentation and truth reset, is complete. PR #154
-merged the ten-document authority package without changing installed
-application behavior.
+Phase 0 and the continuity correction are merged. PR #155 reconciled current
+state with the later Internal.5 startup regression and made startup recovery
+the immediate gate before Phase 1A.
 
 Active branch:
 
 ```text
-agent/continuity-startup-triage
+agent/startup-reliability-internal-6
 ```
 
-This branch is a small continuity and CI-governance package. It:
+This is an app-changing `1.0.0-internal.6` candidate. It:
 
-- closes stale pre-merge documentation-reset state;
-- distinguishes integrated documentation from the Internal.5 executable
-  baseline;
-- makes GitHub Actions the required build/test/heavy-validation environment for
-  Desktop-owned work;
-- makes the production dependency audit blocking in normal PR CI;
-- records the observed installed startup failure and its preservation boundary;
-- adds semantic continuity checks to `sf-audit`.
+- keeps a safe non-business startup document responsive while native startup
+  work runs off the Tauri event loop;
+- verifies/stages the standalone runtime once for bounded same-launch initial
+  attempts instead of repeating the full tree hash for every attempt;
+- gives mandatory runtime readiness two bounded 90-second attempts;
+- aligns the hydrated browser beacon with a 75-second retry window and a
+  five-second per-request timeout;
+- persists bounded redacted `startup-trace.json` and
+  `runtime-ui-diagnostic.json` evidence;
+- preserves authenticated fail-closed runtime/shop authority and all existing
+  AppData.
 
-It does not change installed application behavior and does not require an MSI.
+The package requires GitHub Actions validation, merge to protected `main`, an
+exact-source signed Internal.6 artifact and an in-place Founder update over
+Internal.5 before it can be accepted.
 
 Temporary Founder execution instruction on 2026-07-24: the Desktop Agent owns
 implementation, review follow-up, PR coordination and release work end to end
@@ -96,34 +103,34 @@ update installed over Internal.5 with AppData preserved.
 
 ## Work in progress
 
-- [x] Confirm PR #154 merged at `5e052728`.
-- [x] Separate the integrated documentation checkpoint from executable
-  Internal.5 source `d1fb321`.
-- [x] Mark Phase 0 complete and Phase 1 active.
-- [x] Record the installed `SF-RUNTIME-UI-BLOCKED` evidence and constraints.
-- [x] Move Desktop build/test/heavy validation to GitHub Actions in active
-  workflow authority.
-- [x] Make the production dependency audit blocking in PR CI.
-- [x] Add semantic continuity assertions to `sf-audit`.
-- [x] Review the exact branch diff for authority conflicts and unrelated work.
-- [x] Push the branch and open draft PR #155; GitHub Actions owns validation.
-- [x] Close obsolete PRs #74, #83 and #103 as superseded.
+- [x] Merge PR #155 at `c459ac4` after resolving its P1 authority review.
+- [x] Create the startup package from exact protected `main`.
+- [x] Assign unique candidate version `1.0.0-internal.6` / MSI `1.0.0.6`.
+- [x] Move packaged startup work off the Tauri event loop and show a safe
+  immediate startup document.
+- [x] Reuse one verified runtime tree across same-launch initial attempts.
+- [x] Align native and browser readiness retry budgets.
+- [x] Add bounded redacted startup-stage and UI-ready outcome evidence.
+- [x] Add source, route and Rust contract tests for the new behavior.
+- [ ] Review and publish the exact branch diff as a startup PR.
+- [ ] Pass GitHub Actions on the exact PR head.
+- [ ] Merge and pass the automatically dispatched signed Internal.6 workflow.
+- [ ] Install over Internal.5 with AppData preserved and prove dashboard,
+  normal close and reopen on the Founder T470.
 
 ## Exact next execution order
 
-1. Address all actionable PR #155 review feedback, revalidate in GitHub Actions
-   and merge the continuity/CI-governance PR under the temporary Founder
-   single-agent instruction.
-2. Create a separate app-changing startup-reliability package based on the
-   merged protected `main`.
-3. Validate its source, tests, Windows build and installed lifecycle in GitHub
-   Actions; do not run them on the Founder machine.
-4. Merge, assign a new immutable Internal version, build/sign from the exact
-   protected-main merge source and publish it to the Founder Internal channel.
-5. Update over Internal.5 without deleting AppData. Prove normal launch,
-   authenticated UI readiness, real dashboard, close and reopen on the T470.
-6. Resume Phase 1A workspace/shop authority only after that installed baseline
-   is usable and accepted.
+1. Review the complete Internal.6 branch diff without running local builds or
+   tests.
+2. Push and open the startup PR; let GitHub Actions validate source, tests,
+   Windows build and staged runtime/UI readiness.
+3. Address every actionable review or CI failure and revalidate the exact head.
+4. Merge to protected `main`; version authority then dispatches the exact-source
+   signed Internal.6 workflow.
+5. Install over Internal.5 without deleting AppData. Prove prompt safe startup
+   visibility, authenticated dashboard readiness, normal close and reopen on
+   the T470, and retain the redacted startup trace.
+6. Resume Phase 1A only after Founder acceptance.
 
 ## Local-compute rule
 

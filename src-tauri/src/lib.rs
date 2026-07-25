@@ -186,14 +186,32 @@ struct SpawnedRuntime {
     generation: u64,
 }
 
+struct PreparedRuntime {
+    server_js: PathBuf,
+    runtime_path: String,
+}
+
 const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
+const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             use tauri::Manager;
+            if let Some(window) = app.get_webview_window("main") {
+                if window.is_visible().unwrap_or(false) {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    return;
+                }
+            }
+            if let Some(window) = app.get_webview_window("startup") {
+                let _ = window.show();
+                let _ = window.set_focus();
+                return;
+            }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
@@ -220,57 +238,109 @@ pub fn run() {
             {
                 use tauri::Manager;
                 let app_data_dir = app.path().app_data_dir()?;
-                let resource_dir = app.path().resource_dir()?;
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
+                let app_handle = app.handle().clone();
+                startup_recovery::reset_startup_trace(&app_data_dir);
+                startup_recovery::show_starting(&app_handle)?;
+                startup_recovery::record_startup_stage(
+                    &app_data_dir,
+                    "startup-screen-visible",
+                    None,
+                );
 
-                // Validate the registry and migrate every registered shop before
-                // any business server can observe a database.
-                runtime_protocol::remove_manifest(&app_data_dir);
-                let authority =
-                    match migration_coordinator::prepare_installation(&app_data_dir, &resource_dir)
-                    {
+                // Migration, runtime-tree verification and service startup can
+                // take materially longer on HDD systems. Keep them off Tauri's
+                // event loop so the safe startup document paints immediately.
+                std::thread::spawn(move || {
+                    let resource_dir = match app_handle.path().resource_dir() {
+                        Ok(path) => path,
+                        Err(error) => {
+                            let detail = format!("the packaged resource directory is unavailable: {error}");
+                            let _ = startup_recovery::show_blocked(
+                                &app_handle,
+                                "SF-RUNTIME-STARTUP-BLOCKED",
+                                &detail,
+                            );
+                            return;
+                        }
+                    };
+
+                    // Validate the registry and migrate every registered shop
+                    // before any business server can observe a database.
+                    runtime_protocol::remove_manifest(&app_data_dir);
+                    startup_recovery::record_startup_stage(
+                        &app_data_dir,
+                        "migration-started",
+                        None,
+                    );
+                    let authority = match migration_coordinator::prepare_installation(
+                        &app_data_dir,
+                        &resource_dir,
+                    ) {
                         Ok(authority) => authority,
                         Err(error) => {
                             let detail = error.to_string();
                             eprintln!("[sahelflow] FATAL: all-shop migration blocked: {detail}");
-                            startup_recovery::show_blocked(
-                                app.handle(),
+                            let _ = startup_recovery::show_blocked(
+                                &app_handle,
                                 "SF-MIGRATION-BLOCKED",
                                 &detail,
-                            )?;
-                            return Ok(());
+                            );
+                            return;
                         }
                     };
-                app.manage(std::sync::Mutex::new(authority));
-
-                let runtime = match spawn_initial_services(app.handle()) {
-                    Ok(runtime) => runtime,
-                    Err(error) => {
-                        let detail = error.to_string();
-                        eprintln!(
-                            "[sahelflow] FATAL: mandatory local service startup failed: {detail}"
-                        );
-                        startup_recovery::show_blocked(
-                            app.handle(),
+                    startup_recovery::record_startup_stage(
+                        &app_data_dir,
+                        "migration-complete",
+                        None,
+                    );
+                    if !app_handle.manage(std::sync::Mutex::new(authority)) {
+                        let detail = "the desktop could not register active shop authority";
+                        let _ = startup_recovery::show_blocked(
+                            &app_handle,
                             "SF-RUNTIME-STARTUP-BLOCKED",
-                            &detail,
-                        )?;
-                        return Ok(());
+                            detail,
+                        );
+                        return;
                     }
-                };
 
-                if let Err(error) =
-                    startup_recovery::show_ready(app.handle(), &runtime.protocol.bootstrap_url())
-                {
-                    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-                        if let Ok(mut children) = state.lock() {
-                            children.kill_all();
+                    let runtime = match spawn_initial_services(&app_handle) {
+                        Ok(runtime) => runtime,
+                        Err(error) => {
+                            let detail = error.to_string();
+                            eprintln!(
+                                "[sahelflow] FATAL: mandatory local service startup failed: {detail}"
+                            );
+                            let _ = startup_recovery::show_blocked(
+                                &app_handle,
+                                "SF-RUNTIME-STARTUP-BLOCKED",
+                                &detail,
+                            );
+                            return;
                         }
+                    };
+
+                    if let Err(error) = startup_recovery::show_ready(
+                        &app_handle,
+                        &runtime.protocol.bootstrap_url(),
+                    ) {
+                        if let Some(state) =
+                            app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
+                        {
+                            if let Ok(mut children) = state.lock() {
+                                children.kill_all();
+                            }
+                        }
+                        runtime_protocol::remove_manifest(&app_data_dir);
+                        let detail = format!("the verified workspace could not be opened: {error}");
+                        let _ = startup_recovery::show_blocked(
+                            &app_handle,
+                            "SF-WINDOW-NAVIGATION-BLOCKED",
+                            &detail,
+                        );
                     }
-                    runtime_protocol::remove_manifest(&app_data_dir);
-                    return Err(error);
-                }
+                });
             }
 
             #[cfg(debug_assertions)]
@@ -283,15 +353,15 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
-                let main_window_close = matches!(
+                let app_window_close = matches!(
                     &_event,
                     tauri::RunEvent::WindowEvent {
                         label,
                         event: tauri::WindowEvent::CloseRequested { .. },
                         ..
-                    } if label == "main"
+                    } if label == "main" || label == "startup"
                 );
-                let shutdown = main_window_close
+                let shutdown = app_window_close
                     || matches!(
                         _event,
                         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
@@ -308,7 +378,7 @@ pub fn run() {
                         runtime_protocol::remove_manifest(&app_data_dir);
                     }
                 }
-                if main_window_close {
+                if app_window_close {
                     // AppHandle::exit requests another event-loop transition. A
                     // native close request is already executing on that loop, so
                     // finish Tauri cleanup synchronously and exit immediately.
@@ -450,12 +520,35 @@ fn sidecar_env(
 fn spawn_initial_services(
     app: &tauri::AppHandle,
 ) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    const MAX_INITIAL_ATTEMPTS: u8 = 3;
+    use tauri::Manager;
+
+    const MAX_INITIAL_ATTEMPTS: u8 = 2;
+    let app_data_dir = app.path().app_data_dir()?;
+    startup_recovery::record_startup_stage(&app_data_dir, "runtime-prepare-started", None);
+    let prepared = prepare_runtime(app)?;
+    startup_recovery::record_startup_stage(&app_data_dir, "runtime-prepare-complete", None);
     let mut last_error = None;
     for attempt in 1..=MAX_INITIAL_ATTEMPTS {
-        match spawn_services(app) {
-            Ok(runtime) => return Ok(runtime),
+        startup_recovery::record_startup_stage(
+            &app_data_dir,
+            "runtime-attempt-started",
+            Some(attempt),
+        );
+        match spawn_services(app, &prepared) {
+            Ok(runtime) => {
+                startup_recovery::record_startup_stage(
+                    &app_data_dir,
+                    "runtime-ready",
+                    Some(attempt),
+                );
+                return Ok(runtime);
+            }
             Err(error) => {
+                startup_recovery::record_startup_stage(
+                    &app_data_dir,
+                    "runtime-attempt-failed",
+                    Some(attempt),
+                );
                 eprintln!(
                     "[sahelflow] initial runtime launch {attempt}/{MAX_INITIAL_ATTEMPTS} failed: {error}"
                 );
@@ -466,10 +559,14 @@ fn spawn_initial_services(
     Err(last_error.unwrap_or_else(|| IoError::other("initial runtime launch failed").into()))
 }
 
-/// One supervisor restart attempt maps to exactly one contained child launch.
-fn spawn_services(app: &tauri::AppHandle) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
+/// One initial supervisor attempt maps to exactly one contained child launch,
+/// while reusing the runtime tree verified once for this desktop launch.
+fn spawn_services(
+    app: &tauri::AppHandle,
+    prepared: &PreparedRuntime,
+) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
     let generation = begin_runtime_generation(app)?;
-    finish_runtime_generation_launch(app, generation)
+    finish_runtime_generation_launch(app, generation, prepared)
 }
 
 fn spawn_restart_services(
@@ -478,14 +575,16 @@ fn spawn_restart_services(
     attempt: u8,
 ) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
     let generation = begin_restart_runtime_generation(app, expected_generation, attempt)?;
-    finish_runtime_generation_launch(app, generation)
+    let prepared = prepare_runtime(app)?;
+    finish_runtime_generation_launch(app, generation, &prepared)
 }
 
 fn finish_runtime_generation_launch(
     app: &tauri::AppHandle,
     generation: u64,
+    prepared: &PreparedRuntime,
 ) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    match spawn_runtime_generation(app, generation) {
+    match spawn_runtime_generation(app, generation, prepared) {
         Ok(runtime) => Ok(runtime),
         Err(error) => {
             cancel_runtime_generation(app, generation);
@@ -497,41 +596,17 @@ fn finish_runtime_generation_launch(
 fn spawn_runtime_generation(
     app: &tauri::AppHandle,
     generation: u64,
+    prepared: &PreparedRuntime,
 ) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
     use tauri::Manager;
 
     let app_data_dir = app.path().app_data_dir()?;
-    let app_local_data_dir = app.path().app_local_data_dir()?;
-    let resource_dir = app.path().resource_dir()?;
-    let packaged_standalone = resource_dir.join("standalone");
-    let server_js = packaged_runtime::stage_standalone(
-        &packaged_standalone,
-        &app_local_data_dir,
-        env!("CARGO_PKG_VERSION"),
-    )
-    .map_err(|error| {
-        IoError::new(
-            ErrorKind::InvalidData,
-            format!("failed to stage the verified standalone runtime: {error}"),
-        )
-    })?;
-    let server_working_dir = server_js.parent().ok_or_else(|| {
+    let server_working_dir = prepared.server_js.parent().ok_or_else(|| {
         IoError::new(
             ErrorKind::InvalidData,
             "staged standalone server has no working directory",
         )
     })?;
-
-    let runtime_path = match bundled_bun(&resource_dir) {
-        Some(path) => path,
-        None => {
-            return Err(IoError::new(
-                ErrorKind::NotFound,
-                "The bundled JavaScript runtime is missing. Reinstall SahelFlow.",
-            )
-            .into());
-        }
-    };
 
     let authority = current_shop_authority(app)?;
     let auth = packaged_auth::load(&authority.database_path)?;
@@ -539,8 +614,8 @@ fn spawn_runtime_generation(
     let env = server_env(app, &runtime_protocol, &authority, &auth)?;
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
     let server_child = child_containment::ContainedChild::spawn_in(
-        Path::new(&runtime_path),
-        &[server_js.as_os_str().to_os_string()],
+        Path::new(&prepared.runtime_path),
+        &[prepared.server_js.as_os_str().to_os_string()],
         &process_environment(&env),
         Some(server_working_dir),
     )
@@ -557,7 +632,7 @@ fn spawn_runtime_generation(
         runtime_protocol.app_url()
     );
 
-    if !runtime_protocol.wait_until_ready(Duration::from_secs(60)) {
+    if !runtime_protocol.wait_until_ready(MANDATORY_RUNTIME_READY_TIMEOUT) {
         stop_runtime_launch(app, generation, &server_child, "unready Next.js server")?;
         runtime_protocol::remove_manifest(&app_data_dir);
         return Err(IoError::new(
@@ -611,6 +686,35 @@ fn spawn_runtime_generation(
     Ok(SpawnedRuntime {
         protocol: runtime_protocol,
         generation,
+    })
+}
+
+fn prepare_runtime(app: &tauri::AppHandle) -> Result<PreparedRuntime, Box<dyn std::error::Error>> {
+    use tauri::Manager;
+
+    let app_local_data_dir = app.path().app_local_data_dir()?;
+    let resource_dir = app.path().resource_dir()?;
+    let packaged_standalone = resource_dir.join("standalone");
+    let server_js = packaged_runtime::stage_standalone(
+        &packaged_standalone,
+        &app_local_data_dir,
+        env!("CARGO_PKG_VERSION"),
+    )
+    .map_err(|error| {
+        IoError::new(
+            ErrorKind::InvalidData,
+            format!("failed to stage the verified standalone runtime: {error}"),
+        )
+    })?;
+    let runtime_path = bundled_bun(&resource_dir).ok_or_else(|| {
+        IoError::new(
+            ErrorKind::NotFound,
+            "The bundled JavaScript runtime is missing. Reinstall SahelFlow.",
+        )
+    })?;
+    Ok(PreparedRuntime {
+        server_js,
+        runtime_path,
     })
 }
 
