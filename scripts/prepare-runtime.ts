@@ -22,7 +22,7 @@ const NODE_ASSET = `${NODE_DIRECTORY}.zip`;
 const NODE_URL = `https://nodejs.org/download/release/${NODE_RELEASE}/${NODE_ASSET}`;
 const NODE_CHECKSUM_URL = `https://nodejs.org/download/release/${NODE_RELEASE}/SHASUMS256.txt`;
 const NODE_ARCHIVE_SHA256 = "7df0bc9375723f4a86b3aa1b7cc73342423d9677a8df4538aca31a049e309c29";
-const NODE_EXECUTABLE_SHA256 = "f55db97c9924b0b37b05e8cf1be4e04c72aec01dc1c22420b5c31ab9cd118b89";
+const NODE_EXECUTABLE_SHA256 = "f8d162c0641dcee512132f3bcf8a68169c7ecb852efd8e1a46c9fec5a0f469ed";
 
 const root = resolve(fileURLToPath(import.meta.url), "..", "..");
 const runtimeDir = resolve(root, "src-tauri", "resources", "runtime");

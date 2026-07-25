@@ -118,5 +118,5 @@ jobs:
           path: |
             sf-windows-rust-release-parity.log
             sf-contained-tree-stress.log
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 2
