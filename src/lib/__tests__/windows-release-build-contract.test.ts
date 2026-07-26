@@ -10,6 +10,16 @@ function read(relativePath: string): string {
 }
 
 describe("Windows signed release build contract", () => {
+  it("keeps local release disabled and directs maintainers to the signed exact-source workflow", () => {
+    const localRelease = read("scripts/release.ts");
+
+    expect(localRelease).toContain("bun run release is disabled");
+    expect(localRelease).toContain("Build Signed Internal Windows Update");
+    expect(localRelease).toContain("exact protected-main merge commit SHA");
+    expect(localRelease).toContain("draft signed Internal updater");
+    expect(localRelease).not.toContain("unsigned internal build evidence");
+  });
+
   it("uses the canonical Webpack build and preserves the tracked placeholder bytes", () => {
     const packageJson = JSON.parse(read("package.json")) as {
       scripts?: Record<string, string>;
