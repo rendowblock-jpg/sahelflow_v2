@@ -671,7 +671,11 @@ mod tests {
         };
 
         let started = Instant::now();
-        assert!(protocol.probe_once().is_ok());
+        let mut listening_observed = false;
+        assert!(protocol
+            .probe_once(&mut || listening_observed = true)
+            .is_ok());
+        assert!(listening_observed);
         assert!(started.elapsed() < Duration::from_secs(2));
         release_sender.send(()).expect("release readiness server");
         server.join().expect("readiness server thread");
