@@ -156,8 +156,9 @@ describe("Windows signed release build contract", () => {
     expect(releaseRuntime).toBeGreaterThan(releaseDatabase);
     expect(release).toContain("bunx prisma migrate deploy");
     expect(release).toContain(
-      "Attest reviewed identical PR tree and required checks",
+      "Attest reviewed identical PR tree and risk-aware required gate",
     );
+    expect(release).toContain("$requiredChecks = @('Required PR gate')");
     expect(release).toContain("sourceCommit.tree.sha -cne $headCommit.tree.sha");
     expect(release).toContain("Cache signed-build Rust dependencies");
     expect(release).toContain("sahelflow-standalone-manifest.json");
@@ -212,9 +213,7 @@ describe("Windows signed release build contract", () => {
     expect(packageJson.overrides?.sharp).toBe("0.35.3");
     expect(sidecarPackage.dependencies?.sharp).toBe("0.35.3");
     expect(lockfile).toContain('"sharp": ["sharp@0.35.3"');
-    expect(release).toContain(
-      "Quality Gate (authority + sf-verify + coverage + audit)",
-    );
+    expect(release).toContain("Required PR gate");
     expect(release).toMatch(
       /Upload staged packaged runtime diagnostics[\s\S]*if-no-files-found:\s*ignore/,
     );

@@ -20,12 +20,23 @@ const UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json";
 let uiReadyAttempt = 0;
 let compileCacheFlushed = false;
 
-async function flushPackagedCompileCache(): Promise<void> {
+type CompileCacheProcess = NodeJS.Process & {
+  getBuiltinModule?: (specifier: string) => unknown;
+};
+
+type CompileCacheModule = {
+  flushCompileCache?: () => void;
+};
+
+function flushPackagedCompileCache(): void {
   if (!process.env.NODE_COMPILE_CACHE || compileCacheFlushed) return;
-  compileCacheFlushed = true;
   try {
-    const { flushCompileCache } = await import("node:module");
-    flushCompileCache();
+    const moduleApi = (process as CompileCacheProcess).getBuiltinModule?.(
+      "node:module",
+    ) as CompileCacheModule | undefined;
+    if (!moduleApi?.flushCompileCache) return;
+    moduleApi.flushCompileCache();
+    compileCacheFlushed = true;
   } catch {
     // The cache is a quiet optimization; readiness must not depend on it.
   }
@@ -195,7 +206,7 @@ export async function POST(request: NextRequest) {
   // flush after the first hydrated workspace acknowledgment. This makes later
   // launches reuse V8's validated module code cache without treating AppData
   // as executable source authority.
-  await flushPackagedCompileCache();
+  flushPackagedCompileCache();
 
   return NextResponse.json(
     { status: "ready", instanceId },

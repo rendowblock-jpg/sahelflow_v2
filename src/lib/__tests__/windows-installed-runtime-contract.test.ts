@@ -90,14 +90,17 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');
     expect(uiRoute).toContain('code: "RUNTIME_SESSION_REQUIRED"');
     expect(uiRoute).toContain('code: "RUNTIME_UI_READY_PERSIST_FAILED"');
-    expect(uiRoute).toContain('await import("node:module")');
-    expect(uiRoute).toContain("flushCompileCache()");
+    expect(uiRoute).toContain("getBuiltinModule?.(");
+    expect(uiRoute).toContain('"node:module"');
+    expect(uiRoute).toContain("moduleApi.flushCompileCache()");
+    expect(uiRoute).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
   });
 
   it("builds and launches the installed executable twice on an ephemeral Windows runner", () => {
     const workflow = read(".github/workflows/windows-installed-e2e.yml");
+    const classifier = read("scripts/classify-pr-risk.ts");
     const harness = read("scripts/verify-installed-windows-msi.ps1");
     const treeVerifier = read("scripts/verify-installed-standalone.ts");
     const uiHarness = read("scripts/verify-installed-windows-ui.ps1");
@@ -110,11 +113,14 @@ describe("installed Windows runtime contract", () => {
       "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
     expect(workflow).toContain("contents: read");
-    expect(workflow).toContain('      - "sahelflow.version.json"');
+    expect(workflow).toContain("workflow_call:");
+    expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).not.toContain("pull_request:");
+    expect(classifier).toContain('path === "sahelflow.version.json"');
     expect(workflow).not.toContain("Persist lifecycle-proven");
     expect(workflow).toContain("bunx tauri build --bundles msi");
     expect(workflow).toContain("verify-installed-windows-msi.ps1");
-    expect(workflow).toContain('      - "scripts/standalone-manifest.ts"');
+    expect(classifier).toContain('path === "scripts/standalone-manifest.ts"');
     expect(workflow).toContain("runtime-probe-diagnostic.json");
     expect(harness).toContain('$env:GITHUB_ACTIONS -cne "true"');
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
@@ -223,6 +229,8 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("issues: write");
     expect(dispatcher).toContain("pull-requests: write");
     expect(observer).toContain("pull-requests: write");
+    expect(observer).toContain("      - completed");
+    expect(observer).not.toContain("      - requested");
     expect(dispatcher).toContain('source_ref="${SOURCE_SHA}"');
     expect(dispatcher).toContain("gh workflow run release.yml");
     expect(dispatcher).toContain("gh run list");
