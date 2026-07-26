@@ -1,15 +1,15 @@
 # SahelFlow — Completion Roadmap
 
 > **Status:** Active dependency order
-> **Current protected-main source:** Internal.7 at
-> `3db7e4072f403f39632b7134be841047767a2e6d`
+> **Current protected-main source:** Internal.8 at
+> `eca2111a18fb900e9880177848ada497fd07ab72`
 > **Latest Founder-accepted baseline:** Internal.5
 > **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
-> **Immediate gate:** replace the failing Bun production server with pinned
-> Node.js, use writable non-executable AppData process state, retain bounded
-> redacted early-exit evidence and observe child exit promptly without deleting
-> Founder AppData or weakening runtime authority
-> **Last consolidated:** 2026-07-25
+> **Immediate gate:** deliver Internal.9 through the real in-app updater with a
+> stable full-size startup shell, corrected 1366x768 bottom containment,
+> measured Node listening/semantic readiness and faster repeat launch, without
+> deleting Founder AppData or weakening runtime authority
+> **Last consolidated:** 2026-07-26
 
 This is the shortest safe path from the current application to the complete
 SahelFlow 1.0 product. It controls dependency order, not calendar promises.
@@ -109,30 +109,23 @@ Documentation-only completion does not create an MSI.
 
 ## Phase 1 — Workspace/shop and business-integrity foundation
 
-Before Phase 1A changes the installed application, the runtime acceptance loop
-must close. Internal.7 eliminated the 14-minute recursive staging path and
-prepared the protected runtime in 271 ms on the Founder SSD, but bundled Bun
-then exited with `EPERM` while loading the installed Next.js entrypoint. The
-next coherent candidate replaces only that production server runtime with
-pinned Node.js LTS, detects pre-readiness process exit immediately, and follows
-the normal source → reviewed GitHub checks → signed Internal update →
-preserved-AppData Founder acceptance path. Do not bypass it by deleting AppData,
-running local builds or weakening the fail-closed shop/runtime boundary.
-The clean installed gate must also prove the authenticated workspace twice
-within the bounded day-to-day startup ceiling; a successful package that waits
-minutes or discards the server failure reason does not pass.
-Run `30174665811` proved the bounded diagnostic contract and isolated the next
-correction: the installed Windows launch reduced the spaced protected
-`server.js` path to `C:` at Node's main-module argument boundary. The signed
-launcher must keep that absolute path out of raw argv, transfer only the
-validated path through its explicit child environment, and re-prove the same
-installed MSI/UI gate before Phase 1A starts.
-Exact head `05fffb0ac0885a8f9d5ef56870b026b744233e7d` then proved the fixed
-bootstrap in staged runtime but failed installed run `30176167233` when
-`require(entry)` processed the environment-supplied Windows path as `C:`. The
-next correction must first add a native `ContainedChild` regression for that
-same bootstrap/environment path, then prove a Node-compatible absolute-path
-representation through the installed MSI gate.
+Before Phase 1A changes the installed application, the current installed
+acceptance loop must close. Internal.8 proves pinned Node runtime compatibility,
+authenticated real UI, AppData preservation, normal contained-process close
+and reopen. It is still unaccepted because the normal Founder T470 launch takes
+about 42.5 seconds, the separate small safe-startup window swaps visibly into
+the maximized workspace, and the app-shell flex chain can clip the bottom
+sidebar/footer at 1366x768-class heights.
+
+Internal.9 is the bounded correction: preserve the safe authenticated handoff,
+make the immediate startup surface a full-size SahelFlow shell, repair nested
+viewport containment, enable per-version Node compile caching for repeat
+launches, and trace runtime listening separately from database/auth semantic
+readiness. It then follows source → reviewed GitHub checks → exact-source signed
+Internal update → real in-app updater → preserved-AppData Founder acceptance.
+Do not bypass it with manual reinstall unless updater recovery is required, a
+local build, AppData deletion or weakened readiness. After acceptance, optimize
+the PR workflow lanes/required gate before Phase 1A implementation resumes.
 
 ### Outcome
 

@@ -1,29 +1,7 @@
 name: Windows installed MSI end-to-end
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/windows-installed-e2e.yml"
-      - "sahelflow.version.json"
-      - "scripts/install-founder-windows.ps1"
-      - "scripts/verify-installed-windows-msi.ps1"
-      - "scripts/verify-installed-standalone.ts"
-      - "scripts/standalone-manifest.ts"
-      - "scripts/verify-installed-windows-ui.ps1"
-      - "scripts/prepare-runtime.ts"
-      - "scripts/prepare-libsodium-windows.ps1"
-      - "src-tauri/**"
-      - "src/app/api/internal/runtime-ready/**"
-      - "src/app/api/internal/runtime-bootstrap/**"
-      - "src/app/api/internal/runtime-ui-ready/**"
-      - "src/components/runtime/**"
-      - "src/app/layout.tsx"
-      - "src/lib/runtime-auth.ts"
-      - "src/proxy.ts"
-      - "src/lib/db.ts"
-      - "prisma/**"
-      - "package.json"
-      - "bun.lock"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -228,6 +206,23 @@ jobs:
             $cacheInventory |
               ConvertTo-Json -Depth 10 |
               Set-Content -LiteralPath (Join-Path $destination 'runtime-cache-inventory.json') -Encoding UTF8
+          }
+
+          $nodeCompileCacheRoot = Join-Path $env:LOCALAPPDATA 'com.sahelflow.desktop\node-compile-cache'
+          if (Test-Path -LiteralPath $nodeCompileCacheRoot -PathType Container) {
+            @(
+              Get-ChildItem -LiteralPath $nodeCompileCacheRoot -Directory -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                  $files = @(Get-ChildItem -LiteralPath $_.FullName -Recurse -File -ErrorAction SilentlyContinue)
+                  [pscustomobject]@{
+                    version = $_.Name
+                    fileCount = $files.Count
+                    bytes = [int64](($files | Measure-Object -Property Length -Sum).Sum)
+                  }
+                }
+            ) |
+              ConvertTo-Json -Depth 4 |
+              Set-Content -LiteralPath (Join-Path $destination 'node-compile-cache-inventory.json') -Encoding UTF8
           }
 
           @(

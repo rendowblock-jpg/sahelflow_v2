@@ -2,10 +2,10 @@
 
 > **Status:** Active documentation entry point
 > **Documentation-reset merge:** PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`
-> **Protected-main Internal.7 source:** `3db7e4072f403f39632b7134be841047767a2e6d`
+> **Protected-main Internal.8 checkpoint:** `eca2111a18fb900e9880177848ada497fd07ab72`
 > **Accepted installed release:** `1.0.0-internal.5`
-> **Current installation:** `1.0.0-internal.7`, not Founder-accepted
-> **Last updated:** 2026-07-25
+> **Current installation:** `1.0.0-internal.8`, not Founder-accepted
+> **Last updated:** 2026-07-26
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, records the source-grounded current state, orders the work, and lets the

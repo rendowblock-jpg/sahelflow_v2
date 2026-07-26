@@ -1,15 +1,15 @@
 # SahelFlow — Current State
 
 > **Authority:** merged protected `main` only
-> **Executable source baseline:** `3db7e4072f403f39632b7134be841047767a2e6d`
-> **Source version:** `1.0.0-internal.7` / MSI `1.0.0.7`
-> **Latest signed candidate:** `1.0.0-internal.7`, run `30142585934`
+> **Protected-main baseline:** `eca2111a18fb900e9880177848ada497fd07ab72`
+> **Source version:** `1.0.0-internal.8` / MSI `1.0.0.8`
+> **Latest signed candidate:** `1.0.0-internal.8`, run `30183140347`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
-> **Current installed status:** Internal.7 is installed but not accepted;
-> runtime preparation completed in 271 ms, then bundled Bun exited while
-> loading the protected Next.js entrypoint
+> **Current installed status:** Internal.8 is installed and runtime/lifecycle
+> complete but not accepted; authenticated UI opens in about 42.5 seconds and
+> the startup transition plus bottom app-shell clipping require correction
 > **Observed machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-25
+> **Last assessed:** 2026-07-26
 
 This document describes what integrated source and named evidence prove now. It
 does not convert target architecture, adapter presence, test count, mock output
@@ -19,33 +19,27 @@ or planned scope into a readiness claim. Unmerged work belongs in
 ## Executive truth
 
 SahelFlow is a broad internal Windows application with a proven Internal.5
-installed runtime chain and signed-release-complete but unaccepted Internal.6
-and Internal.7 startup corrections. It is not an empty prototype, but it is not yet a
-commercially complete or AAA SahelFlow 1.0 product.
+accepted baseline and a stronger installed-but-unaccepted Internal.8 runtime
+chain. It is not an empty prototype, but it is not yet a commercially complete
+or AAA SahelFlow 1.0 product.
 
-The protected-main → signed MSI → installed Founder-machine chain remains
-strong historical evidence for Internal.5. Internal.6 proved a responsive safe
-startup surface. Internal.7 removed recursive staging and reduced protected
-runtime preparation to 271 ms, but its bundled Bun process exited with `EPERM`
-while loading `server.js` from `Program Files`; the desktop discarded that
-output and consumed two 90-second readiness deadlines. Both candidates passed
-automated installed runtime/UI gates and failed Founder acceptance, so the
-remaining gap is artifact-to-reference-machine runtime compatibility. The
-source also contains substantial catalog, customer, order, delivery,
-return/refund, COD, accounting, risk, automation, WhatsApp, AI, integration,
-storefront, multilingual UI and test work.
+PR #158 app source `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`
+replaced the failing packaged Bun server with pinned Node.js 22.23.1, retained
+the protected `Program Files` runtime authority, added fail-fast contained-child
+exit evidence and passed exact-head CI, Windows Rust and installed MSI/UI gates.
+PR #159 at `eca2111a18fb900e9880177848ada497fd07ab72` corrected the signed
+release's disposable test-database preparation. Signed run `30183140347` then
+built, signed, installed and published exact app source Internal.8.
 
-PR #158 exact head `05fffb0ac0885a8f9d5ef56870b026b744233e7d`
-passed complete CI and Windows Rust release parity. Its clean Windows MSI built,
-installed and matched the complete 3,985-file protected standalone tree. The
-fixed signed bootstrap executed on the real installed launch, but its
-environment-supplied protected entrypoint still failed in Node's CommonJS
-resolver with `EISDIR` while processing `C:`. This isolates the remaining gap
-to the native contained-process entrypoint representation/transport rather than
-package content, runtime identity, migration, AppData or disk speed. The staged
-runtime passed, but it uses Bun's spawn environment and therefore does not prove
-the custom `CreateProcessW` environment boundary. This is not yet signed,
-installed on the Founder machine or Founder-accepted evidence.
+Founder installation proved the real authenticated dashboard, preserved
+AppData, normal contained-process close and a successful new-instance reopen.
+The remaining startup gate is now performance and presentation rather than
+runtime compatibility. A normal launch showed the startup surface in 138 ms,
+migration in 713 ms, runtime preparation in 160 ms, Node/Next semantic readiness
+in about 32.1 seconds and authenticated UI about 9.1 seconds later: about 42.5
+seconds total. The separate small safe-startup window visibly swaps into a
+maximized workspace, and missing zero-minimum flex constraints can push the
+sidebar/footer below the WebView bottom at 1366x768-class heights.
 
 The main remaining discontinuity is product coherence and authority:
 
@@ -65,9 +59,10 @@ The main remaining discontinuity is product coherence and authority:
 
 The correct characterization is:
 
-> **Accepted Internal.5 baseline plus installed-but-unaccepted Internal.7;
-> current Windows runtime-compatibility gate; broad partial desktop product; commercial
-> and connected platform still largely ahead.**
+> **Accepted Internal.5 baseline plus runtime-complete but unaccepted
+> Internal.8; current low-end startup/layout/updater-acceptance gate; broad
+> partial desktop product; commercial and connected platform still largely
+> ahead.**
 
 ## Evidence ledger
 
@@ -92,15 +87,20 @@ The correct characterization is:
 | Signed Internal.7 build | Actions run `30142585934`; retained artifact `8615273329` | Exact-main signed build, signature, installed runtime/UI and evidence gates passed |
 | Founder Internal.7 install | Internal.6 to Internal.7 in-place upgrade | Exact release MSI installed as display version `1.0.0.7`; AppData was preserved |
 | Founder Internal.7 startup | Installed Internal.7 on 2026-07-25, SSD | Startup screen about 1.6 s; migration about 4.6 s; runtime preparation 271 ms; bundled Bun exited with `EPERM` loading protected `server.js`; two readiness deadlines elapsed; not accepted |
+| Node packaged runtime | PR #158, merge `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7` | Pinned Node 22.23.1, native containment, fail-fast exit diagnostics and exact-head CI/Rust/MSI gates passed |
+| Release DB fixture | PR #159, merge `eca2111a18fb900e9880177848ada497fd07ab72` | Signed workflow prepares the disposable staged database before packaged-runtime verification |
+| Signed Internal.8 build | Actions run `30183140347` | Exact app source built, signed, installed twice, published with updater signature and `latest.json` |
+| Founder Internal.8 install | Internal.7 to Internal.8 in-place upgrade | Exact MSI SHA-256 `5D5DC9A26BC32304EE1A8D850A566A2AE2F3EB8A40CB6CDFE5FD69618AFD85D0`; AppData preserved |
+| Founder Internal.8 lifecycle | Installed Internal.8 on 2026-07-26, SSD | Authenticated dashboard visible; normal process-tree close and new-instance reopen passed |
+| Founder Internal.8 startup/layout | Installed Internal.8 on 2026-07-26, SSD | About 42.5 s to authenticated UI; separate-window transition is jarring and bottom sidebar/footer can clip; not accepted |
 
 The earlier accepted reopen proves that exact historical attempt only.
 Internal.6 exposed recursive verification/staging as the dominant 14-minute
-mechanism. Internal.7 removed that mechanism and proved prompt runtime
-preparation, then exposed a separate Bun Windows module-loader incompatibility
-and missing early-exit observation. The same installed entrypoint remained
-readable as ordinary data, so basic ACL denial, missing content, AppData loss
-and disk class are not adequate explanations. Startup compatibility is blocking
-recovery work, not deferred debt.
+mechanism. Internal.7 removed it and isolated Bun's installed loader failure.
+Internal.8 closes runtime compatibility and lifecycle correctness; it does not
+waive the low-end launch targets or the visible 1366x768 layout contract.
+Internal.9 is therefore a performance/presentation/updater acceptance package,
+not a claim that the wider product is complete.
 
 ## Repository shape
 
@@ -128,7 +128,7 @@ separate evidence result.
 
 | ID | Capability | Current status | Evidence / implementation | Principal gap |
 |---|---|---|---|---|
-| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.6/7 signed and installed with AppData preserved | Production server runtime compatibility, broader hardware matrix, future A→B repetitions |
+| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.8 signed, installed, authenticated and reopened with AppData preserved | Prove the first real in-app Internal.8→Internal.9 update, broader hardware matrix and repeated A→B updates |
 | CAP-002 | Local database/migrations | **Partial** | Prisma/SQLite, eight migrations, runtime preservation | All-shop journaled migrations, preflight, rollback/recovery proof |
 | CAP-003 | Shop management | **Partial/unsafe** | Per-shop files, shop store/routes, creation UI | Trusted workspace/shop context, live safe switch, no process-global fallback |
 | CAP-004 | Local PIN/session | **Implemented for local baseline** | `AuthSecret`, `Session`, runtime auth | Not seller identity, team authority, device or recovery model |
@@ -157,9 +157,9 @@ separate evidence result.
 | CAP-027 | Localization/RTL | **Partial/unverified** | i18n hooks, locale-aware UI and RTL foundations | Complete copy/state parity and systematic AR/FR/EN/RTL evidence |
 | CAP-028 | Accessibility/keyboard | **Partial/unverified** | Radix primitives, shortcuts, focus-related components | Whole-journey WCAG, zoom, screen-reader and keyboard evidence |
 | CAP-029 | AAA design system/page depth | **Partial** | Strong shared UI primitives and broad pages | One coherent system and complete loading/empty/error/degraded/recovery states |
-| CAP-030 | Low-end performance | **Unverified; blocking startup defect** | Internal.7 runtime preparation completed in 271 ms on the Founder T470 SSD | Compatible Node-based launch acceptance, representative datasets, budgets and eight-hour stability |
+| CAP-030 | Low-end performance | **Unverified; blocking startup defect** | Internal.8 runtime works, but Founder T470 authenticated launch is about 42.5 s | Stable first-visible shell, faster warm launch, measured Node listening/semantic readiness, representative datasets and eight-hour stability |
 | CAP-031 | Security/privacy/legal | **Partial/unverified** | Crypto, PIN, secrets, loopback auth and redaction pieces | Full threat models, key recovery, tenant boundaries, Law 18-07 and review |
-| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.7 release-complete** | Exact-source signing, runtime/UI gates, distinct release/Founder acceptance records | Complete the next coherent runtime correction and retain the discipline for every app-changing package |
+| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.8 release-complete** | Exact-source signing, runtime/UI gates, installed lifecycle and distinct release/Founder acceptance records | Complete Internal.9 through the real in-app updater and retain the discipline for every app-changing package |
 
 ## Provider status
 

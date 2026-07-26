@@ -48,6 +48,11 @@ describe("installed Windows runtime contract", () => {
     const desktop = read("src-tauri/src/lib.rs");
     const recovery = read("src-tauri/src/startup_recovery.rs");
     const tauriConfig = read("src-tauri/tauri.conf.json");
+    const startupWindow = (
+      JSON.parse(tauriConfig) as {
+        app?: { windows?: Array<Record<string, unknown>> };
+      }
+    ).app?.windows?.find((window) => window.label === "startup");
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
 
@@ -56,6 +61,9 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("struct PreparedRuntime");
     expect(desktop).toContain("let prepared = prepare_runtime(app)?");
     expect(desktop).toContain("MANDATORY_RUNTIME_READY_TIMEOUT");
+    expect(desktop).toContain('"runtime-listening"');
+    expect(desktop).toContain('"NODE_COMPILE_CACHE"');
+    expect(desktop).toContain('.join("node-compile-cache")');
 
     expect(recovery).toContain('STARTUP_TRACE_FILE: &str = "startup-trace.json"');
     expect(recovery).toContain(
@@ -64,10 +72,16 @@ describe("installed Windows runtime contract", () => {
     expect(recovery).toContain('"SF-RUNTIME-UI-SESSION-BLOCKED"');
     expect(recovery).toContain('"SF-RUNTIME-UI-BEACON-MISSING"');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
-    expect(recovery).toContain("SahelFlow - Safe startup");
+    expect(recovery).toContain("const STARTUP_WINDOW_TITLE: &str = MAIN_WINDOW_TITLE");
     expect(recovery).toContain("SahelFlow - Startup blocked");
-    expect(tauriConfig).toContain('"label": "startup"');
-    expect(tauriConfig).toContain('"title": "SahelFlow - Safe startup"');
+    expect(startupWindow).toMatchObject({
+      label: "startup",
+      title: "SahelFlow",
+      width: 1280,
+      height: 800,
+      maximized: true,
+      visible: false,
+    });
 
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
     expect(beacon).toContain("const REQUEST_TIMEOUT_MS = 5_000");
@@ -76,12 +90,21 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');
     expect(uiRoute).toContain('code: "RUNTIME_SESSION_REQUIRED"');
     expect(uiRoute).toContain('code: "RUNTIME_UI_READY_PERSIST_FAILED"');
+    expect(uiRoute).toContain("getBuiltinModule?.(");
+    expect(uiRoute).toContain('"node:module"');
+    expect(uiRoute).toContain("moduleApi.flushCompileCache()");
+    expect(uiRoute).toContain('locale: runtimeLocale(request)');
+    expect(uiRoute.indexOf("flushPackagedCompileCache();")).toBeLessThan(
+      uiRoute.indexOf("writeJsonAtomically(ackPath, acknowledgment)"),
+    );
+    expect(uiRoute).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
   });
 
   it("builds and launches the installed executable twice on an ephemeral Windows runner", () => {
     const workflow = read(".github/workflows/windows-installed-e2e.yml");
+    const classifier = read("scripts/classify-pr-risk.ts");
     const harness = read("scripts/verify-installed-windows-msi.ps1");
     const treeVerifier = read("scripts/verify-installed-standalone.ts");
     const uiHarness = read("scripts/verify-installed-windows-ui.ps1");
@@ -94,19 +117,24 @@ describe("installed Windows runtime contract", () => {
       "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
     expect(workflow).toContain("contents: read");
-    expect(workflow).toContain('      - "sahelflow.version.json"');
+    expect(workflow).toContain("workflow_call:");
+    expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).not.toContain("pull_request:");
+    expect(classifier).toContain('path === "sahelflow.version.json"');
     expect(workflow).not.toContain("Persist lifecycle-proven");
     expect(workflow).toContain("bunx tauri build --bundles msi");
     expect(workflow).toContain("verify-installed-windows-msi.ps1");
-    expect(workflow).toContain('      - "scripts/standalone-manifest.ts"');
+    expect(classifier).toContain('path === "scripts/standalone-manifest.ts"');
     expect(workflow).toContain("runtime-probe-diagnostic.json");
     expect(harness).toContain('$env:GITHUB_ACTIONS -cne "true"');
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
     expect(harness).toContain("for ($attempt = 1; $attempt -le 2; $attempt++)");
     expect(uiHarness).toContain("Wait-ForPromptVisibleWindow");
-    expect(uiHarness).toContain('"SahelFlow - Safe startup"');
-    expect(uiHarness).toContain("prompt-responsive-safe-startup-window");
-    expect(uiHarness).toContain("$safeStartupWindows.Count -ne 0");
+    expect(uiHarness).toContain("prompt-responsive-startup-shell-window");
+    expect(uiHarness).toContain("StartupWindowHandle");
+    expect(uiHarness).toContain("$workspaceWindows[0].handle -eq $StartupWindowHandle");
+    expect(uiHarness).toContain("Wait-ForNodeCompileCache");
+    expect(uiHarness).toContain("executableOrSourceFiles = 0");
     expect(uiHarness).toContain("$workspaceWindows.Count -ne 1");
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
@@ -205,6 +233,8 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("issues: write");
     expect(dispatcher).toContain("pull-requests: write");
     expect(observer).toContain("pull-requests: write");
+    expect(observer).toContain("      - completed");
+    expect(observer).not.toContain("      - requested");
     expect(dispatcher).toContain('source_ref="${SOURCE_SHA}"');
     expect(dispatcher).toContain("gh workflow run release.yml");
     expect(dispatcher).toContain("gh run list");

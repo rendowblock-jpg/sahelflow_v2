@@ -4,7 +4,7 @@
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** GitHub protected `main`, branches, PRs, Actions, releases
 > and evidence
-> **Last consolidated:** 2026-07-24
+> **Last consolidated:** 2026-07-26
 
 This workflow optimizes for the fastest path to flawless product completion:
 clear ownership, dependency-correct work, independent review, exact evidence
@@ -135,6 +135,31 @@ the product, architecture, current state or roadmap actually changes.
   risks, evidence and next action.
 - Review findings are resolved in the same PR unless they prove the scope itself
   is wrong.
+
+### Risk-aware PR automation
+
+- `Required PR gate` is the single protected-branch and signed-release check.
+  It always verifies exact-head risk classification and the fast version/docs
+  authority lane, then requires every lane selected for the changed paths.
+- Draft PR synchronization runs only classification and fast authority. Keep
+  material work in draft while coding; `ready_for_review` starts the selected
+  heavy lanes once for the reviewable head.
+- A new commit on a ready PR reruns the selected lanes because the reviewed tree
+  changed. Move the PR back to draft before a multi-commit revision cycle.
+- Documentation-only changes do not install dependencies or run application
+  builds. Ordinary web source changes run the full source-quality lane without
+  Windows packaging.
+- Tauri, contained runtime, database/migration, installer, updater, version and
+  release-authority paths select progressively stronger Rust, Windows runtime
+  and installed-MSI lanes. Version or signed-release authority changes require
+  the full set.
+- Windows parity and installed-MSI workflows are reusable/manual workflows;
+  they do not trigger independently on every PR push or again after merge.
+- Protected-main merges do not repeat PR source checks. Exact-tree signed builds
+  still perform their own packaging, signature, installed-runtime and visible-UI
+  gates because those prove the produced artifact rather than repeat source CI.
+- Signed-release status observation records completed runs only; requested-state
+  chatter does not create duplicate PR updates.
 
 ## Risk classes
 

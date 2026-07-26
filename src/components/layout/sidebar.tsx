@@ -113,7 +113,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
   return (
     <aside
       className={cn(
-        "flex h-full flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "flex h-full min-h-0 flex-col overflow-hidden bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
         // Explicit physical border: LTR = border-right (sidebar on left),
         // RTL = border-left (sidebar on right). Don't rely on border-e.
         "border-e border-sidebar-border",
@@ -140,7 +140,7 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea className="min-h-0 flex-1 px-3 py-4">
         {collapsed ? (
           <TooltipProvider delayDuration={0}>
             {navContent}
