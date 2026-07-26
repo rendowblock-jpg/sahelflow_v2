@@ -308,6 +308,11 @@ App-changing work is finally complete only at Founder-accepted.
 - Every app-changing work package gets a unique immutable version.
 - Never rebuild or reuse a failed version.
 - Release requests bind the exact protected-main merge SHA.
+- The signed workflow may reuse successful required PR checks only after it
+  proves the merged protected-main Git tree is byte-identical to the reviewed
+  PR-head tree. It still performs the exact-source signed build and installed
+  MSI/runtime/visible-UI gates; a commit/tree mismatch or missing check blocks
+  release.
 - Verify MSI hash, updater signature, trusted source and update manifest before
   installation.
 - Routine updates install over the existing accepted version.

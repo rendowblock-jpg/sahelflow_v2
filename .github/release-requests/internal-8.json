@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "version": "1.0.0-internal.8",
+  "windowsMsiVersion": "1.0.0.8",
+  "versionAuthorityCommit": "3db7e4072f403f39632b7134be841047767a2e6d",
+  "candidateBaseCommit": "3db7e4072f403f39632b7134be841047767a2e6d",
+  "requestRevision": 1,
+  "requestReason": "replace the failing packaged Bun Next.js runtime with pinned official Node.js LTS, observe pre-readiness child exit immediately, and shorten signed delivery through reviewed-tree check attestation",
+  "signedSourcePolicy": "protected-main-merge-commit-containing-this-request-and-the-coherent-node-runtime-platform-correction",
+  "publication": "draft-only",
+  "installation": "upgrade-over-internal.7-preserve-appdata",
+  "requiredEvidence": [
+    "exact protected-main request merge source",
+    "protected-main and reviewed PR-head Git trees are identical",
+    "all required exact-PR-head source, Windows Rust and installed MSI checks passed",
+    "official Node.js archive and executable SHA-256 provenance plus retained license",
+    "real contained Node.js launcher and pre-readiness exit observation",
+    "updater signature and latest.json exact-asset binding",
+    "signed MSI in-place update over installed Internal.7",
+    "Roaming and Local AppData plus active shop database preservation",
+    "protected Program Files complete standalone tree exact candidate binding",
+    "no developer-PATH or AppData executable runtime fallback",
+    "prompt safe startup and authenticated hydrated workspace readiness",
+    "normal close, complete child teardown, and successful reopen",
+    "Founder T470 visible dashboard acceptance"
+  ],
+  "nextUpdaterDrill": "1.0.0-internal.8-to-next-approved-internal"
+}

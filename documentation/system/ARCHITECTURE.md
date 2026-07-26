@@ -715,15 +715,35 @@ Every merged work package that changes the installed product receives a unique
 monotonically increasing Internal version. Its exact protected-main source is
 bound to the signed MSI, signature, update manifest and retained evidence.
 
-The packaged standalone runtime executes directly from the MSI installation
-under protected `Program Files`. Clean build and release gates generate and
-verify its complete deterministic tree identity before signing; installed
-Windows gates independently recompute the complete protected tree, bind its
-manifest and entrypoint to that exact candidate, and exercise launch plus
+The packaged Next.js standalone runtime executes directly from the MSI
+installation under protected `Program Files` using a pinned, checksum-verified
+Node.js LTS binary. Bun remains a development/build tool and the compiler for
+the isolated WhatsApp executable; it is not the installed Next.js process.
+Clean build and release gates generate and verify the complete deterministic
+standalone tree identity and runtime provenance before signing. Installed
+Windows gates independently recompute the protected tree, bind its manifest,
+entrypoint and Node runtime to the exact candidate, and exercise launch plus
 reopen. User-writable AppData may retain business state, diagnostics and legacy
 caches, but it is not executable runtime authority. Interactive startup
 validates the installed manifest/version and required regular-file entrypoint
-without recursively copying or hashing the complete runtime tree.
+without recursively copying or hashing the complete runtime tree, and aborts
+readiness immediately when the contained server process exits.
+
+The installed server's executable, entrypoint, dependencies and native engine
+remain under protected `Program Files`. Its process working directory is a
+non-executable Local AppData directory so runtime libraries never need to write
+under the installation root. The signed desktop invokes Node with a fixed
+embedded bootstrap; the already validated absolute protected entrypoint is
+carried in the explicit sanitized child environment instead of across the raw
+Windows command-line argument boundary. After regular-file validation, any
+Win32 verbatim disk prefix is removed and the environment carries a
+conventional forward-slash absolute drive path; network, device and
+drive-relative representations fail closed. The bootstrap validates that
+post-transport representation and neither copies nor loads code from AppData.
+The containment layer continuously drains stderr into a fixed-size in-memory
+buffer. Early-exit diagnostics expose only static allowlisted runtime categories
+or a generic suppressed-output signal; arbitrary child text never reaches logs,
+persistence, display or release evidence.
 
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,
@@ -792,7 +812,7 @@ authority.
 | INV-040 | One seller workspace has one independent base license; a person may own several separately licensed workspaces. |
 | INV-041 | Founder control-plane access cannot expose seller operational plaintext or permanent signing material. |
 | INV-042 | Shared connected-service entitlements cannot become public before measured unit economics, quotas and alarms exist. |
-| INV-043 | The desktop executes the release-verified MSI-installed runtime from the protected installation; user-writable runtime copies are not executable authority. |
+| INV-043 | The desktop executes the release-verified MSI-installed Node.js and standalone runtime from the protected installation; user-writable runtime copies and developer-PATH runtimes are not executable authority. |
 
 Every invariant maps to automated tests, packaged/provider/device/recovery evidence and observable recovery in the implementation wave that introduces it.
 

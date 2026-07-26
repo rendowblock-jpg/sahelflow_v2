@@ -190,21 +190,21 @@ jobs:
         shell: pwsh
         run: ./scripts/prepare-libsodium-windows.ps1
 
-      - name: Verify bundled Bun through actual contained launcher
+      - name: Verify bundled Node.js through actual contained launcher
         shell: pwsh
         env:
-          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
+          SF_CONTAINED_NODE_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\node.exe
         run: |
-          & cargo test --manifest-path src-tauri/Cargo.toml contained_bun_runs_with_explicit_stdio_handles --locked -- --nocapture 2>&1 |
-            Tee-Object -FilePath .sf-contained-bun.log
+          & cargo test --manifest-path src-tauri/Cargo.toml contained_node_runs_with_explicit_stdio_handles --locked -- --nocapture 2>&1 |
+            Tee-Object -FilePath .sf-contained-node.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Upload contained Bun launcher diagnostics
+      - name: Upload contained Node.js launcher diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-contained-bun-diagnostics-${{ github.run_id }}
-          path: .sf-contained-bun.log
+          name: windows-contained-node-diagnostics-${{ github.run_id }}
+          path: .sf-contained-node.log
           if-no-files-found: ignore
           retention-days: 2
 

@@ -1,60 +1,73 @@
-# Runtime Bundling (T-S5 decision)
+# Runtime bundling
 
-> **Ship-blocker T-S5:** the `.msi`/`.dmg` installer previously required Bun
-> (or Node) to be installed on the end user's machine. Algerian COD sellers
-> are non-developers — they will NOT have Bun/Node installed. Result: blank
-> window on first launch. Even with Bun installed, the first `bunx prisma`
-> invocation downloads ~50 MB of Prisma engine binaries from npm, which is
-> slow and fails when offline.
+> The signed installer must run on a seller machine without a developer Node,
+> Bun or Rust installation and without downloading executable dependencies on
+> first launch.
 
-## Decision: bundle Bun + Prisma engines as Tauri resources (option a)
+## Decision: Node.js for the installed Next.js server
 
-We bundle the pinned **Bun 1.3.14 Windows x64 baseline** binary + **Prisma `libquery_engine`**
-binary inside the installer via `tauri.conf.json` → `bundle.resources` →
-`resources/runtime/**/*`. The preparation script downloads the named Bun
-release asset, verifies its pinned SHA-256 checksum, and records its release
-URL and checksum provenance in `runtime-manifest.json`. It never copies the
-host Bun executable. At runtime, `lib.rs` (`bundled_bun()` helper)
-prefers `<resource_dir>/runtime/bun[.exe]` before falling back to PATH
-`bun` then PATH `node`. This matches the existing sidecar pattern
-(`externalBin: sahelflow-whatsapp`) and is the lowest-risk option.
+The installed Next.js standalone server runs on pinned **Node.js 22.23.1
+Windows x64**, the production runtime officially supported by Next.js. Bun
+1.3.14 remains the frozen package manager, build tool and WhatsApp sidecar
+compiler, but it is not the installed Next.js process.
 
-Option (b) — `bun build --compile` the Next.js server into a single
-binary — was rejected because the Next.js standalone server is not a
-clean compile target (dynamic requires + ESM/CJS interop) and Prisma
-engines would still need bundling regardless.
+The checksum-pinned Bun baseline executable used to compile the sidecar is
+staged only under ignored `.sf-build/tools`, passed explicitly through Bun's
+`--compile-executable-path`, and retained as build provenance. It is outside
+Tauri resources and never enters the installed application.
 
-## How the founder produces a distributable installer
+The MSI bundles Node.js and the Prisma `libquery_engine` through
+`tauri.conf.json` -> `bundle.resources` -> `resources/runtime/**/*`.
+`prepare-runtime.ts` downloads the official Node.js release archive, verifies
+the published archive and executable SHA-256 values, retains the Node.js
+license, and records provenance in `runtime-manifest.json`. It never copies a
+runtime selected from the build host.
+
+This supersedes the earlier Bun production-runtime choice. Internal.7 proved
+that Bun 1.3.14 could read the protected `server.js` as data on the Founder
+machine but its Windows module loader exited with `EPERM` when executing that
+entrypoint from `Program Files`. The MSI-installed tree and AppData were intact.
+
+Compiling the complete Next.js server to a Bun single-file executable remains
+rejected: the generated standalone server has dynamic module/runtime behavior
+and Prisma native engines that must remain explicit release resources.
+
+## Build path
 
 ```bash
-# 1. (once) populate src-tauri/resources/runtime/ with the platform Bun + Prisma engine
+# Populate src-tauri/resources/runtime with pinned Node.js + Prisma resources.
 bun run scripts/prepare-runtime.ts
 
-# 2. build the installer (.msi on Windows, .dmg on macOS, .AppImage on Linux)
+# Build the Windows MSI. The Tauri beforeBuild hook prepares the runtime again
+# from pinned provenance and builds the standalone frontend and sidecar.
 bun run tauri:build
 ```
 
-`prepare-runtime.ts` currently supports the Windows x64 internal candidate. It
-downloads and verifies Bun on every candidate build so a host-selected modern
-binary cannot be mistaken for the older-CPU baseline.
-
-## What gets bundled
+## Packaged artifacts
 
 | Artifact | Source | Destination |
 |---|---|---|
-| Bun binary | `bun-v1.3.14/bun-windows-x64-baseline.zip` (pinned SHA-256) | `resources/runtime/bun.exe` |
-| Prisma `libquery_engine` | `binaries.prisma.sh` | `resources/runtime/<engine>` |
-| Next.js standalone server | `bun run build` → `.next/standalone` | `resources/standalone/**/*` |
-| Prisma schema + migrations | `prisma/` | (already bundled) `../prisma/**/*` |
-| Migration coordinator | `src/migration_coordinator.rs` | compiled into the Tauri host |
-| WhatsApp sidecar | `bun build --compile --target=bun-windows-x64-baseline` | `binaries/sahelflow-whatsapp-x86_64-pc-windows-msvc.exe` |
+| Node.js binary | `node-v22.23.1-win-x64.zip` with official pinned SHA-256 | `resources/runtime/node.exe` |
+| Node.js license | Official Node.js release archive | `resources/runtime/NODE-LICENSE.txt` |
+| Prisma query engine | Generated pinned `@prisma/client` engine from `bun.lock` | `resources/runtime/query_engine-windows.dll.node` |
+| Next.js standalone server | `bun run build` -> `.next/standalone` | `resources/standalone/**/*` |
+| Prisma schema and migrations | `prisma/` | Tauri `prisma/**/*` resource |
+| WhatsApp sidecar | `bun build --compile --target=bun-windows-x64-baseline` | Tauri external binary |
 
-## Runtime resolution order in `lib.rs`
+## Runtime authority
 
-1. `<resource_dir>/runtime/bun[.exe]` (bundled — production)
-2. PATH `bun` (developer machine)
-3. PATH `node` (last-resort fallback)
+Packaged startup accepts only `<resource_dir>/runtime/node[.exe]` and the
+release-verified standalone tree under the protected MSI installation. If the
+runtime is missing, startup blocks with a reinstall diagnostic; there is no
+PATH or user-writable executable fallback.
 
-If none are found, `lib.rs` logs a clear error instructing the founder to
-run `prepare-runtime.ts` before `tauri:build` — instead of silently
-showing a blank window.
+The server runs in a kill-on-close Windows job. Its pre-readiness exit is
+observed immediately, so a runtime crash cannot consume the full readiness
+deadline. Tauri may expose protected MSI resources with a Win32 verbatim
+`\\?\C:\...` prefix; after validating the installed regular file, the desktop
+removes only that namespace prefix and supplies Node a conventional
+forward-slash absolute drive path through the sanitized child environment.
+GitHub's Windows gate exercises that same fixed bootstrap and environment
+through the real contained launcher, installs the exact MSI, recomputes the
+complete installed standalone identity, and proves launch, normal close and
+reopen.

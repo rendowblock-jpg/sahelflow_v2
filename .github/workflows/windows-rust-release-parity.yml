@@ -98,7 +98,7 @@ jobs:
       - name: Verify full release-equivalent Windows Rust suite
         shell: pwsh
         env:
-          SF_CONTAINED_BUN_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\bun.exe
+          SF_CONTAINED_NODE_PATH: ${{ github.workspace }}\src-tauri\resources\runtime\node.exe
         run: |
           & cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --nocapture --test-threads=1 2>&1 |
             Tee-Object -FilePath sf-windows-rust-release-parity.log
@@ -118,5 +118,5 @@ jobs:
           path: |
             sf-windows-rust-release-parity.log
             sf-contained-tree-stress.log
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 2

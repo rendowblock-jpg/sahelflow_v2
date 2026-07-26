@@ -60,7 +60,7 @@ not require a new Internal MSI.
   Founder-accepted because recursive standalone verification took about 14
   minutes before staging began on the Founder SSD.
 
-### Internal.7 installed-runtime performance candidate
+### Internal.7 installed-runtime performance result
 
 - Uses the standalone runtime directly from its signed MSI-protected
   `Program Files` installation instead of copying it into user-writable Local
@@ -74,6 +74,26 @@ not require a new Internal MSI.
   protected runtime tree to the exact built candidate, reject a new Internal.7
   AppData runtime cache, and prove authenticated launch/normal-close/reopen
   twice.
+- Merged as PR #157 at
+  `3db7e4072f403f39632b7134be841047767a2e6d`, passed signed run
+  `30142585934`, and was installed over Internal.6 with AppData preserved.
+- Reduced Founder runtime preparation to 271 ms, then failed acceptance because
+  bundled Bun exited with `EPERM` while loading the protected Next.js
+  entrypoint and the desktop waited two full readiness deadlines.
+
+### Internal.8 Node runtime and delivery candidate
+
+- Runs the installed Next.js standalone server on pinned official Node.js
+  22.23.1 LTS while retaining Bun for frozen development/build tooling and the
+  compiled WhatsApp sidecar.
+- Verifies official Node.js archive/executable hashes, retains its license and
+  proves the installed runtime identity contains no retired Bun production
+  executable.
+- Observes contained child exit during authenticated readiness so a future
+  early runtime crash is reported immediately.
+- Fixes signed-release PR reporting permissions and reuses reviewed PR checks
+  only after proving protected main and the successful reviewed head have the
+  identical Git tree; exact-source signing and installed MSI/UI gates remain.
 
 ## [1.0.0-internal.5] — 2026-07-24
 

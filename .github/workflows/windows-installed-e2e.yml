@@ -234,7 +234,7 @@ jobs:
             Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
               Where-Object {
                 $_.Name -ieq 'sahelflow.exe' -or
-                $_.Name -ieq 'bun.exe' -or
+                $_.Name -ieq 'node.exe' -or
                 $_.Name -ieq 'sahelflow-whatsapp.exe' -or
                 $_.Name -ieq 'msedgewebview2.exe'
               } |

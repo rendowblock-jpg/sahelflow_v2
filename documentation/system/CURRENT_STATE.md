@@ -1,13 +1,13 @@
 # SahelFlow — Current State
 
 > **Authority:** merged protected `main` only
-> **Executable source baseline:** `772d09c3b2ada4668f8c872bfd469cabb839d82a`
-> **Source version:** `1.0.0-internal.6` / MSI `1.0.0.6`
-> **Latest signed candidate:** `1.0.0-internal.6`, run `30136644587`
+> **Executable source baseline:** `3db7e4072f403f39632b7134be841047767a2e6d`
+> **Source version:** `1.0.0-internal.7` / MSI `1.0.0.7`
+> **Latest signed candidate:** `1.0.0-internal.7`, run `30142585934`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
-> **Current installed status:** Internal.6 is installed and responsive during
-> startup but not accepted; runtime preparation took about 14 minutes on the
-> Founder SSD
+> **Current installed status:** Internal.7 is installed but not accepted;
+> runtime preparation completed in 271 ms, then bundled Bun exited while
+> loading the protected Next.js entrypoint
 > **Observed machine:** Founder ThinkPad T470
 > **Last assessed:** 2026-07-25
 
@@ -19,17 +19,33 @@ or planned scope into a readiness claim. Unmerged work belongs in
 ## Executive truth
 
 SahelFlow is a broad internal Windows application with a proven Internal.5
-installed runtime chain and a signed-release-complete but unaccepted Internal.6
-startup correction. It is not an empty prototype, but it is not yet a
+installed runtime chain and signed-release-complete but unaccepted Internal.6
+and Internal.7 startup corrections. It is not an empty prototype, but it is not yet a
 commercially complete or AAA SahelFlow 1.0 product.
 
 The protected-main → signed MSI → installed Founder-machine chain remains
 strong historical evidence for Internal.5. Internal.6 proved a responsive safe
-startup surface and passed automated installed runtime/UI gates, but its
-interactive runtime preparation still took about 14 minutes on the Founder
-SSD. The source contains substantial catalog, customer, order, delivery,
+startup surface. Internal.7 removed recursive staging and reduced protected
+runtime preparation to 271 ms, but its bundled Bun process exited with `EPERM`
+while loading `server.js` from `Program Files`; the desktop discarded that
+output and consumed two 90-second readiness deadlines. Both candidates passed
+automated installed runtime/UI gates and failed Founder acceptance, so the
+remaining gap is artifact-to-reference-machine runtime compatibility. The
+source also contains substantial catalog, customer, order, delivery,
 return/refund, COD, accounting, risk, automation, WhatsApp, AI, integration,
 storefront, multilingual UI and test work.
+
+PR #158 exact head `05fffb0ac0885a8f9d5ef56870b026b744233e7d`
+passed complete CI and Windows Rust release parity. Its clean Windows MSI built,
+installed and matched the complete 3,985-file protected standalone tree. The
+fixed signed bootstrap executed on the real installed launch, but its
+environment-supplied protected entrypoint still failed in Node's CommonJS
+resolver with `EISDIR` while processing `C:`. This isolates the remaining gap
+to the native contained-process entrypoint representation/transport rather than
+package content, runtime identity, migration, AppData or disk speed. The staged
+runtime passed, but it uses Bun's spawn environment and therefore does not prove
+the custom `CreateProcessW` environment boundary. This is not yet signed,
+installed on the Founder machine or Founder-accepted evidence.
 
 The main remaining discontinuity is product coherence and authority:
 
@@ -49,8 +65,8 @@ The main remaining discontinuity is product coherence and authority:
 
 The correct characterization is:
 
-> **Accepted Internal.5 baseline plus installed-but-unaccepted Internal.6;
-> current runtime-performance gate; broad partial desktop product; commercial
+> **Accepted Internal.5 baseline plus installed-but-unaccepted Internal.7;
+> current Windows runtime-compatibility gate; broad partial desktop product; commercial
 > and connected platform still largely ahead.**
 
 ## Evidence ledger
@@ -72,13 +88,19 @@ The correct characterization is:
 | Signed Internal.6 build | Actions run `30136644587` | Signature, signed installed runtime/UI, deterministic-source and candidate-evidence gates passed |
 | Founder Internal.6 install | Internal.5 to Internal.6 in-place upgrade | Exact release MSI installed as display version `1.0.0.6`; AppData was not deleted |
 | Founder Internal.6 startup | Installed Internal.6 on 2026-07-25, SSD | Safe window responsive; runtime prepare began about 02:36:20 and staging about 02:50:18; authenticated UI missed the installer bound; not accepted |
+| Runtime-staging removal | PR #157, merge `3db7e4072f403f39632b7134be841047767a2e6d` | Direct protected-runtime resolution integrated; PR CI, Windows Rust and installed MSI/UI gates passed |
+| Signed Internal.7 build | Actions run `30142585934`; retained artifact `8615273329` | Exact-main signed build, signature, installed runtime/UI and evidence gates passed |
+| Founder Internal.7 install | Internal.6 to Internal.7 in-place upgrade | Exact release MSI installed as display version `1.0.0.7`; AppData was preserved |
+| Founder Internal.7 startup | Installed Internal.7 on 2026-07-25, SSD | Startup screen about 1.6 s; migration about 4.6 s; runtime preparation 271 ms; bundled Bun exited with `EPERM` loading protected `server.js`; two readiness deadlines elapsed; not accepted |
 
 The earlier accepted reopen proves that exact historical attempt only.
-Internal.6 corrected UI responsiveness and diagnostic visibility, then exposed
-the remaining dominant mechanism: the desktop recursively hashes/copies a
-3,985-file runtime before service startup and still fully hashes an existing
-cache on every launch. The SSD evidence rules out disk class as an adequate
-explanation. Startup performance is blocking recovery work, not deferred debt.
+Internal.6 exposed recursive verification/staging as the dominant 14-minute
+mechanism. Internal.7 removed that mechanism and proved prompt runtime
+preparation, then exposed a separate Bun Windows module-loader incompatibility
+and missing early-exit observation. The same installed entrypoint remained
+readable as ordinary data, so basic ACL denial, missing content, AppData loss
+and disk class are not adequate explanations. Startup compatibility is blocking
+recovery work, not deferred debt.
 
 ## Repository shape
 
@@ -106,7 +128,7 @@ separate evidence result.
 
 | ID | Capability | Current status | Evidence / implementation | Principal gap |
 |---|---|---|---|---|
-| CAP-001 | Signed Windows install/update/runtime | **Proven internal** | PRs #152/#153, signed run #59, Founder upgrade/reopen | Performance, broader hardware matrix, future A→B repetitions |
+| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.6/7 signed and installed with AppData preserved | Production server runtime compatibility, broader hardware matrix, future A→B repetitions |
 | CAP-002 | Local database/migrations | **Partial** | Prisma/SQLite, eight migrations, runtime preservation | All-shop journaled migrations, preflight, rollback/recovery proof |
 | CAP-003 | Shop management | **Partial/unsafe** | Per-shop files, shop store/routes, creation UI | Trusted workspace/shop context, live safe switch, no process-global fallback |
 | CAP-004 | Local PIN/session | **Implemented for local baseline** | `AuthSecret`, `Session`, runtime auth | Not seller identity, team authority, device or recovery model |
@@ -135,9 +157,9 @@ separate evidence result.
 | CAP-027 | Localization/RTL | **Partial/unverified** | i18n hooks, locale-aware UI and RTL foundations | Complete copy/state parity and systematic AR/FR/EN/RTL evidence |
 | CAP-028 | Accessibility/keyboard | **Partial/unverified** | Radix primitives, shortcuts, focus-related components | Whole-journey WCAG, zoom, screen-reader and keyboard evidence |
 | CAP-029 | AAA design system/page depth | **Partial** | Strong shared UI primitives and broad pages | One coherent system and complete loading/empty/error/degraded/recovery states |
-| CAP-030 | Low-end performance | **Unverified; blocking startup defect** | Internal.6 trace proves about 14 minutes of runtime preparation on the Founder T470 SSD | Internal.7 startup acceptance, representative datasets, budgets and eight-hour stability |
+| CAP-030 | Low-end performance | **Unverified; blocking startup defect** | Internal.7 runtime preparation completed in 271 ms on the Founder T470 SSD | Compatible Node-based launch acceptance, representative datasets, budgets and eight-hour stability |
 | CAP-031 | Security/privacy/legal | **Partial/unverified** | Crypto, PIN, secrets, loopback auth and redaction pieces | Full threat models, key recovery, tenant boundaries, Law 18-07 and review |
-| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.6 release-complete** | Exact-source signing, runtime/UI gates, distinct release/Founder acceptance records | Complete Internal.7 Founder acceptance and retain the discipline for every app-changing package |
+| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.7 release-complete** | Exact-source signing, runtime/UI gates, distinct release/Founder acceptance records | Complete the next coherent runtime correction and retain the discipline for every app-changing package |
 
 ## Provider status
 
@@ -159,7 +181,7 @@ alone.
 | Google Sheets | Service-account export/batching | Architecture candidate | Founder scope, field/privacy/idempotency/quota/live proof |
 | Cloudflare | Target control/relay/backup/storefront architecture | Planned | Phase 6 implementation, tenant/security/recovery and economics evidence |
 | Sentry | Environment-gated diagnostics/redaction hooks | Optional internal candidate | Consent, minimization, retention, canary/outage/deletion proof |
-| GitHub Releases/Tauri updater | Signed internal workflow and installed proof | Internal.5 accepted; Internal.6 signed and installed but not accepted | Internal.7 performance acceptance; Beta/Stable promotion remains separate |
+| GitHub Releases/Tauri updater | Signed internal workflow and installed proof | Internal.5 accepted; Internal.7 signed and installed but not accepted | Next Node-runtime acceptance; Beta/Stable promotion remains separate |
 
 ## Current implementation map
 
@@ -222,17 +244,20 @@ connected planes without replacing the canonical desktop.
 
 ## Immediate next boundary
 
-Internal.6 fixed the hidden/unresponsive preparation surface but did not close
-the acceptance loop because recursive runtime verification remained far beyond
-an interactive startup budget. The immediate implementation boundary is:
+Internal.7 fixed recursive runtime preparation but did not close the acceptance
+loop because Bun's Windows module loader exited on the protected Next.js
+entrypoint and the desktop waited full readiness deadlines after process exit.
+The immediate implementation boundary is:
 
-> Launch from the release-verified, MSI-protected installed runtime promptly on
-> the Founder T470 without deleting AppData, weakening fail-closed runtime/shop
-> authority or loading a fallback workspace.
+> Launch the release-verified standalone server on pinned Node.js from the
+> MSI-protected installation, fail immediately on child exit, and open the real
+> workspace promptly on the Founder T470 without deleting AppData, weakening
+> fail-closed runtime/shop authority or loading a fallback workspace.
 
-Internal.7 must retain bounded redacted attempt evidence, pass exact-source
-checks and installed Windows packaging in GitHub Actions, prove no new
-user-writable runtime copy is created, ship as a new signed Internal update,
-and pass preserved-AppData launch plus close/reopen acceptance on the T470.
-Only then may the workspace/shop and business-integrity boundary resume. The
-exact sequence and exit gates are in [`ROADMAP.md`](ROADMAP.md).
+The next coherent candidate must retain bounded redacted attempt evidence, pass
+exact-source checks and installed Windows packaging in GitHub Actions, prove no
+user-writable runtime copy or developer-PATH fallback exists, ship as one new
+signed Internal update, and pass preserved-AppData launch plus close/reopen
+acceptance on the T470. Only then may the workspace/shop and business-integrity
+boundary resume. The exact sequence and exit gates are in
+[`ROADMAP.md`](ROADMAP.md).

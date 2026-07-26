@@ -194,6 +194,65 @@ struct PreparedRuntime {
 const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
+const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
+    ("SF_NODE_ENTRYPOINT_MISSING", "node-entrypoint-missing"),
+    ("SF_NODE_ENTRYPOINT_INVALID", "node-entrypoint-invalid"),
+    (
+        "PRISMACLIENTINITIALIZATIONERROR",
+        "prisma-initialization-failed",
+    ),
+    ("ERR_DLOPEN_FAILED", "native-module-load-failed"),
+    ("MODULE_NOT_FOUND", "module-not-found"),
+    ("EACCES", "access-denied"),
+    ("EPERM", "operation-not-permitted"),
+    ("ENOENT", "file-not-found"),
+    ("EISDIR", "path-is-directory"),
+];
+const NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT";
+const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
+
+fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
+    let raw = path.to_str().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidData,
+            "the installed Node entrypoint is not valid Unicode",
+        )
+    })?;
+
+    #[cfg(windows)]
+    {
+        // Tauri may return an MSI resource path in Win32 verbatim form
+        // (`\\?\C:\...`). Node's CommonJS realpath resolver does not accept
+        // that namespace reliably. Keep the already validated protected file,
+        // but transport it as an ordinary absolute drive path with separators
+        // that do not cross another Windows escaping boundary.
+        let conventional = raw.strip_prefix(r"\\?\").unwrap_or(raw);
+        let normalized = conventional.replace('\\', "/");
+        let bytes = normalized.as_bytes();
+        if bytes.len() < 3
+            || !bytes[0].is_ascii_alphabetic()
+            || bytes[1] != b':'
+            || bytes[2] != b'/'
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "the installed Node entrypoint is not an absolute local drive path",
+            ));
+        }
+        Ok(normalized)
+    }
+
+    #[cfg(not(windows))]
+    {
+        if !path.is_absolute() {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "the installed Node entrypoint is not absolute",
+            ));
+        }
+        Ok(raw.to_owned())
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -601,23 +660,27 @@ fn spawn_runtime_generation(
     use tauri::Manager;
 
     let app_data_dir = app.path().app_data_dir()?;
-    let server_working_dir = prepared.server_js.parent().ok_or_else(|| {
-        IoError::new(
-            ErrorKind::InvalidData,
-            "staged standalone server has no working directory",
-        )
-    })?;
+    let server_working_dir = app.path().app_local_data_dir()?.join("runtime-work");
+    std::fs::create_dir_all(&server_working_dir)?;
 
     let authority = current_shop_authority(app)?;
     let auth = packaged_auth::load(&authority.database_path)?;
     let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str())?;
-    let env = server_env(app, &runtime_protocol, &authority, &auth)?;
+    let mut env = server_env(app, &runtime_protocol, &authority, &auth)?;
+    env.push((
+        NODE_ENTRYPOINT_ENV.to_string(),
+        node_entrypoint_environment_value(&prepared.server_js)?,
+    ));
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
-    let server_child = child_containment::ContainedChild::spawn_in(
+    let process_environment = process_environment(&env);
+    let server_child = child_containment::ContainedChild::spawn_in_capturing_stderr(
         Path::new(&prepared.runtime_path),
-        &[prepared.server_js.as_os_str().to_os_string()],
-        &process_environment(&env),
-        Some(server_working_dir),
+        &[
+            OsString::from("--eval"),
+            OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
+        ],
+        &process_environment,
+        Some(&server_working_dir),
     )
     .map_err(|error| {
         if error.containment_uncertain() {
@@ -628,18 +691,40 @@ fn spawn_runtime_generation(
         ))
     })?;
     eprintln!(
-        "[sahelflow] contained Next.js server spawned with bundled Bun at {}",
+        "[sahelflow] contained Next.js server spawned with bundled Node.js at {}",
         runtime_protocol.app_url()
     );
 
-    if !runtime_protocol.wait_until_ready(MANDATORY_RUNTIME_READY_TIMEOUT) {
-        stop_runtime_launch(app, generation, &server_child, "unready Next.js server")?;
-        runtime_protocol::remove_manifest(&app_data_dir);
-        return Err(IoError::new(
-            ErrorKind::TimedOut,
-            "the mandatory local server failed its authenticated readiness attempt",
-        )
-        .into());
+    match runtime_protocol.wait_until_ready(MANDATORY_RUNTIME_READY_TIMEOUT, || {
+        server_child
+            .try_wait()
+            .map(|exit| exit.map(|exit| exit.code))
+    })? {
+        runtime_protocol::ReadinessOutcome::Ready => {}
+        runtime_protocol::ReadinessOutcome::ProcessExited(code) => {
+            stop_runtime_launch(app, generation, &server_child, "exited Next.js server")?;
+            runtime_protocol::remove_manifest(&app_data_dir);
+            let captured = server_child
+                .stderr_snapshot(Duration::from_secs(1))
+                .ok()
+                .and_then(|raw| summarize_runtime_stderr(&raw));
+            let captured = captured
+                .map(|detail| format!("; stderr summary: {detail}"))
+                .unwrap_or_default();
+            return Err(IoError::other(format!(
+                "the mandatory local server exited before authenticated readiness (exit code {code}){captured}"
+            ))
+            .into());
+        }
+        runtime_protocol::ReadinessOutcome::TimedOut => {
+            stop_runtime_launch(app, generation, &server_child, "unready Next.js server")?;
+            runtime_protocol::remove_manifest(&app_data_dir);
+            return Err(IoError::new(
+                ErrorKind::TimedOut,
+                "the mandatory local server failed its authenticated readiness attempt",
+            )
+            .into());
+        }
     }
 
     if let Err(error) = runtime_protocol.publish_manifest(env!("CARGO_PKG_VERSION")) {
@@ -704,7 +789,7 @@ fn prepare_runtime(app: &tauri::AppHandle) -> Result<PreparedRuntime, Box<dyn st
             format!("failed to resolve the installed standalone runtime: {error}"),
         )
     })?;
-    let runtime_path = bundled_bun(&resource_dir).ok_or_else(|| {
+    let runtime_path = bundled_node(&resource_dir).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
             "The bundled JavaScript runtime is missing. Reinstall SahelFlow.",
@@ -1290,11 +1375,11 @@ fn schedule_sidecar_respawn(
     });
 }
 
-fn bundled_bun(resource_dir: &std::path::Path) -> Option<String> {
+fn bundled_node(resource_dir: &std::path::Path) -> Option<String> {
     let executable = if cfg!(target_os = "windows") {
-        "bun.exe"
+        "node.exe"
     } else {
-        "bun"
+        "node"
     };
     let candidate = resource_dir.join("runtime").join(executable);
     candidate
@@ -1330,6 +1415,30 @@ fn process_environment(values: &[(String, String)]) -> Vec<(OsString, OsString)>
             .map(|(key, value)| (OsString::from(key), OsString::from(value))),
     );
     environment
+}
+
+fn summarize_runtime_stderr(raw: &str) -> Option<String> {
+    if !raw
+        .chars()
+        .any(|character| character != '\0' && !character.is_whitespace())
+    {
+        return None;
+    }
+
+    let uppercase = raw.to_ascii_uppercase();
+    let categories = RUNTIME_STDERR_CLASSIFICATIONS
+        .iter()
+        .filter_map(|(signature, category)| uppercase.contains(signature).then_some(*category))
+        .collect::<Vec<_>>();
+
+    if categories.is_empty() {
+        Some("runtime process emitted stderr before readiness; raw output suppressed".to_string())
+    } else {
+        Some(format!(
+            "runtime process emitted stderr before readiness (categories: {}); raw output suppressed",
+            categories.join(", ")
+        ))
+    }
 }
 
 fn stop_process_tree(
@@ -1388,8 +1497,40 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
 
 #[cfg(test)]
 mod child_environment_tests {
-    use super::is_windows_safe_parent_environment_key;
+    use super::{
+        is_windows_safe_parent_environment_key, node_entrypoint_environment_value,
+        summarize_runtime_stderr,
+    };
     use std::ffi::OsStr;
+    use std::path::Path;
+
+    #[cfg(windows)]
+    #[test]
+    fn node_entrypoint_uses_a_conventional_absolute_drive_path() {
+        let normalized = node_entrypoint_environment_value(Path::new(
+            r"\\?\C:\Program Files\SahelFlow\standalone\server.js",
+        ))
+        .expect("normalize installed entrypoint");
+        assert_eq!(
+            normalized,
+            "C:/Program Files/SahelFlow/standalone/server.js"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn node_entrypoint_rejects_non_local_or_drive_relative_paths() {
+        for invalid in [
+            r"\\server\share\server.js",
+            r"\\?\UNC\server\share\server.js",
+            r"C:standalone\server.js",
+            r"standalone\server.js",
+        ] {
+            let error = node_entrypoint_environment_value(Path::new(invalid))
+                .expect_err("reject unsupported Node entrypoint authority");
+            assert!(error.to_string().contains("absolute local drive path"));
+        }
+    }
 
     #[test]
     fn child_environment_allowlist_excludes_ambient_credentials_and_configuration() {
@@ -1404,5 +1545,44 @@ mod child_environment_tests {
             "DATABASE_URL"
         )));
         assert!(!is_windows_safe_parent_environment_key(OsStr::new("PATH")));
+    }
+
+    #[test]
+    fn runtime_stderr_summary_exposes_only_allowlisted_categories() {
+        let raw = "PrismaClientInitializationError: SELECT * FROM orders WHERE seller = \
+                   'private-seller'; MODULE_NOT_FOUND at C:\\seller\\shop.db; EISDIR; \
+                   runtime-token-that-must-never-escape";
+        let summary = summarize_runtime_stderr(raw).expect("summarize stderr");
+
+        assert!(summary.contains("prisma-initialization-failed"));
+        assert!(summary.contains("module-not-found"));
+        assert!(summary.contains("path-is-directory"));
+        assert!(summary.contains("raw output suppressed"));
+        for private_value in [
+            "SELECT",
+            "orders",
+            "private-seller",
+            "C:\\seller\\shop.db",
+            "runtime-token-that-must-never-escape",
+        ] {
+            assert!(!summary.contains(private_value));
+        }
+    }
+
+    #[test]
+    fn unclassified_runtime_stderr_is_suppressed_without_echoing_child_text() {
+        let private_message = "seller Amira owes 12000 DZD";
+        let summary = summarize_runtime_stderr(private_message).expect("summarize stderr");
+
+        assert_eq!(
+            summary,
+            "runtime process emitted stderr before readiness; raw output suppressed"
+        );
+        assert!(!summary.contains(private_message));
+    }
+
+    #[test]
+    fn empty_runtime_stderr_has_no_summary() {
+        assert_eq!(summarize_runtime_stderr(" \r\n\t\0 "), None);
     }
 }

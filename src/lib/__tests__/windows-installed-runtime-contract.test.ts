@@ -85,7 +85,13 @@ describe("installed Windows runtime contract", () => {
     const harness = read("scripts/verify-installed-windows-msi.ps1");
     const treeVerifier = read("scripts/verify-installed-standalone.ts");
     const uiHarness = read("scripts/verify-installed-windows-ui.ps1");
+    const packagedRuntimeHarness = read(
+      "scripts/verify-windows-packaged-runtime.ts",
+    );
     const desktop = read("src-tauri/src/lib.rs");
+    const containment = read("src-tauri/src/child_containment.rs");
+    const expectedNodeBootstrap =
+      "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
     expect(workflow).toContain("contents: read");
     expect(workflow).toContain('      - "sahelflow.version.json"');
@@ -105,11 +111,44 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
     expect(uiHarness).toContain("$maxRuntimePrepareMilliseconds = 15000");
+    expect(uiHarness).toContain("$maxAuthenticatedUiMilliseconds = 45000");
     expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");
     expect(harness).toContain("$installedRuntimeRoot");
     expect(harness).toContain("verify-installed-standalone.ts");
     expect(harness).toContain("completeTreeVerified");
+    expect(harness).toContain(
+      '$installedNodePath = Join-Path $installedJavascriptRuntimeRoot "node.exe"',
+    );
+    expect(harness).toContain("expectedNodeSha256");
+    expect(harness).toContain("ToLowerInvariant");
+    expect(harness).toContain("runtimeIdentityProblems");
+    expect(desktop).toContain('app_local_data_dir()?.join("runtime-work")');
+    expect(desktop).toContain("spawn_in_capturing_stderr");
+    expect(desktop).toContain("summarize_runtime_stderr");
+    expect(desktop).toContain("raw output suppressed");
+    expect(desktop).toContain('NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT"');
+    expect(desktop).toContain("node_entrypoint_environment_value");
+    expect(desktop).toContain('raw.strip_prefix(r"\\\\?\\")');
+    expect(desktop).toContain('OsString::from("--eval")');
+    expect(desktop).toContain(expectedNodeBootstrap);
+    expect(containment).toContain("std::fs::canonicalize(&script)");
+    expect(containment).toContain("crate::node_entrypoint_environment_value");
+    expect(containment).toContain("crate::NODE_ENTRYPOINT_ENV");
+    expect(containment).toContain("crate::NODE_ENTRYPOINT_BOOTSTRAP");
+    expect(packagedRuntimeHarness).toContain("nodeEntrypointPath");
+    expect(packagedRuntimeHarness).toContain(
+      "SF_NODE_ENTRYPOINT: stagedNodeEntrypoint",
+    );
+    expect(packagedRuntimeHarness).toContain(expectedNodeBootstrap);
+    expect(packagedRuntimeHarness).toContain(
+      '[stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP]',
+    );
+    expect(harness).toContain("runtimeWorkExecutables");
+    expect(harness).toContain("bunProductionRuntimePresent");
+    expect(harness).toContain("Installed Node.js runtime identity does not match");
+    expect(harness).toContain("currentNodeSha256");
+    expect(uiHarness).toContain("$path.StartsWith");
     expect(treeVerifier).toContain("verifyStandaloneManifest");
     expect(harness).toContain(
       "appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count",
@@ -129,6 +168,7 @@ describe("installed Windows runtime contract", () => {
     const dispatcher = read(
       ".github/workflows/release-on-version-authority.yml",
     );
+    const observer = read(".github/workflows/signed-release-observer.yml");
 
     const signatureProof = release.indexOf(
       "Verify local MSI and updater signature",
@@ -163,7 +203,8 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("workflow_dispatch:");
     expect(dispatcher).toContain("actions: write");
     expect(dispatcher).toContain("issues: write");
-    expect(dispatcher).toContain("pull-requests: read");
+    expect(dispatcher).toContain("pull-requests: write");
+    expect(observer).toContain("pull-requests: write");
     expect(dispatcher).toContain('source_ref="${SOURCE_SHA}"');
     expect(dispatcher).toContain("gh workflow run release.yml");
     expect(dispatcher).toContain("gh run list");

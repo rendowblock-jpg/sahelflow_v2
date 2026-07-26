@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -36,6 +36,18 @@ type BunRuntime = Readonly<{
 }>;
 
 const bunRuntime = (globalThis as unknown as { Bun: BunRuntime }).Bun;
+const NODE_ENTRYPOINT_BOOTSTRAP =
+  "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
+
+function nodeEntrypointPath(value: string): string {
+  const conventional = value.startsWith("\\\\?\\") ? value.slice(4) : value;
+  const normalized = conventional.replaceAll("\\", "/");
+  if (!/^[A-Za-z]:\//.test(normalized)) {
+    throw new Error("staged Node entrypoint is not an absolute local drive path");
+  }
+  return normalized;
+}
+
 const root = process.cwd();
 const dataDir = process.env.SF_DATA_DIR;
 const databaseUrl = process.env.DATABASE_URL;
@@ -54,7 +66,14 @@ if (!isAbsolute(databasePath)) {
   throw new Error("DATABASE_URL must contain an absolute SQLite path");
 }
 const sourceStandalone = resolve(root, "src-tauri", "resources", "standalone");
-const bundledBun = resolve(root, "src-tauri", "resources", "runtime", "bun.exe");
+const bundledNode = resolve(root, "src-tauri", "resources", "runtime", "node.exe");
+const runtimeManifestPath = resolve(
+  root,
+  "src-tauri",
+  "resources",
+  "runtime",
+  "runtime-manifest.json",
+);
 const queryEngine = resolve(
   root,
   "src-tauri",
@@ -69,10 +88,32 @@ const authority = JSON.parse(
 if (typeof authority.version !== "string") {
   throw new Error("version authority is missing");
 }
-for (const required of [sourceStandalone, bundledBun, queryEngine, databasePath]) {
+for (const required of [
+  sourceStandalone,
+  bundledNode,
+  runtimeManifestPath,
+  queryEngine,
+  databasePath,
+]) {
   if (!existsSync(required)) {
     throw new Error(`Packaged runtime smoke input is missing: ${required}`);
   }
+}
+const runtimeManifest = JSON.parse(readFileSync(runtimeManifestPath, "utf8")) as {
+  formatVersion?: unknown;
+  node?: { file?: unknown; sha256?: unknown; licenseFile?: unknown };
+};
+const nodeSha256 = createHash("sha256")
+  .update(readFileSync(bundledNode))
+  .digest("hex");
+if (
+  runtimeManifest.formatVersion !== 3 ||
+  runtimeManifest.node?.file !== "node.exe" ||
+  runtimeManifest.node?.sha256 !== nodeSha256 ||
+  runtimeManifest.node?.licenseFile !== "NODE-LICENSE.txt" ||
+  !existsSync(resolve(root, "src-tauri", "resources", "runtime", "NODE-LICENSE.txt"))
+) {
+  throw new Error("packaged Node.js runtime manifest is invalid or incomplete");
 }
 const packagedManifest = JSON.parse(
   readFileSync(resolve(sourceStandalone, STANDALONE_MANIFEST_FILE), "utf8"),
@@ -114,8 +155,10 @@ const stageParent = process.env.TEMP ?? process.env.TMP;
 if (!stageParent || !isAbsolute(stageParent)) {
   throw new Error("Windows temporary directory is unavailable");
 }
-const stage = mkdtempSync(resolve(stageParent, "sahelflow-packaged-runtime-smoke-"));
+const stage = mkdtempSync(resolve(stageParent, "SahelFlow Program Files runtime smoke-"));
 const stagedStandalone = resolve(stage, "standalone");
+const stagedRuntime = resolve(stage, "runtime");
+const stagedWork = resolve(stage, "runtime-work");
 const logPath = resolve(root, ".sf-windows-runtime-smoke.log");
 let child: BunSubprocess | null = null;
 let stdoutPromise: Promise<string> | null = null;
@@ -125,10 +168,20 @@ let stderr = "";
 
 try {
   cpSync(sourceStandalone, stagedStandalone, { recursive: true });
+  cpSync(resolve(root, "src-tauri", "resources", "runtime"), stagedRuntime, {
+    recursive: true,
+  });
+  mkdirSync(stagedWork);
   const stagedServer = resolve(stagedStandalone, "server.js");
+  const stagedNode = resolve(stagedRuntime, "node.exe");
+  const stagedQueryEngine = resolve(
+    stagedRuntime,
+    "query_engine-windows.dll.node",
+  );
   if (!existsSync(stagedServer)) {
     throw new Error("staged server.js is missing");
   }
+  const stagedNodeEntrypoint = nodeEntrypointPath(stagedServer);
 
   const port = await availablePort();
   const sidecarPort = await availablePort();
@@ -174,7 +227,7 @@ try {
     SIDECAR_TOKEN: sidecarToken,
     SIDECAR_TOKEN_FILE: resolve(stage, "sidecar-token"),
     PRISMA_MIGRATIONS_DIR: migrations,
-    PRISMA_QUERY_ENGINE_LIBRARY: queryEngine,
+    PRISMA_QUERY_ENGINE_LIBRARY: stagedQueryEngine,
     HOSTNAME: "127.0.0.1",
     PORT: String(port),
     SF_APP_URL: `http://127.0.0.1:${port}`,
@@ -192,11 +245,12 @@ try {
     APP_VERSION: authority.version,
     NODE_ENV: "production",
     SF_AUTH_MODE: "setup",
+    SF_NODE_ENTRYPOINT: stagedNodeEntrypoint,
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
-  child = bunRuntime.spawn([bundledBun, stagedServer], {
-    cwd: stagedStandalone,
+  child = bunRuntime.spawn([stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP], {
+    cwd: stagedWork,
     env: environment,
     stdout: "pipe",
     stderr: "pipe",

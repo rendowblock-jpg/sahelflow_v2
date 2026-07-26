@@ -228,13 +228,13 @@ const semanticRequirements: Array<[string, string[]]> = [
     "AGENTS.md",
     [
       "Documentation-reset merge checkpoint",
-      "Protected-main Internal.6 executable source",
+      "Protected-main Internal.7 executable source",
       "Does not run source builds, automated tests",
     ],
   ],
   [
     "documentation/README.md",
-    ["Documentation-reset merge", "Protected-main Internal.6 source"],
+    ["Documentation-reset merge", "Protected-main Internal.7 source"],
   ],
   [
     "documentation/system/ROADMAP.md",
@@ -243,9 +243,9 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/system/CURRENT_STATE.md",
     [
-      "**Current installed status:** Internal.6 is installed",
+      "**Current installed status:** Internal.7 is installed",
       "Post-acceptance startup incident",
-      "Launch from the release-verified, MSI-protected installed runtime promptly",
+      "Launch the release-verified standalone server on pinned Node.js",
     ],
   ],
   [

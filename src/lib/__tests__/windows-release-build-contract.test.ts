@@ -10,6 +10,16 @@ function read(relativePath: string): string {
 }
 
 describe("Windows signed release build contract", () => {
+  it("keeps local release disabled and directs maintainers to the signed exact-source workflow", () => {
+    const localRelease = read("scripts/release.ts");
+
+    expect(localRelease).toContain("bun run release is disabled");
+    expect(localRelease).toContain("Build Signed Internal Windows Update");
+    expect(localRelease).toContain("exact protected-main merge commit SHA");
+    expect(localRelease).toContain("draft signed Internal updater");
+    expect(localRelease).not.toContain("unsigned internal build evidence");
+  });
+
   it("uses the canonical Webpack build and preserves the tracked placeholder bytes", () => {
     const packageJson = JSON.parse(read("package.json")) as {
       scripts?: Record<string, string>;
@@ -123,16 +133,59 @@ describe("Windows signed release build contract", () => {
     expect(containment).toContain("STARTF_USESTDHANDLES");
     expect(containment).toContain("PROC_THREAD_ATTRIBUTE_HANDLE_LIST");
     expect(containment).toContain("AssignProcessToJobObject");
-    expect(containment).toContain("contained_bun_runs_with_explicit_stdio_handles");
+    expect(containment).toContain(
+      "contained_node_runs_with_explicit_stdio_handles",
+    );
+    expect(containment).toContain("pub fn try_wait");
     expect(containment).not.toContain("PROC_THREAD_ATTRIBUTE_JOB_LIST");
     expect(ci).toContain("verify-windows-packaged-runtime.ts");
-    expect(ci).toContain("Verify bundled Bun through actual contained launcher");
-    expect(ci).toContain("SF_CONTAINED_BUN_PATH");
+    expect(ci).toContain(
+      "Verify bundled Node.js through actual contained launcher",
+    );
+    expect(ci).toContain("SF_CONTAINED_NODE_PATH");
     expect(release).toContain("verify-windows-packaged-runtime.ts");
-    expect(release).toContain("Verify Rust runtime and actual contained Bun launcher");
-    expect(release).toContain("SF_CONTAINED_BUN_PATH");
+    expect(release).toContain(
+      "Attest reviewed identical PR tree and required checks",
+    );
+    expect(release).toContain("sourceCommit.tree.sha -cne $headCommit.tree.sha");
+    expect(release).toContain("Cache signed-build Rust dependencies");
     expect(release).toContain("sahelflow-standalone-manifest.json");
     expect(evidence).toContain("verifyStandaloneManifest");
+  });
+
+  it("pins an official Node.js production runtime and retires packaged Bun", () => {
+    const prepareRuntime = read("scripts/prepare-runtime.ts");
+    const sidecarBuild = read("scripts/build-sidecar.ts");
+    const desktop = read("src-tauri/src/lib.rs");
+    const release = read(".github/workflows/release.yml");
+
+    expect(prepareRuntime).toContain('const NODE_VERSION = "22.23.1"');
+    expect(prepareRuntime).toContain(
+      'const NODE_ARCHIVE_SHA256 = "7df0bc9375723f4a86b3aa1b7cc73342423d9677a8df4538aca31a049e309c29"',
+    );
+    expect(prepareRuntime).toContain(
+      'const NODE_EXECUTABLE_SHA256 = "f8d162c0641dcee512132f3bcf8a68169c7ecb852efd8e1a46c9fec5a0f469ed"',
+    );
+    expect(prepareRuntime).toContain('licenseFile: "NODE-LICENSE.txt"');
+    expect(prepareRuntime).toContain(
+      'rmSync(resolve(runtimeDir, "bun.exe"), { force: true })',
+    );
+    expect(prepareRuntime).toContain(
+      'role: "build-only-sidecar-compiler"',
+    );
+    expect(prepareRuntime).toContain("packaged: false");
+    expect(prepareRuntime).toContain(
+      'const BUN_COMPILER_EXECUTABLE_SHA256 = "9005d0d585d80425e9b715690de3e614651124c94458ef3d3a302ca1a6d3d813"',
+    );
+    expect(sidecarBuild).toContain(".sf-build");
+    expect(sidecarBuild).toContain("--compile-executable-path");
+    expect(sidecarBuild).not.toContain('"resources"');
+    expect(release).toContain(
+      ".sf-build/tools/bun-compiler-manifest.json",
+    );
+    expect(desktop).toContain("fn bundled_node");
+    expect(desktop).toContain('"node.exe"');
+    expect(desktop).not.toContain("fn bundled_bun");
   });
 
   it("pins the patched sharp runtime and keeps unrelated early failures diagnostic-safe", () => {
@@ -148,7 +201,9 @@ describe("Windows signed release build contract", () => {
     expect(packageJson.overrides?.sharp).toBe("0.35.3");
     expect(sidecarPackage.dependencies?.sharp).toBe("0.35.3");
     expect(lockfile).toContain('"sharp": ["sharp@0.35.3"');
-    expect(release).toContain("Blocking production dependency audit");
+    expect(release).toContain(
+      "Quality Gate (authority + sf-verify + coverage + audit)",
+    );
     expect(release).toMatch(
       /Upload staged packaged runtime diagnostics[\s\S]*if-no-files-found:\s*ignore/,
     );
@@ -179,7 +234,7 @@ describe("Windows signed release build contract", () => {
     expect(
       release.indexOf("Prepare signed local libsodium distribution"),
     ).toBeLessThan(
-      release.indexOf("Verify Rust runtime and actual contained Bun launcher"),
+      release.indexOf("Build signed updater artifacts into a draft release"),
     );
     expect(release).toContain("sahelflow-libsodium-build-manifest.json");
   });

@@ -19,10 +19,9 @@ const SIDECAR_SRC = resolve(ROOT, "sidecars/whatsapp/index.ts");
 const SIDECAR_DIR = resolve(ROOT, "src-tauri", "binaries");
 const PINNED_BUN_COMPILER = resolve(
   ROOT,
-  "src-tauri",
-  "resources",
-  "runtime",
-  "bun.exe",
+  ".sf-build",
+  "tools",
+  "bun-windows-x64-baseline.exe",
 );
 
 // ── 1. Detect the target triple ──────────────────────────────────────────────
@@ -53,7 +52,7 @@ const sidecarOut = resolve(SIDECAR_DIR, sidecarName);
 const compileTarget = isWindows && triple === "x86_64-pc-windows-msvc"
   ? "--target=bun-windows-x64-baseline "
   : "";
-const compileExecutable = isWindows && existsSync(PINNED_BUN_COMPILER)
+const compileExecutable = compileTarget
   ? `--compile-executable-path="${PINNED_BUN_COMPILER}" `
   : "";
 
@@ -111,6 +110,11 @@ if (skipBuild) {
   console.log(`✅ Sidecar binary up-to-date (cached) → src-tauri/binaries/${sidecarName}`);
   console.log("   (skipped 70s rebuild — source unchanged. Run with SF_FORCE_SIDECAR=1 to force.)");
 } else {
+  if (compileTarget && !existsSync(PINNED_BUN_COMPILER)) {
+    throw new Error(
+      `Pinned build-only Bun compiler is missing at ${PINNED_BUN_COMPILER}; run bun run scripts/prepare-runtime.ts first`,
+    );
+  }
   console.log(`── Compiling WhatsApp sidecar → ${sidecarName} ──`);
   try {
     execSync(

@@ -1,6 +1,6 @@
 [package]
 name = "sahelflow"
-version = "1.0.0-internal.7"
+version = "1.0.0-internal.8"
 description = "AI-powered back-office for Algerian COD sellers"
 authors = ["SahelFlow"]
 edition = "2021"
@@ -39,6 +39,7 @@ windows-sys = { version = "0.59", features = [
   "Win32_Security",
   "Win32_Storage_FileSystem",
   "Win32_System_JobObjects",
+  "Win32_System_Pipes",
   "Win32_System_Threading",
 ] }
 

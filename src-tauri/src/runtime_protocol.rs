@@ -15,6 +15,13 @@ const MAX_RESPONSE_BYTES: usize = 128 * 1024;
 const MAX_DIAGNOSTIC_DETAIL_CHARS: usize = 512;
 pub const RUNTIME_PROTOCOL_VERSION: u8 = 1;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReadinessOutcome {
+    Ready,
+    ProcessExited(u32),
+    TimedOut,
+}
+
 /// Per-launch authority for the mandatory local application server.
 ///
 /// Secrets intentionally do not implement Debug or Serialize and are never
@@ -149,22 +156,35 @@ impl RuntimeProtocol {
 
     /// Wait until the exact spawned instance authenticates the probe and
     /// reports that its configured database is queryable.
-    pub fn wait_until_ready(&self, timeout: Duration) -> bool {
+    pub fn wait_until_ready<F>(
+        &self,
+        timeout: Duration,
+        mut child_exit: F,
+    ) -> Result<ReadinessOutcome, IoError>
+    where
+        F: FnMut() -> Result<Option<u32>, IoError>,
+    {
         self.clear_probe_diagnostic();
         let started_at = Instant::now();
         let mut last_failure = "the local server did not accept a readiness connection".to_string();
         while started_at.elapsed() < timeout {
+            if let Some(code) = child_exit()? {
+                let detail =
+                    format!("the local server process exited before readiness with code {code}");
+                self.write_probe_diagnostic(&detail);
+                return Ok(ReadinessOutcome::ProcessExited(code));
+            }
             match self.probe_once() {
                 Ok(()) => {
                     self.clear_probe_diagnostic();
-                    return true;
+                    return Ok(ReadinessOutcome::Ready);
                 }
                 Err(detail) => last_failure = detail,
             }
             std::thread::sleep(Duration::from_millis(250));
         }
         self.write_probe_diagnostic(&last_failure);
-        false
+        Ok(ReadinessOutcome::TimedOut)
     }
 
     /// Publish only non-secret connection metadata after semantic readiness.
@@ -687,6 +707,29 @@ mod tests {
             "configured",
         )
         .is_err());
+    }
+
+    #[test]
+    fn readiness_stops_immediately_when_the_runtime_process_exits() {
+        let directory = std::env::temp_dir().join(format!(
+            "sahelflow-runtime-exit-{}-{}",
+            std::process::id(),
+            random_hex(8).expect("test suffix")
+        ));
+        fs::create_dir_all(&directory).expect("create test directory");
+        let protocol = RuntimeProtocol::allocate(&directory, "setup").expect("runtime protocol");
+
+        let started = Instant::now();
+        let outcome = protocol
+            .wait_until_ready(Duration::from_secs(90), || Ok(Some(23)))
+            .expect("readiness outcome");
+
+        assert_eq!(outcome, ReadinessOutcome::ProcessExited(23));
+        assert!(started.elapsed() < Duration::from_secs(1));
+        let diagnostic = fs::read_to_string(directory.join(PROBE_DIAGNOSTIC_FILE))
+            .expect("read process-exit diagnostic");
+        assert!(diagnostic.contains("exited before readiness with code 23"));
+        fs::remove_dir_all(directory).expect("remove test directory");
     }
 
     #[test]

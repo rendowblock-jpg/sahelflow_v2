@@ -13,7 +13,7 @@ permissions:
   actions: write
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: dispatch-signed-internal-version
@@ -57,7 +57,7 @@ jobs:
           PY
           )"
 
-          notes="SahelFlow ${version} immutable Windows candidate from protected main with installed launch, normal close, child teardown, reopen, cache reuse, and signed-artifact lifecycle verification."
+          notes="SahelFlow ${version} immutable Windows candidate from protected main with reviewed-tree check attestation, installed launch, normal close, child teardown, reopen, and signed-artifact lifecycle verification."
           gh workflow run release.yml \
             --repo "${GITHUB_REPOSITORY}" \
             --ref main \
