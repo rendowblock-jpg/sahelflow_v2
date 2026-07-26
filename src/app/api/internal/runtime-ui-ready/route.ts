@@ -18,6 +18,18 @@ export const runtime = "nodejs";
 
 const UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json";
 let uiReadyAttempt = 0;
+let compileCacheFlushed = false;
+
+async function flushPackagedCompileCache(): Promise<void> {
+  if (!process.env.NODE_COMPILE_CACHE || compileCacheFlushed) return;
+  compileCacheFlushed = true;
+  try {
+    const { flushCompileCache } = await import("node:module");
+    flushCompileCache();
+  } catch {
+    // The cache is a quiet optimization; readiness must not depend on it.
+  }
+}
 
 function noStoreHeaders(): Record<string, string> {
   return {
@@ -178,6 +190,12 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: noStoreHeaders() },
     );
   }
+
+  // The contained Node process is terminated as a tree on desktop close, so
+  // flush after the first hydrated workspace acknowledgment. This makes later
+  // launches reuse V8's validated module code cache without treating AppData
+  // as executable source authority.
+  await flushPackagedCompileCache();
 
   return NextResponse.json(
     { status: "ready", instanceId },

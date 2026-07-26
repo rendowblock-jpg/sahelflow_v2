@@ -19,7 +19,7 @@ const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
 const STARTUP_WINDOW_LABEL: &str = "startup";
-const STARTUP_WINDOW_TITLE: &str = "SahelFlow - Safe startup";
+const STARTUP_WINDOW_TITLE: &str = MAIN_WINDOW_TITLE;
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -576,34 +576,68 @@ fn recovery_html(code: &str, detail: &str, report_path: &str) -> String {
 
 fn starting_html() -> String {
     r#"<!doctype html>
-<html lang="fr">
+<html lang="fr" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SahelFlow - Safe startup</title>
+  <title>SahelFlow</title>
   <style>
-    :root { color-scheme: dark; font-family: Inter, Segoe UI, system-ui, sans-serif; }
+    :root { color-scheme: dark; font-family: Inter, "Segoe UI", system-ui, sans-serif; --bg: #0d0f0f; --panel: #121414; --rail: #101212; --line: #2d3230; --muted: #202522; --soft: #9ca3af; --brand: #10b962; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0d1117; color: #f4f4f5; padding: 24px; }
-    main { width: min(640px, 100%); text-align: center; }
-    .mark { width: 64px; height: 64px; display: grid; place-items: center; margin: 0 auto 24px; border-radius: 18px; background: #064e3b; color: #a7f3d0; font-size: 24px; font-weight: 800; }
-    h1 { margin: 0 0 12px; font-size: clamp(28px, 5vw, 42px); }
-    p { margin: 0 auto; max-width: 560px; color: #d4d4d8; line-height: 1.65; }
-    .status { display: inline-flex; align-items: center; gap: 10px; margin-top: 28px; padding: 10px 14px; border: 1px solid #334155; border-radius: 999px; background: #111827; color: #d1fae5; font-size: 14px; }
-    .pulse { width: 10px; height: 10px; border-radius: 999px; background: #34d399; animation: pulse 1.4s ease-in-out infinite; }
-    .note { margin-top: 18px; color: #a1a1aa; font-size: 13px; }
-    @keyframes pulse { 50% { opacity: .3; transform: scale(.75); } }
-    @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { margin: 0; background: var(--bg); color: #f4f4f5; }
+    .shell { display: flex; width: 100%; height: 100%; min-height: 0; }
+    .rail { width: 256px; min-height: 0; flex: 0 0 256px; border-left: 1px solid var(--line); background: var(--rail); }
+    .brand { height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--brand); color: #fff; font-size: 14px; font-weight: 800; }
+    .brand-lines { display: grid; gap: 7px; flex: 1; }
+    .line, .nav-line, .search, .card, .panel { position: relative; overflow: hidden; background: var(--muted); }
+    .line::after, .nav-line::after, .search::after, .card::after, .panel::after { content: ""; position: absolute; inset: 0; transform: translateX(110%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); animation: shimmer 1.8s ease-in-out infinite; }
+    .line { height: 9px; border-radius: 999px; }
+    .line.short { width: 58%; }
+    .nav { display: grid; gap: 12px; padding: 24px 16px; }
+    .nav-line { height: 34px; border-radius: 9px; }
+    .nav-line.active { background: #173223; border-right: 4px solid var(--brand); }
+    .workspace { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; padding: 8px 0 0 8px; }
+    .surface { min-height: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--panel); }
+    .topbar { height: 48px; flex: 0 0 48px; display: flex; align-items: center; gap: 18px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .search { width: min(44%, 448px); height: 32px; margin-inline: auto; border: 1px solid var(--line); border-radius: 9px; }
+    .status { direction: ltr; display: inline-flex; align-items: center; gap: 9px; color: #b7e9c9; font-size: 13px; white-space: nowrap; }
+    .pulse { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--brand); animation: pulse 1.4s ease-in-out infinite; }
+    main { position: relative; min-height: 0; flex: 1; overflow: hidden; padding: 28px 32px; }
+    .heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .heading-lines { width: min(320px, 42%); display: grid; gap: 10px; }
+    .heading-lines .line:first-child { height: 18px; }
+    .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 30px; }
+    .card { height: 90px; border: 1px solid var(--line); border-radius: 10px; }
+    .panels { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: 18px; height: calc(100% - 168px); }
+    .panel { min-height: 220px; border: 1px solid var(--line); border-radius: 14px; background: #151817; }
+    .startup-note { position: absolute; inset-inline-start: 28px; bottom: 24px; color: var(--soft); font-size: 12px; }
+    @keyframes pulse { 50% { opacity: .35; transform: scale(.78); } }
+    @keyframes shimmer { 55%, 100% { transform: translateX(-110%); } }
+    @media (max-width: 900px) { .rail { width: 72px; flex-basis: 72px; } .brand-lines, .nav-line { opacity: .65; } .cards { grid-template-columns: repeat(2, 1fr); } main { padding: 20px; } }
+    @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #f3f5f4; --panel: #fff; --rail: #fafbfa; --line: #dfe4e1; --muted: #e8ecea; --soft: #667069; } body { color: #17201a; } .panel { background: #fbfcfb; } .status { color: #167a43; } }
+    @media (prefers-reduced-motion: reduce) { .pulse, .line::after, .nav-line::after, .search::after, .card::after, .panel::after { animation: none; } }
   </style>
 </head>
 <body>
-  <main role="status" aria-live="polite">
-    <div class="mark" aria-hidden="true">SF</div>
-    <h1>SahelFlow demarre en toute securite</h1>
-    <p>Preparation de votre espace de travail local. Le premier demarrage apres une mise a jour peut prendre plus de temps sur un disque lent.</p>
-    <div class="status"><span class="pulse" aria-hidden="true"></span>Verification des donnees et des services locaux</div>
-    <p class="note">Vos donnees ne sont ni supprimees ni reinitialisees.</p>
-  </main>
+  <div class="shell" role="status" aria-live="polite" aria-label="Preparation de SahelFlow">
+    <aside class="rail" aria-hidden="true">
+      <div class="brand"><div class="mark">SF</div><div class="brand-lines"><div class="line"></div><div class="line short"></div></div></div>
+      <div class="nav"><div class="nav-line active"></div><div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div></div>
+    </aside>
+    <section class="workspace">
+      <div class="surface">
+        <header class="topbar"><div class="line short" style="width:140px"></div><div class="search"></div><div class="status"><span class="pulse" aria-hidden="true"></span>Preparation de l'espace local</div></header>
+        <main aria-hidden="true">
+          <div class="heading"><div class="heading-lines"><div class="line"></div><div class="line short"></div></div></div>
+          <div class="cards"><div class="card"></div><div class="card"></div><div class="card"></div><div class="card"></div></div>
+          <div class="panels"><div class="panel"></div><div class="panel"></div></div>
+          <div class="startup-note">Verification securisee des donnees et services locaux. Aucune donnee n'est reinitialisee.</div>
+        </main>
+      </div>
+    </section>
+  </div>
 </body>
 </html>"#
         .to_string()
@@ -796,5 +830,17 @@ mod tests {
         let html = recovery_html("SF-TEST", "<script>bad()</script>", "C:\\report.json");
         assert!(!html.contains("<script>bad()</script>"));
         assert!(html.contains("&lt;script&gt;bad()&lt;/script&gt;"));
+    }
+
+    #[test]
+    fn starting_surface_matches_the_full_desktop_shell_without_business_data() {
+        let html = starting_html();
+
+        assert!(html.contains("<title>SahelFlow</title>"));
+        assert!(html.contains("class=\"shell\""));
+        assert!(html.contains("class=\"rail\""));
+        assert!(html.contains("class=\"cards\""));
+        assert!(html.contains("Aucune donnee n'est reinitialisee"));
+        assert!(!html.contains("Safe startup"));
     }
 }

@@ -94,6 +94,29 @@ not require a new Internal MSI.
 - Fixes signed-release PR reporting permissions and reuses reviewed PR checks
   only after proving protected main and the successful reviewed head have the
   identical Git tree; exact-source signing and installed MSI/UI gates remain.
+- Merged as PR #158 at
+  `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`; PR #159 at
+  `eca2111a18fb900e9880177848ada497fd07ab72` corrected the signed release's
+  disposable database fixture.
+- Passed signed run `30183140347`, published the exact signed updater and was
+  installed over Internal.7 with AppData preserved.
+- Proved the authenticated dashboard plus normal close/reopen, but remains
+  unaccepted because launch takes about 42.5 seconds and the startup-window
+  transition plus bottom app-shell clipping require correction.
+
+### Internal.9 startup, layout and updater candidate
+
+- Presents the immediate safe startup state as a maximized SahelFlow dashboard
+  skeleton with the normal title instead of a smaller visibly separate window.
+- Adds zero-minimum flex containment through the desktop shell/sidebar so the
+  navigation scroll region and footer stay reachable at shorter window heights.
+- Separates first Node listening from semantic database/auth readiness in the
+  durable startup trace.
+- Enables the pinned Node runtime's per-version module compile cache in
+  non-executable Local AppData and flushes it after authenticated UI readiness
+  to accelerate repeat launches without changing signed source authority.
+- Will be the first Founder-machine in-app updater acceptance from Internal.8;
+  manual MSI installation is recovery/bootstrap only.
 
 ## [1.0.0-internal.5] — 2026-07-24
 

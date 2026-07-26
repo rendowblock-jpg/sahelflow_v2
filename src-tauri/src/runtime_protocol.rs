@@ -160,6 +160,7 @@ impl RuntimeProtocol {
         &self,
         timeout: Duration,
         mut child_exit: F,
+        mut on_listening: impl FnMut(),
     ) -> Result<ReadinessOutcome, IoError>
     where
         F: FnMut() -> Result<Option<u32>, IoError>,
@@ -174,7 +175,7 @@ impl RuntimeProtocol {
                 self.write_probe_diagnostic(&detail);
                 return Ok(ReadinessOutcome::ProcessExited(code));
             }
-            match self.probe_once() {
+            match self.probe_once(&mut on_listening) {
                 Ok(()) => {
                     self.clear_probe_diagnostic();
                     return Ok(ReadinessOutcome::Ready);
@@ -234,10 +235,11 @@ impl RuntimeProtocol {
         Ok(())
     }
 
-    fn probe_once(&self) -> Result<(), String> {
+    fn probe_once(&self, on_listening: &mut impl FnMut()) -> Result<(), String> {
         let address = SocketAddr::from((Ipv4Addr::LOCALHOST, self.app_port));
         let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500))
             .map_err(|error| format!("readiness connection failed: {}", error.kind()))?;
+        on_listening();
         let io_timeout = Some(Duration::from_secs(2));
         stream.set_read_timeout(io_timeout).map_err(|error| {
             format!(
@@ -721,7 +723,7 @@ mod tests {
 
         let started = Instant::now();
         let outcome = protocol
-            .wait_until_ready(Duration::from_secs(90), || Ok(Some(23)))
+            .wait_until_ready(Duration::from_secs(90), || Ok(Some(23)), || {})
             .expect("readiness outcome");
 
         assert_eq!(outcome, ReadinessOutcome::ProcessExited(23));

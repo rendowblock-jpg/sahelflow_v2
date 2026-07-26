@@ -457,6 +457,11 @@ fn server_env(
 ) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
     use tauri::Manager;
     let app_data_dir = app.path().app_data_dir()?;
+    let compile_cache_dir = app
+        .path()
+        .app_local_data_dir()?
+        .join("node-compile-cache")
+        .join(env!("CARGO_PKG_VERSION"));
     let token_file = app_data_dir.join("sidecar-token");
     let resource_dir = app.path().resource_dir()?;
 
@@ -534,6 +539,10 @@ fn server_env(
             env!("CARGO_PKG_VERSION").to_string(),
         ),
         ("NODE_ENV".to_string(), "production".to_string()),
+        (
+            "NODE_COMPILE_CACHE".to_string(),
+            compile_cache_dir.to_string_lossy().into_owned(),
+        ),
         ("SF_AUTH_MODE".to_string(), auth.mode().as_str().to_string()),
     ];
     if let Some(secret) = auth.secret() {
@@ -695,11 +704,21 @@ fn spawn_runtime_generation(
         runtime_protocol.app_url()
     );
 
-    match runtime_protocol.wait_until_ready(MANDATORY_RUNTIME_READY_TIMEOUT, || {
-        server_child
-            .try_wait()
-            .map(|exit| exit.map(|exit| exit.code))
-    })? {
+    let mut listening_recorded = false;
+    match runtime_protocol.wait_until_ready(
+        MANDATORY_RUNTIME_READY_TIMEOUT,
+        || {
+            server_child
+                .try_wait()
+                .map(|exit| exit.map(|exit| exit.code))
+        },
+        || {
+            if !listening_recorded {
+                startup_recovery::record_startup_stage(&app_data_dir, "runtime-listening", None);
+                listening_recorded = true;
+            }
+        },
+    )? {
         runtime_protocol::ReadinessOutcome::Ready => {}
         runtime_protocol::ReadinessOutcome::ProcessExited(code) => {
             stop_runtime_launch(app, generation, &server_child, "exited Next.js server")?;

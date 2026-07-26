@@ -17,10 +17,13 @@ $runtimeUiDiagnosticPath = Join-Path $roamingRoot "runtime-ui-diagnostic.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $startupTracePath = Join-Path $roamingRoot "startup-trace.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
+$nodeCompileCacheRoot = Join-Path `
+    (Join-Path $env:LOCALAPPDATA "com.sahelflow.desktop\node-compile-cache") `
+    $expectedVersion
 $installRoot = "C:\Program Files\SahelFlow"
 $exe = Join-Path $installRoot "sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
-$safeStartupWindowTitle = "SahelFlow - Safe startup"
+$startupShellWindowTitle = "SahelFlow"
 $workspaceWindowTitle = "SahelFlow"
 $maxRuntimePrepareMilliseconds = 15000
 $maxAuthenticatedUiMilliseconds = 45000
@@ -151,10 +154,10 @@ function Wait-ForPromptVisibleWindow {
             throw "${Phase}: SahelFlow exited before presenting a prompt startup window."
         }
         $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
-        $safeStartupWindows = @(
+        $startupShellWindows = @(
             foreach ($handle in $handles) {
                 $title = [SahelFlowUiWindow]::GetWindowTitle([int64]$handle)
-                if ($title -ceq $safeStartupWindowTitle) {
+                if ($title -ceq $startupShellWindowTitle) {
                     [pscustomobject]@{
                         handle = [int64]$handle
                         title = $title
@@ -162,22 +165,23 @@ function Wait-ForPromptVisibleWindow {
                 }
             }
         )
-        if ($safeStartupWindows.Count -gt 0 -and $Process.Responding) {
+        if ($startupShellWindows.Count -eq 1 -and $Process.Responding) {
             return [pscustomobject]@{
-                outcome = "prompt-responsive-safe-startup-window"
+                outcome = "prompt-responsive-startup-shell-window"
                 elapsedMilliseconds = [int64]((Get-Date) - $Process.StartTime).TotalMilliseconds
-                safeStartupWindows = @($safeStartupWindows)
+                startupWindow = $startupShellWindows[0]
             }
         }
     }
-    throw "${Phase}: SahelFlow did not present its marked responsive safe startup window within 15 seconds."
+    throw "${Phase}: SahelFlow did not present its responsive startup shell within 15 seconds."
 }
 
 function Wait-ForAuthenticatedUi {
     param(
         [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process,
         [Parameter(Mandatory = $true)][datetime]$StartedAt,
-        [Parameter(Mandatory = $true)][string]$Phase
+        [Parameter(Mandatory = $true)][string]$Phase,
+        [Parameter(Mandatory = $true)][long]$StartupWindowHandle
     )
 
     $deadline = $StartedAt.AddMilliseconds($maxAuthenticatedUiMilliseconds)
@@ -244,10 +248,9 @@ function Wait-ForAuthenticatedUi {
             }
         )
         $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
-        $safeStartupWindows = @($visibleWindows | Where-Object { $_.title -ceq $safeStartupWindowTitle })
         if (
             $workspaceWindows.Count -ne 1 -or
-            $safeStartupWindows.Count -ne 0 -or
+            [int64]$workspaceWindows[0].handle -eq $StartupWindowHandle -or
             -not $Process.Responding
         ) {
             continue
@@ -268,6 +271,39 @@ function Wait-ForAuthenticatedUi {
     }
 
     throw "${Phase}: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within $maxAuthenticatedUiMilliseconds ms."
+}
+
+function Wait-ForNodeCompileCache {
+    param([Parameter(Mandatory = $true)][string]$Phase)
+
+    $deadline = (Get-Date).AddSeconds(15)
+    do {
+        $files = @(
+            Get-ChildItem -LiteralPath $nodeCompileCacheRoot -Recurse -File `
+                -ErrorAction SilentlyContinue
+        )
+        if ($files.Count -gt 0) {
+            $forbidden = @(
+                $files | Where-Object {
+                    $_.Extension -in @(".exe", ".dll", ".node", ".js", ".cjs", ".mjs", ".cmd", ".bat", ".ps1") -or
+                    $_.Name -ieq "server.js" -or
+                    $_.Name -ieq "runtime-manifest.json"
+                }
+            )
+            if ($forbidden.Count -ne 0) {
+                throw "${Phase}: Node compile cache contains executable or source authority."
+            }
+            return [pscustomobject]@{
+                root = $nodeCompileCacheRoot
+                fileCount = $files.Count
+                bytes = [int64](($files | Measure-Object -Property Length -Sum).Sum)
+                executableOrSourceFiles = 0
+            }
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    throw "${Phase}: packaged Node did not persist its version-scoped compile cache."
 }
 
 function Close-SahelFlowNormally {
@@ -330,7 +366,10 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
     $promptWindow = Wait-ForPromptVisibleWindow -Process $process -Phase "ui-launch-$attempt"
-    $launch = Wait-ForAuthenticatedUi -Process $process -StartedAt $startedAt -Phase "ui-launch-$attempt"
+    $launch = Wait-ForAuthenticatedUi -Process $process -StartedAt $startedAt `
+        -Phase "ui-launch-$attempt" `
+        -StartupWindowHandle ([int64]$promptWindow.startupWindow.handle)
+    $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-launch-$attempt"
     $startupTrace = Read-JsonFile -Path $startupTracePath
     $uiDiagnostic = Read-JsonFile -Path $runtimeUiDiagnosticPath
     if ($null -eq $startupTrace -or [int]$startupTrace.formatVersion -ne 1) {
@@ -344,6 +383,7 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         'runtime-prepare-started',
         'runtime-prepare-complete',
         'runtime-attempt-started',
+        'runtime-listening',
         'runtime-ready',
         'ui-navigation-started',
         'ui-ready'
@@ -384,6 +424,7 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
     $launch | Add-Member -NotePropertyName promptWindow -NotePropertyValue $promptWindow
+    $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace

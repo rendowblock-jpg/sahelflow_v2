@@ -75,7 +75,7 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   return (
     <div
       dir={dir}
-      className="flex h-[100dvh] overflow-hidden bg-muted/30 lg:bg-muted/40"
+      className="flex h-[100dvh] min-h-0 overflow-hidden bg-muted/30 lg:bg-muted/40"
     >
       {/* Sidebar — hidden on mobile, shown on lg+.
           In RTL, the sidebar visually appears on the RIGHT because the
@@ -83,13 +83,13 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
           We do NOT use flex-row-reverse here (that would double-reverse the
           sidebar's internal content which already handles its own RTL layout). */}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:shadow-md">{t("common.skipToContent")}</a>
-        <div className="hidden lg:flex h-[100dvh] shrink-0">
+      <div className="hidden h-full min-h-0 shrink-0 lg:flex">
         <Sidebar serverLocale={locale} serverDir={dir} />
       </div>
 
       {/* Main content column — floating panel on lg+ */}
-      <div className="flex flex-col flex-1 overflow-hidden p-0 lg:p-2 lg:ps-0 lg:pb-0 rtl:lg:ps-2 rtl:lg:pe-0">
-        <div className="flex flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0 lg:p-2 lg:ps-0 lg:pb-0 rtl:lg:ps-2 rtl:lg:pe-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
           <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
           <main id="main-content" className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden min-h-0 scroll-pt-16">
             {children}

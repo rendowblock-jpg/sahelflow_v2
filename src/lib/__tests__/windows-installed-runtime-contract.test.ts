@@ -48,6 +48,11 @@ describe("installed Windows runtime contract", () => {
     const desktop = read("src-tauri/src/lib.rs");
     const recovery = read("src-tauri/src/startup_recovery.rs");
     const tauriConfig = read("src-tauri/tauri.conf.json");
+    const startupWindow = (
+      JSON.parse(tauriConfig) as {
+        app?: { windows?: Array<Record<string, unknown>> };
+      }
+    ).app?.windows?.find((window) => window.label === "startup");
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
 
@@ -56,6 +61,9 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("struct PreparedRuntime");
     expect(desktop).toContain("let prepared = prepare_runtime(app)?");
     expect(desktop).toContain("MANDATORY_RUNTIME_READY_TIMEOUT");
+    expect(desktop).toContain('"runtime-listening"');
+    expect(desktop).toContain('"NODE_COMPILE_CACHE"');
+    expect(desktop).toContain('.join("node-compile-cache")');
 
     expect(recovery).toContain('STARTUP_TRACE_FILE: &str = "startup-trace.json"');
     expect(recovery).toContain(
@@ -64,10 +72,16 @@ describe("installed Windows runtime contract", () => {
     expect(recovery).toContain('"SF-RUNTIME-UI-SESSION-BLOCKED"');
     expect(recovery).toContain('"SF-RUNTIME-UI-BEACON-MISSING"');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
-    expect(recovery).toContain("SahelFlow - Safe startup");
+    expect(recovery).toContain("const STARTUP_WINDOW_TITLE: &str = MAIN_WINDOW_TITLE");
     expect(recovery).toContain("SahelFlow - Startup blocked");
-    expect(tauriConfig).toContain('"label": "startup"');
-    expect(tauriConfig).toContain('"title": "SahelFlow - Safe startup"');
+    expect(startupWindow).toMatchObject({
+      label: "startup",
+      title: "SahelFlow",
+      width: 1280,
+      height: 800,
+      maximized: true,
+      visible: false,
+    });
 
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
     expect(beacon).toContain("const REQUEST_TIMEOUT_MS = 5_000");
@@ -76,6 +90,8 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');
     expect(uiRoute).toContain('code: "RUNTIME_SESSION_REQUIRED"');
     expect(uiRoute).toContain('code: "RUNTIME_UI_READY_PERSIST_FAILED"');
+    expect(uiRoute).toContain('await import("node:module")');
+    expect(uiRoute).toContain("flushCompileCache()");
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
   });
@@ -104,9 +120,11 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
     expect(harness).toContain("for ($attempt = 1; $attempt -le 2; $attempt++)");
     expect(uiHarness).toContain("Wait-ForPromptVisibleWindow");
-    expect(uiHarness).toContain('"SahelFlow - Safe startup"');
-    expect(uiHarness).toContain("prompt-responsive-safe-startup-window");
-    expect(uiHarness).toContain("$safeStartupWindows.Count -ne 0");
+    expect(uiHarness).toContain("prompt-responsive-startup-shell-window");
+    expect(uiHarness).toContain("StartupWindowHandle");
+    expect(uiHarness).toContain("$workspaceWindows[0].handle -eq $StartupWindowHandle");
+    expect(uiHarness).toContain("Wait-ForNodeCompileCache");
+    expect(uiHarness).toContain("executableOrSourceFiles = 0");
     expect(uiHarness).toContain("$workspaceWindows.Count -ne 1");
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
