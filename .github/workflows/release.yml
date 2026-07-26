@@ -215,6 +215,9 @@ jobs:
         shell: pwsh
         run: bun run test:sandbox -- "$env:SF_TEST_ROOT"
 
+      - name: Deploy signed-runtime test database migrations
+        run: bunx prisma migrate deploy
+
       - name: Verify product, protocol, and updater authority
         run: bun run sf-version
 
