@@ -44,19 +44,23 @@ describe("installed Windows runtime contract", () => {
     expect(protocol).not.toContain("runtime_token: &self.runtime_token");
   });
 
-  it("keeps low-end startup responsive and retains bounded UI-ready evidence", () => {
+  it("keeps the workspace hidden until bounded authenticated UI-ready evidence", () => {
     const desktop = read("src-tauri/src/lib.rs");
     const recovery = read("src-tauri/src/startup_recovery.rs");
     const tauriConfig = read("src-tauri/tauri.conf.json");
-    const startupWindow = (
+    const windows = (
       JSON.parse(tauriConfig) as {
         app?: { windows?: Array<Record<string, unknown>> };
       }
-    ).app?.windows?.find((window) => window.label === "startup");
+    ).app?.windows;
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
 
-    expect(desktop).toContain("startup_recovery::show_starting(&app_handle)");
+    expect(desktop).not.toContain("startup_recovery::show_starting");
+    expect(desktop).not.toContain('get_webview_window("startup")');
+    expect(desktop).not.toContain('label == "main" || label == "startup"');
+    expect(desktop).toContain("if window.is_visible().unwrap_or(false)");
+    expect(desktop).toContain('"workspace-window-pending"');
     expect(desktop).toContain("std::thread::spawn(move ||");
     expect(desktop).toContain("struct PreparedRuntime");
     expect(desktop).toContain("let prepared = prepare_runtime(app)?");
@@ -71,17 +75,15 @@ describe("installed Windows runtime contract", () => {
     );
     expect(recovery).toContain('"SF-RUNTIME-UI-SESSION-BLOCKED"');
     expect(recovery).toContain('"SF-RUNTIME-UI-BEACON-MISSING"');
-    expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
-    expect(recovery).toContain("const STARTUP_WINDOW_TITLE: &str = MAIN_WINDOW_TITLE");
+    expect(recovery).not.toContain("STARTUP_WINDOW_LABEL");
+    expect(recovery).not.toContain("STARTUP_WINDOW_TITLE");
+    expect(recovery).toContain(
+      "if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT)",
+    );
+    expect(recovery).toContain("window.show().and_then(|_| window.set_focus())");
     expect(recovery).toContain("SahelFlow - Startup blocked");
-    expect(startupWindow).toMatchObject({
-      label: "startup",
-      title: "SahelFlow",
-      width: 1280,
-      height: 800,
-      maximized: true,
-      visible: false,
-    });
+    expect(windows).toHaveLength(1);
+    expect(windows?.[0]).toMatchObject({ label: "main", visible: false });
 
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
     expect(beacon).toContain("const REQUEST_TIMEOUT_MS = 5_000");
@@ -100,6 +102,63 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
+  });
+
+  it("authorizes updater IPC from the authenticated loopback workspace", () => {
+    const capability = JSON.parse(
+      read("src-tauri/capabilities/default.json"),
+    ) as {
+      windows?: string[];
+      remote?: { urls?: string[] };
+      permissions?: string[];
+    };
+    const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json")) as {
+      app?: {
+        windows?: Array<{ label?: string; title?: string; visible?: boolean }>;
+        security?: { csp?: string };
+      };
+    };
+    const nextConfig = read("next.config.ts");
+    const updater = read("src/components/updater/update-checker.tsx");
+    const rootLayout = read("src/app/layout.tsx");
+    const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
+
+    expect(capability.windows).toContain("main");
+    expect(capability.remote?.urls).toEqual([
+      "http://127.0.0.1:*",
+      "http://localhost:*",
+    ]);
+    expect(capability.permissions).toEqual(
+      expect.arrayContaining(["updater:default", "process:default"]),
+    );
+    expect(tauriConfig.app?.security?.csp).toContain(
+      "connect-src 'self' ipc: http://ipc.localhost",
+    );
+    expect(tauriConfig.app?.windows).toHaveLength(1);
+    expect(tauriConfig.app?.windows?.[0]).toMatchObject({
+      label: "main",
+      title: "SahelFlow",
+      visible: false,
+    });
+    expect(nextConfig).toContain(
+      '"connect-src \'self\' ipc: http://ipc.localhost',
+    );
+    expect(updater).toContain("isUpdaterAccessFailure(err)");
+    expect(updater).toContain("isUpdaterTransientFailure(err)");
+    expect(updater).toContain("!transientFailure && isUpdaterAccessFailure(err)");
+    expect(updater).toContain("wsaeacces");
+    expect(updater).not.toContain("not allowed|permission|capabilit|ipc");
+    expect(updater).toContain("UPDATER_RETRY_DELAYS_MS");
+    expect(updater).toContain("UPDATER_CURRENT_POLL_INTERVAL_MS");
+    expect(updater).toContain("retryIndex < UPDATER_RETRY_DELAYS_MS.length");
+    expect(updater).toContain("check failed; periodic recovery retained:");
+    expect(updater).not.toContain("setDialogOpen(true);\n            return;");
+    expect(updater).not.toContain("if (cancelled || !update) return");
+    expect(updater).not.toContain("Silently fail on auto-check");
+    expect(updater).not.toContain("Manual check button");
+    expect(rootLayout).toContain('import { Toaster } from "@/components/ui/sonner"');
+    expect(rootLayout).toContain("<Toaster");
+    expect(dashboardLayout).not.toContain("<Toaster");
   });
 
   it("builds and launches the installed executable twice on an ephemeral Windows runner", () => {
@@ -129,17 +188,22 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain('$env:GITHUB_ACTIONS -cne "true"');
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
     expect(harness).toContain("for ($attempt = 1; $attempt -le 2; $attempt++)");
-    expect(uiHarness).toContain("Wait-ForPromptVisibleWindow");
-    expect(uiHarness).toContain("prompt-responsive-startup-shell-window");
-    expect(uiHarness).toContain("StartupWindowHandle");
-    expect(uiHarness).toContain("$workspaceWindows[0].handle -eq $StartupWindowHandle");
+    expect(uiHarness).not.toContain("Wait-ForPromptVisibleWindow");
+    expect(uiHarness).not.toContain("StartupWindowHandle");
+    expect(uiHarness).toContain(
+      "workspace became visible before authenticated readiness evidence",
+    );
+    expect(uiHarness).toContain("workspace-window-pending");
     expect(uiHarness).toContain("Wait-ForNodeCompileCache");
+    expect(uiHarness).toContain("Wait-ForCompleteStartupTrace");
+    expect(uiHarness).toContain("startup trace did not settle within 5 seconds");
     expect(uiHarness).toContain("executableOrSourceFiles = 0");
     expect(uiHarness).toContain("$workspaceWindows.Count -ne 1");
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
     expect(uiHarness).toContain("$maxRuntimePrepareMilliseconds = 15000");
     expect(uiHarness).toContain("$maxAuthenticatedUiMilliseconds = 45000");
+    expect(uiHarness).toContain("Last observation:");
     expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");
     expect(harness).toContain("$installedRuntimeRoot");

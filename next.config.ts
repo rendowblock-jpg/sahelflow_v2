@@ -32,7 +32,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value:
       "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
-      "connect-src 'self' https://generativelanguage.googleapis.com https://api.yalidine.app " +
+      "connect-src 'self' ipc: http://ipc.localhost https://generativelanguage.googleapis.com https://api.yalidine.app " +
       "https://api.youcan.shop https://*.myshopify.com https://backend.maystro-delivery.com " +
       "https://b.maystro-delivery.com https://procolis.com ws://127.0.0.1:3001 ws://localhost:3001 " +
       "https://*.ingest.sentry.io https://*.sentry.io; " +  // T-H5: Sentry error reporting

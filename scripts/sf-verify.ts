@@ -130,7 +130,27 @@ function printOutput(output: string): void {
   const trimmed = output.trim();
   if (!trimmed) return;
 
-  for (const line of trimmed.split("\n").slice(-120)) {
+  const lines = trimmed.split("\n");
+  let selectedLines = lines;
+  if (lines.length > 120) {
+    const firstErrorIndex = lines.findIndex((line) => /\berror\b/i.test(line));
+    if (firstErrorIndex === -1) {
+      selectedLines = lines.slice(-120);
+    } else {
+      const focusStart = Math.max(0, firstErrorIndex - 8);
+      const focusEnd = Math.min(lines.length, firstErrorIndex + 16);
+      const focus = lines.slice(focusStart, focusEnd);
+      const tailCount = Math.max(0, 119 - focus.length);
+      const tailStart = Math.max(focusEnd, lines.length - tailCount);
+      selectedLines = [...focus];
+      if (tailStart > focusEnd) {
+        selectedLines.push(`... ${tailStart - focusEnd} line(s) omitted ...`);
+      }
+      selectedLines.push(...lines.slice(tailStart));
+    }
+  }
+
+  for (const line of selectedLines) {
     console.error(`    ${line}`);
   }
 }

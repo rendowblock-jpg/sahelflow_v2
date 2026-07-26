@@ -6,7 +6,6 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { CheatsheetModal } from "@/components/shared/cheatsheet-modal";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { Toaster } from "@/components/ui/sonner";
 import type { Locale } from "@/lib/i18n";
 import { useI18n } from "@/hooks/use-i18n";
 
@@ -103,13 +102,6 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       {/* Keyboard Shortcuts Cheatsheet (? to open) */}
       <CheatsheetModal open={cheatsheetOpen} onOpenChange={setCheatsheetOpen} />
 
-      {/* Toast Provider */}
-      <Toaster
-        position={dir === "rtl" ? "bottom-left" : "bottom-right"}
-        richColors
-        closeButton
-        toastOptions={{ className: "shadow-popover" }}
-      />
     </div>
   );
 }
