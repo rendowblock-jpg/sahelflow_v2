@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for SahelFlow main window. The webview does NOT need shell:execute/spawn \u2014 the Next.js server and WhatsApp sidecar are spawned at startup by Rust (src-tauri/src/lib.rs spawn_services), not by the webview. Granting shell:execute to the webview would make any XSS in the webview equivalent to arbitrary command execution on the user's machine.",
+  "description": "Default capability for the SahelFlow main window and its authenticated loopback workspace. The webview does NOT need shell:execute/spawn \u2014 the Next.js server and WhatsApp sidecar are spawned at startup by Rust (src-tauri/src/lib.rs spawn_services), not by the webview. Granting shell:execute to the webview would make any XSS in the webview equivalent to arbitrary command execution on the user's machine.",
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:*",
+      "http://localhost:*"
+    ]
+  },
   "windows": [
     "main"
   ],

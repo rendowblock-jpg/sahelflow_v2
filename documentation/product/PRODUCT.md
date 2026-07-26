@@ -353,6 +353,8 @@ On the 4 GB dual-core floor device with representative data:
 On the Founder ThinkPad T470 class:
 
 - cold launch within 8 seconds p95;
+- on a successful normal launch, the authenticated workspace is the first
+  visible SahelFlow window; no splash or intermediate startup shell is shown;
 - ordinary navigation within 700 ms p95;
 - indexed search within 350 ms p95;
 - ordinary local mutation within 500 ms p95.

@@ -288,6 +288,22 @@ desktop-authority, encryption, outage-survival or continuity requirements.
 - Heavy builds and repeated dependency caches remain off the storage-constrained
   Founder machine whenever GitHub Actions can perform them.
 
+## FD-025 — Authenticated workspace is the first normal-launch window
+
+- A successful desktop launch does not show a splash, startup shell, fake
+  dashboard or intermediate window.
+- The single main window remains non-visible only while the signed local runtime
+  starts, the session is authenticated and the real workspace hydrates; the
+  authenticated workspace is the first visible normal-launch surface.
+- If startup is blocked, that same main window shows the bounded recovery surface
+  and diagnostic code. No business workspace is exposed before readiness.
+- Installed acceptance proves the workspace never becomes visible before
+  matching authenticated readiness evidence, then proves visible responsive UI,
+  normal close and reopen.
+- This supersedes Internal.9's visible full-size startup-shell implementation;
+  it does not weaken fail-closed startup, migration, runtime integrity or
+  recovery requirements.
+
 ---
 
 ## Change control

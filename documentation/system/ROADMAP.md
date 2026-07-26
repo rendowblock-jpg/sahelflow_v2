@@ -1,14 +1,13 @@
 # SahelFlow — Completion Roadmap
 
 > **Status:** Active dependency order
-> **Current protected-main source:** Internal.8 at
-> `eca2111a18fb900e9880177848ada497fd07ab72`
+> **Current protected-main source:** Internal.9 at
+> `d516e5fe3459f9e5efba15b6019f1e063a81c10c`
 > **Latest Founder-accepted baseline:** Internal.5
 > **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
-> **Immediate gate:** deliver Internal.9 through the real in-app updater with a
-> stable full-size startup shell, corrected 1366x768 bottom containment,
-> measured Node listening/semantic readiness and faster repeat launch, without
-> deleting Founder AppData or weakening runtime authority
+> **Immediate gate:** deliver the focused Internal.10 updater IPC correction by
+> one signed in-place bootstrap with AppData preserved, then prove normal
+> in-app updating resumes
 > **Last consolidated:** 2026-07-26
 
 This is the shortest safe path from the current application to the complete
@@ -110,22 +109,24 @@ Documentation-only completion does not create an MSI.
 ## Phase 1 — Workspace/shop and business-integrity foundation
 
 Before Phase 1A changes the installed application, the current installed
-acceptance loop must close. Internal.8 proves pinned Node runtime compatibility,
-authenticated real UI, AppData preservation, normal contained-process close
-and reopen. It is still unaccepted because the normal Founder T470 launch takes
-about 42.5 seconds, the separate small safe-startup window swaps visibly into
-the maximized workspace, and the app-shell flex chain can clip the bottom
-sidebar/footer at 1366x768-class heights.
+acceptance loop must close. Internal.9 integrated the full-size startup shell,
+viewport containment, runtime-listening evidence and repeat-launch compile
+cache, then passed exact-source signed installed MSI/UI gates. The existing
+Internal.8 installation could reach the authenticated dashboard and the live
+Internal.9 feed, but its loopback workspace had no Tauri remote capability/CSP
+authorization, so the updater call was blocked and its automatic error path was
+silent.
 
-Internal.9 is the bounded correction: preserve the safe authenticated handoff,
-make the immediate startup surface a full-size SahelFlow shell, repair nested
-viewport containment, enable per-version Node compile caching for repeat
-launches, and trace runtime listening separately from database/auth semantic
-readiness. It then follows source → reviewed GitHub checks → exact-source signed
-Internal update → real in-app updater → preserved-AppData Founder acceptance.
-Do not bypass it with manual reinstall unless updater recovery is required, a
-local build, AppData deletion or weakened readiness. After acceptance, optimize
-the PR workflow lanes/required gate before Phase 1A implementation resumes.
+Internal.10 is the bounded recovery: authorize only the loopback workspace for
+the existing updater/process capability, allow the IPC transport through both
+CSP layers and surface capability failures. It also replaces the Internal.9
+startup shell under FD-025: a single main window remains non-visible only until
+authenticated readiness, the dashboard is the first visible successful state,
+and that same window renders recovery only when launch fails. Because the
+updater defect is embedded in Internal.8, install the exact signed Internal.10
+MSI once in place without uninstalling or deleting AppData. Subsequent Internal
+delivery must prove the normal in-app updater path. Then finish the separate
+workflow-speed package before Phase 1A implementation resumes.
 
 ### Outcome
 

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Inter, Amiri } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
@@ -98,6 +99,12 @@ export default async function RootLayout({
                 <RuntimeUiReadyBeacon />
                 <ServiceWorkerRegister />
                 <UpdateChecker />
+                <Toaster
+                  position={dir === "rtl" ? "bottom-left" : "bottom-right"}
+                  richColors
+                  closeButton
+                  toastOptions={{ className: "shadow-popover" }}
+                />
               </TooltipProvider>
             </ThemeProvider>
           </ServerLocaleProvider>

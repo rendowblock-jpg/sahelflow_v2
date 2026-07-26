@@ -23,7 +23,6 @@ $nodeCompileCacheRoot = Join-Path `
 $installRoot = "C:\Program Files\SahelFlow"
 $exe = Join-Path $installRoot "sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
-$startupShellWindowTitle = "SahelFlow"
 $workspaceWindowTitle = "SahelFlow"
 $maxRuntimePrepareMilliseconds = 15000
 $maxAuthenticatedUiMilliseconds = 45000
@@ -140,51 +139,15 @@ function Get-BusinessIdentity {
     }
 }
 
-function Wait-ForPromptVisibleWindow {
-    param(
-        [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process,
-        [Parameter(Mandatory = $true)][string]$Phase
-    )
-
-    $deadline = (Get-Date).AddSeconds(15)
-    while ((Get-Date) -lt $deadline) {
-        Start-Sleep -Milliseconds 100
-        $Process.Refresh()
-        if ($Process.HasExited) {
-            throw "${Phase}: SahelFlow exited before presenting a prompt startup window."
-        }
-        $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
-        $startupShellWindows = @(
-            foreach ($handle in $handles) {
-                $title = [SahelFlowUiWindow]::GetWindowTitle([int64]$handle)
-                if ($title -ceq $startupShellWindowTitle) {
-                    [pscustomobject]@{
-                        handle = [int64]$handle
-                        title = $title
-                    }
-                }
-            }
-        )
-        if ($startupShellWindows.Count -eq 1 -and $Process.Responding) {
-            return [pscustomobject]@{
-                outcome = "prompt-responsive-startup-shell-window"
-                elapsedMilliseconds = [int64]((Get-Date) - $Process.StartTime).TotalMilliseconds
-                startupWindow = $startupShellWindows[0]
-            }
-        }
-    }
-    throw "${Phase}: SahelFlow did not present its responsive startup shell within 15 seconds."
-}
-
 function Wait-ForAuthenticatedUi {
     param(
         [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process,
         [Parameter(Mandatory = $true)][datetime]$StartedAt,
-        [Parameter(Mandatory = $true)][string]$Phase,
-        [Parameter(Mandatory = $true)][long]$StartupWindowHandle
+        [Parameter(Mandatory = $true)][string]$Phase
     )
 
     $deadline = $StartedAt.AddMilliseconds($maxAuthenticatedUiMilliseconds)
+    $lastObservation = $null
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
         $Process.Refresh()
@@ -206,35 +169,30 @@ function Wait-ForAuthenticatedUi {
 
         $endpointItem = Get-Item -LiteralPath $runtimeEndpointPath -ErrorAction SilentlyContinue
         $uiItem = Get-Item -LiteralPath $runtimeUiReadyPath -ErrorAction SilentlyContinue
-        if ($null -eq $endpointItem -or $null -eq $uiItem) {
-            continue
-        }
+        $endpoint = $null
+        $uiReady = $null
+        $matching = $false
         if (
-            $endpointItem.LastWriteTime -lt $StartedAt.AddSeconds(-2) -or
-            $uiItem.LastWriteTime -lt $StartedAt.AddSeconds(-2)
+            $null -ne $endpointItem -and
+            $null -ne $uiItem -and
+            $endpointItem.LastWriteTime -ge $StartedAt.AddSeconds(-2) -and
+            $uiItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)
         ) {
-            continue
-        }
-
-        $endpoint = Read-JsonFile -Path $runtimeEndpointPath
-        $uiReady = Read-JsonFile -Path $runtimeUiReadyPath
-        if ($null -eq $endpoint -or $null -eq $uiReady) {
-            continue
-        }
-
-        $matching =
-            $endpoint.state -eq "ready" -and
-            $endpoint.appVersion -eq $expectedVersion -and
-            [int64]$endpoint.processId -eq [int64]$Process.Id -and
-            -not [string]::IsNullOrWhiteSpace([string]$endpoint.instanceId) -and
-            [int]$uiReady.formatVersion -eq 1 -and
-            [int]$uiReady.protocolVersion -eq $expectedProtocol -and
-            $uiReady.state -eq "ready" -and
-            $uiReady.appVersion -eq $expectedVersion -and
-            $uiReady.instanceId -eq $endpoint.instanceId -and
-            $uiReady.pageUrl -match '^http://(127\.0\.0\.1|localhost):\d+$'
-        if (-not $matching) {
-            continue
+            $endpoint = Read-JsonFile -Path $runtimeEndpointPath
+            $uiReady = Read-JsonFile -Path $runtimeUiReadyPath
+            if ($null -ne $endpoint -and $null -ne $uiReady) {
+                $matching =
+                    $endpoint.state -eq "ready" -and
+                    $endpoint.appVersion -eq $expectedVersion -and
+                    [int64]$endpoint.processId -eq [int64]$Process.Id -and
+                    -not [string]::IsNullOrWhiteSpace([string]$endpoint.instanceId) -and
+                    [int]$uiReady.formatVersion -eq 1 -and
+                    [int]$uiReady.protocolVersion -eq $expectedProtocol -and
+                    $uiReady.state -eq "ready" -and
+                    $uiReady.appVersion -eq $expectedVersion -and
+                    $uiReady.instanceId -eq $endpoint.instanceId -and
+                    $uiReady.pageUrl -match '^http://(127\.0\.0\.1|localhost):\d+$'
+            }
         }
 
         $handles = @([SahelFlowUiWindow]::FindVisibleTopLevelWindows([uint32]$Process.Id))
@@ -248,9 +206,20 @@ function Wait-ForAuthenticatedUi {
             }
         )
         $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
+        $lastObservation = [pscustomobject]@{
+            endpointMatched = [bool]$matching
+            responding = [bool]$Process.Responding
+            workspaceWindowCount = $workspaceWindows.Count
+            visibleWindows = @($visibleWindows)
+        }
+        if (-not $matching) {
+            if ($workspaceWindows.Count -ne 0) {
+                throw "${Phase}: workspace became visible before authenticated readiness evidence."
+            }
+            continue
+        }
         if (
             $workspaceWindows.Count -ne 1 -or
-            [int64]$workspaceWindows[0].handle -eq $StartupWindowHandle -or
             -not $Process.Responding
         ) {
             continue
@@ -270,7 +239,42 @@ function Wait-ForAuthenticatedUi {
         }
     }
 
-    throw "${Phase}: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within $maxAuthenticatedUiMilliseconds ms."
+    $observationJson = if ($null -eq $lastObservation) {
+        "no matching endpoint/UI-ready evidence was observed"
+    } else {
+        $lastObservation | ConvertTo-Json -Depth 5 -Compress
+    }
+    throw "${Phase}: installed SahelFlow did not produce a matching authenticated, hydrated, responsive UI within $maxAuthenticatedUiMilliseconds ms. Last observation: $observationJson"
+}
+
+function Wait-ForCompleteStartupTrace {
+    param(
+        [Parameter(Mandatory = $true)][datetime]$StartedAt,
+        [Parameter(Mandatory = $true)][string]$Phase,
+        [Parameter(Mandatory = $true)][string[]]$RequiredStages
+    )
+
+    $deadline = (Get-Date).AddSeconds(5)
+    $missingStages = @($RequiredStages)
+    do {
+        $traceItem = Get-Item -LiteralPath $startupTracePath -ErrorAction SilentlyContinue
+        if ($null -ne $traceItem -and $traceItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)) {
+            $trace = Read-JsonFile -Path $startupTracePath
+            if ($null -ne $trace -and [int]$trace.formatVersion -eq 1) {
+                $observedStages = @($trace.events | ForEach-Object { [string]$_.stage })
+                $missingStages = @(
+                    $RequiredStages | Where-Object { $observedStages -notcontains $_ }
+                )
+                if ($missingStages.Count -eq 0) {
+                    return $trace
+                }
+            }
+        }
+        Start-Sleep -Milliseconds 100
+    } while ((Get-Date) -lt $deadline)
+
+    $missingSummary = $missingStages -join ", "
+    throw "${Phase}: startup trace did not settle within 5 seconds. Missing stages: [$missingSummary]."
 }
 
 function Wait-ForNodeCompileCache {
@@ -365,19 +369,12 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
 
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
-    $promptWindow = Wait-ForPromptVisibleWindow -Process $process -Phase "ui-launch-$attempt"
     $launch = Wait-ForAuthenticatedUi -Process $process -StartedAt $startedAt `
-        -Phase "ui-launch-$attempt" `
-        -StartupWindowHandle ([int64]$promptWindow.startupWindow.handle)
+        -Phase "ui-launch-$attempt"
     $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-launch-$attempt"
-    $startupTrace = Read-JsonFile -Path $startupTracePath
-    $uiDiagnostic = Read-JsonFile -Path $runtimeUiDiagnosticPath
-    if ($null -eq $startupTrace -or [int]$startupTrace.formatVersion -ne 1) {
-        throw "ui-launch-$attempt did not retain a valid startup trace."
-    }
     $requiredStages = @(
         'native-started',
-        'startup-screen-visible',
+        'workspace-window-pending',
         'migration-started',
         'migration-complete',
         'runtime-prepare-started',
@@ -388,12 +385,10 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         'ui-navigation-started',
         'ui-ready'
     )
-    $observedStages = @($startupTrace.events | ForEach-Object { [string]$_.stage })
-    foreach ($requiredStage in $requiredStages) {
-        if ($observedStages -notcontains $requiredStage) {
-            throw "ui-launch-$attempt startup trace omitted stage $requiredStage."
-        }
-    }
+    $startupTrace = Wait-ForCompleteStartupTrace -StartedAt $startedAt `
+        -Phase "ui-launch-$attempt" `
+        -RequiredStages $requiredStages
+    $uiDiagnostic = Read-JsonFile -Path $runtimeUiDiagnosticPath
     $prepareStartedEvents = @(
         $startupTrace.events |
             Where-Object { $_.stage -eq 'runtime-prepare-started' }
@@ -423,7 +418,6 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     ) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
-    $launch | Add-Member -NotePropertyName promptWindow -NotePropertyValue $promptWindow
     $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds

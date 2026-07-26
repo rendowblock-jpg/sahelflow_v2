@@ -115,8 +115,37 @@ not require a new Internal MSI.
 - Enables the pinned Node runtime's per-version module compile cache in
   non-executable Local AppData and flushes it after authenticated UI readiness
   to accelerate repeat launches without changing signed source authority.
-- Will be the first Founder-machine in-app updater acceptance from Internal.8;
-  manual MSI installation is recovery/bootstrap only.
+- Merged as PR #160 at
+  `d516e5fe3459f9e5efba15b6019f1e063a81c10c`; signed run `30190505041`
+  passed exact installed runtime/UI launch and reopen gates and published the
+  immutable Internal.9 updater release.
+- Founder Internal.8 reached its authenticated dashboard but did not display
+  the Internal.9 prompt. The published feed and signature were reachable; the
+  loopback UI lacked Tauri remote capability/CSP authorization, and the
+  automatic check hid the resulting failure.
+
+### Internal.10 updater bootstrap recovery
+
+- Grants the authenticated `127.0.0.1`/`localhost` workspace the existing
+  non-execute Tauri capability set without granting shell execute/spawn.
+- Allows the Tauri IPC transport through both desktop and Next.js CSP layers.
+- Surfaces capability/IPC updater failures instead of silently swallowing them
+  and removes the orphaned global manual-check button from document flow.
+- Keeps update discovery alive for the full app session: current versions poll
+  every 30 minutes, deferred updates are re-offered, transient failures use a
+  bounded 1/5/15-minute retry budget, and permanent or exhausted failures are
+  visible while periodic recovery remains active.
+- Mounts the shared toast renderer at the root so updater and recovery failures
+  remain visible on setup, login and authenticated dashboard routes.
+- Removes the separate startup window: the single main window remains
+  non-visible only while authenticated readiness completes, then shows the
+  hydrated dashboard as the first visible normal-launch state; the same window
+  owns actionable recovery if startup fails.
+- Requires installed UI evidence that no SahelFlow workspace becomes visible
+  before the authenticated readiness trace and that launch, close and reopen
+  each produce exactly one responsive dashboard window.
+- Requires one exact signed in-place MSI bootstrap over Internal.8 with AppData
+  preserved; future Internal versions return to the normal in-app updater.
 
 ## [1.0.0-internal.5] — 2026-07-24
 

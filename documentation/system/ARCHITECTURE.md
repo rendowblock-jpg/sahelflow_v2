@@ -729,6 +729,13 @@ validates the installed manifest/version and required regular-file entrypoint
 without recursively copying or hashing the complete runtime tree, and aborts
 readiness immediately when the contained server process exits.
 
+Normal desktop startup has one configured window. It remains non-visible while
+migration, protected-runtime readiness, session authentication and workspace
+hydration complete. The authenticated workspace is the first visible
+normal-launch surface. A startup failure navigates that same main window to the
+bounded recovery document; no splash, placeholder workspace or second startup
+window participates in the successful path.
+
 The installed server's executable, entrypoint, dependencies and native engine
 remain under protected `Program Files`. Its process working directory is a
 non-executable Local AppData directory so runtime libraries never need to write

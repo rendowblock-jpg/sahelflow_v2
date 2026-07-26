@@ -263,17 +263,7 @@ pub fn run() {
                 if window.is_visible().unwrap_or(false) {
                     let _ = window.show();
                     let _ = window.set_focus();
-                    return;
                 }
-            }
-            if let Some(window) = app.get_webview_window("startup") {
-                let _ = window.show();
-                let _ = window.set_focus();
-                return;
-            }
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
             }
         }))
         .plugin(tauri_plugin_shell::init())
@@ -301,16 +291,16 @@ pub fn run() {
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
-                startup_recovery::show_starting(&app_handle)?;
                 startup_recovery::record_startup_stage(
                     &app_data_dir,
-                    "startup-screen-visible",
+                    "workspace-window-pending",
                     None,
                 );
 
                 // Migration, runtime-tree verification and service startup can
                 // take materially longer on HDD systems. Keep them off Tauri's
-                // event loop so the safe startup document paints immediately.
+                // event loop while the main window remains non-visible until
+                // the authenticated workspace has hydrated.
                 std::thread::spawn(move || {
                     let resource_dir = match app_handle.path().resource_dir() {
                         Ok(path) => path,
@@ -418,7 +408,7 @@ pub fn run() {
                         label,
                         event: tauri::WindowEvent::CloseRequested { .. },
                         ..
-                    } if label == "main" || label == "startup"
+                    } if label == "main"
                 );
                 let shutdown = app_window_close
                     || matches!(

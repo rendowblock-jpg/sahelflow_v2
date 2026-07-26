@@ -122,17 +122,17 @@ them locally; GitHub Actions runs the required commands from the pushed commit.
 
 - Documentation-reset merge checkpoint: PR #154 at
   `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
-- Protected-main Internal.8 checkpoint:
-  `eca2111a18fb900e9880177848ada497fd07ab72`; exact signed app source is
-  `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`.
+- Protected-main Internal.9 checkpoint and exact signed app source:
+  `d516e5fe3459f9e5efba15b6019f1e063a81c10c`.
 - Founder-accepted installed release: `1.0.0-internal.5`.
-- Internal.8 is signed-release-complete and installed but not Founder-accepted;
-  authenticated UI and normal close/reopen pass, but normal launch is about
-  42.5 seconds and the startup transition plus bottom app-shell clipping remain.
+- Internal.8 remains installed and unaccepted. Internal.9 is
+  signed-release-complete and passed clean installed MSI/UI gates, but the
+  installed Internal.8 loopback workspace did not show its updater prompt.
 - Phase 0 documentation truth reset is complete; Phase 1 workspace/shop and
   business-integrity work is active.
-- Internal.9 startup-shell, viewport containment, repeat-launch performance and
-  first real in-app updater acceptance are the immediate execution gate.
-  Preserve AppData and legacy caches, execute only the release-verified
-  MSI-installed runtime, and resolve this through one exact-source signed
-  Internal update before Phase 1A proceeds.
+- Internal.10 is the focused updater bootstrap correction: authorize the
+  authenticated loopback workspace for Tauri updater/process IPC, preserve CSP,
+  surface capability failures, and make the authenticated dashboard the first
+  visible normal-launch window through one desktop window. Install the exact
+  signed MSI once in place without deleting AppData. Subsequent Internal
+  delivery returns to the normal in-app updater path before Phase 1A proceeds.

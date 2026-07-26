@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/lib/toast";
-import { Download, RefreshCw, CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { Download, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { isTauriEnv } from "@/lib/env";
 
@@ -22,14 +22,31 @@ interface UpdateInfo {
   body?: string;
 }
 
+const UPDATER_RETRY_DELAYS_MS = [60_000, 5 * 60_000, 15 * 60_000] as const;
+const UPDATER_CURRENT_POLL_INTERVAL_MS = 30 * 60_000;
+
+function isUpdaterAccessFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /(?:permissions associated with this command|(?:plugin:)?(?:updater|process)[.:|][\w-]+\s+not allowed|(?:capabilit|acl).*(?:denied|forbidden|not allowed)|(?:denied|forbidden|not allowed).*(?:capabilit|acl)|(?:ipc|invoke).*(?:denied|forbidden|not allowed))/i.test(
+    message,
+  );
+}
+
+function isUpdaterTransientFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /(?:offline|network|timed?\s*out|timeout|connection|connect(?:ion)?\s+(?:refused|reset|closed)|dns|name resolution|temporar(?:y|ily)|failed to fetch|error sending request|wsaeacces|os error 10013|socket.*access permissions|http(?:\s+status)?\s+(?:408|429|5\d\d)\b)/i.test(
+    message,
+  );
+}
+
 /**
  * Updater component — checks for app updates on launch (Tauri desktop only).
  *
  * In non-Tauri contexts (browser dev), this renders nothing.
  * In Tauri, it:
- *   1. Checks for updates on mount (silently — no UI if no update)
- *   2. If an update is available, shows a toast with a "Télécharger" button
- *   3. When the user clicks, shows a dialog with release notes + install button
+ *   1. Checks on mount and continues polling while the app remains open
+ *   2. Opens a release-notes dialog when a signed update is available
+ *   3. Re-offers deferred updates and surfaces permanent/bounded-retry failures
  *   4. Downloads + installs the update, then prompts to restart
  *
  * The updater uses the Tauri updater plugin (tauri-plugin-updater) which
@@ -39,7 +56,6 @@ interface UpdateInfo {
 export function UpdateChecker() {
   const { t, locale } = useI18n();
   const [isTauri, setIsTauri] = useState(false);
-  const [checking, setChecking] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -53,44 +69,90 @@ export function UpdateChecker() {
     }
   }, []);
 
-  // Check for updates on mount (Tauri only)
+  // Check on mount and retain bounded recovery/polling for the whole session.
   useEffect(() => {
     if (!isTauri) return;
-    void checkForUpdates(false); // silent on first check
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTauri]);
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-  async function checkForUpdates(showToast: boolean): Promise<void> {
-    setChecking(true);
-    try {
-      // Dynamic import — only available in Tauri context
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
+    void (async () => {
+      let retryIndex = 0;
 
-      if (update) {
-        setUpdateAvailable({
-          version: update.version,
-          date: update.date,
-          body: update.body,
+      while (!cancelled) {
+        let nextCheckDelay = UPDATER_CURRENT_POLL_INTERVAL_MS;
+        try {
+          // Dynamic import — only available in Tauri context
+          const { check } = await import("@tauri-apps/plugin-updater");
+          const update = await check();
+          if (cancelled) return;
+
+          if (!update) {
+            retryIndex = 0;
+          } else {
+            setUpdateAvailable({
+              version: update.version,
+              date: update.date,
+              body: update.body,
+            });
+            setDialogOpen(true);
+            // Keep the loop alive. If the seller defers or closes the dialog,
+            // the same signed update is offered again at the normal interval.
+            retryIndex = 0;
+          }
+        } catch (err) {
+          if (cancelled) return;
+          const description =
+            err instanceof Error ? err.message : t("updater.unknownError");
+          const transientFailure = isUpdaterTransientFailure(err);
+
+          // A broken desktop capability cannot recover within this binary.
+          // Transport classification runs first because Windows socket denials
+          // can mention access permissions without being Tauri ACL failures.
+          if (!transientFailure && isUpdaterAccessFailure(err)) {
+            toast.error(t("updater.checkFailed"), {
+              description,
+            });
+            console.warn("[updater] access check failed:", err);
+            return;
+          }
+
+          const shouldRetrySilently =
+            transientFailure && retryIndex < UPDATER_RETRY_DELAYS_MS.length;
+          if (shouldRetrySilently) {
+            nextCheckDelay =
+              UPDATER_RETRY_DELAYS_MS[retryIndex] ??
+              UPDATER_CURRENT_POLL_INTERVAL_MS;
+            retryIndex += 1;
+            console.warn(
+              "[updater] transient check failed; retry scheduled:",
+              err,
+            );
+          } else {
+            // Permanent feed/manifest failures surface immediately. Transient
+            // failures surface after the bounded 1/5/15-minute retry budget.
+            // Periodic polling remains alive so a repaired feed can recover
+            // without requiring an application restart.
+            toast.error(t("updater.checkFailed"), { description });
+            console.error(
+              "[updater] check failed; periodic recovery retained:",
+              err,
+            );
+            retryIndex = 0;
+          }
+        }
+
+        await new Promise<void>((resolve) => {
+          retryTimer = setTimeout(resolve, nextCheckDelay);
         });
-        setDialogOpen(true);
-      } else if (showToast) {
-        toast.success(t("updater.upToDate"), {
-          description: t("updater.upToDateDesc"),
-        });
+        retryTimer = undefined;
       }
-    } catch (err) {
-      // Silently fail on auto-check; show error only on manual check
-      if (showToast) {
-        toast.error(t("updater.checkFailed"), {
-          description: err instanceof Error ? err.message : t("updater.unknownError"),
-        });
-      }
-      console.warn("[updater] check failed:", err);
-    } finally {
-      setChecking(false);
-    }
-  }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
+    };
+  }, [isTauri, t]);
 
   async function downloadAndInstall(): Promise<void> {
     setDownloading(true);
@@ -148,21 +210,6 @@ export function UpdateChecker() {
 
   return (
     <>
-      {/* Manual check button — rendered by the parent (Settings) */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => void checkForUpdates(true)}
-        disabled={checking}
-      >
-        {checking ? (
-          <Loader2 className="h-4 w-4 me-2 animate-spin" />
-        ) : (
-          <RefreshCw className="h-4 w-4 me-2" />
-        )}
-        {t("updater.checkButton")}
-      </Button>
-
       {/* Update available dialog */}
       <Dialog open={dialogOpen} onOpenChange={(o) => !downloading && setDialogOpen(o)}>
         <DialogContent>
