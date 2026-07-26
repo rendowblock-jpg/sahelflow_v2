@@ -144,6 +144,17 @@ describe("Windows signed release build contract", () => {
     );
     expect(ci).toContain("SF_CONTAINED_NODE_PATH");
     expect(release).toContain("verify-windows-packaged-runtime.ts");
+    const releaseSandbox = release.indexOf("Prepare disposable test sandbox");
+    const releaseDatabase = release.indexOf(
+      "Deploy signed-runtime test database migrations",
+    );
+    const releaseRuntime = release.indexOf(
+      "Verify staged packaged runtime reaches authenticated readiness",
+    );
+    expect(releaseSandbox).toBeGreaterThan(-1);
+    expect(releaseDatabase).toBeGreaterThan(releaseSandbox);
+    expect(releaseRuntime).toBeGreaterThan(releaseDatabase);
+    expect(release).toContain("bunx prisma migrate deploy");
     expect(release).toContain(
       "Attest reviewed identical PR tree and required checks",
     );
