@@ -93,6 +93,10 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).toContain("getBuiltinModule?.(");
     expect(uiRoute).toContain('"node:module"');
     expect(uiRoute).toContain("moduleApi.flushCompileCache()");
+    expect(uiRoute).toContain('locale: runtimeLocale(request)');
+    expect(uiRoute.indexOf("flushPackagedCompileCache();")).toBeLessThan(
+      uiRoute.indexOf("writeJsonAtomically(ackPath, acknowledgment)"),
+    );
     expect(uiRoute).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);

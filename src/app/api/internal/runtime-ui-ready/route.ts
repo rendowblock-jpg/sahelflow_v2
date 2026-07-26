@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json";
+const DEFAULT_LOCALE = "fr";
 let uiReadyAttempt = 0;
 let compileCacheFlushed = false;
 
@@ -40,6 +41,13 @@ function flushPackagedCompileCache(): void {
   } catch {
     // The cache is a quiet optimization; readiness must not depend on it.
   }
+}
+
+function runtimeLocale(request: NextRequest): "ar" | "fr" | "en" {
+  const locale = request.cookies.get("sahelflow-locale")?.value;
+  return locale === "ar" || locale === "en" || locale === "fr"
+    ? locale
+    : DEFAULT_LOCALE;
 }
 
 function noStoreHeaders(): Record<string, string> {
@@ -160,6 +168,7 @@ export async function POST(request: NextRequest) {
     instanceId,
     processId: process.pid,
     appVersion,
+    locale: runtimeLocale(request),
     pageUrl: url.origin,
     createdAtUnixSeconds: Math.floor(Date.now() / 1000),
   };
@@ -171,6 +180,13 @@ export async function POST(request: NextRequest) {
     instanceId,
     appVersion,
   });
+
+  // The contained Node process is terminated as a tree on desktop close. Flush
+  // before publishing the durable UI-ready acknowledgment so the native
+  // handoff cannot reveal a workspace while Node is still synchronously
+  // persisting its V8 compile cache.
+  flushPackagedCompileCache();
+
   try {
     writeJsonAtomically(ackPath, acknowledgment);
   } catch {
@@ -201,12 +217,6 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: noStoreHeaders() },
     );
   }
-
-  // The contained Node process is terminated as a tree on desktop close, so
-  // flush after the first hydrated workspace acknowledgment. This makes later
-  // launches reuse V8's validated module code cache without treating AppData
-  // as executable source authority.
-  flushPackagedCompileCache();
 
   return NextResponse.json(
     { status: "ready", instanceId },

@@ -9,10 +9,13 @@ const token = "a".repeat(64);
 const instanceId = "b".repeat(32);
 let dataDir = "";
 
-function request(withCookie: boolean): NextRequest {
+function request(withCookie: boolean, locale?: "ar" | "fr" | "en"): NextRequest {
+  const cookies = [withCookie ? `sf_runtime=${token}` : "", locale ? `sahelflow-locale=${locale}` : ""]
+    .filter(Boolean)
+    .join("; ");
   return new NextRequest("http://127.0.0.1:43123/api/internal/runtime-ui-ready", {
     method: "POST",
-    headers: withCookie ? { cookie: `sf_runtime=${token}` } : undefined,
+    headers: cookies ? { cookie: cookies } : undefined,
   });
 }
 
@@ -46,6 +49,7 @@ describe("packaged runtime hydrated UI readiness", () => {
     expect(acknowledgment.state).toBe("ready");
     expect(acknowledgment.instanceId).toBe(instanceId);
     expect(acknowledgment.appVersion).toBe("1.0.0-internal.7");
+    expect(acknowledgment.locale).toBe("fr");
     expect(acknowledgment.pageUrl).toMatch(
       /^http:\/\/(127\.0\.0\.1|localhost):43123$/,
     );
@@ -60,6 +64,16 @@ describe("packaged runtime hydrated UI readiness", () => {
     expect(diagnostic.instanceId).toBe(instanceId);
     expect(diagnostic.appVersion).toBe("1.0.0-internal.7");
     expect(typeof diagnostic.attempt).toBe("number");
+  });
+
+  it("persists the authenticated workspace locale for the next native startup shell", async () => {
+    const response = await POST(request(true, "ar"));
+    expect(response.status).toBe(200);
+
+    const acknowledgment = JSON.parse(
+      readFileSync(join(dataDir, "runtime-ui-ready.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(acknowledgment.locale).toBe("ar");
   });
 
   it("fails closed without the WebView runtime cookie", async () => {

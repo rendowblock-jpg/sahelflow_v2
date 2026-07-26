@@ -50,6 +50,7 @@ struct RuntimeUiReady {
     state: String,
     instance_id: String,
     app_version: String,
+    locale: Option<String>,
     page_url: String,
 }
 
@@ -111,6 +112,10 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     };
 
     let app_data_dir = app.path().app_data_dir()?;
+    // Render from the previous authenticated workspace locale before clearing
+    // its per-instance acknowledgment. This preserves the seller's physical
+    // shell direction without trusting the old file as current readiness.
+    show_starting(app)?;
     clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
     clear_file(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE))?;
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
@@ -119,7 +124,6 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     // Keep a separate safe startup surface visible while the real workspace
     // navigates and hydrates. This also restores the surface during an
     // automatic runtime recovery where the main window was showing an error.
-    show_starting(app)?;
     window.hide()?;
     window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
     window.navigate(handoff.workspace_url)?;
@@ -132,6 +136,8 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
 /// runtime preparation and mandatory service readiness continue off the event
 /// loop. It never loads a shop, user session or partial workspace.
 pub fn show_starting(app: &tauri::AppHandle) -> Result<(), Box<dyn Error>> {
+    let app_data_dir = app.path().app_data_dir()?;
+    let locale = persisted_startup_locale(&app_data_dir);
     let window = app
         .get_webview_window(STARTUP_WINDOW_LABEL)
         .ok_or_else(|| {
@@ -142,7 +148,7 @@ pub fn show_starting(app: &tauri::AppHandle) -> Result<(), Box<dyn Error>> {
         })?;
     let data_url = format!(
         "data:text/html;charset=utf-8,{}",
-        urlencoding::encode(&starting_html())
+        urlencoding::encode(&starting_html(locale))
     );
     window.set_title(STARTUP_WINDOW_TITLE)?;
     window.navigate(tauri::Url::parse(&data_url)?)?;
@@ -574,9 +580,45 @@ fn recovery_html(code: &str, detail: &str, report_path: &str) -> String {
     )
 }
 
-fn starting_html() -> String {
+fn persisted_startup_locale(app_data_dir: &Path) -> &'static str {
+    let ready_path = app_data_dir.join(RUNTIME_UI_READY_FILE);
+    let locale = fs::read(ready_path)
+        .ok()
+        .filter(|bytes| bytes.len() <= 64 * 1024)
+        .and_then(|bytes| serde_json::from_slice::<RuntimeUiReady>(&bytes).ok())
+        .and_then(|ready| ready.locale);
+
+    match locale.as_deref() {
+        Some("ar") => "ar",
+        Some("en") => "en",
+        _ => "fr",
+    }
+}
+
+fn starting_html(locale: &str) -> String {
+    let (locale, direction, status, note) = match locale {
+        "ar" => (
+            "ar",
+            "rtl",
+            "تحضير مساحة العمل المحلية",
+            "يتم التحقق بأمان من البيانات والخدمات المحلية. لن تتم إعادة تعيين أي بيانات.",
+        ),
+        "en" => (
+            "en",
+            "ltr",
+            "Preparing the local workspace",
+            "Local data and services are being verified safely. No data is being reset.",
+        ),
+        _ => (
+            "fr",
+            "ltr",
+            "Préparation de l’espace local",
+            "Vérification sécurisée des données et services locaux. Aucune donnée n’est réinitialisée.",
+        ),
+    };
+
     r#"<!doctype html>
-<html lang="fr" dir="rtl">
+<html lang="__LOCALE__" dir="__DIRECTION__">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -587,7 +629,7 @@ fn starting_html() -> String {
     html, body { width: 100%; height: 100%; overflow: hidden; }
     body { margin: 0; background: var(--bg); color: #f4f4f5; }
     .shell { display: flex; width: 100%; height: 100%; min-height: 0; }
-    .rail { width: 256px; min-height: 0; flex: 0 0 256px; border-left: 1px solid var(--line); background: var(--rail); }
+    .rail { width: 256px; min-height: 0; flex: 0 0 256px; border-inline-end: 1px solid var(--line); background: var(--rail); }
     .brand { height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
     .mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--brand); color: #fff; font-size: 14px; font-weight: 800; }
     .brand-lines { display: grid; gap: 7px; flex: 1; }
@@ -597,12 +639,12 @@ fn starting_html() -> String {
     .line.short { width: 58%; }
     .nav { display: grid; gap: 12px; padding: 24px 16px; }
     .nav-line { height: 34px; border-radius: 9px; }
-    .nav-line.active { background: #173223; border-right: 4px solid var(--brand); }
-    .workspace { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; padding: 8px 0 0 8px; }
+    .nav-line.active { background: #173223; border-inline-start: 4px solid var(--brand); }
+    .workspace { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; padding: 8px 8px 0; }
     .surface { min-height: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--panel); }
     .topbar { height: 48px; flex: 0 0 48px; display: flex; align-items: center; gap: 18px; padding: 0 16px; border-bottom: 1px solid var(--line); }
     .search { width: min(44%, 448px); height: 32px; margin-inline: auto; border: 1px solid var(--line); border-radius: 9px; }
-    .status { direction: ltr; display: inline-flex; align-items: center; gap: 9px; color: #b7e9c9; font-size: 13px; white-space: nowrap; }
+    .status { display: inline-flex; align-items: center; gap: 9px; color: #b7e9c9; font-size: 13px; white-space: nowrap; }
     .pulse { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--brand); animation: pulse 1.4s ease-in-out infinite; }
     main { position: relative; min-height: 0; flex: 1; overflow: hidden; padding: 28px 32px; }
     .heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
@@ -628,19 +670,22 @@ fn starting_html() -> String {
     </aside>
     <section class="workspace">
       <div class="surface">
-        <header class="topbar"><div class="line short" style="width:140px"></div><div class="search"></div><div class="status"><span class="pulse" aria-hidden="true"></span>Preparation de l'espace local</div></header>
+        <header class="topbar"><div class="line short" style="width:140px"></div><div class="search"></div><div class="status"><span class="pulse" aria-hidden="true"></span>__STATUS__</div></header>
         <main aria-hidden="true">
           <div class="heading"><div class="heading-lines"><div class="line"></div><div class="line short"></div></div></div>
           <div class="cards"><div class="card"></div><div class="card"></div><div class="card"></div><div class="card"></div></div>
           <div class="panels"><div class="panel"></div><div class="panel"></div></div>
-          <div class="startup-note">Verification securisee des donnees et services locaux. Aucune donnee n'est reinitialisee.</div>
+          <div class="startup-note">__NOTE__</div>
         </main>
       </div>
     </section>
   </div>
 </body>
 </html>"#
-        .to_string()
+        .replace("__LOCALE__", locale)
+        .replace("__DIRECTION__", direction)
+        .replace("__STATUS__", status)
+        .replace("__NOTE__", note)
 }
 
 fn escape_html(value: &str) -> String {
@@ -834,13 +879,57 @@ mod tests {
 
     #[test]
     fn starting_surface_matches_the_full_desktop_shell_without_business_data() {
-        let html = starting_html();
+        let html = starting_html("fr");
 
         assert!(html.contains("<title>SahelFlow</title>"));
+        assert!(html.contains("<html lang=\"fr\" dir=\"ltr\">"));
         assert!(html.contains("class=\"shell\""));
         assert!(html.contains("class=\"rail\""));
         assert!(html.contains("class=\"cards\""));
-        assert!(html.contains("Aucune donnee n'est reinitialisee"));
+        assert!(html.contains("Aucune donnée n’est réinitialisée"));
         assert!(!html.contains("Safe startup"));
+    }
+
+    #[test]
+    fn starting_surface_keeps_locale_and_direction_consistent() {
+        let arabic = starting_html("ar");
+        let english = starting_html("en");
+
+        assert!(arabic.contains("<html lang=\"ar\" dir=\"rtl\">"));
+        assert!(arabic.contains("تحضير مساحة العمل المحلية"));
+        assert!(english.contains("<html lang=\"en\" dir=\"ltr\">"));
+        assert!(english.contains("Preparing the local workspace"));
+    }
+
+    #[test]
+    fn persisted_startup_locale_is_bounded_and_allowlisted() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-startup-locale-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let ready_path = root.join(RUNTIME_UI_READY_FILE);
+
+        fs::write(
+            &ready_path,
+            format!(
+                r#"{{"formatVersion":1,"protocolVersion":1,"state":"ready","instanceId":"instance-a","appVersion":"{}","locale":"ar","pageUrl":"http://127.0.0.1:43123"}}"#,
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+        .unwrap();
+        assert_eq!(persisted_startup_locale(&root), "ar");
+
+        let unsafe_locale = fs::read_to_string(&ready_path)
+            .unwrap()
+            .replace("\"ar\"", "\"ar-unsafe\"");
+        fs::write(&ready_path, unsafe_locale).unwrap();
+        assert_eq!(persisted_startup_locale(&root), "fr");
+
+        fs::remove_dir_all(root).unwrap();
     }
 }
