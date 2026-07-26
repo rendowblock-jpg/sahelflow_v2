@@ -1,18 +1,12 @@
 name: Observe signed internal release
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/signed-release-observer.yml
   workflow_dispatch:
   workflow_run:
     workflows:
       - Dispatch signed internal version
       - Build Signed Internal Windows Update
     types:
-      - requested
       - completed
 
 permissions:

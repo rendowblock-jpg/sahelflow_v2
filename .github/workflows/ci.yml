@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # Cancel in-progress runs for the same ref/PR to save CI minutes.
 concurrency:
@@ -15,8 +14,89 @@ permissions:
   contents: read
 
 jobs:
+  classify:
+    name: Classify PR risk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.risk.outputs.docs_only }}
+      run_quality: ${{ steps.risk.outputs.run_quality }}
+      run_tauri: ${{ steps.risk.outputs.run_tauri }}
+      run_windows_standalone: ${{ steps.risk.outputs.run_windows_standalone }}
+      run_windows_rust: ${{ steps.risk.outputs.run_windows_rust }}
+      run_installed_msi: ${{ steps.risk.outputs.run_installed_msi }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Classify changed paths
+        id: risk
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only -z "${BASE_SHA}...${HEAD_SHA}" > "${RUNNER_TEMP}/sahelflow-changed-paths"
+          bun scripts/classify-pr-risk.ts < "${RUNNER_TEMP}/sahelflow-changed-paths" | tee -a "${GITHUB_OUTPUT}"
+
+      - name: Record risk lanes
+        env:
+          DOCS_ONLY: ${{ steps.risk.outputs.docs_only }}
+          RUN_QUALITY: ${{ steps.risk.outputs.run_quality }}
+          RUN_TAURI: ${{ steps.risk.outputs.run_tauri }}
+          RUN_WINDOWS_STANDALONE: ${{ steps.risk.outputs.run_windows_standalone }}
+          RUN_WINDOWS_RUST: ${{ steps.risk.outputs.run_windows_rust }}
+          RUN_INSTALLED_MSI: ${{ steps.risk.outputs.run_installed_msi }}
+        shell: bash
+        run: |
+          {
+            echo '## PR risk classification'
+            echo
+            echo "- Docs only: ${DOCS_ONLY}"
+            echo "- Full source quality: ${RUN_QUALITY}"
+            echo "- Tauri release smoke: ${RUN_TAURI}"
+            echo "- Windows standalone runtime: ${RUN_WINDOWS_STANDALONE}"
+            echo "- Windows Rust parity: ${RUN_WINDOWS_RUST}"
+            echo "- Installed MSI lifecycle: ${RUN_INSTALLED_MSI}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  authority:
+    name: Fast authority (version + documentation)
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Product, app, and runtime protocol authority
+        run: bun run sf-version
+
+      - name: Documentation authority and relative-link audit
+        run: bun run sf-audit
+
   ci:
     name: Quality Gate (authority + sf-verify + coverage + audit)
+    needs: classify
+    if: ${{ github.event.pull_request.draft == false && needs.classify.outputs.run_quality == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -30,6 +110,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -109,6 +192,8 @@ jobs:
   # the real suspended/Job-Object launcher, and authenticated readiness.
   windows-standalone-build:
     name: Windows database + standalone + contained launcher
+    needs: classify
+    if: ${{ github.event.pull_request.draft == false && needs.classify.outputs.run_windows_standalone == 'true' }}
     runs-on: windows-latest
     timeout-minutes: 60
     env:
@@ -118,6 +203,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -225,11 +313,16 @@ jobs:
   # guarded by cfg(not(debug_assertions)), so a debug cargo check is insufficient.
   tauri-build-smoke:
     name: Tauri Rust smoke (cargo check --release)
+    needs: classify
+    if: ${{ github.event.pull_request.draft == false && needs.classify.outputs.run_tauri == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -277,6 +370,85 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 2
+
+  windows-rust-release-parity:
+    needs: classify
+    if: ${{ github.event.pull_request.draft == false && needs.classify.outputs.run_windows_rust == 'true' }}
+    uses: ./.github/workflows/windows-rust-release-parity.yml
+
+  installed-msi:
+    needs: classify
+    if: ${{ github.event.pull_request.draft == false && needs.classify.outputs.run_installed_msi == 'true' }}
+    uses: ./.github/workflows/windows-installed-e2e.yml
+
+  required-pr-gate:
+    name: Required PR gate
+    if: always()
+    needs:
+      - classify
+      - authority
+      - ci
+      - windows-standalone-build
+      - tauri-build-smoke
+      - windows-rust-release-parity
+      - installed-msi
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every selected risk lane
+        env:
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          AUTHORITY_RESULT: ${{ needs.authority.result }}
+          RUN_QUALITY: ${{ needs.classify.outputs.run_quality }}
+          QUALITY_RESULT: ${{ needs.ci.result }}
+          RUN_WINDOWS_STANDALONE: ${{ needs.classify.outputs.run_windows_standalone }}
+          WINDOWS_STANDALONE_RESULT: ${{ needs.windows-standalone-build.result }}
+          RUN_TAURI: ${{ needs.classify.outputs.run_tauri }}
+          TAURI_RESULT: ${{ needs.tauri-build-smoke.result }}
+          RUN_WINDOWS_RUST: ${{ needs.classify.outputs.run_windows_rust }}
+          WINDOWS_RUST_RESULT: ${{ needs.windows-rust-release-parity.result }}
+          RUN_INSTALLED_MSI: ${{ needs.classify.outputs.run_installed_msi }}
+          INSTALLED_MSI_RESULT: ${{ needs.installed-msi.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          require_success() {
+            local label="$1"
+            local result="$2"
+            if [[ "${result}" != 'success' ]]; then
+              echo "${label} did not succeed: ${result}" >&2
+              exit 1
+            fi
+          }
+
+          require_selected_lane() {
+            local label="$1"
+            local selected="$2"
+            local result="$3"
+            if [[ "${selected}" == 'true' ]]; then
+              require_success "${label}" "${result}"
+            elif [[ "${result}" != 'skipped' ]]; then
+              echo "${label} was not selected but returned ${result}" >&2
+              exit 1
+            fi
+          }
+
+          require_success 'PR risk classification' "${CLASSIFY_RESULT}"
+          require_success 'Fast authority' "${AUTHORITY_RESULT}"
+
+          if [[ "${IS_DRAFT}" == 'true' ]]; then
+            echo 'Draft PR: fast authority passed; heavy lanes remain intentionally deferred.'
+            exit 0
+          fi
+
+          require_selected_lane 'Full source quality' "${RUN_QUALITY}" "${QUALITY_RESULT}"
+          require_selected_lane 'Windows standalone runtime' "${RUN_WINDOWS_STANDALONE}" "${WINDOWS_STANDALONE_RESULT}"
+          require_selected_lane 'Tauri release smoke' "${RUN_TAURI}" "${TAURI_RESULT}"
+          require_selected_lane 'Windows Rust parity' "${RUN_WINDOWS_RUST}" "${WINDOWS_RUST_RESULT}"
+          require_selected_lane 'Installed MSI lifecycle' "${RUN_INSTALLED_MSI}" "${INSTALLED_MSI_RESULT}"
+          echo 'Every selected PR risk lane succeeded.'
 
   # T-M9 (TODO): E2E (Playwright) is NOT wired into per-push CI on purpose —
   # a full `bun run test:e2e` boots Next.js + a SQLite DB + the WhatsApp

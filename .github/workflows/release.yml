@@ -104,7 +104,7 @@ jobs:
           "SF_SOURCE_COMMIT=$commit" >> $env:GITHUB_ENV
           "SF_SOURCE_TREE=$tree" >> $env:GITHUB_ENV
 
-      - name: Attest reviewed identical PR tree and required checks
+      - name: Attest reviewed identical PR tree and risk-aware required gate
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -150,13 +150,7 @@ jobs:
             "repos/$repository/commits/$($pull.head.sha)/check-runs?per_page=100" |
             ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw 'failed to resolve reviewed PR checks' }
-          $requiredChecks = @(
-            'Quality Gate (authority + sf-verify + coverage + audit)',
-            'Windows database + standalone + contained launcher',
-            'Tauri Rust smoke (cargo check --release)',
-            'Windows Rust release parity',
-            'Build, install, launch, close, and reopen MSI'
-          )
+          $requiredChecks = @('Required PR gate')
           foreach ($name in $requiredChecks) {
             $latest = @(
               $checks.check_runs |
@@ -400,7 +394,7 @@ jobs:
           - Tag: $env:SF_RELEASE_TAG
           - Source: ${{ inputs.source_ref }}
           - Reviewed PR/head: #$env:SF_REVIEWED_PR / $env:SF_REVIEWED_HEAD
-          - Protected-main and reviewed PR Git trees matched; all required PR checks were successful.
+          - Protected-main and reviewed PR Git trees matched; the risk-aware required PR gate was successful.
           - Draft release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
           - Updater signature and latest.json matched.
           - The exact signed MSI passed installed runtime launch, authenticated hydrated visible UI, normal close, teardown, and reopen twice.

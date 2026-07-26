@@ -1,34 +1,8 @@
 name: Windows Rust release parity
 
 on:
-  pull_request:
-    paths:
-      - "src-tauri/**"
-      - "sidecars/whatsapp/**"
-      - "prisma/**"
-      - "scripts/build-sidecar.ts"
-      - "scripts/prepare-runtime.ts"
-      - "scripts/prepare-libsodium-windows.ps1"
-      - "package.json"
-      - "bun.lock"
-      - ".github/release-requests/*.json"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/windows-rust-release-parity.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "src-tauri/**"
-      - "sidecars/whatsapp/**"
-      - "prisma/**"
-      - "scripts/build-sidecar.ts"
-      - "scripts/prepare-runtime.ts"
-      - "scripts/prepare-libsodium-windows.ps1"
-      - "package.json"
-      - "bun.lock"
-      - ".github/release-requests/*.json"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/windows-rust-release-parity.yml"
+  workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -44,6 +18,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

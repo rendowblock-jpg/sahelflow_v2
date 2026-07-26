@@ -1,29 +1,7 @@
 name: Windows installed MSI end-to-end
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/windows-installed-e2e.yml"
-      - "sahelflow.version.json"
-      - "scripts/install-founder-windows.ps1"
-      - "scripts/verify-installed-windows-msi.ps1"
-      - "scripts/verify-installed-standalone.ts"
-      - "scripts/standalone-manifest.ts"
-      - "scripts/verify-installed-windows-ui.ps1"
-      - "scripts/prepare-runtime.ts"
-      - "scripts/prepare-libsodium-windows.ps1"
-      - "src-tauri/**"
-      - "src/app/api/internal/runtime-ready/**"
-      - "src/app/api/internal/runtime-bootstrap/**"
-      - "src/app/api/internal/runtime-ui-ready/**"
-      - "src/components/runtime/**"
-      - "src/app/layout.tsx"
-      - "src/lib/runtime-auth.ts"
-      - "src/proxy.ts"
-      - "src/lib/db.ts"
-      - "prisma/**"
-      - "package.json"
-      - "bun.lock"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
