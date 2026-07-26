@@ -194,7 +194,20 @@ struct PreparedRuntime {
 const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
-const MAX_RUNTIME_STDERR_CHARACTERS: usize = 4_096;
+const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
+    ("SF_NODE_ENTRYPOINT_MISSING", "node-entrypoint-missing"),
+    ("SF_NODE_ENTRYPOINT_INVALID", "node-entrypoint-invalid"),
+    (
+        "PRISMACLIENTINITIALIZATIONERROR",
+        "prisma-initialization-failed",
+    ),
+    ("ERR_DLOPEN_FAILED", "native-module-load-failed"),
+    ("MODULE_NOT_FOUND", "module-not-found"),
+    ("EACCES", "access-denied"),
+    ("EPERM", "operation-not-permitted"),
+    ("ENOENT", "file-not-found"),
+    ("EISDIR", "path-is-directory"),
+];
 const NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT";
 const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
 
@@ -694,9 +707,9 @@ fn spawn_runtime_generation(
             let captured = server_child
                 .stderr_snapshot(Duration::from_secs(1))
                 .ok()
-                .and_then(|raw| redact_runtime_stderr(&raw, &env));
+                .and_then(|raw| summarize_runtime_stderr(&raw));
             let captured = captured
-                .map(|detail| format!("; redacted stderr: {detail}"))
+                .map(|detail| format!("; stderr summary: {detail}"))
                 .unwrap_or_default();
             return Err(IoError::other(format!(
                 "the mandatory local server exited before authenticated readiness (exit code {code}){captured}"
@@ -1404,29 +1417,28 @@ fn process_environment(values: &[(String, String)]) -> Vec<(OsString, OsString)>
     environment
 }
 
-fn redact_runtime_stderr(raw: &str, environment: &[(String, String)]) -> Option<String> {
-    let mut safe = raw.replace('\0', "");
-    for (key, value) in environment {
-        let upper = key.to_ascii_uppercase();
-        if (upper.contains("TOKEN") || upper.contains("SECRET")) && !value.is_empty() {
-            safe = safe.replace(value, "[redacted]");
-        }
-    }
-    let compact = safe
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .collect::<Vec<_>>()
-        .join(" | ");
-    if compact.is_empty() {
+fn summarize_runtime_stderr(raw: &str) -> Option<String> {
+    if !raw
+        .chars()
+        .any(|character| character != '\0' && !character.is_whitespace())
+    {
         return None;
     }
-    Some(
-        compact
-            .chars()
-            .take(MAX_RUNTIME_STDERR_CHARACTERS)
-            .collect(),
-    )
+
+    let uppercase = raw.to_ascii_uppercase();
+    let categories = RUNTIME_STDERR_CLASSIFICATIONS
+        .iter()
+        .filter_map(|(signature, category)| uppercase.contains(signature).then_some(*category))
+        .collect::<Vec<_>>();
+
+    if categories.is_empty() {
+        Some("runtime process emitted stderr before readiness; raw output suppressed".to_string())
+    } else {
+        Some(format!(
+            "runtime process emitted stderr before readiness (categories: {}); raw output suppressed",
+            categories.join(", ")
+        ))
+    }
 }
 
 fn stop_process_tree(
@@ -1487,7 +1499,7 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
 mod child_environment_tests {
     use super::{
         is_windows_safe_parent_environment_key, node_entrypoint_environment_value,
-        redact_runtime_stderr,
+        summarize_runtime_stderr,
     };
     use std::ffi::OsStr;
     use std::path::Path;
@@ -1536,24 +1548,41 @@ mod child_environment_tests {
     }
 
     #[test]
-    fn runtime_stderr_is_bounded_and_redacts_every_injected_secret() {
-        let token = "runtime-token-that-must-never-escape";
-        let secret = "auth-secret-that-must-never-escape";
-        let environment = vec![
-            ("SF_RUNTIME_TOKEN".to_string(), token.to_string()),
-            ("AUTH_SECRET".to_string(), secret.to_string()),
-            (
-                "DATABASE_URL".to_string(),
-                "file:C:\\seller\\shop.db".to_string(),
-            ),
-        ];
-        let raw = format!("fatal {token}\0 {secret} {}", "x".repeat(8_192));
-        let captured = redact_runtime_stderr(&raw, &environment).expect("capture stderr");
+    fn runtime_stderr_summary_exposes_only_allowlisted_categories() {
+        let raw = "PrismaClientInitializationError: SELECT * FROM orders WHERE seller = \
+                   'private-seller'; MODULE_NOT_FOUND at C:\\seller\\shop.db; EISDIR; \
+                   runtime-token-that-must-never-escape";
+        let summary = summarize_runtime_stderr(raw).expect("summarize stderr");
 
-        assert!(!captured.contains(token));
-        assert!(!captured.contains(secret));
-        assert!(!captured.contains('\0'));
-        assert!(captured.contains("[redacted]"));
-        assert!(captured.chars().count() <= super::MAX_RUNTIME_STDERR_CHARACTERS);
+        assert!(summary.contains("prisma-initialization-failed"));
+        assert!(summary.contains("module-not-found"));
+        assert!(summary.contains("path-is-directory"));
+        assert!(summary.contains("raw output suppressed"));
+        for private_value in [
+            "SELECT",
+            "orders",
+            "private-seller",
+            "C:\\seller\\shop.db",
+            "runtime-token-that-must-never-escape",
+        ] {
+            assert!(!summary.contains(private_value));
+        }
+    }
+
+    #[test]
+    fn unclassified_runtime_stderr_is_suppressed_without_echoing_child_text() {
+        let private_message = "seller Amira owes 12000 DZD";
+        let summary = summarize_runtime_stderr(private_message).expect("summarize stderr");
+
+        assert_eq!(
+            summary,
+            "runtime process emitted stderr before readiness; raw output suppressed"
+        );
+        assert!(!summary.contains(private_message));
+    }
+
+    #[test]
+    fn empty_runtime_stderr_has_no_summary() {
+        assert_eq!(summarize_runtime_stderr(" \r\n\t\0 "), None);
     }
 }

@@ -741,8 +741,9 @@ conventional forward-slash absolute drive path; network, device and
 drive-relative representations fail closed. The bootstrap validates that
 post-transport representation and neither copies nor loads code from AppData.
 The containment layer continuously drains stderr into a fixed-size in-memory
-buffer; an early-exit diagnostic is length-bounded and has every explicitly
-injected token or secret redacted before persistence or display.
+buffer. Early-exit diagnostics expose only static allowlisted runtime categories
+or a generic suppressed-output signal; arbitrary child text never reaches logs,
+persistence, display or release evidence.
 
 The installed client exposes explicit states: `Checking`, `Current`,
 `Available`, `Deferred`, `Downloading`, `Verifying`, `Ready to install`,

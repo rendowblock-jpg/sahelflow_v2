@@ -125,7 +125,8 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain("runtimeIdentityProblems");
     expect(desktop).toContain('app_local_data_dir()?.join("runtime-work")');
     expect(desktop).toContain("spawn_in_capturing_stderr");
-    expect(desktop).toContain("redact_runtime_stderr");
+    expect(desktop).toContain("summarize_runtime_stderr");
+    expect(desktop).toContain("raw output suppressed");
     expect(desktop).toContain('NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT"');
     expect(desktop).toContain("node_entrypoint_environment_value");
     expect(desktop).toContain('raw.strip_prefix(r"\\\\?\\")');

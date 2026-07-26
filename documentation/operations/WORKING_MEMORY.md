@@ -82,8 +82,8 @@ This is one coherent installed-platform correction. It:
   supplies it through the launcher's explicit sanitized environment to a fixed
   bootstrap embedded in the signed desktop executable;
 - continuously drains server stderr into a fixed-size in-memory buffer,
-  redacts every injected token/secret, and retains only a bounded startup
-  failure detail;
+  classifies only allowlisted runtime failure signatures, and suppresses all
+  raw child output before diagnostics, persistence, display or evidence;
 - exercises staged Node, Prisma engine and standalone paths containing spaces
   from the same writable-working-directory model;
 - caps clean-runner day-to-day authenticated UI readiness at 45 seconds;
