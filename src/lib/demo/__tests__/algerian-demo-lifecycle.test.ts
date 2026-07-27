@@ -14,16 +14,50 @@ import {
 let prisma: PrismaClient;
 const client = () => prisma as unknown as DbClient;
 
+/**
+ * The shared helper predates several independent configuration/inbox/AI tables.
+ * Clear the complete lifecycle boundary so this suite never inherits rows from
+ * another Vitest file using the same disposable database.
+ */
+async function resetLifecycleTables(): Promise<void> {
+  await prisma.$transaction([
+    prisma.extractionMetric.deleteMany(),
+    prisma.auditLog.deleteMany(),
+    prisma.aiChatMessage.deleteMany(),
+    prisma.aiChatSession.deleteMany(),
+    prisma.automationLog.deleteMany(),
+    prisma.automation.deleteMany(),
+    prisma.returnNote.deleteMany(),
+    prisma.refund.deleteMany(),
+    prisma.return.deleteMany(),
+    prisma.delivery.deleteMany(),
+    prisma.orderChange.deleteMany(),
+    prisma.orderItem.deleteMany(),
+    prisma.order.deleteMany(),
+    prisma.message.deleteMany(),
+    prisma.conversation.deleteMany(),
+    prisma.productVariant.deleteMany(),
+    prisma.product.deleteMany(),
+    prisma.category.deleteMany(),
+    prisma.customer.deleteMany(),
+    prisma.expense.deleteMany(),
+    prisma.storefrontConfig.deleteMany(),
+    prisma.cannedResponse.deleteMany(),
+    prisma.whatsAppTemplate.deleteMany(),
+    prisma.integration.deleteMany(),
+    prisma.secret.deleteMany(),
+    prisma.setting.deleteMany(),
+    prisma.counter.deleteMany(),
+  ]);
+}
+
 beforeEach(async () => {
   prisma = await createTestPrisma();
+  await resetLifecycleTables();
 });
 
 afterEach(async () => {
-  await prisma.storefrontConfig.deleteMany().catch(() => undefined);
-  await prisma.extractionMetric.deleteMany().catch(() => undefined);
-  await prisma.auditLog.deleteMany().catch(() => undefined);
-  await removeAlgerianDemoWorkspace(client()).catch(() => undefined);
-  await prisma.customer.deleteMany().catch(() => undefined);
+  await resetLifecycleTables().catch(() => undefined);
   await disconnectTestPrisma(prisma);
 });
 
