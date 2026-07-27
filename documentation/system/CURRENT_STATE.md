@@ -1,15 +1,14 @@
 # SahelFlow — Current State
 
 > **Authority:** merged protected `main` only
-> **Protected-main baseline:** `d516e5fe3459f9e5efba15b6019f1e063a81c10c`
-> **Source version:** `1.0.0-internal.9` / MSI `1.0.0.9`
-> **Latest signed candidate:** `1.0.0-internal.9`, run `30190505041`
+> **Protected-main executable baseline:** `ab3c1fb46bbe028745321d7469ae0924e9f236bd`
+> **Source version:** `1.0.0-internal.10` / MSI `1.0.0.10`
+> **Latest signed candidate:** `1.0.0-internal.10`, run `30201584875`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
-> **Current installed status:** Internal.8 remains installed and unaccepted;
-> Internal.9 is signed-release-complete, but Internal.8 did not display its
-> updater prompt because the loopback workspace lacked Tauri IPC authorization
+> **Current installed status:** Internal.10 is installed with AppData preserved
+> but unaccepted because the observed Founder launch took multiple minutes
 > **Observed machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-26
+> **Last assessed:** 2026-07-27
 
 This document describes what integrated source and named evidence prove now. It
 does not convert target architecture, adapter presence, test count, mock output
@@ -19,9 +18,9 @@ or planned scope into a readiness claim. Unmerged work belongs in
 ## Executive truth
 
 SahelFlow is a broad internal Windows application with a proven Internal.5
-accepted baseline, an installed-but-unaccepted Internal.8 runtime and a signed
-but not Founder-installed Internal.9. It is not an empty prototype, but it is
-not yet a commercially complete or AAA SahelFlow 1.0 product.
+accepted baseline and a signed, installed-but-unaccepted Internal.10. It is not
+an empty prototype, but it is not yet a commercially complete or AAA SahelFlow
+1.0 product.
 
 PR #158 app source `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`
 replaced the failing packaged Bun server with pinned Node.js 22.23.1, retained
@@ -45,6 +44,17 @@ contract in FD-025: no separate splash or startup window, the authenticated
 dashboard is the first visible successful state, and the same main window owns
 actionable recovery on failure.
 
+PR #161 merged the correction at
+`ab3c1fb46bbe028745321d7469ae0924e9f236bd`. Exact-head run `30200603507`
+passed every selected source, Rust, Windows runtime and installed-MSI lane;
+signed run `30201584875` built and published immutable Internal.10 and passed
+clean installed launch/close/reopen gates. The Founder installation upgraded in
+place to `1.0.0.10`, and the retained registry and shop-database identities
+matched exactly before and after installation. The real dashboard eventually
+opened, but only after multiple minutes. Internal.10 is therefore not accepted;
+installed dashboard-first visibility, bottom containment, target cold/warm
+launch, close/reopen and the next-version in-app updater path remain unproven.
+
 The main remaining discontinuity is product coherence and authority:
 
 - operational pages exist without one fully proven cross-module COD journey;
@@ -63,9 +73,10 @@ The main remaining discontinuity is product coherence and authority:
 
 The correct characterization is:
 
-> **Accepted Internal.5 baseline, installed-but-unaccepted Internal.8 and signed
-> Internal.9; current updater-bootstrap/Founder-acceptance gate; broad partial
-> desktop product; commercial and connected platform still largely ahead.**
+> **Accepted Internal.5 baseline; Internal.10 source, signed release and
+> preserved installation complete but Founder acceptance blocked by multi-minute
+> launch; broad partial desktop product; commercial and connected platform still
+> largely ahead.**
 
 ## Evidence ledger
 
@@ -99,15 +110,19 @@ The correct characterization is:
 | Startup/layout correction | PR #160, merge `d516e5fe3459f9e5efba15b6019f1e063a81c10c` | Full-size startup shell, viewport containment, listening trace and repeat-launch compile cache integrated |
 | Signed Internal.9 build | Actions run `30190505041` | Exact source built, signed, installed twice in clean release gates and published with updater signature and `latest.json` |
 | Founder Internal.8 updater attempt | Installed Internal.8 on 2026-07-26 | Internal.9 feed returned HTTP 200 but no prompt appeared; loopback Tauri capability/CSP authorization was absent and the updater check failure was silent |
+| Internal.10 updater/direct-launch correction | PR #161, merge `ab3c1fb46bbe028745321d7469ae0924e9f236bd`; reviewed head `776a91410439e0195e11d48db604d855a22e2b75` | Exact-head run `30200603507` passed every selected risk-routed lane |
+| Signed Internal.10 build | Actions run `30201584875`; tag `sahelflow-v1.0.0-internal.10-ab3c1fb46bbe028745321d7469ae0924e9f236bd` | Signed MSI, signature and updater manifest published; clean installed launch/close/reopen gates passed |
+| Founder Internal.10 install | Internal.8 to Internal.10 in-place bootstrap on 2026-07-27 | MSI SHA-256 `DF9F038C3BE3FF7F814CB053CE8B20F00088FDF8FB46935E1E8BAC5C3C436A85`; display version `1.0.0.10`; registry and shop-database pre/post identities matched |
+| Founder Internal.10 launch | Installed Internal.10 on 2026-07-27, SSD | Real dashboard eventually opened and process was responsive, but launch took multiple minutes; no current-version updater prompt is expected; not accepted |
 
 The earlier accepted reopen proves that exact historical attempt only.
 Internal.6 exposed recursive verification/staging as the dominant 14-minute
 mechanism. Internal.7 removed it and isolated Bun's installed loader failure.
 Internal.8 closes runtime compatibility and lifecycle correctness. Internal.9
-integrates the startup and viewport correction and is signed-release-complete,
-but its Founder update is blocked by the updater IPC defect embedded in
-Internal.8. Internal.10 is recovery/bootstrap, not a claim that the wider
-product is complete.
+integrates the first startup/layout correction. Internal.10 closes the updater
+bootstrap and reaches the real Founder dashboard with AppData preserved, but
+its multi-minute launch fails the performance contract. This is installed
+evidence, not a claim that the wider product is complete.
 
 ## Repository shape
 
@@ -135,7 +150,7 @@ separate evidence result.
 
 | ID | Capability | Current status | Evidence / implementation | Principal gap |
 |---|---|---|---|---|
-| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.8 installed and reopened; Internal.9 signed with clean installed gates | Bootstrap the updater IPC repair once, then prove repeated real in-app A→B updates and a broader hardware matrix |
+| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.10 signed and installed in place with AppData preserved | Prove the next real in-app A→B update, target launch timing, full Founder lifecycle and a broader hardware matrix |
 | CAP-002 | Local database/migrations | **Partial** | Prisma/SQLite, eight migrations, runtime preservation | All-shop journaled migrations, preflight, rollback/recovery proof |
 | CAP-003 | Shop management | **Partial/unsafe** | Per-shop files, shop store/routes, creation UI | Trusted workspace/shop context, live safe switch, no process-global fallback |
 | CAP-004 | Local PIN/session | **Implemented for local baseline** | `AuthSecret`, `Session`, runtime auth | Not seller identity, team authority, device or recovery model |
@@ -164,9 +179,9 @@ separate evidence result.
 | CAP-027 | Localization/RTL | **Partial/unverified** | i18n hooks, locale-aware UI and RTL foundations | Complete copy/state parity and systematic AR/FR/EN/RTL evidence |
 | CAP-028 | Accessibility/keyboard | **Partial/unverified** | Radix primitives, shortcuts, focus-related components | Whole-journey WCAG, zoom, screen-reader and keyboard evidence |
 | CAP-029 | AAA design system/page depth | **Partial** | Strong shared UI primitives and broad pages | One coherent system and complete loading/empty/error/degraded/recovery states |
-| CAP-030 | Low-end performance | **Integrated; Founder proof pending** | Internal.9 adds the full-size shell, Node listening trace and repeat-launch compile cache; clean installed gates pass | Install the corrected candidate, measure Founder cold/warm launch, representative datasets and eight-hour stability |
+| CAP-030 | Low-end performance | **Unmet on Founder launch** | Internal.10 retains listening trace and repeat-launch compile cache, but the observed Founder launch took multiple minutes | Isolate the dominant cold/warm startup stage, meet the ≤8 s p95 launch contract, then prove representative datasets and eight-hour stability |
 | CAP-031 | Security/privacy/legal | **Partial/unverified** | Crypto, PIN, secrets, loopback auth and redaction pieces | Full threat models, key recovery, tenant boundaries, Law 18-07 and review |
-| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.9 release-complete** | Exact-source signing, runtime/UI gates, installed lifecycle and distinct release/Founder acceptance records | Bootstrap Internal.10 in place, prove the next real in-app update and retain the discipline for every app-changing package |
+| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.10 release/install complete** | Exact-source signing, runtime/UI gates, preserved Founder installation and distinct release/acceptance records | Close Internal.10 performance/lifecycle acceptance and prove the next real in-app update |
 
 ## Provider status
 
@@ -251,20 +266,20 @@ connected planes without replacing the canonical desktop.
 
 ## Immediate next boundary
 
-Internal.7 fixed recursive runtime preparation but did not close the acceptance
-loop because Bun's Windows module loader exited on the protected Next.js
-entrypoint and the desktop waited full readiness deadlines after process exit.
-The immediate implementation boundary is:
+Internal.10 is installed and reaches the authenticated dashboard, so the
+updater bootstrap is no longer the immediate blocker. Its multi-minute Founder
+launch violates the ≤8 s p95 target and blocks acceptance. The immediate
+implementation boundary is:
 
-> Launch the release-verified standalone server on pinned Node.js from the
-> MSI-protected installation, fail immediately on child exit, and open the real
-> workspace promptly on the Founder T470 without deleting AppData, weakening
-> fail-closed runtime/shop authority or loading a fallback workspace.
+> Use retained installed startup timings to isolate the dominant cold and warm
+> launch stage, correct the root cause across every affected layer, and make the
+> authenticated dashboard the first visible responsive surface within target
+> on the Founder T470 without reinstalling Internal.10, deleting AppData,
+> weakening fail-closed authority or loading a fallback workspace.
 
-The next coherent candidate must retain bounded redacted attempt evidence, pass
-exact-source checks and installed Windows packaging in GitHub Actions, prove no
-user-writable runtime copy or developer-PATH fallback exists, ship as one new
-signed Internal update, and pass preserved-AppData launch plus close/reopen
-acceptance on the T470. Only then may the workspace/shop and business-integrity
-boundary resume. The exact sequence and exit gates are in
+The next coherent candidate uses the fast draft lane while coding, runs selected
+heavy evidence once at its reviewable head, ships as one new signed Internal
+through the recovered in-app updater and proves AppData preservation, bottom
+containment, normal close and reopen. Only then may the workspace/shop and
+business-integrity boundary resume. The exact sequence and exit gates are in
 [`ROADMAP.md`](ROADMAP.md).

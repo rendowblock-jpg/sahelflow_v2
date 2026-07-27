@@ -122,17 +122,19 @@ them locally; GitHub Actions runs the required commands from the pushed commit.
 
 - Documentation-reset merge checkpoint: PR #154 at
   `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
-- Protected-main Internal.9 checkpoint and exact signed app source:
-  `d516e5fe3459f9e5efba15b6019f1e063a81c10c`.
+- Protected-main Internal.10 checkpoint and exact signed app source: PR #161 at
+  `ab3c1fb46bbe028745321d7469ae0924e9f236bd`.
 - Founder-accepted installed release: `1.0.0-internal.5`.
-- Internal.8 remains installed and unaccepted. Internal.9 is
-  signed-release-complete and passed clean installed MSI/UI gates, but the
-  installed Internal.8 loopback workspace did not show its updater prompt.
+- Internal.10 is signed-release-complete and installed in place as
+  `1.0.0.10`; the exact pre/post AppData identities matched.
+- Internal.10 is not Founder-accepted: the real dashboard eventually opened
+  on the Founder T470, but launch took multiple minutes. Direct-dashboard first
+  visibility, bottom containment, normal close/reopen and the next in-app
+  update still require Founder observation.
 - Phase 0 documentation truth reset is complete; Phase 1 workspace/shop and
   business-integrity work is active.
-- Internal.10 is the focused updater bootstrap correction: authorize the
-  authenticated loopback workspace for Tauri updater/process IPC, preserve CSP,
-  surface capability failures, and make the authenticated dashboard the first
-  visible normal-launch window through one desktop window. Install the exact
-  signed MSI once in place without deleting AppData. Subsequent Internal
-  delivery returns to the normal in-app updater path before Phase 1A proceeds.
+- The immediate execution gate is an evidence-led Internal.10 launch-latency
+  diagnosis and one coherent correction. Do not reinstall Internal.10, delete
+  AppData or repeat full release workflows while diagnosing. The next app
+  version must install through the recovered in-app updater and pass the full
+  Founder lifecycle before Phase 1A proceeds.

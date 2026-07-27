@@ -1,7 +1,7 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
 > **Status:** Authoritative founder-approved register
-> **Consolidated:** 2026-07-24
+> **Consolidated:** 2026-07-27
 > **Supersedes:** scattered Excellence Reset addenda and conflicting provisional product policies
 
 This register consolidates the approved product decisions. Detailed engineering mechanisms remain subject to the Architecture Reset, security review, provider certification, and evidence gates, but engineering may not contradict these product policies without a new founder decision.
@@ -303,6 +303,28 @@ desktop-authority, encryption, outage-survival or continuity requirements.
 - This supersedes Internal.9's visible full-size startup-shell implementation;
   it does not weaken fail-closed startup, migration, runtime integrity or
   recovery requirements.
+
+## FD-026 — One-month AAA completion program and fast agentic delivery
+
+- The maximum target for a complete SahelFlow 1.0 AAA Stable candidate is
+  **2026-08-27**.
+- Work proceeds as dependency-correct vertical outcomes across product rules,
+  data/domain authority, application code, UI states, localization,
+  accessibility, security, migration/recovery, diagnostics, tests,
+  documentation and installed evidence. It does not freeze completed layers or
+  degrade into line-by-line task ceremony.
+- Day-to-day feedback is path- and risk-aware: draft synchronization stays on
+  the fast authority lane; selected heavy checks run once when a coherent head
+  becomes reviewable; signed MSI production runs only for merged app-changing
+  work or release-authority changes.
+- Each app-changing package still receives one immutable Internal version and
+  must pass exact-source, signed-release and Founder-installed acceptance. The
+  deadline does not authorize skipped safety, data preservation, AAA depth or
+  false readiness claims.
+- If measured throughput or evidence makes the date materially at risk, agents
+  surface the precise critical-path or scope decision immediately. They do not
+  silently defer a Required capability, repeat known work or hide delay behind
+  process.
 
 ---
 

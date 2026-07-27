@@ -4,7 +4,7 @@
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** GitHub protected `main`, branches, PRs, Actions, releases
 > and evidence
-> **Last consolidated:** 2026-07-26
+> **Last consolidated:** 2026-07-27
 
 This workflow optimizes for the fastest path to flawless product completion:
 clear ownership, dependency-correct work, independent review, exact evidence
@@ -81,6 +81,40 @@ GitHub is infrastructure and durable authority, not a third coding agent.
 10. Founder questions are reserved for consequential product, money,
     ownership, privacy and user-experience choices. Agents decide ordinary
     technical mechanics professionally.
+
+## Fast agentic delivery loop
+
+The default loop optimizes elapsed time without separating quality from the
+seller outcome:
+
+1. Select one dependency-correct vertical outcome and include every affected
+   layer required to make it complete; avoid isolated line-by-line chores and
+   unrelated cleanup.
+2. Branch from current protected `main`, keep the PR draft during implementation
+   and push meaningful coherent batches instead of triggering automation for
+   each small edit.
+3. Draft synchronization runs only risk classification and fast authority.
+   Read and fix that feedback while coding; do not manually dispatch Windows or
+   MSI workflows during ordinary draft iteration.
+4. Complete self-review, tests, documentation and migration/recovery reasoning,
+   then mark one coherent head ready once. That transition starts only the
+   heavy lanes selected by its paths and risk.
+5. A failed selected lane or actionable review finding is corrected on the same
+   branch. Move back to draft for a multi-commit repair cycle; do not rerun a
+   still-running or already-passing exact head.
+6. Merge after the required aggregate gate and review pass. Documentation-only
+   packages end there and never create an MSI.
+7. An app-changing merge produces one immutable signed Internal candidate.
+   Install it once through the current in-app updater, observe the real change,
+   preservation, close and reopen, then record acceptance. Manual MSI is only a
+   bounded updater bootstrap or recovery action.
+
+Healthy-infrastructure service goals are under two minutes for draft authority
+feedback, under fifteen minutes for ordinary reviewable source feedback and
+10–20 minutes from an app-changing merge to a published Founder updater. These
+are operating targets, not permission to bypass a selected safety gate. When a
+target is missed, identify the slow stage from retained timings and repair or
+reroute that stage before repeating the whole workflow.
 
 ## Start/resume protocol
 
