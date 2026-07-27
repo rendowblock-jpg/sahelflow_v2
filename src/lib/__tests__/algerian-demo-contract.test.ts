@@ -28,6 +28,8 @@ describe("Algerian Founder demo contract", () => {
 
   it("contains a coherent Arabic/French COD story and broad operational depth", () => {
     const demo = read("src/lib/demo/algerian-demo.ts");
+    const story = read("src/lib/demo/algerian-demo-story.ts");
+    const route = read("src/app/api/demo-data/route.ts");
 
     expect(demo).toContain("Fatima Zohra Benamar");
     expect(demo).toContain("سلام، شفت mini imprimante");
@@ -41,6 +43,12 @@ describe("Algerian Founder demo contract", () => {
     expect(demo).toContain("client.conversation.create");
     expect(demo).toContain("client.orderChange.create");
     expect(demo).toContain("client.storefrontConfig.create");
+
+    expect(story).toContain('const FLAGSHIP_TOTAL = 6_350');
+    expect(story).toContain('provider: "yalidine"');
+    expect(story).toContain('codRemittanceRef: "REM-YAL-DEMO-001"');
+    expect(story).toContain('status: "delivered"');
+    expect(route).toContain("await finalizeAlgerianDemoStory();");
   });
 
   it("exposes authenticated UI controls and blocks unsafe cleanup", () => {
