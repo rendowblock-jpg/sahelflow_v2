@@ -7,17 +7,19 @@ const read = (path: string) =>
   readFileSync(resolve(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 describe("Algerian Founder demo contract", () => {
-  it("loads only into an empty shop and never seeds credentials or live provider access", () => {
+  it("never seeds credentials or live provider access", () => {
     const demo = read("src/lib/demo/algerian-demo.ts");
 
     expect(demo).toContain('ALGERIAN_DEMO_VERSION = "algerian-cod-founder-v1"');
-    expect(demo).toContain('"DEMO_SHOP_NOT_EMPTY"');
-    expect(demo).toContain("if (initial.hasBusinessData)");
     expect(demo).toContain('const DEMO_PREFIX = "demo-"');
     expect(demo).toContain("startsWith: DEMO_PREFIX");
-    expect(demo).toContain('const PROVIDERS = ["yalidine", "zrexpress", "maystro"]');
-    expect(demo).toContain('dryRun: true');
-    expect(demo).toContain('modelVersion: message.extractionMethod === "gemini" ? "gemini-3.5-flash"');
+    expect(demo).toContain(
+      'const PROVIDERS = ["yalidine", "zrexpress", "maystro"]',
+    );
+    expect(demo).toContain("dryRun: true");
+    expect(demo).toContain(
+      'modelVersion: message.extractionMethod === "gemini" ? "gemini-3.5-flash"',
+    );
 
     expect(demo).not.toContain("authSecret.create");
     expect(demo).not.toContain("secret.create");
@@ -29,37 +31,51 @@ describe("Algerian Founder demo contract", () => {
   it("contains a coherent Arabic/French COD story and broad operational depth", () => {
     const demo = read("src/lib/demo/algerian-demo.ts");
     const story = read("src/lib/demo/algerian-demo-story.ts");
-    const route = read("src/app/api/demo-data/route.ts");
+    const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
 
     expect(demo).toContain("Fatima Zohra Benamar");
     expect(demo).toContain("سلام، شفت mini imprimante");
     expect(demo).toContain("تم تأكيد الطلب DZ-DEMO-0001");
     expect(demo).toContain("codCollected");
     expect(demo).toContain("codRemitted");
-    expect(demo).toContain("codRemittanceRef");
     expect(demo).toContain("client.return.create");
     expect(demo).toContain("client.refund.create");
     expect(demo).toContain("client.expense.createMany");
     expect(demo).toContain("client.conversation.create");
-    expect(demo).toContain("client.orderChange.create");
     expect(demo).toContain("client.storefrontConfig.create");
 
     expect(story).toContain('const FLAGSHIP_TOTAL = 6_350');
     expect(story).toContain('provider: "yalidine"');
     expect(story).toContain('codRemittanceRef: "REM-YAL-DEMO-001"');
+    expect(story).toContain('remittanceRef: "REM-YAL-DEMO-001"');
     expect(story).toContain('status: "delivered"');
-    expect(route).toContain("await finalizeAlgerianDemoStory();");
+    expect(lifecycle).toContain("await finalizeAlgerianDemoStory(tx)");
   });
 
-  it("exposes authenticated UI controls and blocks unsafe cleanup", () => {
+  it("uses an authenticated atomic and recoverable lifecycle", () => {
     const route = read("src/app/api/demo-data/route.ts");
+    const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
     const panel = read("src/components/settings/demo-data-panel.tsx");
     const settings = read("src/components/settings/settings-tabs.tsx");
 
     expect(route.match(/await requireAuth\(\)/g)).toHaveLength(3);
-    expect(route).toContain('"DEMO_REMOVAL_REAL_DATA_PRESENT"');
-    expect(route).toContain("countNonDemoOperationalRecords");
-    expect(route).toContain('headers: { "Cache-Control": "no-store" }');
+    expect(route).toContain("getAlgerianDemoWorkspaceStatus");
+    expect(route).toContain("loadAlgerianDemoWorkspace");
+    expect(route).toContain("removeAlgerianDemoWorkspace");
+    expect(route).toContain('"Cache-Control": "no-store"');
+
+    expect(lifecycle.match(/client\.\$transaction/g)).toHaveLength(2);
+    expect(lifecycle).toContain("timeout: 120_000");
+    expect(lifecycle).toContain("countNonDemoSellerState");
+    expect(lifecycle).toContain("client.storefrontConfig.count");
+    expect(lifecycle).toContain("client.automation.count");
+    expect(lifecycle).toContain("client.cannedResponse.count");
+    expect(lifecycle).toContain("client.whatsAppTemplate.count");
+    expect(lifecycle).toContain("client.integration.count");
+    expect(lifecycle).toContain('"DEMO_SHOP_NOT_EMPTY"');
+    expect(lifecycle).toContain('"DEMO_REMOVAL_REAL_DATA_PRESENT"');
+    expect(lifecycle).toContain("messageId: demoIdentity");
+    expect(lifecycle).toContain("entityId: demoIdentity");
 
     expect(panel).toContain('const COPY: Record<"ar" | "fr" | "en", Copy>');
     expect(panel).toContain('fetch("/api/demo-data"');
