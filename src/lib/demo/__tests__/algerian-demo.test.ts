@@ -54,7 +54,11 @@ describe("Algerian demo data", () => {
 
     const flagship = await prisma.order.findUnique({
       where: { id: "demo-order-001" },
-      include: { items: true, delivery: true, orderChanges: true },
+      include: {
+        items: true,
+        delivery: true,
+        orderChanges: { orderBy: { createdAt: "asc" } },
+      },
     });
     expect(flagship).toMatchObject({
       orderNumber: "DZ-DEMO-0001",
@@ -78,14 +82,34 @@ describe("Algerian demo data", () => {
         total: 5_900,
       }),
     ]);
-    expect(flagship?.orderChanges.map((change) => change.actionType)).toEqual(
-      expect.arrayContaining([
-        "status_change",
-        "ship",
-        "deliver",
-        "cod_remitted",
-      ]),
+    expect(flagship?.orderChanges.map((change) => change.actionType)).toEqual([
+      "create",
+      "status_change",
+      "ship",
+      "deliver",
+      "cod_remitted",
+    ]);
+
+    const now = Date.now();
+    expect(flagship?.createdAt.getTime()).toBeLessThan(now);
+    expect(flagship?.confirmedAt?.getTime()).toBeGreaterThan(
+      flagship?.createdAt.getTime() ?? 0,
     );
+    expect(flagship?.shippedAt?.getTime()).toBeGreaterThan(
+      flagship?.confirmedAt?.getTime() ?? 0,
+    );
+    expect(flagship?.deliveredAt?.getTime()).toBeGreaterThan(
+      flagship?.shippedAt?.getTime() ?? 0,
+    );
+    expect(flagship?.codRemittedAt?.getTime()).toBeGreaterThan(
+      flagship?.deliveredAt?.getTime() ?? 0,
+    );
+    expect(flagship?.codRemittedAt?.getTime()).toBeLessThanOrEqual(now);
+    expect(
+      flagship?.orderChanges.every(
+        (change) => change.createdAt.getTime() <= now,
+      ),
+    ).toBe(true);
 
     const firstConversation = await prisma.conversation.findUnique({
       where: { id: "demo-conversation-01" },
@@ -102,6 +126,11 @@ describe("Algerian demo data", () => {
     expect(firstConversation?.messages.at(-1)?.body).toContain(
       "DZ-DEMO-0001",
     );
+    expect(
+      firstConversation?.messages.every(
+        (message) => message.timestamp.getTime() < (flagship?.createdAt.getTime() ?? 0),
+      ),
+    ).toBe(true);
 
     const automations = await prisma.automation.findMany({
       where: { id: { startsWith: "demo-" } },
