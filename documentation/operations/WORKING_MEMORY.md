@@ -53,28 +53,31 @@ Its outcome is:
   aggregates resolve, without showing a splash, fake separate window or
   unauthenticated workspace;
 - add deterministic Algerian COD sample data through authenticated Settings UI;
-- load sample data only when no independently owned seller records, current or
-  retained legacy phone-reputation intelligence, storefronts, automations,
-  integrations, secrets, reusable messaging configuration or effectful
-  daily-report settings exist;
+- load sample data only when no independently owned seller records, sequence or
+  extraction-analytics state, current or retained legacy phone-reputation
+  intelligence, storefronts, automations, integrations, secrets, reusable
+  messaging configuration or effectful daily-report settings exist;
 - create and remove the complete demo graph atomically, recover marker-less
   interrupted demo footprints, and remove generated analytics/audit records
   derived from demo entities;
 - reserve demo lifecycle markers from the general Settings service;
-- serialize demo load/remove, transactional Settings writes and daily-report
-  generation/send through one shared runtime policy lock;
+- serialize demo load/remove, transactional Settings writes, complete reset and
+  daily-report generation/send through one shared runtime policy lock;
 - block removal when later non-demo operational/configuration state or a real
   WhatsApp daily-report destination exists;
 - prevent enabling an effectful WhatsApp report while the demo remains loaded
   and make the report endpoint itself refuse demo-derived external output;
-- present a complete Arabic/French flagship story from WhatsApp inquiry through
-  review, confirmation, Yalidine delivery and COD accountability;
+- anchor the complete Fatima Zohra WhatsApp/order/delivery/remittance story six
+  days in the past with one chronological timeline and no future completion;
+- make Settings → Reset Everything delete the demo storefront, templates,
+  returns, counters, phone-risk state, markers and all other business data in
+  dependency order while preserving auth, license and integration credentials;
 - retain every Internal.10 preservation, fail-closed startup and updater
   invariant.
 
 Earlier exact heads passed source authority, TypeScript, ESLint, coverage,
 production dependency audit and Rust release checks. Independent review produced
-12 lifecycle/evidence findings; all 12 are corrected on the current draft head
+14 lifecycle/evidence findings; all 14 are corrected on the current draft head
 with focused regression tests. The final Internal.11 head must pass its own
 selected source, Windows and installed-artifact evidence. No Founder
 launch-performance claim has been made.
@@ -91,11 +94,11 @@ launch-performance claim has been made.
 - [x] Add authenticated AR/FR/EN Settings controls and guarded sample cleanup.
 - [x] Add source contracts for isolation, no credentials/provider effects,
   multilingual UI, safe cleanup, journey depth and startup behavior.
-- [x] Address all 12 independent review findings: flagship consistency,
-  atomicity/interruption recovery, complete current/legacy risk and
-  empty-shop/configuration gating, storefront-safe removal, derived-record
-  cleanup, correct COD remittance payload, pre/post-load report isolation,
-  lifecycle-marker protection and transaction/race serialization.
+- [x] Address all 14 independent review findings: flagship consistency and
+  chronology, atomicity/interruption recovery, complete schema/current/legacy
+  risk and empty-shop/configuration gating, storefront-safe removal/reset,
+  derived-record cleanup, correct COD remittance payload, pre/post-load report
+  isolation, lifecycle-marker protection and transaction/race serialization.
 - [x] Assign and synchronize Internal.11 app/MSI/Cargo lock authority.
 - [ ] Pass final exact-head source/type/lint/test and risk-selected Windows lanes.
 - [ ] Merge and publish one exact-source signed Internal.11 candidate.
@@ -149,8 +152,8 @@ launch-performance claim has been made.
 - Do not mix sample data into a seller-owned shop or configuration surface.
 - Do not load or retain demo data while real daily-report WhatsApp settings can
   send demo-derived business information externally.
-- Do not allow general Settings mutation, concurrent configuration or report
-  generation to bypass the demo lifecycle marker.
+- Do not allow general Settings mutation, concurrent configuration, complete
+  reset or report generation to bypass the demo lifecycle marker.
 - Do not create real credentials, provider effects, messages or shipments from
   the sample-data path.
 - Do not put launch credentials, private seller data, raw child output or Node
