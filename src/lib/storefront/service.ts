@@ -60,10 +60,7 @@ function parseConfig(row: {
     theme: JSON.parse(row.theme) as StorefrontTheme,
     productIds: JSON.parse(row.productIds) as string[],
     contact: row.contact ? (JSON.parse(row.contact) as StorefrontContact) : null,
-    // Evaluation storefronts are browse/configuration evidence only. Forcing
-    // them inactive at the service boundary keeps the public submit route from
-    // creating normal seller customers, orders or counters from demo products.
-    isActive: row.id.startsWith("demo-") ? false : row.isActive,
+    isActive: row.isActive,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
