@@ -6,6 +6,8 @@ import {
   loadAlgerianDemoWorkspace,
   removeAlgerianDemoWorkspace,
 } from "@/lib/demo/algerian-demo-lifecycle";
+import { assertDemoAllowsDailyReportSettings } from "@/lib/demo/algerian-demo-policy";
+import { SETTING_KEYS } from "@/lib/settings";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -46,6 +48,7 @@ async function resetLifecycleTables(): Promise<void> {
     prisma.whatsAppTemplate.deleteMany(),
     prisma.integration.deleteMany(),
     prisma.secret.deleteMany(),
+    prisma.phoneReputation.deleteMany(),
     prisma.setting.deleteMany(),
     prisma.counter.deleteMany(),
   ]);
@@ -117,6 +120,30 @@ describe("Algerian demo workspace lifecycle", () => {
     expect(await prisma.order.count()).toBe(0);
   });
 
+  it("treats seller phone-reputation intelligence as non-empty operational data", async () => {
+    await prisma.phoneReputation.create({
+      data: {
+        id: "seller-phone-risk",
+        phoneHash: "a".repeat(64),
+        last4: "1122",
+        severity: "risky",
+        reportedBy: "owner",
+      },
+    });
+
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_SHOP_NOT_EMPTY",
+      statusCode: 409,
+    });
+    expect(await prisma.order.count()).toBe(0);
+  });
+
   it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {
     await prisma.setting.createMany({
       data: [
@@ -136,6 +163,27 @@ describe("Algerian demo workspace lifecycle", () => {
       statusCode: 409,
     });
     expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("prevents configuring an effectful daily report after the demo is loaded", async () => {
+    await loadAlgerianDemoWorkspace(client());
+
+    await expect(
+      assertDemoAllowsDailyReportSettings(client(), {
+        [SETTING_KEYS.dailyReportEnabled]: true,
+        [SETTING_KEYS.dailyReportPhone]: "0550009999",
+      }),
+    ).rejects.toMatchObject({
+      code: "DEMO_REPORT_CONFIGURATION_BLOCKED",
+      statusCode: 409,
+    });
+
+    await expect(
+      assertDemoAllowsDailyReportSettings(client(), {
+        [SETTING_KEYS.dailyReportEnabled]: false,
+        [SETTING_KEYS.dailyReportPhone]: "",
+      }),
+    ).resolves.toBeUndefined();
   });
 
   it("blocks destructive cleanup for a seller storefront and removes demo-derived analytics and audit rows", async () => {
