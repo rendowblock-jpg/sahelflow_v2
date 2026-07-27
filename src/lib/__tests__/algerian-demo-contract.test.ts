@@ -28,7 +28,7 @@ describe("Algerian Founder demo contract", () => {
     expect(demo).not.toMatch(/api[_-]?key\s*:/i);
   });
 
-  it("contains a coherent Arabic/French COD story and broad operational depth", () => {
+  it("contains one coherent past-tense Arabic/French COD story", () => {
     const demo = read("src/lib/demo/algerian-demo.ts");
     const story = read("src/lib/demo/algerian-demo-story.ts");
     const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
@@ -48,6 +48,11 @@ describe("Algerian Founder demo contract", () => {
     expect(story).toContain('provider: "yalidine"');
     expect(story).toContain('codRemittanceRef: "REM-YAL-DEMO-001"');
     expect(story).toContain('remittanceRef: "REM-YAL-DEMO-001"');
+    expect(story).toContain("daysBefore(new Date(), 6)");
+    expect(story).toContain("createdAt: orderCreatedAt");
+    expect(story).toContain(
+      "await client.orderChange.deleteMany({ where: { orderId: FLAGSHIP_ORDER_ID } })",
+    );
     expect(story).toContain('status: "delivered"');
     expect(lifecycle).toContain("await finalizeAlgerianDemoStory(tx)");
   });
@@ -113,8 +118,9 @@ describe("Algerian Founder demo contract", () => {
     expect(settings).toContain("<DemoDataPanel />");
   });
 
-  it("serializes settings and report effects with demo lifecycle authority", () => {
+  it("serializes settings, reset and report effects with demo lifecycle authority", () => {
     const settingsRoute = read("src/app/api/settings/route.ts");
+    const resetRoute = read("src/app/api/settings/reset/route.ts");
     const reportRoute = read("src/app/api/reports/daily/route.ts");
 
     expect(settingsRoute).toContain("await withDemoPolicyLock(() =>");
@@ -131,6 +137,16 @@ describe("Algerian Founder demo contract", () => {
     expect(reportRoute).toContain('code: "DEMO_REPORT_SEND_BLOCKED"');
     expect(reportRoute.indexOf("isAlgerianDemoLoaded(db)")).toBeLessThan(
       reportRoute.indexOf("sidecar.send(phone, report.message)"),
+    );
+
+    expect(resetRoute).toContain("await withDemoPolicyLock(() =>");
+    expect(resetRoute).toContain("await tx.returnNote.deleteMany({})");
+    expect(resetRoute).toContain("await tx.whatsAppTemplate.deleteMany({})");
+    expect(resetRoute).toContain("await tx.storefrontConfig.deleteMany({})");
+    expect(resetRoute).toContain("await tx.phoneReputation.deleteMany({})");
+    expect(resetRoute).toContain("await tx.counter.deleteMany({})");
+    expect(resetRoute.indexOf("storefrontConfig.deleteMany")).toBeLessThan(
+      resetRoute.indexOf("product.deleteMany"),
     );
   });
 
