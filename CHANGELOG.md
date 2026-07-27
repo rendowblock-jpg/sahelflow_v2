@@ -161,6 +161,29 @@ not require a new Internal MSI.
   first-visible dashboard, bottom containment and close/reopen evidence. The
   next Internal must also prove the recovered in-app updater path.
 
+### Internal.11 Founder experience candidate
+
+- Persists packaged Node compile-cache work at semantic runtime readiness and
+  authenticated UI readiness instead of relying on normal process exit after
+  the desktop terminates the contained runtime tree.
+- Streams a stable dashboard-shaped loading surface inside the authenticated
+  shell while the full dashboard aggregates resolve.
+- Adds a deterministic Algerian COD evaluation workspace with realistic DZD
+  products, fictional customers, 34 days of orders, Yalidine/ZR Express/Maystro
+  delivery states, COD collection/remittance, returns, refunds, expenses,
+  Arabic/French WhatsApp conversations, extraction evidence, dry-run
+  automations, storefront configuration, AI brief and audit history.
+- Makes the flagship `DZ-DEMO-0001` journey inspectable from Fatima Zohra's
+  Arabic WhatsApp inquiry through review, Yalidine delivery and COD remittance.
+- Loads and removes the demo atomically, recovers interrupted marker-less demo
+  footprints, rejects any independently owned seller business/configuration
+  state and removes generated analytics/audit rows derived from demo entities.
+- Creates no real credentials, provider calls, shipments or messages and blocks
+  cleanup when later seller-owned records or configuration would be damaged.
+- Assigns candidate identity `1.0.0-internal.11` / MSI `1.0.0.11`. PR #163 must
+  still pass final exact-head source, Windows, installed-MSI and independent
+  review gates before merge, signing or Founder acceptance.
+
 ## [1.0.0-internal.5] — 2026-07-24
 
 ### Runtime and installed UI

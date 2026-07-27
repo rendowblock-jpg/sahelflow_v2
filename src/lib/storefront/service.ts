@@ -11,7 +11,6 @@
  */
 import "server-only";
 
-
 import type { ServiceContext } from "@/lib/data/service-base";
 
 export interface StorefrontTheme {

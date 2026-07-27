@@ -22,11 +22,47 @@ import { SahelFlowError } from "@/types/errors";
 import { logger } from "@/lib/logger";
 import { captureError } from "@/lib/monitoring/sentry";
 import { redactError } from "@/lib/redact-pii";
-import { shopContext } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
+import { isAlgerianDemoLoaded } from "@/lib/demo/algerian-demo-policy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
+
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/**
+ * The demo workspace is a read-only evaluator surface. These routes are the
+ * minimum control-plane exceptions required to authenticate, remove/reset the
+ * demo, clear settings, prove runtime readiness, update the application, or
+ * switch/create shops. All ordinary commerce/inbox/provider mutations fail
+ * closed while the marker is loaded.
+ */
+const DEMO_MUTATION_ALLOWLIST = [
+  /^\/api\/auth(?:\/|$)/,
+  /^\/api\/demo-data(?:\/|$)/,
+  /^\/api\/health(?:\/|$)/,
+  /^\/api\/internal(?:\/|$)/,
+  /^\/api\/license(?:\/|$)/,
+  /^\/api\/reports\/daily(?:\/|$)/,
+  /^\/api\/settings(?:\/|$)/,
+  /^\/api\/shops(?:\/|$)/,
+  /^\/api\/updates?(?:\/|$)/,
+] as const;
+
+function resolveRequestMethod(req: NextRequest | undefined, label?: string): string {
+  return (req?.method ?? label?.trim().split(/\s+/, 1)[0] ?? "GET").toUpperCase();
+}
+
+function resolveRequestPath(req: NextRequest | undefined, label?: string): string {
+  const pathname = req?.nextUrl?.pathname;
+  if (pathname) return pathname;
+  return label?.match(/(\/api\/[^\s?]+)/)?.[1] ?? "";
+}
+
+function isAllowedDemoMutation(pathname: string): boolean {
+  return DEMO_MUTATION_ALLOWLIST.some((pattern) => pattern.test(pathname));
+}
 
 export function withErrorHandler<T extends RouteHandler>(
   handler: T,
@@ -34,11 +70,27 @@ export function withErrorHandler<T extends RouteHandler>(
 ): T {
   const wrapped = async (...args: Parameters<T>): Promise<NextResponse> => {
     const req = args[0] as NextRequest | undefined;
-    const path = label ?? req?.nextUrl?.pathname ?? "unknown";
+    const logPath = label ?? req?.nextUrl?.pathname ?? "unknown";
     try {
       if (process.env.NODE_ENV === "production") {
         assertProcessShopAuthority(shopContext);
       }
+
+      const method = resolveRequestMethod(req, label);
+      const pathname = resolveRequestPath(req, label);
+      if (
+        MUTATING_METHODS.has(method) &&
+        pathname.startsWith("/api/") &&
+        !isAllowedDemoMutation(pathname) &&
+        (await isAlgerianDemoLoaded(db))
+      ) {
+        throw new SahelFlowError(
+          "This Algerian demo workspace is read-only. Remove or reset the demo before creating or changing seller data.",
+          "DEMO_MUTATION_BLOCKED",
+          409,
+        );
+      }
+
       const response = await handler(...args);
       response.headers.set("X-SahelFlow-Shop-Id", shopContext.shopId);
       response.headers.set(
@@ -62,7 +114,7 @@ export function withErrorHandler<T extends RouteHandler>(
       }
       if (err instanceof SahelFlowError) {
         if (err.statusCode >= 500) {
-          logger.error(`api.${path}`, err, { code: err.code });
+          logger.error(`api.${logPath}`, err, { code: err.code });
         }
         return NextResponse.json(
           { error: err.message, code: err.code },
@@ -70,7 +122,7 @@ export function withErrorHandler<T extends RouteHandler>(
         );
       }
       logger.error(
-        `api.${path}.unexpected`,
+        `api.${logPath}.unexpected`,
         err instanceof Error ? err : undefined,
       );
       // Wave 2: capture to Sentry (no-op if SENTRY_DSN not set).
@@ -78,7 +130,7 @@ export function withErrorHandler<T extends RouteHandler>(
       // validation messages, and stack traces can contain customer phone,
       // email, or address. The redacted copy goes to Sentry; the original
       // (full) error is what we logged above for local debugging.
-      void captureError(redactError(err), { path, method: req?.method });
+      void captureError(redactError(err), { path: logPath, method: req?.method });
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 },

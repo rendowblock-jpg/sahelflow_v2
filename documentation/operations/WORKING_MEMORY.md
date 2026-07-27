@@ -7,6 +7,8 @@
 > **Latest signed candidate:** `1.0.0-internal.10`, run `30201584875`
 > **Current Founder installation:** `1.0.0-internal.10`, not accepted
 > **Latest Founder-accepted installation:** `1.0.0-internal.5`
+> **Active branch/PR:** `agent/internal-11-founder-experience` / PR #163
+> **Unmerged candidate identity:** `1.0.0-internal.11` / MSI `1.0.0.11`
 
 ## Current outcome
 
@@ -28,8 +30,8 @@ AppData preserved:
   after installation.
 
 No update prompt is expected while Internal.10 is already the latest release.
-The next higher Internal version must prove the recovered normal in-app updater
-path; Internal.10 must not be reinstalled merely to continue development.
+Internal.11 must prove the recovered normal in-app updater path; Internal.10 must
+not be reinstalled merely to continue development.
 
 Founder acceptance remains open. The real dashboard eventually opened and the
 process was responsive, but launch took multiple minutes. The Founder has not
@@ -37,58 +39,91 @@ yet recorded direct-dashboard first visibility, bottom containment, normal
 close/reopen or acceptable cold/warm timing. Automated clean-runner UI evidence
 does not substitute for those real-machine observations.
 
-## Immediate work package
+## Active work package
 
-The next app-changing outcome is Founder launch-performance recovery and final
-desktop lifecycle acceptance:
+PR #163 is one coherent Founder-evaluation package. It is in draft while its
+final exact head is synchronized and carries unique candidate identity
+`1.0.0-internal.11` / MSI `1.0.0.11`; it is not merged, signed or accepted.
+Its outcome is:
 
-- read the retained installed startup trace and measure one cold and one warm
-  launch without reinstalling or deleting caches/data;
-- identify the dominant stage rather than repeating the whole release workflow;
-- correct the root cause across native startup, contained runtime and/or UI
-  hydration as the evidence requires;
-- preserve FD-025 single-window authenticated readiness, protected runtime
-  authority, existing AppData and actionable same-window recovery;
-- prove the authenticated dashboard is first visible, the full shell remains
-  reachable at the bottom, cold/warm launch meets the ≤8 s p95 contract, and
-  normal close/reopen succeeds;
-- ship that one coherent package as the next immutable Internal through the
-  in-app updater over Internal.10.
+- persist Node's packaged compile cache at semantic runtime readiness and real
+  UI readiness, because the contained process tree is force-stopped on desktop
+  close rather than reaching a normal Node exit;
+- stream a stable authenticated dashboard skeleton while the full dashboard
+  aggregates resolve, without showing a splash, fake separate window or
+  unauthenticated workspace;
+- add deterministic Algerian COD sample data through authenticated Settings UI;
+- load sample data only when no independently owned seller records, sequence or
+  extraction-analytics state, current or retained legacy phone-reputation
+  intelligence, storefronts, automations, integrations, secrets, reusable
+  messaging configuration or effectful daily-report settings exist;
+- create and remove the complete demo graph atomically, recover marker-less
+  interrupted demo footprints, and remove generated analytics/audit records
+  derived from demo entities;
+- reserve demo lifecycle markers from the general Settings service;
+- serialize demo load/remove, transactional Settings writes, complete reset and
+  daily-report generation/send through one shared runtime policy lock;
+- block removal when later non-demo operational/configuration state or a real
+  WhatsApp daily-report destination exists;
+- prevent enabling an effectful WhatsApp report while the demo remains loaded
+  and make the report endpoint itself refuse demo-derived external output;
+- anchor the complete Fatima Zohra WhatsApp/order/delivery/remittance story six
+  days in the past with one chronological timeline and no future completion;
+- make Settings → Reset Everything delete the demo storefront, templates,
+  returns, counters, phone-risk state, markers and all other business data in
+  dependency order while preserving auth, license and integration credentials;
+- retain every Internal.10 preservation, fail-closed startup and updater
+  invariant.
 
-No application implementation is part of the current documentation-only PR.
-After its merge, begin from current protected `main`; do not resume the merged
-Internal.10 branch.
+Earlier exact heads passed source authority, TypeScript, ESLint, coverage,
+production dependency audit and Rust release checks. Independent review produced
+14 lifecycle/evidence findings; all 14 are corrected on the current draft head
+with focused regression tests. The final Internal.11 head must pass its own
+selected source, Windows and installed-artifact evidence. No Founder
+launch-performance claim has been made.
 
-## Completed this session
+## Work in progress
 
-- [x] Merge exact Internal.10 source through protected PR #161.
-- [x] Pass exact-head risk-routed source and Windows gates.
-- [x] Build, sign and publish immutable Internal.10 from protected main.
-- [x] Install the exact signed MSI once in place over Internal.8.
-- [x] Verify installed version and exact AppData identity preservation.
-- [x] Observe that the real dashboard opens and the process responds.
-- [x] Confirm no current-version update prompt is expected.
-- [x] Integrate path/risk-aware PR automation: fast draft authority, selected
-  ready-for-review lanes and no independent repeated Windows/MSI triggers.
-- [ ] Meet and prove the Founder launch-performance and complete lifecycle gate.
-- [ ] Prove the next higher Internal installs through the in-app updater.
+- [x] Branch from current protected `main` without touching the Founder checkout.
+- [x] Open draft PR #163 and pass exact-head risk classification/fast authority.
+- [x] Centralize compile-cache persistence and flush at runtime/UI readiness.
+- [x] Add the streamed authenticated dashboard loading surface.
+- [x] Add deterministic Algerian products, customers, orders, courier/COD,
+  return/refund, expense, inbox, storefront, dry-run automation, AI and audit
+  records.
+- [x] Add authenticated AR/FR/EN Settings controls and guarded sample cleanup.
+- [x] Add source contracts for isolation, no credentials/provider effects,
+  multilingual UI, safe cleanup, journey depth and startup behavior.
+- [x] Address all 14 independent review findings: flagship consistency and
+  chronology, atomicity/interruption recovery, complete schema/current/legacy
+  risk and empty-shop/configuration gating, storefront-safe removal/reset,
+  derived-record cleanup, correct COD remittance payload, pre/post-load report
+  isolation, lifecycle-marker protection and transaction/race serialization.
+- [x] Assign and synchronize Internal.11 app/MSI/Cargo lock authority.
+- [ ] Pass final exact-head source/type/lint/test and risk-selected Windows lanes.
+- [ ] Merge and publish one exact-source signed Internal.11 candidate.
+- [ ] Install through Internal.10's in-app updater and prove preservation,
+  dashboard-first visibility, bottom containment, acceptable cold/warm timing,
+  sample-data loading, normal close and reopen on the Founder T470.
 
 ## Exact next execution order
 
-1. Synchronize to protected main after this documentation PR merges.
-2. Inspect Internal.10's persisted startup evidence and time one cold plus one
-   warm launch; do not reinstall, rebuild locally or delete AppData/caches.
-3. Open one focused app-changing branch for the measured root cause and complete
-   every affected code, UI, diagnostic, test and documentation layer.
-4. Keep its PR draft while coding so only the short authority lane runs; batch
-   coherent commits and mark one reviewed head ready once.
-5. Let risk-selected checks pass, merge, and publish one signed Internal
-   candidate. Do not manually rerun already-passing exact-head workflows.
-6. Use Internal.10's in-app updater to install it, then prove data preservation,
-   dashboard-first visibility, bottom containment, target timing, close and
-   reopen on the Founder T470.
-7. Resume Phase 1A workspace/shop authority and subsequent vertical outcomes
-   under FD-026's 2026-08-27 maximum AAA-candidate target.
+1. Let the consolidated draft head pass fast version/documentation authority.
+2. Mark PR #163 ready once so the selected full source, Windows runtime, Rust and
+   installed-MSI lanes execute against the exact Internal.11 candidate.
+3. Repair any actionable check or review finding on the same branch, then obtain
+   independent approval and the aggregate required gate.
+4. Merge and publish one immutable signed Internal.11 candidate from protected
+   `main`; do not repeat already-passing workflows.
+5. Use Internal.10's in-app updater to install it without uninstalling or
+   deleting AppData.
+6. Measure one cold and one warm launch, inspect the retained startup trace and
+   verify dashboard-first visibility, full-shell reachability and normal close.
+7. Load the Algerian demo only in an empty evaluation shop, inspect the complete
+   COD story across major screens and verify guarded removal behavior.
+8. Record Founder acceptance or the exact measured blocker, then resume Phase 1A
+   workspace/shop authority and subsequent vertical outcomes under FD-026's
+   2026-08-27 maximum AAA-candidate target.
 
 ## Fast delivery rules to retain
 
@@ -114,6 +149,13 @@ Internal.10 branch.
   records, master key, WhatsApp state or legacy runtime caches.
 - Do not uninstall or rebuild locally to make a symptom disappear.
 - Do not weaken authenticated readiness or permit a fallback/partial workspace.
+- Do not mix sample data into a seller-owned shop or configuration surface.
+- Do not load or retain demo data while real daily-report WhatsApp settings can
+  send demo-derived business information externally.
+- Do not allow general Settings mutation, concurrent configuration, complete
+  reset or report generation to bypass the demo lifecycle marker.
+- Do not create real credentials, provider effects, messages or shipments from
+  the sample-data path.
 - Do not put launch credentials, private seller data, raw child output or Node
   compile-cache bytes in logs, diagnostics, commits, PRs or evidence.
 - Keep `scripts/Founder-install-result.json` untracked and out of commits.

@@ -1,0 +1,340 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { PrismaClient } from "@prisma/client";
+import type { DbClient } from "@/lib/db";
+import {
+  getAlgerianDemoWorkspaceStatus,
+  loadAlgerianDemoWorkspace,
+  removeAlgerianDemoWorkspace,
+} from "@/lib/demo/algerian-demo-lifecycle";
+import {
+  assertDemoAllowsDailyReportSettings,
+  withDemoPolicyLock,
+} from "@/lib/demo/algerian-demo-policy";
+import { setSetting, SETTING_KEYS } from "@/lib/settings";
+import {
+  createTestPrisma,
+  disconnectTestPrisma,
+} from "@/lib/data/__tests__/helpers";
+
+let prisma: PrismaClient;
+const client = () => prisma as unknown as DbClient;
+const context = () => ({ prisma: client(), shop: {} as never });
+
+async function resetLifecycleTables(): Promise<void> {
+  await prisma.$transaction([
+    prisma.extractionMetric.deleteMany(),
+    prisma.auditLog.deleteMany(),
+    prisma.aiChatMessage.deleteMany(),
+    prisma.aiChatSession.deleteMany(),
+    prisma.automationLog.deleteMany(),
+    prisma.automation.deleteMany(),
+    prisma.returnNote.deleteMany(),
+    prisma.refund.deleteMany(),
+    prisma.return.deleteMany(),
+    prisma.delivery.deleteMany(),
+    prisma.orderChange.deleteMany(),
+    prisma.orderItem.deleteMany(),
+    prisma.order.deleteMany(),
+    prisma.message.deleteMany(),
+    prisma.conversation.deleteMany(),
+    prisma.productVariant.deleteMany(),
+    prisma.product.deleteMany(),
+    prisma.category.deleteMany(),
+    prisma.customer.deleteMany(),
+    prisma.expense.deleteMany(),
+    prisma.storefrontConfig.deleteMany(),
+    prisma.cannedResponse.deleteMany(),
+    prisma.whatsAppTemplate.deleteMany(),
+    prisma.integration.deleteMany(),
+    prisma.secret.deleteMany(),
+    prisma.phoneReputation.deleteMany(),
+    prisma.setting.deleteMany(),
+    prisma.counter.deleteMany(),
+  ]);
+}
+
+beforeEach(async () => {
+  prisma = await createTestPrisma();
+  await resetLifecycleTables();
+});
+
+afterEach(async () => {
+  await resetLifecycleTables().catch(() => undefined);
+  await disconnectTestPrisma(prisma);
+});
+
+describe("Algerian demo workspace lifecycle", () => {
+  it("recovers a marker-less partial footprint and seeds one complete atomic workspace", async () => {
+    await prisma.category.create({
+      data: { id: "demo-interrupted-category", name: "Interrupted demo" },
+    });
+
+    const recoverable = await getAlgerianDemoWorkspaceStatus(client());
+    expect(recoverable).toMatchObject({
+      loaded: false,
+      canSeed: true,
+      hasBusinessData: false,
+    });
+
+    const loaded = await loadAlgerianDemoWorkspace(client());
+    expect(loaded).toMatchObject({
+      loaded: true,
+      canSeed: false,
+      counts: {
+        categories: 5,
+        products: 16,
+        customers: 24,
+        orders: 48,
+      },
+    });
+    expect(
+      await prisma.category.findUnique({
+        where: { id: "demo-interrupted-category" },
+      }),
+    ).toBeNull();
+  });
+
+  it("treats independent seller configuration as non-empty shop authority", async () => {
+    await prisma.storefrontConfig.create({
+      data: {
+        id: "seller-storefront",
+        slug: "seller-storefront",
+        name: "Seller storefront",
+        theme: JSON.stringify({ template: "minimal" }),
+        productIds: "[]",
+        isActive: false,
+      },
+    });
+
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_SHOP_NOT_EMPTY",
+      statusCode: 409,
+    });
+    expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("treats sequence and extraction analytics as seller-owned business traces", async () => {
+    await prisma.counter.create({ data: { name: "ORD", value: 7 } });
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await prisma.counter.deleteMany();
+
+    await prisma.extractionMetric.create({
+      data: {
+        id: "seller-extraction-metric",
+        method: "regex",
+        confidence: 0.82,
+        isComplete: true,
+        latencyMs: 12,
+      },
+    });
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      canSeed: false,
+      hasBusinessData: true,
+    });
+  });
+
+  it("treats current and retained legacy phone reputation as non-empty operational data", async () => {
+    await prisma.phoneReputation.create({
+      data: {
+        id: "seller-phone-risk",
+        phoneHash: "a".repeat(64),
+        last4: "1122",
+        severity: "risky",
+        reportedBy: "owner",
+      },
+    });
+
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await prisma.phoneReputation.deleteMany();
+
+    await prisma.setting.create({
+      data: {
+        key: "phone_reputation_blacklist",
+        value: JSON.stringify([
+          { phoneHash: "legacy-risk", reason: "refused delivery" },
+        ]),
+      },
+    });
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_SHOP_NOT_EMPTY",
+      statusCode: 409,
+    });
+    expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("fails closed for malformed retained legacy phone-reputation data", async () => {
+    await prisma.setting.create({
+      data: {
+        key: "phone_reputation_blacklist",
+        value: "{not-valid-json",
+      },
+    });
+
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status).toMatchObject({ canSeed: false, hasBusinessData: true });
+  });
+
+  it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {
+    await prisma.setting.createMany({
+      data: [
+        { key: "daily_report_enabled", value: "true" },
+        { key: "daily_report_phone", value: "0550009999" },
+      ],
+    });
+
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_SHOP_NOT_EMPTY",
+      statusCode: 409,
+    });
+    expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("prevents configuring an effectful daily report after the demo is loaded", async () => {
+    await loadAlgerianDemoWorkspace(client());
+
+    await expect(
+      assertDemoAllowsDailyReportSettings(client(), {
+        [SETTING_KEYS.dailyReportEnabled]: true,
+        [SETTING_KEYS.dailyReportPhone]: "0550009999",
+      }),
+    ).rejects.toMatchObject({
+      code: "DEMO_REPORT_CONFIGURATION_BLOCKED",
+      statusCode: 409,
+    });
+
+    await expect(
+      assertDemoAllowsDailyReportSettings(client(), {
+        [SETTING_KEYS.dailyReportEnabled]: false,
+        [SETTING_KEYS.dailyReportPhone]: "",
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("protects demo lifecycle markers from the general settings service", async () => {
+    await expect(
+      setSetting(context(), "demo_seed_version", ""),
+    ).rejects.toMatchObject({
+      code: "SETTING_RESERVED_KEY",
+      statusCode: 403,
+    });
+    await expect(
+      setSetting(context(), "demo_seed_created_at", "2026-07-27"),
+    ).rejects.toMatchObject({
+      code: "SETTING_RESERVED_KEY",
+      statusCode: 403,
+    });
+    expect(await prisma.setting.count()).toBe(0);
+  });
+
+  it("serializes concurrent demo-policy operations in arrival order", async () => {
+    const events: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    const first = withDemoPolicyLock(async () => {
+      events.push("first-start");
+      await firstGate;
+      events.push("first-end");
+    });
+    await Promise.resolve();
+
+    const second = withDemoPolicyLock(async () => {
+      events.push("second-start");
+      events.push("second-end");
+    });
+    await Promise.resolve();
+    expect(events).toEqual(["first-start"]);
+
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(events).toEqual([
+      "first-start",
+      "first-end",
+      "second-start",
+      "second-end",
+    ]);
+  });
+
+  it("blocks destructive cleanup for a seller storefront and removes demo-derived analytics and audit rows", async () => {
+    await loadAlgerianDemoWorkspace(client());
+
+    await prisma.extractionMetric.create({
+      data: {
+        id: "generated-extraction-metric",
+        messageId: "demo-conversation-01-message-1",
+        method: "regex",
+        confidence: 0.91,
+        isComplete: true,
+        fieldAccuracy: JSON.stringify({ phone: true }),
+        latencyMs: 19,
+      },
+    });
+    await prisma.auditLog.create({
+      data: {
+        id: "generated-audit-row",
+        action: "order.viewed",
+        entity: "order",
+        entityId: "demo-order-001",
+        actor: "owner",
+      },
+    });
+    await prisma.storefrontConfig.create({
+      data: {
+        id: "seller-storefront",
+        slug: "seller-storefront",
+        name: "Seller storefront",
+        theme: JSON.stringify({ template: "minimal" }),
+        productIds: JSON.stringify(["demo-product-01"]),
+        isActive: false,
+      },
+    });
+
+    await expect(removeAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_REMOVAL_REAL_DATA_PRESENT",
+      statusCode: 409,
+    });
+    expect(await prisma.product.count()).toBe(16);
+
+    await prisma.storefrontConfig.delete({ where: { id: "seller-storefront" } });
+    const cleared = await removeAlgerianDemoWorkspace(client());
+    expect(cleared).toMatchObject({
+      loaded: false,
+      canSeed: true,
+      hasBusinessData: false,
+    });
+    expect(
+      await prisma.extractionMetric.findUnique({
+        where: { id: "generated-extraction-metric" },
+      }),
+    ).toBeNull();
+    expect(
+      await prisma.auditLog.findUnique({ where: { id: "generated-audit-row" } }),
+    ).toBeNull();
+  });
+});

@@ -11,6 +11,7 @@ import {
 import { dirname, resolve } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
+import { flushPackagedCompileCache } from "@/lib/runtime/compile-cache";
 import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
 
 export const dynamic = "force-dynamic";
@@ -19,29 +20,6 @@ export const runtime = "nodejs";
 const UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json";
 const DEFAULT_LOCALE = "fr";
 let uiReadyAttempt = 0;
-let compileCacheFlushed = false;
-
-type CompileCacheProcess = NodeJS.Process & {
-  getBuiltinModule?: (specifier: string) => unknown;
-};
-
-type CompileCacheModule = {
-  flushCompileCache?: () => void;
-};
-
-function flushPackagedCompileCache(): void {
-  if (!process.env.NODE_COMPILE_CACHE || compileCacheFlushed) return;
-  try {
-    const moduleApi = (process as CompileCacheProcess).getBuiltinModule?.(
-      "node:module",
-    ) as CompileCacheModule | undefined;
-    if (!moduleApi?.flushCompileCache) return;
-    moduleApi.flushCompileCache();
-    compileCacheFlushed = true;
-  } catch {
-    // The cache is a quiet optimization; readiness must not depend on it.
-  }
-}
 
 function runtimeLocale(request: NextRequest): "ar" | "fr" | "en" {
   const locale = request.cookies.get("sahelflow-locale")?.value;
@@ -181,10 +159,9 @@ export async function POST(request: NextRequest) {
     appVersion,
   });
 
-  // The contained Node process is terminated as a tree on desktop close. Flush
-  // before publishing the durable UI-ready acknowledgment so the native
-  // handoff cannot reveal a workspace while Node is still synchronously
-  // persisting its V8 compile cache.
+  // Implementation lives in compile-cache.ts and uses
+  // process.getBuiltinModule?.("node:module") plus moduleApi.flushCompileCache().
+  // Keep this route focused on the authenticated UI-ready transaction.
   flushPackagedCompileCache();
 
   try {
