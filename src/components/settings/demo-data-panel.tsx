@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -68,7 +68,6 @@ type Copy = {
   refresh: string;
   confirmRemove: string;
   failed: string;
-  dataset: string;
   products: string;
   customers: string;
   orders: string;
@@ -102,7 +101,6 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     confirmRemove:
       "سيتم حذف السجلات التجريبية فقط. لن تتأثر أي بيانات أخرى. هل تريد المتابعة؟",
     failed: "تعذر تنفيذ العملية",
-    dataset: "قصة COD جزائرية كاملة",
     products: "منتج",
     customers: "زبون",
     orders: "طلب",
@@ -136,7 +134,6 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     confirmRemove:
       "Seuls les enregistrements de démonstration seront supprimés. Les autres données resteront intactes. Continuer ?",
     failed: "L'opération a échoué",
-    dataset: "Parcours COD algérien complet",
     products: "produits",
     customers: "clients",
     orders: "commandes",
@@ -170,7 +167,6 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     confirmRemove:
       "Only demo-tagged records will be removed. All other data stays untouched. Continue?",
     failed: "The operation failed",
-    dataset: "Complete Algerian COD journey",
     products: "products",
     customers: "customers",
     orders: "orders",
@@ -194,6 +190,16 @@ async function readError(response: Response): Promise<string> {
   }
 }
 
+async function requestStatus(signal?: AbortSignal): Promise<DemoStatus> {
+  const response = await fetch("/api/demo-data", {
+    cache: "no-store",
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) throw new Error(await readError(response));
+  return (await response.json()) as DemoStatus;
+}
+
 export function DemoDataPanel() {
   const router = useRouter();
   const { locale } = useI18n();
@@ -204,44 +210,31 @@ export function DemoDataPanel() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  const loadStatus = async () => {
-    setBusy((current) => current ?? "refresh");
+  useEffect(() => {
+    const controller = new AbortController();
+    void requestStatus(controller.signal)
+      .then((nextStatus) => setStatus(nextStatus))
+      .catch((failure: unknown) => {
+        if (failure instanceof DOMException && failure.name === "AbortError") return;
+        setError(failure instanceof Error ? failure.message : "Status request failed");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setBusy(null);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const refreshStatus = async () => {
+    setBusy("refresh");
     setError(null);
     try {
-      const response = await fetch("/api/demo-data", {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      if (!response.ok) throw new Error(await readError(response));
-      setStatus((await response.json()) as DemoStatus);
+      setStatus(await requestStatus());
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : copy.failed);
     } finally {
       setBusy(null);
     }
   };
-
-  useEffect(() => {
-    void loadStatus();
-    // Status is intentionally fetched once on panel mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const metrics = useMemo(() => {
-    if (!status) return [];
-    return [
-      { icon: Package, value: status.counts.products, label: copy.products },
-      { icon: Users, value: status.counts.customers, label: copy.customers },
-      { icon: ShoppingCart, value: status.counts.orders, label: copy.orders },
-      { icon: Truck, value: status.counts.deliveries, label: copy.deliveries },
-      {
-        icon: MessageSquare,
-        value: status.counts.conversations,
-        label: copy.conversations,
-      },
-      { icon: ReceiptText, value: status.counts.expenses, label: copy.expenses },
-    ];
-  }, [copy, status]);
 
   const mutate = async (method: "POST" | "DELETE") => {
     if (method === "DELETE" && !window.confirm(copy.confirmRemove)) return;
@@ -263,13 +256,31 @@ export function DemoDataPanel() {
     }
   };
 
+  const metrics = status
+    ? [
+        { icon: Package, value: status.counts.products, label: copy.products },
+        { icon: Users, value: status.counts.customers, label: copy.customers },
+        { icon: ShoppingCart, value: status.counts.orders, label: copy.orders },
+        { icon: Truck, value: status.counts.deliveries, label: copy.deliveries },
+        {
+          icon: MessageSquare,
+          value: status.counts.conversations,
+          label: copy.conversations,
+        },
+        { icon: ReceiptText, value: status.counts.expenses, label: copy.expenses },
+      ]
+    : [];
+
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden border-primary/20">
         <CardHeader className="border-b bg-gradient-to-br from-primary/10 via-background to-background">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <Badge variant="outline" className="gap-1.5 border-primary/30 bg-primary/5 text-primary">
+              <Badge
+                variant="outline"
+                className="gap-1.5 border-primary/30 bg-primary/5 text-primary"
+              >
                 <Sparkles className="size-3.5" />
                 {copy.eyebrow}
               </Badge>
@@ -335,7 +346,10 @@ export function DemoDataPanel() {
           )}
 
           {error && (
-            <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+            >
               <span className="font-medium">{copy.failed}: </span>
               {error}
             </div>
@@ -385,10 +399,12 @@ export function DemoDataPanel() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => void loadStatus()}
+              onClick={() => void refreshStatus()}
               disabled={busy !== null}
             >
-              {busy === "refresh" && <Loader2 className="me-2 size-4 animate-spin" />}
+              {busy === "refresh" && (
+                <Loader2 className="me-2 size-4 animate-spin" />
+              )}
               {copy.refresh}
             </Button>
           </div>
