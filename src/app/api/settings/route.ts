@@ -5,6 +5,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
 import { db, shopContext } from "@/lib/db";
+import { assertDemoAllowsDailyReportSettings } from "@/lib/demo/algerian-demo-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,16 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
 
   // W2-5: capture before-state (all settings before update) for audit.
   const before = await getAllSettings(context);
+  const effectiveAfter = {
+    ...before,
+    ...input.settings,
+  } as Record<string, unknown>;
+
+  // Demo orders are intentionally realistic but may never be delivered to a
+  // real WhatsApp destination. Check the complete effective after-state so an
+  // update cannot enable the schedule while retaining an existing phone (or set
+  // a phone while retaining an enabled schedule). Clearing both remains allowed.
+  await assertDemoAllowsDailyReportSettings(db, effectiveAfter);
 
   for (const [key, value] of Object.entries(input.settings)) {
     await setSetting(context, key, value);
@@ -48,13 +59,16 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
   const settings = await getAllSettings(context);
   // Fire-and-forget audit log — settings mutations are security-sensitive
   // (license payload, daily_report_phone, profile PII).
-  void logAudit({ prisma: db, shop: shopContext }, {
-    action: "settings.updated",
-    entity: "settings",
-    actor: "user",
-    before: before as Record<string, unknown>,
-    after: settings as Record<string, unknown>,
-    metadata: { updatedKeys: Object.keys(input.settings) },
-  });
+  void logAudit(
+    { prisma: db, shop: shopContext },
+    {
+      action: "settings.updated",
+      entity: "settings",
+      actor: "user",
+      before: before as Record<string, unknown>,
+      after: settings as Record<string, unknown>,
+      metadata: { updatedKeys: Object.keys(input.settings) },
+    },
+  );
   return NextResponse.json({ settings });
 }, "PUT /api/settings");
