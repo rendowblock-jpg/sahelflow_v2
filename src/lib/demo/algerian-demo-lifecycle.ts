@@ -75,11 +75,12 @@ async function countLegacyPhoneReputation(client: DbClient): Promise<number> {
 /**
  * Count seller-owned state that must never be mixed with the evaluation dataset.
  *
- * Auth/session rows and harmless preference Settings belong to the installed
- * application shell rather than the active shop's sample business records.
- * Credentials, integrations, storefronts, automations, reusable messaging,
- * current/legacy phone-risk data and effectful report Settings are included even
- * when the order catalog is otherwise empty.
+ * Auth/session rows, security audit entries, reference-only WilayaRiskProfile
+ * rows and harmless preference Settings belong to the installed shell rather
+ * than an active shop's sample business records. Business entities, sequence
+ * counters, extraction analytics, credentials, integrations, storefronts,
+ * automations, reusable messaging, current/legacy phone-risk data and effectful
+ * report Settings are included even when the visible catalog is otherwise empty.
  */
 async function countNonDemoSellerState(client: DbClient): Promise<number> {
   const counts = await Promise.all([
@@ -101,6 +102,8 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     client.integration.count({ where: { id: outsideDemo } }),
     client.secret.count({ where: { id: outsideDemo } }),
     client.aiChatSession.count({ where: { id: outsideDemo } }),
+    client.extractionMetric.count({ where: { id: outsideDemo } }),
+    client.counter.count(),
     // The demo does not create PhoneReputation records. Every row here is
     // independently owned seller risk intelligence and makes the shop non-empty.
     client.phoneReputation.count(),
@@ -210,7 +213,7 @@ export async function loadAlgerianDemoWorkspace(
 
       if ((await countNonDemoSellerState(tx)) > 0) {
         throw new SahelFlowError(
-          "Sample data can only be loaded into a shop with no seller-owned business records, current or legacy phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
+          "Sample data can only be loaded into a shop with no seller-owned business records, sequence/analytics state, current or legacy phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
           "DEMO_SHOP_NOT_EMPTY",
           409,
         );
@@ -240,7 +243,7 @@ export async function removeAlgerianDemoWorkspace(
       const tx = transaction as unknown as DbClient;
       if ((await countNonDemoSellerState(tx)) > 0) {
         throw new SahelFlowError(
-          "Demo removal is blocked because independently owned seller records, current or legacy phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
+          "Demo removal is blocked because independently owned seller records, sequence/analytics state, current or legacy phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
           "DEMO_REMOVAL_REAL_DATA_PRESENT",
           409,
         );
