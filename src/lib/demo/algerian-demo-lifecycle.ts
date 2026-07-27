@@ -7,6 +7,9 @@ import {
   seedAlgerianDemoData,
   type AlgerianDemoStatus,
 } from "@/lib/demo/algerian-demo";
+import {
+  dailyReportWouldBeEffectful,
+} from "@/lib/demo/algerian-demo-policy";
 import { finalizeAlgerianDemoStory } from "@/lib/demo/algerian-demo-story";
 import { SETTING_KEYS } from "@/lib/settings";
 import { SahelFlowError } from "@/types/errors";
@@ -35,12 +38,8 @@ async function countEffectfulSettings(client: DbClient): Promise<number> {
     },
     select: { key: true, value: true },
   });
-  const values = new Map(rows.map((row) => [row.key, row.value]));
-  const reportEnabled =
-    values.get(SETTING_KEYS.dailyReportEnabled)?.trim().toLowerCase() === "true";
-  const reportDestination =
-    values.get(SETTING_KEYS.dailyReportPhone)?.trim() ?? "";
-  return reportEnabled || reportDestination.length > 0 ? 1 : 0;
+  const settings = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  return dailyReportWouldBeEffectful(settings) ? 1 : 0;
 }
 
 /**
@@ -48,9 +47,9 @@ async function countEffectfulSettings(client: DbClient): Promise<number> {
  *
  * Auth/session rows and harmless preference Settings belong to the installed
  * application shell rather than the active shop's sample business records.
- * Credentials, integrations, storefronts, automations, reusable messaging
- * configuration and effectful report Settings are included even when the order
- * catalog is otherwise empty.
+ * Credentials, integrations, storefronts, automations, reusable messaging,
+ * phone-risk data and effectful report Settings are included even when the
+ * order catalog is otherwise empty.
  */
 async function countNonDemoSellerState(client: DbClient): Promise<number> {
   const counts = await Promise.all([
@@ -72,6 +71,9 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     client.integration.count({ where: { id: outsideDemo } }),
     client.secret.count({ where: { id: outsideDemo } }),
     client.aiChatSession.count({ where: { id: outsideDemo } }),
+    // The demo does not create PhoneReputation records. Every row here is
+    // independently owned seller risk intelligence and makes the shop non-empty.
+    client.phoneReputation.count(),
     countEffectfulSettings(client),
   ]);
   return counts.reduce((total, count) => total + count, 0);
@@ -175,7 +177,7 @@ export async function loadAlgerianDemoWorkspace(
 
     if ((await countNonDemoSellerState(tx)) > 0) {
       throw new SahelFlowError(
-        "Sample data can only be loaded into a shop with no seller-owned business records, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
+        "Sample data can only be loaded into a shop with no seller-owned business records, phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
         "DEMO_SHOP_NOT_EMPTY",
         409,
       );
@@ -203,7 +205,7 @@ export async function removeAlgerianDemoWorkspace(
     const tx = transaction as unknown as DbClient;
     if ((await countNonDemoSellerState(tx)) > 0) {
       throw new SahelFlowError(
-        "Demo removal is blocked because independently owned seller records, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
+        "Demo removal is blocked because independently owned seller records, phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
         "DEMO_REMOVAL_REAL_DATA_PRESENT",
         409,
       );
