@@ -1,14 +1,17 @@
 # SahelFlow — Coding, Review and Delivery Workflow
 
 > **Status:** Active operating contract
+> **Operating model:** SahelFlow Completion Operating Model v2
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** GitHub protected `main`, branches, PRs, Actions, releases
 > and evidence
 > **Last consolidated:** 2026-07-27
 
-This workflow optimizes for the fastest path to flawless product completion:
-clear ownership, dependency-correct work, independent review, exact evidence
-and continuous delivery to the Founder-installed application.
+This workflow is the fastest professional path to a complete class-AAA SahelFlow
+candidate. Speed comes from dependency-correct parallelism, short coherent work
+packages, one frozen review head, milestone releases and strict blocker
+classification. It never comes from weakening data preservation, business
+integrity, Arabic/RTL quality, accessibility, security or evidence.
 
 GLM, Codex Cloud, MAWS and the `agent-handoff` continuity model are not part of
 the active workflow.
@@ -18,20 +21,21 @@ the active workflow.
 ### Founder
 
 - Sets product direction, price, entitlements, priorities and value judgments.
-- Resolves genuinely consequential product/business tradeoffs.
-- Approves sensitive signing, payment and release actions.
-- Installs and observes Founder Internal updates on the reference machine.
-- Decides Beta/Stable promotion.
+- Resolves consequential product, money, ownership, privacy and experience
+  tradeoffs.
+- Approves sensitive signing, payment, Beta and Stable actions.
+- Installs and observes coherent Founder Internal milestone candidates.
+- Decides Beta and Stable promotion.
 
 ### Web Agent
 
-- Works from a synchronized GitHub repository checkout.
-- Investigates source and authoritative documentation.
+- Works from synchronized GitHub authority.
+- Investigates source and active documentation.
 - Designs and implements complete work packages.
-- Runs all available environment-valid checks.
+- Runs every environment-valid check it can actually prove.
 - Creates branches, commits, pushes and PRs.
 - Reviews Desktop Agent PRs.
-- Does not claim local installed-Windows evidence it did not observe.
+- Does not claim installed-Windows evidence it did not observe.
 
 ### Desktop Agent
 
@@ -42,7 +46,7 @@ the active workflow.
   installation or other heavy validation on the Founder machine.
 - Uses GitHub Actions on the exact pushed commit for required source, test,
   build and packaging evidence.
-- Uses the local machine for lightweight source inspection and editing plus
+- Uses the local machine only for lightweight source inspection/editing and
   non-destructive installed-Windows, WebView, UI, AppData-preservation and
   reference-hardware observation.
 - Reviews Web Agent PRs.
@@ -56,407 +60,374 @@ the active workflow.
 GitHub is infrastructure and durable authority, not a third coding agent.
 
 - Protected `main` is integrated source truth.
-- Branches/PRs are proposed work.
+- Branches and PRs are proposed work.
 - Actions is clean-checkout verification and artifact production authority.
-- Actions runs all required builds, automated tests, coverage and heavy
-  validation for Desktop-owned work; a local Desktop run is not a prerequisite.
 - Releases bind exact source, versions, signatures, artifacts and evidence.
-- PR comments/checks carry review and acceptance facts.
+- PR comments, checks and issues carry review, scope and acceptance facts.
 
 ## Core rules
 
-1. One task has one owning agent.
-2. One coherent work package uses one branch and one PR.
-3. No direct work on protected `main`.
-4. The other agent reviews material work before completion.
+1. One work package has one owning agent, one branch and one PR.
+2. No direct work on protected `main`.
+3. The non-authoring agent reviews material work.
+4. Shared schema, migration, domain and design-system contracts are serialized
+   before dependent parallel work.
 5. Parallel work is allowed only when contracts and files are independent.
-6. Shared schema, migration, domain contracts and design-system primitives are
-   serialized before dependent parallel work.
-7. No important work or decision remains only in chat or an unpushed local
+6. No important decision or intended work remains only in chat or an unpushed
    checkout.
-8. `CURRENT_STATE.md` describes merged `main`; `WORKING_MEMORY.md` describes
-   everything still in flight.
-9. Product code is not complete because files changed or CI turned green; the
-   governed capability/journey outcome and evidence must pass.
-10. Founder questions are reserved for consequential product, money,
-    ownership, privacy and user-experience choices. Agents decide ordinary
-    technical mechanics professionally.
+7. `CURRENT_STATE.md` describes merged `main`; `WORKING_MEMORY.md` describes the
+   execution frontier and in-flight work.
+8. Source changes or green CI do not complete a capability; the named outcome
+   and required evidence must pass.
+9. Arabic/RTL, accessibility, recovery states and low-resource performance are
+   continuous product requirements, not final polish.
+10. Public Stable claims remain evidence-gated even when implementation is
+    compressed into a small number of intensive sessions.
 
-## Fast agentic delivery loop
+## Completion Operating Model v2
 
-The default loop optimizes elapsed time without separating quality from the
-seller outcome:
+### Multi-phase sessions
 
-1. Select one dependency-correct vertical outcome and include every affected
-   layer required to make it complete; avoid isolated line-by-line chores and
-   unrelated cleanup.
-2. Branch from current protected `main`, keep the PR draft during implementation
-   and push meaningful coherent batches instead of triggering automation for
-   each small edit.
-3. Draft synchronization runs only risk classification and fast authority.
-   Read and fix that feedback while coding; do not manually dispatch Windows or
-   MSI workflows during ordinary draft iteration.
-4. Complete self-review, tests, documentation and migration/recovery reasoning,
-   then mark one coherent head ready once. That transition starts only the
-   heavy lanes selected by its paths and risk.
-5. A failed selected lane or actionable review finding is corrected on the same
-   branch. Move back to draft for a multi-commit repair cycle; do not rerun a
-   still-running or already-passing exact head.
-6. Merge after the required aggregate gate and review pass. Documentation-only
-   packages end there and never create an MSI.
-7. An app-changing merge produces one immutable signed Internal candidate.
-   Install it once through the current in-app updater, observe the real change,
-   preservation, close and reopen, then record acceptance. Manual MSI is only a
-   bounded updater bootstrap or recovery action.
+Each intensive execution session advances multiple roadmap phases when their
+shared dependencies permit. A session is not limited to one small correction.
+It normally combines foundation, seller journeys, experience quality and
+platform work through independent lanes.
 
-Healthy-infrastructure service goals are under two minutes for draft authority
-feedback, under fifteen minutes for ordinary reviewable source feedback and
-10–20 minutes from an app-changing merge to a published Founder updater. These
-are operating targets, not permission to bypass a selected safety gate. When a
-target is missed, identify the slow stage from retained timings and repair or
-reroute that stage before repeating the whole workflow.
+The four-session execution overlay is defined in `../system/ROADMAP.md` and the
+compact current entry point is in `WORKING_MEMORY.md`.
+
+### Work lanes and WIP limits
+
+#### Core authority lane — WIP 1
+
+Owns shared contracts that dependent work may not reinvent:
+
+- workspace and trusted shop context;
+- schema, migration and compatibility;
+- business state machines;
+- stock and money movements;
+- trusted audit, inbox/outbox, idempotency and permissions.
+
+#### Seller vertical lanes — WIP 2 total
+
+Each lane delivers one observable seller journey across UI, API, domain and
+database after the required shared contracts are frozen. The two vertical lanes
+must not overlap ownership of the same contract or files.
+
+#### Experience and Arabic lane — WIP 1
+
+Owns the cross-application quality foundation and works continuously:
+
+- design tokens, typography and navigation architecture;
+- Arabic-first copy and typography;
+- real RTL geometry and mixed Arabic/Latin content;
+- tables, charts, icons, forms, dialogs, focus and keyboard behavior;
+- loading, empty, error, degraded, stale, conflict and recovery states;
+- responsive and 1366×768 containment;
+- accessibility and visual polish.
+
+A major unusable Arabic/RTL or UX failure in the named outcome is P1, not P3.
+
+#### Platform and performance lane — WIP 1
+
+Owns:
+
+- cold and warm startup;
+- updater and release automation;
+- packaging, diagnostics and CI elapsed time;
+- backup/restore infrastructure;
+- low-resource scheduling and long-session stability.
+
+At most one frozen signed candidate may be in flight. Release publication,
+installation or Founder observation does not stop independent development.
+
+## Work-package contract
+
+Before implementation, record in the PR body and Working Memory:
+
+- seller/Founder outcome;
+- governing Founder decision, product clause and capability/journey;
+- architecture invariants and frozen shared contracts;
+- source baseline and owner;
+- scope and explicit non-goals;
+- existing data/behavior to preserve;
+- migration, compatibility and forward-repair strategy;
+- threat/privacy implications;
+- Arabic/RTL, accessibility and performance implications;
+- required automated, installed and Founder evidence.
+
+Normal branch lifetime is less than two working days. A package that cannot
+produce a coherent observable outcome in about one or two days is split by
+usable outcomes, not by arbitrary backend/frontend files.
+
+Ordinary feature PRs do not bump the app version. Do not mix drive-by refactors,
+unrelated dependency upgrades, broad formatting or general cleanup into a
+product outcome.
 
 ## Start/resume protocol
 
 Before changing anything:
 
-1. Declare environment: Web checkout, Desktop local Windows, GitHub Actions
-   Linux/Windows, or installed Windows artifact.
-2. Read `AGENTS.md`.
-3. Read this file and `WORKING_MEMORY.md`.
-4. Read the governing product, experience, architecture, current-state and
-   roadmap sections.
-5. Synchronize with protected `main`.
-6. Inspect `git status`; preserve unrelated user work.
-7. Resolve active PR/branch ownership.
-8. State the exact outcome, non-goals, risk class and evidence required.
+1. Declare the actual environment: Web checkout, Desktop local Windows, GitHub
+   Actions Linux/Windows, or installed Windows artifact.
+2. Read `AGENTS.md`, this file and `WORKING_MEMORY.md`.
+3. Read the governing product, experience, decisions, architecture, current
+   state and roadmap sections.
+4. Synchronize with protected `main` and inspect repository status.
+5. Preserve unrelated user work.
+6. Resolve active PR/branch ownership and the WIP-lane allocation.
+7. State the exact multi-phase session outcomes.
+8. Freeze shared contracts before dependent parallel implementation.
 
-Chat history is useful context but never a substitute for current GitHub
+Chat history is useful context but never substitutes for current GitHub
 authority.
-
-## Work-package contract
-
-Before implementation, record:
-
-- outcome in seller/Founder terms;
-- governing product clause and decision;
-- capability IDs and journeys/states;
-- architecture invariants;
-- source baseline and branch owner;
-- in-scope and non-goals;
-- existing data/behavior to preserve;
-- migration/compatibility and rollback/forward-repair strategy;
-- threat/privacy implications;
-- target device/performance implications;
-- acceptance evidence and Founder observation required.
-
-Do not create a new permanent planning document. Put the compact contract in
-the PR body and active Working Memory; update the owning durable documents when
-the product, architecture, current state or roadmap actually changes.
 
 ## Branch and PR practice
 
 - Branch naming: `agent/<outcome>`.
 - Branch from current protected `main`.
-- Rebase or merge current `main` only deliberately; never hide conflicts.
-- Commit coherent checkpoints with concise intent.
-- Push before ending a session that contains intended work.
+- Rebase or merge current `main` deliberately; never hide conflicts.
 - Open a draft PR early for material work.
-- Keep one PR focused enough to review and install as one outcome.
-- Do not mix drive-by refactors, unrelated dependency upgrades or broad
-  formatting into a product change.
-- PR body states purpose, root/current gap, exact changes, preservation,
-  risks, evidence and next action.
-- Review findings are resolved in the same PR unless they prove the scope itself
-  is wrong.
+- Push meaningful coherent batches rather than every tiny edit.
+- Keep one PR focused enough to review as one outcome.
+- PR body states purpose, current gap, exact changes, preservation, risks,
+  evidence and next action.
+- Move a ready PR back to draft before a multi-commit correction cycle.
+- Merge dependency-correct packages as soon as their selected gates and review
+  pass; do not wait for an unrelated candidate installation.
 
-### Risk-aware PR automation
+## Review model
 
-- `Required PR gate` is the single protected-branch and signed-release check.
-  It always verifies exact-head risk classification and the fast version/docs
-  authority lane, then requires every lane selected for the changed paths.
-- Draft PR synchronization runs only classification and fast authority. Keep
-  material work in draft while coding; `ready_for_review` starts the selected
-  heavy lanes once for the reviewable head.
-- A new commit on a ready PR reruns the selected lanes because the reviewed tree
-  changed. Move the PR back to draft before a multi-commit revision cycle.
-- Documentation-only changes do not install dependencies or run application
-  builds. Ordinary web source changes run the full source-quality lane without
-  Windows packaging.
-- Tauri, contained runtime, database/migration, installer, updater, version and
-  release-authority paths select progressively stronger Rust, Windows runtime
-  and installed-MSI lanes. Version or signed-release authority changes require
-  the full set.
-- Windows parity and installed-MSI workflows are reusable/manual workflows;
-  they do not trigger independently on every PR push or again after merge.
-- Protected-main merges do not repeat PR source checks. Exact-tree signed builds
-  still perform their own packaging, signature, installed-runtime and visible-UI
-  gates because those prove the produced artifact rather than repeat source CI.
-- Signed-release status observation records completed runs only; requested-state
-  chatter does not create duplicate PR updates.
+### Review passes
 
-## Risk classes
+Material work receives:
 
-Risk determines evidence depth; it never weakens product quality.
+1. contract review before substantial dependent implementation;
+2. author self-review;
+3. one independent review of the frozen implementation head;
+4. one consolidated repair batch for actionable blockers.
 
-### R0 — Documentation and non-executable metadata
+Review findings are classified by severity rather than allowed to create an
+unbounded loop.
 
-Examples: active docs, comments, non-runtime inventories.
+### Severity
 
-Required:
+- **P0 — stop immediately:** data loss, security compromise, cross-shop leakage,
+  corrupt update/restore, irreversible stock or money damage.
+- **P1 — blocks merge or release:** broken required journey, authority bypass,
+  duplicate effect, unsafe migration, startup/install failure, or major unusable
+  Arabic/UX failure in the named outcome.
+- **P2 — scheduled hardening:** bounded edge case or secondary inconsistency that
+  does not invalidate the package outcome.
+- **P3 — polish backlog:** low-impact cleanup or optional optimization.
 
-- authority and conflict review;
-- link/reference/audit validation;
-- no application update unless packaging/updater/release authority changed.
+P2/P3 findings do not repeatedly reopen a frozen green release candidate. Group
+them into focused follow-up packages with an owner and dependency position.
 
-### R1 — Presentation and read-only behavior
+## Risk-aware CI
 
-Examples: copy, layout, visual hierarchy, read-only projections.
+`Required PR gate` is the single protected-branch aggregate check. It requires
+classification, fast authority and every lane selected for the exact PR head.
 
-Required:
+### Draft head
 
-- type/lint/unit checks;
-- representative data and all applicable page states;
-- AR/FR/EN, RTL/LTR, keyboard, zoom and accessibility review;
-- installed Founder update for material app-visible work.
+Run only fast feedback appropriate to changed paths:
 
-### R2 — Ordinary local business writes
+- path/risk classification;
+- product/version/documentation authority;
+- targeted type/lint checks where available;
+- relevant focused unit/domain tests.
 
-Examples: product/customer/settings writes with bounded effects.
+### Frozen review head
 
-Required:
+When the coherent head becomes ready, run the selected full lanes once:
 
-- R1 evidence;
-- domain/integration tests;
-- authorization/shop boundaries;
-- audit and migration/compatibility review;
-- installed update and real workflow observation.
+- complete type/lint/unit/domain quality;
+- database/integration/migration checks when applicable;
+- Linux Rust/Tauri when applicable;
+- Windows standalone/Rust/MSI only for affected risk.
 
-### R3 — Identity, money, secrets or external effects
+Installed-MSI testing is selected for native startup, migrations, packaged
+runtime, installer/updater, signing/version or release-authority risk. Ordinary
+business/UI PRs do not build an MSI merely because they change the installed
+application.
 
-Examples: orders, inventory, COD, refunds, roles, licenses, providers, AI
-actions.
+### CI economy
 
-Required:
+- Never rerun an unchanged passing exact head.
+- Cancel superseded runs.
+- Retry only failed infrastructure jobs when evidence supports a transient
+  failure.
+- Do not dispatch duplicate full workflows while one is running.
+- Retain lane timing and diagnose the slow stage before repeating a pipeline.
+- Documentation-only work runs authority/audit only and never creates an MSI.
 
-- R2 evidence;
-- explicit state machine and invariants;
-- transaction/idempotency/replay/concurrency and compensation tests;
-- threat/privacy review;
-- failure/degraded/recovery evidence;
-- external sandbox/live proof when applicable;
-- installed Founder acceptance.
+Healthy targets are under two minutes for draft authority, under fifteen minutes
+for ordinary reviewable source feedback and 10–20 minutes from a frozen milestone
+merge set to a published Internal updater under healthy infrastructure.
 
-### R4 — Data survivability and release authority
+## Milestone Internal release train
 
-Examples: migrations, backup/restore, key recovery, installer/updater/signing.
+Routine Internal delivery is milestone/session-based, not one release for every
+tiny merged PR.
 
-Required:
+1. Merge independently complete packages to protected `main` without ordinary
+   feature version bumps.
+2. When the merged outcomes form one coherent Founder test, create one exact
+   release request and unique immutable Internal version.
+3. Build the exact-source signed MSI, signature and `latest.json` as a draft.
+4. Verify source binding, signature, packaged runtime, installed launch/reopen,
+   authenticated hydrated UI, deterministic evidence and manifest.
+5. Publish automatically only in a protected final step after every required
+   post-build gate succeeds.
+6. Failed candidates remain drafts and never reach the live updater endpoint.
+7. Install through the existing in-app updater, preserve AppData, observe the
+   named milestone, close and reopen, and record Founder result.
 
-- R3 evidence;
-- exact-source clean-checkout artifacts;
-- preflight, preservation, failure injection and recovery;
-- clean install, in-place update, rollback-compatible repair and replacement
-  restore as applicable;
-- signed artifact/manifest/signature verification;
-- installed Founder lifecycle acceptance.
+Manual MSI is recovery/bootstrap only. Manual GitHub publication is not the
+routine Internal model after the protected automatic-promotion step is
+implemented.
 
-## Validation layers
+Beta and Stable always require explicit Founder approval. Internal automation
+must never promote or leak unfinished work into those channels.
 
-Use only the layers the environment can actually prove:
+## Completion states
 
-1. **Static/source** — types, lint, schema/contracts, dependency and policy
-   inspection.
-2. **Unit/domain** — invariants, calculations, validation, state transitions.
-3. **Integration/API/database** — transactions, authorization, idempotency,
-   migrations, retry and rollback.
-4. **Development UI** — real browser flows and all required states in the
-   available source environment.
-5. **Clean GitHub Actions** — fresh checkout and exact commit.
-6. **Signed artifact** — exact versions, hashes, signatures, manifests and
-   retained evidence.
-7. **Installed Windows** — MSI install/update, WebView, real UI, close/reopen,
-   process teardown, registry/database/AppData preservation.
-8. **Reference hardware** — T470 and 4 GB/HDD performance, long-session,
-   sleep/resume/reboot where required.
-9. **External/provider** — dated sandbox/live capability proof.
-10. **Seller/beta** — representative operational outcome.
+- **Source-complete package** — coherent PR merged to protected `main`.
+- **Release-complete milestone** — exact-source signed candidate passed every
+  selected release and installed-artifact gate and was published.
+- **Founder-accepted milestone** — installed update preserved data, reopened and
+  demonstrated the named outcomes on the reference machine.
+- **Stable-complete product** — representative beta, provider, security/privacy,
+  legal, restore, compatibility and rollout gates also pass.
 
-A lower layer cannot claim a higher one.
+A source-complete package may be followed by independent work before the
+milestone candidate is accepted. A dependent package may not bypass an unproven
+shared contract.
+
+## Performance workflow
+
+Startup and low-resource performance are a dedicated platform lane, not a reason
+to freeze the whole program.
+
+Measure before changing architecture:
+
+```text
+native process start
+→ registry/migration
+→ packaged runtime launch
+→ first socket listening
+→ authenticated semantic readiness
+→ dashboard response
+→ WebView hydration
+→ first usable interaction
+```
+
+Fix the largest measured stage first. Record cold and warm attempts separately.
+Do not delete AppData/caches, reinstall or weaken authenticated readiness to make
+a number look better. The product target remains the T470 and 4 GB/HDD envelope
+in the active product decisions.
 
 ## Database and migration rules
 
-- Production schema change uses append-only reviewed migrations; `db push` is
+- Production schema uses append-only reviewed migrations; `db push` is
   development-only.
 - Inventory every affected shop/database and format.
 - Preflight disk, version, compatibility and required backup.
-- Never silently initialize a new empty database over an existing failure.
+- Never silently initialize an empty database over an existing failure.
 - Migrations are journaled, restartable and observable.
-- Preserve existing Founder data unless an explicit destructive ceremony is
-  approved.
-- No schema-only release without a compatible application path.
-- Failed migration leaves a clear recoverable state.
+- Preserve Founder data unless an explicit destructive ceremony is approved.
+- No schema-only package without a compatible application path.
+- Failed migration leaves an explicit recoverable state.
 - Restore is atomic; failure leaves the current installation unchanged.
 
 ## Business transaction and provider rules
 
 - Derive workspace/shop/member/device/permission from trusted context.
 - Validate state transition and idempotency before effects.
-- Domain mutation, required movements, trusted audit and outbox commit
-  atomically.
+- Commit domain mutation, required movements, trusted audit, domain event,
+  outbox and compensation facts atomically.
 - Persist authenticated inbound events before acknowledgement.
 - Store stable effect keys, attempts, receipts and ambiguous-result state.
-- Advance checkpoints only after earlier work commits or enters a governed dead
+- Checkpoints advance only after prior work commits or enters governed dead
   letter.
 - Money uses integer smallest units and explicit currency.
-- Stock, money, status and external effects reverse through explicit
+- Stock, money, status and provider effects reverse through explicit
   compensating facts.
-- Provider code is hidden/conditional until capability-specific live
+- Provider code remains hidden or conditional until capability-specific live
   certification.
 
 ## UI and experience completion
 
-Every material UI change applies the contract in
-`../product/EXPERIENCE.md`. Review real content and:
+Every material UI change applies `../product/EXPERIENCE.md` with real content:
 
-- loading, first-use empty, filtered-empty, success-empty, error, permission,
-  offline, stale, pending, conflict, retry and recovery states;
+- happy, loading, first-use empty, filtered-empty, success-empty, permission,
+  offline, stale, pending, conflict, error, retry and recovery states;
 - normal, destructive, bulk and keyboard behavior;
-- AR/FR/EN and RTL/LTR;
-- 1366×768, zoom and responsive layouts;
-- screen-reader/focus/reduced-motion;
+- Arabic, French and English with real RTL/LTR parity;
+- Arabic joining, typography and mixed-direction numbers/identifiers;
+- 1366×768, responsive layout and 100–200% zoom;
+- screen-reader, focus and reduced-motion behavior;
 - representative data and low-end responsiveness;
 - trust cues for shop, actor, money, stock, sync and commit authority.
 
 Attractive screenshots do not replace journey evidence.
 
-## Continuous Founder Internal update loop
+## Validation layers
 
-Every work package that changes the installed app follows:
+Use only the evidence an environment can prove:
 
-```text
-task contract
-→ owner branch
-→ implementation and targeted checks
-→ push/draft PR
-→ cross-agent review
-→ clean GitHub Actions
-→ merge protected main
-→ unique Internal version request
-→ exact-source signed MSI + signature + latest.json
-→ automated installed runtime and visible-UI acceptance
-→ Founder Internal publication
-→ in-app update over previous accepted version
-→ AppData preservation
-→ real UI/change observation, close and reopen
-→ evidence record
-→ final completion
-```
+1. static/source;
+2. unit/domain;
+3. integration/API/database;
+4. development UI;
+5. clean GitHub Actions;
+6. signed artifact;
+7. installed Windows;
+8. T470 and floor-device hardware;
+9. external/provider;
+10. representative seller/Beta.
 
-### Completion states
-
-- **Source-complete** — merged protected source.
-- **Release-complete** — exact-source signed candidate passed release gates.
-- **Founder-accepted** — real installed update preserved data, reopened and
-  demonstrated the intended change.
-
-App-changing work is finally complete only at Founder-accepted.
-
-### Update rules
-
-- Every app-changing work package gets a unique immutable version.
-- Never rebuild or reuse a failed version.
-- Release requests bind the exact protected-main merge SHA.
-- The signed workflow may reuse successful required PR checks only after it
-  proves the merged protected-main Git tree is byte-identical to the reviewed
-  PR-head tree. It still performs the exact-source signed build and installed
-  MSI/runtime/visible-UI gates; a commit/tree mismatch or missing check blocks
-  release.
-- Verify MSI hash, updater signature, trusted source and update manifest before
-  installation.
-- Routine updates install over the existing accepted version.
-- Do not uninstall or delete AppData to make acceptance pass.
-- At most one unaccepted Founder Internal version is in flight.
-- If acceptance fails, stop related stacking and repair through a new version.
-- Manual MSI installation is recovery/bootstrap only after the in-app updater
-  path is established.
-- Documentation-only work does not create an update unless executable release
-  authority changed.
-
-### Channels
-
-- **Internal** — frequent Founder-only development delivery.
-- **Beta** — selected representative sellers after phase gates.
-- **Stable** — public evidence-approved release.
-
-Internal cadence must never leak unfinished development builds to Beta/Stable
-sellers.
+A lower layer cannot claim a higher one.
 
 ## Low-storage Founder machine
 
 - The Desktop Agent may inspect and edit source locally, but does not run builds,
   automated tests, coverage, dependency installation or heavy validation.
-- Clean source checks, builds, full matrices and Windows packaging belong in
-  GitHub Actions.
+- Builds, matrices and Windows packaging belong in GitHub Actions.
 - Do not require permanent `node_modules`, `.next`, Rust `target` or repeated
-  installer caches on the Founder machine.
-- Use exact prebuilt artifacts for local installation and acceptance.
-- Do not delete canonical Roaming/Local AppData, registry, database, migration
-  records or master keys during routine work.
-- Clean temporary artifacts only with explicit validated paths.
-- Record the exact machine/profile/artifact for performance claims.
-
-## Review
-
-The non-authoring agent reviews:
-
-- correctness against product and experience;
-- authority, state and invariant gaps;
-- data preservation and migration;
-- security/privacy and abuse paths;
-- concurrency, replay, failure and compensation;
-- UI states, localization/accessibility and low-end behavior;
-- tests that prove outcomes rather than implementation trivia;
-- unnecessary scope, duplicate abstractions and stale documentation.
-
-The reviewer challenges material assumptions and can block completion. Review
-does not transfer branch ownership unless explicitly handed off.
-
-## Merge gate
-
-Before merge:
-
-- scope is coherent and no unrelated user changes are staged;
-- required checks for the risk class pass;
-- migration/recovery and compatibility are reviewed;
-- reviewer findings are resolved;
-- docs accurately describe target/current/in-flight state;
-- no secret/private data entered the diff or evidence;
-- PR names the post-merge Internal delivery requirement.
+  installer caches locally.
+- Use exact prebuilt artifacts for installation and observation.
+- Do not delete canonical Roaming/Local AppData, registry, databases, migration
+  records or keys during routine work.
+- Record exact machine, profile, artifact and timing for performance claims.
 
 ## Documentation updates
 
-- Founder product decision → `product/DECISIONS.md` plus affected owner.
+- Founder choice → `product/DECISIONS.md` plus affected owner.
 - Scope/public promise → `product/PRODUCT.md`.
 - Capability/journey/UI standard → `product/EXPERIENCE.md`.
 - Target invariant/protocol → `system/ARCHITECTURE.md`.
 - Merged implementation/evidence → `system/CURRENT_STATE.md`.
-- Dependency order → `system/ROADMAP.md`.
+- Dependency and multi-session order → `system/ROADMAP.md`.
 - Workflow/release practice → this file.
-- In-flight branch/build/update → `WORKING_MEMORY.md`.
+- Execution frontier → `WORKING_MEMORY.md`.
 - Adopted research → `research/RESEARCH.md`.
 
-Update an owner; do not create another plan, gap report, wave, prompt, status or
-handoff document.
+Update an owner. Do not create another permanent plan, gap report, wave, prompt,
+status or handoff document. Issue #164 is the tracked execution epic, not an
+additional documentation authority.
 
 ## Stop conditions
 
 Stop and escalate when:
 
-- the requested action needs a new consequential Founder choice;
-- branch ownership or overlapping changes are unclear;
-- preservation requires destructive data handling;
-- permissions/signing/secrets are unavailable;
+- a consequential Founder choice is missing;
+- branch ownership or shared-contract overlap is unclear;
+- preservation would require destructive data handling;
+- signing/secrets/permissions are unavailable;
 - evidence disproves the governing design;
-- a protected workflow requires authority not already granted;
-- a release cannot bind exact source or preserve the accepted installation.
+- a protected workflow requires unavailable authority;
+- exact source cannot bind to the release;
+- a P0 or unresolved P1 exists;
+- public claims would exceed current evidence.
