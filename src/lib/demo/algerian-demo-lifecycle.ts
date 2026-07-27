@@ -9,12 +9,14 @@ import {
 } from "@/lib/demo/algerian-demo";
 import {
   dailyReportWouldBeEffectful,
+  withDemoPolicyLock,
 } from "@/lib/demo/algerian-demo-policy";
 import { finalizeAlgerianDemoStory } from "@/lib/demo/algerian-demo-story";
 import { SETTING_KEYS } from "@/lib/settings";
 import { SahelFlowError } from "@/types/errors";
 
 const DEMO_PREFIX = "demo-";
+const LEGACY_PHONE_REPUTATION_KEY = "phone_reputation_blacklist";
 const TRANSACTION_OPTIONS = {
   maxWait: 10_000,
   timeout: 120_000,
@@ -43,13 +45,41 @@ async function countEffectfulSettings(client: DbClient): Promise<number> {
 }
 
 /**
+ * Upgraded shops may still retain seller-owned phone-risk intelligence in the
+ * historical JSON Setting because no migration to PhoneReputation rows has been
+ * shipped. Non-empty or malformed retained data fails closed; only an absent,
+ * blank, null, empty-array or empty-object value is considered empty.
+ */
+async function countLegacyPhoneReputation(client: DbClient): Promise<number> {
+  const row = await client.setting.findUnique({
+    where: { key: LEGACY_PHONE_REPUTATION_KEY },
+    select: { value: true },
+  });
+  const raw = row?.value.trim() ?? "";
+  if (!raw) return 0;
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.length > 0 ? 1 : 0;
+    if (parsed && typeof parsed === "object") {
+      return Object.keys(parsed as Record<string, unknown>).length > 0 ? 1 : 0;
+    }
+    return parsed ? 1 : 0;
+  } catch {
+    // Retained seller data must not be ignored merely because its legacy blob
+    // cannot be decoded. Block seeding and leave recovery to an explicit path.
+    return 1;
+  }
+}
+
+/**
  * Count seller-owned state that must never be mixed with the evaluation dataset.
  *
  * Auth/session rows and harmless preference Settings belong to the installed
  * application shell rather than the active shop's sample business records.
  * Credentials, integrations, storefronts, automations, reusable messaging,
- * phone-risk data and effectful report Settings are included even when the
- * order catalog is otherwise empty.
+ * current/legacy phone-risk data and effectful report Settings are included even
+ * when the order catalog is otherwise empty.
  */
 async function countNonDemoSellerState(client: DbClient): Promise<number> {
   const counts = await Promise.all([
@@ -74,6 +104,7 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     // The demo does not create PhoneReputation records. Every row here is
     // independently owned seller risk intelligence and makes the shop non-empty.
     client.phoneReputation.count(),
+    countLegacyPhoneReputation(client),
     countEffectfulSettings(client),
   ]);
   return counts.reduce((total, count) => total + count, 0);
@@ -164,55 +195,60 @@ export async function getAlgerianDemoWorkspaceStatus(
 
 /**
  * Atomically recover any interrupted demo footprint and create the complete
- * deterministic workspace. A process interruption rolls the SQLite transaction
- * back instead of stranding a half-seeded shop.
+ * deterministic workspace. The shared policy lock serializes this operation
+ * with report-setting writes and report sends; the database transaction gives
+ * rollback if any seed/finalizer write fails.
  */
 export async function loadAlgerianDemoWorkspace(
   client: DbClient = db,
 ): Promise<AlgerianDemoStatus> {
-  return client.$transaction(async (transaction) => {
-    const tx = transaction as unknown as DbClient;
-    const status = await safeStatus(tx);
-    if (status.loaded) return status;
+  return withDemoPolicyLock(() =>
+    client.$transaction(async (transaction) => {
+      const tx = transaction as unknown as DbClient;
+      const status = await safeStatus(tx);
+      if (status.loaded) return status;
 
-    if ((await countNonDemoSellerState(tx)) > 0) {
-      throw new SahelFlowError(
-        "Sample data can only be loaded into a shop with no seller-owned business records, phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
-        "DEMO_SHOP_NOT_EMPTY",
-        409,
-      );
-    }
+      if ((await countNonDemoSellerState(tx)) > 0) {
+        throw new SahelFlowError(
+          "Sample data can only be loaded into a shop with no seller-owned business records, current or legacy phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
+          "DEMO_SHOP_NOT_EMPTY",
+          409,
+        );
+      }
 
-    // Recover a marker-less partial footprint from a previously interrupted
-    // version before starting the atomic seed.
-    await clearDemoDerivedRecords(tx);
-    await clearAlgerianDemoData(tx);
-    await seedAlgerianDemoData(tx);
-    await finalizeAlgerianDemoStory(tx);
-    return safeStatus(tx);
-  }, TRANSACTION_OPTIONS);
+      // Recover a marker-less partial footprint from a previously interrupted
+      // version before starting the atomic seed.
+      await clearDemoDerivedRecords(tx);
+      await clearAlgerianDemoData(tx);
+      await seedAlgerianDemoData(tx);
+      await finalizeAlgerianDemoStory(tx);
+      return safeStatus(tx);
+    }, TRANSACTION_OPTIONS),
+  );
 }
 
 /**
  * Remove the complete demo graph atomically. Any independently owned seller
  * state blocks cleanup, including a non-demo storefront that references demo
- * products.
+ * products. The same policy lock prevents concurrent report configuration/send.
  */
 export async function removeAlgerianDemoWorkspace(
   client: DbClient = db,
 ): Promise<AlgerianDemoStatus> {
-  return client.$transaction(async (transaction) => {
-    const tx = transaction as unknown as DbClient;
-    if ((await countNonDemoSellerState(tx)) > 0) {
-      throw new SahelFlowError(
-        "Demo removal is blocked because independently owned seller records, phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
-        "DEMO_REMOVAL_REAL_DATA_PRESENT",
-        409,
-      );
-    }
+  return withDemoPolicyLock(() =>
+    client.$transaction(async (transaction) => {
+      const tx = transaction as unknown as DbClient;
+      if ((await countNonDemoSellerState(tx)) > 0) {
+        throw new SahelFlowError(
+          "Demo removal is blocked because independently owned seller records, current or legacy phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
+          "DEMO_REMOVAL_REAL_DATA_PRESENT",
+          409,
+        );
+      }
 
-    await clearDemoDerivedRecords(tx);
-    await clearAlgerianDemoData(tx);
-    return safeStatus(tx);
-  }, TRANSACTION_OPTIONS);
+      await clearDemoDerivedRecords(tx);
+      await clearAlgerianDemoData(tx);
+      return safeStatus(tx);
+    }, TRANSACTION_OPTIONS),
+  );
 }
