@@ -77,6 +77,8 @@ describe("Algerian Founder demo contract", () => {
     );
     expect(lifecycle).toContain("dailyReportWouldBeEffectful(settings)");
     expect(lifecycle).toContain("client.phoneReputation.count()");
+    expect(lifecycle).toContain("client.extractionMetric.count");
+    expect(lifecycle).toContain("client.counter.count()");
     expect(lifecycle).toContain("client.storefrontConfig.count");
     expect(lifecycle).toContain("client.automation.count");
     expect(lifecycle).toContain("client.cannedResponse.count");
