@@ -7,6 +7,7 @@ import {
   getAlgerianDemoStatus,
   seedAlgerianDemoData,
 } from "@/lib/demo/algerian-demo";
+import { finalizeAlgerianDemoStory } from "@/lib/demo/algerian-demo-story";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,9 @@ export const GET = withErrorHandler(async () => {
 
 export const POST = withErrorHandler(async () => {
   await requireAuth();
-  return NextResponse.json(await seedAlgerianDemoData(), {
+  await seedAlgerianDemoData();
+  await finalizeAlgerianDemoStory();
+  return NextResponse.json(await getAlgerianDemoStatus(), {
     status: 201,
     headers: { "Cache-Control": "no-store" },
   });
