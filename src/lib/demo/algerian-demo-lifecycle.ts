@@ -73,14 +73,35 @@ async function countLegacyPhoneReputation(client: DbClient): Promise<number> {
 }
 
 /**
+ * Standalone extraction metrics are seller analytics and make a shop non-empty.
+ * A generated non-demo metric whose `messageId` points at a demo message is part
+ * of the removable demo graph, so it must not block the cleanup that deletes it.
+ */
+async function countIndependentExtractionMetrics(
+  client: DbClient,
+): Promise<number> {
+  const [outsideIdCount, demoMessageDerivedCount] = await Promise.all([
+    client.extractionMetric.count({ where: { id: outsideDemo } }),
+    client.extractionMetric.count({
+      where: {
+        id: outsideDemo,
+        messageId: demoIdentity,
+      },
+    }),
+  ]);
+  return Math.max(0, outsideIdCount - demoMessageDerivedCount);
+}
+
+/**
  * Count seller-owned state that must never be mixed with the evaluation dataset.
  *
  * Auth/session rows, security audit entries, reference-only WilayaRiskProfile
  * rows and harmless preference Settings belong to the installed shell rather
  * than an active shop's sample business records. Business entities, sequence
- * counters, extraction analytics, credentials, integrations, storefronts,
- * automations, reusable messaging, current/legacy phone-risk data and effectful
- * report Settings are included even when the visible catalog is otherwise empty.
+ * counters, independent extraction analytics, credentials, integrations,
+ * storefronts, automations, reusable messaging, current/legacy phone-risk data
+ * and effectful report Settings are included even when the visible catalog is
+ * otherwise empty.
  */
 async function countNonDemoSellerState(client: DbClient): Promise<number> {
   const counts = await Promise.all([
@@ -102,7 +123,7 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     client.integration.count({ where: { id: outsideDemo } }),
     client.secret.count({ where: { id: outsideDemo } }),
     client.aiChatSession.count({ where: { id: outsideDemo } }),
-    client.extractionMetric.count({ where: { id: outsideDemo } }),
+    countIndependentExtractionMetrics(client),
     client.counter.count(),
     // The demo does not create PhoneReputation records. Every row here is
     // independently owned seller risk intelligence and makes the shop non-empty.
