@@ -1,222 +1,216 @@
 # SahelFlow working memory
 
-> **Purpose:** Compact in-progress checkpoint; not product or architecture
-> authority
+> **Purpose:** Compact execution frontier; not product or architecture authority
 > **Last updated:** 2026-07-27
 > **Protected-main executable checkpoint:** Internal.11 merge
 > `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
 > **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
-> **Founder installation:** Founder reports Internal.11 completed through the
-> in-app updater; exact post-install version/preservation evidence is not yet
-> recorded in repository authority
+> **Founder installation:** Founder reports Internal.11 installed through the
+> in-app updater and usable; exact post-install version/AppData identity is not
+> yet recorded
 > **Founder acceptance:** open; first and subsequent launches remain materially
 > slow on the ThinkPad T470
-> **Approved execution program:** issue #164
-> **Current branch:** `agent/document-aaa-completion-program`
+> **Operating authority:** FD-027, `WORKFLOW.md`, `ROADMAP.md`
+> **Execution epic:** issue #164
+> **Current stage:** documentation reconciled; Session 1 implementation ready
 
 ## Current truth
 
-PR #163 merged Internal.11 and the exact-source signed run completed every
-selected build, signature, installed-runtime, authenticated-UI, reopen,
-manifest and evidence gate. The workflow intentionally created a draft release;
-the Founder published it manually after the missing updater prompt exposed that
-handoff. The installed Internal.10 application then detected and installed the
-update.
+PR #163 merged Internal.11 and exact-head run `30243181965` passed every
+selected source, Rust, Windows runtime, installed-MSI, authenticated-UI and
+required lane. Signed run `30244003253` built and verified the exact MSI,
+signature, installed launch/reopen, authenticated hydrated UI twice,
+deterministic evidence and updater manifest.
 
-The Founder reports:
+The workflow left the release as a draft. The Founder manually published the
+verified draft, then Internal.10 detected and installed Internal.11 through the
+in-app updater.
 
-- the application UI itself opens and remains usable;
-- the first Internal.11 launch was slow;
+Founder observation:
+
+- application UI opens and is usable;
+- first Internal.11 launch was slow;
 - later launches are also not acceptably fast;
-- the repeated-launch performance problem remains a real product defect.
+- repeated-launch performance is an active defect;
+- exact post-install version, AppData identity, cold/warm stage timings,
+  demo-workspace walkthrough and full lifecycle record remain open.
 
-Do not describe Internal.11 as Founder-accepted until the installed version,
-AppData preservation, cold/warm timings, close/reopen and intended demo outcome
-are recorded. The slow-launch defect receives a dedicated measured platform lane
-but no longer freezes independent product development.
+Do not call Internal.11 Founder-accepted. The performance defect receives a
+measured platform lane but does not freeze independent product work.
 
-## Founder-approved completion direction
+## Approved operating model
 
-Issue #164 records the approved compressed program:
+FD-027 establishes SahelFlow Completion Operating Model v2:
 
-- finish the application across every required layer as a class-AAA, top-tier
-  Founder candidate as fast as professionally possible;
-- advance multiple roadmap phases in each intensive execution session;
-- target three or four execution sessions rather than spending sessions on tiny
-  isolated corrections;
-- treat the current frontend/UI/UX as broadly unaccepted rather than applying
-  superficial polish;
-- make Arabic/RTL correctness a blocking continuous product track across the
-  entire application;
-- retain evidence honesty: public Stable still requires representative beta,
-  live provider certification, independent security/privacy/Law 18-07 review,
-  incident/restore drills and explicit promotion.
+- each intensive session advances multiple roadmap phases when dependencies
+  permit;
+- ordinary feature PRs merge without version bumps;
+- coherent merged outcomes are grouped into one milestone/session Internal
+  candidate;
+- routine Internal drafts auto-publish only after every post-build gate passes;
+- one frozen candidate may be in flight while independent work continues;
+- P0/P1 block the affected outcome; P2/P3 become focused follow-ups;
+- Arabic/RTL and whole-app UX quality are blocking continuous tracks;
+- the four sessions target a complete Founder AAA candidate, while public Stable
+  still requires representative beta, live provider, independent review and
+  rollout evidence.
 
-No application implementation is authorized in this documentation session.
-The next session begins execution from current protected `main` after this
-planning record is integrated.
+## Active lanes and WIP limits
 
-## Operating model for the execution sessions
+### 1. Core authority — WIP 1
 
-### Active lanes and WIP limits
+- workspace/shop context;
+- schema, migration and compatibility;
+- business state machines and movements;
+- audit, inbox/outbox, idempotency and permissions.
 
-1. **Core authority lane — WIP 1**
-   - workspace/shop context;
-   - schema, migration and compatibility;
-   - state machines and movement ledgers;
-   - trusted audit, inbox/outbox, idempotency and permissions.
+### 2. Seller verticals — WIP 2 total
 
-2. **Seller vertical lanes — WIP 2 total**
-   - complete observable seller outcomes across UI, API, domain and database;
-   - begin only after their shared contracts are frozen;
-   - no overlapping branch ownership.
+- complete observable journeys across UI, API, domain and database;
+- begin after shared contracts are frozen;
+- no overlapping ownership.
 
-3. **Experience and Arabic lane — WIP 1**
-   - coherent design system and navigation architecture;
-   - Arabic typography, copy, geometry and mixed-direction content;
-   - RTL tables, charts, icons, forms, dialogs, focus and keyboard behavior;
-   - complete loading, empty, error, degraded, conflict and recovery states;
-   - continuous across all sessions, not deferred to a final redesign.
+### 3. Experience and Arabic — WIP 1
 
-4. **Platform and performance lane — WIP 1**
-   - cold/warm startup;
-   - release/updater automation;
-   - CI elapsed time, packaging and diagnostics;
-   - backup/restore infrastructure and low-resource behavior.
+- shared design system and navigation;
+- Arabic copy, typography, geometry and mixed-direction content;
+- RTL tables, charts, icons, forms, dialogs and focus behavior;
+- complete page states, accessibility, responsiveness and polish.
 
-At most one frozen signed candidate may be in flight. Release publication,
-installation or Founder observation does not stop independent branches.
+### 4. Platform and performance — WIP 1
 
-### Work-package rules
+- cold/warm startup;
+- updater/release automation;
+- CI, packaging and diagnostics;
+- backup/restore infrastructure and low-resource behavior.
 
-- One branch/PR owns one coherent seller or Founder outcome.
-- Normal branch lifetime is less than two working days.
-- Include every affected layer required for correctness and acceptance.
-- Split oversized work by usable outcomes, never by arbitrary backend/frontend
-  files.
-- Ordinary feature PRs do not bump the app version.
-- Shared schema, domain and design-system contracts merge before dependent work.
-- Do not mix unrelated refactors, dependency upgrades or broad cleanup.
+At most one frozen signed candidate is in flight.
 
-### Review severity
+## Session map
 
-- **P0:** data loss, security compromise, cross-shop leakage, corrupt
-  update/restore or irreversible stock/money damage; stop immediately.
-- **P1:** required journey/authority failure, duplicate effect, unsafe migration,
-  startup/install failure or major unusable Arabic/UX defect in the named
-  outcome; blocks merge/release.
-- **P2:** bounded hardening that does not invalidate the outcome; schedule a
-  focused follow-up.
-- **P3:** low-impact polish or optional cleanup; retain in backlog.
+### Session 1 — foundation, delivery and global experience
 
-P2/P3 findings do not repeatedly reopen a frozen green release candidate.
-
-### CI and release direction
-
-- Draft heads run fast authority and targeted checks.
-- One frozen review head runs selected full source/database/native lanes.
-- Never rerun an unchanged passing exact head.
-- Retry only failed infrastructure jobs when appropriate.
-- Installed-MSI lanes are selected for native, migration, packaged-runtime,
-  installer/updater or release-authority risk rather than every UI/business PR.
-- Routine Internal candidates build as drafts, pass all post-build gates, then
-  auto-publish in a protected final step.
-- Failed candidates remain drafts.
-- Internal delivery is milestone/session-based, not one release for every tiny
-  merge.
-- Beta and Stable always require explicit Founder approval.
-
-## Four-session execution map
-
-### Session 1 — foundation, delivery system and global experience base
-
-Advance Phase 1, the Phase 3 experience track and platform work together:
-
-- implement safe automatic Internal publication after every release gate passes;
-- measure cold and warm launch stages and fix the largest proven repeated-launch
-  cost without blocking independent work;
-- implement the first compatible Phase 1A package: durable workspace identity,
-  shop binding/incarnation, explicit trusted context and Founder-data
-  migration/recovery;
-- establish global design-system and Arabic/RTL foundations: typography,
-  logical spacing, shell/navigation direction, mixed content, shared
-  form/table/dialog states and 1366×768 containment;
-- inventory every serious frontend/Arabic failure and bind it to an owning
-  session outcome;
-- cut at most one coherent Founder milestone candidate.
+- protected automatic publication after every release gate;
+- measured Internal.11 cold/warm startup and correction of the largest stage;
+- first compatible Phase 1A workspace/shop/incarnation authority package;
+- global design-system and Arabic/RTL foundations;
+- whole-route UI/Arabic failure inventory bound to Session 1–4 owners;
+- at most one coherent Founder milestone candidate.
 
 ### Session 2 — business truth and Golden COD core
 
-Advance Phase 1B, Phase 2 and experience remediation together:
-
-- separate order, delivery, inventory, COD/financial and return/refund state
-  contracts;
-- add reservation, stock movement and COD receivable/remittance/refund/correction
-  facts;
-- atomically bind mutation, trusted audit, domain event, outbox and idempotency;
-- place all order intake behind one canonical command boundary;
-- complete the primary catalog, customer/risk, order, confirmation, inventory and
-  delivery UI journeys with the shared AAA/Arabic system;
-- prove duplicate, retry, interruption, conflict and compensation behavior.
+- separate state machines;
+- inventory and COD movements;
+- canonical atomic transition/audit/outbox/idempotency service;
+- unified order intake;
+- primary catalog/customer/order/confirmation/inventory/delivery UI journeys;
+- duplicate, retry, interruption, conflict and compensation proof.
 
 ### Session 3 — complete local product and commercial/provider foundations
 
-Advance Phases 2, 3, 4 and 5 where dependencies permit:
-
-- complete the Golden COD Journey through return/refund, COD reconciliation,
-  inventory, finance, customer and analytics;
-- complete local onboarding/demo, inbox, automations, accounting, analytics,
-  settings, diagnostics and support depth;
-- complete local encrypted backup, restore and replacement-install recovery;
-- implement identity/team/device/licensing foundations over the stable workspace
-  contract;
-- implement durable provider inbox/outbox/receipt/dead-letter/reconciliation
-  foundations and expose only certified capabilities;
-- continue complete AR/FR/EN, RTL/LTR, accessibility and responsive remediation.
+- finish Golden COD through return/refund, remittance and analytics;
+- onboarding/demo, inbox, automations, accounting, analytics, settings,
+  diagnostics and support;
+- local encrypted backup/restore/replacement install;
+- identity/team/device/licensing foundations;
+- durable provider effect foundations;
+- continued multilingual, RTL, accessibility and responsive completion.
 
 ### Session 4 — whole-product AAA integration and Founder candidate
 
-- audit every route/page/component against the page-completion contract;
-- eliminate inconsistent shells, spacing, copy, state handling, placeholders and
-  broken Arabic/RTL behavior;
-- complete cross-module navigation, data UX, history, trust cues and recovery;
-- pass representative-data, startup, low-resource and long-session budgets;
-- prove install, update, migration, backup, restore and replacement install;
+- full page/component audit;
+- eliminate inconsistent UX and broken Arabic/RTL;
+- complete data UX, history, trust and recovery;
+- pass representative performance and long-session budgets;
+- prove install/update/migration/backup/restore/replacement install;
 - close all known P0/P1 defects;
 - produce and Founder-test the complete AAA Internal candidate;
-- record only the residual external Beta/Stable evidence that coding sessions
-  cannot honestly manufacture.
+- record only external Beta/Stable evidence still outstanding.
 
 ## Exact next-session start
 
-1. Synchronize protected `main` and confirm Internal.11/source/release authority.
-2. Verify no overlapping active implementation PR or checkout ownership.
-3. Open issue #164 and declare Session 1 lane ownership and exact branch names.
-4. Freeze the Phase 1A workspace/shop contract and the global
-   design-system/Arabic contract before dependent parallel implementation.
-5. Start four independent bounded packages where files/contracts permit:
-   release auto-publication, measured startup performance, Phase 1A authority and
-   global experience/Arabic foundations.
-6. Keep each PR draft while batching implementation; do not assign release
-   versions to ordinary packages.
-7. Merge dependency-correct packages as soon as their selected gates and review
-   pass.
-8. Cut one milestone Internal candidate only after the Session 1 outcomes form a
-   coherent Founder test.
-9. Record exact merged outcomes, measured blockers and Session 2 entry point.
+1. Synchronize protected `main` and read FD-027, Workflow, Roadmap, Current State
+   and this file.
+2. Confirm no overlapping implementation PR or local checkout ownership.
+3. Open issue #164 and post the Session 1 lane allocation and branch names.
+4. Freeze two shared contracts first:
+   - Phase 1A workspace/shop/incarnation compatibility contract;
+   - global design-system/Arabic/RTL contract.
+5. Start four bounded packages where contracts/files permit:
+   - `agent/internal-auto-publish`;
+   - `agent/internal-11-startup-performance`;
+   - `agent/workspace-shop-authority`;
+   - `agent/design-system-arabic-rtl`.
+6. Keep material PRs draft while batching coherent work.
+7. Do not assign app versions to ordinary packages.
+8. Merge dependency-correct packages as soon as selected gates and review pass.
+9. Cut one milestone Internal only when Session 1 outcomes form a coherent
+   Founder test.
+10. Record merged outcomes, exact measurements and Session 2 entry point.
 
-## Non-negotiable preservation and quality rules
+Branch names are intended starting names; change them only to avoid a real
+collision, then record the replacement on issue #164.
 
-- Do not delete Roaming/Local AppData, shop databases, registry, migration
-  records, keys, WhatsApp state or seller records to make progress appear clean.
-- Do not weaken authenticated startup, shop authority, authorization,
-  transaction, migration, backup or provider-effect boundaries.
-- Do not claim provider certification, public Stable, performance or Arabic/UX
-  completion without exact evidence.
-- Do not defer Arabic/RTL, accessibility, loading/error/recovery states or
-  low-resource performance to a final polish pass.
-- Do not spend another session repeating unchanged workflows or repairing P2/P3
-  details inside a frozen candidate.
-- Do not create another plan, wave, prompt, status or handoff document; issue
-  #164 plus the active authority and this Working Memory are the execution entry
-  points.
+## Session 1 acceptance contracts
+
+### Release auto-publication
+
+- release remains draft until all signed post-build gates pass;
+- final protected step publishes the exact verified release;
+- failed candidate remains draft;
+- updater `latest.json` is live only after publication;
+- Beta/Stable cannot auto-promote.
+
+### Startup performance
+
+Measure separately:
+
+```text
+native process start
+→ registry/migration
+→ packaged runtime launch
+→ first socket listening
+→ authenticated semantic readiness
+→ dashboard response
+→ WebView hydration
+→ first usable interaction
+```
+
+Record cold and warm attempts. Fix the largest proven stage first. Do not
+reinstall, delete AppData/caches or weaken authenticated readiness.
+
+### Workspace/shop authority
+
+- durable workspace identity;
+- every shop bound to workspace and persistent incarnation;
+- explicit trusted context for every request/background execution;
+- active UI preference cannot select provider/background write authority;
+- safe migration of existing registry/databases;
+- failure remains visible and recoverable;
+- no silent fallback or cross-shop leakage.
+
+### Global experience and Arabic
+
+- coherent typography and spacing tokens;
+- correct shell/navigation direction;
+- semantic localized copy rather than fragments;
+- Arabic joining and mixed Arabic/Latin/numeric behavior;
+- shared tables, forms, dialogs and operational states;
+- 1366×768 and zoom containment;
+- keyboard/focus/screen-reader baseline;
+- inventory of every major route's design/Arabic defects and assigned session.
+
+## Non-negotiable rules
+
+- Do not delete Roaming/Local AppData, databases, registry, migrations, keys,
+  WhatsApp state or seller records to make progress appear clean.
+- Do not weaken startup, shop authority, authorization, transaction, migration,
+  backup or provider-effect boundaries.
+- Do not claim provider certification, performance, Arabic/UX completion or
+  Stable without exact evidence.
+- Do not defer Arabic/RTL, accessibility, page states or low-resource performance
+  to a final polish pass.
+- Do not repeat unchanged workflows or repair P2/P3 findings inside a frozen
+  candidate.
+- Do not create another permanent plan, wave, gap, prompt, status or handoff
+  document. The active authority plus issue #164 are sufficient.

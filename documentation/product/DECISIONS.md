@@ -258,6 +258,10 @@ desktop-authority, encryption, outage-survival or continuity requirements.
 
 ## FD-023 — Founder continuous internal-update acceptance
 
+> **Cadence note:** FD-027 supersedes the one-version-per-work-package cadence.
+> Exact-source signing, automated gates, in-place updating, preservation and
+> Founder milestone acceptance remain required.
+
 - Every completed work package that changes the installed application receives
   a new immutable Internal version after merge to protected `main`.
 - The exact-source signed artifact must pass automated release, signature,
@@ -306,6 +310,10 @@ desktop-authority, encryption, outage-survival or continuity requirements.
 
 ## FD-026 — One-month AAA completion program and fast agentic delivery
 
+> **Execution note:** FD-027 supersedes the one-version-per-package cadence and
+> defines the approved multi-phase session model. The 2026-08-27 maximum target,
+> full AAA depth and evidence honesty remain.
+
 - The maximum target for a complete SahelFlow 1.0 AAA Stable candidate is
   **2026-08-27**.
 - Work proceeds as dependency-correct vertical outcomes across product rules,
@@ -325,6 +333,97 @@ desktop-authority, encryption, outage-survival or continuity requirements.
   surface the precise critical-path or scope decision immediately. They do not
   silently defer a Required capability, repeat known work or hide delay behind
   process.
+
+## FD-027 — SahelFlow Completion Operating Model v2
+
+This decision governs the compressed implementation program approved on
+2026-07-27.
+
+### Superseded cadence rules
+
+- This supersedes FD-023's statement that every completed app-changing work
+  package receives its own Internal version.
+- This supersedes FD-026's statement that every app-changing package receives an
+  immutable Internal version.
+- Source-complete packages may merge independently without version bumps and may
+  be grouped into one coherent milestone/session Internal candidate.
+- Every milestone candidate still receives one unique immutable version, exact
+  source binding, signed artifact, automated installed gates and Founder
+  observation.
+- An unaccepted candidate does not globally freeze independent work. Dependent
+  work remains blocked by an unproven shared contract, P0 or unresolved P1.
+- At most one frozen signed candidate may be in flight.
+
+### Multi-phase execution
+
+- The Founder target is a complete class-AAA, top-tier SahelFlow candidate across
+  every required product layer as fast as professionally possible.
+- Work advances multiple roadmap phases in each intensive session when their
+  dependencies permit.
+- The compressed program uses four planned sessions: foundation/delivery/global
+  experience; business truth/Golden COD core; complete local product plus
+  identity/provider foundations; whole-product AAA integration and Founder
+  candidate.
+- These sessions target a complete Founder AAA candidate. They do not fabricate
+  representative seller beta, live provider certification, independent
+  security/privacy/Law 18-07 review, incident/restore drills, compatibility
+  evidence or Stable promotion.
+
+### Work lanes and WIP
+
+- Core authority lane: WIP 1.
+- Seller vertical lanes: WIP 2 total after shared contracts are frozen.
+- Experience and Arabic lane: WIP 1 and continuous across all sessions.
+- Platform and performance lane: WIP 1.
+- Shared schema, migration, domain and design-system contracts are serialized
+  before dependent parallel work.
+- Normal branches deliver one coherent outcome and normally live less than two
+  working days.
+
+### Frontend, Arabic and AAA quality
+
+- The current frontend and UX are broadly unaccepted as AAA.
+- Arabic/RTL parity is a blocking product requirement, not optional polish.
+- The program must systematically correct visual hierarchy, information
+  architecture, consistency, typography, mixed-direction content, RTL geometry,
+  tables, charts, icons, forms, dialogs, navigation, focus, accessibility,
+  responsiveness and all operational states across the application.
+- A major unusable Arabic/RTL or UX defect in the named outcome is P1.
+- No screenshot, route existence, mocked happy path or source-only test completes
+  a page or capability.
+
+### Review severity
+
+- P0 stops immediately: data loss, security compromise, cross-shop leakage,
+  corrupt update/restore or irreversible stock/money damage.
+- P1 blocks merge/release: required journey or authority failure, duplicate
+  effect, unsafe migration, startup/install failure or major unusable Arabic/UX
+  defect in the named outcome.
+- P2 is scheduled focused hardening that does not invalidate the outcome.
+- P3 is low-impact polish or optional cleanup.
+- P2/P3 findings do not repeatedly reopen a frozen green candidate.
+
+### CI and release
+
+- Draft heads run fast authority and targeted checks.
+- One frozen review head runs selected full source/database/native lanes.
+- An unchanged passing exact head is not rerun.
+- Installed-MSI testing is risk-selected rather than mandatory for every
+  business/UI PR.
+- Routine Internal candidates build as drafts, pass every post-build signature,
+  install, reopen, authenticated-UI and manifest gate, then publish
+  automatically in a protected final step.
+- Failed candidates remain drafts and never reach the updater.
+- Beta and Stable always require explicit Founder approval.
+
+### Preservation and honesty
+
+- The operating model does not authorize AppData deletion, unsafe migration,
+  weakened authority, skipped security/privacy/accessibility/localization gates,
+  false provider support, false performance claims or false Stable readiness.
+- If the target becomes materially at risk, agents surface the exact critical
+  path or consequential scope choice immediately instead of hiding delay or
+  lowering the bar.
 
 ---
 
