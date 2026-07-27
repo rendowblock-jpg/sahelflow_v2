@@ -146,6 +146,20 @@ not require a new Internal MSI.
   each produce exactly one responsive dashboard window.
 - Requires one exact signed in-place MSI bootstrap over Internal.8 with AppData
   preserved; future Internal versions return to the normal in-app updater.
+- Merged as PR #161 at
+  `ab3c1fb46bbe028745321d7469ae0924e9f236bd`; exact-head run
+  `30200603507` passed the selected source, Rust, Windows runtime and installed
+  MSI lanes.
+- Signed run `30201584875` published immutable Internal.10 and passed its clean
+  installed launch/close/reopen gates. The exact release MSI SHA-256 is
+  `DF9F038C3BE3FF7F814CB053CE8B20F00088FDF8FB46935E1E8BAC5C3C436A85`.
+- The Founder installation upgraded in place to display version `1.0.0.10` and
+  retained exact pre-install AppData identities. No update prompt is expected
+  while this version is already current.
+- The real dashboard eventually opened, but startup took multiple minutes.
+  Internal.10 therefore remains unaccepted pending measured cold/warm launch,
+  first-visible dashboard, bottom containment and close/reopen evidence. The
+  next Internal must also prove the recovered in-app updater path.
 
 ## [1.0.0-internal.5] — 2026-07-24
 

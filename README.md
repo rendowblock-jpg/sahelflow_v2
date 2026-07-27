@@ -4,10 +4,10 @@ SahelFlow is a Windows-first operations system for Algerian
 cash-on-delivery sellers.
 
 > **Repository status:** protected `main` and the current installation are
-> `1.0.0-internal.6`; it is signed-release-complete but not Founder-accepted
-> because runtime preparation took about 14 minutes on the Founder SSD.
-> `1.0.0-internal.5` remains the latest accepted baseline. SahelFlow 1.0 Stable
-> has not been released.
+> `1.0.0-internal.10`. It is signed-release-complete and installed with AppData
+> preserved, but not Founder-accepted because real launch took multiple minutes
+> on the Founder T470. `1.0.0-internal.5` remains the latest accepted baseline.
+> SahelFlow 1.0 Stable has not been released.
 
 ## Documentation
 
@@ -51,17 +51,17 @@ inventory/financial truth.
 
 Protected-main source
 `d1fb321ea213b0bfbb10042144c4c9b8019254eb` produced signed and
-Founder-accepted `1.0.0-internal.5`. Source
-`772d09c3b2ada4668f8c872bfd469cabb839d82a` then produced signed Internal.6;
-its GitHub artifact/signature/runtime/visible-UI gates passed and the Founder
-ThinkPad upgraded in place with AppData preserved. Its safe startup surface was
-responsive, but the installed runtime did not prepare inside the acceptance
-bound, so Internal.6 is not accepted.
+Founder-accepted `1.0.0-internal.5`. PR #161 at
+`ab3c1fb46bbe028745321d7469ae0924e9f236bd` produced signed Internal.10;
+run `30201584875` passed signed installed gates and the Founder installation
+upgraded in place with AppData identities preserved. The real dashboard opened,
+but only after multiple minutes, so Internal.10 remains unaccepted.
 
-This proves the Internal.5 installed runtime chain and the Internal.6 signed
-release chain separately. It does not prove Internal.6 Founder acceptance,
-Stable product completeness, provider certification, low-end performance
-targets or the future connected platform.
+This proves the Internal.5 accepted chain and the Internal.10 source, signed
+release and preserved installation separately. It does not prove Internal.10
+Founder acceptance, the recovered next-version in-app update, Stable product
+completeness, provider certification, low-end performance targets or the future
+connected platform.
 
 ## GitHub Actions validation
 

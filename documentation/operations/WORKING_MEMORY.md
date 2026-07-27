@@ -2,113 +2,117 @@
 
 > **Purpose:** Compact in-progress checkpoint; not product or architecture
 > authority
-> **Last updated:** 2026-07-26
-> **Protected-main checkpoint:** `d516e5fe3459f9e5efba15b6019f1e063a81c10c`
-> **Latest signed candidate:** `1.0.0-internal.9`, not Founder-installed
-> **Current Founder installation:** `1.0.0-internal.8`, not accepted
+> **Last updated:** 2026-07-27
+> **Protected-main executable checkpoint:** `ab3c1fb46bbe028745321d7469ae0924e9f236bd`
+> **Latest signed candidate:** `1.0.0-internal.10`, run `30201584875`
+> **Current Founder installation:** `1.0.0-internal.10`, not accepted
 > **Latest Founder-accepted installation:** `1.0.0-internal.5`
 
 ## Current outcome
 
-Internal.9 is source-complete and signed-release-complete. PR #160 merged exact
-source `d516e5fe3459f9e5efba15b6019f1e063a81c10c`; signed run `30190505041`
-built and published the immutable release and passed signed installed runtime,
-authenticated UI, normal close and reopen gates. The live updater manifest is
-reachable and names the exact signed Internal.9 MSI.
+Internal.10 is source-complete, signed-release-complete and installed with
+AppData preserved:
 
-The Founder Internal.8 installation opens its real authenticated dashboard but
-does not show the Internal.9 update prompt. This is an application defect, not
-a user or feed failure:
+- PR #161 merged reviewed head
+  `776a91410439e0195e11d48db604d855a22e2b75` as protected-main commit
+  `ab3c1fb46bbe028745321d7469ae0924e9f236bd`;
+- exact-head run `30200603507` passed every selected source, Rust, Windows
+  runtime and installed-MSI lane;
+- signed run `30201584875` published tag
+  `sahelflow-v1.0.0-internal.10-ab3c1fb46bbe028745321d7469ae0924e9f236bd`;
+- the exact MSI SHA-256 is
+  `DF9F038C3BE3FF7F814CB053CE8B20F00088FDF8FB46935E1E8BAC5C3C436A85`;
+- the Founder installation reports display version `1.0.0.10` and executable
+  product version `1.0.0-internal.10`;
+- the retained shop registry and database identities matched exactly before and
+  after installation.
 
-- the production WebView navigates from bundled `data:` content to the
-  authenticated `http://127.0.0.1:<dynamic-port>` workspace;
-- Tauri capabilities granted updater/process access only to bundled local
-  content and defined no `remote.urls` for that loopback workspace;
-- both the desktop and Next.js CSP omitted the Tauri IPC transport;
-- the automatic updater check swallowed access failures, while its orphaned
-  manual button rendered after the full-height app shell and was not reachable.
+No update prompt is expected while Internal.10 is already the latest release.
+The next higher Internal version must prove the recovered normal in-app updater
+path; Internal.10 must not be reinstalled merely to continue development.
 
-The permission and CSP policy are embedded in Internal.8, so that binary cannot
-repair its own updater. One signed in-place MSI bootstrap is necessary. It must
-not uninstall the app or delete AppData.
+Founder acceptance remains open. The real dashboard eventually opened and the
+process was responsive, but launch took multiple minutes. The Founder has not
+yet recorded direct-dashboard first visibility, bottom containment, normal
+close/reopen or acceptable cold/warm timing. Automated clean-runner UI evidence
+does not substitute for those real-machine observations.
 
-## Active work package
+## Immediate work package
 
-Branch:
+The next app-changing outcome is Founder launch-performance recovery and final
+desktop lifecycle acceptance:
 
-```text
-fix/internal-10-updater-loopback
-```
+- read the retained installed startup trace and measure one cold and one warm
+  launch without reinstalling or deleting caches/data;
+- identify the dominant stage rather than repeating the whole release workflow;
+- correct the root cause across native startup, contained runtime and/or UI
+  hydration as the evidence requires;
+- preserve FD-025 single-window authenticated readiness, protected runtime
+  authority, existing AppData and actionable same-window recovery;
+- prove the authenticated dashboard is first visible, the full shell remains
+  reachable at the bottom, cold/warm launch meets the ≤8 s p95 contract, and
+  normal close/reopen succeeds;
+- ship that one coherent package as the next immutable Internal through the
+  in-app updater over Internal.10.
 
-Internal.10 is the smallest complete updater recovery:
+No application implementation is part of the current documentation-only PR.
+After its merge, begin from current protected `main`; do not resume the merged
+Internal.10 branch.
 
-- authorize only the main window's `127.0.0.1` and `localhost` workspace
-  origins for the existing non-execute capability set;
-- keep shell execute/spawn forbidden and retain the authenticated native
-  loopback handoff;
-- allow `ipc:` and `http://ipc.localhost` through both effective CSP layers;
-- surface capability/permission/IPC updater failures instead of hiding them;
-- keep current, deferred and remotely repaired updater states recoverable with
-  periodic checks, bounded transient retries and visible permanent failures;
-- remove the orphaned global manual-check button from document flow;
-- remove the separate startup window and make the authenticated dashboard the
-  first visible successful launch state through the single main window;
-- keep that window non-visible only through native readiness and use the same
-  window for actionable recovery on failure;
-- add a source contract covering remote origins, updater/process permissions,
-  both CSP layers, visible access-failure handling and the single-window launch
-  invariant;
-- assign unique app/MSI version `1.0.0-internal.10` / `1.0.0.10`;
-- build, sign and install exact protected-main Internal.10 once in place over
-  Internal.8 with AppData preserved.
+## Completed this session
 
-## Work in progress
-
-- [x] Verify the live Internal.9 updater manifest and signed release assets.
-- [x] Reproduce the absent Founder update prompt on installed Internal.8.
-- [x] Prove the missing loopback capability/CSP authorization in exact source.
-- [x] Create the focused Internal.10 branch from protected main.
-- [x] Implement capability, CSP, failure visibility, direct-dashboard startup
-  and regression-contract changes.
-- [x] Assign unique Internal.10 app and MSI versions.
-- [x] Complete focused source review and authority updates.
-- [x] Commit, push and open focused PR #161.
-- [ ] Run risk-routed GitHub checks from the exact pushed head and resolve all
-  actionable findings.
-- [ ] Merge only after the required exact-head gate passes.
-- [ ] Build, sign and publish immutable Internal.10 from protected main.
-- [ ] Close SahelFlow normally and install the exact signed Internal.10 MSI in
-  place without uninstalling or deleting AppData.
-- [ ] Prove the dashboard is the first visible window, authenticated UI,
-  corrected bottom layout, startup timing, AppData preservation, normal close
-  and reopen on the Founder T470.
-- [ ] Use the next Internal package to prove normal in-app updating resumes.
-- [ ] Finish the separate artifact-driven workflow-speed optimization before
-  Phase 1A product work resumes.
+- [x] Merge exact Internal.10 source through protected PR #161.
+- [x] Pass exact-head risk-routed source and Windows gates.
+- [x] Build, sign and publish immutable Internal.10 from protected main.
+- [x] Install the exact signed MSI once in place over Internal.8.
+- [x] Verify installed version and exact AppData identity preservation.
+- [x] Observe that the real dashboard opens and the process responds.
+- [x] Confirm no current-version update prompt is expected.
+- [x] Integrate path/risk-aware PR automation: fast draft authority, selected
+  ready-for-review lanes and no independent repeated Windows/MSI triggers.
+- [ ] Meet and prove the Founder launch-performance and complete lifecycle gate.
+- [ ] Prove the next higher Internal installs through the in-app updater.
 
 ## Exact next execution order
 
-1. Push the reviewed single-window amendment to draft PR #161 while keeping the
-   Founder evidence JSON untracked; let the optimized classifier run its short
-   draft lane.
-2. Mark that exact head ready once and run the required app/release lanes.
-3. Address any current-head review/check finding on the same branch and merge
-   only after the required aggregate gate passes.
-4. Let protected main automatically dispatch the exact Internal.10 signed
-   release and verify its manifest, signature and installed clean-runner proof.
-5. Ask the Founder to close the running app normally, then run the source-owned
-   installer against the exact MSI hash with preservation checks.
-6. Observe the real dashboard as the first visible successful state, bottom
-   containment, cold/warm timing, normal close and reopen; record acceptance or
-   a precise remaining defect.
-7. Implement candidate-artifact promotion and short feedback lanes so normal
-   coding targets minutes to PR feedback and 10-20 minutes merge-to-updater.
+1. Synchronize to protected main after this documentation PR merges.
+2. Inspect Internal.10's persisted startup evidence and time one cold plus one
+   warm launch; do not reinstall, rebuild locally or delete AppData/caches.
+3. Open one focused app-changing branch for the measured root cause and complete
+   every affected code, UI, diagnostic, test and documentation layer.
+4. Keep its PR draft while coding so only the short authority lane runs; batch
+   coherent commits and mark one reviewed head ready once.
+5. Let risk-selected checks pass, merge, and publish one signed Internal
+   candidate. Do not manually rerun already-passing exact-head workflows.
+6. Use Internal.10's in-app updater to install it, then prove data preservation,
+   dashboard-first visibility, bottom containment, target timing, close and
+   reopen on the Founder T470.
+7. Resume Phase 1A workspace/shop authority and subsequent vertical outcomes
+   under FD-026's 2026-08-27 maximum AAA-candidate target.
+
+## Fast delivery rules to retain
+
+- Complete dependency-correct vertical outcomes across all affected layers;
+  do not freeze quality dimensions or create line-by-line ceremony.
+- Draft PRs run classification and fast authority only. Selected heavy source,
+  Rust, Windows or MSI lanes run once for the coherent reviewable head.
+- Documentation-only work merges without an Internal MSI.
+- Each app-changing merge produces one version and one signed candidate, not a
+  release for every draft revision.
+- Healthy-infrastructure targets are under two minutes for draft authority,
+  under fifteen minutes for ordinary reviewable source feedback and 10–20
+  minutes from app-changing merge to published updater.
+- If a target is missed, use retained timings to repair or reroute the slow
+  stage before repeating the entire workflow.
+- If the 2026-08-27 target becomes materially at risk, surface the exact
+  critical-path or Required-scope decision immediately; never hide delay or
+  weaken the AAA/evidence gates.
 
 ## Preservation constraints
 
 - Do not delete Roaming or Local AppData, shop databases, registry, migration
   records, master key, WhatsApp state or legacy runtime caches.
-- Do not uninstall or rebuild locally to make the symptom disappear.
+- Do not uninstall or rebuild locally to make a symptom disappear.
 - Do not weaken authenticated readiness or permit a fallback/partial workspace.
 - Do not put launch credentials, private seller data, raw child output or Node
   compile-cache bytes in logs, diagnostics, commits, PRs or evidence.

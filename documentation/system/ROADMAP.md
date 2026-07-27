@@ -1,18 +1,20 @@
 # SahelFlow — Completion Roadmap
 
 > **Status:** Active dependency order
-> **Current protected-main source:** Internal.9 at
-> `d516e5fe3459f9e5efba15b6019f1e063a81c10c`
+> **Current protected-main executable source:** Internal.10 at
+> `ab3c1fb46bbe028745321d7469ae0924e9f236bd`
 > **Latest Founder-accepted baseline:** Internal.5
 > **Current phase:** Phase 1 — workspace/shop and business-integrity foundation
-> **Immediate gate:** deliver the focused Internal.10 updater IPC correction by
-> one signed in-place bootstrap with AppData preserved, then prove normal
-> in-app updating resumes
-> **Last consolidated:** 2026-07-26
+> **Immediate gate:** correct Internal.10's measured multi-minute Founder launch
+> without reinstalling it, then prove the next version through the recovered
+> in-app updater
+> **Founder maximum AAA-candidate target:** 2026-08-27
+> **Last consolidated:** 2026-07-27
 
 This is the shortest safe path from the current application to the complete
-SahelFlow 1.0 product. It controls dependency order, not calendar promises.
-Work is complete only when its named outcome and evidence pass.
+SahelFlow 1.0 product. It controls dependency order under FD-026's maximum
+2026-08-27 AAA-candidate target. Work is complete only when its named outcome
+and evidence pass; the date does not weaken a gate or create a readiness claim.
 
 ## Sequencing rules
 
@@ -30,6 +32,9 @@ Work is complete only when its named outcome and evidence pass.
 9. Do not stack related product work over an unaccepted Founder update.
 10. Remove obsolete code only after compatible migration, parity and recovery
     evidence.
+11. Complete coherent vertical outcomes across all affected layers and use the
+    path/risk-aware fast loop in `WORKFLOW.md`; do not repeat full release lanes
+    for draft iterations or documentation-only work.
 
 ## Critical path
 
@@ -109,24 +114,23 @@ Documentation-only completion does not create an MSI.
 ## Phase 1 — Workspace/shop and business-integrity foundation
 
 Before Phase 1A changes the installed application, the current installed
-acceptance loop must close. Internal.9 integrated the full-size startup shell,
-viewport containment, runtime-listening evidence and repeat-launch compile
-cache, then passed exact-source signed installed MSI/UI gates. The existing
-Internal.8 installation could reach the authenticated dashboard and the live
-Internal.9 feed, but its loopback workspace had no Tauri remote capability/CSP
-authorization, so the updater call was blocked and its automatic error path was
-silent.
+acceptance loop must close. Internal.10 merged as PR #161 at
+`ab3c1fb46bbe028745321d7469ae0924e9f236bd`; exact-head run `30200603507`
+and signed run `30201584875` passed the selected source, Windows, installed MSI,
+signature, runtime and visible-UI gates. The Founder installation upgraded in
+place to `1.0.0.10` with exact AppData identities preserved, and no update
+prompt is expected while it is already the current release.
 
-Internal.10 is the bounded recovery: authorize only the loopback workspace for
-the existing updater/process capability, allow the IPC transport through both
-CSP layers and surface capability failures. It also replaces the Internal.9
-startup shell under FD-025: a single main window remains non-visible only until
-authenticated readiness, the dashboard is the first visible successful state,
-and that same window renders recovery only when launch fails. Because the
-updater defect is embedded in Internal.8, install the exact signed Internal.10
-MSI once in place without uninstalling or deleting AppData. Subsequent Internal
-delivery must prove the normal in-app updater path. Then finish the separate
-workflow-speed package before Phase 1A implementation resumes.
+The real Founder dashboard eventually opened, but launch took multiple minutes.
+Internal.10 is therefore not accepted. The immediate work is to measure one
+cold and one warm launch from retained startup evidence, identify the dominant
+stage, and correct it without reinstalling Internal.10, weakening authenticated
+readiness, loading a fallback workspace or deleting data. The resulting single
+app-changing package must ship once through the recovered in-app updater and
+prove dashboard-first visibility, bottom containment, target launch timing,
+AppData preservation, normal close and reopen. The workflow-speed redesign is
+already integrated; Phase 1A then resumes through the fast vertical-outcome
+loop rather than another release-process project.
 
 ### Outcome
 
