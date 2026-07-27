@@ -12,177 +12,157 @@ SahelFlow 1.0 Stable has not been released.
 
 - Consolidated the active documentation into ten authoritative documents in
   PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
-- Binding current state to accepted Internal.5 instead of stale pre-runtime
+- Bound current state to accepted Internal.5 instead of stale pre-runtime
   baselines.
-- Preserving five detailed research reports as non-authoritative archive
-  evidence.
-- Replacing duplicate product, experience, architecture, gap, roadmap, prompt,
+- Preserved detailed research as non-authoritative archive evidence.
+- Replaced duplicate product, experience, architecture, gap, roadmap, prompt,
   wave and history documents.
-- Installing the two-agent Web/Desktop GitHub workflow.
-- Removing GLM, Codex Cloud, MAWS and `agent-handoff` from active coordination.
-- Recording the continuous source → signed Internal update →
-  Founder-installed acceptance loop.
-- Establishing the business-integrity foundation and Golden COD Journey as the
-  next application program.
+- Installed the two-agent Web/Desktop GitHub workflow.
+- Removed GLM, Codex Cloud, MAWS and `agent-handoff` from active coordination.
+- Recorded the source → signed Internal → Founder-observed truth model.
+- Established business integrity and the Golden COD Journey as the application
+  critical path.
 
-This documentation-only reset does not change installed app behavior and does
-not require a new Internal MSI.
+This documentation-only reset did not change installed app behavior or require a
+new Internal MSI.
+
+### SahelFlow Completion Operating Model v2
+
+- Added Founder decision FD-027, superseding the old one-version-per-work-package
+  cadence while preserving exact-source signing, automated gates, in-place
+  updating, data preservation and Founder milestone acceptance.
+- Established four bounded execution lanes: one core-authority lane, up to two
+  seller verticals, one continuous experience/Arabic lane and one
+  platform/performance lane.
+- Established a four-session multi-phase program covering foundation/delivery,
+  business truth and Golden COD core, complete local product plus commercial and
+  provider foundations, then whole-product AAA integration.
+- Made Arabic/RTL, accessibility, complete page states and low-resource
+  performance blocking continuous requirements rather than final polish.
+- Classified review findings P0/P1/P2/P3 so non-blocking P2/P3 work no longer
+  repeatedly reopens frozen green candidates.
+- Changed routine Internal delivery to coherent milestone/session candidates:
+  ordinary feature PRs do not bump the app version, one frozen candidate may be
+  in flight while independent work continues, and failed candidates remain
+  drafts.
+- Defined protected automatic publication only after every signature, install,
+  reopen, authenticated-UI and manifest gate; Beta and Stable remain explicit
+  Founder promotions.
+- Recorded issue #164 as the tracked execution epic while keeping the ten active
+  documents as the only documentation authority.
+
+This operating-model reconciliation is documentation-only and does not itself
+change the current release workflow or create an MSI.
 
 ### Continuity and installed-startup triage
 
-- Closed the stale pre-merge documentation-reset working state and marked
-  Phase 1 active.
-- Distinguished the PR #154 documentation checkpoint from the Internal.5
-  executable source.
-- Moved all builds, automated tests, coverage and heavy validation for
-  Desktop-owned work to GitHub Actions.
-- Recorded the preserved-AppData Internal.5 `SF-RUNTIME-UI-BLOCKED` incident as
-  the immediate execution gate before Phase 1A.
-- Made the production dependency audit blocking in normal pull-request CI.
+- Closed the stale pre-merge documentation-reset working state and marked Phase 1
+  active.
+- Distinguished documentation checkpoints from executable source.
+- Moved builds, automated tests, coverage and heavy validation for Desktop-owned
+  work to GitHub Actions.
+- Recorded the preserved-AppData Internal.5 `SF-RUNTIME-UI-BLOCKED` incident.
+- Made the production dependency audit blocking in normal PR CI.
 
 ### Internal.6 startup reliability result
 
-- Keeps a safe non-business startup screen responsive while migrations,
-  runtime verification and mandatory services prepare off the Tauri event loop.
-- Reuses one verified standalone tree across bounded initial server attempts
-  instead of re-hashing the full tree on every same-launch retry.
-- Aligns browser UI-ready retries with the native readiness deadline and adds a
-  per-request timeout instead of silently giving up after about three seconds.
-- Persists bounded redacted startup-stage and UI-ready outcome evidence so a
-  future block distinguishes missing hydration, session rejection, route
-  unavailability, persistence failure and acknowledgment mismatch.
-- Preserves the authenticated fail-closed workspace boundary and requires an
-  in-place update over Internal.5 without deleting AppData.
+- Kept a safe non-business startup screen responsive while migrations, runtime
+  verification and mandatory services prepared off the Tauri event loop.
+- Reused one verified standalone tree across bounded initial server attempts.
+- Aligned browser UI-ready retries with the native readiness deadline and added a
+  per-request timeout.
+- Persisted bounded redacted startup-stage and UI-ready evidence.
 - Merged as PR #156 at
-  `772d09c3b2ada4668f8c872bfd469cabb839d82a`, passed exact-source signed run
-  `30136644587`, and was installed over Internal.5 with AppData preserved.
-- Proved the safe startup window remained responsive, but was not
-  Founder-accepted because recursive standalone verification took about 14
-  minutes before staging began on the Founder SSD.
+  `772d09c3b2ada4668f8c872bfd469cabb839d82a`, passed signed run
+  `30136644587`, and installed over Internal.5 with AppData preserved.
+- Was not Founder-accepted because recursive standalone verification took about
+  14 minutes before staging began on the Founder SSD.
 
 ### Internal.7 installed-runtime performance result
 
-- Uses the standalone runtime directly from its signed MSI-protected
-  `Program Files` installation instead of copying it into user-writable Local
-  AppData.
-- Keeps full deterministic tree identity generation and verification in clean
-  GitHub build/release evidence while removing 3,985-file recursive hashing
-  from interactive startup.
-- Leaves every existing Roaming/Local AppData file and legacy runtime cache
-  untouched.
-- Extends the installed Windows gate to recompute and bind the complete
-  protected runtime tree to the exact built candidate, reject a new Internal.7
-  AppData runtime cache, and prove authenticated launch/normal-close/reopen
-  twice.
+- Used the standalone runtime directly from signed MSI-protected `Program Files`
+  instead of copying it to user-writable Local AppData.
+- Removed 3,985-file recursive hashing from interactive startup while retaining
+  deterministic clean-build evidence.
+- Extended installed Windows gates for runtime identity and launch/reopen.
 - Merged as PR #157 at
   `3db7e4072f403f39632b7134be841047767a2e6d`, passed signed run
-  `30142585934`, and was installed over Internal.6 with AppData preserved.
-- Reduced Founder runtime preparation to 271 ms, then failed acceptance because
-  bundled Bun exited with `EPERM` while loading the protected Next.js
-  entrypoint and the desktop waited two full readiness deadlines.
+  `30142585934`, and installed over Internal.6 with AppData preserved.
+- Reduced runtime preparation to 271 ms, then failed because bundled Bun exited
+  with `EPERM` while loading the protected Next.js entrypoint.
 
-### Internal.8 Node runtime and delivery candidate
+### Internal.8 Node runtime and delivery result
 
-- Runs the installed Next.js standalone server on pinned official Node.js
-  22.23.1 LTS while retaining Bun for frozen development/build tooling and the
-  compiled WhatsApp sidecar.
-- Verifies official Node.js archive/executable hashes, retains its license and
-  proves the installed runtime identity contains no retired Bun production
-  executable.
-- Observes contained child exit during authenticated readiness so a future
-  early runtime crash is reported immediately.
-- Fixes signed-release PR reporting permissions and reuses reviewed PR checks
-  only after proving protected main and the successful reviewed head have the
-  identical Git tree; exact-source signing and installed MSI/UI gates remain.
+- Ran the installed Next.js standalone server on pinned official Node.js 22.23.1
+  LTS while retaining Bun for development/build tooling and WhatsApp.
+- Verified Node archive/executable hashes and installed runtime identity.
+- Observed contained child exit during readiness.
 - Merged as PR #158 at
   `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`; PR #159 at
-  `eca2111a18fb900e9880177848ada497fd07ab72` corrected the signed release's
-  disposable database fixture.
-- Passed signed run `30183140347`, published the exact signed updater and was
-  installed over Internal.7 with AppData preserved.
-- Proved the authenticated dashboard plus normal close/reopen, but remains
-  unaccepted because launch takes about 42.5 seconds and the startup-window
-  transition plus bottom app-shell clipping require correction.
+  `eca2111a18fb900e9880177848ada497fd07ab72` corrected the signed release
+  database fixture.
+- Passed signed run `30183140347`, published and installed over Internal.7 with
+  AppData preserved.
+- Proved authenticated dashboard and close/reopen, but remained unaccepted at
+  about 42.5 seconds to UI with layout issues.
 
-### Internal.9 startup, layout and updater candidate
+### Internal.9 startup, layout and updater result
 
-- Presents the immediate safe startup state as a maximized SahelFlow dashboard
-  skeleton with the normal title instead of a smaller visibly separate window.
-- Adds zero-minimum flex containment through the desktop shell/sidebar so the
-  navigation scroll region and footer stay reachable at shorter window heights.
-- Separates first Node listening from semantic database/auth readiness in the
-  durable startup trace.
-- Enables the pinned Node runtime's per-version module compile cache in
-  non-executable Local AppData and flushes it after authenticated UI readiness
-  to accelerate repeat launches without changing signed source authority.
+- Added the full-size startup presentation, viewport containment, separate
+  runtime-listening evidence and version-scoped Node compile cache.
 - Merged as PR #160 at
-  `d516e5fe3459f9e5efba15b6019f1e063a81c10c`; signed run `30190505041`
-  passed exact installed runtime/UI launch and reopen gates and published the
-  immutable Internal.9 updater release.
-- Founder Internal.8 reached its authenticated dashboard but did not display
-  the Internal.9 prompt. The published feed and signature were reachable; the
-  loopback UI lacked Tauri remote capability/CSP authorization, and the
-  automatic check hid the resulting failure.
+  `d516e5fe3459f9e5efba15b6019f1e063a81c10c`; signed run
+  `30190505041` published the immutable update and passed installed gates.
+- Installed Internal.8 did not display the Internal.9 prompt because the loopback
+  workspace lacked Tauri remote capability/CSP authorization and the automatic
+  failure path was hidden.
 
 ### Internal.10 updater bootstrap recovery
 
-- Grants the authenticated `127.0.0.1`/`localhost` workspace the existing
-  non-execute Tauri capability set without granting shell execute/spawn.
-- Allows the Tauri IPC transport through both desktop and Next.js CSP layers.
-- Surfaces capability/IPC updater failures instead of silently swallowing them
-  and removes the orphaned global manual-check button from document flow.
-- Keeps update discovery alive for the full app session: current versions poll
-  every 30 minutes, deferred updates are re-offered, transient failures use a
-  bounded 1/5/15-minute retry budget, and permanent or exhausted failures are
-  visible while periodic recovery remains active.
-- Mounts the shared toast renderer at the root so updater and recovery failures
-  remain visible on setup, login and authenticated dashboard routes.
-- Removes the separate startup window: the single main window remains
-  non-visible only while authenticated readiness completes, then shows the
-  hydrated dashboard as the first visible normal-launch state; the same window
-  owns actionable recovery if startup fails.
-- Requires installed UI evidence that no SahelFlow workspace becomes visible
-  before the authenticated readiness trace and that launch, close and reopen
-  each produce exactly one responsive dashboard window.
-- Requires one exact signed in-place MSI bootstrap over Internal.8 with AppData
-  preserved; future Internal versions return to the normal in-app updater.
+- Granted the authenticated loopback workspace the existing non-execute Tauri
+  capability set and allowed IPC through both CSP layers.
+- Surfaced updater capability failures, retained session polling/retry and
+  mounted global toast rendering.
+- Removed the separate startup window and enforced the single hidden-until-ready
+  main window.
 - Merged as PR #161 at
   `ab3c1fb46bbe028745321d7469ae0924e9f236bd`; exact-head run
-  `30200603507` passed the selected source, Rust, Windows runtime and installed
-  MSI lanes.
-- Signed run `30201584875` published immutable Internal.10 and passed its clean
-  installed launch/close/reopen gates. The exact release MSI SHA-256 is
+  `30200603507` passed selected source, Rust, Windows runtime and installed MSI.
+- Signed run `30201584875` published Internal.10. The exact MSI SHA-256 is
   `DF9F038C3BE3FF7F814CB053CE8B20F00088FDF8FB46935E1E8BAC5C3C436A85`.
-- The Founder installation upgraded in place to display version `1.0.0.10` and
-  retained exact pre-install AppData identities. No update prompt is expected
-  while this version is already current.
-- The real dashboard eventually opened, but startup took multiple minutes.
-  Internal.10 therefore remains unaccepted pending measured cold/warm launch,
-  first-visible dashboard, bottom containment and close/reopen evidence. The
-  next Internal must also prove the recovered in-app updater path.
+- Founder installed it in place with exact registry/shop-database identities
+  preserved. The dashboard opened after multiple minutes, so it was not
+  accepted.
 
-### Internal.11 Founder experience candidate
+### Internal.11 Founder experience result
 
-- Persists packaged Node compile-cache work at semantic runtime readiness and
-  authenticated UI readiness instead of relying on normal process exit after
-  the desktop terminates the contained runtime tree.
-- Streams a stable dashboard-shaped loading surface inside the authenticated
-  shell while the full dashboard aggregates resolve.
-- Adds a deterministic Algerian COD evaluation workspace with realistic DZD
-  products, fictional customers, 34 days of orders, Yalidine/ZR Express/Maystro
-  delivery states, COD collection/remittance, returns, refunds, expenses,
-  Arabic/French WhatsApp conversations, extraction evidence, dry-run
-  automations, storefront configuration, AI brief and audit history.
-- Makes the flagship `DZ-DEMO-0001` journey inspectable from Fatima Zohra's
-  Arabic WhatsApp inquiry through review, Yalidine delivery and COD remittance.
-- Loads and removes the demo atomically, recovers interrupted marker-less demo
-  footprints, rejects any independently owned seller business/configuration
-  state and removes generated analytics/audit rows derived from demo entities.
-- Creates no real credentials, provider calls, shipments or messages and blocks
-  cleanup when later seller-owned records or configuration would be damaged.
-- Assigns candidate identity `1.0.0-internal.11` / MSI `1.0.0.11`. PR #163 must
-  still pass final exact-head source, Windows, installed-MSI and independent
-  review gates before merge, signing or Founder acceptance.
+- Persisted packaged Node compile-cache work at semantic runtime and
+  authenticated-UI readiness.
+- Streamed a dashboard-shaped loading surface inside the real authenticated
+  shell.
+- Added a deterministic Algerian COD evaluation workspace with DZD products,
+  fictional customers, 34 days of orders, courier states, COD
+  collection/remittance, returns, refunds, expenses, Arabic/French WhatsApp,
+  extraction evidence, dry-run automations, storefront configuration, AI brief
+  and audit history.
+- Made `DZ-DEMO-0001` an inspectable Fatima Zohra → Yalidine delivery → COD
+  remittance story.
+- Added atomic load/remove, marker-less recovery, guarded cleanup, read-only demo
+  mutation boundaries and external-effect prevention.
+- Merged as PR #163 at
+  `1b9c52235a37d4593c2fffa3c397b85498aba7fd`.
+- Exact-head run `30243181965` passed selected source, Rust, Windows runtime,
+  installed-MSI, authenticated-UI and required lanes.
+- Signed run `30244003253` passed signature, MSI, installed launch/reopen,
+  authenticated hydrated UI twice, deterministic evidence and draft
+  `latest.json`.
+- The workflow left the release as a draft. The Founder manually published the
+  verified draft, then Internal.10 detected and installed Internal.11 through the
+  in-app updater.
+- Founder reports the application UI is usable, but first and subsequent
+  launches remain materially slow. Exact post-install version/AppData identity,
+  cold/warm stage timing, demo walkthrough and full lifecycle acceptance remain
+  open.
 
 ## [1.0.0-internal.5] — 2026-07-24
 
