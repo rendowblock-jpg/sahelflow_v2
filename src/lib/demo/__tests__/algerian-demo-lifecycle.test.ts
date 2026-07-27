@@ -20,11 +20,6 @@ let prisma: PrismaClient;
 const client = () => prisma as unknown as DbClient;
 const context = () => ({ prisma: client(), shop: {} as never });
 
-/**
- * The shared helper predates several independent configuration/inbox/AI tables.
- * Clear the complete lifecycle boundary so this suite never inherits rows from
- * another Vitest file using the same disposable database.
- */
 async function resetLifecycleTables(): Promise<void> {
   await prisma.$transaction([
     prisma.extractionMetric.deleteMany(),
@@ -122,6 +117,29 @@ describe("Algerian demo workspace lifecycle", () => {
       statusCode: 409,
     });
     expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("treats sequence and extraction analytics as seller-owned business traces", async () => {
+    await prisma.counter.create({ data: { name: "ORD", value: 7 } });
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await prisma.counter.deleteMany();
+
+    await prisma.extractionMetric.create({
+      data: {
+        id: "seller-extraction-metric",
+        method: "regex",
+        confidence: 0.82,
+        isComplete: true,
+        latencyMs: 12,
+      },
+    });
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      canSeed: false,
+      hasBusinessData: true,
+    });
   });
 
   it("treats current and retained legacy phone reputation as non-empty operational data", async () => {
