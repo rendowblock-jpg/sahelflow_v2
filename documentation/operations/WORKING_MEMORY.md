@@ -8,6 +8,7 @@
 > **Current Founder installation:** `1.0.0-internal.10`, not accepted
 > **Latest Founder-accepted installation:** `1.0.0-internal.5`
 > **Active branch/PR:** `agent/internal-11-founder-experience` / PR #163
+> **Unmerged candidate identity:** `1.0.0-internal.11` / MSI `1.0.0.11`
 
 ## Current outcome
 
@@ -29,8 +30,8 @@ AppData preserved:
   after installation.
 
 No update prompt is expected while Internal.10 is already the latest release.
-The next higher Internal version must prove the recovered normal in-app updater
-path; Internal.10 must not be reinstalled merely to continue development.
+Internal.11 must prove the recovered normal in-app updater path; Internal.10 must
+not be reinstalled merely to continue development.
 
 Founder acceptance remains open. The real dashboard eventually opened and the
 process was responsive, but launch took multiple minutes. The Founder has not
@@ -40,8 +41,10 @@ does not substitute for those real-machine observations.
 
 ## Active work package
 
-PR #163 is one coherent Founder-evaluation package, currently draft and not yet
-versioned or accepted. Its outcome is:
+PR #163 is one coherent Founder-evaluation package. It is in draft while its
+final exact head is synchronized and carries unique candidate identity
+`1.0.0-internal.11` / MSI `1.0.0.11`; it is not merged, signed or accepted.
+Its outcome is:
 
 - persist Node's packaged compile cache at semantic runtime readiness and real
   UI readiness, because the contained process tree is force-stopped on desktop
@@ -50,18 +53,24 @@ versioned or accepted. Its outcome is:
   aggregates resolve, without showing a splash, fake separate window or
   unauthenticated workspace;
 - add deterministic Algerian COD sample data through authenticated Settings UI;
-- load sample data only into an empty active shop and never create credentials,
-  secrets or live external-provider effects;
-- tag all sample identities, provide compensating cleanup and block removal if
-  later non-demo operational work exists;
+- load sample data only when no independently owned seller records,
+  storefronts, automations, integrations or reusable messaging configuration
+  exist;
+- create and remove the complete demo graph atomically, recover marker-less
+  interrupted demo footprints, and remove generated analytics/audit records
+  derived from demo entities;
+- block removal when later non-demo operational or configuration state exists;
 - present a complete Arabic/French flagship story from WhatsApp inquiry through
   review, confirmation, Yalidine delivery and COD accountability;
 - retain every Internal.10 preservation, fail-closed startup and updater
   invariant.
 
-The draft exact-head authority lane passed. Full source/type/lint/test, selected
-Windows and installed-artifact evidence remain pending and no launch-performance
-claim has been made.
+The earlier exact head passed full source quality, coverage, dependency audit,
+Windows database/standalone and contained-runtime checks. Independent review
+then found six lifecycle and evidence defects; all six are corrected on the
+current draft head with focused regression tests. The final Internal.11 head
+must now pass its own selected source, Windows and installed-artifact evidence.
+No Founder launch-performance claim has been made.
 
 ## Work in progress
 
@@ -75,22 +84,26 @@ claim has been made.
 - [x] Add authenticated AR/FR/EN Settings controls and guarded sample cleanup.
 - [x] Add source contracts for isolation, no credentials/provider effects,
   multilingual UI, safe cleanup, journey depth and startup behavior.
-- [ ] Pass full exact-head source/type/lint/test and risk-selected Windows lanes.
-- [ ] Assign one unique next Internal app/MSI version to the final reviewed head.
-- [ ] Merge and publish one exact-source signed Internal candidate.
+- [x] Address all six independent review findings: atomicity, interruption
+  recovery, complete empty-shop/configuration gating, storefront-safe removal,
+  derived-record cleanup and correct COD remittance timeline payload.
+- [x] Assign and synchronize Internal.11 app/MSI authority.
+- [ ] Pass final exact-head source/type/lint/test and risk-selected Windows lanes.
+- [ ] Merge and publish one exact-source signed Internal.11 candidate.
 - [ ] Install through Internal.10's in-app updater and prove preservation,
   dashboard-first visibility, bottom containment, acceptable cold/warm timing,
   sample-data loading, normal close and reopen on the Founder T470.
 
 ## Exact next execution order
 
-1. Complete source review and run the selected reviewable-head GitHub lanes for
-   PR #163; repair actionable findings on the same branch.
-2. Assign the unique next Internal version only to the coherent final head and
-   synchronize every version authority.
-3. Merge after independent review and required exact-head evidence.
-4. Publish one immutable signed candidate from protected `main`; do not repeat
-   already-passing workflows.
+1. Finish version/release-facing authority synchronization on the draft head and
+   let its fast authority lane pass.
+2. Mark PR #163 ready once so the selected full source, Windows runtime, Rust and
+   installed-MSI lanes execute against the exact Internal.11 candidate.
+3. Repair any actionable check or review finding on the same branch, then obtain
+   independent approval and the aggregate required gate.
+4. Merge and publish one immutable signed Internal.11 candidate from protected
+   `main`; do not repeat already-passing workflows.
 5. Use Internal.10's in-app updater to install it without uninstalling or
    deleting AppData.
 6. Measure one cold and one warm launch, inspect the retained startup trace and
@@ -125,7 +138,7 @@ claim has been made.
   records, master key, WhatsApp state or legacy runtime caches.
 - Do not uninstall or rebuild locally to make a symptom disappear.
 - Do not weaken authenticated readiness or permit a fallback/partial workspace.
-- Do not mix sample data into a non-empty seller shop.
+- Do not mix sample data into a seller-owned shop or configuration surface.
 - Do not create real credentials, provider effects, messages or shipments from
   the sample-data path.
 - Do not put launch credentials, private seller data, raw child output or Node
