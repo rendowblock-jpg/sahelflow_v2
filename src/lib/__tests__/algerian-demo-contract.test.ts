@@ -72,17 +72,20 @@ describe("Algerian Founder demo contract", () => {
     expect(route).toContain('"Cache-Control": "no-store"');
 
     expect(lifecycle.match(/client\.\$transaction/g)).toHaveLength(2);
-    expect(lifecycle.match(/withDemoPolicyLock/g).length).toBeGreaterThanOrEqual(3);
+    expect(
+      (lifecycle.match(/withDemoPolicyLock/g) ?? []).length,
+    ).toBeGreaterThanOrEqual(3);
     expect(lifecycle).toContain("timeout: 120_000");
     expect(lifecycle).toContain("countNonDemoSellerState");
     expect(lifecycle).toContain("countEffectfulSettings");
     expect(lifecycle).toContain("countLegacyPhoneReputation");
+    expect(lifecycle).toContain("countIndependentExtractionMetrics");
     expect(lifecycle).toContain(
       'LEGACY_PHONE_REPUTATION_KEY = "phone_reputation_blacklist"',
     );
     expect(lifecycle).toContain("dailyReportWouldBeEffectful(settings)");
     expect(lifecycle).toContain("client.phoneReputation.count()");
-    expect(lifecycle).toContain("client.extractionMetric.count");
+    expect(lifecycle).toContain("demoMessageDerivedCount");
     expect(lifecycle).toContain("client.counter.count()");
     expect(lifecycle).toContain("client.storefrontConfig.count");
     expect(lifecycle).toContain("client.automation.count");
@@ -128,11 +131,15 @@ describe("Algerian Founder demo contract", () => {
     expect(settingsRoute).toContain(
       "await assertDemoAllowsDailyReportSettings(prisma, effectiveAfter)",
     );
-    expect(settingsRoute.indexOf("assertDemoAllowsDailyReportSettings")).toBeLessThan(
+    expect(
+      settingsRoute.indexOf("assertDemoAllowsDailyReportSettings"),
+    ).toBeLessThan(
       settingsRoute.indexOf("await setSetting(context, key, value)"),
     );
 
-    expect(reportRoute).toContain("return withDemoPolicyLock(() => executeReport(trigger))");
+    expect(reportRoute).toContain(
+      "return withDemoPolicyLock(() => executeReport(trigger))",
+    );
     expect(reportRoute).toContain("if (await isAlgerianDemoLoaded(db))");
     expect(reportRoute).toContain('code: "DEMO_REPORT_SEND_BLOCKED"');
     expect(reportRoute.indexOf("isAlgerianDemoLoaded(db)")).toBeLessThan(
