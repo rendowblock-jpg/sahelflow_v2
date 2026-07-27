@@ -5,12 +5,17 @@ import { db, type DbClient } from "@/lib/db";
 const FLAGSHIP_ORDER_ID = "demo-order-001";
 const FLAGSHIP_CUSTOMER_ID = "demo-customer-01";
 const FLAGSHIP_PRODUCT_ID = "demo-product-01";
+const FLAGSHIP_CONVERSATION_ID = "demo-conversation-01";
 const FLAGSHIP_TOTAL = 6_350;
 
+const minutesAfter = (value: Date, minutes: number) =>
+  new Date(value.getTime() + minutes * 60 * 1000);
 const hoursAfter = (value: Date, hours: number) =>
   new Date(value.getTime() + hours * 60 * 60 * 1000);
 const daysAfter = (value: Date, days: number) =>
   new Date(value.getTime() + days * 24 * 60 * 60 * 1000);
+const daysBefore = (value: Date, days: number) =>
+  new Date(value.getTime() - days * 24 * 60 * 60 * 1000);
 
 /**
  * Make the Founder walkthrough internally consistent across inbox, order,
@@ -26,14 +31,42 @@ export async function finalizeAlgerianDemoStory(
 ): Promise<void> {
   const order = await client.order.findUnique({
     where: { id: FLAGSHIP_ORDER_ID },
-    select: { id: true, createdAt: true },
+    select: { id: true },
   });
   if (!order) return;
 
-  const confirmedAt = hoursAfter(order.createdAt, 2);
-  const shippedAt = hoursAfter(order.createdAt, 8);
-  const deliveredAt = daysAfter(order.createdAt, 2);
+  // Anchor the completed walkthrough six days before seeding. The broad seed's
+  // first order is generated for today, which would otherwise put delivery and
+  // remittance several days in the future while already marking them complete.
+  const conversationStartedAt = daysBefore(new Date(), 6);
+  conversationStartedAt.setHours(8, 30, 0, 0);
+  const messageTimes = [0, 15, 30, 45].map((minutes) =>
+    minutesAfter(conversationStartedAt, minutes),
+  );
+  const orderCreatedAt = minutesAfter(conversationStartedAt, 60);
+  const confirmedAt = hoursAfter(orderCreatedAt, 2);
+  const shippedAt = hoursAfter(orderCreatedAt, 8);
+  const deliveredAt = daysAfter(orderCreatedAt, 2);
   const remittedAt = daysAfter(deliveredAt, 2);
+
+  await client.conversation.updateMany({
+    where: { id: FLAGSHIP_CONVERSATION_ID },
+    data: {
+      createdAt: conversationStartedAt,
+      lastMessageAt: messageTimes[3],
+    },
+  });
+  for (let index = 0; index < messageTimes.length; index += 1) {
+    await client.message.updateMany({
+      where: {
+        id: `${FLAGSHIP_CONVERSATION_ID}-message-${index + 1}`,
+      },
+      data: {
+        timestamp: messageTimes[index],
+        createdAt: messageTimes[index],
+      },
+    });
+  }
 
   await client.orderItem.deleteMany({ where: { orderId: FLAGSHIP_ORDER_ID } });
   await client.orderItem.create({
@@ -54,6 +87,7 @@ export async function finalizeAlgerianDemoStory(
       status: "delivered",
       totalPrice: FLAGSHIP_TOTAL,
       deliveryCost: 450,
+      createdAt: orderCreatedAt,
       confirmedAt,
       shippedAt,
       deliveredAt,
@@ -75,6 +109,7 @@ export async function finalizeAlgerianDemoStory(
       cost: 450,
       status: "delivered",
       estimatedDelivery: deliveredAt,
+      createdAt: shippedAt,
     },
     create: {
       id: "demo-delivery-flagship",
@@ -88,28 +123,42 @@ export async function finalizeAlgerianDemoStory(
     },
   });
 
+  // Replace the broad generator's pending create-only entry with one clean,
+  // chronological flagship timeline.
+  await client.orderChange.deleteMany({ where: { orderId: FLAGSHIP_ORDER_ID } });
   const changes = [
+    {
+      id: "demo-order-001-change-created",
+      actionType: "create",
+      actor: "system",
+      createdAt: orderCreatedAt,
+      payload: { source: "whatsapp", status: "pending" },
+    },
     {
       id: "demo-order-001-change-confirmed",
       actionType: "status_change",
+      actor: "owner",
       createdAt: confirmedAt,
       payload: { from: "pending", to: "confirmed", channel: "whatsapp_ar" },
     },
     {
       id: "demo-order-001-change-shipped",
       actionType: "ship",
+      actor: "owner",
       createdAt: shippedAt,
       payload: { provider: "yalidine", trackingNumber: "YALIDINE-DEMO-26001" },
     },
     {
       id: "demo-order-001-change-delivered",
       actionType: "deliver",
+      actor: "owner",
       createdAt: deliveredAt,
       payload: { codCollected: true, amount: FLAGSHIP_TOTAL },
     },
     {
       id: "demo-order-001-change-remitted",
       actionType: "cod_remitted",
+      actor: "owner",
       createdAt: remittedAt,
       payload: {
         remittanceRef: "REM-YAL-DEMO-001",
@@ -119,25 +168,15 @@ export async function finalizeAlgerianDemoStory(
   ] as const;
 
   for (const change of changes) {
-    await client.orderChange.upsert({
-      where: { id: change.id },
-      update: {
-        status: "confirmed",
-        actionType: change.actionType,
-        actor: "owner",
-        payload: JSON.stringify(change.payload),
-        confirmedBy: "owner",
-        confirmedAt: change.createdAt,
-        createdAt: change.createdAt,
-      },
-      create: {
+    await client.orderChange.create({
+      data: {
         id: change.id,
         orderId: FLAGSHIP_ORDER_ID,
         status: "confirmed",
         actionType: change.actionType,
-        actor: "owner",
+        actor: change.actor,
         payload: JSON.stringify(change.payload),
-        confirmedBy: "owner",
+        confirmedBy: change.actor === "owner" ? "owner" : "system",
         confirmedAt: change.createdAt,
         createdAt: change.createdAt,
       },
