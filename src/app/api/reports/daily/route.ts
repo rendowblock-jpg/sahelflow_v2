@@ -7,6 +7,7 @@ import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { getI18n } from "@/lib/i18n-server";
+import { isAlgerianDemoLoaded } from "@/lib/demo/algerian-demo-policy";
 
 /** Setting key for the daily-report idempotency guard (W2-9).
  *  Stores the last Algiers-local date (YYYY-MM-DD) on which the report
@@ -38,6 +39,7 @@ export const dynamic = "force-dynamic";
  * visitors from triggering the report.
  *
  * Behavior:
+ *   - If an Algerian demo workspace is loaded → 409, no report generation/send
  *   - If daily_report_enabled ≠ "true" → 200 { ok: false, reason: "disabled" }
  *   - If daily_report_phone is not set → 200 { ok: false, reason: "no phone" }
  *   - If no orders yesterday → 200 { ok: false, reason: "no orders" }
@@ -56,6 +58,22 @@ export const dynamic = "force-dynamic";
  */
 async function handleReport(trigger: "cron" | "manual"): Promise<NextResponse> {
   const context = { prisma: db, shop: shopContext };
+
+  // Defense in depth: the Settings route prevents configuring an effectful
+  // report while the demo is loaded, but cron/manual sends also fail closed in
+  // case settings were changed by an older binary, direct maintenance path or
+  // interrupted update. Do this before reading orders or calling the sidecar.
+  if (await isAlgerianDemoLoaded(db)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: "demo workspace loaded",
+        code: "DEMO_REPORT_SEND_BLOCKED",
+      },
+      { status: 409, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   // 1. Check if the daily report is enabled
   const enabled = await getBool(context, SETTING_KEYS.dailyReportEnabled, false);
   if (!enabled && trigger === "cron") {
@@ -164,7 +182,10 @@ function verifyCronSecret(req: NextRequest): boolean {
     // (empty string), constantTimeEqual returns false and the request is
     // rejected. Previously the fallback let anyone hit the cron endpoint
     // with the publicly-known "dev" secret.
-    return !!env.publicCronSecret && constantTimeEqual(headerSecret, env.publicCronSecret);
+    return (
+      !!env.publicCronSecret &&
+      constantTimeEqual(headerSecret, env.publicCronSecret)
+    );
   }
   return false;
 }
