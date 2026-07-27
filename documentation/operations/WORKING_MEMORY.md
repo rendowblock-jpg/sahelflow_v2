@@ -54,23 +54,25 @@ Its outcome is:
   unauthenticated workspace;
 - add deterministic Algerian COD sample data through authenticated Settings UI;
 - load sample data only when no independently owned seller records,
-  storefronts, automations, integrations or reusable messaging configuration
-  exist;
+  storefronts, automations, integrations, secrets, reusable messaging
+  configuration or effectful daily-report settings exist;
 - create and remove the complete demo graph atomically, recover marker-less
   interrupted demo footprints, and remove generated analytics/audit records
   derived from demo entities;
-- block removal when later non-demo operational or configuration state exists;
+- block removal when later non-demo operational/configuration state or a real
+  WhatsApp daily-report destination exists;
 - present a complete Arabic/French flagship story from WhatsApp inquiry through
   review, confirmation, Yalidine delivery and COD accountability;
 - retain every Internal.10 preservation, fail-closed startup and updater
   invariant.
 
-The earlier exact head passed full source quality, coverage, dependency audit,
-Windows database/standalone and contained-runtime checks. Independent review
-then found six lifecycle and evidence defects; all six are corrected on the
-current draft head with focused regression tests. The final Internal.11 head
-must now pass its own selected source, Windows and installed-artifact evidence.
-No Founder launch-performance claim has been made.
+Earlier exact heads passed source authority, TypeScript, ESLint and Rust release
+checks; one focused lifecycle test then exposed incomplete shared-test cleanup
+and was isolated across the full table boundary. Independent review produced
+seven lifecycle/evidence findings; all seven are corrected on the current draft
+head with focused regression tests. The final Internal.11 head must pass its own
+selected source, Windows and installed-artifact evidence. No Founder
+launch-performance claim has been made.
 
 ## Work in progress
 
@@ -84,9 +86,10 @@ No Founder launch-performance claim has been made.
 - [x] Add authenticated AR/FR/EN Settings controls and guarded sample cleanup.
 - [x] Add source contracts for isolation, no credentials/provider effects,
   multilingual UI, safe cleanup, journey depth and startup behavior.
-- [x] Address all six independent review findings: atomicity, interruption
+- [x] Address all seven independent review findings: atomicity, interruption
   recovery, complete empty-shop/configuration gating, storefront-safe removal,
-  derived-record cleanup and correct COD remittance timeline payload.
+  derived-record cleanup, correct COD remittance timeline payload and blocking
+  effectful WhatsApp daily-report settings.
 - [x] Assign and synchronize Internal.11 app/MSI authority.
 - [ ] Pass final exact-head source/type/lint/test and risk-selected Windows lanes.
 - [ ] Merge and publish one exact-source signed Internal.11 candidate.
@@ -139,6 +142,8 @@ No Founder launch-performance claim has been made.
 - Do not uninstall or rebuild locally to make a symptom disappear.
 - Do not weaken authenticated readiness or permit a fallback/partial workspace.
 - Do not mix sample data into a seller-owned shop or configuration surface.
+- Do not load or retain demo data while real daily-report WhatsApp settings can
+  send demo-derived business information externally.
 - Do not create real credentials, provider effects, messages or shipments from
   the sample-data path.
 - Do not put launch credentials, private seller data, raw child output or Node
