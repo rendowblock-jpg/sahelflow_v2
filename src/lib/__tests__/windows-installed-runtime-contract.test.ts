@@ -55,6 +55,10 @@ describe("installed Windows runtime contract", () => {
     ).app?.windows;
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
+    const rootLayout = read("src/app/layout.tsx");
+    const dashboardRouteLayout = read("src/app/(dashboard)/layout.tsx");
+    const setupPage = read("src/app/setup/page.tsx");
+    const loginPage = read("src/app/login/page.tsx");
 
     expect(desktop).not.toContain("startup_recovery::show_starting");
     expect(desktop).not.toContain('get_webview_window("startup")');
@@ -88,6 +92,17 @@ describe("installed Windows runtime contract", () => {
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
     expect(beacon).toContain("const REQUEST_TIMEOUT_MS = 5_000");
     expect(beacon).not.toContain("MAX_ATTEMPTS");
+    expect(rootLayout).not.toContain("<RuntimeUiReadyBeacon />");
+    const setupGuard = dashboardRouteLayout.indexOf("if (!(await isAuthSetup())");
+    const authGuard = dashboardRouteLayout.indexOf("if (!(await isAuthenticated())");
+    const beaconIndex = dashboardRouteLayout.indexOf("<RuntimeUiReadyBeacon />");
+    const childrenIndex = dashboardRouteLayout.indexOf("{children}");
+    expect(setupGuard).toBeGreaterThan(-1);
+    expect(authGuard).toBeGreaterThan(setupGuard);
+    expect(beaconIndex).toBeGreaterThan(authGuard);
+    expect(childrenIndex).toBeGreaterThan(beaconIndex);
+    expect(setupPage).toContain("<RuntimeUiReadyBeacon />");
+    expect(loginPage).toContain("<RuntimeUiReadyBeacon />");
 
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');
     expect(uiRoute).toContain('code: "RUNTIME_SESSION_REQUIRED"');

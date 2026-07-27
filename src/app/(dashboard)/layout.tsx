@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { SpeculationRules } from "@/components/shared/speculation-rules";
 import { getDirection, type Locale } from "@/lib/i18n";
 import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
@@ -38,6 +39,12 @@ export default async function DashboardRouteLayout({
 
   return (
     <DashboardLayout locale={locale} dir={dir}>
+      {/*
+        Authentication and setup authority have resolved above. Signal the
+        hydrated workspace shell before slower page aggregates finish behind
+        their route loading surface.
+      */}
+      <RuntimeUiReadyBeacon />
       <SpeculationRules />
       {children}
     </DashboardLayout>

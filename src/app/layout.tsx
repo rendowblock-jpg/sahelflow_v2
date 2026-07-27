@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
-import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { UpdateChecker } from "@/components/updater/update-checker";
 import { getDirection, type Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
@@ -96,7 +95,6 @@ export default async function RootLayout({
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
               <TooltipProvider delayDuration={300}>
                 {children}
-                <RuntimeUiReadyBeacon />
                 <ServiceWorkerRegister />
                 <UpdateChecker />
                 <Toaster
