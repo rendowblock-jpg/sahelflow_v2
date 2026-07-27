@@ -1,0 +1,195 @@
+name: Internal.11 final safety patch
+
+on:
+  push:
+    branches:
+      - agent/internal-11-founder-experience
+    paths:
+      - .github/workflows/internal11-final-safety-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/internal-11-founder-experience
+          fetch-depth: 0
+
+      - name: Apply bounded safety fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{path}: expected one match, found {count}")
+              target.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          def replace_all(path: str, old: str, new: str, expected: int) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != expected:
+                  raise RuntimeError(f"{path}: expected {expected} matches, found {count}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_once(
+              "src/app/api/storefront/submit/route.ts",
+              '''  if (!config || !config.isActive) {
+              return NextResponse.json({ error: "Storefront not found or inactive" }, { status: 404 });
+            }
+
+            // Fetch the products''',
+              '''  if (!config || !config.isActive) {
+              return NextResponse.json({ error: "Storefront not found or inactive" }, { status: 404 });
+            }
+            if (config.id.startsWith("demo-")) {
+              return NextResponse.json(
+                {
+                  error: "Demo storefront is read-only",
+                  code: "DEMO_STOREFRONT_READ_ONLY",
+                },
+                { status: 409, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+
+            // Fetch the products''',
+          )
+
+          replace_once(
+              "src/app/api/delivery/create/route.ts",
+              '''  const input = createSchema.parse(body);
+            const context = { prisma: db, shop: shopContext };
+            const adapter = getDeliveryAdapter(input.provider);''',
+              '''  const input = createSchema.parse(body);
+            if (input.orderId.startsWith("demo-")) {
+              return NextResponse.json(
+                {
+                  error: "Demo orders cannot create real courier shipments",
+                  code: "DEMO_PROVIDER_EFFECT_BLOCKED",
+                },
+                { status: 409, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+            const context = { prisma: db, shop: shopContext };
+            const adapter = getDeliveryAdapter(input.provider);''',
+          )
+
+          replace_all(
+              "src/app/api/delivery/sync/route.ts",
+              '''  if (!delivery) {
+              return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
+            }
+            if (!delivery.trackingNumber) {''',
+              '''  if (!delivery) {
+              return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
+            }
+            if (delivery.orderId.startsWith("demo-")) {
+              return NextResponse.json(
+                {
+                  error: "Demo deliveries cannot call courier providers",
+                  code: "DEMO_PROVIDER_EFFECT_BLOCKED",
+                },
+                { status: 409, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+            if (!delivery.trackingNumber) {''',
+              2,
+          )
+
+          replace_once(
+              "src/lib/demo/algerian-demo-lifecycle.ts",
+              '''    return parsed ? 1 : 0;''',
+              '''    // The historical authority is an array. Any scalar is malformed
+              // retained state and must fail closed rather than being treated as empty.
+              return 1;''',
+          )
+
+          replace_once(
+              "src/lib/demo/algerian-demo-story.ts",
+              '''  const [orderCount, delivered] = await Promise.all([''',
+              '''  await client.auditLog.updateMany({
+              where: { id: "demo-audit-01" },
+              data: { createdAt: confirmedAt },
+            });
+
+            const [orderCount, delivered] = await Promise.all([''',
+          )
+
+          replace_once(
+              "src/lib/demo/__tests__/algerian-demo-lifecycle.test.ts",
+              '''  it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {''',
+              '''  it("fails closed on scalar legacy phone-reputation state", async () => {
+              await prisma.setting.create({
+                data: { key: "phone_reputation_blacklist", value: "false" },
+              });
+
+              const status = await getAlgerianDemoWorkspaceStatus(client());
+              expect(status).toMatchObject({
+                loaded: false,
+                canSeed: false,
+                hasBusinessData: true,
+              });
+              await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+                code: "DEMO_SHOP_NOT_EMPTY",
+                statusCode: 409,
+              });
+            });
+
+            it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {''',
+          )
+
+          replace_once(
+              "src/lib/demo/__tests__/algerian-demo-contract.test.ts",
+              '''  it("persists compiled startup modules and streams an authentic dashboard shell", () => {''',
+              '''  it("blocks public storefront and courier effects for demo entities", () => {
+              const storefront = read("src/app/api/storefront/submit/route.ts");
+              const deliveryCreate = read("src/app/api/delivery/create/route.ts");
+              const deliverySync = read("src/app/api/delivery/sync/route.ts");
+              const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
+              const story = read("src/lib/demo/algerian-demo-story.ts");
+
+              expect(storefront).toContain('code: "DEMO_STOREFRONT_READ_ONLY"');
+              expect(storefront.indexOf("DEMO_STOREFRONT_READ_ONLY")).toBeLessThan(
+                storefront.indexOf("orderService.create"),
+              );
+              expect(deliveryCreate).toContain('code: "DEMO_PROVIDER_EFFECT_BLOCKED"');
+              expect(deliveryCreate.indexOf("DEMO_PROVIDER_EFFECT_BLOCKED")).toBeLessThan(
+                deliveryCreate.indexOf("const creds = await loadDeliveryCredentials"),
+              );
+              expect(
+                deliverySync.match(/DEMO_PROVIDER_EFFECT_BLOCKED/g)?.length ?? 0,
+              ).toBeGreaterThanOrEqual(2);
+              expect(lifecycle).toContain("Any scalar is malformed");
+              expect(story).toContain('where: { id: "demo-audit-01" }');
+              expect(story).toContain("data: { createdAt: confirmedAt }");
+            });
+
+            it("persists compiled startup modules and streams an authentic dashboard shell", () => {''',
+          )
+
+      - name: Commit exact patch and remove workflow
+        shell: bash
+        run: |
+          rm .github/workflows/internal11-final-safety-patch.yml
+          git config user.name "sahelflow-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            .github/workflows/internal11-final-safety-patch.yml \
+            src/app/api/storefront/submit/route.ts \
+            src/app/api/delivery/create/route.ts \
+            src/app/api/delivery/sync/route.ts \
+            src/lib/demo/algerian-demo-lifecycle.ts \
+            src/lib/demo/algerian-demo-story.ts \
+            src/lib/demo/__tests__/algerian-demo-lifecycle.test.ts \
+            src/lib/demo/__tests__/algerian-demo-contract.test.ts
+          git commit -m "fix(demo): block external effects and align evidence"
+          git push origin HEAD:agent/internal-11-founder-experience
