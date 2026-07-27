@@ -183,6 +183,13 @@ export async function finalizeAlgerianDemoStory(
     });
   }
 
+  // The broad seed created this audit event at seed time. Re-date it with the
+  // actual flagship confirmation so audit/history surfaces remain chronological.
+  await client.auditLog.updateMany({
+    where: { id: "demo-audit-01" },
+    data: { createdAt: confirmedAt },
+  });
+
   const [orderCount, delivered] = await Promise.all([
     client.order.count({ where: { customerId: FLAGSHIP_CUSTOMER_ID } }),
     client.order.aggregate({
