@@ -55,6 +55,7 @@ describe("Algerian Founder demo contract", () => {
   it("uses an authenticated atomic and recoverable lifecycle", () => {
     const route = read("src/app/api/demo-data/route.ts");
     const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
+    const policy = read("src/lib/demo/algerian-demo-policy.ts");
     const panel = read("src/components/settings/demo-data-panel.tsx");
     const settings = read("src/components/settings/settings-tabs.tsx");
 
@@ -68,9 +69,8 @@ describe("Algerian Founder demo contract", () => {
     expect(lifecycle).toContain("timeout: 120_000");
     expect(lifecycle).toContain("countNonDemoSellerState");
     expect(lifecycle).toContain("countEffectfulSettings");
-    expect(lifecycle).toContain("SETTING_KEYS.dailyReportEnabled");
-    expect(lifecycle).toContain("SETTING_KEYS.dailyReportPhone");
-    expect(lifecycle).toContain("reportDestination.length > 0");
+    expect(lifecycle).toContain("dailyReportWouldBeEffectful(settings)");
+    expect(lifecycle).toContain("client.phoneReputation.count()");
     expect(lifecycle).toContain("client.storefrontConfig.count");
     expect(lifecycle).toContain("client.automation.count");
     expect(lifecycle).toContain("client.cannedResponse.count");
@@ -80,6 +80,11 @@ describe("Algerian Founder demo contract", () => {
     expect(lifecycle).toContain('"DEMO_REMOVAL_REAL_DATA_PRESENT"');
     expect(lifecycle).toContain("messageId: demoIdentity");
     expect(lifecycle).toContain("entityId: demoIdentity");
+
+    expect(policy).toContain('ALGERIAN_DEMO_MARKER_KEY = "demo_seed_version"');
+    expect(policy).toContain("dailyReportWouldBeEffectful");
+    expect(policy).toContain("assertDemoAllowsDailyReportSettings");
+    expect(policy).toContain('"DEMO_REPORT_CONFIGURATION_BLOCKED"');
 
     expect(panel).toContain('const COPY: Record<"ar" | "fr" | "en", Copy>');
     expect(panel).toContain('fetch("/api/demo-data"');
@@ -91,6 +96,25 @@ describe("Algerian Founder demo contract", () => {
     expect(settings).toContain('{ id: "demo", icon: Database');
     expect(settings).toContain('useState<Tab>("demo")');
     expect(settings).toContain("<DemoDataPanel />");
+  });
+
+  it("blocks configuring or sending real WhatsApp reports from demo data", () => {
+    const settingsRoute = read("src/app/api/settings/route.ts");
+    const reportRoute = read("src/app/api/reports/daily/route.ts");
+
+    expect(settingsRoute).toContain("const effectiveAfter = {");
+    expect(settingsRoute).toContain(
+      "await assertDemoAllowsDailyReportSettings(db, effectiveAfter)",
+    );
+    expect(settingsRoute.indexOf("assertDemoAllowsDailyReportSettings")).toBeLessThan(
+      settingsRoute.indexOf("await setSetting(context, key, value)"),
+    );
+
+    expect(reportRoute).toContain("if (await isAlgerianDemoLoaded(db))");
+    expect(reportRoute).toContain('code: "DEMO_REPORT_SEND_BLOCKED"');
+    expect(reportRoute.indexOf("isAlgerianDemoLoaded(db)")).toBeLessThan(
+      reportRoute.indexOf("sidecar.send(phone, report.message)"),
+    );
   });
 
   it("persists compiled startup modules and streams an authentic dashboard shell", () => {
