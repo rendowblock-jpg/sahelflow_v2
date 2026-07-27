@@ -6,8 +6,11 @@ import {
   loadAlgerianDemoWorkspace,
   removeAlgerianDemoWorkspace,
 } from "@/lib/demo/algerian-demo-lifecycle";
-import { assertDemoAllowsDailyReportSettings } from "@/lib/demo/algerian-demo-policy";
-import { SETTING_KEYS } from "@/lib/settings";
+import {
+  assertDemoAllowsDailyReportSettings,
+  withDemoPolicyLock,
+} from "@/lib/demo/algerian-demo-policy";
+import { setSetting, SETTING_KEYS } from "@/lib/settings";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -15,6 +18,7 @@ import {
 
 let prisma: PrismaClient;
 const client = () => prisma as unknown as DbClient;
+const context = () => ({ prisma: client(), shop: {} as never });
 
 /**
  * The shared helper predates several independent configuration/inbox/AI tables.
@@ -120,7 +124,7 @@ describe("Algerian demo workspace lifecycle", () => {
     expect(await prisma.order.count()).toBe(0);
   });
 
-  it("treats seller phone-reputation intelligence as non-empty operational data", async () => {
+  it("treats current and retained legacy phone reputation as non-empty operational data", async () => {
     await prisma.phoneReputation.create({
       data: {
         id: "seller-phone-risk",
@@ -131,8 +135,22 @@ describe("Algerian demo workspace lifecycle", () => {
       },
     });
 
-    const status = await getAlgerianDemoWorkspaceStatus(client());
-    expect(status).toMatchObject({
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await prisma.phoneReputation.deleteMany();
+
+    await prisma.setting.create({
+      data: {
+        key: "phone_reputation_blacklist",
+        value: JSON.stringify([
+          { phoneHash: "legacy-risk", reason: "refused delivery" },
+        ]),
+      },
+    });
+    expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
       loaded: false,
       canSeed: false,
       hasBusinessData: true,
@@ -142,6 +160,18 @@ describe("Algerian demo workspace lifecycle", () => {
       statusCode: 409,
     });
     expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("fails closed for malformed retained legacy phone-reputation data", async () => {
+    await prisma.setting.create({
+      data: {
+        key: "phone_reputation_blacklist",
+        value: "{not-valid-json",
+      },
+    });
+
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status).toMatchObject({ canSeed: false, hasBusinessData: true });
   });
 
   it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {
@@ -184,6 +214,53 @@ describe("Algerian demo workspace lifecycle", () => {
         [SETTING_KEYS.dailyReportPhone]: "",
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it("protects demo lifecycle markers from the general settings service", async () => {
+    await expect(
+      setSetting(context(), "demo_seed_version", ""),
+    ).rejects.toMatchObject({
+      code: "SETTING_RESERVED_KEY",
+      statusCode: 403,
+    });
+    await expect(
+      setSetting(context(), "demo_seed_created_at", "2026-07-27"),
+    ).rejects.toMatchObject({
+      code: "SETTING_RESERVED_KEY",
+      statusCode: 403,
+    });
+    expect(await prisma.setting.count()).toBe(0);
+  });
+
+  it("serializes concurrent demo-policy operations in arrival order", async () => {
+    const events: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    const first = withDemoPolicyLock(async () => {
+      events.push("first-start");
+      await firstGate;
+      events.push("first-end");
+    });
+    await Promise.resolve();
+
+    const second = withDemoPolicyLock(async () => {
+      events.push("second-start");
+      events.push("second-end");
+    });
+    await Promise.resolve();
+    expect(events).toEqual(["first-start"]);
+
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(events).toEqual([
+      "first-start",
+      "first-end",
+      "second-start",
+      "second-end",
+    ]);
   });
 
   it("blocks destructive cleanup for a seller storefront and removes demo-derived analytics and audit rows", async () => {
