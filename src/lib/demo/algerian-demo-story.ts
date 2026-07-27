@@ -111,7 +111,10 @@ export async function finalizeAlgerianDemoStory(
       id: "demo-order-001-change-remitted",
       actionType: "cod_remitted",
       createdAt: remittedAt,
-      payload: { reference: "REM-YAL-DEMO-001", amount: FLAGSHIP_TOTAL },
+      payload: {
+        remittanceRef: "REM-YAL-DEMO-001",
+        amount: FLAGSHIP_TOTAL,
+      },
     },
   ] as const;
 
