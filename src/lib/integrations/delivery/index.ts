@@ -7,7 +7,6 @@
  */
 import "server-only";
 
-
 import type {
   DeliveryAdapter,
   DeliveryCredentials,
@@ -20,6 +19,11 @@ import { zrExpressAdapter } from "./zr-express";
 import { dhdAdapter } from "./dhd";
 import { getSecret } from "@/lib/secrets";
 import type { ServiceContext } from "@/lib/data/service-base";
+import {
+  ALGERIAN_DEMO_MARKER_KEY,
+  ALGERIAN_DEMO_VERSION,
+} from "@/lib/demo/algerian-demo-policy";
+import { SahelFlowError } from "@/types/errors";
 
 const REGISTRY: Record<string, DeliveryAdapter> = {
   yalidine: yalidineAdapter,
@@ -50,6 +54,21 @@ export async function loadDeliveryCredentials(
   context: ServiceContext,
   provider: string,
 ): Promise<DeliveryCredentials> {
+  // The demo workspace contains realistic fictional recipients. Fail before
+  // loading credentials or calling create/sync/cancel/test provider endpoints,
+  // even when credentials were configured after the demo was loaded.
+  const demoMarker = await context.prisma.setting.findUnique({
+    where: { key: ALGERIAN_DEMO_MARKER_KEY },
+    select: { value: true },
+  });
+  if (demoMarker?.value === ALGERIAN_DEMO_VERSION) {
+    throw new SahelFlowError(
+      "Courier provider actions are disabled while the Algerian demo workspace is loaded.",
+      "DEMO_PROVIDER_EFFECT_BLOCKED",
+      409,
+    );
+  }
+
   const keys = deliverySecretKeys(provider);
   const creds: DeliveryCredentials = {};
   for (const key of keys) {
