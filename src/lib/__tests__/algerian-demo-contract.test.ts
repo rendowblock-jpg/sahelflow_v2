@@ -56,6 +56,7 @@ describe("Algerian Founder demo contract", () => {
     const route = read("src/app/api/demo-data/route.ts");
     const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
     const policy = read("src/lib/demo/algerian-demo-policy.ts");
+    const settingsService = read("src/lib/settings/index.ts");
     const panel = read("src/components/settings/demo-data-panel.tsx");
     const settings = read("src/components/settings/settings-tabs.tsx");
 
@@ -66,9 +67,14 @@ describe("Algerian Founder demo contract", () => {
     expect(route).toContain('"Cache-Control": "no-store"');
 
     expect(lifecycle.match(/client\.\$transaction/g)).toHaveLength(2);
+    expect(lifecycle.match(/withDemoPolicyLock/g).length).toBeGreaterThanOrEqual(3);
     expect(lifecycle).toContain("timeout: 120_000");
     expect(lifecycle).toContain("countNonDemoSellerState");
     expect(lifecycle).toContain("countEffectfulSettings");
+    expect(lifecycle).toContain("countLegacyPhoneReputation");
+    expect(lifecycle).toContain(
+      'LEGACY_PHONE_REPUTATION_KEY = "phone_reputation_blacklist"',
+    );
     expect(lifecycle).toContain("dailyReportWouldBeEffectful(settings)");
     expect(lifecycle).toContain("client.phoneReputation.count()");
     expect(lifecycle).toContain("client.storefrontConfig.count");
@@ -82,9 +88,16 @@ describe("Algerian Founder demo contract", () => {
     expect(lifecycle).toContain("entityId: demoIdentity");
 
     expect(policy).toContain('ALGERIAN_DEMO_MARKER_KEY = "demo_seed_version"');
+    expect(policy).toContain("let demoPolicyTail: Promise<void>");
+    expect(policy).toContain("export async function withDemoPolicyLock");
     expect(policy).toContain("dailyReportWouldBeEffectful");
     expect(policy).toContain("assertDemoAllowsDailyReportSettings");
     expect(policy).toContain('"DEMO_REPORT_CONFIGURATION_BLOCKED"');
+
+    expect(settingsService).toContain("const RESERVED_SETTING_KEYS = new Set([");
+    expect(settingsService).toContain('"demo_seed_version"');
+    expect(settingsService).toContain('"demo_seed_created_at"');
+    expect(settingsService).toContain("RESERVED_SETTING_KEYS.has(key)");
 
     expect(panel).toContain('const COPY: Record<"ar" | "fr" | "en", Copy>');
     expect(panel).toContain('fetch("/api/demo-data"');
@@ -98,18 +111,20 @@ describe("Algerian Founder demo contract", () => {
     expect(settings).toContain("<DemoDataPanel />");
   });
 
-  it("blocks configuring or sending real WhatsApp reports from demo data", () => {
+  it("serializes settings and report effects with demo lifecycle authority", () => {
     const settingsRoute = read("src/app/api/settings/route.ts");
     const reportRoute = read("src/app/api/reports/daily/route.ts");
 
-    expect(settingsRoute).toContain("const effectiveAfter = {");
+    expect(settingsRoute).toContain("await withDemoPolicyLock(() =>");
+    expect(settingsRoute).toContain("db.$transaction(async (transaction) =>");
     expect(settingsRoute).toContain(
-      "await assertDemoAllowsDailyReportSettings(db, effectiveAfter)",
+      "await assertDemoAllowsDailyReportSettings(prisma, effectiveAfter)",
     );
     expect(settingsRoute.indexOf("assertDemoAllowsDailyReportSettings")).toBeLessThan(
       settingsRoute.indexOf("await setSetting(context, key, value)"),
     );
 
+    expect(reportRoute).toContain("return withDemoPolicyLock(() => executeReport(trigger))");
     expect(reportRoute).toContain("if (await isAlgerianDemoLoaded(db))");
     expect(reportRoute).toContain('code: "DEMO_REPORT_SEND_BLOCKED"');
     expect(reportRoute.indexOf("isAlgerianDemoLoaded(db)")).toBeLessThan(
