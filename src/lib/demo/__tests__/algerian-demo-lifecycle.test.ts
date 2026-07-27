@@ -117,6 +117,27 @@ describe("Algerian demo workspace lifecycle", () => {
     expect(await prisma.order.count()).toBe(0);
   });
 
+  it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {
+    await prisma.setting.createMany({
+      data: [
+        { key: "daily_report_enabled", value: "true" },
+        { key: "daily_report_phone", value: "0550009999" },
+      ],
+    });
+
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status).toMatchObject({
+      loaded: false,
+      canSeed: false,
+      hasBusinessData: true,
+    });
+    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_SHOP_NOT_EMPTY",
+      statusCode: 409,
+    });
+    expect(await prisma.order.count()).toBe(0);
+  });
+
   it("blocks destructive cleanup for a seller storefront and removes demo-derived analytics and audit rows", async () => {
     await loadAlgerianDemoWorkspace(client());
 
