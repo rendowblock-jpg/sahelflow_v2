@@ -67,6 +67,10 @@ describe("Algerian Founder demo contract", () => {
     expect(lifecycle.match(/client\.\$transaction/g)).toHaveLength(2);
     expect(lifecycle).toContain("timeout: 120_000");
     expect(lifecycle).toContain("countNonDemoSellerState");
+    expect(lifecycle).toContain("countEffectfulSettings");
+    expect(lifecycle).toContain("SETTING_KEYS.dailyReportEnabled");
+    expect(lifecycle).toContain("SETTING_KEYS.dailyReportPhone");
+    expect(lifecycle).toContain("reportDestination.length > 0");
     expect(lifecycle).toContain("client.storefrontConfig.count");
     expect(lifecycle).toContain("client.automation.count");
     expect(lifecycle).toContain("client.cannedResponse.count");
