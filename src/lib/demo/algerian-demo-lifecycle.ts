@@ -64,7 +64,9 @@ async function countLegacyPhoneReputation(client: DbClient): Promise<number> {
     if (parsed && typeof parsed === "object") {
       return Object.keys(parsed as Record<string, unknown>).length > 0 ? 1 : 0;
     }
-    return parsed ? 1 : 0;
+    // The historical authority is an array. Any scalar is malformed retained
+    // state and must fail closed rather than being treated as an empty shop.
+    return 1;
   } catch {
     // Retained seller data must not be ignored merely because its legacy blob
     // cannot be decoded. Block seeding and leave recovery to an explicit path.
