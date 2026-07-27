@@ -160,13 +160,23 @@ describe("Algerian Founder demo contract", () => {
     );
   });
 
-  it("keeps demo storefront and courier operations effect-free", () => {
+  it("keeps demo browsing available while ordinary mutations stay blocked", () => {
     const storefront = read("src/lib/storefront/service.ts");
     const delivery = read("src/lib/integrations/delivery/index.ts");
+    const apiWrapper = read("src/lib/api/with-error-handler.ts");
+    const storefrontSubmit = read("src/app/api/storefront/submit/route.ts");
 
-    expect(storefront).toContain(
-      'isActive: row.id.startsWith("demo-") ? false : row.isActive',
+    expect(storefront).toContain("isActive: row.isActive");
+    expect(storefront).not.toContain('row.id.startsWith("demo-") ? false');
+    expect(storefrontSubmit).toContain("withErrorHandler");
+    expect(apiWrapper).toContain("const MUTATING_METHODS");
+    expect(apiWrapper).toContain("const DEMO_MUTATION_ALLOWLIST");
+    expect(apiWrapper).toContain('"DEMO_MUTATION_BLOCKED"');
+    expect(apiWrapper).toContain("await isAlgerianDemoLoaded(db)");
+    expect(apiWrapper.indexOf("DEMO_MUTATION_BLOCKED")).toBeLessThan(
+      apiWrapper.indexOf("const response = await handler(...args)"),
     );
+
     expect(delivery).toContain("ALGERIAN_DEMO_MARKER_KEY");
     expect(delivery).toContain("ALGERIAN_DEMO_VERSION");
     expect(delivery).toContain('"DEMO_PROVIDER_EFFECT_BLOCKED"');
