@@ -8,6 +8,7 @@ import {
   type AlgerianDemoStatus,
 } from "@/lib/demo/algerian-demo";
 import { finalizeAlgerianDemoStory } from "@/lib/demo/algerian-demo-story";
+import { SETTING_KEYS } from "@/lib/settings";
 import { SahelFlowError } from "@/types/errors";
 
 const DEMO_PREFIX = "demo-";
@@ -20,13 +21,36 @@ const outsideDemo = { not: { startsWith: DEMO_PREFIX } } as const;
 const demoIdentity = { startsWith: DEMO_PREFIX } as const;
 
 /**
+ * Settings are normally shell preferences and do not make a shop operationally
+ * non-empty. These two values are different: a configured destination or an
+ * enabled schedule can send a real WhatsApp report derived from newly seeded
+ * demo orders, so either one blocks loading.
+ */
+async function countEffectfulSettings(client: DbClient): Promise<number> {
+  const rows = await client.setting.findMany({
+    where: {
+      key: {
+        in: [SETTING_KEYS.dailyReportEnabled, SETTING_KEYS.dailyReportPhone],
+      },
+    },
+    select: { key: true, value: true },
+  });
+  const values = new Map(rows.map((row) => [row.key, row.value]));
+  const reportEnabled =
+    values.get(SETTING_KEYS.dailyReportEnabled)?.trim().toLowerCase() === "true";
+  const reportDestination =
+    values.get(SETTING_KEYS.dailyReportPhone)?.trim() ?? "";
+  return reportEnabled || reportDestination.length > 0 ? 1 : 0;
+}
+
+/**
  * Count seller-owned state that must never be mixed with the evaluation dataset.
  *
- * Auth/session rows and ordinary Setting values are intentionally excluded: they
- * belong to the installed application shell rather than the active shop's sample
- * business records. Credentials, integrations, storefronts, automations and
- * reusable messaging configuration are included even when the order catalog is
- * otherwise empty.
+ * Auth/session rows and harmless preference Settings belong to the installed
+ * application shell rather than the active shop's sample business records.
+ * Credentials, integrations, storefronts, automations, reusable messaging
+ * configuration and effectful report Settings are included even when the order
+ * catalog is otherwise empty.
  */
 async function countNonDemoSellerState(client: DbClient): Promise<number> {
   const counts = await Promise.all([
@@ -48,6 +72,7 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     client.integration.count({ where: { id: outsideDemo } }),
     client.secret.count({ where: { id: outsideDemo } }),
     client.aiChatSession.count({ where: { id: outsideDemo } }),
+    countEffectfulSettings(client),
   ]);
   return counts.reduce((total, count) => total + count, 0);
 }
@@ -60,42 +85,27 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
 async function clearDemoDerivedRecords(client: DbClient): Promise<void> {
   await client.extractionMetric.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { messageId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { messageId: demoIdentity }],
     },
   });
   await client.auditLog.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { entityId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { entityId: demoIdentity }],
     },
   });
   await client.automationLog.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { automationId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { automationId: demoIdentity }],
     },
   });
   await client.aiChatMessage.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { sessionId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { sessionId: demoIdentity }],
     },
   });
   await client.returnNote.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { returnId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { returnId: demoIdentity }],
     },
   });
   await client.refund.deleteMany({
@@ -109,34 +119,22 @@ async function clearDemoDerivedRecords(client: DbClient): Promise<void> {
   });
   await client.return.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { orderId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { orderId: demoIdentity }],
     },
   });
   await client.delivery.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { orderId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { orderId: demoIdentity }],
     },
   });
   await client.orderChange.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { orderId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { orderId: demoIdentity }],
     },
   });
   await client.orderItem.deleteMany({
     where: {
-      OR: [
-        { id: demoIdentity },
-        { orderId: demoIdentity },
-      ],
+      OR: [{ id: demoIdentity }, { orderId: demoIdentity }],
     },
   });
 }
@@ -177,7 +175,7 @@ export async function loadAlgerianDemoWorkspace(
 
     if ((await countNonDemoSellerState(tx)) > 0) {
       throw new SahelFlowError(
-        "Sample data can only be loaded into a shop with no seller-owned business records, storefronts, automations, integrations or reusable messaging configuration.",
+        "Sample data can only be loaded into a shop with no seller-owned business records, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
         "DEMO_SHOP_NOT_EMPTY",
         409,
       );
@@ -205,7 +203,7 @@ export async function removeAlgerianDemoWorkspace(
     const tx = transaction as unknown as DbClient;
     if ((await countNonDemoSellerState(tx)) > 0) {
       throw new SahelFlowError(
-        "Demo removal is blocked because independently owned seller records or configuration now exist. Export or move that work before removing the sample workspace.",
+        "Demo removal is blocked because independently owned seller records, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
         "DEMO_REMOVAL_REAL_DATA_PRESENT",
         409,
       );
