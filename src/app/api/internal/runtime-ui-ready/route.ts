@@ -159,8 +159,9 @@ export async function POST(request: NextRequest) {
     appVersion,
   });
 
-  // Persist modules compiled while rendering and hydrating the real workspace.
-  // Cache failure is non-fatal and never changes authenticated readiness.
+  // Implementation lives in compile-cache.ts and uses
+  // process.getBuiltinModule?.("node:module") plus moduleApi.flushCompileCache().
+  // Keep this route focused on the authenticated UI-ready transaction.
   flushPackagedCompileCache();
 
   try {
