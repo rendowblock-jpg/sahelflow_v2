@@ -55,7 +55,7 @@ describe("Algerian Founder demo contract", () => {
 
     expect(panel).toContain('const COPY: Record<"ar" | "fr" | "en", Copy>');
     expect(panel).toContain('fetch("/api/demo-data"');
-    expect(panel).toContain('method: "DELETE"');
+    expect(panel).toContain('mutate("DELETE")');
     expect(panel).toContain("window.confirm(copy.confirmRemove)");
     expect(panel).toContain("Fatima Zohra WhatsApp message");
     expect(panel).toContain("رسالة واتساب من فاطمة الزهراء");
