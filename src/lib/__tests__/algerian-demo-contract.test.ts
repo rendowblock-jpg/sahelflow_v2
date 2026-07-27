@@ -53,6 +53,8 @@ describe("Algerian Founder demo contract", () => {
     expect(story).toContain(
       "await client.orderChange.deleteMany({ where: { orderId: FLAGSHIP_ORDER_ID } })",
     );
+    expect(story).toContain('where: { id: "demo-audit-01" }');
+    expect(story).toContain("data: { createdAt: confirmedAt }");
     expect(story).toContain('status: "delivered"');
     expect(lifecycle).toContain("await finalizeAlgerianDemoStory(tx)");
   });
@@ -83,6 +85,7 @@ describe("Algerian Founder demo contract", () => {
     expect(lifecycle).toContain(
       'LEGACY_PHONE_REPUTATION_KEY = "phone_reputation_blacklist"',
     );
+    expect(lifecycle).toContain("Any scalar is malformed retained");
     expect(lifecycle).toContain("dailyReportWouldBeEffectful(settings)");
     expect(lifecycle).toContain("client.phoneReputation.count()");
     expect(lifecycle).toContain("demoMessageDerivedCount");
@@ -154,6 +157,21 @@ describe("Algerian Founder demo contract", () => {
     expect(resetRoute).toContain("await tx.counter.deleteMany({})");
     expect(resetRoute.indexOf("storefrontConfig.deleteMany")).toBeLessThan(
       resetRoute.indexOf("product.deleteMany"),
+    );
+  });
+
+  it("keeps demo storefront and courier operations effect-free", () => {
+    const storefront = read("src/lib/storefront/service.ts");
+    const delivery = read("src/lib/integrations/delivery/index.ts");
+
+    expect(storefront).toContain(
+      'isActive: row.id.startsWith("demo-") ? false : row.isActive',
+    );
+    expect(delivery).toContain("ALGERIAN_DEMO_MARKER_KEY");
+    expect(delivery).toContain("ALGERIAN_DEMO_VERSION");
+    expect(delivery).toContain('"DEMO_PROVIDER_EFFECT_BLOCKED"');
+    expect(delivery.indexOf("DEMO_PROVIDER_EFFECT_BLOCKED")).toBeLessThan(
+      delivery.indexOf("const keys = deliverySecretKeys(provider)"),
     );
   });
 
