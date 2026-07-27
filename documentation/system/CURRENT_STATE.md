@@ -266,10 +266,9 @@ connected planes without replacing the canonical desktop.
 
 ## Immediate next boundary
 
-The superseded runtime boundary was: **Launch the release-verified standalone
-server on pinned Node.js**. Internal.8 achieved that protected-runtime
-mechanism; the phrase remains here as historical continuity, not the current
-next action.
+The superseded runtime boundary was: **Launch the release-verified standalone server on pinned Node.js**.
+Internal.8 achieved that protected-runtime mechanism; the phrase remains here
+as historical continuity, not the current next action.
 
 Internal.10 is installed and reaches the authenticated dashboard, so the
 updater bootstrap is no longer the immediate blocker. Its multi-minute Founder
