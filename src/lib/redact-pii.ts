@@ -13,7 +13,9 @@
  * Object string persistence is allowlisted rather than blocklisted. Numbers,
  * booleans and dates remain available for forensic comparisons. Machine-owned
  * identifiers and state/type/code fields survive through a semantic key rule;
- * free-form values and unknown provider aliases are redacted by default.
+ * free-form values and unknown provider aliases are redacted by default. When
+ * a free-form value contains a recognizable phone/email, the surrounding
+ * operational context is retained only after that PII is replaced.
  */
 
 const KEY_SEPARATOR_REGEX = /[^a-z0-9]/g;
@@ -148,6 +150,12 @@ function scrubEmbeddedPii(value: string): string {
     .replace(EMAIL_REGEX, "[EMAIL]");
 }
 
+function redactUnapprovedString(value: string): string {
+  if (value.length === 0) return value;
+  const scrubbed = scrubEmbeddedPii(value);
+  return scrubbed !== value ? scrubbed : "[REDACTED]";
+}
+
 function redactRecursive(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (value instanceof Date) return new Date(value.getTime());
@@ -163,7 +171,7 @@ function redactRecursive(value: unknown): unknown {
         : typeof entry === "string"
           ? isSafeStringValue(normalizedKey, entry)
             ? scrubEmbeddedPii(entry)
-            : redactScalar(entry)
+            : redactUnapprovedString(entry)
           : Array.isArray(entry) && !SAFE_STRING_KEYS.has(normalizedKey)
             ? redactScalar(entry)
             : redactRecursive(entry);
