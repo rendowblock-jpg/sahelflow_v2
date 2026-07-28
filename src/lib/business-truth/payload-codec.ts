@@ -10,7 +10,8 @@ export type BusinessPayloadKind =
   | "domain-event"
   | "outbox-intent"
   | "compensation-fact"
-  | "financial-movement-detail";
+  | "financial-movement-detail"
+  | "inventory-movement-detail";
 
 export type FinancialMovementDetailField =
   | "counterparty"
@@ -42,6 +43,19 @@ export function financialMovementDetailBinding(
     kind: "financial-movement-detail",
     recordKey: `${movementKey}:${field}`,
     recordType: `${movementType}:${field}`,
+    commandId,
+  };
+}
+
+export function inventoryMovementReasonBinding(
+  commandId: string,
+  movementKey: string,
+  movementType: string,
+): BusinessPayloadBinding {
+  return {
+    kind: "inventory-movement-detail",
+    recordKey: `${movementKey}:reason`,
+    recordType: `${movementType}:reason`,
     commandId,
   };
 }
