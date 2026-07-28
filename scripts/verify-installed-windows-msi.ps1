@@ -51,6 +51,8 @@ $runtimeWorkRoot = Join-Path $localRoot "runtime-work"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
+$founderSentinelKey = "founder_ci_sentinel"
+$founderSentinelValue = "preserve-v1-founder-row"
 $installedProductRoot = "C:\Program Files\SahelFlow"
 $installedRuntimeRoot = Join-Path $installedProductRoot "standalone"
 $installedRuntimeManifestPath = Join-Path $installedRuntimeRoot `
@@ -104,6 +106,68 @@ function Read-JsonFile {
             decodeError = $_.Exception.Message
             raw = Get-Content -LiteralPath $Path -Raw
         }
+    }
+}
+
+function Get-FounderSentinel {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("seed", "read")]
+        [string]$Mode
+    )
+
+    $previousDatabaseUrl = [Environment]::GetEnvironmentVariable("DATABASE_URL", "Process")
+    $previousMode = [Environment]::GetEnvironmentVariable("SF_FOUNDER_SENTINEL_MODE", "Process")
+    $previousKey = [Environment]::GetEnvironmentVariable("SF_FOUNDER_SENTINEL_KEY", "Process")
+    $previousValue = [Environment]::GetEnvironmentVariable("SF_FOUNDER_SENTINEL_VALUE", "Process")
+    $sentinelScript = @'
+const { PrismaClient } = await import("@prisma/client");
+const prisma = new PrismaClient();
+try {
+  const key = process.env.SF_FOUNDER_SENTINEL_KEY;
+  const value = process.env.SF_FOUNDER_SENTINEL_VALUE;
+  if (process.env.SF_FOUNDER_SENTINEL_MODE === "seed") {
+    await prisma.setting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    });
+  }
+  const row = await prisma.setting.findUnique({ where: { key } });
+  console.log(JSON.stringify(row));
+} finally {
+  await prisma.$disconnect();
+}
+'@
+
+    try {
+        $env:DATABASE_URL = "file:$DatabasePath"
+        $env:SF_FOUNDER_SENTINEL_MODE = $Mode
+        $env:SF_FOUNDER_SENTINEL_KEY = $founderSentinelKey
+        $env:SF_FOUNDER_SENTINEL_VALUE = $founderSentinelValue
+        Push-Location $repositoryRoot
+        $output = @(& bun -e $sentinelScript 2>&1)
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) {
+            throw "Founder sentinel $Mode failed: $($output -join [Environment]::NewLine)"
+        }
+        $jsonLine = @(
+            $output |
+                ForEach-Object { [string]$_ } |
+                Where-Object { $_.TrimStart().StartsWith("{") }
+        ) | Select-Object -Last 1
+        if ([string]::IsNullOrWhiteSpace($jsonLine)) {
+            throw "Founder sentinel $Mode did not return a JSON row."
+        }
+        return $jsonLine | ConvertFrom-Json
+    } finally {
+        Pop-Location -ErrorAction SilentlyContinue
+        if ($null -eq $previousDatabaseUrl) { Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue } else { $env:DATABASE_URL = $previousDatabaseUrl }
+        if ($null -eq $previousMode) { Remove-Item Env:SF_FOUNDER_SENTINEL_MODE -ErrorAction SilentlyContinue } else { $env:SF_FOUNDER_SENTINEL_MODE = $previousMode }
+        if ($null -eq $previousKey) { Remove-Item Env:SF_FOUNDER_SENTINEL_KEY -ErrorAction SilentlyContinue } else { $env:SF_FOUNDER_SENTINEL_KEY = $previousKey }
+        if ($null -eq $previousValue) { Remove-Item Env:SF_FOUNDER_SENTINEL_VALUE -ErrorAction SilentlyContinue } else { $env:SF_FOUNDER_SENTINEL_VALUE = $previousValue }
     }
 }
 
@@ -298,9 +362,71 @@ if ($existing.Count -ne 0) {
     throw "The ephemeral runner unexpectedly already has SahelFlow installed."
 }
 
-# These paths belong to the ephemeral Actions account only. Starting clean makes
-# the test deterministic and cannot touch Founder or seller data.
+# These paths belong to the ephemeral Actions account only. Seed the real v1
+# registry shape before installation so the first candidate launch must prove
+# the same in-place migration and Founder-row preservation required in production.
 Remove-Item -LiteralPath $roamingRoot, $localRoot -Recurse -Force -ErrorAction SilentlyContinue
+$legacyShopsRoot = Join-Path $roamingRoot "shops"
+$legacyDatabasePath = Join-Path $legacyShopsRoot "dev.db"
+$legacyInstallationId = [Guid]::NewGuid().ToString("N")
+New-Item -ItemType Directory -Path $legacyShopsRoot -Force | Out-Null
+
+$previousDatabaseUrl = [Environment]::GetEnvironmentVariable("DATABASE_URL", "Process")
+try {
+    $env:DATABASE_URL = "file:$legacyDatabasePath"
+    Push-Location $repositoryRoot
+    $migrationOutput = @(& bunx prisma migrate deploy --schema=prisma/schema.prisma 2>&1)
+    $migrationExitCode = $LASTEXITCODE
+    if ($migrationExitCode -ne 0) {
+        throw "Failed to prepare the v1 Founder database fixture: $($migrationOutput -join [Environment]::NewLine)"
+    }
+} finally {
+    Pop-Location -ErrorAction SilentlyContinue
+    if ($null -eq $previousDatabaseUrl) {
+        Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:DATABASE_URL = $previousDatabaseUrl
+    }
+}
+
+$legacyFounderSentinel = Get-FounderSentinel -DatabasePath $legacyDatabasePath -Mode "seed"
+if (
+    $legacyFounderSentinel.key -cne $founderSentinelKey -or
+    $legacyFounderSentinel.value -cne $founderSentinelValue
+) {
+    throw "The v1 Founder database fixture did not retain its seeded sentinel row."
+}
+$legacyRegistry = [ordered]@{
+    formatVersion = 1
+    revision = 1
+    installationId = $legacyInstallationId
+    activeShopId = "default"
+    shops = @(
+        [ordered]@{
+            id = "default"
+            name = "Ma Boutique"
+            databaseFile = "dev.db"
+            icon = $null
+            createdAt = "2026-01-01T00:00:00.000Z"
+        }
+    )
+}
+$legacyRegistryJson = $legacyRegistry | ConvertTo-Json -Depth 6
+[System.IO.File]::WriteAllText(
+    $registryPath,
+    "$legacyRegistryJson$([Environment]::NewLine)",
+    [System.Text.UTF8Encoding]::new($false)
+)
+$legacyCompatibilityIdentity = [pscustomobject]@{
+    registryFormatVersion = 1
+    registryRevision = 1
+    installationId = $legacyInstallationId
+    registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
+    databasePath = $legacyDatabasePath
+    databaseLength = (Get-Item -LiteralPath $legacyDatabasePath).Length
+    databaseSha256 = (Get-FileHash -LiteralPath $legacyDatabasePath -Algorithm SHA256).Hash
+    founderSentinel = $legacyFounderSentinel
+}
 
 $arguments = @(
     "/i",
@@ -406,6 +532,7 @@ $closures = @()
 $installedRuntimeIdentity = $null
 $registryIdentity = $null
 $databaseIdentity = $null
+$registryMigrationIdentity = $null
 
 for ($attempt = 1; $attempt -le 2; $attempt++) {
     if ($attempt -eq 1) {
@@ -480,12 +607,22 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     }
 
     $registry = Read-JsonFile $registryPath
-    if ($null -eq $registry -or $registry.revision -lt 1 -or [string]::IsNullOrWhiteSpace($registry.activeShopId)) {
+    if (
+        $null -eq $registry -or
+        $registry.formatVersion -ne 2 -or
+        $registry.revision -lt 1 -or
+        [string]$registry.workspaceId -notmatch '^[0-9a-f]{32}$' -or
+        [string]$registry.installationId -notmatch '^[0-9a-f]{32}$' -or
+        [string]::IsNullOrWhiteSpace($registry.activeShopId)
+    ) {
         throw "Installed launch did not create a valid active shop registry."
     }
     $activeShop = @($registry.shops | Where-Object { $_.id -eq $registry.activeShopId })
     if ($activeShop.Count -ne 1) {
         throw "Installed launch did not resolve exactly one active shop."
+    }
+    if ([string]$activeShop[0].incarnationId -notmatch '^[0-9a-f]{32}$') {
+        throw "Installed launch did not resolve a valid shop incarnation."
     }
     $databasePath = Join-Path (Join-Path $roamingRoot "shops") $activeShop[0].databaseFile
     if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) {
@@ -493,8 +630,11 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     }
 
     $currentRegistryIdentity = [pscustomobject]@{
+        workspaceId = [string]$registry.workspaceId
+        installationId = [string]$registry.installationId
         revision = $registry.revision
         activeShopId = $registry.activeShopId
+        shopIncarnationId = [string]$activeShop[0].incarnationId
         registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
     }
     $closures += Close-SahelFlowNormally -Process $process
@@ -507,11 +647,31 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         length = (Get-Item -LiteralPath $databasePath).Length
         sha256 = (Get-FileHash -LiteralPath $databasePath -Algorithm SHA256).Hash
     }
+    $currentFounderSentinel = Get-FounderSentinel -DatabasePath $databasePath -Mode "read"
+    if (
+        $currentFounderSentinel.key -cne $founderSentinelKey -or
+        $currentFounderSentinel.value -cne $founderSentinelValue
+    ) {
+        throw "Installed migration did not preserve the seeded Founder row."
+    }
 
     if ($attempt -eq 1) {
+        if (
+            $currentRegistryIdentity.installationId -cne $legacyInstallationId -or
+            [int64]$currentRegistryIdentity.revision -ne 2 -or
+            $currentRegistryIdentity.activeShopId -cne "default" -or
+            $currentDatabaseIdentity.path -cne $legacyDatabasePath
+        ) {
+            throw "Installed launch did not preserve the v1 Founder authority during registry migration."
+        }
         $installedRuntimeIdentity = $currentInstalledRuntimeIdentity
         $registryIdentity = $currentRegistryIdentity
         $databaseIdentity = $currentDatabaseIdentity
+        $registryMigrationIdentity = [pscustomobject]@{
+            before = $legacyCompatibilityIdentity
+            after = $currentRegistryIdentity
+            founderSentinelAfter = $currentFounderSentinel
+        }
     } else {
         if ($currentInstalledRuntimeIdentity.directory -ne $installedRuntimeIdentity.directory -or
             $currentInstalledRuntimeIdentity.manifestSha256 -ne $installedRuntimeIdentity.manifestSha256 -or
@@ -523,8 +683,11 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
             $currentInstalledRuntimeIdentity.appDataRuntimeCacheEntryCount -ne 0) {
             throw "Second launch changed the protected installed runtime or staged an AppData copy."
         }
-        if ($currentRegistryIdentity.revision -ne $registryIdentity.revision -or
+        if ($currentRegistryIdentity.workspaceId -ne $registryIdentity.workspaceId -or
+            $currentRegistryIdentity.installationId -ne $registryIdentity.installationId -or
+            $currentRegistryIdentity.revision -ne $registryIdentity.revision -or
             $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
+            $currentRegistryIdentity.shopIncarnationId -ne $registryIdentity.shopIncarnationId -or
             $currentRegistryIdentity.registrySha256 -ne $registryIdentity.registrySha256) {
             throw "Second launch changed registry authority."
         }
@@ -552,6 +715,7 @@ $result = [ordered]@{
     installedTreeVerification = $installedTreeVerification
     installedRuntime = $installedRuntimeIdentity
     registry = $registryIdentity
+    registryMigration = $registryMigrationIdentity
     database = $databaseIdentity
     finalProcesses = Get-SahelFlowProcessTree
 }

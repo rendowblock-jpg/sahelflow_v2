@@ -510,7 +510,23 @@ fn server_env(
             runtime.manifest_path().to_string_lossy().into_owned(),
         ),
         ("SF_MIGRATION_STATUS".to_string(), "ready".to_string()),
+        (
+            "SF_WORKSPACE_ID".to_string(),
+            authority.workspace_id.clone(),
+        ),
+        (
+            "SF_INSTALLATION_ID".to_string(),
+            authority.installation_id.clone(),
+        ),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
+        (
+            "SF_SHOP_INCARNATION_ID".to_string(),
+            authority.shop_incarnation_id.clone(),
+        ),
+        (
+            "SF_DATABASE_FILE_ID".to_string(),
+            authority.database_file_id.clone(),
+        ),
         (
             "SF_REGISTRY_REVISION".to_string(),
             authority.registry_revision.to_string(),
@@ -664,7 +680,8 @@ fn spawn_runtime_generation(
 
     let authority = current_shop_authority(app)?;
     let auth = packaged_auth::load(&authority.database_path)?;
-    let runtime_protocol = RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str())?;
+    let runtime_protocol =
+        RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str(), &authority)?;
     let mut env = server_env(app, &runtime_protocol, &authority, &auth)?;
     env.push((
         NODE_ENTRYPOINT_ENV.to_string(),

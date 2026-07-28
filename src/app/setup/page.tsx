@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock, Loader2, ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
+import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -66,6 +67,7 @@ export default function SetupPage() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-muted/30 p-4">
+      <RuntimeUiReadyBeacon />
       <div
         className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5"
         aria-hidden="true"
