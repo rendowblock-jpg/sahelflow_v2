@@ -13,10 +13,14 @@ import {
   validateBusinessCommandOutcome,
 } from "./contracts";
 import { getBusinessEnvelopeKey } from "./envelope-key";
-import { sealBusinessPayloadWithKey } from "./payload-codec";
+import {
+  financialMovementDetailBinding,
+  sealBusinessPayloadWithKey,
+} from "./payload-codec";
 import {
   type BusinessPrincipalContext,
   type TrustedBusinessPrincipal,
+  hasDefaultBusinessReplayAuthority,
   resolveTrustedBusinessPrincipal,
 } from "./principal";
 import {
@@ -204,7 +208,7 @@ async function authorizeStoredCommandReplay<TPayload>(
     return;
   }
 
-  if (stored.actor !== principal.auditActor) {
+  if (!hasDefaultBusinessReplayAuthority(stored.actor, principal)) {
     throw new SahelFlowError(
       "This principal is not authorized to read another principal's committed command result",
       "BUSINESS_COMMAND_REPLAY_FORBIDDEN",
@@ -374,6 +378,43 @@ async function persistOutcome<TResult>(
   }
 
   for (const movement of outcome.financialMovements ?? []) {
+    const encryptedCounterparty =
+      movement.counterparty === undefined
+        ? null
+        : sealBusinessPayloadWithKey(
+            movement.counterparty,
+            financialMovementDetailBinding(
+              commandId,
+              movement.movementKey,
+              movement.movementType,
+              "counterparty",
+            ),
+            envelopeKey,
+          );
+    const encryptedReference =
+      movement.reference === undefined
+        ? null
+        : sealBusinessPayloadWithKey(
+            movement.reference,
+            financialMovementDetailBinding(
+              commandId,
+              movement.movementKey,
+              movement.movementType,
+              "reference",
+            ),
+            envelopeKey,
+          );
+    const encryptedReason = sealBusinessPayloadWithKey(
+      movement.reason,
+      financialMovementDetailBinding(
+        commandId,
+        movement.movementKey,
+        movement.movementType,
+        "reason",
+      ),
+      envelopeKey,
+    );
+
     await tx.$executeRaw`
       INSERT INTO "FinancialMovement" (
         "id", "movementKey", "commandId", "orderId", "settlementId",
@@ -383,8 +424,8 @@ async function persistOutcome<TResult>(
         ${randomUUID()}, ${movement.movementKey}, ${commandId},
         ${movement.orderId ?? null}, ${movement.settlementId ?? null},
         ${movement.movementType}, ${movement.amount}, ${movement.currency},
-        ${movement.counterparty ?? null}, ${movement.reference ?? null},
-        ${movement.reason}, ${movement.occurredAt ?? now}
+        ${encryptedCounterparty}, ${encryptedReference},
+        ${encryptedReason}, ${movement.occurredAt ?? now}
       )
     `;
   }
