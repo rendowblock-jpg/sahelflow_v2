@@ -23,35 +23,37 @@
  */
 
 /** Keys whose values should always be redacted. */
-const SENSITIVE_KEYS = new Set([
-  "phone",
-  "phoneBlindIndex",
-  "address",
-  "addressLine",
-  "addressLine1",
-  "addressLine2",
-  "notes",
-  "note",
-  "deliveryNotes",
-  "messageBody",
-  "body",
-  "rawMessage",
-  "raw",
-  "name",
-  "customerName",
-  "fullName",
-  "firstName",
-  "lastName",
-  "email",
-  "password",
-  "apiToken",
-  "apiKey",
-  "accessToken",
-  "consumerSecret",
-  "secret",
-  "credentials",
-  "token",
-]);
+const SENSITIVE_KEYS = new Set(
+  [
+    "phone",
+    "phoneBlindIndex",
+    "address",
+    "addressLine",
+    "addressLine1",
+    "addressLine2",
+    "notes",
+    "note",
+    "deliveryNotes",
+    "messageBody",
+    "body",
+    "rawMessage",
+    "raw",
+    "name",
+    "customerName",
+    "fullName",
+    "firstName",
+    "lastName",
+    "email",
+    "password",
+    "apiToken",
+    "apiKey",
+    "accessToken",
+    "consumerSecret",
+    "secret",
+    "credentials",
+    "token",
+  ].map((key) => key.toLowerCase()),
+);
 
 /**
  * Regex: matches Algerian phone numbers.
@@ -102,9 +104,8 @@ function redactRecursive(value: unknown): unknown {
     const obj = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
-      // SV-L3: previously only the FIRST char was lowercased, so keys like
-      // "PHONE", "EMAIL", "API_KEY" (all-caps) never matched the
-      // SENSITIVE_KEYS set (which is lowercase). Lowercase the WHOLE key.
+      // Normalize both the configured key set and the lookup key so camelCase,
+      // uppercase, snake-like and mixed-case spellings share one comparison.
       const lowerK = k.toLowerCase();
       if (SENSITIVE_KEYS.has(lowerK)) {
         out[k] = redactScalar(v);
