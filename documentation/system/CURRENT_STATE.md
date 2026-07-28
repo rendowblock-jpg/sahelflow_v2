@@ -1,15 +1,17 @@
 # SahelFlow — Current State
 
 > **Authority:** merged protected `main` only
-> **Protected-main executable baseline:** `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
-> **Source version:** `1.0.0-internal.11` / MSI `1.0.0.11`
+> **Protected-main Session 1 package checkpoint:** PR #171 at
+> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`
+> **Source version request:** `1.0.0-internal.12` / MSI `1.0.0.12`; not yet a
+> signed or installed result
 > **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
 > **Current installed status:** Founder reports Internal.11 installed through the
 > in-app updater and usable, but exact post-install version/AppData identity is
 > not yet recorded and first plus subsequent launches remain materially slow
 > **Observed machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-27
+> **Last assessed:** 2026-07-28
 
 This document describes what merged protected source and named evidence prove
 now. It does not convert target architecture, adapter presence, test count, mock
@@ -19,9 +21,10 @@ output or planned scope into readiness. The active execution frontier belongs in
 ## Executive truth
 
 SahelFlow is a broad internal Windows application with a proven Internal.5
-accepted baseline and a stronger Internal.11 source/release chain installed by
-the Founder but not accepted. It is not an empty prototype, but it is not yet a
-commercially complete or class-AAA SahelFlow 1.0 product.
+accepted baseline, a stronger Internal.11 source/release chain installed by the
+Founder but not accepted, and four merged Session 1 source packages grouped into
+an Internal.12 milestone request. It is not an empty prototype, but it is not
+yet a commercially complete or class-AAA SahelFlow 1.0 product.
 
 PR #158 app source `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`
 replaced the failing packaged Bun server with pinned Node.js 22.23.1, retained
@@ -64,10 +67,31 @@ Founder observation after the update:
   workspace walkthrough or full close/reopen record has yet been committed as
   Founder evidence.
 
+Session 1 added four exact merged packages after Internal.11:
+
+- PR #167 at `5081fcadb3794ca6e57f7cc4a32c4b5f573532c6` protects automatic
+  Internal publication behind every signed post-build gate and a monotonic
+  latest-release check;
+- PR #168 at `d7e6568a46a929d552dbe8bbe0541f23dd8d5fc4` migrates the shop
+  registry compatibly to workspace/shop/incarnation identity and complete
+  trusted request context;
+- PR #169 at `e6e1f16a03464c4338548c8905d9bca17b6df4a7` moves the real
+  authenticated UI-ready boundary ahead of slower dashboard children and adds
+  stronger packaged/installed readiness evidence;
+- PR #171 at `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15` adds the global
+  Arabic/RTL, chart, operational-state, containment and route-inventory
+  foundation.
+
+Selected exact-head source and installed lanes passed for those package heads,
+with no open P0/P1 review finding. The startup change has not yet been timed on
+the Founder T470, and the Arabic foundation is not evidence that every route is
+already AAA; the generated inventory assigns the remaining failures across
+Sessions 2–4.
+
 The main product discontinuities remain:
 
-- process-global/relaunch-oriented shop selection instead of trusted live
-  workspace/shop context;
+- the Phase 1A trusted workspace/shop/incarnation foundation exists, but complete
+  seller identity, membership, device and live-switch authority remains ahead;
 - no final separate order, delivery, inventory, COD/financial and return/refund
   state machines;
 - no append-only stock and money movement truth;
@@ -77,17 +101,18 @@ The main product discontinuities remain:
 - provider adapters exist without a certified public launch set;
 - PWA/storefront/cloud/recovery planes are prototypes, partial or target-only;
 - the frontend, information architecture and page-state depth are not yet AAA;
-- Arabic/RTL is partial and inconsistent across copy, geometry, mixed content,
-  tables, charts, forms, icons, navigation and accessibility;
+- Arabic/RTL now has shared typography, bidi, shell, table, dialog, chart and
+  operational-state foundations, but route-level copy, geometry and
+  accessibility failures remain assigned work;
 - repeated-launch performance violates the T470 target.
 
 The correct characterization is:
 
-> **Accepted Internal.5 baseline; Internal.11 source and signed release complete,
-> Founder reports successful in-app installation and usable UI, but repeated
-> launch performance and full installed evidence remain open; broad partial
-> desktop product with major business-authority, AAA experience, commercial,
-> provider and connected-platform work ahead.**
+> **Accepted Internal.5 baseline; Internal.11 installed but not accepted;
+> Session 1 source packages merged and grouped into an unsigned Internal.12
+> request; repeated-launch performance and full Founder installed evidence remain
+> open; major business-authority, route-level AAA, commercial, provider and
+> connected-platform work continues.**
 
 ## Evidence ledger
 
@@ -111,6 +136,10 @@ The correct characterization is:
 | Internal.11 publication | Founder manual GitHub action | Verified draft published after automatic publication was found missing |
 | Internal.10 → Internal.11 update | Founder observation | In-app updater installed the higher version and the app opened; exact preservation/version record pending |
 | Internal.11 performance | Founder T470 observation | First and subsequent launches remain materially slow; not accepted |
+| Protected auto-publication | PR #167 merge `5081fcadb3794ca6e57f7cc4a32c4b5f573532c6` | Protected final publication and monotonic latest-release guard integrated; first live run pending Internal.12 |
+| Workspace/shop authority | PR #168 merge `d7e6568a46a929d552dbe8bbe0541f23dd8d5fc4` | Registry v2 migration and trusted workspace/shop/incarnation context passed selected source and installed lanes |
+| Startup readiness correction | PR #169 merge `e6e1f16a03464c4338548c8905d9bca17b6df4a7` | Clean-runner packaged/install/reopen/UI evidence passed; no post-change T470 timing yet |
+| Arabic/RTL and chart foundation | PR #171 merge `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15` | Shared bidi/layout/state/chart contracts and generated route inventory passed selected exact-head gates |
 
 The earlier accepted reopen proves that exact historical attempt only. Clean
 runner results prove the exact artifact on that runner, not T470 performance or
@@ -142,9 +171,9 @@ separate evidence result.
 
 | ID | Capability | Current status | Evidence / implementation | Principal gap |
 |---|---|---|---|---|
-| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.11 exact-source release gates passed and Founder reports in-app update installed | Automate protected publication, record exact T470 preservation/lifecycle, meet launch target and prove broader matrix |
+| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.11 installed; protected auto-publication merged | Prove first automatic publication, record exact T470 preservation/lifecycle, meet launch target and prove broader matrix |
 | CAP-002 | Local database/migrations | **Partial** | Prisma/SQLite, eight migrations, runtime preservation | All-shop journaled migration/preflight/rollback/recovery |
-| CAP-003 | Shop management | **Partial/unsafe** | Per-shop files, registry/store/routes and creation UI | Durable workspace/shop/incarnation authority and safe live switching |
+| CAP-003 | Shop management | **Partial** | Registry v2 workspace/shop/incarnation identity, trusted context, per-shop files and routes | Complete membership/device authority and safe live switching across every background/provider path |
 | CAP-004 | Local PIN/session | **Implemented for local baseline** | `AuthSecret`, `Session`, runtime auth | Not seller identity, team authority, device or recovery model |
 | CAP-005 | Seller identity/workspace/team | **Missing** | Profile/agent UI fragments only | Person/workspace/license, memberships, roles, fields, devices, revocation |
 | CAP-006 | Trial/permanent licensing | **Unsafe/partial** | License UI/store/hook and Ed25519 concepts | Online signed trial, complete lockout, offline permanent issuance and entitlements |
@@ -168,12 +197,12 @@ separate evidence result.
 | CAP-024 | Shared cloud/control plane | **Missing** | Target documentation only | Measured multi-tenant control/relay implementation and economics gate |
 | CAP-025 | Zero-knowledge cloud backup | **Missing** | Target documentation only | Key hierarchy, client encryption, retention and restore drills |
 | CAP-026 | Founder Console | **Missing** | Scattered release/support operations | Private audited seller/trial/payment/license/device/usage/incident UI |
-| CAP-027 | Localization/RTL | **Partial/poor across app** | i18n hooks, locale-aware UI and foundations | Systematic Arabic copy, typography, geometry, mixed content, state and route parity |
+| CAP-027 | Localization/RTL | **Partial foundation** | Shared Arabic font/bidi, logical shell, table/dialog/state and chart direction contracts | Close the generated route inventory for systematic copy, geometry, focus and accessibility parity |
 | CAP-028 | Accessibility/keyboard | **Partial/unverified** | Radix primitives, shortcuts and focus-related components | Whole-journey WCAG, zoom, screen-reader and keyboard evidence |
 | CAP-029 | AAA design system/page depth | **Partial/broadly unaccepted** | Shared primitives and broad pages | Coherent navigation/system, complete states, premium hierarchy and no prototype UX |
-| CAP-030 | Low-end performance | **Unmet on Founder launch** | Internal.11 retains stage tracing and compile-cache work | Measure exact cold/warm stages, meet ≤8 s p95, representative data and eight-hour stability |
+| CAP-030 | Low-end performance | **Unmet on Founder launch** | Retained trace measured about 110 s; Session 1 readiness-boundary correction passed clean-runner installed gates | Measure post-change cold/warm T470 stages, meet ≤8 s p95, representative data and eight-hour stability |
 | CAP-031 | Security/privacy/legal | **Partial/unverified** | Crypto, PIN, secrets, loopback auth and redaction pieces | Complete threat models, recovery, tenant boundaries, Law 18-07 and review |
-| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.11 release/install partial proof** | Exact-source signing, automated installed gates and Founder-reported in-app update | Protected auto-publication and complete T470 evidence/acceptance |
+| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.11 release/install partial proof** | Exact-source signing, automated installed gates, Founder-reported in-app update and protected auto-publication source | Prove first automatic publication and complete T470 evidence/acceptance |
 
 ## Provider status
 

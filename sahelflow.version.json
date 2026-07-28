@@ -2,8 +2,8 @@
   "formatVersion": 1,
   "product": "SahelFlow",
   "productMajor": 1,
-  "version": "1.0.0-internal.11",
-  "windowsMsiVersion": "1.0.0.11",
+  "version": "1.0.0-internal.12",
+  "windowsMsiVersion": "1.0.0.12",
   "channel": "internal",
   "updater": {
     "enabled": true,

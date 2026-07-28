@@ -1,9 +1,11 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; not product or architecture authority
-> **Last updated:** 2026-07-27
-> **Protected-main executable checkpoint:** Internal.11 merge
-> `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
+> **Last updated:** 2026-07-28
+> **Protected-main Session 1 package checkpoint:** PR #171 at
+> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`
+> **Active milestone request:** `codex/session1-internal-12`,
+> `1.0.0-internal.12` / MSI `1.0.0.12`
 > **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
 > **Founder installation:** Founder reports Internal.11 installed through the
 > in-app updater and usable; exact post-install version/AppData identity is not
@@ -12,7 +14,8 @@
 > slow on the ThinkPad T470
 > **Operating authority:** FD-027, `WORKFLOW.md`, `ROADMAP.md`
 > **Execution epic:** issue #164
-> **Current stage:** documentation reconciled; Session 1 implementation ready
+> **Current stage:** Session 1 source packages merged; one milestone candidate
+> is in flight while the Web Agent owns Session 2 through draft PR #170
 
 ## Current truth
 
@@ -35,8 +38,23 @@ Founder observation:
 - exact post-install version, AppData identity, cold/warm stage timings,
   demo-workspace walkthrough and full lifecycle record remain open.
 
-Do not call Internal.11 Founder-accepted. The performance defect receives a
-measured platform lane but does not freeze independent product work.
+Do not call Internal.11 Founder-accepted. Session 1 now has four merged source
+packages:
+
+- PR #167 / `5081fcadb3794ca6e57f7cc4a32c4b5f573532c6` — protected
+  release auto-publication and monotonic latest-release guard;
+- PR #168 / `d7e6568a46a929d552dbe8bbe0541f23dd8d5fc4` — compatible
+  workspace/shop/incarnation registry authority and trusted complete context;
+- PR #169 / `e6e1f16a03464c4338548c8905d9bca17b6df4a7` — measured
+  startup correction and expanded packaged/installed evidence;
+- PR #171 / `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15` — global
+  design-system, Arabic/RTL, chart, operational-state and route-inventory
+  foundation.
+
+All four passed their selected exact-head gates and independent review without
+open P0/P1 findings. The retained pre-change Founder trace was about 110 seconds;
+the readiness-boundary correction has clean-runner installed proof but no new
+T470 timing result, so performance acceptance remains open.
 
 ## Approved operating model
 
@@ -127,29 +145,23 @@ At most one frozen signed candidate is in flight.
 - produce and Founder-test the complete AAA Internal candidate;
 - record only external Beta/Stable evidence still outstanding.
 
-## Exact next-session start
+## Exact next execution order
 
-1. Synchronize protected `main` and read FD-027, Workflow, Roadmap, Current State
-   and this file.
-2. Confirm no overlapping implementation PR or local checkout ownership.
-3. Open issue #164 and post the Session 1 lane allocation and branch names.
-4. Freeze two shared contracts first:
-   - Phase 1A workspace/shop/incarnation compatibility contract;
-   - global design-system/Arabic/RTL contract.
-5. Start four bounded packages where contracts/files permit:
-   - `agent/internal-auto-publish`;
-   - `agent/internal-11-startup-performance`;
-   - `agent/workspace-shop-authority`;
-   - `agent/design-system-arabic-rtl`.
-6. Keep material PRs draft while batching coherent work.
-7. Do not assign app versions to ordinary packages.
-8. Merge dependency-correct packages as soon as selected gates and review pass.
-9. Cut one milestone Internal only when Session 1 outcomes form a coherent
-   Founder test.
-10. Record merged outcomes, exact measurements and Session 2 entry point.
-
-Branch names are intended starting names; change them only to avoid a real
-collision, then record the replacement on issue #164.
+1. Pass exact-head authority and selected release-risk gates for the single
+   Internal.12 milestone request.
+2. Merge it through protected `main`, then dispatch the signed release workflow
+   once with that exact merge commit and Session 1 release notes.
+3. Require signature, packaged runtime, install/reopen, authenticated hydrated
+   UI twice, deterministic evidence, manifest and monotonic publication gates.
+4. Confirm the verified draft auto-publishes and exposes live `latest.json`; do
+   not publish or rerun a failed unchanged candidate manually.
+5. Install Internal.12 through the existing in-app updater without deleting or
+   replacing Founder AppData.
+6. Record exact installed version and registry/database identities, one cold and
+   one warm T470 launch, authenticated UI, normal close/reopen and the Arabic
+   dashboard/chart result.
+7. Let the Web Agent continue Session 2 on PR #170, adopting the merged Session 1
+   workspace and experience contracts without overlapping this release branch.
 
 ## Session 1 acceptance contracts
 
