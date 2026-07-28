@@ -1,12 +1,13 @@
 import "server-only";
 
 import { PrismaClient } from "@prisma/client";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import {
   chmodSync,
   closeSync,
   copyFileSync,
   existsSync,
+  fsyncSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -14,6 +15,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { connect } from "node:net";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
 import {
@@ -32,11 +34,33 @@ import {
   decryptPiiRow,
   encryptPiiFields,
 } from "@/lib/crypto/pii-fields";
+import {
+  MASTER_KEY_ROTATION_LOCK_FILE,
+  MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION,
+  parseMasterKeyRotationLock,
+  type MasterKeyRotationLockRecord,
+} from "@/lib/maintenance/master-key-rotation";
+
+/**
+ * Installation-wide master-key rotation.
+ *
+ * Usage:
+ *   bun run scripts/rotate-master-key.ts
+ *   bun run scripts/rotate-master-key.ts --dry-run
+ *   bun run scripts/rotate-master-key.ts --recover-stale-lock
+ *
+ * The script acquires a maintenance lease before inspecting any database,
+ * refuses to rotate while a live desktop runtime exists, re-wraps every
+ * registered shop and the provisioning template with one old/new key pair,
+ * and commits the shared keyfile only after every target succeeds.
+ */
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const FORCE = process.argv.includes("--force");
+const RECOVER_STALE_LOCK = process.argv.includes("--recover-stale-lock");
 const KEY_BYTES = 32;
 const REGISTRY_FORMAT_VERSION = 2;
+const RUNTIME_MANIFEST_FORMAT_VERSION = 1;
 
 interface RotationTarget {
   id: string;
@@ -60,6 +84,19 @@ interface ModelStats {
   plaintext: number;
 }
 
+interface RotationLease {
+  handle: number;
+  record: MasterKeyRotationLockRecord;
+}
+
+interface RuntimeEndpointManifest {
+  formatVersion: number;
+  state: string;
+  host: string;
+  appPort: number;
+  processId: number;
+}
+
 function dataDir(): string {
   return process.env.SF_DATA_DIR
     ? resolve(process.env.SF_DATA_DIR)
@@ -68,10 +105,30 @@ function dataDir(): string {
 
 const KEYFILE_PATH = join(dataDir(), "master.key");
 const SIDECAR_PATH = join(dataDir(), "master.key.new");
-const LOCK_PATH = join(dataDir(), "master-key-rotation.lock");
+const LOCK_PATH = join(dataDir(), MASTER_KEY_ROTATION_LOCK_FILE);
+const RUNTIME_MANIFEST_PATH = join(dataDir(), "runtime-endpoint.json");
 const REGISTRY_PATH = join(dataDir(), "shop-registry.json");
 const SHOPS_DIR = join(dataDir(), "shops");
 const SHOP_TEMPLATE_PATH = join(dataDir(), "system", "shop-template.db");
+
+function errorCode(error: unknown): string | undefined {
+  return error && typeof error === "object" && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : undefined;
+}
+
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = errorCode(error);
+    if (code === "ESRCH") return false;
+    // EPERM means the process exists but cannot be signalled. Unknown failures
+    // also fail closed rather than declaring a live owner stale.
+    return true;
+  }
+}
 
 function readKey(path: string): Buffer {
   const hex = readFileSync(path, "utf8").trim();
@@ -127,6 +184,174 @@ function loadOrCreateNewKey(oldKey: Buffer): Buffer {
     }
   }
   return newKey;
+}
+
+function readExistingRotationLock(): MasterKeyRotationLockRecord {
+  return parseMasterKeyRotationLock(
+    JSON.parse(readFileSync(LOCK_PATH, "utf8")),
+  );
+}
+
+function removeStaleRotationLock(expectedToken: string | null): void {
+  if (!existsSync(LOCK_PATH)) return;
+  if (expectedToken !== null) {
+    const current = readExistingRotationLock();
+    if (current.token !== expectedToken) {
+      throw new Error(
+        "The rotation lock changed ownership while stale recovery was in progress",
+      );
+    }
+  }
+  unlinkSync(LOCK_PATH);
+}
+
+function acquireRotationLease(): RotationLease {
+  mkdirSync(dataDir(), { recursive: true });
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const handle = openSync(LOCK_PATH, "wx", 0o600);
+      const record: MasterKeyRotationLockRecord = {
+        formatVersion: MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION,
+        ownerPid: process.pid,
+        token: randomUUID().replaceAll("-", ""),
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        writeFileSync(handle, `${JSON.stringify(record, null, 2)}\n`, "utf8");
+        fsyncSync(handle);
+        try {
+          chmodSync(LOCK_PATH, 0o600);
+        } catch {
+          // Best effort on platforms that do not expose POSIX modes.
+        }
+        return { handle, record };
+      } catch (error) {
+        closeSync(handle);
+        if (existsSync(LOCK_PATH)) unlinkSync(LOCK_PATH);
+        throw error;
+      }
+    } catch (error) {
+      if (errorCode(error) !== "EEXIST") throw error;
+
+      let existing: MasterKeyRotationLockRecord | null = null;
+      try {
+        existing = readExistingRotationLock();
+      } catch {
+        if (!RECOVER_STALE_LOCK && !FORCE) {
+          throw new Error(
+            `The rotation lease at ${LOCK_PATH} is malformed. After verifying SahelFlow is closed, rerun with --recover-stale-lock.`,
+          );
+        }
+        console.warn(`Recovering malformed stale rotation lease: ${LOCK_PATH}`);
+        removeStaleRotationLock(null);
+        continue;
+      }
+
+      if (processIsAlive(existing.ownerPid)) {
+        throw new Error(
+          `Another live master-key rotation owns ${LOCK_PATH} (PID ${existing.ownerPid}, token ${existing.token})`,
+        );
+      }
+
+      console.warn(
+        `Recovering stale rotation lease from dead PID ${existing.ownerPid}; the existing sidecar will preserve crash-resume authority.`,
+      );
+      removeStaleRotationLock(existing.token);
+    }
+  }
+
+  throw new Error(`Could not acquire master-key rotation lease: ${LOCK_PATH}`);
+}
+
+function releaseRotationLease(lease: RotationLease): void {
+  closeSync(lease.handle);
+  if (!existsSync(LOCK_PATH)) return;
+  try {
+    const current = readExistingRotationLock();
+    if (current.token !== lease.record.token) {
+      console.warn(
+        `Rotation lease ownership changed; refusing to remove ${LOCK_PATH}`,
+      );
+      return;
+    }
+    unlinkSync(LOCK_PATH);
+  } catch {
+    console.warn(
+      `Rotation lease became unreadable; refusing to remove ${LOCK_PATH}`,
+    );
+  }
+}
+
+function readRuntimeManifest(): RuntimeEndpointManifest {
+  const value = JSON.parse(readFileSync(RUNTIME_MANIFEST_PATH, "utf8")) as Partial<RuntimeEndpointManifest>;
+  if (
+    value.formatVersion !== RUNTIME_MANIFEST_FORMAT_VERSION ||
+    value.state !== "ready" ||
+    value.host !== "127.0.0.1" ||
+    !Number.isSafeInteger(value.appPort) ||
+    (value.appPort ?? 0) <= 0 ||
+    (value.appPort ?? 0) > 65_535 ||
+    !Number.isSafeInteger(value.processId) ||
+    (value.processId ?? 0) <= 0
+  ) {
+    throw new Error("Runtime endpoint manifest is malformed");
+  }
+  return {
+    formatVersion: RUNTIME_MANIFEST_FORMAT_VERSION,
+    state: "ready",
+    host: "127.0.0.1",
+    appPort: value.appPort,
+    processId: value.processId,
+  };
+}
+
+function loopbackPortIsOpen(port: number): Promise<boolean> {
+  return new Promise((resolvePort) => {
+    const socket = connect({ host: "127.0.0.1", port });
+    let settled = false;
+    const settle = (open: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolvePort(open);
+    };
+    socket.setTimeout(500);
+    socket.once("connect", () => settle(true));
+    socket.once("timeout", () => settle(false));
+    socket.once("error", () => settle(false));
+  });
+}
+
+async function assertApplicationStopped(): Promise<void> {
+  if (!existsSync(RUNTIME_MANIFEST_PATH)) return;
+
+  let manifest: RuntimeEndpointManifest;
+  try {
+    manifest = readRuntimeManifest();
+  } catch {
+    if (!FORCE) {
+      throw new Error(
+        `Cannot prove SahelFlow is stopped because ${RUNTIME_MANIFEST_PATH} is malformed. Verify the app is closed, then rerun with --force.`,
+      );
+    }
+    console.warn(
+      `Ignoring malformed runtime manifest after explicit --force: ${RUNTIME_MANIFEST_PATH}`,
+    );
+    return;
+  }
+
+  const ownerAlive = processIsAlive(manifest.processId);
+  const serverListening = await loopbackPortIsOpen(manifest.appPort);
+  if (ownerAlive || serverListening) {
+    throw new Error(
+      `SahelFlow is still running (PID ${manifest.processId}, port ${manifest.appPort}). Close the desktop app before rotating the master key.`,
+    );
+  }
+
+  console.warn(
+    `Ignoring stale runtime manifest for dead PID ${manifest.processId}; the maintenance lease prevents a new packaged server from starting or writing.`,
+  );
 }
 
 function databasePathFromUrl(databaseUrl: string): string {
@@ -441,7 +666,7 @@ async function rotateMessages(
         continue;
       }
 
-      let plaintext: string | null = null;
+      let plaintext: string;
       try {
         plaintext = decryptString(encryptedPayload(row.body), oldKey);
       } catch {
@@ -481,7 +706,7 @@ async function rotateSecrets(
         ciphertext: row.ciphertext,
         tag: row.tag,
       };
-      let plaintext: string | null = null;
+      let plaintext: string;
       try {
         plaintext = decryptString(payload, oldKey);
       } catch {
@@ -580,15 +805,13 @@ function printStats(allStats: readonly ModelStats[]): void {
 }
 
 async function main(): Promise<void> {
-  mkdirSync(dataDir(), { recursive: true });
-  let lock: number | null = null;
+  const lease = acquireRotationLease();
   try {
-    lock = openSync(LOCK_PATH, "wx", 0o600);
-  } catch {
-    throw new Error(`Another master-key rotation owns ${LOCK_PATH}`);
-  }
+    // Acquire the maintenance lease first, then prove the old runtime is gone.
+    // A packaged Node process launched after this point refuses startup, and an
+    // already-running process refuses every process-bound production write.
+    await assertApplicationStopped();
 
-  try {
     const targets = loadRotationTargets();
     const oldKey = loadOldKey();
     const newKey = loadOrCreateNewKey(oldKey);
@@ -602,6 +825,7 @@ async function main(): Promise<void> {
         : "Installation-wide master-key rotation",
     );
     console.log(`Keyfile: ${KEYFILE_PATH}`);
+    console.log(`Maintenance lease: ${LOCK_PATH}`);
     console.log(`Registered database targets: ${targets.length}`);
     for (const target of targets) {
       console.log(` - ${target.id}: ${target.databasePath}`);
@@ -629,8 +853,7 @@ async function main(): Promise<void> {
       "All registered shop Secrets—including business-truth envelope wrappers—were re-wrapped before the shared keyfile commit.",
     );
   } finally {
-    if (lock !== null) closeSync(lock);
-    if (existsSync(LOCK_PATH)) unlinkSync(LOCK_PATH);
+    releaseRotationLease(lease);
   }
 }
 
