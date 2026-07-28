@@ -1,11 +1,11 @@
-name: Dispatch signed Internal.13 after merge
+name: Ensure signed Internal.13 dispatch
 
 on:
   push:
     branches:
       - main
     paths:
-      - sahelflow.version.json
+      - .github/workflows/dispatch-internal-13.yml
 
 permissions:
   actions: write
@@ -18,45 +18,88 @@ concurrency:
 jobs:
   dispatch:
     runs-on: ubuntu-24.04
+    env:
+      SOURCE_SHA: fb32faedc5ecfc1718e395824f437b805cbb9ef2
+      RELEASE_TAG: sahelflow-v1.0.0-internal.13-fb32faedc5ecfc1718e395824f437b805cbb9ef2
     steps:
-      - name: Checkout exact protected-main commit
+      - name: Checkout protected main
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Verify one-time Internal.13 authority
-        id: authority
+      - name: Verify guarded Internal.13 authority
         shell: bash
         run: |
           set -euo pipefail
           version="$(python -c 'import json; print(json.load(open("sahelflow.version.json", encoding="utf-8"))["version"])')"
           if [[ "${version}" != "1.0.0-internal.13" ]]; then
+            echo "Protected main is ${version}; refusing the one-time Internal.13 dispatch." >&2
+            exit 1
+          fi
+          git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "${SOURCE_SHA}" refs/remotes/origin/main
+
+      - name: Detect active or existing signed candidate
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          runs_status="$(curl --silent --show-error --output runs.json --write-out '%{http_code}' \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=30")"
+          if [[ "${runs_status}" != "200" ]]; then
+            cat runs.json >&2
+            echo "Failed to inspect signed workflow runs: HTTP ${runs_status}." >&2
+            exit 1
+          fi
+          active="$(python - <<'PY'
+          import json
+          data = json.load(open('runs.json', encoding='utf-8'))
+          print('true' if any(run.get('status') in {'queued', 'in_progress', 'waiting', 'pending'} for run in data.get('workflow_runs', [])) else 'false')
+          PY
+          )"
+          if [[ "${active}" == "true" ]]; then
             echo "dispatch=false" >> "${GITHUB_OUTPUT}"
-            echo "Skipping: protected main is ${version}, not the one-time Internal.13 candidate."
+            echo "A signed updater workflow is already active; guarded dispatcher will not duplicate it."
             exit 0
           fi
-          if [[ ! "${GITHUB_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Invalid protected-main SHA: ${GITHUB_SHA}" >&2
+
+          tag_status="$(curl --silent --show-error --output tag.json --write-out '%{http_code}' \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}")"
+          if [[ "${tag_status}" == "200" ]]; then
+            echo "dispatch=false" >> "${GITHUB_OUTPUT}"
+            echo "Internal.13 release tag already exists; guarded dispatcher will not duplicate it."
+            exit 0
+          fi
+          if [[ "${tag_status}" != "404" ]]; then
+            cat tag.json >&2
+            echo "Failed to inspect Internal.13 tag: HTTP ${tag_status}." >&2
             exit 1
           fi
           echo "dispatch=true" >> "${GITHUB_OUTPUT}"
 
       - name: Dispatch exact-source signed updater workflow
-        if: steps.authority.outputs.dispatch == 'true'
+        if: steps.guard.outputs.dispatch == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
           payload="$(python - <<'PY'
           import json, os
           print(json.dumps({
-              "ref": "main",
-              "inputs": {
-                  "source_ref": os.environ["SOURCE_SHA"],
-                  "release_notes": "Internal.13 combines the merged Session 1 workspace, startup and Arabic/RTL foundations with the Session 2 business-truth contracts, encrypted atomic command authority, movement facts and recovery hardening."
+              'ref': 'main',
+              'inputs': {
+                  'source_ref': os.environ['SOURCE_SHA'],
+                  'release_notes': 'Internal.13 combines the Session 1 workspace, startup and Arabic/RTL foundations with the Session 2 business-truth contracts, encrypted atomic command authority, movement facts and recovery hardening.'
               }
           }))
           PY
@@ -73,4 +116,4 @@ jobs:
             echo "Signed workflow dispatch failed with HTTP ${status}." >&2
             exit 1
           fi
-          echo "Dispatched release.yml for exact protected-main source ${SOURCE_SHA}."
+          echo "Dispatched release.yml for exact protected source ${SOURCE_SHA}."
