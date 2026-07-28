@@ -1,4 +1,4 @@
-name: Ensure signed Internal.13 dispatch
+name: Ensure and report signed Internal.13
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 permissions:
   actions: write
   contents: read
+  issues: write
 
 concurrency:
   group: dispatch-signed-internal-13
@@ -18,9 +19,11 @@ concurrency:
 jobs:
   dispatch:
     runs-on: ubuntu-24.04
+    timeout-minutes: 180
     env:
       SOURCE_SHA: fb32faedc5ecfc1718e395824f437b805cbb9ef2
       RELEASE_TAG: sahelflow-v1.0.0-internal.13-fb32faedc5ecfc1718e395824f437b805cbb9ef2
+      DISPATCH_REF: release/internal-13-dispatch-ref
     steps:
       - name: Checkout protected main
         uses: actions/checkout@v4
@@ -29,63 +32,81 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify guarded Internal.13 authority
+      - name: Verify immutable Internal.13 authority
         shell: bash
         run: |
           set -euo pipefail
           version="$(python -c 'import json; print(json.load(open("sahelflow.version.json", encoding="utf-8"))["version"])')"
           if [[ "${version}" != "1.0.0-internal.13" ]]; then
-            echo "Protected main is ${version}; refusing the one-time Internal.13 dispatch." >&2
+            echo "Protected main is ${version}; refusing the Internal.13 release operation." >&2
             exit 1
           fi
           git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "${SOURCE_SHA}" refs/remotes/origin/main
 
-      - name: Detect active or existing signed candidate
+      - name: Wait for unrelated release activity
         id: guard
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          runs_status="$(curl --silent --show-error --output runs.json --write-out '%{http_code}' \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=30")"
-          if [[ "${runs_status}" != "200" ]]; then
-            cat runs.json >&2
-            echo "Failed to inspect signed workflow runs: HTTP ${runs_status}." >&2
-            exit 1
-          fi
-          active="$(python - <<'PY'
-          import json
-          data = json.load(open('runs.json', encoding='utf-8'))
-          print('true' if any(run.get('status') in {'queued', 'in_progress', 'waiting', 'pending'} for run in data.get('workflow_runs', [])) else 'false')
-          PY
-          )"
-          if [[ "${active}" == "true" ]]; then
-            echo "dispatch=false" >> "${GITHUB_OUTPUT}"
-            echo "A signed updater workflow is already active; guarded dispatcher will not duplicate it."
-            exit 0
-          fi
+          active_states='queued in_progress waiting pending requested'
+          for attempt in $(seq 1 360); do
+            release_status="$(curl --silent --show-error --output exact-release.json --write-out '%{http_code}' \
+              --header 'Accept: application/vnd.github+json' \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+            if [[ "${release_status}" == '200' ]]; then
+              {
+                echo 'dispatch=false'
+                echo 'release_exists=true'
+              } >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            if [[ "${release_status}" != '404' ]]; then
+              cat exact-release.json >&2
+              echo "Failed to inspect exact Internal.13 release: HTTP ${release_status}." >&2
+              exit 1
+            fi
 
-          tag_status="$(curl --silent --show-error --output tag.json --write-out '%{http_code}' \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}")"
-          if [[ "${tag_status}" == "200" ]]; then
-            echo "dispatch=false" >> "${GITHUB_OUTPUT}"
-            echo "Internal.13 release tag already exists; guarded dispatcher will not duplicate it."
+            runs_status="$(curl --silent --show-error --output release-runs.json --write-out '%{http_code}' \
+              --header 'Accept: application/vnd.github+json' \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=100")"
+            if [[ "${runs_status}" != '200' ]]; then
+              cat release-runs.json >&2
+              echo "Failed to inspect signed workflow runs: HTTP ${runs_status}." >&2
+              exit 1
+            fi
+            active="$(python - <<'PY'
+          import json
+          data = json.load(open('release-runs.json', encoding='utf-8'))
+          states = {'queued', 'in_progress', 'waiting', 'pending', 'requested'}
+          print('true' if any(run.get('status') in states for run in data.get('workflow_runs', [])) else 'false')
+          PY
+            )"
+            if [[ "${active}" == 'true' ]]; then
+              echo "Another signed updater run is active; waiting without attributing it to Internal.13."
+              sleep 5
+              continue
+            fi
+
+            python - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json, os
+          data = json.load(open('release-runs.json', encoding='utf-8'))
+          ref = os.environ['DISPATCH_REF']
+          ids = [str(run.get('id')) for run in data.get('workflow_runs', []) if run.get('head_branch') == ref and run.get('id')]
+          print('previous_ids=' + ','.join(ids))
+          print('dispatch=true')
+          print('release_exists=false')
+          PY
             exit 0
-          fi
-          if [[ "${tag_status}" != "404" ]]; then
-            cat tag.json >&2
-            echo "Failed to inspect Internal.13 tag: HTTP ${tag_status}." >&2
-            exit 1
-          fi
-          echo "dispatch=true" >> "${GITHUB_OUTPUT}"
+          done
+          echo 'Existing signed updater activity did not clear within the bounded observation window.' >&2
+          exit 1
 
       - name: Dispatch exact-source signed updater workflow
         if: steps.guard.outputs.dispatch == 'true'
@@ -97,7 +118,7 @@ jobs:
           payload="$(python - <<'PY'
           import json, os
           print(json.dumps({
-              'ref': 'main',
+              'ref': os.environ['DISPATCH_REF'],
               'inputs': {
                   'source_ref': os.environ['SOURCE_SHA'],
                   'release_notes': 'Internal.13 combines the Session 1 workspace, startup and Arabic/RTL foundations with the Session 2 business-truth contracts, encrypted atomic command authority, movement facts and recovery hardening.'
@@ -105,16 +126,236 @@ jobs:
           }))
           PY
           )"
-          status="$(curl --silent --show-error --output response.txt --write-out '%{http_code}' \
+          status="$(curl --silent --show-error --output dispatch-response.txt --write-out '%{http_code}' \
             --request POST \
-            --header "Accept: application/vnd.github+json" \
+            --header 'Accept: application/vnd.github+json' \
             --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/dispatches" \
             --data "${payload}")"
-          if [[ "${status}" != "204" ]]; then
-            cat response.txt >&2
+          if [[ "${status}" != '204' ]]; then
+            cat dispatch-response.txt >&2
             echo "Signed workflow dispatch failed with HTTP ${status}." >&2
             exit 1
           fi
-          echo "Dispatched release.yml for exact protected source ${SOURCE_SHA}."
+
+      - name: Resolve exact dispatched run
+        id: resolved
+        if: steps.guard.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_IDS: ${{ steps.guard.outputs.previous_ids }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            status="$(curl --silent --show-error --output current-runs.json --write-out '%{http_code}' \
+              --header 'Accept: application/vnd.github+json' \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=100")"
+            if [[ "${status}" != '200' ]]; then
+              cat current-runs.json >&2
+              echo "Failed to resolve the exact dispatched run: HTTP ${status}." >&2
+              exit 1
+            fi
+            python - <<'PY'
+          import json, os
+          data = json.load(open('current-runs.json', encoding='utf-8'))
+          previous = {value for value in os.environ.get('PREVIOUS_IDS', '').split(',') if value}
+          ref = os.environ['DISPATCH_REF']
+          matches = [run for run in data.get('workflow_runs', []) if run.get('head_branch') == ref and str(run.get('id', '')) not in previous]
+          if matches:
+              run = max(matches, key=lambda item: item.get('id', 0))
+              with open('resolved-run.json', 'w', encoding='utf-8') as target:
+                  json.dump(run, target)
+          PY
+            if [[ -f resolved-run.json ]]; then
+              python - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json
+          run = json.load(open('resolved-run.json', encoding='utf-8'))
+          print(f"run_id={run.get('id', '')}")
+          print(f"run_url={run.get('html_url', '')}")
+          print(f"run_status={run.get('status', '')}")
+          PY
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'The unique Internal.13 dispatch was accepted, but its run was not visible within the bounded lookup window.' >&2
+          exit 1
+
+      - name: Follow exact signed run to completion
+        id: completed
+        if: steps.guard.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.resolved.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 660); do
+            status="$(curl --silent --show-error --output exact-run.json --write-out '%{http_code}' \
+              --header 'Accept: application/vnd.github+json' \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+            if [[ "${status}" != '200' ]]; then
+              cat exact-run.json >&2
+              echo "Failed to inspect exact signed run: HTTP ${status}." >&2
+              exit 1
+            fi
+            run_status="$(python -c 'import json; print(json.load(open("exact-run.json", encoding="utf-8")).get("status", ""))')"
+            if [[ "${run_status}" == 'completed' ]]; then
+              python - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json
+          run = json.load(open('exact-run.json', encoding='utf-8'))
+          print(f"run_conclusion={run.get('conclusion', '')}")
+          print(f"run_url={run.get('html_url', '')}")
+          PY
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'The exact signed updater run exceeded the bounded completion window.' >&2
+          exit 1
+
+      - name: Verify exact published release
+        id: publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            release_status="$(curl --silent --show-error --output exact-release.json --write-out '%{http_code}' \
+              --header 'Accept: application/vnd.github+json' \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+            if [[ "${release_status}" == '404' ]]; then
+              sleep 10
+              continue
+            fi
+            if [[ "${release_status}" != '200' ]]; then
+              cat exact-release.json >&2
+              echo "Failed to inspect exact release state: HTTP ${release_status}." >&2
+              exit 1
+            fi
+            latest_status="$(curl --silent --show-error --output latest-release.json --write-out '%{http_code}' \
+              --header 'Accept: application/vnd.github+json' \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest")"
+            if [[ "${latest_status}" != '200' ]]; then
+              cat latest-release.json >&2
+              echo "Failed to inspect latest release: HTTP ${latest_status}." >&2
+              exit 1
+            fi
+            python - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json, os
+          release = json.load(open('exact-release.json', encoding='utf-8'))
+          latest = json.load(open('latest-release.json', encoding='utf-8'))
+          assets = [asset.get('name', '') for asset in release.get('assets', [])]
+          msi = [name for name in assets if name.endswith('.msi')]
+          signatures = [name for name in assets if name.endswith('.msi.sig')]
+          manifests = [name for name in assets if name == 'latest.json']
+          source_ok = release.get('target_commitish') == os.environ['SOURCE_SHA']
+          assets_ok = len(msi) == 1 and len(signatures) == 1 and len(manifests) == 1
+          latest_ok = latest.get('tag_name') == os.environ['RELEASE_TAG']
+          published = not release.get('draft') and not release.get('prerelease') and source_ok and assets_ok and latest_ok
+          print(f"publication={'success' if published else 'failure'}")
+          print(f"release_url={release.get('html_url', '')}")
+          print(f"draft={str(bool(release.get('draft'))).lower()}")
+          print(f"prerelease={str(bool(release.get('prerelease'))).lower()}")
+          print(f"source_ok={str(source_ok).lower()}")
+          print(f"assets_ok={str(assets_ok).lower()}")
+          print(f"latest_ok={str(latest_ok).lower()}")
+          print('assets=' + ','.join(assets))
+          PY
+            exit 0
+          done
+          {
+            echo 'publication=failure'
+            echo 'draft=unknown'
+            echo 'prerelease=unknown'
+            echo 'source_ok=false'
+            echo 'assets_ok=false'
+            echo 'latest_ok=false'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Report verified release result to issue 164
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.resolved.outputs.run_id }}
+          RUN_URL: ${{ steps.completed.outputs.run_url || steps.resolved.outputs.run_url }}
+          RUN_CONCLUSION: ${{ steps.completed.outputs.run_conclusion }}
+          PUBLICATION: ${{ steps.publication.outputs.publication }}
+          RELEASE_URL: ${{ steps.publication.outputs.release_url }}
+          DRAFT: ${{ steps.publication.outputs.draft }}
+          PRERELEASE: ${{ steps.publication.outputs.prerelease }}
+          SOURCE_OK: ${{ steps.publication.outputs.source_ok }}
+          ASSETS_OK: ${{ steps.publication.outputs.assets_ok }}
+          LATEST_OK: ${{ steps.publication.outputs.latest_ok }}
+          ASSETS: ${{ steps.publication.outputs.assets }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(python - <<'PY'
+          import json, os
+          lines = [
+              '## Internal.13 signed release result',
+              '',
+              f'- Source: `{os.environ["SOURCE_SHA"]}`',
+              f'- Expected tag: `{os.environ["RELEASE_TAG"]}`',
+              f'- Publication: `{os.environ.get("PUBLICATION", "unknown") or "unknown"}`',
+              f'- Draft: `{os.environ.get("DRAFT", "unknown") or "unknown"}`',
+              f'- Prerelease: `{os.environ.get("PRERELEASE", "unknown") or "unknown"}`',
+              f'- Exact source binding: `{os.environ.get("SOURCE_OK", "false") or "false"}`',
+              f'- Required asset set: `{os.environ.get("ASSETS_OK", "false") or "false"}`',
+              f'- Live latest release: `{os.environ.get("LATEST_OK", "false") or "false"}`',
+          ]
+          if os.environ.get('RUN_ID'):
+              lines.append(f'- Signed run ID: `{os.environ["RUN_ID"]}`')
+          if os.environ.get('RUN_CONCLUSION'):
+              lines.append(f'- Signed run conclusion: `{os.environ["RUN_CONCLUSION"]}`')
+          if os.environ.get('RUN_URL'):
+              lines.append(f'- Signed run: {os.environ["RUN_URL"]}')
+          if os.environ.get('RELEASE_URL'):
+              lines.append(f'- Release: {os.environ["RELEASE_URL"]}')
+          if os.environ.get('ASSETS'):
+              lines.append(f'- Assets: `{os.environ["ASSETS"]}`')
+          lines.append(f'- Observer run: https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}')
+          print(json.dumps({'body': '\n'.join(lines)}))
+          PY
+          )"
+          status="$(curl --silent --show-error --output comment.json --write-out '%{http_code}' \
+            --request POST \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/164/comments" \
+            --data "${body}")"
+          if [[ "${status}" != '201' ]]; then
+            cat comment.json >&2
+            echo "Failed to report Internal.13 release state: HTTP ${status}." >&2
+            exit 1
+          fi
+
+      - name: Enforce successful signed publication
+        env:
+          DISPATCHED: ${{ steps.guard.outputs.dispatch }}
+          RUN_CONCLUSION: ${{ steps.completed.outputs.run_conclusion }}
+          PUBLICATION: ${{ steps.publication.outputs.publication }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${DISPATCHED}" == 'true' && "${RUN_CONCLUSION}" != 'success' ]]; then
+            echo "Exact signed run did not succeed: ${RUN_CONCLUSION:-unknown}." >&2
+            exit 1
+          fi
+          if [[ "${PUBLICATION}" != 'success' ]]; then
+            echo 'Exact Internal.13 release is not a verified live publication.' >&2
+            exit 1
+          fi
