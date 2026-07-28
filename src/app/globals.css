@@ -863,7 +863,7 @@ td { text-align: inherit; }
    a cursive script where letters connect). Override ALL tracking-* utilities
    in RTL mode. This is a global safety net; individual components can also
    use rtl:tracking-normal for explicitness. */
-html[dir="rtl"] :where(*) {
+html[dir="rtl"] :where(:dir(rtl)) {
   letter-spacing: normal !important;
 }
 

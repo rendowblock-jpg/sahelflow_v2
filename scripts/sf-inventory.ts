@@ -16,6 +16,7 @@ type OwnerSession = "Session 2" | "Session 3" | "Session 4";
 interface RouteExperienceAudit {
   route: string;
   file: string;
+  sourceFiles: string[];
   ownerSession: OwnerSession;
   ownerOutcome: string;
   boundaries: {
@@ -157,11 +158,76 @@ function hasRouteBoundary(fileSet: Set<string>, pageFile: string, name: string):
   );
 }
 
+function resolveLocalSourceImport(
+  fileSet: Set<string>,
+  fromFile: string,
+  specifier: string,
+): string | null {
+  let base: string;
+  if (specifier.startsWith("@/")) {
+    base = `src/${specifier.slice(2)}`;
+  } else if (specifier.startsWith(".")) {
+    base = relative(
+      repoRoot,
+      resolve(repoRoot, dirname(fromFile), specifier),
+    ).replace(/\\/g, "/");
+  } else {
+    return null;
+  }
+
+  const candidates = [
+    base,
+    `${base}.tsx`,
+    `${base}.ts`,
+    `${base}.jsx`,
+    `${base}.js`,
+    `${base}/index.tsx`,
+    `${base}/index.ts`,
+    `${base}/index.jsx`,
+    `${base}/index.js`,
+  ];
+  return candidates.find(
+    (candidate) => fileSet.has(candidate) && /\.(?:ts|tsx|js|jsx)$/.test(candidate),
+  ) ?? null;
+}
+
+function collectRouteSourceFiles(fileSet: Set<string>, entryFile: string): string[] {
+  const visited = new Set<string>();
+  const queue = [entryFile];
+  const staticImport = /(?:import|export)\s+(?:type\s+)?(?:[^;"']+?\s+from\s+)?["']([^"']+)["']/g;
+  const dynamicImport = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+
+  while (queue.length > 0) {
+    const file = queue.shift()!;
+    if (visited.has(file)) continue;
+    visited.add(file);
+    if (visited.size > 500) {
+      throw new Error(`route dependency traversal exceeded 500 files for ${entryFile}`);
+    }
+
+    const content = readUtf8(resolve(repoRoot, file));
+    for (const pattern of [staticImport, dynamicImport]) {
+      pattern.lastIndex = 0;
+      for (const match of content.matchAll(pattern)) {
+        const dependency = resolveLocalSourceImport(fileSet, file, match[1]!);
+        if (dependency && !visited.has(dependency)) queue.push(dependency);
+      }
+    }
+  }
+
+  return [...visited]
+    .filter((file) => /\.(?:tsx|jsx)$/.test(file))
+    .sort();
+}
+
 function auditRouteExperience(
   fileSet: Set<string>,
   route: { route: string; file: string },
 ): RouteExperienceAudit {
-  const content = readUtf8(resolve(repoRoot, route.file));
+  const sourceFiles = collectRouteSourceFiles(fileSet, route.file);
+  const content = sourceFiles
+    .map((file) => readUtf8(resolve(repoRoot, file)))
+    .join("\n");
   const owner = ownerForRoute(route.route);
   const boundaries = {
     loading: hasRouteBoundary(fileSet, route.file, "loading"),
@@ -206,7 +272,7 @@ function auditRouteExperience(
     (signals.chartSurface ? 3 : 0) +
     (signals.translationCalls === 0 ? 1 : 0);
 
-  return { ...route, ...owner, boundaries, signals, risks, riskScore };
+  return { ...route, sourceFiles, ...owner, boundaries, signals, risks, riskScore };
 }
 
 const files = runGit(["ls-files", "-z"])
@@ -375,7 +441,7 @@ const summaryLines = [
   `- Session 2 owned routes: ${inventory.experience.ownerCounts["Session 2"]}`,
   `- Session 3 owned routes: ${inventory.experience.ownerCounts["Session 3"]}`,
   `- Session 4 owned routes: ${inventory.experience.ownerCounts["Session 4"]}`,
-  "- Every route entry in repository-inventory.json records boundary coverage, logical/physical geometry signals, bidi isolation, directional icons, chart exposure, owner session and deterministic risk score.",
+  "- Every route entry in repository-inventory.json follows its local import graph and records the rendered source files, boundary coverage, logical/physical geometry signals, bidi isolation, directional icons, chart exposure, owner session and deterministic risk score.",
   "",
   "### Highest static-risk routes",
   "",
