@@ -30,7 +30,13 @@ function writeFixture(options?: {
   channel?: "internal" | "beta" | "stable";
   continueOnGateError?: boolean;
   concretePublicationGuards?: boolean;
+  publicationFailureGuard?: boolean;
   tagBindingGuard?: boolean;
+  protectedTagCreateOnlyOnMissing?: boolean;
+  protectedTagCreationFailureGuard?: boolean;
+  protectedTagLookupFailureGuard?: boolean;
+  protectedTagPeelFailureGuard?: boolean;
+  protectedTagMismatchFailureGuard?: boolean;
   malformedTagPeeling?: boolean;
   monotonicVersionGuard?: boolean;
   draftSafeLookup?: boolean;
@@ -40,6 +46,7 @@ function writeFixture(options?: {
   draftLookupExactTagGuard?: boolean;
   draftLookupUniqueGuard?: boolean;
   draftLookupStateGuard?: boolean;
+  draftTargetBindingGuard?: boolean;
   protectedEnvironment?: boolean;
   serializedPublication?: boolean;
 }): string {
@@ -153,16 +160,19 @@ function writeFixture(options?: {
                 "          if (-not $release.draft) { Write-Warning 'ignored' }",
                 "          if ($release.prerelease) { Write-Warning 'ignored' }",
               ]),
+          ...(options?.draftTargetBindingGuard ?? true
+            ? [
+                "          if ([string]$release.target_commitish -cne $env:SF_SOURCE_COMMIT) { throw 'blocked' }",
+              ]
+            : [
+                "          if ([string]$release.target_commitish -cne $env:SF_SOURCE_COMMIT) { Write-Warning 'ignored' }",
+              ]),
         ]
       : [
           '          $release = gh api "repos/repo/releases/tags/$env:SF_RELEASE_TAG"',
         ]),
   );
   if (options?.autoPublishWorkflow ?? true) {
-    signedWorkflow.push(
-      "      - name: Publish exact verified Internal release",
-      "        run: |",
-    );
     if (options?.concretePublicationGuards ?? true) {
       signedWorkflow.push(
         "          if ($env:SF_RELEASE_VERSION -cnotmatch '-internal\\.[0-9]+$') { throw 'blocked' }",
@@ -173,23 +183,87 @@ function writeFixture(options?: {
         "          echo release version is not eligible for automatic Internal publication",
       );
     }
-    if (options?.tagBindingGuard ?? true) {
-      signedWorkflow.push(
-        '          $tagObject = gh api "repos/repo/git/ref/tags/$env:SF_RELEASE_TAG"',
-        options?.malformedTagPeeling
-          ? "          while ($tagObject.type -ceq 'tag') { $tagObject = $tagObject.object }"
-          : "          while ($tagObject.type -ceq 'tag') { $tagObject = gh api \"repos/repo/git/tags/$($tagObject.sha)\" }",
-        "          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) { throw 'blocked' }",
-      );
-    }
     if (options?.monotonicVersionGuard ?? true) {
       signedWorkflow.push(
         '          $latestRelease = gh api "repos/repo/releases/latest"',
         "          if ($currentBase -lt $latestBase -or ($currentBase -eq $latestBase -and $currentSequence -le $latestSequence)) { throw 'Internal publication must be strictly newer' }",
       );
     }
+    if (options?.tagBindingGuard ?? true) {
+      signedWorkflow.push(
+        "      - name: Create and verify exact release tag while draft remains protected",
+        "        run: |",
+        '          gh api "repos/repo/git/ref/tags/$env:SF_RELEASE_TAG" --silent',
+        ...(options?.protectedTagCreateOnlyOnMissing ?? true
+          ? [
+              "          if ($LASTEXITCODE -ne 0) {",
+              '            gh api --method POST "repos/repo/git/refs"',
+              '              -f "ref=refs/tags/$env:SF_RELEASE_TAG"',
+              '              -f "sha=$env:SF_SOURCE_COMMIT"',
+              ...(options?.protectedTagCreationFailureGuard ?? true
+                ? [
+                    "            if ($LASTEXITCODE -ne 0) { throw 'blocked' }",
+                  ]
+                : [
+                    "            if ($LASTEXITCODE -ne 0) { Write-Warning 'ignored' }",
+                  ]),
+              "          }",
+            ]
+          : [
+              "          if ($LASTEXITCODE -ne 0) { Write-Warning 'missing' }",
+              '          gh api --method POST "repos/repo/git/refs"',
+              '            -f "ref=refs/tags/$env:SF_RELEASE_TAG"',
+              '            -f "sha=$env:SF_SOURCE_COMMIT"',
+              ...(options?.protectedTagCreationFailureGuard ?? true
+                ? [
+                    "          if ($LASTEXITCODE -ne 0) { throw 'blocked' }",
+                  ]
+                : [
+                    "          if ($LASTEXITCODE -ne 0) { Write-Warning 'ignored' }",
+                  ]),
+            ]),
+        '          $tagObject = gh api "repos/repo/git/ref/tags/$env:SF_RELEASE_TAG"',
+        ...(options?.protectedTagLookupFailureGuard ?? true
+          ? [
+              "          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) { throw 'blocked' }",
+            ]
+          : [
+              "          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) { Write-Warning 'ignored' }",
+            ]),
+        ...(options?.malformedTagPeeling
+          ? [
+              "          while ($tagObject.type -ceq 'tag') { $tagObject = $tagObject.object }",
+            ]
+          : [
+              "          while ($tagObject.type -ceq 'tag') {",
+              '            $tagObject = gh api "repos/repo/git/tags/$($tagObject.sha)"',
+              ...(options?.protectedTagPeelFailureGuard ?? true
+                ? [
+                    "            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) { throw 'blocked' }",
+                  ]
+                : [
+                    "            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) { Write-Warning 'ignored' }",
+                  ]),
+              "          }",
+            ]),
+        ...(options?.protectedTagMismatchFailureGuard ?? true
+          ? [
+              "          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) { throw 'blocked' }",
+            ]
+          : [
+              "          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) { Write-Warning 'ignored' }",
+            ]),
+      );
+    }
     signedWorkflow.push(
+      "      - name: Publish exact verified Internal release",
+      "        run: |",
       "          gh release edit tag --draft=false --latest",
+      ...(options?.publicationFailureGuard ?? true
+        ? ["          if ($LASTEXITCODE -ne 0) { throw 'blocked' }"]
+        : [
+            "          if ($LASTEXITCODE -ne 0) { Write-Warning 'ignored' }",
+          ]),
       "          echo Beta and Stable promotion remain manual Founder decisions",
     );
   }
@@ -371,6 +445,84 @@ describe("verify-updater-contract", () => {
     expect(result.stderr).toContain("peel the actual release tag");
   });
 
+  it("rejects publication that ignores a failed release edit", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        publicationFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("publish only after tag validation");
+  });
+
+  it("rejects a protected tag gate that ignores creation failure", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        protectedTagCreationFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("peel the actual release tag");
+  });
+
+  it("rejects a protected tag gate that creates the tag on every run", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        protectedTagCreateOnlyOnMissing: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("peel the actual release tag");
+  });
+
+  it("rejects a protected tag gate that ignores a failed lookup", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        protectedTagLookupFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("peel the actual release tag");
+  });
+
+  it("rejects a protected tag gate that ignores a failed annotated-tag peel", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        protectedTagPeelFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("peel the actual release tag");
+  });
+
+  it("rejects a protected tag gate that does not terminate on a tag mismatch", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        protectedTagMismatchFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("peel the actual release tag");
+  });
+
   it("rejects publication without a monotonic Internal version guard", () => {
     const result = verify(
       writeFixture({
@@ -460,6 +612,19 @@ describe("verify-updater-contract", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects a draft whose exact source target is not fail closed", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftTargetBindingGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("bind its target to the exact source");
   });
 
   it("rejects draft enumeration that only logs ambiguous matches", () => {

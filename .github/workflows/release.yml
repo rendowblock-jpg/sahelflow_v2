@@ -461,22 +461,8 @@ jobs:
             throw 'automatic Internal publication target unexpectedly has prerelease semantics'
           }
 
-          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
-            ConvertFrom-Json |
-            Select-Object -ExpandProperty object
-          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
-            throw 'failed to resolve the draft release tag authority'
-          }
-          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
-            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
-              ConvertFrom-Json |
-              Select-Object -ExpandProperty object
-            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
-              throw 'failed to peel the annotated draft release tag'
-            }
-          }
-          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
-            throw 'draft release tag does not resolve to the exact verified source commit'
+          if ([string]$release.target_commitish -cne $env:SF_SOURCE_COMMIT) {
+            throw 'draft release target does not equal the exact verified source commit'
           }
 
           $releaseAssets = @($release.assets)
@@ -527,6 +513,40 @@ jobs:
           if ($null -eq $platform) { throw 'draft latest.json has no Windows x64 MSI entry' }
           if ($platform.url -notmatch [regex]::Escape("/releases/download/$env:SF_RELEASE_TAG/")) {
             throw 'draft latest.json is not bound to the exact verified release tag'
+          }
+
+      - name: Create and verify exact release tag while draft remains protected
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" --silent 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh api --method POST "repos/${{ github.repository }}/git/refs" `
+              -f "ref=refs/tags/$env:SF_RELEASE_TAG" `
+              -f "sha=$env:SF_SOURCE_COMMIT" `
+              --silent
+            if ($LASTEXITCODE -ne 0) {
+              throw 'failed to create the exact release tag while the release remained a draft'
+            }
+          }
+
+          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty object
+          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+            throw 'failed to resolve the protected release tag authority'
+          }
+          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
+            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
+              ConvertFrom-Json |
+              Select-Object -ExpandProperty object
+            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+              throw 'failed to peel the annotated protected release tag'
+            }
+          }
+          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
+            throw 'protected release tag does not resolve to the exact verified source commit'
           }
 
       - name: Publish exact verified Internal release

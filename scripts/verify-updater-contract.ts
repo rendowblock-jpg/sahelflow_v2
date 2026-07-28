@@ -271,14 +271,6 @@ if (updater.enabled) {
     "protected publication must reject every non-increasing Internal version before promotion",
   );
   requireCondition(
-    /git\/ref\/tags\/\$env:SF_RELEASE_TAG/.test(signedJob) &&
-      /\$tagObject\.type\s+-ceq\s+'tag'/.test(signedJob) &&
-      /git\/tags\/\$\(\$tagObject\.sha\)/.test(signedJob) &&
-      /\$tagObject\.type\s+-cne\s+'commit'/.test(signedJob) &&
-      /\$tagObject\.sha\s+-cne\s+\$env:SF_SOURCE_COMMIT/.test(signedJob),
-    "protected publication must peel the actual release tag and bind it to the exact source commit",
-  );
-  requireCondition(
     !/^\s*continue-on-error:\s*true\s*$/m.test(signedJob),
     "signed candidate and publication gates must not continue after errors",
   );
@@ -286,10 +278,18 @@ if (updater.enabled) {
   const draftLookupIndex = signedJob.indexOf(
     "- name: Verify exact draft publication target",
   );
+  const protectedTagIndex = signedJob.indexOf(
+    "- name: Create and verify exact release tag while draft remains protected",
+  );
   const draftLookupStep =
-    draftLookupIndex >= 0 && publishIndex > draftLookupIndex
-      ? signedJob.slice(draftLookupIndex, publishIndex)
+    draftLookupIndex >= 0 && protectedTagIndex > draftLookupIndex
+      ? signedJob.slice(draftLookupIndex, protectedTagIndex)
       : "";
+  const protectedTagStep =
+    protectedTagIndex >= 0 && publishIndex > protectedTagIndex
+      ? signedJob.slice(protectedTagIndex, publishIndex)
+      : "";
+  const publishStep = publishIndex >= 0 ? signedJob.slice(publishIndex) : "";
   requireCondition(
     /releases\?per_page=100&page=\$page/.test(draftLookupStep) &&
       /\$page\s+-le\s+10/.test(draftLookupStep) &&
@@ -315,8 +315,93 @@ if (updater.enabled) {
       /if\s*\(\$release\.prerelease\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
         draftLookupStep,
       ) &&
+      /if\s*\(\[string\]\$release\.target_commitish\s+-cne\s+\$env:SF_SOURCE_COMMIT\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        draftLookupStep,
+      ) &&
+      !/git\/ref\/tags\/\$env:SF_RELEASE_TAG/.test(draftLookupStep) &&
       !/releases\/tags\/\$env:SF_RELEASE_TAG/.test(draftLookupStep),
-    "protected publication must enumerate authenticated releases and resolve exactly one draft instead of using the published tag endpoint",
+    "protected publication must resolve exactly one authenticated draft and bind its target to the exact source before preparing its release tag",
+  );
+  const publishCommandIndex = publishStep.indexOf("gh release edit");
+  const firstProtectedTagLookupIndex = protectedTagStep.indexOf(
+    "git/ref/tags/$env:SF_RELEASE_TAG",
+  );
+  const tagCreateIndex = protectedTagStep.search(
+    /gh api --method POST[^\r\n]*git\/refs/,
+  );
+  const verifiedProtectedTagLookupIndex = protectedTagStep.indexOf(
+    "git/ref/tags/$env:SF_RELEASE_TAG",
+    firstProtectedTagLookupIndex + 1,
+  );
+  const tagPeelApiIndex = protectedTagStep.indexOf(
+    "git/tags/$($tagObject.sha)",
+  );
+  const finalTagCheckIndex = protectedTagStep.indexOf(
+    "$tagObject.type -cne 'commit'",
+  );
+  const initialTagLookupStep =
+    verifiedProtectedTagLookupIndex >= 0 &&
+    tagPeelApiIndex > verifiedProtectedTagLookupIndex
+      ? protectedTagStep.slice(verifiedProtectedTagLookupIndex, tagPeelApiIndex)
+      : "";
+  const tagCreateStep =
+    tagCreateIndex >= 0 && verifiedProtectedTagLookupIndex > tagCreateIndex
+      ? protectedTagStep.slice(tagCreateIndex, verifiedProtectedTagLookupIndex)
+      : "";
+  const lookupToCreateStep =
+    firstProtectedTagLookupIndex >= 0 &&
+    verifiedProtectedTagLookupIndex > firstProtectedTagLookupIndex
+      ? protectedTagStep.slice(
+          firstProtectedTagLookupIndex,
+          verifiedProtectedTagLookupIndex,
+        )
+      : "";
+  const tagPeelStep =
+    tagPeelApiIndex >= 0 && finalTagCheckIndex > tagPeelApiIndex
+      ? protectedTagStep.slice(tagPeelApiIndex, finalTagCheckIndex)
+      : "";
+  const finalTagStep =
+    finalTagCheckIndex >= 0
+      ? protectedTagStep.slice(finalTagCheckIndex)
+      : "";
+  requireCondition(
+    protectedTagIndex > draftLookupIndex &&
+      publishIndex > protectedTagIndex &&
+      firstProtectedTagLookupIndex >= 0 &&
+      tagCreateIndex > firstProtectedTagLookupIndex &&
+      verifiedProtectedTagLookupIndex > tagCreateIndex &&
+      /if\s*\(\$LASTEXITCODE\s+-ne\s+0\)\s*\{[^}]*gh api --method POST/.test(
+        lookupToCreateStep,
+      ) &&
+      /-f\s+"ref=refs\/tags\/\$env:SF_RELEASE_TAG"/.test(
+        protectedTagStep,
+      ) &&
+      /-f\s+"sha=\$env:SF_SOURCE_COMMIT"/.test(protectedTagStep) &&
+      /if\s*\(\$LASTEXITCODE\s+-ne\s+0\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        tagCreateStep,
+      ) &&
+      /if\s*\(\$LASTEXITCODE\s+-ne\s+0\s+-or\s+\$null\s+-eq\s+\$tagObject\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        initialTagLookupStep,
+      ) &&
+      /\$tagObject\.type\s+-ceq\s+'tag'/.test(protectedTagStep) &&
+      /git\/tags\/\$\(\$tagObject\.sha\)/.test(protectedTagStep) &&
+      /if\s*\(\$LASTEXITCODE\s+-ne\s+0\s+-or\s+\$null\s+-eq\s+\$tagObject\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        tagPeelStep,
+      ) &&
+      /\$tagObject\.type\s+-cne\s+'commit'/.test(finalTagStep) &&
+      /\$tagObject\.sha\s+-cne\s+\$env:SF_SOURCE_COMMIT/.test(
+        finalTagStep,
+      ) &&
+      /\{[^{}]*\bthrow\b[^{}]*\}/.test(finalTagStep),
+    "protected publication must create or reuse, peel, and bind the actual release tag to the exact source commit while the release remains a draft",
+  );
+  requireCondition(
+    publishCommandIndex >= 0 &&
+      /gh release edit[\s\S]*?--latest\s*\r?\n\s*if\s*\(\$LASTEXITCODE\s+-ne\s+0\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        publishStep,
+      ) &&
+      !/git\/ref\/tags\/\$env:SF_RELEASE_TAG/.test(publishStep),
+    "protected publication must publish only after tag validation and must fail closed on release-edit errors",
   );
   const protectedPublicationGates = [
     "Verify staged packaged runtime reaches authenticated readiness",
