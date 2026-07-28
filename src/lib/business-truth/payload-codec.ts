@@ -9,7 +9,13 @@ import {
 export type BusinessPayloadKind =
   | "domain-event"
   | "outbox-intent"
-  | "compensation-fact";
+  | "compensation-fact"
+  | "financial-movement-detail";
+
+export type FinancialMovementDetailField =
+  | "counterparty"
+  | "reference"
+  | "reason";
 
 export interface BusinessPayloadBinding {
   kind: BusinessPayloadKind;
@@ -23,6 +29,20 @@ function resultBinding(binding: BusinessPayloadBinding): BusinessCommandResultBi
     commandId: binding.commandId,
     idempotencyKey: `${binding.kind}:${binding.recordKey}`,
     requestHash: `${binding.kind}:${binding.recordType}`,
+  };
+}
+
+export function financialMovementDetailBinding(
+  commandId: string,
+  movementKey: string,
+  movementType: string,
+  field: FinancialMovementDetailField,
+): BusinessPayloadBinding {
+  return {
+    kind: "financial-movement-detail",
+    recordKey: `${movementKey}:${field}`,
+    recordType: `${movementType}:${field}`,
+    commandId,
   };
 }
 
