@@ -19,11 +19,15 @@ import {
   type TrustedBusinessPrincipal,
   resolveTrustedBusinessPrincipal,
 } from "./principal";
-import { canonicalBusinessRequestJson } from "./request-codec";
+import {
+  canonicalBusinessRequestJson,
+  compareCanonicalKeys,
+} from "./request-codec";
 import {
   openBusinessCommandResultWithKey,
   sealBusinessCommandResultWithKey,
 } from "./result-codec";
+import { assertBusinessCommandShopAuthority } from "./shop-authority";
 
 export type BusinessTransaction = Parameters<
   Parameters<DbClient["$transaction"]>[0]
@@ -40,8 +44,40 @@ export type BusinessCommandHandler<TResult> = (
   execution: BusinessCommandExecution,
 ) => Promise<BusinessCommandOutcome<TResult>>;
 
+export interface StoredBusinessCommandIdentity {
+  commandId: string;
+  commandType: string;
+  aggregateType: string;
+  aggregateId: string;
+  actor: string;
+}
+
+export interface BusinessCommandReplayAuthorizationContext<TPayload> {
+  tx: BusinessTransaction;
+  command: BusinessCommandEnvelope<TPayload>;
+  principal: TrustedBusinessPrincipal;
+  storedCommand: Readonly<StoredBusinessCommandIdentity>;
+}
+
+export type BusinessCommandReplayAuthorizer<TPayload> = (
+  context: BusinessCommandReplayAuthorizationContext<TPayload>,
+) => Promise<void>;
+
+export interface BusinessCommandOptions<TPayload> {
+  /**
+   * Optional replay access policy. It runs before a stored result is decrypted.
+   * A cross-principal replay is denied unless this policy explicitly authorizes
+   * it. Callers may also provide it for same-principal access revalidation.
+   */
+  authorizeReplay?: BusinessCommandReplayAuthorizer<TPayload>;
+}
+
 interface StoredCommandRow {
   id: string;
+  commandType: string;
+  aggregateType: string;
+  aggregateId: string;
+  actor: string;
   requestHash: string;
   status: string;
   resultJson: string | null;
@@ -70,7 +106,7 @@ function canonicalize(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
         .filter(([, entry]) => entry !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareCanonicalKeys(left, right))
         .map(([key, entry]) => [key, canonicalize(entry)]),
     );
   }
@@ -107,6 +143,10 @@ async function findStoredCommand(
   const rows = await tx.$queryRaw<StoredCommandRow[]>`
     SELECT
       "id",
+      "commandType",
+      "aggregateType",
+      "aggregateId",
+      "actor",
       "requestHash",
       "status",
       "resultJson",
@@ -118,12 +158,11 @@ async function findStoredCommand(
   return rows[0] ?? null;
 }
 
-function replayStoredCommand<TResult>(
+function assertStoredCommandReplayable(
   stored: StoredCommandRow,
   requestHash: string,
   idempotencyKey: string,
-  envelopeKey: Buffer,
-): BusinessCommandResult<TResult> {
+): void {
   if (stored.requestHash !== requestHash) {
     throw new ConflictError(
       `Idempotency key '${idempotencyKey}' is already bound to different command content`,
@@ -138,13 +177,54 @@ function replayStoredCommand<TResult>(
       `Idempotency key '${idempotencyKey}' has an incomplete command record`,
     );
   }
+}
 
+async function authorizeStoredCommandReplay<TPayload>(
+  tx: BusinessTransaction,
+  stored: StoredCommandRow,
+  command: BusinessCommandEnvelope<TPayload>,
+  principal: TrustedBusinessPrincipal,
+  options: BusinessCommandOptions<TPayload>,
+): Promise<void> {
+  const storedCommand: StoredBusinessCommandIdentity = Object.freeze({
+    commandId: stored.id,
+    commandType: stored.commandType,
+    aggregateType: stored.aggregateType,
+    aggregateId: stored.aggregateId,
+    actor: stored.actor,
+  });
+
+  if (options.authorizeReplay !== undefined) {
+    await options.authorizeReplay({
+      tx,
+      command,
+      principal,
+      storedCommand,
+    });
+    return;
+  }
+
+  if (stored.actor !== principal.auditActor) {
+    throw new SahelFlowError(
+      "This principal is not authorized to read another principal's committed command result",
+      "BUSINESS_COMMAND_REPLAY_FORBIDDEN",
+      403,
+    );
+  }
+}
+
+function replayStoredCommand<TResult>(
+  stored: StoredCommandRow,
+  requestHash: string,
+  idempotencyKey: string,
+  envelopeKey: Buffer,
+): BusinessCommandResult<TResult> {
   return {
     commandId: stored.id,
     aggregateVersion: Number(stored.committedVersion),
     replayed: true,
     result: openBusinessCommandResultWithKey<TResult>(
-      stored.resultJson,
+      stored.resultJson ?? "",
       {
         commandId: stored.id,
         idempotencyKey,
@@ -388,8 +468,10 @@ export async function executeBusinessCommand<TPayload, TResult>(
   context: BusinessPrincipalContext,
   command: BusinessCommandEnvelope<TPayload>,
   handler: BusinessCommandHandler<TResult>,
+  options: BusinessCommandOptions<TPayload> = {},
 ): Promise<BusinessCommandResult<TResult>> {
   validateBusinessCommand(command);
+  assertBusinessCommandShopAuthority(context);
   const principal = await resolveTrustedBusinessPrincipal(context);
   const requestHash = businessCommandRequestHash(command);
   const envelopeKey = await getBusinessEnvelopeKey(context);
@@ -397,6 +479,18 @@ export async function executeBusinessCommand<TPayload, TResult>(
   return context.prisma.$transaction(async (tx) => {
     const stored = await findStoredCommand(tx, command.idempotencyKey);
     if (stored) {
+      assertStoredCommandReplayable(
+        stored,
+        requestHash,
+        command.idempotencyKey,
+      );
+      await authorizeStoredCommandReplay(
+        tx,
+        stored,
+        command,
+        principal,
+        options,
+      );
       return replayStoredCommand<TResult>(
         stored,
         requestHash,
