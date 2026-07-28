@@ -28,6 +28,11 @@ export interface LegacyOrderAuthority {
    */
   confirmedAt?: Date | null;
   /**
+   * A governed delivery-completion timestamp. Imported `delivered` labels may
+   * omit both this timestamp and a Delivery row, so status alone is not proof.
+   */
+  deliveredAt?: Date | null;
+  /**
    * Whether the compatibility reader explicitly inspected the Delivery relation.
    * Undefined means the caller has only order-level status and must not infer
    * absence of a provider/shipment row.
@@ -152,7 +157,22 @@ function projectDelivery(
     case "shipped":
       return ambiguous("in_transit", "Legacy shipped does not preserve the courier's exact delivery state");
     case "delivered":
-      return deterministic("delivered", "Legacy delivered explicitly records customer delivery");
+      if (authority.deliveredAt) {
+        return deterministic(
+          "delivered",
+          "The compatibility reader retained the governed legacy delivery-completion timestamp",
+        );
+      }
+      if (authority.deliveryExists === true) {
+        return ambiguous(
+          "delivered",
+          "A Delivery row exists, but the legacy delivered label has no governed completion timestamp or provider-state fact",
+        );
+      }
+      return ambiguous(
+        "delivered",
+        "Legacy delivered can be imported directly without a Delivery row or deliveredAt evidence; status alone is not delivery proof",
+      );
     case "refused":
       return ambiguous("refused", "Legacy refused does not preserve physical return receipt");
     case "returned":
