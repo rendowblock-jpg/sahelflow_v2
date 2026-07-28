@@ -430,9 +430,32 @@ jobs:
             throw "Internal publication must be strictly newer than $($latestRelease.tag_name)"
           }
 
-          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:SF_RELEASE_TAG" |
-            ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the draft publication target' }
+          $releaseMatches = @()
+          $releaseEnumerationComplete = $false
+          for ($page = 1; $page -le 10; $page++) {
+            $releasePage = @(
+              gh api "repos/${{ github.repository }}/releases?per_page=100&page=$page" |
+                ConvertFrom-Json
+            )
+            if ($LASTEXITCODE -ne 0) {
+              throw "failed to enumerate draft publication targets at page $page"
+            }
+            $releaseMatches += @(
+              $releasePage |
+                Where-Object { $_.tag_name -ceq $env:SF_RELEASE_TAG }
+            )
+            if ($releasePage.Count -lt 100) {
+              $releaseEnumerationComplete = $true
+              break
+            }
+          }
+          if (-not $releaseEnumerationComplete) {
+            throw 'draft release enumeration exceeded the protected 1000-release bound'
+          }
+          if ($releaseMatches.Count -ne 1) {
+            throw "expected exactly one draft publication target for $env:SF_RELEASE_TAG; found $($releaseMatches.Count)"
+          }
+          $release = $releaseMatches[0]
           if (-not $release.draft) { throw 'automatic publication target is not a draft release' }
           if ($release.prerelease) {
             throw 'automatic Internal publication target unexpectedly has prerelease semantics'
