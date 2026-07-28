@@ -160,8 +160,9 @@ At most one frozen signed candidate is in flight.
 6. Record exact installed version and registry/database identities, one cold and
    one warm T470 launch, authenticated UI, normal close/reopen and the Arabic
    dashboard/chart result.
-7. Begin the next complete observable Golden COD vertical only after the
-   Internal.13 source and release result are recorded.
+7. Begin the next complete observable Golden COD vertical as soon as the
+   Internal.13 source is frozen on protected `main`; continue it independently
+   while signing, publication, Founder installation and T470 observation complete.
 
 ## Session 1 acceptance contracts
 
@@ -208,21 +209,7 @@ reinstall, delete AppData/caches or weaken authenticated readiness.
 - semantic localized copy rather than fragments;
 - Arabic joining and mixed Arabic/Latin/numeric behavior;
 - shared tables, forms, dialogs and operational states;
-- 1366×768 and zoom containment;
-- keyboard/focus/screen-reader baseline;
-- inventory of every major route's design/Arabic defects and assigned session.
-
-## Non-negotiable rules
-
-- Do not delete Roaming/Local AppData, databases, registry, migrations, keys,
-  WhatsApp state or seller records to make progress appear clean.
-- Do not weaken startup, shop authority, authorization, transaction, migration,
-  backup or provider-effect boundaries.
-- Do not claim provider certification, performance, Arabic/UX completion or
-  Stable without exact evidence.
-- Do not defer Arabic/RTL, accessibility, page states or low-resource performance
-  to a final polish pass.
-- Do not repeat unchanged workflows or repair P2/P3 findings inside a frozen
-  candidate.
-- Do not create another permanent plan, wave, gap, prompt, status or handoff
-  document. The active authority plus issue #164 are sufficient.
+- stable LTR chart plotting geometry with direction-correct labels/tooltips;
+- preserved zero values and locale-aware DZD labels;
+- keyboard/focus, responsiveness and viewport containment;
+- generated route inventory assigns every remaining failure.
