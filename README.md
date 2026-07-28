@@ -3,14 +3,13 @@
 SahelFlow is a Windows-first operations system for Algerian cash-on-delivery
 sellers.
 
-> **Repository status:** Session 1 source packages are merged through PR #171 at
-> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`. The milestone source identity is
-> `1.0.0-internal.12` / MSI `1.0.0.12`; it remains a release request until its
-> exact protected-main commit passes the signed workflow. Internal.11 signed run
-> `30244003253` remains the latest published candidate. The Founder reports it
-> installed through the in-app updater and usable, but it is not accepted
-> because first and subsequent launches remain materially slow and exact
-> post-install preservation/lifecycle evidence is still open.
+> **Repository status:** Session 1 and the Session 2 business-truth foundation
+> are merged through PR #170 at `6cd1103b55c905d26492ecf5436e644d377ce557`.
+> The combined milestone source identity is `1.0.0-internal.13` / MSI
+> `1.0.0.13`; it remains a release request until its exact protected-main commit
+> passes the signed workflow. Internal.11 remains the latest confirmed
+> Founder-installed candidate; Founder acceptance and post-change T470 timing
+> remain open.
 > `1.0.0-internal.5` remains the latest Founder-accepted baseline. SahelFlow 1.0
 > Stable has not been released.
 

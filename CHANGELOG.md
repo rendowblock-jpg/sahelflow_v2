@@ -164,6 +164,24 @@ change the current release workflow or create an MSI.
   cold/warm stage timing, demo walkthrough and full lifecycle acceptance remain
   open.
 
+### Internal.13 combined Session 1 + business-truth milestone request
+
+- Includes the merged Internal.12 Session 1 outcomes: protected automatic
+  publication, workspace/shop/incarnation authority, startup-readiness
+  correction, and the shared Arabic/RTL, chart, containment and operational-state
+  foundation.
+- Adds the Session 2 business-truth foundation from PR #170: independent
+  lifecycle contracts, additive canonical persistence, atomic idempotent
+  commands, append-only inventory/financial facts, encrypted payloads and
+  trusted principal authority.
+- Adds multi-shop crash-recoverable master-key rotation, fail-closed audit
+  redaction, evidence-based legacy projections, migration-authoritative reset
+  and demo cleanup.
+- Assigns immutable candidate identity `1.0.0-internal.13` / MSI `1.0.0.13`.
+- This remains a source request until the exact protected-main signed workflow
+  passes signing, MSI install/reopen, authenticated hydrated UI twice,
+  deterministic evidence, updater-manifest and automatic-publication gates.
+
 ### Internal.12 Session 1 milestone request
 
 - Merged protected automatic publication only after the exact signed release,

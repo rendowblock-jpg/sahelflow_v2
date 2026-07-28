@@ -2,10 +2,10 @@
 
 > **Purpose:** Compact execution frontier; not product or architecture authority
 > **Last updated:** 2026-07-28
-> **Protected-main Session 1 package checkpoint:** PR #171 at
-> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`
-> **Active milestone request:** `codex/session1-internal-12`,
-> `1.0.0-internal.12` / MSI `1.0.0.12`
+> **Protected-main combined source checkpoint:** PR #170 at
+> `6cd1103b55c905d26492ecf5436e644d377ce557`
+> **Active milestone request:** `codex/session2-internal-13`,
+> `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
 > **Founder installation:** Founder reports Internal.11 installed through the
 > in-app updater and usable; exact post-install version/AppData identity is not
@@ -14,8 +14,8 @@
 > slow on the ThinkPad T470
 > **Operating authority:** FD-027, `WORKFLOW.md`, `ROADMAP.md`
 > **Execution epic:** issue #164
-> **Current stage:** Session 1 source packages merged; one milestone candidate
-> is in flight while the Web Agent owns Session 2 through draft PR #170
+> **Current stage:** Session 1 and the Session 2 business-truth foundation are
+> merged; the combined Internal.13 milestone candidate is in flight
 
 ## Current truth
 
@@ -147,21 +147,22 @@ At most one frozen signed candidate is in flight.
 
 ## Exact next execution order
 
-1. Pass exact-head authority and selected release-risk gates for the single
-   Internal.12 milestone request.
+1. Pass exact-head authority and selected release-risk gates for the combined
+   Internal.13 milestone request.
 2. Merge it through protected `main`, then dispatch the signed release workflow
-   once with that exact merge commit and Session 1 release notes.
+   once with that exact merge commit and combined Session 1 + Session 2 notes.
 3. Require signature, packaged runtime, install/reopen, authenticated hydrated
    UI twice, deterministic evidence, manifest and monotonic publication gates.
 4. Confirm the verified draft auto-publishes and exposes live `latest.json`; do
    not publish or rerun a failed unchanged candidate manually.
-5. Install Internal.12 through the existing in-app updater without deleting or
+5. Install Internal.13 through the existing in-app updater without deleting or
    replacing Founder AppData.
 6. Record exact installed version and registry/database identities, one cold and
    one warm T470 launch, authenticated UI, normal close/reopen and the Arabic
    dashboard/chart result.
-7. Let the Web Agent continue Session 2 on PR #170, adopting the merged Session 1
-   workspace and experience contracts without overlapping this release branch.
+7. Begin the next complete observable Golden COD vertical as soon as the
+   Internal.13 source is frozen on protected `main`; continue it independently
+   while signing, publication, Founder installation and T470 observation complete.
 
 ## Session 1 acceptance contracts
 
@@ -208,21 +209,7 @@ reinstall, delete AppData/caches or weaken authenticated readiness.
 - semantic localized copy rather than fragments;
 - Arabic joining and mixed Arabic/Latin/numeric behavior;
 - shared tables, forms, dialogs and operational states;
-- 1366×768 and zoom containment;
-- keyboard/focus/screen-reader baseline;
-- inventory of every major route's design/Arabic defects and assigned session.
-
-## Non-negotiable rules
-
-- Do not delete Roaming/Local AppData, databases, registry, migrations, keys,
-  WhatsApp state or seller records to make progress appear clean.
-- Do not weaken startup, shop authority, authorization, transaction, migration,
-  backup or provider-effect boundaries.
-- Do not claim provider certification, performance, Arabic/UX completion or
-  Stable without exact evidence.
-- Do not defer Arabic/RTL, accessibility, page states or low-resource performance
-  to a final polish pass.
-- Do not repeat unchanged workflows or repair P2/P3 findings inside a frozen
-  candidate.
-- Do not create another permanent plan, wave, gap, prompt, status or handoff
-  document. The active authority plus issue #164 are sufficient.
+- stable LTR chart plotting geometry with direction-correct labels/tooltips;
+- preserved zero values and locale-aware DZD labels;
+- keyboard/focus, responsiveness and viewport containment;
+- generated route inventory assigns every remaining failure.

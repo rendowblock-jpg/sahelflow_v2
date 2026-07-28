@@ -4,9 +4,9 @@
 > **Documentation-reset merge:** PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`
 > **Protected-main Internal.11 signed checkpoint:**
 > `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
-> **Protected-main Session 1 package checkpoint:** PR #171 at
-> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`
-> **Milestone source request:** `1.0.0-internal.12` / MSI `1.0.0.12`; not signed
+> **Protected-main combined source checkpoint:** PR #170 at
+> `6cd1103b55c905d26492ecf5436e644d377ce557`
+> **Milestone source request:** `1.0.0-internal.13` / MSI `1.0.0.13`; not signed
 > or published until the exact protected-main release workflow passes
 > **Accepted installed release:** `1.0.0-internal.5`
 > **Current installation:** Founder reports `1.0.0-internal.11` installed, not

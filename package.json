@@ -1,6 +1,6 @@
 {
   "name": "sahelflow",
-  "version": "1.0.0-internal.12",
+  "version": "1.0.0-internal.13",
   "private": true,
   "packageManager": "bun@1.3.14",
   "description": "SahelFlow — AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
