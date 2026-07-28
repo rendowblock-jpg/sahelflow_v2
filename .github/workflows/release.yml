@@ -515,6 +515,40 @@ jobs:
             throw 'draft latest.json is not bound to the exact verified release tag'
           }
 
+      - name: Create and verify exact release tag while draft remains protected
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" --silent 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh api --method POST "repos/${{ github.repository }}/git/refs" `
+              -f "ref=refs/tags/$env:SF_RELEASE_TAG" `
+              -f "sha=$env:SF_SOURCE_COMMIT" `
+              --silent
+            if ($LASTEXITCODE -ne 0) {
+              throw 'failed to create the exact release tag while the release remained a draft'
+            }
+          }
+
+          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty object
+          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+            throw 'failed to resolve the protected release tag authority'
+          }
+          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
+            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
+              ConvertFrom-Json |
+              Select-Object -ExpandProperty object
+            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+              throw 'failed to peel the annotated protected release tag'
+            }
+          }
+          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
+            throw 'protected release tag does not resolve to the exact verified source commit'
+          }
+
       - name: Publish exact verified Internal release
         shell: pwsh
         env:
@@ -531,24 +565,6 @@ jobs:
             ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw 'failed to verify the published Internal release' }
           if ($release.draft) { throw 'verified Internal release remained a draft after publication' }
-
-          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
-            ConvertFrom-Json |
-            Select-Object -ExpandProperty object
-          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
-            throw 'failed to resolve the published release tag authority'
-          }
-          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
-            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
-              ConvertFrom-Json |
-              Select-Object -ExpandProperty object
-            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
-              throw 'failed to peel the annotated published release tag'
-            }
-          }
-          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
-            throw 'published release tag does not resolve to the exact verified source commit'
-          }
 
           $latestTag = gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name'
           if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the live updater release' }
