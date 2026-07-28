@@ -87,10 +87,10 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       </div>
 
       {/* Main content column — floating panel on lg+ */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0 lg:p-2 lg:ps-0 lg:pb-0 rtl:lg:ps-2 rtl:lg:pe-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0 lg:p-2 lg:ps-0 lg:pb-0">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
           <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
-          <main id="main-content" className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden min-h-0 scroll-pt-16">
+          <main id="main-content" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden scroll-pt-16" tabIndex={-1}>
             {children}
           </main>
         </div>

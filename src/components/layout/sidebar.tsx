@@ -69,16 +69,9 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                       : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  {/* Active indicator bar — explicit physical positioning.
-                      LTR: left edge (next to the icon on the left).
-                      RTL: right edge (next to the icon on the right). */}
+                  {/* Active indicator follows the logical start edge. */}
                   {isActive && (
-                    <span
-                      className={cn(
-                        "absolute top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary",
-                        isRtl ? "right-0" : "left-0",
-                      )}
-                    />
+                    <span className="absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary" />
                   )}
                   <Icon className={cn(
                     "h-5 w-5 shrink-0 transition-transform duration-200",

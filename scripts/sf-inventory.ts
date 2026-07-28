@@ -11,6 +11,32 @@ interface PackageJson {
   workspaces?: string[];
 }
 
+type OwnerSession = "Session 2" | "Session 3" | "Session 4";
+
+interface RouteExperienceAudit {
+  route: string;
+  file: string;
+  ownerSession: OwnerSession;
+  ownerOutcome: string;
+  boundaries: {
+    loading: boolean;
+    error: boolean;
+    notFound: boolean;
+  };
+  signals: {
+    translationCalls: number;
+    physicalGeometryClasses: number;
+    logicalGeometryClasses: number;
+    directionalIcons: number;
+    directionGuards: number;
+    bidiIsolates: number;
+    operationalStateTerms: number;
+    chartSurface: boolean;
+  };
+  risks: string[];
+  riskScore: number;
+}
+
 interface Inventory {
   generatedAt: string;
   commit: string;
@@ -21,6 +47,12 @@ interface Inventory {
   markdown: string[];
   readmes: string[];
   routes: Array<{ route: string; file: string }>;
+  experience: {
+    contract: string;
+    routeAudits: RouteExperienceAudit[];
+    highestRiskRoutes: RouteExperienceAudit[];
+    ownerCounts: Record<OwnerSession, number>;
+  };
   apiRoutes: Array<{ route: string; file: string }>;
   commands: Record<string, string>;
   pages: string[];
@@ -78,6 +110,105 @@ function routeFromAppFile(file: string): string {
   return `/${segments.join("/")}`.replace(/\/$/, "") || "/";
 }
 
+function countMatches(content: string, pattern: RegExp): number {
+  return [...content.matchAll(pattern)].length;
+}
+
+function ownerForRoute(route: string): Pick<RouteExperienceAudit, "ownerSession" | "ownerOutcome"> {
+  const session2Prefixes = [
+    "/dashboard",
+    "/orders",
+    "/customers",
+    "/risk",
+    "/products",
+    "/deliveries",
+  ];
+  if (session2Prefixes.some((prefix) => route === prefix || route.startsWith(`${prefix}/`))) {
+    return { ownerSession: "Session 2", ownerOutcome: "Golden COD core UI" };
+  }
+
+  const session3Prefixes = [
+    "/accounting",
+    "/agents",
+    "/analytics",
+    "/automations",
+    "/imports",
+    "/inbox",
+    "/login",
+    "/onboarding",
+    "/profile",
+    "/returns",
+    "/settings",
+    "/setup",
+    "/storefront",
+    "/storefronts",
+  ];
+  if (route === "/" || session3Prefixes.some((prefix) => route === prefix || route.startsWith(`${prefix}/`))) {
+    return { ownerSession: "Session 3", ownerOutcome: "Complete local product and provider foundations" };
+  }
+
+  return { ownerSession: "Session 4", ownerOutcome: "Whole-product AAA integration" };
+}
+
+function hasRouteBoundary(fileSet: Set<string>, pageFile: string, name: string): boolean {
+  const directory = dirname(pageFile).replace(/\\/g, "/");
+  return ["tsx", "ts", "jsx", "js"].some((extension) =>
+    fileSet.has(`${directory}/${name}.${extension}`),
+  );
+}
+
+function auditRouteExperience(
+  fileSet: Set<string>,
+  route: { route: string; file: string },
+): RouteExperienceAudit {
+  const content = readUtf8(resolve(repoRoot, route.file));
+  const owner = ownerForRoute(route.route);
+  const boundaries = {
+    loading: hasRouteBoundary(fileSet, route.file, "loading"),
+    error: hasRouteBoundary(fileSet, route.file, "error"),
+    notFound: hasRouteBoundary(fileSet, route.file, "not-found"),
+  };
+  const signals = {
+    translationCalls: countMatches(content, /\bt\s*\(/g),
+    physicalGeometryClasses: countMatches(
+      content,
+      /\b(?:ml|mr|pl|pr|left|right|border-l|border-r|rounded-l|rounded-r|text-left|text-right)-[^\s"'`}]*/g,
+    ),
+    logicalGeometryClasses: countMatches(
+      content,
+      /\b(?:ms|me|ps|pe|start|end|border-s|border-e|text-start|text-end)-[^\s"'`}]*/g,
+    ),
+    directionalIcons: countMatches(
+      content,
+      /\b(?:ArrowLeft|ArrowRight|ChevronLeft|ChevronRight|PanelLeft|PanelRight|MoveLeft|MoveRight)\b/g,
+    ),
+    directionGuards: countMatches(content, /\b(?:rtl:|isRtl|icon-rtl-flip|getDirection|dir=)/g),
+    bidiIsolates: countMatches(content, /\b(?:bdi|bidi-isolate|technical-value|force-ltr|dir=["']ltr)/g),
+    operationalStateTerms: countMatches(
+      content,
+      /\b(?:loading|empty|permission|offline|stale|conflict|error|recovery)\b/gi,
+    ),
+    chartSurface: /@\/components\/charts\/|from\s+["']recharts["']|\bChartContainer\b/.test(content),
+  };
+  const risks: string[] = [];
+  if (!boundaries.loading) risks.push("missing-loading-boundary");
+  if (!boundaries.error) risks.push("missing-error-boundary");
+  if (signals.physicalGeometryClasses > 0) risks.push("physical-geometry-needs-logical-review");
+  if (signals.directionalIcons > signals.directionGuards) risks.push("directional-icons-need-rtl-review");
+  if (signals.chartSurface) risks.push("chart-arabic-geometry-review");
+  if (signals.translationCalls === 0) risks.push("route-copy-translation-not-observed");
+
+  const riskScore =
+    (boundaries.loading ? 0 : 4) +
+    (boundaries.error ? 0 : 4) +
+    Math.min(signals.physicalGeometryClasses, 8) +
+    Math.max(0, signals.directionalIcons - signals.directionGuards) * 2 +
+    (signals.chartSurface ? 3 : 0) +
+    (signals.translationCalls === 0 ? 1 : 0);
+
+  return { ...route, ...owner, boundaries, signals, risks, riskScore };
+}
+
 const files = runGit(["ls-files", "-z"])
   .split("\0")
   .map((file) => file.trim())
@@ -99,6 +230,19 @@ const routeFiles = files.filter((file) => /^src\/app\/.+\/(?:page|route)\.(?:ts|
 const routes = routeFiles
   .filter((file) => /\/page\.(?:ts|tsx|js|jsx)$/.test(file) || /^src\/app\/page\.(?:ts|tsx|js|jsx)$/.test(file))
   .map((file) => ({ route: routeFromAppFile(file), file }));
+const fileSet = new Set(files);
+const routeAudits = routes.map((route) => auditRouteExperience(fileSet, route));
+const highestRiskRoutes = [...routeAudits]
+  .sort((left, right) => right.riskScore - left.riskScore || left.route.localeCompare(right.route))
+  .slice(0, 12);
+const ownerCounts: Record<OwnerSession, number> = {
+  "Session 2": 0,
+  "Session 3": 0,
+  "Session 4": 0,
+};
+for (const routeAudit of routeAudits) {
+  ownerCounts[routeAudit.ownerSession] += 1;
+}
 const apiRoutes = routeFiles
   .filter((file) => /\/route\.(?:ts|tsx|js|jsx)$/.test(file) || /^src\/app\/route\.(?:ts|tsx|js|jsx)$/.test(file))
   .map((file) => ({ route: routeFromAppFile(file), file }));
@@ -172,6 +316,11 @@ const inventory: Inventory = {
     components: components.length,
     designTokenFiles: designTokenFiles.length,
     designTokens: designTokenSet.size,
+    experienceRoutes: routeAudits.length,
+    chartRoutes: routeAudits.filter((route) => route.signals.chartSurface).length,
+    physicalGeometryRoutes: routeAudits.filter(
+      (route) => route.signals.physicalGeometryClasses > 0,
+    ).length,
     prismaModels: prismaModels.length,
     prismaEnums: prismaEnums.length,
     migrationFiles: migrations.length,
@@ -183,6 +332,12 @@ const inventory: Inventory = {
   markdown,
   readmes,
   routes,
+  experience: {
+    contract: "session1-global-experience-v1",
+    routeAudits,
+    highestRiskRoutes,
+    ownerCounts,
+  },
   apiRoutes,
   commands: pkg.scripts ?? {},
   pages,
@@ -214,6 +369,20 @@ const summaryLines = [
   ...Object.entries(inventory.counts).map(([name, count]) => `- ${name}: ${count}`),
   "",
   "The JSON file in this directory is machine-generated evidence only; it does not replace repository authority documents.",
+  "",
+  "## Experience and Arabic route evidence",
+  "",
+  `- Session 2 owned routes: ${inventory.experience.ownerCounts["Session 2"]}`,
+  `- Session 3 owned routes: ${inventory.experience.ownerCounts["Session 3"]}`,
+  `- Session 4 owned routes: ${inventory.experience.ownerCounts["Session 4"]}`,
+  "- Every route entry in repository-inventory.json records boundary coverage, logical/physical geometry signals, bidi isolation, directional icons, chart exposure, owner session and deterministic risk score.",
+  "",
+  "### Highest static-risk routes",
+  "",
+  ...inventory.experience.highestRiskRoutes.map(
+    (route) =>
+      `- ${route.route} — ${route.ownerSession}; score ${route.riskScore}; ${route.risks.join(", ") || "no static risks"}`,
+  ),
   "",
 ];
 writeFileSync(outputSummary, summaryLines.join("\n"), "utf8");

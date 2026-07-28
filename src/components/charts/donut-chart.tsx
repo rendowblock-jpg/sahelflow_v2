@@ -84,7 +84,7 @@ export function DonutChart({
       {(centerValue || centerLabel) && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           {centerValue && (
-            <span className="text-2xl font-bold tabular-nums">{centerValue}</span>
+            <bdi dir="ltr" className="text-2xl font-bold tabular-nums">{centerValue}</bdi>
           )}
           {centerLabel && (
             <span className="text-xs text-muted-foreground">{centerLabel}</span>

@@ -145,10 +145,10 @@ jobs:
       - name: Generate clean-checkout repository inventory
         run: bun run sf-inventory
 
-      - name: Upload Phase 0 repository inventory
+      - name: Upload repository and experience inventory
         uses: actions/upload-artifact@v4
         with:
-          name: phase0-repository-inventory
+          name: repository-experience-inventory
           path: .sf-inventory
           if-no-files-found: error
           include-hidden-files: true
