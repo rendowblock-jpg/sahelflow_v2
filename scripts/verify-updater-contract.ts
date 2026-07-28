@@ -283,6 +283,41 @@ if (updater.enabled) {
     "signed candidate and publication gates must not continue after errors",
   );
   const publishIndex = signedJob.indexOf("- name: Publish exact verified Internal release");
+  const draftLookupIndex = signedJob.indexOf(
+    "- name: Verify exact draft publication target",
+  );
+  const draftLookupStep =
+    draftLookupIndex >= 0 && publishIndex > draftLookupIndex
+      ? signedJob.slice(draftLookupIndex, publishIndex)
+      : "";
+  requireCondition(
+    /releases\?per_page=100&page=\$page/.test(draftLookupStep) &&
+      /\$page\s+-le\s+10/.test(draftLookupStep) &&
+      /if\s*\(\$LASTEXITCODE\s+-ne\s+0\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        draftLookupStep,
+      ) &&
+      /if\s*\(\$releasePage\.Count\s+-lt\s+100\)\s*\{[\s\S]*?\$releaseEnumerationComplete\s*=\s*\$true[\s\S]*?break[\s\S]*?\}/.test(
+        draftLookupStep,
+      ) &&
+      /if\s*\(-not\s+\$releaseEnumerationComplete\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        draftLookupStep,
+      ) &&
+      /\$releaseMatches\s*\+=\s*@\(\s*\$releasePage\s*\|\s*Where-Object\s*\{\s*\$_\.tag_name\s+-ceq\s+\$env:SF_RELEASE_TAG\s*\}\s*\)/.test(
+        draftLookupStep,
+      ) &&
+      /if\s*\(\$releaseMatches\.Count\s+-ne\s+1\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        draftLookupStep,
+      ) &&
+      /\$release\s*=\s*\$releaseMatches\[0\]/.test(draftLookupStep) &&
+      /if\s*\(-not\s+\$release\.draft\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        draftLookupStep,
+      ) &&
+      /if\s*\(\$release\.prerelease\)\s*\{[^{}]*\bthrow\b[^{}]*\}/.test(
+        draftLookupStep,
+      ) &&
+      !/releases\/tags\/\$env:SF_RELEASE_TAG/.test(draftLookupStep),
+    "protected publication must enumerate authenticated releases and resolve exactly one draft instead of using the published tag endpoint",
+  );
   const protectedPublicationGates = [
     "Verify staged packaged runtime reaches authenticated readiness",
     "Verify local MSI and updater signature",
