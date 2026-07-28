@@ -28,6 +28,11 @@ export interface LegacyOrderAuthority {
    */
   confirmedAt?: Date | null;
   /**
+   * A governed shipment-handoff timestamp. Imported downstream labels may omit
+   * this timestamp, so status alone is not fulfillment proof.
+   */
+  shippedAt?: Date | null;
+  /**
    * A governed delivery-completion timestamp. Imported `delivered` labels may
    * omit both this timestamp and a Delivery row, so status alone is not proof.
    */
@@ -115,15 +120,44 @@ function projectConfirmation(
   );
 }
 
-function projectFulfillment(status: OrderStatus): LegacyProjectedState<FulfillmentState> {
+function hasGovernedFulfillmentEvidence(authority: LegacyOrderAuthority): boolean {
+  return Boolean(
+    authority.shippedAt ||
+      authority.deliveredAt ||
+      authority.deliveryExists === true,
+  );
+}
+
+function projectFulfillment(
+  authority: LegacyOrderAuthority,
+): LegacyProjectedState<FulfillmentState> {
+  const { status } = authority;
   if (status === "draft" || status === "pending" || status === "confirmed") {
     return deterministic("unfulfilled", `Legacy ${status} has not recorded shipment`);
   }
   if (status === "shipped") {
-    return deterministic("shipped", "Legacy shipped explicitly records fulfillment handoff");
+    if (hasGovernedFulfillmentEvidence(authority)) {
+      return deterministic(
+        "shipped",
+        "The compatibility reader retained governed shipment or Delivery evidence",
+      );
+    }
+    return ambiguous(
+      "shipped",
+      "Legacy shipped can be imported directly without shippedAt or a Delivery row; status alone is not fulfillment proof",
+    );
   }
   if (status === "delivered" || status === "returned" || status === "refused") {
-    return deterministic("closed", `Legacy ${status} is downstream of shipment`);
+    if (hasGovernedFulfillmentEvidence(authority)) {
+      return deterministic(
+        "closed",
+        `Legacy ${status} retains governed shipment or Delivery evidence`,
+      );
+    }
+    return ambiguous(
+      "closed",
+      `Legacy ${status} can be imported directly without shippedAt, deliveredAt or a Delivery row; downstream status alone is not fulfillment proof`,
+    );
   }
   return ambiguous<FulfillmentState>(
     "unknown",
@@ -265,7 +299,7 @@ export function projectLegacyOrderAuthority(
     source: "legacy_order_projection" as const,
     order: projectOrder(authority.status),
     confirmation: projectConfirmation(authority),
-    fulfillment: projectFulfillment(authority.status),
+    fulfillment: projectFulfillment(authority),
     delivery: projectDelivery(authority),
     inventory: projectInventory(authority.status),
     cod: projectCod(authority),
