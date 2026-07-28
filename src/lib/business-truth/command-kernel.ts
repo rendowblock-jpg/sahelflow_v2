@@ -15,6 +15,7 @@ import {
 } from "./contracts";
 import { getBusinessEnvelopeKey } from "./envelope-key";
 import { sealBusinessPayloadWithKey } from "./payload-codec";
+import { canonicalBusinessRequestJson } from "./request-codec";
 import {
   openBusinessCommandResultWithKey,
   sealBusinessCommandResultWithKey,
@@ -82,7 +83,7 @@ function canonicalJson(value: unknown): string {
 export function businessCommandRequestHash<TPayload>(
   command: BusinessCommandEnvelope<TPayload>,
 ): string {
-  const canonicalRequest = canonicalJson({
+  const canonicalRequest = canonicalBusinessRequestJson({
     commandType: command.commandType,
     aggregate: command.aggregate,
     actor: command.actor,
