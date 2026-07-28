@@ -90,6 +90,7 @@ export function redactPii<T>(value: T): T {
 
 function redactRecursive(value: unknown): unknown {
   if (value === null || value === undefined) return value;
+  if (value instanceof Date) return new Date(value.getTime());
   if (typeof value === "string") {
     // Redact phone numbers + emails embedded in strings
     return value
@@ -124,6 +125,7 @@ function redactScalar(v: unknown): unknown {
   if (typeof v === "string") return v.length > 0 ? "[REDACTED]" : v;
   if (typeof v === "number") return v; // counts/amounts OK
   if (typeof v === "boolean") return v;
+  if (v instanceof Date) return "[REDACTED]";
   if (Array.isArray(v)) return v.map(redactScalar);
   if (typeof v === "object") return redactRecursive(v);
   return "[REDACTED]";
