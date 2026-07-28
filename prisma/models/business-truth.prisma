@@ -14,21 +14,30 @@ model BusinessAggregateVersion {
 }
 
 model BusinessCommand {
-  id               String    @id
-  idempotencyKey   String    @unique
-  commandType      String
-  aggregateType    String
-  aggregateId      String
-  requestHash      String
-  status           String    @default("processing")
-  resultJson       String?
-  actor            String
-  correlationId    String
-  causationId      String?
-  expectedVersion  Int
-  committedVersion Int?
-  createdAt        DateTime  @default(now())
-  committedAt      DateTime?
+  id                String    @id
+  idempotencyKey    String    @unique
+  commandType       String
+  aggregateType     String
+  aggregateId       String
+  requestHash       String
+  status            String    @default("processing")
+  resultJson        String?
+  actor             String
+  correlationId     String
+  causationId       String?
+  expectedVersion   Int
+  committedVersion  Int?
+  createdAt         DateTime  @default(now())
+  committedAt       DateTime?
+
+  domainEvents            DomainEvent[]
+  outboxIntents           OutboxIntent[]
+  createdReservations     InventoryReservation[] @relation("ReservationCreatedBy")
+  closedReservations      InventoryReservation[] @relation("ReservationClosedBy")
+  inventoryMovements      InventoryMovement[]
+  financialMovements      FinancialMovement[]
+  projectionInvalidations ProjectionInvalidation[]
+  compensationFacts       CompensationFact[]
 
   @@index([aggregateType, aggregateId, createdAt])
   @@index([commandType, createdAt])
@@ -45,6 +54,8 @@ model DomainEvent {
   payloadJson      String
   occurredAt       DateTime @default(now())
 
+  command BusinessCommand @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   @@index([aggregateType, aggregateId, aggregateVersion])
   @@index([commandId])
 }
@@ -60,6 +71,8 @@ model OutboxIntent {
   nextAttemptAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
+
+  command BusinessCommand @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([status, nextAttemptAt])
   @@index([commandId])
@@ -78,6 +91,10 @@ model InventoryReservation {
   closedByCommandId  String?
   createdAt          DateTime  @default(now())
   closedAt           DateTime?
+
+  createdByCommand BusinessCommand  @relation("ReservationCreatedBy", fields: [createdByCommandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  closedByCommand  BusinessCommand? @relation("ReservationClosedBy", fields: [closedByCommandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  movements        InventoryMovement[]
 
   @@index([orderId, state])
   @@index([productId, productVariantId, state])
@@ -99,6 +116,9 @@ model InventoryMovement {
   reason           String
   occurredAt       DateTime @default(now())
 
+  command     BusinessCommand      @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  reservation InventoryReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   @@index([productId, productVariantId, occurredAt])
   @@index([orderId, occurredAt])
   @@index([commandId])
@@ -118,6 +138,8 @@ model FinancialMovement {
   reason       String
   occurredAt   DateTime @default(now())
 
+  command BusinessCommand @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   @@index([orderId, occurredAt])
   @@index([settlementId, occurredAt])
   @@index([commandId])
@@ -128,6 +150,8 @@ model ProjectionInvalidation {
   commandId     String
   projectionKey String
   createdAt     DateTime @default(now())
+
+  command BusinessCommand @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([commandId, projectionKey])
   @@index([projectionKey, createdAt])
@@ -140,6 +164,8 @@ model CompensationFact {
   factType    String
   payloadJson String
   createdAt   DateTime @default(now())
+
+  command BusinessCommand @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([commandId])
 }
