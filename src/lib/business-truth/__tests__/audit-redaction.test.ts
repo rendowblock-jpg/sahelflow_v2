@@ -39,13 +39,18 @@ describe("audit PII redaction", () => {
     expect(redacted.nested.updatedAt.toISOString()).toBe(updatedAt.toISOString());
   });
 
-  it("redacts provider-shaped snake, kebab, dotted and spaced aliases", () => {
+  it("redacts provider aliases and unknown persisted strings by default", () => {
     const redacted = redactPii({
       customer_name: "Fatima Benali",
       first_name: "Fatima",
       "last-name": "Benali",
       "delivery.notes": "Private entrance",
       "phone blind index": "blind-index-secret",
+      nom: "Fatima Benali",
+      adresse: "12 Rue Provider",
+      Client: "Fatima Benali",
+      future_provider_alias: "unclassified customer text",
+      status: "confirmed",
       nested: {
         api_token: "provider-token",
         address_line1: "12 Rue Provider",
@@ -59,6 +64,11 @@ describe("audit PII redaction", () => {
       "last-name": "[REDACTED]",
       "delivery.notes": "[REDACTED]",
       "phone blind index": "[REDACTED]",
+      nom: "[REDACTED]",
+      adresse: "[REDACTED]",
+      Client: "[REDACTED]",
+      future_provider_alias: "[REDACTED]",
+      status: "confirmed",
       nested: {
         api_token: "[REDACTED]",
         address_line1: "[REDACTED]",
