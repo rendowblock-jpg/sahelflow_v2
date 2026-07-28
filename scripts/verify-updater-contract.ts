@@ -200,10 +200,6 @@ if (updater.enabled) {
     "enabled updater workflow must use the protected updater signing-key password environment",
   );
   requireCondition(
-    /^\s*environment:\s*internal-updater\s*$/m.test(workflow),
-    "enabled internal updater workflow must bind signing to environment internal-updater",
-  );
-  requireCondition(
     /workflow_dispatch:/.test(workflow) && /source_ref:/.test(workflow),
     "internal updater publication must require a manual exact-source workflow dispatch",
   );
@@ -213,7 +209,102 @@ if (updater.enabled) {
   );
   requireCondition(
     /releaseDraft:\s*true/.test(workflow),
-    "internal updater workflow must create a draft release for explicit publication",
+    "internal updater workflow must create a draft release before protected publication",
+  );
+  requireCondition(
+    authority.channel === "internal" && updater.approvalScope === "internal-lab",
+    "automatic release publication is restricted to the internal/internal-lab authority",
+  );
+
+  const signedJobMarker = "  windows-internal-updater:";
+  const signedJobStart = workflow.indexOf(signedJobMarker);
+  const workflowPreamble =
+    signedJobStart < 0 ? workflow : workflow.slice(0, signedJobStart);
+  requireCondition(
+    /^concurrency:\s*$/m.test(workflowPreamble) &&
+      /^  group:\s*sahelflow-internal-updater\s*$/m.test(workflowPreamble) &&
+      /^  cancel-in-progress:\s*false\s*$/m.test(workflowPreamble),
+    "automatic Internal publication must serialize candidates without cancelling an in-flight signed build",
+  );
+  const afterSignedJob =
+    signedJobStart >= 0
+      ? workflow.slice(signedJobStart + signedJobMarker.length)
+      : "";
+  const nextJobOffset = afterSignedJob.search(/^  [a-zA-Z0-9_-]+:\s*$/m);
+  const signedJob =
+    signedJobStart < 0
+      ? ""
+      : nextJobOffset < 0
+        ? workflow.slice(signedJobStart)
+        : workflow.slice(
+            signedJobStart,
+            signedJobStart + signedJobMarker.length + nextJobOffset,
+          );
+
+  requireCondition(
+    /^[ ]{4}environment:\s*internal-updater\s*$/m.test(signedJob),
+    "enabled Internal publication must run inside the protected internal-updater environment",
+  );
+
+  requireCondition(
+    /^\s{6}- name:\s*Publish exact verified Internal release\s*$/m.test(signedJob),
+    "internal updater workflow must include a protected final publication step",
+  );
+  requireCondition(
+    /gh release edit[\s\S]*--draft=false[\s\S]*--latest/.test(signedJob),
+    "verified Internal draft must be published and promoted to the live updater endpoint",
+  );
+  requireCondition(
+    signedJob.includes(
+      "$env:SF_RELEASE_VERSION -cnotmatch '-internal\\.[0-9]+$'",
+    ) &&
+      signedJob.includes(
+        '$expectedTag = "sahelflow-v${env:SF_RELEASE_VERSION}-${env:SF_SOURCE_COMMIT}"',
+      ),
+    "protected publication must execute the concrete Internal version and exact-tag guards",
+  );
+  requireCondition(
+    /releases\/latest/.test(signedJob) &&
+      /\$currentBase\s+-lt\s+\$latestBase/.test(signedJob) &&
+      /\$currentSequence\s+-le\s+\$latestSequence/.test(signedJob) &&
+      /Internal publication must be strictly newer/.test(signedJob),
+    "protected publication must reject every non-increasing Internal version before promotion",
+  );
+  requireCondition(
+    /git\/ref\/tags\/\$env:SF_RELEASE_TAG/.test(signedJob) &&
+      /\$tagObject\.type\s+-ceq\s+'tag'/.test(signedJob) &&
+      /git\/tags\/\$\(\$tagObject\.sha\)/.test(signedJob) &&
+      /\$tagObject\.type\s+-cne\s+'commit'/.test(signedJob) &&
+      /\$tagObject\.sha\s+-cne\s+\$env:SF_SOURCE_COMMIT/.test(signedJob),
+    "protected publication must peel the actual release tag and bind it to the exact source commit",
+  );
+  requireCondition(
+    !/^\s*continue-on-error:\s*true\s*$/m.test(signedJob),
+    "signed candidate and publication gates must not continue after errors",
+  );
+  const publishIndex = signedJob.indexOf("- name: Publish exact verified Internal release");
+  const protectedPublicationGates = [
+    "Verify staged packaged runtime reaches authenticated readiness",
+    "Verify local MSI and updater signature",
+    "Install and prove signed runtime launch/reopen",
+    "Prove signed authenticated hydrated WebView UI twice",
+    "Verify deterministic build source rewrites",
+    "Generate signed candidate evidence manifest from clean worktree",
+    "Download and verify draft latest.json",
+    "Retain signed candidate and evidence",
+    "Verify exact draft publication target",
+  ];
+  for (const gate of protectedPublicationGates) {
+    const gateIndex = signedJob.indexOf(`- name: ${gate}`);
+    requireCondition(
+      gateIndex >= 0 && publishIndex > gateIndex,
+      `automatic Internal publication must run after gate: ${gate}`,
+    );
+  }
+  requireCondition(
+    publishIndex >= 0 &&
+      signedJob.indexOf("\n      - name:", publishIndex + 1) < 0,
+    "protected Internal publication must be the final step in the signed updater job",
   );
   requireCondition(
     /includeUpdaterJson:\s*true/.test(workflow),

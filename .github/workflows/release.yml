@@ -384,20 +384,163 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Record publication handoff
+      - name: Verify exact draft publication target
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          if ($env:SF_SOURCE_COMMIT -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'protected publication does not have an exact source commit'
+          }
+          if ($env:SF_RELEASE_VERSION -cnotmatch '-internal\.[0-9]+$') {
+            throw "release version is not eligible for automatic Internal publication: $env:SF_RELEASE_VERSION"
+          }
+          $expectedTag = "sahelflow-v${env:SF_RELEASE_VERSION}-${env:SF_SOURCE_COMMIT}"
+          if ($env:SF_RELEASE_TAG -cne $expectedTag) {
+            throw "release tag mismatch: expected $expectedTag, found $env:SF_RELEASE_TAG"
+          }
+
+          $currentMatch = [regex]::Match(
+            $env:SF_RELEASE_VERSION,
+            '^(?<base>[0-9]+\.[0-9]+\.[0-9]+)-internal\.(?<sequence>[0-9]+)$'
+          )
+          if (-not $currentMatch.Success) {
+            throw "release version cannot participate in monotonic Internal publication: $env:SF_RELEASE_VERSION"
+          }
+          $latestRelease = gh api "repos/${{ github.repository }}/releases/latest" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $null -eq $latestRelease) {
+            throw 'failed to resolve the currently published release before publication'
+          }
+          $latestMatch = [regex]::Match(
+            [string]$latestRelease.tag_name,
+            '^sahelflow-v(?<base>[0-9]+\.[0-9]+\.[0-9]+)-internal\.(?<sequence>[0-9]+)-[0-9a-f]{40}$'
+          )
+          if (-not $latestMatch.Success) {
+            throw "automatic Internal publication cannot replace non-Internal latest release: $($latestRelease.tag_name)"
+          }
+          $currentBase = [version]$currentMatch.Groups['base'].Value
+          $latestBase = [version]$latestMatch.Groups['base'].Value
+          $currentSequence = [uint64]$currentMatch.Groups['sequence'].Value
+          $latestSequence = [uint64]$latestMatch.Groups['sequence'].Value
+          if (
+            $currentBase -lt $latestBase -or
+            ($currentBase -eq $latestBase -and $currentSequence -le $latestSequence)
+          ) {
+            throw "Internal publication must be strictly newer than $($latestRelease.tag_name)"
+          }
+
+          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the draft publication target' }
+          if (-not $release.draft) { throw 'automatic publication target is not a draft release' }
+          if ($release.prerelease) {
+            throw 'automatic Internal publication target unexpectedly has prerelease semantics'
+          }
+
+          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty object
+          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+            throw 'failed to resolve the draft release tag authority'
+          }
+          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
+            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
+              ConvertFrom-Json |
+              Select-Object -ExpandProperty object
+            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+              throw 'failed to peel the annotated draft release tag'
+            }
+          }
+          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
+            throw 'draft release tag does not resolve to the exact verified source commit'
+          }
+
+          $releaseAssets = @($release.assets)
+          $msiAssets = @($releaseAssets | Where-Object { $_.name -like '*.msi' })
+          $signatureAssets = @($releaseAssets | Where-Object { $_.name -like '*.msi.sig' })
+          $manifestAssets = @($releaseAssets | Where-Object { $_.name -ceq 'latest.json' })
+          if ($msiAssets.Count -ne 1 -or $signatureAssets.Count -ne 1 -or $manifestAssets.Count -ne 1) {
+            throw "draft asset set is incomplete: MSI=$($msiAssets.Count) signature=$($signatureAssets.Count) latest.json=$($manifestAssets.Count)"
+          }
+          if ($msiAssets[0].name -cne $env:SF_MSI_NAME) {
+            throw 'draft MSI name does not match the locally verified signed MSI'
+          }
+          if ($signatureAssets[0].name -cne "${env:SF_MSI_NAME}.sig") {
+            throw 'draft updater signature name does not match the locally verified signature'
+          }
+
+          $downloadDir = Join-Path $env:RUNNER_TEMP 'sahelflow-publication-verification'
+          New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
+          gh release download "$env:SF_RELEASE_TAG" `
+            --pattern "$env:SF_MSI_NAME" `
+            --pattern "${env:SF_MSI_NAME}.sig" `
+            --pattern 'latest.json' `
+            --dir $downloadDir
+          if ($LASTEXITCODE -ne 0) { throw 'failed to download the exact draft assets for publication' }
+
+          $remoteMsi = Join-Path $downloadDir $env:SF_MSI_NAME
+          $remoteSignature = Join-Path $downloadDir "${env:SF_MSI_NAME}.sig"
+          $remoteManifest = Join-Path $downloadDir 'latest.json'
+          $comparisons = @(
+            @{ Label = 'MSI'; Local = $env:SF_MSI_PATH; Remote = $remoteMsi },
+            @{ Label = 'updater signature'; Local = $env:SF_MSI_SIG_PATH; Remote = $remoteSignature },
+            @{ Label = 'latest.json'; Local = $env:SF_LATEST_JSON_PATH; Remote = $remoteManifest }
+          )
+          foreach ($comparison in $comparisons) {
+            $localHash = (Get-FileHash -LiteralPath $comparison.Local -Algorithm SHA256).Hash
+            $remoteHash = (Get-FileHash -LiteralPath $comparison.Remote -Algorithm SHA256).Hash
+            if ($localHash -cne $remoteHash) {
+              throw "draft $($comparison.Label) differs from the locally verified candidate"
+            }
+          }
+
+          $metadata = Get-Content -LiteralPath $remoteManifest -Raw | ConvertFrom-Json
+          if ($metadata.version -cne $env:SF_RELEASE_VERSION) {
+            throw 'draft latest.json version does not match the verified Internal version'
+          }
+          $platform = $metadata.platforms.'windows-x86_64-msi'
+          if ($null -eq $platform) { $platform = $metadata.platforms.'windows-x86_64' }
+          if ($null -eq $platform) { throw 'draft latest.json has no Windows x64 MSI entry' }
+          if ($platform.url -notmatch [regex]::Escape("/releases/download/$env:SF_RELEASE_TAG/")) {
+            throw 'draft latest.json is not bound to the exact verified release tag'
+          }
+
+      - name: Publish exact verified Internal release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "$env:SF_RELEASE_TAG" `
+            --repo '${{ github.repository }}' `
+            --draft=false `
+            --prerelease=false `
+            --latest
+          if ($LASTEXITCODE -ne 0) { throw 'failed to publish the exact verified Internal release' }
+
+          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to verify the published Internal release' }
+          if ($release.draft) { throw 'verified Internal release remained a draft after publication' }
+
+          $latestTag = gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the live updater release' }
+          if ($latestTag.Trim() -cne $env:SF_RELEASE_TAG) {
+            throw "live updater release mismatch: expected $env:SF_RELEASE_TAG, found $($latestTag.Trim())"
+          }
+
           @"
-          ## Signed internal updater draft is ready
+          ## Verified Internal updater published
 
           - Version: $env:SF_RELEASE_VERSION
           - Tag: $env:SF_RELEASE_TAG
           - Source: ${{ inputs.source_ref }}
           - Reviewed PR/head: #$env:SF_REVIEWED_PR / $env:SF_REVIEWED_HEAD
           - Protected-main and reviewed PR Git trees matched; the risk-aware required PR gate was successful.
-          - Draft release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
-          - Updater signature and latest.json matched.
+          - Release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
+          - The draft MSI, updater signature and latest.json matched the locally verified candidate byte-for-byte immediately before publication.
           - The exact signed MSI passed installed runtime launch, authenticated hydrated visible UI, normal close, teardown, and reopen twice.
           - The retained artifact includes the PowerShell 5.1-safe Founder installer and UI acceptance evidence.
-          - Publish the verified draft release to make the configured updater endpoint live.
+          - The live updater endpoint now resolves this exact Internal release.
+          - Beta and Stable promotion remain manual Founder decisions.
           "@ >> $env:GITHUB_STEP_SUMMARY

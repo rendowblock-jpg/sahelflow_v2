@@ -252,11 +252,13 @@ describe("Windows signed release build contract", () => {
   it("retains hidden release evidence without widening the upload path", () => {
     const release = read(".github/workflows/release.yml");
     const retainStart = release.indexOf("Retain signed candidate and evidence");
-    const handoffStart = release.indexOf("Record publication handoff");
-    const retain = release.slice(retainStart, handoffStart);
+    const publicationStart = release.indexOf(
+      "Verify exact draft publication target",
+    );
+    const retain = release.slice(retainStart, publicationStart);
 
     expect(retainStart).toBeGreaterThan(-1);
-    expect(handoffStart).toBeGreaterThan(retainStart);
+    expect(publicationStart).toBeGreaterThan(retainStart);
     expect(retain).toContain(".sf-evidence/candidate-manifest.json");
     expect(retain).toContain(
       ".sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json",
