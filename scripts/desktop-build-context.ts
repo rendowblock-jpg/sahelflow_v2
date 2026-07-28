@@ -11,6 +11,9 @@ const BUILD_SHOP_ID = "bundle-build";
 const BUILD_DATABASE_FILE = `${BUILD_SHOP_ID}.db`;
 const BUILD_REGISTRY_REVISION = 1;
 const BUILD_MIGRATION_SET_SHA256 = "0".repeat(64);
+const BUILD_WORKSPACE_ID = "a".repeat(32);
+const BUILD_INSTALLATION_ID = "b".repeat(32);
+const BUILD_INCARNATION_ID = "c".repeat(32);
 
 export type DesktopBuildContext = Readonly<{
   root: string;
@@ -41,13 +44,15 @@ export function prepareDesktopBuildContext(): DesktopBuildContext {
     registryPath,
     `${JSON.stringify(
       {
-        formatVersion: 1,
+        formatVersion: 2,
         revision: BUILD_REGISTRY_REVISION,
-        installationId: "desktop-bundle-build",
+        workspaceId: BUILD_WORKSPACE_ID,
+        installationId: BUILD_INSTALLATION_ID,
         activeShopId: BUILD_SHOP_ID,
         shops: [
           {
             id: BUILD_SHOP_ID,
+            incarnationId: BUILD_INCARNATION_ID,
             name: "Desktop Bundle Build",
             databaseFile: BUILD_DATABASE_FILE,
             icon: null,
@@ -70,7 +75,11 @@ export function prepareDesktopBuildContext(): DesktopBuildContext {
     env: Object.freeze({
       DATABASE_URL: `file:${databasePath}`,
       SF_DATA_DIR: dataDir,
+      SF_WORKSPACE_ID: BUILD_WORKSPACE_ID,
+      SF_INSTALLATION_ID: BUILD_INSTALLATION_ID,
       SF_ACTIVE_SHOP_ID: BUILD_SHOP_ID,
+      SF_SHOP_INCARNATION_ID: BUILD_INCARNATION_ID,
+      SF_DATABASE_FILE_ID: BUILD_DATABASE_FILE,
       SF_REGISTRY_REVISION: String(BUILD_REGISTRY_REVISION),
       SF_MIGRATION_SET_SHA256: BUILD_MIGRATION_SET_SHA256,
       SF_MIGRATION_STATUS: "ready",

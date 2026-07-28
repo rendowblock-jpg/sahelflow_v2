@@ -28,7 +28,11 @@ describe("desktop build ShopContext", () => {
     expect(context.env).toEqual({
       DATABASE_URL: `file:${context.databasePath}`,
       SF_DATA_DIR: context.dataDir,
+      SF_WORKSPACE_ID: "a".repeat(32),
+      SF_INSTALLATION_ID: "b".repeat(32),
       SF_ACTIVE_SHOP_ID: "bundle-build",
+      SF_SHOP_INCARNATION_ID: "c".repeat(32),
+      SF_DATABASE_FILE_ID: "bundle-build.db",
       SF_REGISTRY_REVISION: "1",
       SF_MIGRATION_SET_SHA256: "0".repeat(64),
       SF_MIGRATION_STATUS: "ready",
@@ -38,14 +42,19 @@ describe("desktop build ShopContext", () => {
       formatVersion: number;
       revision: number;
       activeShopId: string;
-      shops: Array<{ id: string; databaseFile: string }>;
+      workspaceId: string;
+      installationId: string;
+      shops: Array<{ id: string; incarnationId: string; databaseFile: string }>;
     };
-    expect(registry.formatVersion).toBe(1);
+    expect(registry.formatVersion).toBe(2);
     expect(registry.revision).toBe(1);
+    expect(registry.workspaceId).toBe("a".repeat(32));
+    expect(registry.installationId).toBe("b".repeat(32));
     expect(registry.activeShopId).toBe("bundle-build");
     expect(registry.shops).toHaveLength(1);
     expect(registry.shops[0]).toMatchObject({
       id: "bundle-build",
+      incarnationId: "c".repeat(32),
       databaseFile: "bundle-build.db",
     });
   });

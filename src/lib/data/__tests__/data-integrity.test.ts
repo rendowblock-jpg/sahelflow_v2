@@ -1345,10 +1345,11 @@ describe("Scenario 13 — PII survives backup → wipe → restore", () => {
     writeFileSync(
       META_PATH,
       JSON.stringify({
-        formatVersion: 1,
+        formatVersion: 2,
         revision: 1,
-        installationId: "test-installation",
-        shops: [{ id: "test", name: "Test", databaseFile: testDbPath.split(/[\\/]/).pop(), icon: null, createdAt: new Date().toISOString() }],
+        workspaceId: "a".repeat(32),
+        installationId: "b".repeat(32),
+        shops: [{ id: "test", incarnationId: "c".repeat(32), name: "Test", databaseFile: testDbPath.split(/[\\/]/).pop(), icon: null, createdAt: new Date().toISOString() }],
         activeShopId: "test",
       }),
     );
