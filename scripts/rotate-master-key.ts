@@ -2,6 +2,7 @@ import "server-only";
 
 import { PrismaClient } from "@prisma/client";
 import { randomBytes, randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   closeSync,
@@ -154,6 +155,90 @@ function loadOldKey(): Buffer {
   return readKey(KEYFILE_PATH);
 }
 
+function fsyncDirectory(directoryPath: string): void {
+  const directoryHandle = openSync(directoryPath, "r");
+  try {
+    fsyncSync(directoryHandle);
+  } finally {
+    closeSync(directoryHandle);
+  }
+}
+
+function powershellLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function moveFileWriteThroughWindows(source: string, target: string): void {
+  const command = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SahelFlowDurableMove {
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool MoveFileEx(string existingFileName, string newFileName, int flags);
+}
+'@
+$ok = [SahelFlowDurableMove]::MoveFileEx(
+  ${powershellLiteral(source)},
+  ${powershellLiteral(target)},
+  8
+)
+if (-not $ok) {
+  $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+  Write-Error "MoveFileEx(MOVEFILE_WRITE_THROUGH) failed with Win32 error $code"
+  exit 1
+}
+`;
+  const result = spawnSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", command],
+    { encoding: "utf8", windowsHide: true },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr ||
+        result.stdout ||
+        "Could not durably publish the master-key rotation sidecar",
+    );
+  }
+}
+
+function writeDurableSidecar(newKey: Buffer): void {
+  mkdirSync(dataDir(), { recursive: true });
+  const temporaryPath = `${SIDECAR_PATH}.${process.pid}.${randomUUID()}.tmp`;
+  const sidecarHandle = openSync(temporaryPath, "wx", 0o600);
+  try {
+    writeFileSync(sidecarHandle, newKey.toString("hex"), "utf8");
+    // Database rewrites must never begin until the complete new key has reached
+    // stable storage. Closing a file descriptor alone does not provide that
+    // authority after power loss.
+    fsyncSync(sidecarHandle);
+  } finally {
+    closeSync(sidecarHandle);
+  }
+
+  try {
+    if (process.platform === "win32") {
+      // Windows has no POSIX directory fsync. MOVEFILE_WRITE_THROUGH is the
+      // platform authority that flushes the durable directory-entry update.
+      moveFileWriteThroughWindows(temporaryPath, SIDECAR_PATH);
+    } else {
+      renameSync(temporaryPath, SIDECAR_PATH);
+      fsyncDirectory(dataDir());
+    }
+  } catch (error) {
+    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
+    throw error;
+  }
+
+  try {
+    chmodSync(SIDECAR_PATH, 0o600);
+  } catch {
+    // Best effort on platforms that do not expose POSIX modes.
+  }
+}
+
 function loadOrCreateNewKey(oldKey: Buffer): Buffer {
   if (existsSync(SIDECAR_PATH)) {
     const resumed = readKey(SIDECAR_PATH);
@@ -170,19 +255,7 @@ function loadOrCreateNewKey(oldKey: Buffer): Buffer {
   }
 
   const newKey = randomBytes(KEY_BYTES);
-  if (!DRY_RUN) {
-    mkdirSync(dataDir(), { recursive: true });
-    writeFileSync(SIDECAR_PATH, newKey.toString("hex"), {
-      encoding: "utf8",
-      mode: 0o600,
-      flag: "wx",
-    });
-    try {
-      chmodSync(SIDECAR_PATH, 0o600);
-    } catch {
-      // Best effort on platforms that do not expose POSIX modes.
-    }
-  }
+  if (!DRY_RUN) writeDurableSidecar(newKey);
   return newKey;
 }
 
@@ -264,8 +337,17 @@ function acquireRotationLease(): RotationLease {
   throw new Error(`Could not acquire master-key rotation lease: ${LOCK_PATH}`);
 }
 
-function releaseRotationLease(lease: RotationLease): void {
+function finishRotationLease(
+  lease: RotationLease,
+  removeLease: boolean,
+): void {
   closeSync(lease.handle);
+  if (!removeLease) {
+    console.error(
+      `Maintenance lease retained at ${LOCK_PATH}; SahelFlow startup and writes remain blocked until this rotation is resumed successfully.`,
+    );
+    return;
+  }
   if (!existsSync(LOCK_PATH)) return;
   try {
     const current = readExistingRotationLock();
@@ -806,6 +888,10 @@ function printStats(allStats: readonly ModelStats[]): void {
 
 async function main(): Promise<void> {
   const lease = acquireRotationLease();
+  let mutationWindowEntered = false;
+  let keyfileCommitted = false;
+  let retainMaintenanceLease = false;
+
   try {
     // Acquire the maintenance lease first, then prove the old runtime is gone.
     // A packaged Node process launched after this point refuses startup, and an
@@ -832,6 +918,11 @@ async function main(): Promise<void> {
     }
 
     const allStats: ModelStats[] = [];
+    // Once the first target is entered, a later failure cannot prove that no
+    // database transaction committed. Keep the installation blocked until a
+    // successful resume commits the shared keyfile.
+    if (!DRY_RUN) mutationWindowEntered = true;
+
     // The shared keyfile is deliberately not committed until every registered
     // shop and the provisioning template have been processed with this exact
     // old/new key pair. A crash leaves the old keyfile plus reusable sidecar.
@@ -846,14 +937,24 @@ async function main(): Promise<void> {
     }
 
     const backupPath = commitKeyfile(newKey);
+    keyfileCommitted = true;
     console.log("\nRotation complete.");
     console.log(`Old key backup: ${backupPath}`);
     console.log(`New keyfile: ${KEYFILE_PATH}`);
     console.log(
       "All registered shop Secrets—including business-truth envelope wrappers—were re-wrapped before the shared keyfile commit.",
     );
+  } catch (error) {
+    retainMaintenanceLease =
+      !DRY_RUN && mutationWindowEntered && !keyfileCommitted;
+    if (retainMaintenanceLease) {
+      console.error(
+        "Rotation entered the database mutation window but did not commit the new keyfile. The maintenance lease will remain in place so the app cannot start or write against mixed-key data.",
+      );
+    }
+    throw error;
   } finally {
-    releaseRotationLease(lease);
+    finishRotationLease(lease, !retainMaintenanceLease);
   }
 }
 
@@ -862,6 +963,11 @@ main().catch((error) => {
   if (existsSync(SIDECAR_PATH)) {
     console.error(
       `Keep ${SIDECAR_PATH}; rerunning will resume with the same new key.`,
+    );
+  }
+  if (existsSync(LOCK_PATH)) {
+    console.error(
+      `Keep ${LOCK_PATH}; it intentionally blocks SahelFlow until a successful resume.`,
     );
   }
   console.error(error);
