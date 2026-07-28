@@ -1,0 +1,145 @@
+// Session 2 business-truth persistence models.
+//
+// The corresponding migration is additive. These models expose the command,
+// event, reservation, movement, outbox and compensation tables to Prisma while
+// legacy order/status/stock/COD readers remain available during migration.
+
+model BusinessAggregateVersion {
+  aggregateType String
+  aggregateId   String
+  version       Int      @default(0)
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@id([aggregateType, aggregateId])
+}
+
+model BusinessCommand {
+  id               String    @id
+  idempotencyKey   String    @unique
+  commandType      String
+  aggregateType    String
+  aggregateId      String
+  requestHash      String
+  status           String    @default("processing")
+  resultJson       String?
+  actor            String
+  correlationId    String
+  causationId      String?
+  expectedVersion  Int
+  committedVersion Int?
+  createdAt        DateTime  @default(now())
+  committedAt      DateTime?
+
+  @@index([aggregateType, aggregateId, createdAt])
+  @@index([commandType, createdAt])
+}
+
+model DomainEvent {
+  id               String   @id
+  eventKey         String   @unique
+  commandId        String
+  eventType        String
+  aggregateType    String
+  aggregateId      String
+  aggregateVersion Int
+  payloadJson      String
+  occurredAt       DateTime @default(now())
+
+  @@index([aggregateType, aggregateId, aggregateVersion])
+  @@index([commandId])
+}
+
+model OutboxIntent {
+  id            String    @id
+  effectKey     String    @unique
+  commandId     String
+  effectType    String
+  payloadJson   String
+  status        String    @default("queued")
+  attemptCount  Int       @default(0)
+  nextAttemptAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([commandId])
+}
+
+model InventoryReservation {
+  id                 String    @id
+  reservationKey     String    @unique
+  orderId            String
+  orderItemId        String?
+  productId          String
+  productVariantId   String?
+  quantity           Int
+  state              String    @default("active")
+  createdByCommandId String
+  closedByCommandId  String?
+  createdAt          DateTime  @default(now())
+  closedAt           DateTime?
+
+  @@index([orderId, state])
+  @@index([productId, productVariantId, state])
+}
+
+model InventoryMovement {
+  id               String   @id
+  movementKey      String   @unique
+  commandId        String
+  orderId          String?
+  orderItemId      String?
+  reservationId    String?
+  productId        String
+  productVariantId String?
+  movementType     String
+  quantity         Int
+  fromPosition     String?
+  toPosition       String?
+  reason           String
+  occurredAt       DateTime @default(now())
+
+  @@index([productId, productVariantId, occurredAt])
+  @@index([orderId, occurredAt])
+  @@index([commandId])
+}
+
+model FinancialMovement {
+  id           String   @id
+  movementKey  String   @unique
+  commandId    String
+  orderId      String?
+  settlementId String?
+  movementType String
+  amount       Int
+  currency     String   @default("DZD")
+  counterparty String?
+  reference    String?
+  reason       String
+  occurredAt   DateTime @default(now())
+
+  @@index([orderId, occurredAt])
+  @@index([settlementId, occurredAt])
+  @@index([commandId])
+}
+
+model ProjectionInvalidation {
+  id            String   @id
+  commandId     String
+  projectionKey String
+  createdAt     DateTime @default(now())
+
+  @@unique([commandId, projectionKey])
+  @@index([projectionKey, createdAt])
+}
+
+model CompensationFact {
+  id          String   @id
+  factKey     String   @unique
+  commandId   String
+  factType    String
+  payloadJson String
+  createdAt   DateTime @default(now())
+
+  @@index([commandId])
+}
