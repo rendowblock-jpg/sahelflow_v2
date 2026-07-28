@@ -86,6 +86,8 @@ const SAFE_STRING_KEYS = new Set(
     "format",
     "algorithm",
     "safeField",
+    "trustedPrincipalSubject",
+    "handlerPrincipal",
   ].map(normalizeKey),
 );
 
