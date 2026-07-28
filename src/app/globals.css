@@ -13,7 +13,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-arabic: var(--font-arabic), "Amiri", serif;
 
   /* Sidebar */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -268,7 +267,7 @@
   @media (pointer: coarse) {
     button:not([data-size]),
     [role="button"]:not([data-size]) {
-      min-height: 40px;
+      min-height: var(--touch-target);
     }
   }
 
@@ -684,6 +683,12 @@
     --content-lg: 1024px;
     --content-xl: 1280px;
     --content-2xl: 1536px;
+
+    /* Shared interaction and density contracts. */
+    --control-height: 2.25rem;
+    --touch-target: 2.75rem;
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
   }
 }
 
@@ -701,13 +706,22 @@
 
   /* Force a specific direction for elements that must not flip
      (e.g. phone numbers, prices with currency) */
-  .force-ltr {
+  .force-ltr,
+  .technical-value,
+  .numeric-value {
     direction: ltr;
-    unicode-bidi: embed;
+    unicode-bidi: isolate;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .bidi-isolate,
+  bdi {
+    unicode-bidi: isolate;
   }
 
   /* Tabular figures for all numeric data — tighter, aligned */
-  .nums {
+  .nums,
+  .numeric-value {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
@@ -845,22 +859,11 @@ table { text-align: start; }  /* UA default is center for th — force logical s
 th { text-align: inherit; }   /* inherit from table/tr, don't default to center */
 td { text-align: inherit; }
 
-/* Ensure dir="rtl" propagates to ALL descendants (flex/grid children can lose
-   direction inheritance, causing icons/text to stay LTR inside an RTL container).
-   Elements with explicit dir="ltr" or .force-ltr override this. */
-[dir="rtl"] :where(nav, div, section, main, header, footer, ul, ol, li, a, button, span) {
-  direction: rtl;
-}
-[dir="rtl"] .force-ltr,
-[dir="ltr"] {
-  direction: ltr;
-}
-
 /* Arabic doesn't use letter-spacing — it breaks connected letters (Arabic is
    a cursive script where letters connect). Override ALL tracking-* utilities
    in RTL mode. This is a global safety net; individual components can also
    use rtl:tracking-normal for explicitness. */
-[dir="rtl"] {
+html[dir="rtl"] :where(:dir(rtl)) {
   letter-spacing: normal !important;
 }
 
@@ -886,12 +889,11 @@ td { text-align: inherit; }
       that can clip at the default 1.5 line-height)
    3. NO letter-spacing (handled by the global rule above)
 
-   The --font-arabic variable is defined but was NEVER APPLIED. Arabic text
-   was rendering in Inter's fallback (system font), not Amiri. This rule
-   applies the Arabic font stack to all text when dir="rtl".
+   Apply the Arabic stack at body scope, where next/font exposes its source
+   variable. Technical and numeric values opt back into an isolated LTR stack.
 */
-[dir="rtl"] {
-  font-family: var(--font-arabic), var(--font-sans);
+html[dir="rtl"] body {
+  font-family: var(--font-arabic), "Amiri", serif;
   line-height: 1.65;  /* Arabic needs more line-height than Latin (1.5) */
 }
 [dir="rtl"] h1,
@@ -901,14 +903,25 @@ td { text-align: inherit; }
   line-height: 1.4;  /* headings need slightly less, but still more than Latin 1.2 */
 }
 
+/* Recharts geometry uses a stable LTR coordinate system. Translated legends
+   and tooltips restore the document direction at their own boundary. */
+[data-slot="chart"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+[data-slot="chart-tooltip"],
+[data-slot="chart-legend"] {
+  unicode-bidi: isolate;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    UI/UX consistency — unified component styling
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* Consistent focus ring across all interactive elements */
 *:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: var(--focus-ring-offset);
   /* border-radius intentionally NOT set here — let each component keep its own radius */
 }
 

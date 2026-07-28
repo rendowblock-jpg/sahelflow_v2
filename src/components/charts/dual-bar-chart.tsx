@@ -35,19 +35,20 @@ export function DualBarChart({
   revenueLabel = "Revenue",
   expensesLabel = "Expenses",
 }: DualBarChartProps) {
-  const { dir } = useI18n();
+  const { dir, locale } = useI18n();
   const isRtl = dir === "rtl";
   const maxValue = Math.max(...data.map((d) => Math.max(d.revenue, d.expenses)), 1);
   const yMax = Math.ceil(maxValue * 1.15 / 1000) * 1000;
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart
-        data={data}
-        barGap={4}
-        barCategoryGap="25%"
-        margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}
-      >
+    <div dir="ltr" className="w-full" data-slot="chart">
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart
+          data={data}
+          barGap={4}
+          barCategoryGap="25%"
+          margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}
+        >
         <defs>
           <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={REVENUE_COLOR} stopOpacity={1} />
@@ -78,8 +79,17 @@ export function DualBarChart({
           orientation={isRtl ? "right" : "left"}
         />
         <Tooltip
-          formatter={(value: number) => formatDZD(value)}
+          formatter={(value: number) => (
+            <bdi dir="ltr" className="numeric-value">
+              {formatDZD(value, locale)}
+            </bdi>
+          )}
           cursor={{ fill: "oklch(from var(--muted) l c h / 0.3)" }}
+          wrapperStyle={{
+            direction: isRtl ? "rtl" : "ltr",
+            textAlign: isRtl ? "right" : "left",
+            unicodeBidi: "isolate",
+          }}
           contentStyle={{
             borderRadius: "10px",
             border: "1px solid var(--border)",
@@ -103,7 +113,8 @@ export function DualBarChart({
             <Cell key={i} fill={d.expenses === 0 ? EMPTY_COLOR : "url(#expenseGrad)"} />
           ))}
         </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

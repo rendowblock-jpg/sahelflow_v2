@@ -4,6 +4,7 @@ import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/hooks/use-i18n"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -54,6 +55,7 @@ function ChartContainer({
       <div
         data-slot="chart"
         data-chart={chartId}
+        dir="ltr"
         className={cn(
           "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex aspect-video justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className
@@ -125,8 +127,9 @@ function ChartTooltipContent({
     indicator?: "line" | "dot" | "dashed"
     nameKey?: string
     labelKey?: string
-  }) {
+}) {
   const { config } = useChart()
+  const { dir } = useI18n()
 
   const tooltipLabel = React.useMemo(() => {
     if (hideLabel || !payload?.length) {
@@ -172,8 +175,10 @@ function ChartTooltipContent({
 
   return (
     <div
+      data-slot="chart-tooltip"
+      dir={dir}
       className={cn(
-        "border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
+        "border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-start text-xs shadow-xl",
         className
       )}
     >
@@ -193,7 +198,22 @@ function ChartTooltipContent({
               )}
             >
               {formatter && item?.value !== undefined && item.name ? (
-                formatter(item.value, item.name, item, index, item.payload)
+                (() => {
+                  const formatted = formatter(item.value, item.name, item, index, item.payload)
+                  if (Array.isArray(formatted) && formatted.length >= 2) {
+                    return (
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-muted-foreground">
+                          {formatted[1]}
+                        </span>
+                        <bdi dir="ltr" className="shrink-0 font-mono font-medium tabular-nums text-foreground">
+                          {formatted[0]}
+                        </bdi>
+                      </div>
+                    )
+                  }
+                  return formatted
+                })()
               ) : (
                 <>
                   {itemConfig?.icon ? (
@@ -232,10 +252,10 @@ function ChartTooltipContent({
                         {itemConfig?.label || item.name}
                       </span>
                     </div>
-                    {item.value && (
-                      <span className="text-foreground font-mono font-medium tabular-nums">
+                    {item.value !== undefined && item.value !== null && (
+                      <bdi dir="ltr" className="text-foreground font-mono font-medium tabular-nums">
                         {item.value.toLocaleString()}
-                      </span>
+                      </bdi>
                     )}
                   </div>
                 </>
@@ -260,8 +280,9 @@ function ChartLegendContent({
   Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
     hideIcon?: boolean
     nameKey?: string
-  }) {
+}) {
   const { config } = useChart()
+  const { dir } = useI18n()
 
   if (!payload?.length) {
     return null
@@ -269,6 +290,8 @@ function ChartLegendContent({
 
   return (
     <div
+      data-slot="chart-legend"
+      dir={dir}
       className={cn(
         "flex items-center justify-center gap-4",
         verticalAlign === "top" ? "pb-3" : "pt-3",
