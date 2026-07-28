@@ -164,6 +164,29 @@ change the current release workflow or create an MSI.
   cold/warm stage timing, demo walkthrough and full lifecycle acceptance remain
   open.
 
+### Internal.12 Session 1 milestone request
+
+- Merged protected automatic publication only after the exact signed release,
+  MSI install/reopen, authenticated-UI, deterministic evidence and updater
+  manifest gates pass; failed candidates remain drafts.
+- Migrated the shop registry compatibly to workspace/shop/incarnation identity
+  and made trusted complete shop context explicit across request authority.
+- Measured the retained Founder startup trace at about 110 seconds, moved the
+  authenticated UI-ready boundary ahead of slower dashboard children, and
+  extended packaged/installed evidence without claiming new T470 timing proof.
+- Added the global Arabic font and bidi foundation, logical RTL shell geometry,
+  focused main navigation, viewport-safe dialogs and tables, and shared complete
+  operational states.
+- Repaired shared charts for Arabic mode: stable LTR plotting geometry,
+  direction-correct tooltips and legends, isolated numeric values, preserved
+  zero values and locale-aware DZD accounting labels.
+- Extended the generated route inventory to include inherited layouts,
+  templates, boundaries, local dependency surfaces, chart/RTL risks and assigned
+  Session 1–4 ownership.
+- Assigns milestone identity `1.0.0-internal.12` / MSI `1.0.0.12`. This source
+  request is not a signed, published or Founder-accepted result until the exact
+  protected-main release workflow and real T470 observation complete.
+
 ## [1.0.0-internal.5] — 2026-07-24
 
 ### Runtime and installed UI

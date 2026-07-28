@@ -7,6 +7,7 @@ type VersionAuthority = {
   version: string;
   windowsMsiVersion: string;
   runtimeProtocolVersion: number;
+  shopRegistryFormatVersion: number;
 };
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
@@ -31,6 +32,20 @@ const runtimeProtocol = readFileSync(
 const protocolVersion = /RUNTIME_PROTOCOL_VERSION:\s*u8\s*=\s*(\d+)/.exec(
   runtimeProtocol,
 )?.[1];
+const shopRegistry = readFileSync(
+  resolve(root, "src", "lib", "shops", "index.ts"),
+  "utf8",
+);
+const shopRegistryFormatVersion =
+  /SHOP_REGISTRY_FORMAT_VERSION\s*=\s*(\d+)/.exec(shopRegistry)?.[1];
+const migrationCoordinator = readFileSync(
+  resolve(root, "src-tauri", "src", "migration_coordinator.rs"),
+  "utf8",
+);
+const nativeShopRegistryFormatVersion =
+  /const REGISTRY_FORMAT_VERSION:\s*u8\s*=\s*(\d+)/.exec(
+    migrationCoordinator,
+  )?.[1];
 
 const observed = [
   ["package.json", packageVersion.version],
@@ -83,8 +98,22 @@ if (Number(protocolVersion) !== authority.runtimeProtocolVersion) {
   );
   failed = true;
 }
+if (Number(shopRegistryFormatVersion) !== authority.shopRegistryFormatVersion) {
+  console.error(
+    `shop registry TypeScript authority: expected ${authority.shopRegistryFormatVersion}, found ${shopRegistryFormatVersion ?? "missing"}`,
+  );
+  failed = true;
+}
+if (
+  Number(nativeShopRegistryFormatVersion) !== authority.shopRegistryFormatVersion
+) {
+  console.error(
+    `shop registry native authority: expected ${authority.shopRegistryFormatVersion}, found ${nativeShopRegistryFormatVersion ?? "missing"}`,
+  );
+  failed = true;
+}
 
 if (failed) process.exit(1);
 console.log(
-  `SahelFlow ${authority.version}; MSI ${authority.windowsMsiVersion}; runtime protocol ${authority.runtimeProtocolVersion}; authority synchronized`,
+  `SahelFlow ${authority.version}; MSI ${authority.windowsMsiVersion}; runtime protocol ${authority.runtimeProtocolVersion}; shop registry ${authority.shopRegistryFormatVersion}; authority synchronized`,
 );
