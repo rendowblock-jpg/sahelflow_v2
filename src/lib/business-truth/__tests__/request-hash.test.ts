@@ -51,4 +51,21 @@ describe("businessCommandRequestHash", () => {
       businessCommandRequestHash(command({ nested: { gamma: "x", beta: true }, alpha: 1 })),
     );
   });
+
+  it("orders canonically equivalent Unicode spellings by code unit, not locale", () => {
+    const composed = "\u00e9";
+    const decomposed = "e\u0301";
+    const first = Object.fromEntries([
+      [composed, "composed"],
+      [decomposed, "decomposed"],
+    ]);
+    const second = Object.fromEntries([
+      [decomposed, "decomposed"],
+      [composed, "composed"],
+    ]);
+
+    expect(businessCommandRequestHash(command(first))).toBe(
+      businessCommandRequestHash(command(second)),
+    );
+  });
 });
