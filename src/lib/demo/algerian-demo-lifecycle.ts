@@ -1,5 +1,6 @@
 import "server-only";
 
+import { BUSINESS_ENVELOPE_SECRET_KEY } from "@/lib/business-truth/envelope-key";
 import { db, type DbClient } from "@/lib/db";
 import {
   clearAlgerianDemoData,
@@ -98,12 +99,12 @@ async function countIndependentExtractionMetrics(
  * Count seller-owned state that must never be mixed with the evaluation dataset.
  *
  * Auth/session rows, security audit entries, reference-only WilayaRiskProfile
- * rows and harmless preference Settings belong to the installed shell rather
- * than an active shop's sample business records. Business entities, sequence
- * counters, independent extraction analytics, credentials, integrations,
- * storefronts, automations, reusable messaging, current/legacy phone-risk data
- * and effectful report Settings are included even when the visible catalog is
- * otherwise empty.
+ * rows, the internal wrapped business-envelope key and harmless preference
+ * Settings belong to the installed shell rather than an active shop's sample
+ * business records. Business entities, sequence counters, independent extraction
+ * analytics, seller credentials, integrations, storefronts, automations,
+ * reusable messaging, current/legacy phone-risk data and effectful report
+ * Settings are included even when the visible catalog is otherwise empty.
  */
 async function countNonDemoSellerState(client: DbClient): Promise<number> {
   const counts = await Promise.all([
@@ -123,7 +124,12 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     client.cannedResponse.count({ where: { id: outsideDemo } }),
     client.whatsAppTemplate.count({ where: { id: outsideDemo } }),
     client.integration.count({ where: { id: outsideDemo } }),
-    client.secret.count({ where: { id: outsideDemo } }),
+    client.secret.count({
+      where: {
+        id: outsideDemo,
+        key: { not: BUSINESS_ENVELOPE_SECRET_KEY },
+      },
+    }),
     client.aiChatSession.count({ where: { id: outsideDemo } }),
     countIndependentExtractionMetrics(client),
     client.counter.count(),
