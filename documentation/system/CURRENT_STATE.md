@@ -303,6 +303,9 @@ connected planes without replacing canonical desktop authority.
 
 ## Immediate next boundary
 
+The superseded runtime boundary was: **Launch the release-verified standalone server on pinned Node.js**.
+Internal.8 achieved that mechanism; the phrase remains for historical continuity.
+
 Internal.13 release verification and the next Golden COD vertical are independent
 lanes once the source candidate is frozen on protected `main`:
 
