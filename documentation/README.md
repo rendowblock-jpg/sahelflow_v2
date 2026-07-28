@@ -2,6 +2,8 @@
 
 > **Status:** Active documentation entry point
 > **Documentation-reset merge:** PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`
+> **Protected-main Internal.11 signed checkpoint:**
+> `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
 > **Protected-main Session 1 package checkpoint:** PR #171 at
 > `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`
 > **Milestone source request:** `1.0.0-internal.12` / MSI `1.0.0.12`; not signed
