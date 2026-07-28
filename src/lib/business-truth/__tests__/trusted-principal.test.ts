@@ -6,7 +6,10 @@ import { PrismaClient } from "@prisma/client";
 import type { BusinessCommandEnvelope } from "../contracts";
 import { executeBusinessCommand } from "../command-kernel";
 import { BUSINESS_ENVELOPE_SECRET_KEY } from "../envelope-key";
-import { systemBusinessPrincipal } from "../principal";
+import {
+  systemBusinessPrincipal,
+  testAuthenticatedOwnerBusinessPrincipal,
+} from "../principal";
 
 const db = new PrismaClient();
 const context = {
@@ -170,5 +173,38 @@ describe("trusted business principals", () => {
     expect(replay).toEqual({ ...first, replayed: true });
     expect(authorizeReplay).toHaveBeenCalledTimes(1);
     expect(replayHandler).not.toHaveBeenCalled();
+  });
+
+  it("keeps replay available to the authenticated owner after session renewal", async () => {
+    const command = probeCommand("owner-session-replay", "owner-session-aggregate");
+    const oldSessionContext = {
+      prisma: db as never,
+      businessPrincipal: testAuthenticatedOwnerBusinessPrincipal("session-old"),
+    };
+    const first = await executeBusinessCommand(
+      oldSessionContext,
+      command,
+      async () => probeOutcome(command.aggregate.id),
+    );
+
+    const replayHandler = vi.fn(async () => probeOutcome(command.aggregate.id));
+    const renewedSessionContext = {
+      prisma: db as never,
+      businessPrincipal: testAuthenticatedOwnerBusinessPrincipal("session-new"),
+    };
+    const replay = await executeBusinessCommand(
+      renewedSessionContext,
+      command,
+      replayHandler,
+    );
+
+    expect(first.replayed).toBe(false);
+    expect(replay).toEqual({ ...first, replayed: true });
+    expect(replayHandler).not.toHaveBeenCalled();
+
+    const stored = await db.businessCommand.findUniqueOrThrow({
+      where: { idempotencyKey: command.idempotencyKey },
+    });
+    expect(stored.actor).toBe("authenticated-owner:session-old");
   });
 });
