@@ -118,20 +118,33 @@ public static class SahelFlowUiWindow
 
 function Get-BusinessIdentity {
     $registry = Read-JsonFile -Path $registryPath
-    if ($null -eq $registry -or $registry.revision -lt 1 -or [string]::IsNullOrWhiteSpace($registry.activeShopId)) {
+    if (
+        $null -eq $registry -or
+        $registry.formatVersion -ne 2 -or
+        $registry.revision -lt 1 -or
+        [string]$registry.workspaceId -notmatch '^[0-9a-f]{32}$' -or
+        [string]$registry.installationId -notmatch '^[0-9a-f]{32}$' -or
+        [string]::IsNullOrWhiteSpace($registry.activeShopId)
+    ) {
         throw "Installed UI verification could not resolve the active shop registry."
     }
     $activeShop = @($registry.shops | Where-Object { $_.id -eq $registry.activeShopId })
     if ($activeShop.Count -ne 1) {
         throw "Installed UI verification did not resolve exactly one active shop."
     }
+    if ([string]$activeShop[0].incarnationId -notmatch '^[0-9a-f]{32}$') {
+        throw "Installed UI verification did not resolve a valid shop incarnation."
+    }
     $databasePath = Join-Path (Join-Path $roamingRoot "shops") $activeShop[0].databaseFile
     if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) {
         throw "Installed UI verification could not find the active shop database."
     }
     return [pscustomobject]@{
+        workspaceId = [string]$registry.workspaceId
+        installationId = [string]$registry.installationId
         registryRevision = [int64]$registry.revision
         activeShopId = [string]$registry.activeShopId
+        shopIncarnationId = [string]$activeShop[0].incarnationId
         registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
         databasePath = $databasePath
         databaseLength = (Get-Item -LiteralPath $databasePath).Length
@@ -441,8 +454,11 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
 
     $current = Get-BusinessIdentity
     if (
+        $current.workspaceId -ne $baseline.workspaceId -or
+        $current.installationId -ne $baseline.installationId -or
         $current.registryRevision -ne $baseline.registryRevision -or
         $current.activeShopId -ne $baseline.activeShopId -or
+        $current.shopIncarnationId -ne $baseline.shopIncarnationId -or
         $current.registrySha256 -ne $baseline.registrySha256 -or
         $current.databasePath -ne $baseline.databasePath -or
         $current.databaseLength -ne $baseline.databaseLength -or

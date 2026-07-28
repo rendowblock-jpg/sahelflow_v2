@@ -137,7 +137,11 @@ export async function GET(request: Request) {
   const expectedToken = process.env.SF_RUNTIME_TOKEN;
   const instanceId = process.env.SF_RUNTIME_INSTANCE_ID;
   const runtimePort = process.env.SF_RUNTIME_PORT;
+  const workspaceId = process.env.SF_WORKSPACE_ID;
+  const installationId = process.env.SF_INSTALLATION_ID;
   const shopId = process.env.SF_ACTIVE_SHOP_ID;
+  const shopIncarnationId = process.env.SF_SHOP_INCARNATION_ID;
+  const databaseFileId = process.env.SF_DATABASE_FILE_ID;
   const registryRevision = process.env.SF_REGISTRY_REVISION;
   const migrationSetSha256 = process.env.SF_MIGRATION_SET_SHA256;
   const authMode = process.env[AUTH_MODE_ENV];
@@ -147,7 +151,11 @@ export async function GET(request: Request) {
     !expectedToken ||
     !instanceId ||
     !runtimePort ||
+    !/^[0-9a-f]{32}$/i.test(workspaceId ?? "") ||
+    !/^[0-9a-f]{32}$/i.test(installationId ?? "") ||
     !shopId ||
+    !/^[0-9a-f]{32}$/i.test(shopIncarnationId ?? "") ||
+    !databaseFileId ||
     !registryRevision ||
     !/^[0-9a-f]{64}$/i.test(migrationSetSha256 ?? "") ||
     (authMode !== AUTH_MODE_SETUP && authMode !== AUTH_MODE_CONFIGURED) ||
@@ -218,7 +226,11 @@ export async function GET(request: Request) {
     processId: process.pid,
     appVersion: process.env.APP_VERSION ?? "unknown",
     port: Number.parseInt(runtimePort, 10),
+    workspaceId,
+    installationId,
     shopId,
+    shopIncarnationId,
+    databaseFileId,
     registryRevision: Number.parseInt(registryRevision, 10),
     migrationSetSha256,
     authMode,

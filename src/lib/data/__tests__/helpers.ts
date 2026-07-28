@@ -13,7 +13,10 @@ import type { ShopContext } from "@/lib/shops/context";
 process.env.SF_MASTER_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 export const TEST_SHOP_CONTEXT: ShopContext = Object.freeze({
+  workspaceId: "a".repeat(32),
+  installationId: "b".repeat(32),
   shopId: "test",
+  shopIncarnationId: "c".repeat(32),
   registryRevision: 1,
   databaseFileId: "test.db",
   migrationSetSha256: "0".repeat(64),

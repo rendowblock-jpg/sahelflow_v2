@@ -1,3 +1,4 @@
+use crate::migration_coordinator::ActiveShopAuthority;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::{Error as IoError, ErrorKind, Read, Write};
@@ -34,7 +35,33 @@ pub struct RuntimeProtocol {
     app_token: String,
     sidecar_token: String,
     auth_mode: String,
+    shop_authority: RuntimeShopAuthority,
     manifest_path: PathBuf,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RuntimeShopAuthority {
+    workspace_id: String,
+    installation_id: String,
+    shop_id: String,
+    shop_incarnation_id: String,
+    database_file_id: String,
+    registry_revision: u64,
+    migration_set_sha256: String,
+}
+
+impl From<&ActiveShopAuthority> for RuntimeShopAuthority {
+    fn from(authority: &ActiveShopAuthority) -> Self {
+        Self {
+            workspace_id: authority.workspace_id.clone(),
+            installation_id: authority.installation_id.clone(),
+            shop_id: authority.shop_id.clone(),
+            shop_incarnation_id: authority.shop_incarnation_id.clone(),
+            database_file_id: authority.database_file_id.clone(),
+            registry_revision: authority.registry_revision,
+            migration_set_sha256: authority.migration_set_sha256.clone(),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -71,7 +98,11 @@ struct RuntimeReadiness {
     process_id: u32,
     app_version: String,
     port: u16,
+    workspace_id: String,
+    installation_id: String,
     shop_id: String,
+    shop_incarnation_id: String,
+    database_file_id: String,
     registry_revision: u64,
     migration_set_sha256: String,
     auth_mode: String,
@@ -91,7 +122,11 @@ struct RuntimeChecks {
 impl RuntimeProtocol {
     /// Ask the OS for an available loopback port and generate independent
     /// cryptographic launch identity and bearer credential.
-    pub fn allocate(app_data_dir: &Path, auth_mode: &str) -> Result<Self, IoError> {
+    pub fn allocate(
+        app_data_dir: &Path,
+        auth_mode: &str,
+        authority: &ActiveShopAuthority,
+    ) -> Result<Self, IoError> {
         let app_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
         let sidecar_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
         let app_port = app_listener.local_addr()?.port();
@@ -106,6 +141,7 @@ impl RuntimeProtocol {
             app_token: random_hex(32)?,
             sidecar_token: random_hex(32)?,
             auth_mode: auth_mode.to_string(),
+            shop_authority: RuntimeShopAuthority::from(authority),
             manifest_path: app_data_dir.join(MANIFEST_FILE),
         })
     }
@@ -304,7 +340,13 @@ impl RuntimeProtocol {
             }
         }
 
-        validate_readiness_response(&response, &self.instance_id, self.app_port, &self.auth_mode)
+        validate_readiness_response(
+            &response,
+            &self.instance_id,
+            self.app_port,
+            &self.auth_mode,
+            &self.shop_authority,
+        )
     }
 
     fn probe_diagnostic_path(&self) -> Option<PathBuf> {
@@ -488,6 +530,7 @@ fn validate_readiness_response(
     expected_instance_id: &str,
     expected_port: u16,
     expected_auth_mode: &str,
+    expected_authority: &RuntimeShopAuthority,
 ) -> Result<(), String> {
     let header_end = response_header_end(response)?
         .ok_or_else(|| "readiness response did not contain complete HTTP headers".to_string())?;
@@ -539,19 +582,17 @@ fn validate_readiness_response(
     if readiness.port != expected_port {
         return Err("readiness response reported the wrong loopback port".to_string());
     }
-    if readiness.shop_id.trim().is_empty() {
-        return Err("readiness response omitted the active shop".to_string());
-    }
-    if readiness.registry_revision == 0 {
-        return Err("readiness response reported an invalid registry revision".to_string());
-    }
-    if readiness.migration_set_sha256.len() != 64
-        || !readiness
-            .migration_set_sha256
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit())
-    {
-        return Err("readiness response reported an invalid migration digest".to_string());
+    let reported_authority = RuntimeShopAuthority {
+        workspace_id: readiness.workspace_id,
+        installation_id: readiness.installation_id,
+        shop_id: readiness.shop_id,
+        shop_incarnation_id: readiness.shop_incarnation_id,
+        database_file_id: readiness.database_file_id,
+        registry_revision: readiness.registry_revision,
+        migration_set_sha256: readiness.migration_set_sha256,
+    };
+    if reported_authority != *expected_authority {
+        return Err("readiness response did not bind the exact desktop shop authority".to_string());
     }
     if readiness.auth_mode != expected_auth_mode {
         return Err("readiness response reported the wrong authentication mode".to_string());
@@ -574,17 +615,37 @@ mod tests {
     use std::sync::mpsc;
     use std::thread;
 
+    fn authority() -> ActiveShopAuthority {
+        ActiveShopAuthority {
+            workspace_id: "a".repeat(32),
+            installation_id: "b".repeat(32),
+            shop_id: "default".to_string(),
+            shop_incarnation_id: "c".repeat(32),
+            database_file_id: "dev.db".to_string(),
+            database_path: PathBuf::from("dev.db"),
+            registry_revision: 1,
+            migration_set_sha256: "f".repeat(64),
+        }
+    }
+
+    fn runtime_authority() -> RuntimeShopAuthority {
+        RuntimeShopAuthority::from(&authority())
+    }
+
     fn valid_body(instance: &str, port: u16, auth_mode: &str) -> String {
         format!(
-            "{{\"protocolVersion\":1,\"status\":\"ready\",\"instanceId\":\"{instance}\",\"processId\":42,\"appVersion\":\"1.0.0-internal.3\",\"port\":{port},\"shopId\":\"default\",\"registryRevision\":1,\"migrationSetSha256\":\"{}\",\"authMode\":\"{auth_mode}\",\"checks\":{{\"app\":\"ready\",\"database\":\"ready\",\"migration\":\"ready\",\"registry\":\"ready\",\"shop\":\"ready\",\"auth\":\"ready\"}}}}",
+            "{{\"protocolVersion\":1,\"status\":\"ready\",\"instanceId\":\"{instance}\",\"processId\":42,\"appVersion\":\"1.0.0-internal.3\",\"port\":{port},\"workspaceId\":\"{}\",\"installationId\":\"{}\",\"shopId\":\"default\",\"shopIncarnationId\":\"{}\",\"databaseFileId\":\"dev.db\",\"registryRevision\":1,\"migrationSetSha256\":\"{}\",\"authMode\":\"{auth_mode}\",\"checks\":{{\"app\":\"ready\",\"database\":\"ready\",\"migration\":\"ready\",\"registry\":\"ready\",\"shop\":\"ready\",\"auth\":\"ready\"}}}}",
+            "a".repeat(32),
+            "b".repeat(32),
+            "c".repeat(32),
             "f".repeat(64)
         )
     }
 
     #[test]
     fn allocation_uses_loopback_port_and_non_serialized_random_secrets() {
-        let protocol =
-            RuntimeProtocol::allocate(Path::new("."), "configured").expect("runtime protocol");
+        let protocol = RuntimeProtocol::allocate(Path::new("."), "configured", &authority())
+            .expect("runtime protocol");
 
         assert_ne!(protocol.app_port(), 0);
         assert_ne!(protocol.sidecar_port(), 0);
@@ -621,18 +682,58 @@ mod tests {
         ]
         .concat();
 
-        assert!(validate_readiness_response(&valid, "instance-a", 49152, "configured").is_ok());
-        assert!(validate_readiness_response(&valid, "instance-a", 49152, "setup").is_err());
-        assert!(
-            validate_readiness_response(&wrong_instance, "instance-a", 49152, "configured")
-                .is_err()
-        );
-        assert!(
-            validate_readiness_response(&unauthorized, "instance-a", 49152, "configured").is_err()
-        );
-        assert!(
-            validate_readiness_response(b"not http", "instance-a", 49152, "configured").is_err()
-        );
+        let expected_authority = runtime_authority();
+        assert!(validate_readiness_response(
+            &valid,
+            "instance-a",
+            49152,
+            "configured",
+            &expected_authority,
+        )
+        .is_ok());
+        assert!(validate_readiness_response(
+            &valid,
+            "instance-a",
+            49152,
+            "setup",
+            &expected_authority,
+        )
+        .is_err());
+        assert!(validate_readiness_response(
+            &wrong_instance,
+            "instance-a",
+            49152,
+            "configured",
+            &expected_authority,
+        )
+        .is_err());
+        assert!(validate_readiness_response(
+            &unauthorized,
+            "instance-a",
+            49152,
+            "configured",
+            &expected_authority,
+        )
+        .is_err());
+        assert!(validate_readiness_response(
+            b"not http",
+            "instance-a",
+            49152,
+            "configured",
+            &expected_authority,
+        )
+        .is_err());
+
+        let mut wrong_authority = expected_authority.clone();
+        wrong_authority.workspace_id = "d".repeat(32);
+        assert!(validate_readiness_response(
+            &valid,
+            "instance-a",
+            49152,
+            "configured",
+            &wrong_authority,
+        )
+        .is_err());
     }
 
     #[test]
@@ -667,6 +768,7 @@ mod tests {
             app_token: "b".repeat(64),
             sidecar_token: "c".repeat(64),
             auth_mode: "configured".to_string(),
+            shop_authority: runtime_authority(),
             manifest_path: std::env::temp_dir().join("unused-runtime-endpoint.json"),
         };
 
@@ -693,8 +795,14 @@ mod tests {
             body.to_vec(),
         ]
         .concat();
-        let failure = validate_readiness_response(&response, "instance-a", 49152, "configured")
-            .expect_err("blocked readiness must fail");
+        let failure = validate_readiness_response(
+            &response,
+            "instance-a",
+            49152,
+            "configured",
+            &runtime_authority(),
+        )
+        .expect_err("blocked readiness must fail");
         assert!(failure.contains("HTTP 503"));
         assert!(failure.contains("RUNTIME_AUTH_MISMATCH"));
     }
@@ -711,6 +819,7 @@ mod tests {
             "instance-a",
             49152,
             "configured",
+            &runtime_authority(),
         )
         .is_err());
     }
@@ -723,7 +832,8 @@ mod tests {
             random_hex(8).expect("test suffix")
         ));
         fs::create_dir_all(&directory).expect("create test directory");
-        let protocol = RuntimeProtocol::allocate(&directory, "setup").expect("runtime protocol");
+        let protocol =
+            RuntimeProtocol::allocate(&directory, "setup", &authority()).expect("runtime protocol");
 
         let started = Instant::now();
         let outcome = protocol

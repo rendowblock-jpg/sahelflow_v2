@@ -38,7 +38,11 @@ describe("GET /api/internal/runtime-ready", () => {
     process.env.SF_RUNTIME_INSTANCE_ID = INSTANCE_ID;
     process.env.SF_RUNTIME_PORT = "49152";
     process.env.APP_VERSION = "4.1.0-test";
+    process.env.SF_WORKSPACE_ID = "a".repeat(32);
+    process.env.SF_INSTALLATION_ID = "b".repeat(32);
     process.env.SF_ACTIVE_SHOP_ID = "default";
+    process.env.SF_SHOP_INCARNATION_ID = "c".repeat(32);
+    process.env.SF_DATABASE_FILE_ID = "dev.db";
     process.env.SF_REGISTRY_REVISION = "7";
     process.env.SF_MIGRATION_SET_SHA256 = "f".repeat(64);
     process.env.SF_AUTH_MODE = "configured";
@@ -52,7 +56,11 @@ describe("GET /api/internal/runtime-ready", () => {
     delete process.env.SF_RUNTIME_INSTANCE_ID;
     delete process.env.SF_RUNTIME_PORT;
     delete process.env.APP_VERSION;
+    delete process.env.SF_WORKSPACE_ID;
+    delete process.env.SF_INSTALLATION_ID;
     delete process.env.SF_ACTIVE_SHOP_ID;
+    delete process.env.SF_SHOP_INCARNATION_ID;
+    delete process.env.SF_DATABASE_FILE_ID;
     delete process.env.SF_REGISTRY_REVISION;
     delete process.env.SF_MIGRATION_SET_SHA256;
     delete process.env.SF_AUTH_MODE;
@@ -160,7 +168,11 @@ describe("GET /api/internal/runtime-ready", () => {
       processId: process.pid,
       appVersion: "4.1.0-test",
       port: 49152,
+      workspaceId: "a".repeat(32),
+      installationId: "b".repeat(32),
       shopId: "default",
+      shopIncarnationId: "c".repeat(32),
+      databaseFileId: "dev.db",
       registryRevision: 7,
       migrationSetSha256: "f".repeat(64),
       authMode: "configured",
