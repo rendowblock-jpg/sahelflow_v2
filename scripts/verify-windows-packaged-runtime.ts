@@ -189,19 +189,24 @@ try {
   const runtimeToken = randomBytes(32).toString("hex");
   const appToken = randomBytes(32).toString("hex");
   const sidecarToken = randomBytes(32).toString("hex");
+  const workspaceId = randomBytes(16).toString("hex");
+  const installationId = randomBytes(16).toString("hex");
+  const incarnationId = randomBytes(16).toString("hex");
   const databaseFile = basename(databasePath);
   mkdirSync(dataDir, { recursive: true });
   writeFileSync(
     resolve(dataDir, "shop-registry.json"),
     `${JSON.stringify(
       {
-        formatVersion: 1,
+        formatVersion: 2,
         revision: 1,
-        installationId: "windows-packaged-runtime-smoke",
+        workspaceId,
+        installationId,
         activeShopId: "test",
         shops: [
           {
             id: "test",
+            incarnationId,
             name: "Windows Runtime Smoke",
             databaseFile,
             icon: null,
@@ -237,7 +242,11 @@ try {
     SF_RUNTIME_PORT: String(port),
     SF_RUNTIME_MANIFEST_PATH: resolve(stage, "runtime-endpoint.json"),
     SF_MIGRATION_STATUS: "ready",
+    SF_WORKSPACE_ID: workspaceId,
+    SF_INSTALLATION_ID: installationId,
     SF_ACTIVE_SHOP_ID: "test",
+    SF_SHOP_INCARNATION_ID: incarnationId,
+    SF_DATABASE_FILE_ID: databaseFile,
     SF_REGISTRY_REVISION: "1",
     SF_MIGRATION_SET_SHA256: "0".repeat(64),
     WHATSAPP_SIDECAR_URL: `http://127.0.0.1:${sidecarPort}`,
@@ -289,7 +298,11 @@ try {
     readyBody.status !== "ready" ||
     readyBody.instanceId !== instanceId ||
     readyBody.appVersion !== authority.version ||
+    readyBody.workspaceId !== workspaceId ||
+    readyBody.installationId !== installationId ||
     readyBody.shopId !== "test" ||
+    readyBody.shopIncarnationId !== incarnationId ||
+    readyBody.databaseFileId !== databaseFile ||
     readyBody.registryRevision !== 1 ||
     readyBody.migrationSetSha256 !== "0".repeat(64) ||
     !checks ||

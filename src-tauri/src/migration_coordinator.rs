@@ -10,7 +10,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const REGISTRY_FILE: &str = "shop-registry.json";
 const LEGACY_REGISTRY_FILE: &str = "app-meta.json";
-const REGISTRY_FORMAT_VERSION: u8 = 1;
+const LEGACY_REGISTRY_FORMAT_VERSION: u8 = 1;
+const REGISTRY_FORMAT_VERSION: u8 = 2;
 const JOURNAL_FORMAT_VERSION: u8 = 1;
 const COMPATIBILITY_REPORT_FORMAT_VERSION: u8 = 1;
 const MIGRATION_SET_HASH_DOMAIN: &[u8] = b"sahelflow-migration-set-v1\n";
@@ -19,6 +20,8 @@ const MIGRATION_SET_HASH_DOMAIN: &[u8] = b"sahelflow-migration-set-v1\n";
 #[serde(rename_all = "camelCase")]
 struct ShopRecord {
     id: String,
+    #[serde(default)]
+    incarnation_id: String,
     name: String,
     database_file: String,
     icon: Option<String>,
@@ -30,6 +33,8 @@ struct ShopRecord {
 struct ShopRegistry {
     format_version: u8,
     revision: u64,
+    #[serde(default)]
+    workspace_id: String,
     installation_id: String,
     active_shop_id: Option<String>,
     shops: Vec<ShopRecord>,
@@ -171,7 +176,11 @@ enum SchemaItem {
 
 #[derive(Clone, Debug)]
 pub struct ActiveShopAuthority {
+    pub workspace_id: String,
+    pub installation_id: String,
     pub shop_id: String,
+    pub shop_incarnation_id: String,
+    pub database_file_id: String,
     pub database_path: PathBuf,
     pub registry_revision: u64,
     pub migration_set_sha256: String,
@@ -564,7 +573,11 @@ pub fn active_authority(
         .find(|shop| &shop.id == active_id)
         .ok_or_else(|| IoError::new(ErrorKind::InvalidData, "active shop is not registered"))?;
     Ok(ActiveShopAuthority {
+        workspace_id: registry.workspace_id.clone(),
+        installation_id: registry.installation_id.clone(),
         shop_id: shop.id.clone(),
+        shop_incarnation_id: shop.incarnation_id.clone(),
+        database_file_id: shop.database_file.clone(),
         database_path: app_data_dir.join("shops").join(&shop.database_file),
         registry_revision: registry.revision,
         migration_set_sha256: migration_set_sha256.to_string(),
@@ -908,7 +921,19 @@ fn load_or_import_registry(
 ) -> Result<ShopRegistry, Box<dyn std::error::Error>> {
     let registry_path = app_data_dir.join(REGISTRY_FILE);
     if registry_path.exists() {
-        return read_json(&registry_path);
+        let mut registry: ShopRegistry = read_json(&registry_path)?;
+        if registry.format_version == LEGACY_REGISTRY_FORMAT_VERSION {
+            registry.format_version = REGISTRY_FORMAT_VERSION;
+            registry.workspace_id = random_hex(16);
+            for shop in &mut registry.shops {
+                shop.incarnation_id = random_hex(16);
+            }
+            registry.revision = registry.revision.checked_add(1).ok_or_else(|| {
+                IoError::new(ErrorKind::InvalidData, "shop registry revision overflow")
+            })?;
+            write_json_atomic(&registry_path, &registry)?;
+        }
+        return Ok(registry);
     }
     let legacy_path = app_data_dir.join(LEGACY_REGISTRY_FILE);
     let registry = if legacy_path.exists() {
@@ -926,6 +951,7 @@ fn load_or_import_registry(
                     .into_owned();
                 Ok(ShopRecord {
                     id: shop.id,
+                    incarnation_id: random_hex(16),
                     name: shop.name,
                     database_file,
                     icon: shop.icon,
@@ -938,6 +964,7 @@ fn load_or_import_registry(
         ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 1,
+            workspace_id: random_hex(16),
             installation_id: random_hex(16),
             active_shop_id: legacy
                 .active_shop_id
@@ -948,6 +975,7 @@ fn load_or_import_registry(
         ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 0,
+            workspace_id: random_hex(16),
             installation_id: random_hex(16),
             active_shop_id: None,
             shops: Vec::new(),
@@ -971,6 +999,7 @@ fn ensure_initial_shop(
     }
     registry.shops.push(ShopRecord {
         id: "default".to_string(),
+        incarnation_id: random_hex(16),
         name: "Ma Boutique".to_string(),
         database_file,
         icon: None,
@@ -998,6 +1027,14 @@ fn validate_registry(
         )
         .into());
     }
+    if !valid_identity(&registry.workspace_id) {
+        return Err(IoError::new(ErrorKind::InvalidData, "workspace identity is invalid").into());
+    }
+    if !valid_identity(&registry.installation_id) {
+        return Err(
+            IoError::new(ErrorKind::InvalidData, "installation identity is invalid").into(),
+        );
+    }
     let active = registry
         .active_shop_id
         .as_ref()
@@ -1018,6 +1055,13 @@ fn validate_registry(
             return Err(
                 IoError::new(ErrorKind::InvalidData, "shop registry contains duplicates").into(),
             );
+        }
+        if !valid_identity(&shop.incarnation_id) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "shop incarnation identity is invalid",
+            )
+            .into());
         }
         if !valid_database_file(&shop.database_file) {
             return Err(
@@ -1256,6 +1300,10 @@ fn valid_shop_id(value: &str) -> bool {
             .iter()
             .skip(1)
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
+}
+
+fn valid_identity(value: &str) -> bool {
+    value.len() == 32 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn valid_database_file(value: &str) -> bool {
@@ -1749,6 +1797,10 @@ mod tests {
             prepare_installation(&app_data, &resources).expect("prepare fresh installation");
 
         assert_eq!(authority.shop_id, "default");
+        assert!(valid_identity(&authority.workspace_id));
+        assert!(valid_identity(&authority.installation_id));
+        assert!(valid_identity(&authority.shop_incarnation_id));
+        assert_eq!(authority.database_file_id, "dev.db");
         assert!(authority.database_path.is_file());
         assert!(app_data.join("shop-registry.json").is_file());
         assert!(app_data.join("system/shop-template.db").is_file());
@@ -1770,6 +1822,70 @@ mod tests {
         }
 
         drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn upgrades_v1_registry_identity_without_replacing_founder_data() {
+        let root = test_root("registry-v1-upgrade");
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        fs::create_dir_all(app_data.join("shops")).expect("create shops directory");
+        let founder_database =
+            Connection::open(app_data.join("shops/dev.db")).expect("create founder database");
+        founder_database
+            .execute_batch(
+                "CREATE TABLE Business (id TEXT PRIMARY KEY, name TEXT NOT NULL);\n\
+                 INSERT INTO Business (id, name) VALUES ('founder', 'Preserved Founder');",
+            )
+            .expect("seed founder row");
+        drop(founder_database);
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE IF NOT EXISTS Business (id TEXT PRIMARY KEY, name TEXT NOT NULL);",
+        );
+        let installation_id = "1".repeat(32);
+        let legacy_registry = serde_json::json!({
+            "formatVersion": LEGACY_REGISTRY_FORMAT_VERSION,
+            "revision": 7,
+            "installationId": installation_id,
+            "activeShopId": "default",
+            "shops": [{
+                "id": "default",
+                "name": "Ma Boutique",
+                "databaseFile": "dev.db",
+                "icon": null,
+                "createdAt": "2026-01-01T00:00:00Z"
+            }]
+        });
+        write_json_atomic(&app_data.join(REGISTRY_FILE), &legacy_registry)
+            .expect("write v1 registry");
+
+        let authority = prepare_installation(&app_data, &resources).expect("upgrade v1 registry");
+        let upgraded: ShopRegistry =
+            read_json(&app_data.join(REGISTRY_FILE)).expect("read upgraded registry");
+
+        assert_eq!(upgraded.format_version, REGISTRY_FORMAT_VERSION);
+        assert_eq!(upgraded.revision, 8);
+        assert_eq!(upgraded.installation_id, installation_id);
+        assert!(valid_identity(&upgraded.workspace_id));
+        assert!(valid_identity(&upgraded.shops[0].incarnation_id));
+        assert_eq!(authority.workspace_id, upgraded.workspace_id);
+        assert_eq!(
+            authority.shop_incarnation_id,
+            upgraded.shops[0].incarnation_id
+        );
+        assert!(authority.database_path.is_file());
+        let preserved_name: String = Connection::open(&authority.database_path)
+            .expect("open preserved founder database")
+            .query_row(
+                "SELECT name FROM Business WHERE id = 'founder'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("read preserved founder row");
+        assert_eq!(preserved_name, "Preserved Founder");
         fs::remove_dir_all(root).expect("remove test root");
     }
 
@@ -1887,6 +2003,7 @@ mod tests {
             read_json(&app_data.join(REGISTRY_FILE)).expect("read registry");
         registry.shops.push(ShopRecord {
             id: "second".to_string(),
+            incarnation_id: random_hex(16),
             name: "Second Shop".to_string(),
             database_file: "second.db".to_string(),
             icon: None,
@@ -1971,10 +2088,12 @@ mod tests {
         let registry = ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 1,
+            workspace_id: random_hex(16),
             installation_id: random_hex(16),
             active_shop_id: Some("current".to_string()),
             shops: vec![ShopRecord {
                 id: "current".to_string(),
+                incarnation_id: random_hex(16),
                 name: "Current Seller".to_string(),
                 database_file: "current.db".to_string(),
                 icon: None,
@@ -2526,10 +2645,12 @@ mod tests {
         let registry = ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 1,
+            workspace_id: random_hex(16),
             installation_id: random_hex(16),
             active_shop_id: Some("first".to_string()),
             shops: vec![ShopRecord {
                 id: "first".to_string(),
+                incarnation_id: random_hex(16),
                 name: "First".to_string(),
                 database_file: "first.db".to_string(),
                 icon: None,
@@ -2567,10 +2688,12 @@ mod tests {
         let registry = ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 1,
+            workspace_id: random_hex(16),
             installation_id: random_hex(16),
             active_shop_id: Some("linked".to_string()),
             shops: vec![ShopRecord {
                 id: "linked".to_string(),
+                incarnation_id: random_hex(16),
                 name: "Linked".to_string(),
                 database_file: "linked.db".to_string(),
                 icon: None,

@@ -54,9 +54,10 @@ describe("atomic shop registry", () => {
     expect(getActiveShopId()).toBeNull();
 
     const registry = getRegistry();
-    expect(registry.formatVersion).toBe(1);
+    expect(registry.formatVersion).toBe(2);
     expect(registry.revision).toBe(0);
-    expect(registry.installationId).toBeTruthy();
+    expect(registry.workspaceId).toMatch(/^[0-9a-f]{32}$/);
+    expect(registry.installationId).toMatch(/^[0-9a-f]{32}$/);
     expect(existsSync(paths.registryPath)).toBe(true);
   });
 
@@ -73,6 +74,7 @@ describe("atomic shop registry", () => {
     const shop = createShop({ name: "Boutique Elegante" });
 
     expect(shop.id).toBe("boutique-elegante");
+    expect(shop.incarnationId).toMatch(/^[0-9a-f]{32}$/);
     expect(shop.databaseFile).toBe("boutique-elegante.db");
     expect(readFileSync(`${paths.shopsDir}/${shop.databaseFile}`, "utf8")).toBe(
       "migrated-template",
@@ -104,6 +106,22 @@ describe("atomic shop registry", () => {
     expect(getRegistry().revision).toBe(revision);
   });
 
+  it("rejects production creation and deletion outside the desktop supervisor", () => {
+    const first = createShop({ name: "First" });
+    createShop({ name: "Second" });
+    const revision = getRegistry().revision;
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(() => createShop({ name: "Blocked" })).toThrowError(
+      expect.objectContaining({ code: "SHOP_CREATE_SUPERVISOR_REQUIRED" }),
+    );
+    expect(() => deleteShop(first.id)).toThrowError(
+      expect.objectContaining({ code: "SHOP_DELETE_SUPERVISOR_REQUIRED" }),
+    );
+    expect(getRegistry().revision).toBe(revision);
+    expect(listShops()).toHaveLength(2);
+  });
+
   it("fails closed on malformed registry JSON", () => {
     writeFileSync(paths.registryPath, "{broken");
     expect(() => listShops()).toThrowError(ShopRegistryError);
@@ -114,13 +132,15 @@ describe("atomic shop registry", () => {
     writeFileSync(
       paths.registryPath,
       JSON.stringify({
-        formatVersion: 1,
+        formatVersion: 2,
         revision: 1,
-        installationId: "installation-a",
+        workspaceId: "a".repeat(32),
+        installationId: "b".repeat(32),
         activeShopId: "missing",
         shops: [
           {
             id: "missing",
+            incarnationId: "c".repeat(32),
             name: "Missing",
             databaseFile: "missing.db",
             icon: null,
@@ -136,13 +156,15 @@ describe("atomic shop registry", () => {
     writeFileSync(
       paths.registryPath,
       JSON.stringify({
-        formatVersion: 1,
+        formatVersion: 2,
         revision: 1,
-        installationId: "installation-a",
+        workspaceId: "a".repeat(32),
+        installationId: "b".repeat(32),
         activeShopId: "unsafe",
         shops: [
           {
             id: "unsafe",
+            incarnationId: "c".repeat(32),
             name: "Unsafe",
             databaseFile: "..\\seller.db",
             icon: null,
@@ -186,13 +208,15 @@ describe("atomic shop registry", () => {
     writeFileSync(
       paths.registryPath,
       JSON.stringify({
-        formatVersion: 1,
+        formatVersion: 2,
         revision: 0,
-        installationId: "installation-a",
+        workspaceId: "a".repeat(32),
+        installationId: "b".repeat(32),
         activeShopId: "default",
         shops: [
           {
             id: "default",
+            incarnationId: "c".repeat(32),
             name: "Ma Boutique",
             databaseFile: "dev.db",
             icon: null,

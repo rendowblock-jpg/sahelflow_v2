@@ -28,11 +28,12 @@ import {
   shopsDir,
 } from "./paths";
 
-export const SHOP_REGISTRY_FORMAT_VERSION = 1;
+export const SHOP_REGISTRY_FORMAT_VERSION = 2;
 const MAX_SHOPS = 10;
 
 export interface Shop {
   id: string;
+  incarnationId: string;
   name: string;
   databaseFile: string;
   icon: string | null;
@@ -40,8 +41,9 @@ export interface Shop {
 }
 
 export interface ShopRegistry {
-  formatVersion: 1;
+  formatVersion: 2;
   revision: number;
+  workspaceId: string;
   installationId: string;
   activeShopId: string | null;
   shops: Shop[];
@@ -79,6 +81,14 @@ function databasePath(shop: Shop): string {
   return join(shopsDir, safeName);
 }
 
+function randomIdentity(): string {
+  return randomUUID().replaceAll("-", "");
+}
+
+function isIdentity(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{32}$/i.test(value);
+}
+
 function validateShop(value: unknown): Shop {
   if (!value || typeof value !== "object") {
     throw new ShopRegistryError("Registry contains an invalid shop", "REGISTRY_SHOP_INVALID");
@@ -87,11 +97,18 @@ function validateShop(value: unknown): Shop {
   if (!shop.id || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(shop.id)) {
     throw new ShopRegistryError("Registry contains an invalid shop ID", "REGISTRY_SHOP_ID_INVALID");
   }
+  if (!isIdentity(shop.incarnationId)) {
+    throw new ShopRegistryError(
+      `Shop ${shop.id} has an invalid incarnation identity`,
+      "REGISTRY_SHOP_INCARNATION_INVALID",
+    );
+  }
   if (!shop.name?.trim() || !shop.databaseFile || !shop.createdAt) {
     throw new ShopRegistryError(`Shop ${shop.id} is incomplete`, "REGISTRY_SHOP_INVALID");
   }
   const validated: Shop = {
     id: shop.id,
+    incarnationId: shop.incarnationId,
     name: shop.name.trim(),
     databaseFile: shop.databaseFile,
     icon: typeof shop.icon === "string" ? shop.icon : null,
@@ -115,7 +132,11 @@ function validateRegistry(value: unknown, requireFiles = true): ShopRegistry {
   if (!Number.isSafeInteger(registry.revision) || (registry.revision ?? -1) < 0) {
     throw new ShopRegistryError("Registry revision is invalid", "REGISTRY_REVISION_INVALID");
   }
-  if (!registry.installationId || !Array.isArray(registry.shops)) {
+  if (
+    !isIdentity(registry.workspaceId) ||
+    !isIdentity(registry.installationId) ||
+    !Array.isArray(registry.shops)
+  ) {
     throw new ShopRegistryError("Registry identity or shop list is missing", "REGISTRY_INVALID");
   }
 
@@ -152,6 +173,7 @@ function validateRegistry(value: unknown, requireFiles = true): ShopRegistry {
   return {
     formatVersion: SHOP_REGISTRY_FORMAT_VERSION,
     revision: registry.revision!,
+    workspaceId: registry.workspaceId,
     installationId: registry.installationId,
     activeShopId: registry.activeShopId ?? null,
     shops,
@@ -208,7 +230,8 @@ function emptyRegistry(): ShopRegistry {
   return {
     formatVersion: SHOP_REGISTRY_FORMAT_VERSION,
     revision: 0,
-    installationId: randomUUID(),
+    workspaceId: randomIdentity(),
+    installationId: randomIdentity(),
     activeShopId: null,
     shops: [],
   };
@@ -249,6 +272,7 @@ function importLegacyRegistry(): ShopRegistry {
     }
     return validateShop({
       id: shop.id,
+      incarnationId: randomIdentity(),
       name: shop.name,
       databaseFile: file,
       icon: shop.icon ?? null,
@@ -259,7 +283,8 @@ function importLegacyRegistry(): ShopRegistry {
     {
       formatVersion: SHOP_REGISTRY_FORMAT_VERSION,
       revision: 1,
-      installationId: randomUUID(),
+      workspaceId: randomIdentity(),
+      installationId: randomIdentity(),
       activeShopId: legacy.activeShopId ?? shops[0]?.id ?? null,
       shops,
     },
@@ -376,6 +401,13 @@ export function getActiveShop(): Shop | null {
 export function createShop(input: { name: string; icon?: string | null }): Shop {
   const name = input.name.trim();
   if (!name) throw new ShopRegistryError("Shop name is required", "SHOP_NAME_REQUIRED");
+  if (process.env.NODE_ENV === "production") {
+    throw new SahelFlowError(
+      "Shop creation is blocked until the desktop supervisor can own registry provisioning",
+      "SHOP_CREATE_SUPERVISOR_REQUIRED",
+      503,
+    );
+  }
 
   return withRegistryLock(() => {
     const registry = existsSync(registryPath)
@@ -387,6 +419,7 @@ export function createShop(input: { name: string; icon?: string | null }): Shop 
     const id = generateShopId(name, registry.shops);
     const shop: Shop = {
       id,
+      incarnationId: randomIdentity(),
       name,
       databaseFile: `${id}.db`,
       icon: input.icon ?? null,
@@ -412,6 +445,13 @@ export function createShop(input: { name: string; icon?: string | null }): Shop 
 }
 
 export function deleteShop(shopId: string): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new SahelFlowError(
+      "Shop deletion is blocked until the desktop supervisor can own registry recovery",
+      "SHOP_DELETE_SUPERVISOR_REQUIRED",
+      503,
+    );
+  }
   withRegistryLock(() => {
     const registry = validateRegistry(parseJson(registryPath));
     const shop = registry.shops.find((candidate) => candidate.id === shopId);
