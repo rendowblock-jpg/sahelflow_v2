@@ -8,19 +8,12 @@
  *   - redactPii(obj) → deep-clones obj, replacing sensitive or unapproved
  *     string fields with "[REDACTED]" so provider aliases cannot bypass the
  *     audit boundary.
- *   - redactError(err) → returns a NEW Error with message/stack PII-scrubbed
- *     (W3-24: prevents customer phone/email from leaking to Sentry via
- *     Prisma errors, validation messages, etc.).
+ *   - redactError(err) → returns a NEW Error with message/stack PII-scrubbed.
  *
  * Object string persistence is allowlisted rather than blocklisted. Numbers,
- * booleans and dates remain available for forensic comparisons, while only
- * explicitly operational string fields survive. This closes multilingual and
- * provider-shaped aliases such as `nom`, `adresse`, `Client` or future unknown
- * field names without requiring an exhaustive PII dictionary.
- *
- * Used by: src/lib/audit.ts, src/lib/data/order-change-service.ts,
- * src/lib/ai/chat/agent.ts (tool result persistence),
- * src/lib/api/with-error-handler.ts (Sentry capture pre-processing).
+ * booleans and dates remain available for forensic comparisons. Machine-owned
+ * identifiers and state/type/code fields survive through a semantic key rule;
+ * free-form values and unknown provider aliases are redacted by default.
  */
 
 const KEY_SEPARATOR_REGEX = /[^a-z0-9]/g;
@@ -29,7 +22,6 @@ function normalizeKey(key: string): string {
   return key.toLowerCase().replace(KEY_SEPARATOR_REGEX, "");
 }
 
-/** Keys whose values should always be redacted regardless of value shape. */
 const SENSITIVE_KEYS = new Set(
   [
     "phone",
@@ -72,38 +64,13 @@ const SENSITIVE_KEYS = new Set(
   ].map(normalizeKey),
 );
 
-/**
- * Machine-owned strings that are useful in persisted audit evidence. Free-form
- * values, seller/customer copy, provider payload aliases and unknown future
- * fields remain redacted by default.
- */
 const SAFE_STRING_KEYS = new Set(
   [
-    "id",
     "key",
-    "field",
-    "path",
-    "table",
-    "action",
-    "actionType",
-    "entity",
-    "entityId",
-    "actor",
-    "status",
-    "state",
     "from",
     "to",
-    "oldStatus",
-    "newStatus",
-    "previousStatus",
-    "nextStatus",
-    "type",
-    "kind",
-    "code",
-    "errorCode",
-    "reasonCode",
-    "source",
-    "provider",
+    "action",
+    "entity",
     "method",
     "currency",
     "operation",
@@ -112,38 +79,8 @@ const SAFE_STRING_KEYS = new Set(
     "role",
     "permission",
     "trigger",
-    "commandId",
-    "commandType",
-    "aggregateType",
-    "aggregateId",
-    "correlationId",
-    "causationId",
-    "trustedPrincipalKind",
-    "trustedPrincipalSubject",
-    "claimedActor",
-    "orderId",
-    "orderItemId",
-    "productId",
-    "productVariantId",
-    "customerId",
-    "deliveryId",
-    "returnId",
-    "refundId",
-    "reservationId",
-    "integrationId",
-    "automationId",
-    "conversationId",
-    "messageId",
-    "movementType",
-    "fromPosition",
-    "toPosition",
-    "effectType",
-    "eventType",
-    "severity",
-    "priority",
     "direction",
     "channel",
-    "modelVersion",
     "locale",
     "language",
     "format",
@@ -152,15 +89,45 @@ const SAFE_STRING_KEYS = new Set(
   ].map(normalizeKey),
 );
 
-/** Algerian local phone numbers. */
+const SAFE_MACHINE_KEY_SUFFIXES = [
+  "id",
+  "status",
+  "state",
+  "type",
+  "kind",
+  "code",
+  "source",
+  "provider",
+  "method",
+  "currency",
+  "operation",
+  "mode",
+  "scope",
+  "role",
+  "permission",
+  "trigger",
+  "version",
+  "position",
+  "actor",
+  "format",
+  "algorithm",
+  "locale",
+  "language",
+  "field",
+  "path",
+  "table",
+] as const;
+
+function isSafeStringKey(normalizedKey: string): boolean {
+  return (
+    SAFE_STRING_KEYS.has(normalizedKey) ||
+    SAFE_MACHINE_KEY_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix))
+  );
+}
+
 const PHONE_REGEX = /\b0\d(?:\s?\d{2}){4}\b/g;
-
-/** International +213 phone numbers. */
 const INT_PHONE_REGEX = /\+213\s?\d(?:\s?\d{2}){4}/g;
-
-/** Simplified email-address matcher. */
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
-
 const ERROR_OWN_FIELDS = new Set(["message", "name", "stack"]);
 
 export function redactPii<T>(value: T): T {
@@ -187,10 +154,10 @@ function redactRecursive(value: unknown): unknown {
       const redactedValue = SENSITIVE_KEYS.has(normalizedKey)
         ? redactScalar(entry)
         : typeof entry === "string"
-          ? SAFE_STRING_KEYS.has(normalizedKey)
+          ? isSafeStringKey(normalizedKey)
             ? scrubEmbeddedPii(entry)
             : redactScalar(entry)
-          : Array.isArray(entry) && !SAFE_STRING_KEYS.has(normalizedKey)
+          : Array.isArray(entry) && !isSafeStringKey(normalizedKey)
             ? redactScalar(entry)
             : redactRecursive(entry);
 
