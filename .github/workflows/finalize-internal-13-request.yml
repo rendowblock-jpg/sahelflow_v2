@@ -1,0 +1,88 @@
+name: Finalize Internal.13 request metadata
+
+on:
+  push:
+    branches:
+      - codex/session2-internal-13
+    paths:
+      - .github/workflows/finalize-internal-13-request.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/session2-internal-13
+
+      - name: Synchronize Founder handoff and release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          installer = Path("scripts/install-founder-windows.ps1")
+          text = installer.read_text(encoding="utf-8")
+          text = text.replace("[string]$ExpectedDisplayVersion = '1.0.0.12'", "[string]$ExpectedDisplayVersion = '1.0.0.13'", 1)
+          text = text.replace("[string]$ExpectedAppVersion = '1.0.0-internal.12'", "[string]$ExpectedAppVersion = '1.0.0-internal.13'", 1)
+          installer.write_text(text, encoding="utf-8")
+
+          changelog = Path("CHANGELOG.md")
+          text = changelog.read_text(encoding="utf-8")
+          marker = "### Internal.12 Session 1 milestone request\n"
+          section = """### Internal.13 combined Session 1 + business-truth milestone request
+
+- Includes the merged Internal.12 Session 1 outcomes: protected automatic publication,
+  workspace/shop/incarnation authority, startup-readiness correction, and the shared
+  Arabic/RTL, chart, containment and operational-state foundation.
+- Adds the Session 2 business-truth foundation from PR #170: independent lifecycle
+  contracts, additive canonical persistence, atomic idempotent commands, append-only
+  inventory/financial facts, encrypted payloads and trusted principal authority.
+- Adds multi-shop crash-recoverable master-key rotation, fail-closed audit redaction,
+  evidence-based legacy projections, migration-authoritative reset and demo cleanup.
+- Assigns immutable candidate identity `1.0.0-internal.13` / MSI `1.0.0.13`.
+- This remains a source request until the exact protected-main signed workflow passes
+  signing, MSI install/reopen, authenticated hydrated UI twice, deterministic evidence,
+  updater-manifest and automatic-publication gates.
+
+"""
+          if "### Internal.13 combined Session 1 + business-truth milestone request" not in text:
+              if marker not in text:
+                  raise SystemExit("Internal.12 changelog marker missing")
+              text = text.replace(marker, section + marker, 1)
+          changelog.write_text(text, encoding="utf-8")
+
+          readme = Path("README.md")
+          text = readme.read_text(encoding="utf-8")
+          old = """> **Repository status:** Session 1 source packages are merged through PR #171 at
+> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`. The milestone source identity is
+> `1.0.0-internal.12` / MSI `1.0.0.12`; it remains a release request until its
+> exact protected-main commit passes the signed workflow. Internal.11 signed run
+> `30244003253` remains the latest published candidate. The Founder reports it
+> installed through the in-app updater and usable, but it is not accepted
+> because first and subsequent launches remain materially slow and exact
+> post-install preservation/lifecycle evidence is still open.
+"""
+          new = """> **Repository status:** Session 1 and the Session 2 business-truth foundation
+> are merged through PR #170 at `6cd1103b55c905d26492ecf5436e644d377ce557`.
+> The combined milestone source identity is `1.0.0-internal.13` / MSI
+> `1.0.0.13`; it remains a release request until its exact protected-main commit
+> passes the signed workflow. Internal.11 remains the latest confirmed
+> Founder-installed candidate; Founder acceptance and post-change T470 timing
+> remain open.
+"""
+          if old not in text:
+              raise SystemExit("README status block changed unexpectedly")
+          readme.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          rm .github/workflows/finalize-internal-13-request.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/install-founder-windows.ps1 CHANGELOG.md README.md .github/workflows/finalize-internal-13-request.yml
+          git commit -m "chore(release): finalize Internal.13 request"
+          git push origin HEAD:codex/session2-internal-13
