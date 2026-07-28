@@ -22,6 +22,12 @@ export interface LegacyOrderAuthority {
   status: OrderStatus;
   codCollected: boolean | null;
   codRemitted: boolean;
+  /**
+   * Whether the compatibility reader explicitly inspected the Delivery relation.
+   * Undefined means the caller has only order-level status and must not infer
+   * absence of a provider/shipment row.
+   */
+  deliveryExists?: boolean;
   refundCount?: number;
   activeRefundAmount?: number;
   totalPrice?: number;
@@ -106,12 +112,29 @@ function projectFulfillment(status: OrderStatus): LegacyProjectedState<Fulfillme
   );
 }
 
-function projectDelivery(status: OrderStatus): LegacyProjectedState<CanonicalDeliveryState> {
-  switch (status) {
+function projectDelivery(
+  authority: LegacyOrderAuthority,
+): LegacyProjectedState<CanonicalDeliveryState> {
+  switch (authority.status) {
     case "draft":
     case "pending":
     case "confirmed":
-      return deterministic("not_created", `Legacy ${status} has no order-level shipment state`);
+      if (authority.deliveryExists === false) {
+        return deterministic(
+          "not_created",
+          `The compatibility reader verified that the legacy ${authority.status} order has no Delivery row`,
+        );
+      }
+      if (authority.deliveryExists === true) {
+        return ambiguous(
+          "pending",
+          `A Delivery row exists while the legacy order remains ${authority.status}; inspect provider state instead of inferring from Order.status`,
+        );
+      }
+      return ambiguous<CanonicalDeliveryState>(
+        "unknown",
+        `Legacy ${authority.status} status alone cannot prove whether a Delivery row already exists`,
+      );
     case "shipped":
       return ambiguous("in_transit", "Legacy shipped does not preserve the courier's exact delivery state");
     case "delivered":
@@ -209,7 +232,7 @@ export function projectLegacyOrderAuthority(
     order: projectOrder(authority.status),
     confirmation: projectConfirmation(authority.status),
     fulfillment: projectFulfillment(authority.status),
-    delivery: projectDelivery(authority.status),
+    delivery: projectDelivery(authority),
     inventory: projectInventory(authority.status),
     cod: projectCod(authority),
     returns: projectReturn(authority.status),
