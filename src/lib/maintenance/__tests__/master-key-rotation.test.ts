@@ -8,6 +8,7 @@ import { SahelFlowError } from "@/types/errors";
 import {
   assertMasterKeyRotationInactive,
   MASTER_KEY_ROTATION_LOCK_FILE,
+  MASTER_KEY_ROTATION_SIDECAR_FILE,
   parseMasterKeyRotationLock,
 } from "../master-key-rotation";
 
@@ -27,7 +28,7 @@ afterEach(() => {
 });
 
 describe("master-key rotation maintenance authority", () => {
-  it("allows normal operation when no rotation lease exists", () => {
+  it("allows normal operation when no rotation authority exists", () => {
     expect(() => assertMasterKeyRotationInactive()).not.toThrow();
   });
 
@@ -54,6 +55,29 @@ describe("master-key rotation maintenance authority", () => {
         statusCode: 503,
       });
       expect((error as Error).message).toContain("PID 4242");
+    }
+  });
+
+  it("keeps startup and writes blocked when only the durable sidecar survives", () => {
+    mkdirSync(root, { recursive: true });
+    writeFileSync(
+      join(root, MASTER_KEY_ROTATION_SIDECAR_FILE),
+      "ab".repeat(32),
+      "utf8",
+    );
+
+    try {
+      assertMasterKeyRotationInactive();
+      throw new Error("rotation sidecar must block operation");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SahelFlowError);
+      expect(error).toMatchObject({
+        code: "MASTER_KEY_ROTATION_IN_PROGRESS",
+        statusCode: 503,
+      });
+      expect((error as Error).message).toContain(
+        "durable pending-key recovery sidecar",
+      );
     }
   });
 
