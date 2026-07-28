@@ -168,7 +168,12 @@ function decodeResult(value: unknown): unknown {
         if (Object.prototype.hasOwnProperty.call(output, entry[0])) {
           throw codecError("Stored object result contains a duplicate key");
         }
-        output[entry[0]] = decodeResult(entry[1]);
+        Object.defineProperty(output, entry[0], {
+          value: decodeResult(entry[1]),
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
       }
       return output;
     }
