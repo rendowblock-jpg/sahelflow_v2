@@ -11,10 +11,15 @@
  * backing store changes — only the implementation swaps.
  *
  * Well-known secret keys (convention: snake_case):
- *   - "gemini_api_key"          — Google AI Studio key for order extraction
- *   - "yalidine_api_token"      — (future) Yalidine delivery API
- *   - "zrexpress_api_key"       — (future) ZR Express delivery API
- *   - "maystro_api_token"       — (future) Maystro delivery API
+ *   - "gemini_api_key"                    — Google AI Studio key for order extraction
+ *   - "yalidine_api_token"                — (future) Yalidine delivery API
+ *   - "zrexpress_api_key"                 — (future) ZR Express delivery API
+ *   - "maystro_api_token"                 — (future) Maystro delivery API
+ *   - "business_truth_envelope_key_v1"    — internal random key that encrypts
+ *                                             command/event/outbox/compensation
+ *                                             envelopes. It is not user-editable;
+ *                                             master-key rotation re-wraps it as
+ *                                             an ordinary Secret.
  */
 import "server-only";
 

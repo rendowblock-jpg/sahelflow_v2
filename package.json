@@ -43,6 +43,9 @@
     "dev:web": "next dev -p 3000",
     "dev:tauri:skip-sidecar": "bunx tauri dev"
   },
+  "prisma": {
+    "schema": "prisma"
+  },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
     "@hookform/resolvers": "^5.4.0",
