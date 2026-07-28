@@ -254,6 +254,7 @@ describe("Algerian demo data", () => {
     if (item.productId === null) {
       throw new Error("Expected a product-backed demo order item");
     }
+    const productId = item.productId;
 
     await executeBusinessCommand(
       { prisma: demoClient() as never },
@@ -297,7 +298,7 @@ describe("Algerian demo data", () => {
             reservationKey: "generated-reservation-key",
             orderId: item.orderId,
             orderItemId: item.id,
-            productId: item.productId,
+            productId,
             productVariantId: item.productVariantId ?? undefined,
             quantity: 1,
           },
@@ -309,7 +310,7 @@ describe("Algerian demo data", () => {
             orderId: item.orderId,
             orderItemId: item.id,
             reservationId: "generated-reservation-id",
-            productId: item.productId,
+            productId,
             productVariantId: item.productVariantId ?? undefined,
             quantity: 1,
             fromPosition: "available",
