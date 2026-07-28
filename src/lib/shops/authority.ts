@@ -1,6 +1,8 @@
 import "server-only";
 
 import { readFileSync } from "node:fs";
+
+import { assertMasterKeyRotationInactive } from "@/lib/maintenance/master-key-rotation";
 import { SahelFlowError } from "@/types/errors";
 import type { ShopContext } from "./context";
 import { registryPath } from "./paths";
@@ -82,6 +84,11 @@ export function assertShopAuthorityMatches(
 }
 
 export function assertProcessShopAuthority(context: ShopContext): void {
+  // `withShopAuthority` calls this before every process-bound production model
+  // write, and the business-command raw SQL boundary calls it before opening its
+  // transaction. This closes the post-scan old-key write race during rotation.
+  assertMasterKeyRotationInactive();
+
   let registry: unknown;
   try {
     registry = JSON.parse(readFileSync(registryPath, "utf8"));

@@ -2,6 +2,8 @@ import "server-only";
 
 import { basename } from "node:path";
 
+import { assertMasterKeyRotationInactive } from "@/lib/maintenance/master-key-rotation";
+
 export type ShopContext = Readonly<{
   workspaceId: string;
   installationId: string;
@@ -20,6 +22,12 @@ export function processShopContext(): ShopContext {
   const testing = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
   const development = process.env.NODE_ENV === "development";
   const packaged = process.env.NODE_ENV === "production";
+
+  // The rotation lease is acquired before any shop is scanned. A packaged
+  // server launched during that window must not initialize a database client or
+  // become ready under the old key.
+  if (packaged) assertMasterKeyRotationInactive();
+
   const fallbackShopId = !packaged && testing ? "test" : development ? "default" : "";
   const shopId = process.env.SF_ACTIVE_SHOP_ID ?? fallbackShopId;
   const registryRevision = Number.parseInt(

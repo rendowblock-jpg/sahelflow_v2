@@ -17,7 +17,7 @@
     "test:sandbox": "bun run scripts/prepare-test-sandbox.ts",
     "sf-verify": "bun run scripts/sf-verify.ts",
     "sf-audit": "bun run scripts/sf-audit.ts",
-    "sf-inventory": "bun run scripts/sf-inventory.ts",
+    "sf-inventory": "bun run scripts/sf-inventory.ts && bun run scripts/augment-prisma-inventory.ts",
     "sf-version": "bun run scripts/sf-version.ts && bun run scripts/verify-updater-contract.ts",
     "sf-updater-contract": "bun run scripts/verify-updater-contract.ts",
     "sf-evidence": "bun run scripts/generate-evidence-manifest.ts",
@@ -42,6 +42,9 @@
     "build:sidecar": "bun run scripts/build-sidecar.ts",
     "dev:web": "next dev -p 3000",
     "dev:tauri:skip-sidecar": "bunx tauri dev"
+  },
+  "prisma": {
+    "schema": "prisma"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",

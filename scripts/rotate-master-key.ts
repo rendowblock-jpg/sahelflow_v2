@@ -1,346 +1,537 @@
-/**
- * Master-key rotation script — re-encrypts all PII + secrets with a NEW key.
- *
- * Usage:
- *   bun run scripts/rotate-master-key.ts            # rotate (writes DB + keyfile)
- *   bun run scripts/rotate-master-key.ts --dry-run  # report only, no writes
- *   bun run scripts/rotate-master-key.ts --force    # skip the sidecar safety check
- *
- * ─── WHAT IT ROTATES ──────────────────────────────────────────────────────
- *
- * The master key (32 random bytes, persisted at `data/master.key` as 64 hex
- * chars, mode 0600) is used for:
- *
- *   1. AES-256-GCM field encryption (random IV, non-deterministic) for:
- *        Customer.{name, phone2, address, notes}      (in-place ciphertext)
- *        Customer.phoneEnc                              (companion ciphertext
- *                                                          — phone column holds
- *                                                          the HMAC blind index)
- *        Order.{phone, address, notes}                 (in-place ciphertext)
- *        Conversation.{contactName, contactPhone}      (in-place ciphertext)
- *        Message.body                                  (in-place ciphertext)
- *        Secret.{ciphertext, iv, tag}                  (3-column payload)
- *
- *   2. HMAC-SHA256 blind indexes (deterministic, searchable) for:
- *        Customer.phone     (the actual `phone` column IS the blind index)
- *        Customer.nameBlindIndex
- *        Order.phoneBlindIndex
- *
- * All of the above must be re-derived with the NEW key, otherwise:
- *   - Ciphertext fields become unreadable (decryption with the new key fails).
- *   - Blind-index equality lookups silently miss (old index != new index).
- *
- * ─── CRASH SAFETY (idempotent-resume design) ──────────────────────────────
- *
- * The dangerous failure mode: rotate the keyfile FIRST, then crash mid-DB-
- * rotation → some rows are encrypted with the OLD key, some with the NEW key,
- * and the keyfile only has the NEW key → the OLD-key rows are permanently
- * unreadable.
- *
- * Mitigation: a 3-phase protocol with a sidecar file.
- *
- *   Phase 1 (pre-rotate): Write the NEW key to `data/master.key.new` (sidecar,
- *                         does NOT affect the running app — it still reads
- *                         `data/master.key`). Save oldKey + newKey to memory.
- *
- *   Phase 2 (re-encrypt): For each model, in a single $transaction:
- *                           - Read all rows via dbRaw (bypasses the PII
- *                             extension → raw ciphertext visible).
- *                           - For each row, try decrypt with OLD key.
- *                             If that fails, try NEW key (row already rotated
- *                             by a previous crashed run — keep as-is).
- *                             If both fail, log + skip (corrupt row — manual
- *                             investigation needed).
- *                           - Re-encrypt with NEW key + recompute blind
- *                             indexes with NEW key.
- *                           - Update the row.
- *
- *   Phase 3 (commit):     Backup `data/master.key` →
- *                         `data/master.key.old-<ISO-timestamp>`. Then atomically
- *                         rename `data/master.key.new` → `data/master.key`.
- *                         Reset the master-key in-memory cache so subsequent
- *                         `getMasterKey()` reads the new keyfile.
- *
- * If the script crashes between Phase 2 and Phase 3:
- *   - On re-run, Phase 0 detects the `master.key.new` sidecar.
- *   - The script reads the NEW key from the sidecar (so it doesn't generate
- *     a DIFFERENT new key — that would create a 3-key mess).
- *   - Phase 2 resumes: already-rotated rows (decrypt with NEW key succeeds)
- *     are skipped; OLD-key rows are rotated.
- *   - Phase 3 commits.
- *
- * If you want to ABORT an in-progress rotation (e.g. you decided not to
- * rotate): delete `data/master.key.new` and manually run a partial-rollback
- * using the backup files (or restore from DB backup — always take one before
- * rotating!).
- *
- * ─── WHAT THIS SCRIPT DOES NOT DO ──────────────────────────────────────────
- *
- *   - Multi-shop rotation. The script operates on the DATABASE_URL shop only.
- *     For multi-shop deployments, set DATABASE_URL per shop + run the script
- *     once per shop. (The master key is shared across shops via the keyfile,
- *     so rotate the keyfile ONCE — but the DB re-encryption must run per DB.)
- *
- *   - SQLCipher re-keying. Prisma's SQLite driver silently ignores the `?key=`
- *     connection param (ADR-003) — there's no SQLCipher to re-key. Encryption
- *     is purely at the field level, which is exactly what this script re-keys.
- *
- *   - Backups. TAKE A FILE-LEVEL BACKUP OF `data/master.key` AND THE SQLITE
- *     FILE BEFORE RUNNING. This script is best-effort but cannot recover from
- *     disk corruption or a partial crash with no backup.
- *
- * ─── CONSTRAINTS ───────────────────────────────────────────────────────────
- *
- *   - The app must be STOPPED during rotation. If the app writes a row mid-
- *     rotation, that row could be encrypted with either the OLD or NEW key
- *     depending on timing — the script's read-modify-write tx wouldn't see
- *     it, and the post-rotation state would be inconsistent.
- *
- *   - `SF_MASTER_KEY` env var overrides the keyfile. If it's set, the script
- *     will use it as the OLD key (and refuse to write the keyfile — that
- *     would be a no-op since the env var wins). Unset `SF_MASTER_KEY` before
- *     running in production.
- */
 import "server-only";
 
+import { PrismaClient } from "@prisma/client";
+import { randomBytes, randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  renameSync,
-  copyFileSync,
-  mkdirSync,
   chmodSync,
-} from "fs";
-import { join } from "path";
-import { randomBytes } from "crypto";
+  closeSync,
+  copyFileSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { connect } from "node:net";
+import { basename, isAbsolute, join, resolve } from "node:path";
 
-import { dbRaw } from "@/lib/db";
 import {
-  getMasterKey,
-  _resetMasterKeyCacheForTests,
-} from "@/lib/crypto/master-key";
+  decryptCustomerRow,
+  encryptCustomerData,
+} from "@/lib/crypto/customer-encryption";
 import {
-  encryptString,
   decryptString,
+  encryptString,
   isEncryptedPayload,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
 import {
-  encryptCustomerData,
-  decryptCustomerRow,
-} from "@/lib/crypto/customer-encryption";
-import {
-  encryptPiiFields,
-  decryptPiiRow,
-  ORDER_PII_FIELDS,
   CONVERSATION_PII_FIELDS,
+  ORDER_PII_FIELDS,
+  decryptPiiRow,
+  encryptPiiFields,
 } from "@/lib/crypto/pii-fields";
+import {
+  MASTER_KEY_ROTATION_LOCK_FILE,
+  MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION,
+  parseMasterKeyRotationLock,
+  type MasterKeyRotationLockRecord,
+} from "@/lib/maintenance/master-key-rotation";
 
-// ── CLI flags ──────────────────────────────────────────────────────────────
+/**
+ * Installation-wide master-key rotation.
+ *
+ * Usage:
+ *   bun run scripts/rotate-master-key.ts
+ *   bun run scripts/rotate-master-key.ts --dry-run
+ *   bun run scripts/rotate-master-key.ts --recover-stale-lock
+ *
+ * The script acquires a maintenance lease before inspecting any database,
+ * refuses to rotate while a live desktop runtime exists, re-wraps every
+ * registered shop and the provisioning template with one old/new key pair,
+ * and commits the shared keyfile only after every target succeeds.
+ */
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const FORCE = process.argv.includes("--force");
+const RECOVER_STALE_LOCK = process.argv.includes("--recover-stale-lock");
+const KEY_BYTES = 32;
+const REGISTRY_FORMAT_VERSION = 2;
+const RUNTIME_MANIFEST_FORMAT_VERSION = 1;
 
-// ── File paths (matches master-key.ts:39-46) ───────────────────────────────
-
-function getDataDir(): string {
-  if (process.env.SF_DATA_DIR) return process.env.SF_DATA_DIR;
-  return join(process.cwd(), "data");
-}
-const KEYFILE_PATH = join(getDataDir(), "master.key");
-const SIDECAR_PATH = join(getDataDir(), "master.key.new");
-
-// ── Phase 0: safety check ──────────────────────────────────────────────────
-
-function loadOldKey(): Buffer {
-  // If SF_MASTER_KEY env is set, getMasterKey() returns it (and the keyfile
-  // is irrelevant — writing to it would be a no-op). Refuse to proceed.
-  if (process.env.SF_MASTER_KEY) {
-    console.error(
-      "❌ SF_MASTER_KEY env var is set. The keyfile is not the source of truth —\n" +
-        "   writing a new keyfile would have no effect. Unset SF_MASTER_KEY and\n" +
-        "   re-run so the keyfile (data/master.key) is the active key.",
-    );
-    process.exit(1);
-  }
-  if (!existsSync(KEYFILE_PATH)) {
-    console.error(
-      `❌ No keyfile found at ${KEYFILE_PATH}.\n` +
-        "   The app generates one on first run — start the app once before rotating.",
-    );
-    process.exit(1);
-  }
-  // getMasterKey() reads + caches the keyfile value. We reset the cache later
-  // (Phase 3) so subsequent getMasterKey() calls in this process re-read.
-  return getMasterKey();
+interface RotationTarget {
+  id: string;
+  databasePath: string;
 }
 
-function loadOrCreateNewKey(oldKey: Buffer): Buffer {
-  // If a sidecar from a previous crashed run exists, REUSE that new key —
-  // generating a fresh one would leave already-rotated rows unreadable.
-  if (existsSync(SIDECAR_PATH)) {
-    if (!FORCE) {
-      const hex = readFileSync(SIDECAR_PATH, "utf8").trim();
-      const resumed = Buffer.from(hex, "hex");
-      if (resumed.length !== 32) {
-        console.error(
-          `❌ Sidecar ${SIDECAR_PATH} is corrupt (expected 32 bytes, got ${resumed.length}).\n` +
-            "   Delete it (and accept that rows rotated in the previous run are\n" +
-            "   unreadable) or restore from backup.",
-        );
-        process.exit(1);
-      }
-      if (resumed.equals(oldKey)) {
-        console.error(
-          `❌ Sidecar ${SIDECAR_PATH} matches the current keyfile — previous run\n` +
-            "   crashed BEFORE Phase 2 wrote any rows. Safe to delete the sidecar\n" +
-            "   and re-run, OR pass --force to ignore this check.",
-        );
-        process.exit(1);
-      }
-      console.warn(
-        `⚠️  Resuming from previous crashed run: sidecar ${SIDECAR_PATH} exists.\n` +
-          "   Re-using the same NEW key (so already-rotated rows stay readable).\n" +
-          "   Pass --force to skip this check (e.g. after manually deleting the sidecar).",
-      );
-      return resumed;
-    }
-    console.warn("⚠️  --force: ignoring existing sidecar (will overwrite).");
-  }
-
-  const newKey = randomBytes(32);
-  if (!DRY_RUN) {
-    if (!existsSync(getDataDir())) mkdirSync(getDataDir(), { recursive: true });
-    // "wx" = O_EXCL — fails with EEXIST if another caller wrote the sidecar
-    // between our existsSync check and this write (defensive; should never
-    // happen since we just checked above, but mirrors master-key.ts:89's pattern).
-    try {
-      writeFileSync(SIDECAR_PATH, newKey.toString("hex"), { mode: 0o600, flag: "wx" });
-    } catch (err: unknown) {
-      if (
-        err instanceof Error &&
-        "code" in err &&
-        (err as { code?: string }).code === "EEXIST"
-      ) {
-        // Lost the race — re-read the winning sidecar.
-        const hex = readFileSync(SIDECAR_PATH, "utf8").trim();
-        return Buffer.from(hex, "hex");
-      }
-      throw err;
-    }
-    try {
-      chmodSync(SIDECAR_PATH, 0o600);
-    } catch {
-      /* best effort */
-    }
-  }
-  return newKey;
+interface RegistryShape {
+  formatVersion: number;
+  shops: Array<{
+    id: string;
+    databaseFile: string;
+  }>;
 }
-
-// ── Phase 2: re-encrypt each model ─────────────────────────────────────────
 
 interface ModelStats {
+  shopId: string;
   model: string;
   total: number;
   rotated: number;
-  alreadyNew: number; // decrypted with NEW key (resumed from previous run)
-  skipped: number;    // plaintext, corrupt, or undecryptable
+  alreadyNew: number;
+  plaintext: number;
 }
 
-async function rotateCustomers(oldKey: Buffer, newKey: Buffer): Promise<ModelStats> {
-  const stats: ModelStats = { model: "Customer", total: 0, rotated: 0, alreadyNew: 0, skipped: 0 };
+interface RotationLease {
+  handle: number;
+  record: MasterKeyRotationLockRecord;
+}
 
-  const rows = await dbRaw.customer.findMany();
-  stats.total = rows.length;
-  if (rows.length === 0) return stats;
+interface RuntimeEndpointManifest {
+  formatVersion: number;
+  state: string;
+  host: string;
+  appPort: number;
+  processId: number;
+}
 
-  if (DRY_RUN) {
-    console.log(`   [dry-run] would rotate ${rows.length} customer row(s)`);
-    return stats;
+function dataDir(): string {
+  return process.env.SF_DATA_DIR
+    ? resolve(process.env.SF_DATA_DIR)
+    : resolve(process.cwd(), "data");
+}
+
+const KEYFILE_PATH = join(dataDir(), "master.key");
+const SIDECAR_PATH = join(dataDir(), "master.key.new");
+const LOCK_PATH = join(dataDir(), MASTER_KEY_ROTATION_LOCK_FILE);
+const RUNTIME_MANIFEST_PATH = join(dataDir(), "runtime-endpoint.json");
+const REGISTRY_PATH = join(dataDir(), "shop-registry.json");
+const SHOPS_DIR = join(dataDir(), "shops");
+const SHOP_TEMPLATE_PATH = join(dataDir(), "system", "shop-template.db");
+
+function errorCode(error: unknown): string | undefined {
+  return error && typeof error === "object" && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : undefined;
+}
+
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = errorCode(error);
+    if (code === "ESRCH") return false;
+    // EPERM means the process exists but cannot be signalled. Unknown failures
+    // also fail closed rather than declaring a live owner stale.
+    return true;
+  }
+}
+
+function readKey(path: string): Buffer {
+  const hex = readFileSync(path, "utf8").trim();
+  if (!/^[0-9a-f]{64}$/i.test(hex)) {
+    throw new Error(`${path} must contain exactly 64 hexadecimal characters`);
+  }
+  const key = Buffer.from(hex, "hex");
+  if (key.length !== KEY_BYTES) {
+    throw new Error(`${path} decoded to ${key.length} bytes instead of ${KEY_BYTES}`);
+  }
+  return key;
+}
+
+function loadOldKey(): Buffer {
+  if (process.env.SF_MASTER_KEY) {
+    throw new Error(
+      "SF_MASTER_KEY is set. Unset it before rotating the installation keyfile.",
+    );
+  }
+  if (!existsSync(KEYFILE_PATH)) {
+    throw new Error(`Master keyfile is missing: ${KEYFILE_PATH}`);
+  }
+  return readKey(KEYFILE_PATH);
+}
+
+function fsyncDirectory(directoryPath: string): void {
+  const directoryHandle = openSync(directoryPath, "r");
+  try {
+    fsyncSync(directoryHandle);
+  } finally {
+    closeSync(directoryHandle);
+  }
+}
+
+function powershellLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function moveFileWriteThroughWindows(source: string, target: string): void {
+  const command = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SahelFlowDurableMove {
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool MoveFileEx(string existingFileName, string newFileName, int flags);
+}
+'@
+$ok = [SahelFlowDurableMove]::MoveFileEx(
+  ${powershellLiteral(source)},
+  ${powershellLiteral(target)},
+  8
+)
+if (-not $ok) {
+  $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+  Write-Error "MoveFileEx(MOVEFILE_WRITE_THROUGH) failed with Win32 error $code"
+  exit 1
+}
+`;
+  const result = spawnSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", command],
+    { encoding: "utf8", windowsHide: true },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr ||
+        result.stdout ||
+        "Could not durably publish the master-key rotation sidecar",
+    );
+  }
+}
+
+function writeDurableSidecar(newKey: Buffer): void {
+  mkdirSync(dataDir(), { recursive: true });
+  const temporaryPath = `${SIDECAR_PATH}.${process.pid}.${randomUUID()}.tmp`;
+  const sidecarHandle = openSync(temporaryPath, "wx", 0o600);
+  try {
+    writeFileSync(sidecarHandle, newKey.toString("hex"), "utf8");
+    // Database rewrites must never begin until the complete new key has reached
+    // stable storage. Closing a file descriptor alone does not provide that
+    // authority after power loss.
+    fsyncSync(sidecarHandle);
+  } finally {
+    closeSync(sidecarHandle);
   }
 
-  await dbRaw.$transaction(async (tx) => {
-    for (const row of rows) {
-      // Try OLD key first. If decryption fails (tampered or already-rotated),
-      // try NEW key — if that succeeds, the row was rotated in a previous
-      // crashed run; keep it as-is. If both fail, the row is corrupt — skip.
-      const decryptedWithOld = tryDecryptCustomer(row, oldKey);
-      if (decryptedWithOld === null) {
-        const decryptedWithNew = tryDecryptCustomer(row, newKey);
-        if (decryptedWithNew !== null) {
-          stats.alreadyNew++;
-          continue;
+  try {
+    if (process.platform === "win32") {
+      // Windows has no POSIX directory fsync. MOVEFILE_WRITE_THROUGH is the
+      // platform authority that flushes the durable directory-entry update.
+      moveFileWriteThroughWindows(temporaryPath, SIDECAR_PATH);
+    } else {
+      renameSync(temporaryPath, SIDECAR_PATH);
+      fsyncDirectory(dataDir());
+    }
+  } catch (error) {
+    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
+    throw error;
+  }
+
+  try {
+    chmodSync(SIDECAR_PATH, 0o600);
+  } catch {
+    // Best effort on platforms that do not expose POSIX modes.
+  }
+}
+
+function loadOrCreateNewKey(oldKey: Buffer): Buffer {
+  if (existsSync(SIDECAR_PATH)) {
+    const resumed = readKey(SIDECAR_PATH);
+    if (!resumed.equals(oldKey)) {
+      console.warn(`Resuming installation-wide rotation from ${SIDECAR_PATH}`);
+      return resumed;
+    }
+    if (!FORCE) {
+      throw new Error(
+        `${SIDECAR_PATH} matches the current master key. Remove it or rerun with --force.`,
+      );
+    }
+    if (!DRY_RUN) unlinkSync(SIDECAR_PATH);
+  }
+
+  const newKey = randomBytes(KEY_BYTES);
+  if (!DRY_RUN) writeDurableSidecar(newKey);
+  return newKey;
+}
+
+function readExistingRotationLock(): MasterKeyRotationLockRecord {
+  return parseMasterKeyRotationLock(
+    JSON.parse(readFileSync(LOCK_PATH, "utf8")),
+  );
+}
+
+function removeStaleRotationLock(expectedToken: string | null): void {
+  if (!existsSync(LOCK_PATH)) return;
+  if (expectedToken !== null) {
+    const current = readExistingRotationLock();
+    if (current.token !== expectedToken) {
+      throw new Error(
+        "The rotation lock changed ownership while stale recovery was in progress",
+      );
+    }
+  }
+  unlinkSync(LOCK_PATH);
+}
+
+function acquireRotationLease(): RotationLease {
+  mkdirSync(dataDir(), { recursive: true });
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const handle = openSync(LOCK_PATH, "wx", 0o600);
+      const record: MasterKeyRotationLockRecord = {
+        formatVersion: MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION,
+        ownerPid: process.pid,
+        token: randomUUID().replaceAll("-", ""),
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        writeFileSync(handle, `${JSON.stringify(record, null, 2)}\n`, "utf8");
+        fsyncSync(handle);
+        try {
+          chmodSync(LOCK_PATH, 0o600);
+        } catch {
+          // Best effort on platforms that do not expose POSIX modes.
         }
-        console.warn(
-          `   ⚠️  Customer ${row.id}: decrypt failed with both OLD and NEW key — skipping (corrupt?).`,
-        );
-        stats.skipped++;
+        return { handle, record };
+      } catch (error) {
+        closeSync(handle);
+        if (existsSync(LOCK_PATH)) unlinkSync(LOCK_PATH);
+        throw error;
+      }
+    } catch (error) {
+      if (errorCode(error) !== "EEXIST") throw error;
+
+      let existing: MasterKeyRotationLockRecord | null = null;
+      try {
+        existing = readExistingRotationLock();
+      } catch {
+        if (!RECOVER_STALE_LOCK && !FORCE) {
+          throw new Error(
+            `The rotation lease at ${LOCK_PATH} is malformed. After verifying SahelFlow is closed, rerun with --recover-stale-lock.`,
+          );
+        }
+        console.warn(`Recovering malformed stale rotation lease: ${LOCK_PATH}`);
+        removeStaleRotationLock(null);
         continue;
       }
 
-      // Re-encrypt with NEW key (recomputes phone blind index, phoneEnc,
-      // and nameBlindIndex transparently via encryptCustomerData).
-      const reEncrypted = encryptCustomerData(decryptedWithOld, newKey);
+      if (processIsAlive(existing.ownerPid)) {
+        throw new Error(
+          `Another live master-key rotation owns ${LOCK_PATH} (PID ${existing.ownerPid}, token ${existing.token})`,
+        );
+      }
 
-      await tx.customer.update({
-        where: { id: row.id },
-        data: {
-          name: reEncrypted.name as string,
-          phone: reEncrypted.phone as string,
-          phoneEnc: (reEncrypted.phoneEnc as string | undefined) ?? null,
-          nameBlindIndex: (reEncrypted.nameBlindIndex as string | undefined) ?? null,
-          phone2: (reEncrypted.phone2 as string | undefined) ?? null,
-          address: reEncrypted.address as string | undefined,
-          notes: reEncrypted.notes as string | undefined,
-        },
-      });
-      stats.rotated++;
+      console.warn(
+        `Recovering stale rotation lease from dead PID ${existing.ownerPid}; the existing sidecar will preserve crash-resume authority.`,
+      );
+      removeStaleRotationLock(existing.token);
     }
-  });
+  }
 
-  return stats;
+  throw new Error(`Could not acquire master-key rotation lease: ${LOCK_PATH}`);
 }
 
-/**
- * Try to decrypt a customer row with the given key. Returns the plaintext
- * shape (suitable for passing back into `encryptCustomerData`), or null if
- * any encrypted field fails to decrypt (tampered / wrong key).
- *
- * Edge case: if `phoneEnc` is null but `phone` is a blind-index hex string,
- * we can't recover the plaintext phone. Return null so the caller can try
- * the other key (and ultimately skip if both fail).
- */
+function finishRotationLease(
+  lease: RotationLease,
+  removeLease: boolean,
+): void {
+  closeSync(lease.handle);
+  if (!removeLease) {
+    console.error(
+      `Maintenance lease retained at ${LOCK_PATH}; SahelFlow startup and writes remain blocked until this rotation is resumed successfully.`,
+    );
+    return;
+  }
+  if (!existsSync(LOCK_PATH)) return;
+  try {
+    const current = readExistingRotationLock();
+    if (current.token !== lease.record.token) {
+      console.warn(
+        `Rotation lease ownership changed; refusing to remove ${LOCK_PATH}`,
+      );
+      return;
+    }
+    unlinkSync(LOCK_PATH);
+  } catch {
+    console.warn(
+      `Rotation lease became unreadable; refusing to remove ${LOCK_PATH}`,
+    );
+  }
+}
+
+function readRuntimeManifest(): RuntimeEndpointManifest {
+  const value = JSON.parse(readFileSync(RUNTIME_MANIFEST_PATH, "utf8")) as Partial<RuntimeEndpointManifest>;
+  if (
+    value.formatVersion !== RUNTIME_MANIFEST_FORMAT_VERSION ||
+    value.state !== "ready" ||
+    value.host !== "127.0.0.1" ||
+    !Number.isSafeInteger(value.appPort) ||
+    (value.appPort ?? 0) <= 0 ||
+    (value.appPort ?? 0) > 65_535 ||
+    !Number.isSafeInteger(value.processId) ||
+    (value.processId ?? 0) <= 0
+  ) {
+    throw new Error("Runtime endpoint manifest is malformed");
+  }
+  return {
+    formatVersion: RUNTIME_MANIFEST_FORMAT_VERSION,
+    state: "ready",
+    host: "127.0.0.1",
+    appPort: value.appPort,
+    processId: value.processId,
+  };
+}
+
+function loopbackPortIsOpen(port: number): Promise<boolean> {
+  return new Promise((resolvePort) => {
+    const socket = connect({ host: "127.0.0.1", port });
+    let settled = false;
+    const settle = (open: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolvePort(open);
+    };
+    socket.setTimeout(500);
+    socket.once("connect", () => settle(true));
+    socket.once("timeout", () => settle(false));
+    socket.once("error", () => settle(false));
+  });
+}
+
+async function assertApplicationStopped(): Promise<void> {
+  if (!existsSync(RUNTIME_MANIFEST_PATH)) return;
+
+  let manifest: RuntimeEndpointManifest;
+  try {
+    manifest = readRuntimeManifest();
+  } catch {
+    if (!FORCE) {
+      throw new Error(
+        `Cannot prove SahelFlow is stopped because ${RUNTIME_MANIFEST_PATH} is malformed. Verify the app is closed, then rerun with --force.`,
+      );
+    }
+    console.warn(
+      `Ignoring malformed runtime manifest after explicit --force: ${RUNTIME_MANIFEST_PATH}`,
+    );
+    return;
+  }
+
+  const ownerAlive = processIsAlive(manifest.processId);
+  const serverListening = await loopbackPortIsOpen(manifest.appPort);
+  if (ownerAlive || serverListening) {
+    throw new Error(
+      `SahelFlow is still running (PID ${manifest.processId}, port ${manifest.appPort}). Close the desktop app before rotating the master key.`,
+    );
+  }
+
+  console.warn(
+    `Ignoring stale runtime manifest for dead PID ${manifest.processId}; the maintenance lease prevents a new packaged server from starting or writing.`,
+  );
+}
+
+function databasePathFromUrl(databaseUrl: string): string {
+  const match = databaseUrl.match(/^file:(.+)$/);
+  if (!match?.[1]) {
+    throw new Error("DATABASE_URL must be a file: SQLite URL");
+  }
+  const path = decodeURIComponent(match[1]);
+  return isAbsolute(path) ? path : resolve(process.cwd(), path);
+}
+
+function validateRegistryTarget(shop: RegistryShape["shops"][number]): RotationTarget {
+  if (!shop.id || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(shop.id)) {
+    throw new Error("Shop registry contains an invalid shop ID");
+  }
+  const safeName = basename(shop.databaseFile);
+  if (
+    safeName !== shop.databaseFile ||
+    !/^[a-z0-9][a-z0-9-]*\.db$/.test(safeName)
+  ) {
+    throw new Error(`Shop ${shop.id} has an invalid database file identity`);
+  }
+  const databasePath = join(SHOPS_DIR, safeName);
+  if (!existsSync(databasePath)) {
+    throw new Error(`Registered shop database is missing: ${databasePath}`);
+  }
+  return { id: shop.id, databasePath };
+}
+
+function loadRotationTargets(): RotationTarget[] {
+  const targets: RotationTarget[] = [];
+
+  if (existsSync(REGISTRY_PATH)) {
+    const parsed = JSON.parse(readFileSync(REGISTRY_PATH, "utf8")) as RegistryShape;
+    if (
+      parsed.formatVersion !== REGISTRY_FORMAT_VERSION ||
+      !Array.isArray(parsed.shops)
+    ) {
+      throw new Error("The canonical shop registry is invalid or unsupported");
+    }
+    targets.push(...parsed.shops.map(validateRegistryTarget));
+  }
+
+  if (existsSync(SHOP_TEMPLATE_PATH)) {
+    targets.push({ id: "system-shop-template", databasePath: SHOP_TEMPLATE_PATH });
+  }
+
+  if (targets.length === 0) {
+    const fallback = process.env.DATABASE_URL;
+    if (!fallback) {
+      throw new Error(
+        "No registered shops, shop template, or DATABASE_URL database was found",
+      );
+    }
+    const databasePath = databasePathFromUrl(fallback);
+    if (!existsSync(databasePath)) {
+      throw new Error(`DATABASE_URL database is missing: ${databasePath}`);
+    }
+    targets.push({ id: "database-url", databasePath });
+  }
+
+  const unique = new Map<string, RotationTarget>();
+  for (const target of targets) {
+    unique.set(resolve(target.databasePath), {
+      ...target,
+      databasePath: resolve(target.databasePath),
+    });
+  }
+  return [...unique.values()];
+}
+
+function encryptedPayload(json: string): EncryptedPayload {
+  const parsed = JSON.parse(json) as Partial<EncryptedPayload>;
+  if (
+    typeof parsed.iv !== "string" ||
+    typeof parsed.ciphertext !== "string" ||
+    typeof parsed.tag !== "string"
+  ) {
+    throw new Error("Malformed encrypted payload");
+  }
+  return {
+    iv: parsed.iv,
+    ciphertext: parsed.ciphertext,
+    tag: parsed.tag,
+  };
+}
+
 function tryDecryptCustomer(
   row: Record<string, unknown>,
   key: Buffer,
 ): Record<string, unknown> | null {
-  // Sanity: at least one field should be encrypted. If the row is entirely
-  // plaintext (pre-migration), there's nothing to rotate — skip with a warning.
-  const hasEncryptedField =
-    isEncryptedPayload(row.name as string | null) ||
-    isEncryptedPayload(row.phoneEnc as string | null) ||
-    isEncryptedPayload(row.phone2 as string | null) ||
-    isEncryptedPayload(row.address as string | null) ||
-    isEncryptedPayload(row.notes as string | null);
-
-  if (!hasEncryptedField) {
-    // Plaintext row — never encrypted. Nothing to rotate. Caller treats as
-    // skipped (we don't want to "rotate" plaintext into a different shape).
-    return null;
-  }
-
   try {
-    // decryptCustomerRow catches per-field decryption failures internally
-    // and leaves the raw value. After the call, check that EVERY encrypted
-    // field decrypted successfully (i.e. is no longer an EncryptedPayload).
     const decrypted = decryptCustomerRow({ ...row }, key);
-    if (isEncryptedPayload(decrypted.name as string | null)) return null;
-    if (isEncryptedPayload(decrypted.phone2 as string | null)) return null;
-    if (isEncryptedPayload(decrypted.address as string | null)) return null;
-    if (isEncryptedPayload(decrypted.notes as string | null)) return null;
-    // If phoneEnc was present but phone is still a 64-hex blind index after
-    // decryption, decryption failed — wrong key.
+    for (const field of ["name", "phoneEnc", "phone2", "address", "notes"]) {
+      if (isEncryptedPayload(decrypted[field] as string | null | undefined)) {
+        return null;
+      }
+    }
     if (
       row.phoneEnc &&
       typeof decrypted.phone === "string" &&
@@ -354,472 +545,431 @@ function tryDecryptCustomer(
   }
 }
 
-async function rotateOrders(oldKey: Buffer, newKey: Buffer): Promise<ModelStats> {
-  const stats: ModelStats = { model: "Order", total: 0, rotated: 0, alreadyNew: 0, skipped: 0 };
-
-  const rows = await dbRaw.order.findMany();
-  stats.total = rows.length;
-  if (rows.length === 0) return stats;
-
-  if (DRY_RUN) {
-    console.log(`   [dry-run] would rotate ${rows.length} order row(s)`);
-    return stats;
+function tryDecryptPiiRow(
+  row: Record<string, unknown>,
+  fields: readonly string[],
+  key: Buffer,
+): Record<string, unknown> | null {
+  try {
+    const decrypted = decryptPiiRow({ ...row }, fields, key);
+    return fields.some((field) =>
+      isEncryptedPayload(decrypted[field] as string | null | undefined),
+    )
+      ? null
+      : decrypted;
+  } catch {
+    return null;
   }
+}
 
-  await dbRaw.$transaction(async (tx) => {
+function stats(shopId: string, model: string, total: number): ModelStats {
+  return {
+    shopId,
+    model,
+    total,
+    rotated: 0,
+    alreadyNew: 0,
+    plaintext: 0,
+  };
+}
+
+async function rotateCustomers(
+  client: PrismaClient,
+  shopId: string,
+  oldKey: Buffer,
+  newKey: Buffer,
+): Promise<ModelStats> {
+  const rows = await client.customer.findMany();
+  const result = stats(shopId, "Customer", rows.length);
+
+  await client.$transaction(async (tx) => {
     for (const row of rows) {
-      const decryptedWithOld = tryDecryptPiiRow(row, ORDER_PII_FIELDS, oldKey);
-      if (decryptedWithOld === null) {
-        const decryptedWithNew = tryDecryptPiiRow(row, ORDER_PII_FIELDS, newKey);
-        if (decryptedWithNew !== null) {
-          stats.alreadyNew++;
-          continue;
-        }
-        console.warn(
-          `   ⚠️  Order ${row.id} (#${row.orderNumber}): decrypt failed with both keys — skipping.`,
-        );
-        stats.skipped++;
+      const raw = row as unknown as Record<string, unknown>;
+      const encrypted = ["name", "phoneEnc", "phone2", "address", "notes"].some(
+        (field) => isEncryptedPayload(raw[field] as string | null | undefined),
+      );
+      if (!encrypted) {
+        result.plaintext += 1;
         continue;
       }
 
-      // Re-encrypt + recompute phoneBlindIndex (matches db.ts:265 createMany
-      // path; the create path at db.ts:252 does NOT derive phoneBlindIndex,
-      // but we always re-derive it here so post-rotation equality search works).
-      const reEncrypted = encryptPiiFields(decryptedWithOld, ORDER_PII_FIELDS, newKey, {
-        sourceField: "phone",
-        indexField: "phoneBlindIndex",
-      });
+      const oldPlaintext = tryDecryptCustomer(raw, oldKey);
+      if (oldPlaintext === null) {
+        if (tryDecryptCustomer(raw, newKey) !== null) {
+          result.alreadyNew += 1;
+          continue;
+        }
+        throw new Error(`Shop ${shopId}: Customer ${row.id} is undecryptable`);
+      }
 
-      await tx.order.update({
-        where: { id: row.id as string },
+      result.rotated += 1;
+      if (DRY_RUN) continue;
+      const reEncrypted = encryptCustomerData(oldPlaintext, newKey);
+      await tx.customer.update({
+        where: { id: row.id },
         data: {
+          name: reEncrypted.name as string,
           phone: reEncrypted.phone as string,
-          phoneBlindIndex: reEncrypted.phoneBlindIndex as string | undefined,
-          address: reEncrypted.address as string | undefined,
-          notes: reEncrypted.notes as string | undefined,
+          phoneEnc: (reEncrypted.phoneEnc as string | undefined) ?? null,
+          nameBlindIndex:
+            (reEncrypted.nameBlindIndex as string | undefined) ?? null,
+          phone2: (reEncrypted.phone2 as string | undefined) ?? null,
+          address: (reEncrypted.address as string | undefined) ?? null,
+          notes: (reEncrypted.notes as string | undefined) ?? null,
         },
       });
-      stats.rotated++;
     }
   });
+  return result;
+}
 
-  return stats;
+async function rotateOrders(
+  client: PrismaClient,
+  shopId: string,
+  oldKey: Buffer,
+  newKey: Buffer,
+): Promise<ModelStats> {
+  const rows = await client.order.findMany();
+  const result = stats(shopId, "Order", rows.length);
+
+  await client.$transaction(async (tx) => {
+    for (const row of rows) {
+      const raw = row as unknown as Record<string, unknown>;
+      const encrypted = ORDER_PII_FIELDS.some((field) =>
+        isEncryptedPayload(raw[field] as string | null | undefined),
+      );
+      if (!encrypted) {
+        result.plaintext += 1;
+        continue;
+      }
+
+      const oldPlaintext = tryDecryptPiiRow(raw, ORDER_PII_FIELDS, oldKey);
+      if (oldPlaintext === null) {
+        if (tryDecryptPiiRow(raw, ORDER_PII_FIELDS, newKey) !== null) {
+          result.alreadyNew += 1;
+          continue;
+        }
+        throw new Error(`Shop ${shopId}: Order ${row.id} is undecryptable`);
+      }
+
+      result.rotated += 1;
+      if (DRY_RUN) continue;
+      const reEncrypted = encryptPiiFields(
+        oldPlaintext,
+        ORDER_PII_FIELDS,
+        newKey,
+        { sourceField: "phone", indexField: "phoneBlindIndex" },
+      );
+      await tx.order.update({
+        where: { id: row.id },
+        data: {
+          phone: reEncrypted.phone as string,
+          phoneBlindIndex:
+            (reEncrypted.phoneBlindIndex as string | undefined) ?? null,
+          address: reEncrypted.address as string,
+          notes: (reEncrypted.notes as string | undefined) ?? null,
+        },
+      });
+    }
+  });
+  return result;
 }
 
 async function rotateConversations(
+  client: PrismaClient,
+  shopId: string,
   oldKey: Buffer,
   newKey: Buffer,
 ): Promise<ModelStats> {
-  const stats: ModelStats = {
-    model: "Conversation",
-    total: 0,
-    rotated: 0,
-    alreadyNew: 0,
-    skipped: 0,
-  };
+  const rows = await client.conversation.findMany();
+  const result = stats(shopId, "Conversation", rows.length);
 
-  const rows = await dbRaw.conversation.findMany();
-  stats.total = rows.length;
-  if (rows.length === 0) return stats;
-
-  if (DRY_RUN) {
-    console.log(`   [dry-run] would rotate ${rows.length} conversation row(s)`);
-    return stats;
-  }
-
-  await dbRaw.$transaction(async (tx) => {
+  await client.$transaction(async (tx) => {
     for (const row of rows) {
-      const decryptedWithOld = tryDecryptPiiRow(row, CONVERSATION_PII_FIELDS, oldKey);
-      if (decryptedWithOld === null) {
-        const decryptedWithNew = tryDecryptPiiRow(row, CONVERSATION_PII_FIELDS, newKey);
-        if (decryptedWithNew !== null) {
-          stats.alreadyNew++;
-          continue;
-        }
-        console.warn(
-          `   ⚠️  Conversation ${row.id}: decrypt failed with both keys — skipping.`,
-        );
-        stats.skipped++;
+      const raw = row as unknown as Record<string, unknown>;
+      const encrypted = CONVERSATION_PII_FIELDS.some((field) =>
+        isEncryptedPayload(raw[field] as string | null | undefined),
+      );
+      if (!encrypted) {
+        result.plaintext += 1;
         continue;
       }
 
-      const reEncrypted = encryptPiiFields(decryptedWithOld, CONVERSATION_PII_FIELDS, newKey);
+      const oldPlaintext = tryDecryptPiiRow(
+        raw,
+        CONVERSATION_PII_FIELDS,
+        oldKey,
+      );
+      if (oldPlaintext === null) {
+        if (
+          tryDecryptPiiRow(raw, CONVERSATION_PII_FIELDS, newKey) !== null
+        ) {
+          result.alreadyNew += 1;
+          continue;
+        }
+        throw new Error(
+          `Shop ${shopId}: Conversation ${row.id} is undecryptable`,
+        );
+      }
 
+      result.rotated += 1;
+      if (DRY_RUN) continue;
+      const reEncrypted = encryptPiiFields(
+        oldPlaintext,
+        CONVERSATION_PII_FIELDS,
+        newKey,
+      );
       await tx.conversation.update({
-        where: { id: row.id as string },
+        where: { id: row.id },
         data: {
           contactName: reEncrypted.contactName as string,
-          contactPhone: (reEncrypted.contactPhone as string | undefined) ?? null,
+          contactPhone:
+            (reEncrypted.contactPhone as string | undefined) ?? null,
         },
       });
-      stats.rotated++;
     }
   });
-
-  return stats;
+  return result;
 }
 
 async function rotateMessages(
+  client: PrismaClient,
+  shopId: string,
   oldKey: Buffer,
   newKey: Buffer,
 ): Promise<ModelStats> {
-  const stats: ModelStats = {
-    model: "Message",
-    total: 0,
-    rotated: 0,
-    alreadyNew: 0,
-    skipped: 0,
-  };
+  const rows = await client.message.findMany();
+  const result = stats(shopId, "Message", rows.length);
 
-  const rows = await dbRaw.message.findMany();
-  stats.total = rows.length;
-  if (rows.length === 0) return stats;
-
-  if (DRY_RUN) {
-    console.log(`   [dry-run] would rotate ${rows.length} message row(s)`);
-    return stats;
-  }
-
-  await dbRaw.$transaction(async (tx) => {
+  await client.$transaction(async (tx) => {
     for (const row of rows) {
-      const body = row.body as string | null;
-      if (!body || !isEncryptedPayload(body)) {
-        // Plaintext or null — skip (do not encrypt-then-rotate, that would
-        // change the semantics of the row from "was plaintext" to "encrypted
-        // with new key"). The migration script (migrate-pii-encryption.ts)
-        // is the right tool for that.
-        stats.skipped++;
+      if (!row.body || !isEncryptedPayload(row.body)) {
+        result.plaintext += 1;
         continue;
       }
 
       let plaintext: string;
       try {
-        plaintext = decryptString(jsonToPayload(body), oldKey);
+        plaintext = decryptString(encryptedPayload(row.body), oldKey);
       } catch {
-        // Try NEW key (already-rotated row from a previous crashed run).
         try {
-          decryptString(jsonToPayload(body), newKey);
-          stats.alreadyNew++;
+          decryptString(encryptedPayload(row.body), newKey);
+          result.alreadyNew += 1;
           continue;
         } catch {
-          console.warn(
-            `   ⚠️  Message ${row.id}: decrypt failed with both keys — skipping.`,
-          );
-          stats.skipped++;
-          continue;
+          throw new Error(`Shop ${shopId}: Message ${row.id} is undecryptable`);
         }
       }
 
-      const reEncrypted = encryptString(plaintext, newKey);
+      result.rotated += 1;
+      if (DRY_RUN) continue;
       await tx.message.update({
-        where: { id: row.id as string },
-        data: { body: JSON.stringify(reEncrypted) },
+        where: { id: row.id },
+        data: { body: JSON.stringify(encryptString(plaintext, newKey)) },
       });
-      stats.rotated++;
     }
   });
-
-  return stats;
+  return result;
 }
 
 async function rotateSecrets(
+  client: PrismaClient,
+  shopId: string,
   oldKey: Buffer,
   newKey: Buffer,
 ): Promise<ModelStats> {
-  const stats: ModelStats = {
-    model: "Secret",
-    total: 0,
-    rotated: 0,
-    alreadyNew: 0,
-    skipped: 0,
-  };
+  const rows = await client.secret.findMany();
+  const result = stats(shopId, "Secret", rows.length);
 
-  // Secret stores iv/ciphertext/tag as separate columns (not a JSON payload).
-  const rows = await dbRaw.secret.findMany();
-  stats.total = rows.length;
-  if (rows.length === 0) return stats;
-
-  if (DRY_RUN) {
-    console.log(`   [dry-run] would rotate ${rows.length} secret row(s)`);
-    return stats;
-  }
-
-  await dbRaw.$transaction(async (tx) => {
+  await client.$transaction(async (tx) => {
     for (const row of rows) {
       const payload: EncryptedPayload = {
         iv: row.iv,
         ciphertext: row.ciphertext,
         tag: row.tag,
       };
-
       let plaintext: string;
       try {
         plaintext = decryptString(payload, oldKey);
       } catch {
         try {
-          // Try NEW key — already-rotated row?
           decryptString(payload, newKey);
-          stats.alreadyNew++;
+          result.alreadyNew += 1;
           continue;
         } catch {
-          console.warn(
-            `   ⚠️  Secret ${row.id} (key=${row.key}): decrypt failed with both keys — skipping.`,
+          throw new Error(
+            `Shop ${shopId}: Secret ${row.id} (${row.key}) is undecryptable`,
           );
-          stats.skipped++;
-          continue;
         }
       }
 
+      result.rotated += 1;
+      if (DRY_RUN) continue;
       const reEncrypted = encryptString(plaintext, newKey);
       await tx.secret.update({
         where: { id: row.id },
-        data: {
-          iv: reEncrypted.iv,
-          ciphertext: reEncrypted.ciphertext,
-          tag: reEncrypted.tag,
-        },
+        data: reEncrypted,
       });
-      stats.rotated++;
     }
   });
-
-  return stats;
+  return result;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function tryDecryptPiiRow(
-  row: Record<string, unknown>,
-  fields: readonly string[],
-  key: Buffer,
-): Record<string, unknown> | null {
-  const hasEncryptedField = fields.some((f) =>
-    isEncryptedPayload(row[f] as string | null),
-  );
-  if (!hasEncryptedField) return null; // plaintext row, nothing to rotate
-
+async function rotateTarget(
+  target: RotationTarget,
+  oldKey: Buffer,
+  newKey: Buffer,
+): Promise<ModelStats[]> {
+  const client = new PrismaClient({
+    datasourceUrl: `file:${target.databasePath}`,
+    log: ["error"],
+  });
   try {
-    const decrypted = decryptPiiRow({ ...row }, fields, key);
-    // Verify every encrypted field successfully decrypted.
-    for (const f of fields) {
-      if (isEncryptedPayload(decrypted[f] as string | null)) return null;
-    }
-    return decrypted;
-  } catch {
-    return null;
+    await client.$connect();
+    return [
+      await rotateCustomers(client, target.id, oldKey, newKey),
+      await rotateOrders(client, target.id, oldKey, newKey),
+      await rotateConversations(client, target.id, oldKey, newKey),
+      await rotateMessages(client, target.id, oldKey, newKey),
+      await rotateSecrets(client, target.id, oldKey, newKey),
+    ];
+  } finally {
+    await client.$disconnect();
   }
 }
 
-function jsonToPayload(json: string): EncryptedPayload {
-  const parsed = JSON.parse(json) as Partial<EncryptedPayload>;
-  if (
-    !parsed.iv ||
-    !parsed.ciphertext ||
-    !parsed.tag ||
-    typeof parsed.iv !== "string" ||
-    typeof parsed.ciphertext !== "string" ||
-    typeof parsed.tag !== "string"
-  ) {
-    throw new Error("Malformed encrypted payload");
-  }
-  return { iv: parsed.iv, ciphertext: parsed.ciphertext, tag: parsed.tag };
-}
-
-// ── Phase 3: commit (backup + rename) ──────────────────────────────────────
-
-function commitKeyfile(oldKey: Buffer, newKey: Buffer): { backupPath: string } {
-  if (DRY_RUN) {
-    console.log(`   [dry-run] would back up ${KEYFILE_PATH} → master.key.old-<ts>`);
-    console.log(`   [dry-run] would rename ${SIDECAR_PATH} → ${KEYFILE_PATH}`);
-    return { backupPath: "(dry-run, no backup written)" };
-  }
-
+function commitKeyfile(newKey: Buffer): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupPath = `${KEYFILE_PATH}.old-${timestamp}`;
-
-  // copyFileSync preserves the source; the original keyfile is left in place
-  // until the rename below atomically replaces it. If the rename fails, the
-  // old keyfile is still intact (and the sidecar still has the new key).
   copyFileSync(KEYFILE_PATH, backupPath);
   try {
     chmodSync(backupPath, 0o600);
   } catch {
-    /* best effort */
+    // Best effort on platforms that do not expose POSIX modes.
   }
 
-  // Atomic on POSIX: rename(2) is atomic when src + dst are on the same
-  // filesystem (they are — both in data/).
-  renameSync(SIDECAR_PATH, KEYFILE_PATH);
+  try {
+    renameSync(SIDECAR_PATH, KEYFILE_PATH);
+  } catch (error) {
+    copyFileSync(backupPath, KEYFILE_PATH);
+    throw error;
+  }
+
   try {
     chmodSync(KEYFILE_PATH, 0o600);
   } catch {
-    /* best effort */
+    // Best effort on platforms that do not expose POSIX modes.
   }
-
-  // Sanity: the new keyfile should decode to the new key we just wrote.
-  const writtenHex = readFileSync(KEYFILE_PATH, "utf8").trim();
-  const writtenKey = Buffer.from(writtenHex, "hex");
-  if (!writtenKey.equals(newKey)) {
-    // Should never happen — but if it does, the OLD key is in the backup.
-    console.error(
-      `❌ KEYFILE VERIFICATION FAILED. The new keyfile does not match the new key.\n` +
-        `   Old key backed up at: ${backupPath}\n` +
-        `   Restore it manually if needed.`,
-    );
-    process.exit(1);
+  if (!readKey(KEYFILE_PATH).equals(newKey)) {
+    copyFileSync(backupPath, KEYFILE_PATH);
+    throw new Error("The committed master key does not match the rotation sidecar");
   }
-
-  // Reset the in-memory cache so any subsequent getMasterKey() in this process
-  // reads the new keyfile. (The script exits immediately after, but this is
-  // correct hygiene in case the import graph retained a stale cache.)
-  _resetMasterKeyCacheForTests();
-
-  // Suppress unused-variable lint for oldKey (kept in scope for clarity —
-  // the caller may want to log the old key fingerprint).
-  void oldKey;
-
-  return { backupPath };
+  return backupPath;
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
+function printStats(allStats: readonly ModelStats[]): void {
+  console.log("");
+  console.log(
+    `${"Shop".padEnd(24)} ${"Model".padEnd(14)} ${"Total".padStart(7)} ${
+      (DRY_RUN ? "WouldRotate" : "Rotated").padStart(12)
+    } ${"AlreadyNew".padStart(11)} ${"Plaintext".padStart(10)}`,
+  );
+  console.log("-".repeat(84));
+  for (const item of allStats) {
+    console.log(
+      `${item.shopId.padEnd(24)} ${item.model.padEnd(14)} ${String(
+        item.total,
+      ).padStart(7)} ${String(item.rotated).padStart(12)} ${String(
+        item.alreadyNew,
+      ).padStart(11)} ${String(item.plaintext).padStart(10)}`,
+    );
+  }
+}
 
 async function main(): Promise<void> {
-  console.log(
-    DRY_RUN
-      ? "🔍 DRY-RUN MODE (read-only — no DB or keyfile changes)"
-      : "🔐 MASTER-KEY ROTATION (will modify DB rows + keyfile)",
-  );
-  console.log(`   keyfile: ${KEYFILE_PATH}`);
-  console.log(`   sidecar: ${SIDECAR_PATH}`);
-  console.log("");
+  const lease = acquireRotationLease();
+  let mutationWindowEntered = false;
+  let keyfileCommitted = false;
+  let retainMaintenanceLease = false;
 
-  // IMPORTANT: ensure the app is stopped. We can't enforce this from the
-  // script, but a heuristic check: if the DB has very recent writes (within
-  // the last 30s), warn. (Skipped — would require reading DB mtime, and the
-  // warning is best-effort anyway.)
+  try {
+    // Acquire the maintenance lease first, then prove the old runtime is gone.
+    // A packaged Node process launched after this point refuses startup, and an
+    // already-running process refuses every process-bound production write.
+    await assertApplicationStopped();
 
-  // ── Phase 0 + 1: load keys ──
-  const oldKey = loadOldKey();
-  const newKey = loadOrCreateNewKey(oldKey);
+    const targets = loadRotationTargets();
+    const oldKey = loadOldKey();
+    const newKey = loadOrCreateNewKey(oldKey);
+    if (oldKey.equals(newKey)) {
+      throw new Error("The old and new master keys are identical");
+    }
 
-  console.log(
-    `   OLD key fingerprint: ${oldKey.toString("hex").slice(0, 16)}… (${oldKey.length} bytes)`,
-  );
-  console.log(
-    `   NEW key fingerprint: ${newKey.toString("hex").slice(0, 16)}… (${newKey.length} bytes)`,
-  );
-  if (oldKey.equals(newKey)) {
-    console.error(
-      "❌ OLD and NEW keys are identical. Refusing to rotate (no-op or bug).",
-    );
-    process.exit(1);
-  }
-  console.log("");
-
-  // ── Phase 2: re-encrypt every model ──
-  console.log("Phase 2: re-encrypting DB rows…");
-  const allStats: ModelStats[] = [];
-  allStats.push(await rotateCustomers(oldKey, newKey));
-  allStats.push(await rotateOrders(oldKey, newKey));
-  allStats.push(await rotateConversations(oldKey, newKey));
-  allStats.push(await rotateMessages(oldKey, newKey));
-  allStats.push(await rotateSecrets(oldKey, newKey));
-
-  console.log("");
-  console.log("─".repeat(60));
-  console.log(
-    `   ${"Model".padEnd(14)}  ${"Total".padStart(7)}  ${"Rotated".padStart(8)}  ${"AlreadyNew".padStart(11)}  ${"Skipped".padStart(8)}`,
-  );
-  console.log("─".repeat(60));
-  for (const s of allStats) {
     console.log(
-      `   ${s.model.padEnd(14)}  ${String(s.total).padStart(7)}  ${String(s.rotated).padStart(8)}  ${String(s.alreadyNew).padStart(11)}  ${String(s.skipped).padStart(8)}`,
+      DRY_RUN
+        ? "Master-key rotation dry run"
+        : "Installation-wide master-key rotation",
     );
-  }
-  console.log("─".repeat(60));
-  const totals = allStats.reduce(
-    (acc, s) => ({
-      total: acc.total + s.total,
-      rotated: acc.rotated + s.rotated,
-      alreadyNew: acc.alreadyNew + s.alreadyNew,
-      skipped: acc.skipped + s.skipped,
-    }),
-    { total: 0, rotated: 0, alreadyNew: 0, skipped: 0 },
-  );
-  console.log(
-    `   ${"TOTAL".padEnd(14)}  ${String(totals.total).padStart(7)}  ${String(totals.rotated).padStart(8)}  ${String(totals.alreadyNew).padStart(11)}  ${String(totals.skipped).padStart(8)}`,
-  );
-  console.log("");
+    console.log(`Keyfile: ${KEYFILE_PATH}`);
+    console.log(`Maintenance lease: ${LOCK_PATH}`);
+    console.log(`Registered database targets: ${targets.length}`);
+    for (const target of targets) {
+      console.log(` - ${target.id}: ${target.databasePath}`);
+    }
 
-  if (totals.skipped > 0) {
-    console.warn(
-      `⚠️  ${totals.skipped} row(s) skipped (corrupt or undecryptable). Review the warnings above.`,
+    const allStats: ModelStats[] = [];
+    // Once the first target is entered, a later failure cannot prove that no
+    // database transaction committed. Keep the installation blocked until a
+    // successful resume commits the shared keyfile.
+    if (!DRY_RUN) mutationWindowEntered = true;
+
+    // The shared keyfile is deliberately not committed until every registered
+    // shop and the provisioning template have been processed with this exact
+    // old/new key pair. A crash leaves the old keyfile plus reusable sidecar.
+    for (const target of targets) {
+      allStats.push(...(await rotateTarget(target, oldKey, newKey)));
+    }
+    printStats(allStats);
+
+    if (DRY_RUN) {
+      console.log("\nDry run complete. No database or keyfile changes were written.");
+      return;
+    }
+
+    const backupPath = commitKeyfile(newKey);
+    keyfileCommitted = true;
+    console.log("\nRotation complete.");
+    console.log(`Old key backup: ${backupPath}`);
+    console.log(`New keyfile: ${KEYFILE_PATH}`);
+    console.log(
+      "All registered shop Secrets—including business-truth envelope wrappers—were re-wrapped before the shared keyfile commit.",
     );
-  }
-
-  // ── Phase 3: commit keyfile ──
-  if (DRY_RUN) {
-    console.log("Dry-run complete. No changes written.");
-    console.log("Re-run without --dry-run to perform the rotation.");
-    // Clean up the sidecar if dry-run somehow created one (it shouldn't have).
-    if (existsSync(SIDECAR_PATH)) {
-      console.warn(
-        `⚠️  Sidecar ${SIDECAR_PATH} exists from a previous non-dry-run attempt — not deleted (re-run without --dry-run to complete, or delete manually to abort).`,
+  } catch (error) {
+    retainMaintenanceLease =
+      !DRY_RUN && mutationWindowEntered && !keyfileCommitted;
+    if (retainMaintenanceLease) {
+      console.error(
+        "Rotation entered the database mutation window but did not commit the new keyfile. The maintenance lease will remain in place so the app cannot start or write against mixed-key data.",
       );
     }
-    process.exit(0);
+    throw error;
+  } finally {
+    finishRotationLease(lease, !retainMaintenanceLease);
   }
-
-  console.log("Phase 3: committing keyfile…");
-  const { backupPath } = commitKeyfile(oldKey, newKey);
-  console.log(`   ✅ Old key backed up to: ${backupPath}`);
-  console.log(`   ✅ New key written to:   ${KEYFILE_PATH}`);
-  console.log("");
-  console.log("─".repeat(60));
-  console.log("✅ Rotation complete.");
-  console.log(
-    `   Re-encrypted ${totals.rotated} row(s) with the new key (${totals.alreadyNew} were already on the new key).`,
-  );
-  console.log(`   Old key backed up at: ${backupPath}`);
-  console.log("");
-  console.log("NEXT STEPS:");
-  console.log("   1. Restart the app so it loads the new keyfile.");
-  console.log("   2. Verify a few records decrypt correctly (open a customer,");
-  console.log("      an order, a conversation, a message).");
-  console.log("   3. If everything looks good, you can delete the backup file.");
-  console.log("      If something is wrong, restore the backup, restart the app,");
-  console.log("      and re-run this script (it will resume from the sidecar).");
-  console.log("");
-  console.log("NOTE: this script operates on the DATABASE_URL shop only.");
-  console.log("      For multi-shop deployments, set DATABASE_URL per shop");
-  console.log("      and run once per shop (the keyfile rotation is shared).");
-  process.exit(0);
 }
 
-main().catch((err) => {
-  console.error("");
-  console.error("❌ Rotation FAILED.");
-  console.error("");
+main().catch((error) => {
+  console.error("Master-key rotation failed.");
   if (existsSync(SIDECAR_PATH)) {
     console.error(
-      `⚠️  Sidecar ${SIDECAR_PATH} exists — a partial rotation may be in progress.`,
+      `Keep ${SIDECAR_PATH}; rerunning will resume with the same new key.`,
     );
-    console.error(
-      "   DO NOT delete the sidecar unless you've verified no rows were re-encrypted.",
-    );
-    console.error(
-      "   Re-run this script (without --force) to resume from the sidecar.",
-    );
-    console.error(
-      "   If you need to abort, restore the DB from backup first, THEN delete the sidecar.",
-    );
-  } else {
-    console.error(
-      "   No sidecar was written — the failure occurred before Phase 1 completed.",
-    );
-    console.error("   No DB rows were modified. Safe to re-run.");
   }
-  console.error("");
-  console.error("Error:", err);
-  process.exit(1);
+  if (existsSync(LOCK_PATH)) {
+    console.error(
+      `Keep ${LOCK_PATH}; it intentionally blocks SahelFlow until a successful resume.`,
+    );
+  }
+  console.error(error);
+  process.exitCode = 1;
 });

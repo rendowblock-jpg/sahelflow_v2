@@ -1,5 +1,6 @@
 import "server-only";
 
+import { BUSINESS_ENVELOPE_SECRET_KEY } from "@/lib/business-truth/envelope-key";
 import { db, type DbClient } from "@/lib/db";
 import {
   clearAlgerianDemoData,
@@ -95,12 +96,29 @@ async function countIndependentExtractionMetrics(
 }
 
 /**
+ * Canonical authority is seller-owned unless its aggregate identity belongs to
+ * the deterministic demo graph. Child facts are protected by command foreign
+ * keys, so counting non-demo commands/versions also blocks mixed or independent
+ * canonical history from being silently removed with the sample workspace.
+ */
+async function countIndependentBusinessTruth(client: DbClient): Promise<number> {
+  const [commands, aggregateVersions] = await Promise.all([
+    client.businessCommand.count({ where: { aggregateId: outsideDemo } }),
+    client.businessAggregateVersion.count({
+      where: { aggregateId: outsideDemo },
+    }),
+  ]);
+  return commands + aggregateVersions;
+}
+
+/**
  * Count seller-owned state that must never be mixed with the evaluation dataset.
  *
  * Auth/session rows, security audit entries, reference-only WilayaRiskProfile
- * rows and harmless preference Settings belong to the installed shell rather
- * than an active shop's sample business records. Business entities, sequence
- * counters, independent extraction analytics, credentials, integrations,
+ * rows, the internal wrapped business-envelope key and harmless preference
+ * Settings belong to the installed shell rather than an active shop's sample
+ * business records. Business entities, sequence counters, independent extraction
+ * analytics, canonical command authority, seller credentials, integrations,
  * storefronts, automations, reusable messaging, current/legacy phone-risk data
  * and effectful report Settings are included even when the visible catalog is
  * otherwise empty.
@@ -123,9 +141,15 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
     client.cannedResponse.count({ where: { id: outsideDemo } }),
     client.whatsAppTemplate.count({ where: { id: outsideDemo } }),
     client.integration.count({ where: { id: outsideDemo } }),
-    client.secret.count({ where: { id: outsideDemo } }),
+    client.secret.count({
+      where: {
+        id: outsideDemo,
+        key: { not: BUSINESS_ENVELOPE_SECRET_KEY },
+      },
+    }),
     client.aiChatSession.count({ where: { id: outsideDemo } }),
     countIndependentExtractionMetrics(client),
+    countIndependentBusinessTruth(client),
     client.counter.count(),
     // The demo does not create PhoneReputation records. Every row here is
     // independently owned seller risk intelligence and makes the shop non-empty.
@@ -137,11 +161,47 @@ async function countNonDemoSellerState(client: DbClient): Promise<number> {
 }
 
 /**
+ * Remove the append-only command graph whose aggregate belongs to the demo.
+ * Generated child IDs are intentionally irrelevant: command foreign keys are
+ * the deletion boundary. Any non-demo command or aggregate version is counted
+ * as independent seller state before this function runs and blocks cleanup.
+ */
+async function clearDemoBusinessTruth(client: DbClient): Promise<void> {
+  const commandRows = await client.businessCommand.findMany({
+    where: { aggregateId: demoIdentity },
+    select: { id: true },
+  });
+  const commandIds = commandRows.map((row) => row.id);
+
+  if (commandIds.length > 0) {
+    const commandId = { in: commandIds } as const;
+
+    await client.compensationFact.deleteMany({ where: { commandId } });
+    await client.projectionInvalidation.deleteMany({ where: { commandId } });
+    await client.financialMovement.deleteMany({ where: { commandId } });
+    await client.inventoryMovement.deleteMany({ where: { commandId } });
+    await client.inventoryReservation.deleteMany({
+      where: { createdByCommandId: commandId },
+    });
+    await client.outboxIntent.deleteMany({ where: { commandId } });
+    await client.domainEvent.deleteMany({ where: { commandId } });
+    await client.businessCommand.deleteMany({
+      where: { id: { in: commandIds } },
+    });
+  }
+
+  await client.businessAggregateVersion.deleteMany({
+    where: { aggregateId: demoIdentity },
+  });
+}
+
+/**
  * Remove records created through normal application flows but derived from demo
  * entities. These rows may have generated non-demo IDs, so prefix-only cleanup
  * is insufficient.
  */
 async function clearDemoDerivedRecords(client: DbClient): Promise<void> {
+  await clearDemoBusinessTruth(client);
   await client.extractionMetric.deleteMany({
     where: {
       OR: [{ id: demoIdentity }, { messageId: demoIdentity }],
@@ -236,7 +296,7 @@ export async function loadAlgerianDemoWorkspace(
 
       if ((await countNonDemoSellerState(tx)) > 0) {
         throw new SahelFlowError(
-          "Sample data can only be loaded into a shop with no seller-owned business records, sequence/analytics state, current or legacy phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
+          "Sample data can only be loaded into a shop with no seller-owned business records, sequence/analytics state, canonical command authority, current or legacy phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
           "DEMO_SHOP_NOT_EMPTY",
           409,
         );
@@ -266,7 +326,7 @@ export async function removeAlgerianDemoWorkspace(
       const tx = transaction as unknown as DbClient;
       if ((await countNonDemoSellerState(tx)) > 0) {
         throw new SahelFlowError(
-          "Demo removal is blocked because independently owned seller records, sequence/analytics state, current or legacy phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
+          "Demo removal is blocked because independently owned seller records, sequence/analytics state, canonical command authority, current or legacy phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
           "DEMO_REMOVAL_REAL_DATA_PRESENT",
           409,
         );
