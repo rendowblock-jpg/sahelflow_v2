@@ -33,6 +33,13 @@ function writeFixture(options?: {
   tagBindingGuard?: boolean;
   malformedTagPeeling?: boolean;
   monotonicVersionGuard?: boolean;
+  draftSafeLookup?: boolean;
+  draftLookupApiFailureGuard?: boolean;
+  draftLookupCompletionGuard?: boolean;
+  draftLookupEnumerationFailureGuard?: boolean;
+  draftLookupExactTagGuard?: boolean;
+  draftLookupUniqueGuard?: boolean;
+  draftLookupStateGuard?: boolean;
   protectedEnvironment?: boolean;
   serializedPublication?: boolean;
 }): string {
@@ -96,7 +103,60 @@ function writeFixture(options?: {
     "      - name: Retain signed candidate and evidence",
     "        run: echo retained",
     "      - name: Verify exact draft publication target",
-    "        run: echo verified",
+    "        run: |",
+    ...(options?.draftSafeLookup ?? true
+      ? [
+          "          $releaseMatches = @()",
+          "          $releaseEnumerationComplete = $false",
+          "          for ($page = 1; $page -le 10; $page++) {",
+          '            $releasePage = @(gh api "repos/repo/releases?per_page=100&page=$page" | ConvertFrom-Json)',
+          ...(options?.draftLookupApiFailureGuard ?? true
+            ? ["            if ($LASTEXITCODE -ne 0) { throw 'blocked' }"]
+            : [
+                "            if ($LASTEXITCODE -ne 0) { Write-Warning 'ignored' }",
+              ]),
+          ...(options?.draftLookupExactTagGuard ?? true
+            ? [
+                '            $releaseMatches += @($releasePage | Where-Object { $_.tag_name -ceq $env:SF_RELEASE_TAG })',
+              ]
+            : [
+                '            $discardedMatches = @($releasePage | Where-Object { $_.tag_name -ceq $env:SF_RELEASE_TAG })',
+                "            $releaseMatches += @($releasePage)",
+              ]),
+          ...(options?.draftLookupCompletionGuard ?? true
+            ? [
+                "            if ($releasePage.Count -lt 100) { $releaseEnumerationComplete = $true; break }",
+              ]
+            : ["            if ($releasePage.Count -lt 100) { break }"]),
+          "          }",
+          ...(options?.draftLookupEnumerationFailureGuard ?? true
+            ? [
+                "          if (-not $releaseEnumerationComplete) { throw 'blocked' }",
+              ]
+            : [
+                "          if (-not $releaseEnumerationComplete) { Write-Warning 'ignored' }",
+              ]),
+          ...(options?.draftLookupUniqueGuard ?? true
+            ? [
+                "          if ($releaseMatches.Count -ne 1) { throw 'blocked' }",
+              ]
+            : [
+                "          if ($releaseMatches.Count -ne 1) { Write-Warning 'ignored' }",
+              ]),
+          "          $release = $releaseMatches[0]",
+          ...(options?.draftLookupStateGuard ?? true
+            ? [
+                "          if (-not $release.draft) { throw 'blocked' }",
+                "          if ($release.prerelease) { throw 'blocked' }",
+              ]
+            : [
+                "          if (-not $release.draft) { Write-Warning 'ignored' }",
+                "          if ($release.prerelease) { Write-Warning 'ignored' }",
+              ]),
+        ]
+      : [
+          '          $release = gh api "repos/repo/releases/tags/$env:SF_RELEASE_TAG"',
+        ]),
   );
   if (options?.autoPublishWorkflow ?? true) {
     signedWorkflow.push(
@@ -322,6 +382,97 @@ describe("verify-updater-contract", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("non-increasing Internal version");
+  });
+
+  it("rejects draft lookup through the published release-by-tag endpoint", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftSafeLookup: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects draft enumeration that ignores API failures", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftLookupApiFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects draft enumeration without a proven final page", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftLookupCompletionGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects draft enumeration that only logs an incomplete scan", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftLookupEnumerationFailureGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects draft enumeration without exact case-sensitive tag matching", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftLookupExactTagGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects draft enumeration without release-state guards", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftLookupStateGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
+  });
+
+  it("rejects draft enumeration that only logs ambiguous matches", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        draftLookupUniqueGuard: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enumerate authenticated releases");
   });
 
   it("rejects automatic publication without serialized signed candidates", () => {
