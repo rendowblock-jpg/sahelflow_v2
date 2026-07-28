@@ -22,6 +22,17 @@
  * src/lib/api/with-error-handler.ts (Sentry capture pre-processing).
  */
 
+const KEY_SEPARATOR_REGEX = /[^a-z0-9]/g;
+
+/**
+ * Normalize provider/application key spellings to one stable comparison form.
+ * This makes camelCase, snake_case, kebab-case, dotted and spaced aliases such
+ * as customerName, customer_name and customer-name share the same authority.
+ */
+function normalizeSensitiveKey(key: string): string {
+  return key.toLowerCase().replace(KEY_SEPARATOR_REGEX, "");
+}
+
 /** Keys whose values should always be redacted. */
 const SENSITIVE_KEYS = new Set(
   [
@@ -52,7 +63,7 @@ const SENSITIVE_KEYS = new Set(
     "secret",
     "credentials",
     "token",
-  ].map((key) => key.toLowerCase()),
+  ].map(normalizeSensitiveKey),
 );
 
 /**
@@ -105,14 +116,18 @@ function redactRecursive(value: unknown): unknown {
     const obj = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
-      // Normalize both the configured key set and the lookup key so camelCase,
-      // uppercase, snake-like and mixed-case spellings share one comparison.
-      const lowerK = k.toLowerCase();
-      if (SENSITIVE_KEYS.has(lowerK)) {
-        out[k] = redactScalar(v);
-      } else {
-        out[k] = redactRecursive(v);
-      }
+      const normalizedKey = normalizeSensitiveKey(k);
+      const redactedValue = SENSITIVE_KEYS.has(normalizedKey)
+        ? redactScalar(v)
+        : redactRecursive(v);
+      // Define the own property directly so provider-shaped special keys cannot
+      // invoke legacy prototype setters while the redacted clone is built.
+      Object.defineProperty(out, k, {
+        value: redactedValue,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
     return out;
   }
