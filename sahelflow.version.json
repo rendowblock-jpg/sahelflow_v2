@@ -18,6 +18,6 @@
     "installMode": "passive"
   },
   "runtimeProtocolVersion": 1,
-  "shopRegistryFormatVersion": 1,
+  "shopRegistryFormatVersion": 2,
   "backupFormatVersion": 1
 }
