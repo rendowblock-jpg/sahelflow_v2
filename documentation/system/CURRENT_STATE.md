@@ -22,9 +22,10 @@ output or planned scope into readiness. The active execution frontier belongs in
 
 SahelFlow is a broad internal Windows application with a proven Internal.5
 accepted baseline, a stronger Internal.11 source/release chain installed by the
-Founder but not accepted, the merged Session 1 packages, and the merged Session 2 business-truth foundation grouped into
-an Internal.13 milestone request. It is not an empty prototype, but it is not
-yet a commercially complete or class-AAA SahelFlow 1.0 product.
+Founder but not accepted, the merged Session 1 packages, and the merged Session
+2 business-truth foundation grouped into an Internal.13 milestone request. It is
+not an empty prototype, but it is not yet a commercially complete or class-AAA
+SahelFlow 1.0 product.
 
 PR #158 app source `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`
 replaced the failing packaged Bun server with pinned Node.js 22.23.1, retained
@@ -88,14 +89,26 @@ the Founder T470, and the Arabic foundation is not evidence that every route is
 already AAA; the generated inventory assigns the remaining failures across
 Sessions 2–4.
 
+PR #170 merged the Session 2 business-truth source foundation at
+`6cd1103b55c905d26492ecf5436e644d377ce557`. It adds independent lifecycle
+contracts, canonical aggregate/command/event/outbox/reservation/movement and
+compensation persistence, trusted encrypted idempotent command execution,
+crash-recoverable multi-shop key rotation, migration-authoritative reset and
+fail-closed legacy projections. Production order, delivery, refund, provider,
+automation and UI routes remain on the legacy paths until complete observable
+verticals adopt those contracts.
+
 The main product discontinuities remain:
 
 - the Phase 1A trusted workspace/shop/incarnation foundation exists, but complete
   seller identity, membership, device and live-switch authority remains ahead;
-- no final separate order, delivery, inventory, COD/financial and return/refund
-  state machines;
-- no append-only stock and money movement truth;
-- no complete canonical transition/audit/outbox/idempotency service;
+- independent order, delivery, inventory, COD/financial and return/refund
+  contracts exist, but production routes do not yet adopt them end to end;
+- append-only inventory and financial movement persistence exists at the
+  canonical foundation layer, but complete production journeys do not yet write,
+  reconcile and compensate through it;
+- the atomic command/audit/event/outbox/idempotency foundation exists, but the
+  production order, delivery, refund, provider and automation paths remain legacy;
 - no fully proven cross-module Golden COD Journey;
 - identity, teams, devices, licensing and Founder operations are incomplete;
 - provider adapters exist without a certified public launch set;
@@ -110,9 +123,10 @@ The correct characterization is:
 
 > **Accepted Internal.5 baseline; Internal.11 installed but not accepted;
 > Session 1 and the Session 2 business-truth foundation merged and grouped
-> into an unsigned Internal.13 request; repeated-launch performance and full Founder installed evidence remain
-> open; major business-authority, route-level AAA, commercial, provider and
-> connected-platform work continues.**
+> into an unsigned Internal.13 request; repeated-launch performance and full
+> Founder installed evidence remain open; production adoption of the canonical
+> business foundation, route-level AAA, commercial, provider and connected-
+> platform work continues.**
 
 ## Evidence ledger
 
@@ -140,6 +154,7 @@ The correct characterization is:
 | Workspace/shop authority | PR #168 merge `d7e6568a46a929d552dbe8bbe0541f23dd8d5fc4` | Registry v2 migration and trusted workspace/shop/incarnation context passed selected source and installed lanes |
 | Startup readiness correction | PR #169 merge `e6e1f16a03464c4338548c8905d9bca17b6df4a7` | Clean-runner packaged/install/reopen/UI evidence passed; no post-change T470 timing yet |
 | Arabic/RTL and chart foundation | PR #171 merge `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15` | Shared bidi/layout/state/chart contracts and generated route inventory passed selected exact-head gates |
+| Session 2 business-truth foundation | PR #170 merge `6cd1103b55c905d26492ecf5436e644d377ce557`; exact-head run `30344619022` | Independent lifecycle contracts, canonical persistence, encrypted trusted idempotent commands, movement/compensation facts, key rotation, reset and legacy-ambiguity proof integrated; production routes not switched |
 
 The earlier accepted reopen proves that exact historical attempt only. Clean
 runner results prove the exact artifact on that runner, not T470 performance or
@@ -178,17 +193,17 @@ separate evidence result.
 | CAP-005 | Seller identity/workspace/team | **Missing** | Profile/agent UI fragments only | Person/workspace/license, memberships, roles, fields, devices, revocation |
 | CAP-006 | Trial/permanent licensing | **Unsafe/partial** | License UI/store/hook and Ed25519 concepts | Online signed trial, complete lockout, offline permanent issuance and entitlements |
 | CAP-007 | Catalog/products/variants | **Partial** | Pages, routes, models, imports/exports | Complete stock authority, bulk/data UX, journey and scale proof |
-| CAP-008 | Inventory | **Partial/unsafe** | Stock fields and order lifecycle effects | Reservation and append-only movement ledger, replay/concurrency and return disposition |
+| CAP-008 | Inventory | **Partial foundation** | Existing stock behavior plus canonical reservation and `InventoryMovement` persistence with encrypted reasons and same-key concurrency proof | Adopt reservation consumption/release and movement reconciliation across production confirmation, shipment, cancellation and return journeys |
 | CAP-009 | Customers/risk | **Partial** | Search, details, blacklist, risk/phone reputation | PII classification, duplicate merge, permissions and journey proof |
-| CAP-010 | Orders/confirmation | **Partial** | Routes/UI/timeline, confirmation queue, status actions | Separate state machines, canonical service and Golden journey |
+| CAP-010 | Orders/confirmation | **Partial foundation** | Existing routes/UI plus independent order/confirmation contracts and the trusted atomic command kernel | Switch a complete production confirmation vertical and prove the Golden journey, conflicts, retries and compensation |
 | CAP-011 | Delivery/couriers | **Partial/unverified** | Delivery model/UI/routes and candidate adapters | Durable provider inbox, certification, exceptions and reconciliation |
-| CAP-012 | Returns/refunds | **Partial/unsafe** | Models, routes and UI | Atomic append-only stock/money/status compensation |
-| CAP-013 | COD/accounting | **Partial** | Expenses, COD fields, reconciliation UI/tests | Receivable/remittance/fee/discrepancy ledger and governed correction |
-| CAP-014 | Audit/history | **Partial/unsafe** | `AuditLog`, `OrderChange`, timelines | Trusted actor/device and atomic business audit/movements |
+| CAP-012 | Returns/refunds | **Partial foundation** | Existing models/routes/UI plus compensation facts and canonical inventory/financial movement contracts | Adopt atomic production return/refund transitions and prove stock, money and status compensation end to end |
+| CAP-013 | COD/accounting | **Partial foundation** | Expenses, COD UI/tests and canonical DZD `FinancialMovement` persistence with encrypted free-form details | Adopt production receivable/remittance/fee/discrepancy posting, reconciliation and governed correction |
+| CAP-014 | Audit/history | **Partial foundation** | `AuditLog`, `OrderChange`, timelines plus trusted principals and atomic audit/event/outbox/movement persistence | Adopt the kernel across production routes, add durable effect workers and complete device/operator authority |
 | CAP-015 | Imports/exports | **Implemented/partial** | Product/customer/order/expense import and exports | Preview/mapping/recovery consistency and scale evidence |
 | CAP-016 | Local backup/restore | **Partial/unsafe** | Create/list/restore routes and settings UI | Verified all-shop snapshots, atomic restore and independent recovery |
 | CAP-017 | WhatsApp/inbox | **Partial/unverified** | Sidecar, QR/connect, chats/messages/send and inbox UI | Durable encrypted ingress/egress, restart/replay and certification |
-| CAP-018 | Automations | **Partial/unsafe** | Conditions, steps, logs and editor | Transactional outbox, approvals, idempotent effects, receipts/dead letters |
+| CAP-018 | Automations | **Partial/unsafe** | Conditions, steps, logs and editor | Transactional outbox adoption, approvals, idempotent effects, receipts/dead letters |
 | CAP-019 | AI/extraction | **Partial/unsafe** | Deterministic/Gemini routes, schemas and chat/extraction UI | Central data policy, safe corpus, receipts and bound approvals |
 | CAP-020 | Analytics/reporting | **Partial/unverified** | Dashboard, analytics and reporting routes/charts | Governed financial semantics, representative scale and complete states |
 | CAP-021 | Provider framework | **Candidate/unverified** | Courier/commerce/Sheets integration code | Founder launch set and dated live certification |
@@ -240,8 +255,11 @@ Tauri Windows host
 └── Bun/Baileys WhatsApp sidecar
 ```
 
-The final target adds explicit workspace/member/device/shop/entitlement
-authority, append-only movements, durable inbox/outbox and optional bounded
+The current source also contains an additive canonical business-truth layer for
+commands, events, outbox intents, reservations, inventory/financial movements,
+projection invalidations and compensation facts. The final target still adds
+explicit workspace/member/device/shop/entitlement authority, production adoption
+of those business contracts, durable inbox/outbox execution and optional bounded
 connected planes without replacing canonical desktop authority.
 
 ## Keep and harden
@@ -251,6 +269,7 @@ connected planes without replacing canonical desktop authority.
 - Prisma/SQLite per-shop local authority.
 - Existing product, customer, order, delivery, return, accounting and risk
   behavior that survives target invariants.
+- Canonical business contracts, command kernel and append-only fact persistence.
 - Shared multilingual/RTL component foundations.
 - Runtime authentication, signature verification, updater and evidence
   infrastructure.
@@ -259,9 +278,10 @@ connected planes without replacing canonical desktop authority.
 ## Migrate or replace
 
 - Process-global active-shop routing → authenticated workspace/shop context.
-- Direct stock fields/effects → reservations and append-only movement ledger.
-- Conflated statuses → separate order/delivery/inventory/financial/return states.
-- Best-effort audit/effects → atomic audit and durable inbox/outbox.
+- Legacy direct stock effects → canonical reservations and movement ledger.
+- Conflated production statuses → the separate business lifecycle contracts.
+- Best-effort production audit/effects → the atomic command/audit/outbox boundary
+  plus durable effect workers.
 - Local PIN as identity → local unlock plus person/workspace/member/device.
 - Self-issued/local trial → online trial-only signed issuance and offline
   permanent entitlement.
@@ -283,17 +303,19 @@ connected planes without replacing canonical desktop authority.
 
 ## Immediate next boundary
 
-The superseded runtime boundary was: **Launch the release-verified standalone server on pinned Node.js**.
-Internal.8 achieved that mechanism; the phrase remains for historical continuity.
+Internal.13 release verification and the next Golden COD vertical are independent
+lanes once the source candidate is frozen on protected `main`:
 
-Session 1 now begins four bounded lanes from current protected `main`:
+1. merge the exact green Internal.13 source request and dispatch the signed
+   protected-main updater workflow;
+2. require signature, install/reopen, authenticated hydrated UI twice,
+   deterministic evidence, manifest and automatic publication;
+3. independently start the first complete observable production vertical that
+   adopts the frozen business contracts across UI, API, domain and database;
+4. record Founder T470 installation, preservation and cold/warm timing without
+   blocking that independent vertical.
 
-1. protected automatic Internal publication after all release gates;
-2. measured Internal.11 cold/warm performance correction;
-3. compatible Phase 1A workspace/shop/incarnation authority;
-4. global design-system and Arabic/RTL foundations plus route inventory.
-
-Shared contracts remain dependency-serialized, but the slow-launch defect no
-longer freezes independent Phase 1A or experience work. Exact lane ownership and
-entry steps are in [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md)
+Shared contracts remain dependency-serialized. Release observation does not
+freeze independent seller or experience work. Exact lane ownership and entry
+steps are in [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md)
 and [`ROADMAP.md`](ROADMAP.md).
