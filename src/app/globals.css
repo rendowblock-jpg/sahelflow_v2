@@ -13,8 +13,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  /* Keep this Tailwind token distinct from next/font's source variable. */
-  --font-arabic-ui: var(--font-arabic), "Amiri", serif;
 
   /* Sidebar */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -895,7 +893,7 @@ html[dir="rtl"] :where(*) {
    variable. Technical and numeric values opt back into an isolated LTR stack.
 */
 html[dir="rtl"] body {
-  font-family: var(--font-arabic-ui);
+  font-family: var(--font-arabic), "Amiri", serif;
   line-height: 1.65;  /* Arabic needs more line-height than Latin (1.5) */
 }
 [dir="rtl"] h1,
