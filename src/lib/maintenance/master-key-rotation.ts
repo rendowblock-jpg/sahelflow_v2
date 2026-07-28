@@ -7,6 +7,7 @@ import { dataRoot } from "@/lib/storage/data-root";
 import { SahelFlowError } from "@/types/errors";
 
 export const MASTER_KEY_ROTATION_LOCK_FILE = "master-key-rotation.lock";
+export const MASTER_KEY_ROTATION_SIDECAR_FILE = "master.key.new";
 export const MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION = 1;
 
 export interface MasterKeyRotationLockRecord {
@@ -18,6 +19,10 @@ export interface MasterKeyRotationLockRecord {
 
 export function masterKeyRotationLockPath(): string {
   return join(dataRoot(), MASTER_KEY_ROTATION_LOCK_FILE);
+}
+
+export function masterKeyRotationSidecarPath(): string {
+  return join(dataRoot(), MASTER_KEY_ROTATION_SIDECAR_FILE);
 }
 
 export function parseMasterKeyRotationLock(
@@ -49,24 +54,32 @@ export function parseMasterKeyRotationLock(
 /**
  * Fail closed while the installation-wide master key is being rotated.
  *
- * The rotation script owns this lease before it inspects any shop database and
- * removes it only after all shops and the provisioning template have been
- * re-wrapped or the preflight fails. Packaged startup and every process-bound
- * production write call this guard, closing the race where a running or newly
- * launched app could persist old-key ciphertext after its shop was scanned.
+ * The rotation script owns a maintenance lease before it inspects any shop
+ * database. It also durably publishes `master.key.new` before entering the
+ * mutation window. Startup and production writes therefore observe either the
+ * lease or the sidecar: even if a power loss drops the newly-created lease
+ * directory entry, the fsynced sidecar remains a durable recovery barrier until
+ * the rotation commits the shared keyfile and removes it.
  */
 export function assertMasterKeyRotationInactive(): void {
   const lockPath = masterKeyRotationLockPath();
-  if (!existsSync(lockPath)) return;
+  const sidecarPath = masterKeyRotationSidecarPath();
+  const lockExists = existsSync(lockPath);
+  const sidecarExists = existsSync(sidecarPath);
+  if (!lockExists && !sidecarExists) return;
 
-  let detail = "unknown owner";
-  try {
-    const record = parseMasterKeyRotationLock(
-      JSON.parse(readFileSync(lockPath, "utf8")),
-    );
-    detail = `PID ${record.ownerPid}, started ${record.createdAt}`;
-  } catch {
-    detail = "malformed maintenance lease";
+  let detail = sidecarExists
+    ? "durable pending-key recovery sidecar"
+    : "unknown owner";
+  if (lockExists) {
+    try {
+      const record = parseMasterKeyRotationLock(
+        JSON.parse(readFileSync(lockPath, "utf8")),
+      );
+      detail = `PID ${record.ownerPid}, started ${record.createdAt}`;
+    } catch {
+      detail = "malformed maintenance lease";
+    }
   }
 
   throw new SahelFlowError(
