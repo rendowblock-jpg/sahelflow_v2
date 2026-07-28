@@ -45,4 +45,34 @@ describe("legacy delivery compatibility projection", () => {
       certainty: "deterministic",
     });
   });
+
+  it("keeps an imported delivered label ambiguous without governed evidence", () => {
+    const projection = projectLegacyOrderAuthority({
+      status: "delivered",
+      codCollected: false,
+      codRemitted: false,
+    });
+
+    expect(projection.delivery).toMatchObject({
+      value: "delivered",
+      certainty: "ambiguous",
+    });
+    expect(projection.delivery.reason).toContain("imported directly");
+  });
+
+  it("treats deliveredAt as governed legacy completion evidence", () => {
+    const deliveredAt = new Date("2026-07-28T07:30:00.000Z");
+    const projection = projectLegacyOrderAuthority({
+      status: "delivered",
+      codCollected: false,
+      codRemitted: false,
+      deliveredAt,
+    });
+
+    expect(projection.delivery).toMatchObject({
+      value: "delivered",
+      certainty: "deterministic",
+    });
+    expect(projection.delivery.reason).toContain("completion timestamp");
+  });
 });
