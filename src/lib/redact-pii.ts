@@ -120,10 +120,15 @@ const SAFE_MACHINE_KEY_SUFFIXES = [
   "table",
 ] as const;
 
-function isSafeStringKey(normalizedKey: string): boolean {
+const SAFE_EXACT_STRING_VALUES = new Map<string, ReadonlySet<string>>([
+  [normalizeKey("reason"), new Set(["refund"])],
+]);
+
+function isSafeStringValue(normalizedKey: string, value: string): boolean {
   return (
     SAFE_STRING_KEYS.has(normalizedKey) ||
-    SAFE_MACHINE_KEY_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix))
+    SAFE_MACHINE_KEY_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix)) ||
+    SAFE_EXACT_STRING_VALUES.get(normalizedKey)?.has(value) === true
   );
 }
 
@@ -156,10 +161,10 @@ function redactRecursive(value: unknown): unknown {
       const redactedValue = SENSITIVE_KEYS.has(normalizedKey)
         ? redactScalar(entry)
         : typeof entry === "string"
-          ? isSafeStringKey(normalizedKey)
+          ? isSafeStringValue(normalizedKey, entry)
             ? scrubEmbeddedPii(entry)
             : redactScalar(entry)
-          : Array.isArray(entry) && !isSafeStringKey(normalizedKey)
+          : Array.isArray(entry) && !SAFE_STRING_KEYS.has(normalizedKey)
             ? redactScalar(entry)
             : redactRecursive(entry);
 
