@@ -1,9 +1,9 @@
 # SahelFlow — Current State
 
 > **Authority:** merged protected `main` only
-> **Protected-main Session 1 package checkpoint:** PR #171 at
-> `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15`
-> **Source version request:** `1.0.0-internal.12` / MSI `1.0.0.12`; not yet a
+> **Protected-main combined source checkpoint:** PR #170 at
+> `6cd1103b55c905d26492ecf5436e644d377ce557`
+> **Source version request:** `1.0.0-internal.13` / MSI `1.0.0.13`; not yet a
 > signed or installed result
 > **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
@@ -22,8 +22,8 @@ output or planned scope into readiness. The active execution frontier belongs in
 
 SahelFlow is a broad internal Windows application with a proven Internal.5
 accepted baseline, a stronger Internal.11 source/release chain installed by the
-Founder but not accepted, and four merged Session 1 source packages grouped into
-an Internal.12 milestone request. It is not an empty prototype, but it is not
+Founder but not accepted, the merged Session 1 packages, and the merged Session 2 business-truth foundation grouped into
+an Internal.13 milestone request. It is not an empty prototype, but it is not
 yet a commercially complete or class-AAA SahelFlow 1.0 product.
 
 PR #158 app source `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`
@@ -109,8 +109,8 @@ The main product discontinuities remain:
 The correct characterization is:
 
 > **Accepted Internal.5 baseline; Internal.11 installed but not accepted;
-> Session 1 source packages merged and grouped into an unsigned Internal.12
-> request; repeated-launch performance and full Founder installed evidence remain
+> Session 1 and the Session 2 business-truth foundation merged and grouped
+> into an unsigned Internal.13 request; repeated-launch performance and full Founder installed evidence remain
 > open; major business-authority, route-level AAA, commercial, provider and
 > connected-platform work continues.**
 
@@ -136,7 +136,7 @@ The correct characterization is:
 | Internal.11 publication | Founder manual GitHub action | Verified draft published after automatic publication was found missing |
 | Internal.10 → Internal.11 update | Founder observation | In-app updater installed the higher version and the app opened; exact preservation/version record pending |
 | Internal.11 performance | Founder T470 observation | First and subsequent launches remain materially slow; not accepted |
-| Protected auto-publication | PR #167 merge `5081fcadb3794ca6e57f7cc4a32c4b5f573532c6` | Protected final publication and monotonic latest-release guard integrated; first live run pending Internal.12 |
+| Protected auto-publication | PR #167 merge `5081fcadb3794ca6e57f7cc4a32c4b5f573532c6` | Protected final publication and monotonic latest-release guard integrated; first combined live run pending Internal.13 |
 | Workspace/shop authority | PR #168 merge `d7e6568a46a929d552dbe8bbe0541f23dd8d5fc4` | Registry v2 migration and trusted workspace/shop/incarnation context passed selected source and installed lanes |
 | Startup readiness correction | PR #169 merge `e6e1f16a03464c4338548c8905d9bca17b6df4a7` | Clean-runner packaged/install/reopen/UI evidence passed; no post-change T470 timing yet |
 | Arabic/RTL and chart foundation | PR #171 merge `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15` | Shared bidi/layout/state/chart contracts and generated route inventory passed selected exact-head gates |
