@@ -16,14 +16,15 @@ describe("projectLegacyOrderAuthority", () => {
     expect(projection.requiresReview).toBe(true);
   });
 
-  it("marks confirmed stock as ambiguous because legacy code mutated a counter", () => {
+  it("marks confirmed stock and confirmation proof as ambiguous without governed facts", () => {
     const projection = projectLegacyOrderAuthority({
       status: "confirmed",
       codCollected: false,
       codRemitted: false,
     });
 
-    expect(projection.confirmation).toMatchObject({ value: "confirmed", certainty: "deterministic" });
+    expect(projection.confirmation).toMatchObject({ value: "confirmed", certainty: "ambiguous" });
+    expect(projection.confirmation.reason).toContain("imported directly");
     expect(projection.inventory).toMatchObject({ value: "reserved", certainty: "ambiguous" });
     expect(projection.warnings.join(" ")).toContain("without a reservation fact");
     expect(projection.provenFactIds).toEqual([]);
