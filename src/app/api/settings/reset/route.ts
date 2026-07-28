@@ -36,7 +36,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // the public storefront, catalog, demo markers and dependent records aligned.
   await withDemoPolicyLock(() =>
     context.prisma.$transaction(async (tx) => {
-      // Delete in dependency order (children before parents).
+      // Delete canonical business-truth children before their command and
+      // aggregate authorities. The stable wrapped envelope key remains in Secret
+      // so reset does not silently rotate or orphan encrypted key authority.
+      await tx.compensationFact.deleteMany({});
+      await tx.projectionInvalidation.deleteMany({});
+      await tx.financialMovement.deleteMany({});
+      await tx.inventoryMovement.deleteMany({});
+      await tx.inventoryReservation.deleteMany({});
+      await tx.outboxIntent.deleteMany({});
+      await tx.domainEvent.deleteMany({});
+      await tx.businessCommand.deleteMany({});
+      await tx.businessAggregateVersion.deleteMany({});
+
+      // Delete legacy/current business records in dependency order (children
+      // before parents).
       await tx.extractionMetric.deleteMany({});
       await tx.returnNote.deleteMany({});
       await tx.orderChange.deleteMany({});
@@ -66,7 +80,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       // Preserve authentication/license and legacy integration credentials. All
       // demo markers, daily-report destinations and ordinary business settings
       // are removed. Dedicated Secret/Integration tables are intentionally
-      // preserved by the reset contract.
+      // preserved by the reset contract, including the internal wrapped
+      // business-envelope key.
       const protectedExactKeys = [
         "active_machine_id",
         "gemini_api_key",
