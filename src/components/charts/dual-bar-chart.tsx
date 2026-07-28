@@ -35,7 +35,7 @@ export function DualBarChart({
   revenueLabel = "Revenue",
   expensesLabel = "Expenses",
 }: DualBarChartProps) {
-  const { dir } = useI18n();
+  const { dir, locale } = useI18n();
   const isRtl = dir === "rtl";
   const maxValue = Math.max(...data.map((d) => Math.max(d.revenue, d.expenses)), 1);
   const yMax = Math.ceil(maxValue * 1.15 / 1000) * 1000;
@@ -79,14 +79,17 @@ export function DualBarChart({
           orientation={isRtl ? "right" : "left"}
         />
         <Tooltip
-          formatter={(value: number) => formatDZD(value)}
+          formatter={(value: number) => (
+            <bdi dir="ltr" className="numeric-value">
+              {formatDZD(value, locale)}
+            </bdi>
+          )}
           cursor={{ fill: "oklch(from var(--muted) l c h / 0.3)" }}
           wrapperStyle={{
             direction: isRtl ? "rtl" : "ltr",
             textAlign: isRtl ? "right" : "left",
             unicodeBidi: "isolate",
           }}
-          itemStyle={{ direction: "ltr", unicodeBidi: "isolate" }}
           contentStyle={{
             borderRadius: "10px",
             border: "1px solid var(--border)",

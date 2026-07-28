@@ -25,11 +25,9 @@ export type OperationalStateKind =
   | "error"
   | "recovery";
 
-interface StateAction {
-  label: string;
-  href?: string;
-  onClick?: () => void;
-}
+type StateAction =
+  | { label: string; href: string; onClick?: never }
+  | { label: string; onClick: () => void; href?: never };
 
 interface OperationalStateProps {
   kind: OperationalStateKind;

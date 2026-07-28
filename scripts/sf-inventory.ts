@@ -499,7 +499,7 @@ const summaryLines = [
   `- Session 2 owned routes: ${inventory.experience.ownerCounts["Session 2"]}`,
   `- Session 3 owned routes: ${inventory.experience.ownerCounts["Session 3"]}`,
   `- Session 4 owned routes: ${inventory.experience.ownerCounts["Session 4"]}`,
-  "- Every route entry in repository-inventory.json follows its local import graph and records the rendered source files, boundary coverage, logical/physical geometry signals, bidi isolation, directional icons, chart exposure, owner session and deterministic risk score.",
+  "- Every route entry in repository-inventory.json records its page, ancestor layouts/templates, inherited boundaries and conservative static local-dependency surface, plus geometry, bidi, directional-icon, chart, owner-session and deterministic risk signals.",
   "",
   "### Highest static-risk routes",
   "",
