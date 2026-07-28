@@ -16,6 +16,7 @@ type OwnerSession = "Session 2" | "Session 3" | "Session 4";
 interface RouteExperienceAudit {
   route: string;
   file: string;
+  routeEntries: string[];
   sourceFiles: string[];
   ownerSession: OwnerSession;
   ownerOutcome: string;
@@ -23,6 +24,11 @@ interface RouteExperienceAudit {
     loading: boolean;
     error: boolean;
     notFound: boolean;
+  };
+  boundaryFiles: {
+    loading: string[];
+    error: string[];
+    notFound: string[];
   };
   signals: {
     translationCalls: number;
@@ -151,11 +157,28 @@ function ownerForRoute(route: string): Pick<RouteExperienceAudit, "ownerSession"
   return { ownerSession: "Session 4", ownerOutcome: "Whole-product AAA integration" };
 }
 
-function hasRouteBoundary(fileSet: Set<string>, pageFile: string, name: string): boolean {
-  const directory = dirname(pageFile).replace(/\\/g, "/");
-  return ["tsx", "ts", "jsx", "js"].some((extension) =>
-    fileSet.has(`${directory}/${name}.${extension}`),
-  );
+function routeAncestorDirectories(pageFile: string): string[] {
+  const appRoot = "src/app";
+  const pageDirectory = dirname(pageFile).replace(/\\/g, "/");
+  const relativeDirectory = pageDirectory.slice(appRoot.length).replace(/^\//, "");
+  const directories = [appRoot];
+  let current = appRoot;
+  for (const segment of relativeDirectory.split("/").filter(Boolean)) {
+    current = `${current}/${segment}`;
+    directories.push(current);
+  }
+  return directories;
+}
+
+function routeBoundaryFiles(fileSet: Set<string>, pageFile: string, name: string): string[] {
+  const boundaries: string[] = [];
+  for (const directory of routeAncestorDirectories(pageFile)) {
+    for (const extension of ["tsx", "ts", "jsx", "js"]) {
+      const candidate = `${directory}/${name}.${extension}`;
+      if (fileSet.has(candidate)) boundaries.push(candidate);
+    }
+  }
+  return boundaries;
 }
 
 function resolveLocalSourceImport(
@@ -191,9 +214,23 @@ function resolveLocalSourceImport(
   ) ?? null;
 }
 
-function collectRouteSourceFiles(fileSet: Set<string>, entryFile: string): string[] {
+function collectRouteEntryFiles(fileSet: Set<string>, pageFile: string): string[] {
+  const entries: string[] = [];
+  for (const directory of routeAncestorDirectories(pageFile)) {
+    for (const name of ["layout", "template"]) {
+      for (const extension of ["tsx", "ts", "jsx", "js"]) {
+        const candidate = `${directory}/${name}.${extension}`;
+        if (fileSet.has(candidate)) entries.push(candidate);
+      }
+    }
+  }
+  entries.push(pageFile);
+  return [...new Set(entries)];
+}
+
+function collectRouteSourceFiles(fileSet: Set<string>, entryFiles: string[]): string[] {
   const visited = new Set<string>();
-  const queue = [entryFile];
+  const queue = [...entryFiles];
   const staticImport = /(?:import|export)\s+(?:type\s+)?(?:[^;"']+?\s+from\s+)?["']([^"']+)["']/g;
   const dynamicImport = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
 
@@ -202,7 +239,7 @@ function collectRouteSourceFiles(fileSet: Set<string>, entryFile: string): strin
     if (visited.has(file)) continue;
     visited.add(file);
     if (visited.size > 500) {
-      throw new Error(`route dependency traversal exceeded 500 files for ${entryFile}`);
+      throw new Error(`route dependency traversal exceeded 500 files for ${entryFiles.join(", ")}`);
     }
 
     const content = readUtf8(resolve(repoRoot, file));
@@ -224,15 +261,26 @@ function auditRouteExperience(
   fileSet: Set<string>,
   route: { route: string; file: string },
 ): RouteExperienceAudit {
-  const sourceFiles = collectRouteSourceFiles(fileSet, route.file);
+  const boundaryFiles = {
+    loading: routeBoundaryFiles(fileSet, route.file, "loading"),
+    error: routeBoundaryFiles(fileSet, route.file, "error"),
+    notFound: routeBoundaryFiles(fileSet, route.file, "not-found"),
+  };
+  const routeEntries = [...new Set([
+    ...collectRouteEntryFiles(fileSet, route.file),
+    ...boundaryFiles.loading,
+    ...boundaryFiles.error,
+    ...boundaryFiles.notFound,
+  ])];
+  const sourceFiles = collectRouteSourceFiles(fileSet, routeEntries);
   const content = sourceFiles
     .map((file) => readUtf8(resolve(repoRoot, file)))
     .join("\n");
   const owner = ownerForRoute(route.route);
   const boundaries = {
-    loading: hasRouteBoundary(fileSet, route.file, "loading"),
-    error: hasRouteBoundary(fileSet, route.file, "error"),
-    notFound: hasRouteBoundary(fileSet, route.file, "not-found"),
+    loading: boundaryFiles.loading.length > 0,
+    error: boundaryFiles.error.length > 0,
+    notFound: boundaryFiles.notFound.length > 0,
   };
   const signals = {
     translationCalls: countMatches(content, /\bt\s*\(/g),
@@ -272,7 +320,17 @@ function auditRouteExperience(
     (signals.chartSurface ? 3 : 0) +
     (signals.translationCalls === 0 ? 1 : 0);
 
-  return { ...route, sourceFiles, ...owner, boundaries, signals, risks, riskScore };
+  return {
+    ...route,
+    routeEntries,
+    sourceFiles,
+    ...owner,
+    boundaries,
+    boundaryFiles,
+    signals,
+    risks,
+    riskScore,
+  };
 }
 
 const files = runGit(["ls-files", "-z"])
