@@ -461,22 +461,8 @@ jobs:
             throw 'automatic Internal publication target unexpectedly has prerelease semantics'
           }
 
-          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
-            ConvertFrom-Json |
-            Select-Object -ExpandProperty object
-          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
-            throw 'failed to resolve the draft release tag authority'
-          }
-          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
-            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
-              ConvertFrom-Json |
-              Select-Object -ExpandProperty object
-            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
-              throw 'failed to peel the annotated draft release tag'
-            }
-          }
-          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
-            throw 'draft release tag does not resolve to the exact verified source commit'
+          if ([string]$release.target_commitish -cne $env:SF_SOURCE_COMMIT) {
+            throw 'draft release target does not equal the exact verified source commit'
           }
 
           $releaseAssets = @($release.assets)
@@ -545,6 +531,24 @@ jobs:
             ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw 'failed to verify the published Internal release' }
           if ($release.draft) { throw 'verified Internal release remained a draft after publication' }
+
+          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty object
+          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+            throw 'failed to resolve the published release tag authority'
+          }
+          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
+            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
+              ConvertFrom-Json |
+              Select-Object -ExpandProperty object
+            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+              throw 'failed to peel the annotated published release tag'
+            }
+          }
+          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
+            throw 'published release tag does not resolve to the exact verified source commit'
+          }
 
           $latestTag = gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name'
           if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the live updater release' }
