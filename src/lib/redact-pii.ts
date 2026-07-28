@@ -73,27 +73,45 @@ const SENSITIVE_KEYS = new Set(
 );
 
 /**
- * Operational strings that are useful in persisted audit evidence and are not
- * customer-authored free text. Everything else is redacted by default.
+ * Machine-owned strings that are useful in persisted audit evidence. Free-form
+ * values, seller/customer copy, provider payload aliases and unknown future
+ * fields remain redacted by default.
  */
 const SAFE_STRING_KEYS = new Set(
   [
     "id",
+    "key",
+    "field",
+    "path",
+    "table",
     "action",
+    "actionType",
     "entity",
     "entityId",
     "actor",
     "status",
     "state",
+    "from",
+    "to",
+    "oldStatus",
+    "newStatus",
+    "previousStatus",
+    "nextStatus",
     "type",
     "kind",
     "code",
     "errorCode",
+    "reasonCode",
     "source",
     "provider",
     "method",
     "currency",
     "operation",
+    "mode",
+    "scope",
+    "role",
+    "permission",
+    "trigger",
     "commandId",
     "commandType",
     "aggregateType",
@@ -103,6 +121,19 @@ const SAFE_STRING_KEYS = new Set(
     "trustedPrincipalKind",
     "trustedPrincipalSubject",
     "claimedActor",
+    "orderId",
+    "orderItemId",
+    "productId",
+    "productVariantId",
+    "customerId",
+    "deliveryId",
+    "returnId",
+    "refundId",
+    "reservationId",
+    "integrationId",
+    "automationId",
+    "conversationId",
+    "messageId",
     "movementType",
     "fromPosition",
     "toPosition",
