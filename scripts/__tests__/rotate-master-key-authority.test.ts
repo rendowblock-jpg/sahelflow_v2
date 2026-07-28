@@ -57,6 +57,27 @@ describe("installation-wide master-key rotation authority", () => {
     );
   });
 
+  it("durably persists the sidecar before entering the mutation window", () => {
+    const sidecarWrite = source.indexOf("function writeDurableSidecar");
+    const fileFlush = source.indexOf("fsyncSync(sidecarHandle)", sidecarWrite);
+    const posixDirectoryFlush = source.indexOf("fsyncDirectory(dataDir())", fileFlush);
+    const windowsWriteThrough = source.indexOf(
+      "MOVEFILE_WRITE_THROUGH",
+      fileFlush,
+    );
+    const loadSidecar = source.indexOf("loadOrCreateNewKey(oldKey)");
+    const mutationWindow = source.indexOf(
+      "mutationWindowEntered = true",
+      loadSidecar,
+    );
+
+    expect(sidecarWrite).toBeGreaterThan(-1);
+    expect(fileFlush).toBeGreaterThan(sidecarWrite);
+    expect(posixDirectoryFlush).toBeGreaterThan(fileFlush);
+    expect(windowsWriteThrough).toBeGreaterThan(fileFlush);
+    expect(mutationWindow).toBeGreaterThan(loadSidecar);
+  });
+
   it("proves the desktop runtime is stopped before scanning databases", () => {
     const lease = source.indexOf("const lease = acquireRotationLease()");
     const stopped = source.indexOf("await assertApplicationStopped()", lease);
@@ -84,5 +105,27 @@ describe("installation-wide master-key rotation authority", () => {
     expect(source).toContain("--recover-stale-lock");
     expect(source).toContain("current.token !== lease.record.token");
     expect(source).toContain("removeStaleRotationLock(existing.token)");
+  });
+
+  it("retains the startup/write barrier after any mutation-window failure", () => {
+    const mutationWindow = source.indexOf("mutationWindowEntered = true");
+    const retainDecision = source.indexOf(
+      "mutationWindowEntered && !keyfileCommitted",
+      mutationWindow,
+    );
+    const finishLease = source.indexOf(
+      "finishRotationLease(lease, !retainMaintenanceLease)",
+      retainDecision,
+    );
+
+    expect(mutationWindow).toBeGreaterThan(-1);
+    expect(retainDecision).toBeGreaterThan(mutationWindow);
+    expect(finishLease).toBeGreaterThan(retainDecision);
+    expect(source).toContain(
+      "Maintenance lease retained at ${LOCK_PATH}",
+    );
+    expect(source).toContain(
+      "it intentionally blocks SahelFlow until a successful resume",
+    );
   });
 });
