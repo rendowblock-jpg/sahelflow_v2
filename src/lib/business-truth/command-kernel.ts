@@ -3,7 +3,6 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 
 import type { DbClient } from "@/lib/db";
-import type { ServiceContext } from "@/lib/data/service-base";
 import { redactPii } from "@/lib/redact-pii";
 import { ConflictError, SahelFlowError } from "@/types/errors";
 import {
@@ -15,6 +14,11 @@ import {
 } from "./contracts";
 import { getBusinessEnvelopeKey } from "./envelope-key";
 import { sealBusinessPayloadWithKey } from "./payload-codec";
+import {
+  type BusinessPrincipalContext,
+  type TrustedBusinessPrincipal,
+  resolveTrustedBusinessPrincipal,
+} from "./principal";
 import { canonicalBusinessRequestJson } from "./request-codec";
 import {
   openBusinessCommandResultWithKey,
@@ -29,6 +33,7 @@ export interface BusinessCommandExecution {
   tx: BusinessTransaction;
   commandId: string;
   aggregateVersion: number;
+  principal: TrustedBusinessPrincipal;
 }
 
 export type BusinessCommandHandler<TResult> = (
@@ -86,6 +91,8 @@ export function businessCommandRequestHash<TPayload>(
   const canonicalRequest = canonicalBusinessRequestJson({
     commandType: command.commandType,
     aggregate: command.aggregate,
+    // This remains an untrusted caller claim and is only command content. The
+    // persisted audit actor is resolved separately from trusted execution context.
     actor: command.actor,
     causationId: command.causationId ?? null,
     payload: command.payload,
@@ -202,6 +209,7 @@ async function persistOutcome<TResult>(
   aggregateVersion: number,
   outcome: BusinessCommandOutcome<TResult>,
   envelopeKey: Buffer,
+  principal: TrustedBusinessPrincipal,
 ): Promise<void> {
   const now = new Date();
 
@@ -210,7 +218,7 @@ async function persistOutcome<TResult>(
       action: outcome.audit.action,
       entity: outcome.audit.entity,
       entityId: outcome.audit.entityId,
-      actor: command.actor,
+      actor: principal.auditActor,
       before: jsonOrNull(outcome.audit.before),
       after: jsonOrNull(outcome.audit.after),
       metadata: canonicalJson(
@@ -221,6 +229,9 @@ async function persistOutcome<TResult>(
           correlationId: command.correlationId,
           causationId: command.causationId ?? null,
           aggregateVersion,
+          trustedPrincipalKind: principal.kind,
+          trustedPrincipalSubject: principal.subjectId,
+          claimedActor: command.actor,
         }),
       ),
     },
@@ -374,11 +385,12 @@ async function persistOutcome<TResult>(
 }
 
 export async function executeBusinessCommand<TPayload, TResult>(
-  context: ServiceContext,
+  context: BusinessPrincipalContext,
   command: BusinessCommandEnvelope<TPayload>,
   handler: BusinessCommandHandler<TResult>,
 ): Promise<BusinessCommandResult<TResult>> {
   validateBusinessCommand(command);
+  const principal = await resolveTrustedBusinessPrincipal(context);
   const requestHash = businessCommandRequestHash(command);
   const envelopeKey = await getBusinessEnvelopeKey(context);
 
@@ -409,13 +421,18 @@ export async function executeBusinessCommand<TPayload, TResult>(
       ) VALUES (
         ${commandId}, ${command.idempotencyKey}, ${command.commandType},
         ${command.aggregate.type}, ${command.aggregate.id}, ${requestHash},
-        'processing', ${command.actor}, ${command.correlationId},
+        'processing', ${principal.auditActor}, ${command.correlationId},
         ${command.causationId ?? null}, ${command.aggregate.expectedVersion},
         ${new Date()}
       )
     `;
 
-    const outcome = await handler({ tx, commandId, aggregateVersion });
+    const outcome = await handler({
+      tx,
+      commandId,
+      aggregateVersion,
+      principal,
+    });
     validateBusinessCommandOutcome(outcome);
     const sealedResult = sealBusinessCommandResultWithKey(
       outcome.result,
@@ -434,6 +451,7 @@ export async function executeBusinessCommand<TPayload, TResult>(
       aggregateVersion,
       outcome,
       envelopeKey,
+      principal,
     );
 
     const updated = await tx.$executeRaw`
