@@ -37,7 +37,7 @@ describe("projectLegacyOrderAuthority", () => {
       codRemitted: false,
     });
 
-    expect(projection.delivery).toMatchObject({ value: "delivered", certainty: "deterministic" });
+    expect(projection.delivery).toMatchObject({ value: "delivered", certainty: "ambiguous" });
     expect(projection.cod).toMatchObject({ value: "receivable", certainty: "ambiguous" });
   });
 
