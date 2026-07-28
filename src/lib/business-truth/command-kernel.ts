@@ -15,6 +15,7 @@ import {
 import { getBusinessEnvelopeKey } from "./envelope-key";
 import {
   financialMovementDetailBinding,
+  inventoryMovementReasonBinding,
   sealBusinessPayloadWithKey,
 } from "./payload-codec";
 import {
@@ -31,6 +32,7 @@ import {
   openBusinessCommandResultWithKey,
   sealBusinessCommandResultWithKey,
 } from "./result-codec";
+import { withBusinessCommandKeyQueue } from "./same-key-queue";
 import { assertBusinessCommandShopAuthority } from "./shop-authority";
 
 export type BusinessTransaction = Parameters<
@@ -360,6 +362,15 @@ async function persistOutcome<TResult>(
   }
 
   for (const movement of outcome.inventoryMovements ?? []) {
+    const encryptedReason = sealBusinessPayloadWithKey(
+      movement.reason,
+      inventoryMovementReasonBinding(
+        commandId,
+        movement.movementKey,
+        movement.movementType,
+      ),
+      envelopeKey,
+    );
     await tx.$executeRaw`
       INSERT INTO "InventoryMovement" (
         "id", "movementKey", "commandId", "orderId", "orderItemId",
@@ -371,7 +382,7 @@ async function persistOutcome<TResult>(
         ${movement.reservationId ?? null}, ${movement.productId},
         ${movement.productVariantId ?? null}, ${movement.movementType},
         ${movement.quantity}, ${movement.fromPosition ?? null},
-        ${movement.toPosition ?? null}, ${movement.reason},
+        ${movement.toPosition ?? null}, ${encryptedReason},
         ${movement.occurredAt ?? now}
       )
     `;
@@ -505,18 +516,15 @@ async function persistOutcome<TResult>(
   }
 }
 
-export async function executeBusinessCommand<TPayload, TResult>(
+async function executeBusinessCommandOnce<TPayload, TResult>(
   context: BusinessPrincipalContext,
   command: BusinessCommandEnvelope<TPayload>,
   handler: BusinessCommandHandler<TResult>,
-  options: BusinessCommandOptions<TPayload> = {},
+  options: BusinessCommandOptions<TPayload>,
+  principal: TrustedBusinessPrincipal,
+  requestHash: string,
+  envelopeKey: Buffer,
 ): Promise<BusinessCommandResult<TResult>> {
-  validateBusinessCommand(command);
-  assertBusinessCommandShopAuthority(context);
-  const principal = await resolveTrustedBusinessPrincipal(context);
-  const requestHash = businessCommandRequestHash(command);
-  const envelopeKey = await getBusinessEnvelopeKey(context);
-
   return context.prisma.$transaction(async (tx) => {
     const stored = await findStoredCommand(tx, command.idempotencyKey);
     if (stored) {
@@ -609,4 +617,33 @@ export async function executeBusinessCommand<TPayload, TResult>(
       result: sealedResult.normalizedResult,
     };
   });
+}
+
+export async function executeBusinessCommand<TPayload, TResult>(
+  context: BusinessPrincipalContext,
+  command: BusinessCommandEnvelope<TPayload>,
+  handler: BusinessCommandHandler<TResult>,
+  options: BusinessCommandOptions<TPayload> = {},
+): Promise<BusinessCommandResult<TResult>> {
+  validateBusinessCommand(command);
+  assertBusinessCommandShopAuthority(context);
+  const principal = await resolveTrustedBusinessPrincipal(context);
+  const requestHash = businessCommandRequestHash(command);
+
+  return withBusinessCommandKeyQueue(
+    context.prisma as object,
+    command.idempotencyKey,
+    async () => {
+      const envelopeKey = await getBusinessEnvelopeKey(context);
+      return executeBusinessCommandOnce(
+        context,
+        command,
+        handler,
+        options,
+        principal,
+        requestHash,
+        envelopeKey,
+      );
+    },
+  );
 }
