@@ -30,15 +30,29 @@ describe("projectLegacyOrderAuthority", () => {
     expect(projection.provenFactIds).toEqual([]);
   });
 
-  it("does not equate delivered with courier remittance", () => {
+  it("does not manufacture fulfillment or delivery from an imported delivered label", () => {
     const projection = projectLegacyOrderAuthority({
       status: "delivered",
       codCollected: false,
       codRemitted: false,
     });
 
+    expect(projection.fulfillment).toMatchObject({ value: "closed", certainty: "ambiguous" });
     expect(projection.delivery).toMatchObject({ value: "delivered", certainty: "ambiguous" });
     expect(projection.cod).toMatchObject({ value: "receivable", certainty: "ambiguous" });
+  });
+
+  it("accepts governed shipment evidence without promoting other legacy dimensions", () => {
+    const projection = projectLegacyOrderAuthority({
+      status: "shipped",
+      codCollected: false,
+      codRemitted: false,
+      shippedAt: new Date("2026-07-28T08:00:00.000Z"),
+    });
+
+    expect(projection.fulfillment).toMatchObject({ value: "shipped", certainty: "deterministic" });
+    expect(projection.delivery).toMatchObject({ value: "in_transit", certainty: "ambiguous" });
+    expect(projection.inventory).toMatchObject({ value: "outbound", certainty: "ambiguous" });
   });
 
   it("treats a remitted boolean as compatibility evidence, not settlement proof", () => {
@@ -63,6 +77,7 @@ describe("projectLegacyOrderAuthority", () => {
       totalPrice: 2500,
     });
 
+    expect(projection.fulfillment.certainty).toBe("ambiguous");
     expect(projection.delivery.certainty).toBe("ambiguous");
     expect(projection.inventory.value).toBe("unknown");
     expect(projection.returns).toMatchObject({ value: "completed", certainty: "ambiguous" });
