@@ -40,7 +40,7 @@ export function parseMasterKeyRotationLock(
   }
   return {
     formatVersion: MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION,
-    ownerPid: record.ownerPid,
+    ownerPid: record.ownerPid!,
     token: record.token,
     createdAt: record.createdAt,
   };
