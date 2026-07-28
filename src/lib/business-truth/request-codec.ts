@@ -17,6 +17,19 @@ function requestCodecError(message: string): SahelFlowError {
   return new SahelFlowError(message, "INVALID_COMMAND_PAYLOAD", 400);
 }
 
+/**
+ * Compare JavaScript strings by UTF-16 code unit without locale collation.
+ *
+ * `localeCompare` can treat distinct Unicode spellings as equal and may vary
+ * across runtime locales. Canonical request and audit evidence must instead use
+ * one process-independent total ordering.
+ */
+export function compareCanonicalKeys(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function encodeRequest(
   value: unknown,
   active: WeakSet<object>,
@@ -74,7 +87,7 @@ function encodeRequest(
     }
 
     const entries = (keys as string[])
-      .sort((left, right) => left.localeCompare(right))
+      .sort(compareCanonicalKeys)
       .map((key): readonly [string, TaggedRequestValue] => {
         const descriptor = Object.getOwnPropertyDescriptor(value, key);
         if (
