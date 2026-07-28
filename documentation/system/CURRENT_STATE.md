@@ -3,9 +3,8 @@
 > **Authority:** merged protected `main` only
 > **Protected-main combined source checkpoint:** PR #170 at
 > `6cd1103b55c905d26492ecf5436e644d377ce557`
-> **Source version request:** `1.0.0-internal.13` / MSI `1.0.0.13`; not yet a
-> signed or installed result
-> **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
+> **Latest signed release:** `1.0.0-internal.13` / MSI `1.0.0.13`, exact source
+> `fb32faedc5ecfc1718e395824f437b805cbb9ef2`, run `30366866703`
 > **Latest Founder-installed acceptance:** `1.0.0-internal.5`
 > **Current installed status:** Founder reports Internal.11 installed through the
 > in-app updater and usable, but exact post-install version/AppData identity is
@@ -23,9 +22,9 @@ output or planned scope into readiness. The active execution frontier belongs in
 SahelFlow is a broad internal Windows application with a proven Internal.5
 accepted baseline, a stronger Internal.11 source/release chain installed by the
 Founder but not accepted, the merged Session 1 packages, and the merged Session
-2 business-truth foundation grouped into an Internal.13 milestone request. It is
-not an empty prototype, but it is not yet a commercially complete or class-AAA
-SahelFlow 1.0 product.
+2 business-truth foundation grouped and published as signed Internal.13. It is
+not an empty prototype, but Internal.13 is not yet Founder-installed or accepted
+and the product is not yet commercially complete or class-AAA SahelFlow 1.0.
 
 PR #158 app source `1cd9a27fc747d85979427e51eff9b0ba8b7ba7a7`
 replaced the failing packaged Bun server with pinned Node.js 22.23.1, retained
@@ -98,6 +97,17 @@ fail-closed legacy projections. Production order, delivery, refund, provider,
 automation and UI routes remain on the legacy paths until complete observable
 verticals adopt those contracts.
 
+PR #174 froze the combined Internal.13 executable source at
+`fb32faedc5ecfc1718e395824f437b805cbb9ef2`. After failed publication attempts
+exposed GitHub draft-release tag semantics, PR #177 merged the fail-closed
+release correction at `b2776bd3ea8d879a475c26af9d0c720d666671a9`.
+Protected run `30366866703` then passed exact-source and reviewed-tree authority,
+signed build, staged readiness, signed install/reopen, authenticated hydrated UI
+twice, deterministic evidence, byte-identical draft assets, exact source-bound
+tag verification and automatic publication. The release is non-draft,
+non-prerelease, GitHub latest, and the public updater endpoint serves signed
+`1.0.0-internal.13`.
+
 The main product discontinuities remain:
 
 - the Phase 1A trusted workspace/shop/incarnation foundation exists, but complete
@@ -122,11 +132,11 @@ The main product discontinuities remain:
 The correct characterization is:
 
 > **Accepted Internal.5 baseline; Internal.11 installed but not accepted;
-> Session 1 and the Session 2 business-truth foundation merged and grouped
-> into an unsigned Internal.13 request; repeated-launch performance and full
-> Founder installed evidence remain open; production adoption of the canonical
-> business foundation, route-level AAA, commercial, provider and connected-
-> platform work continues.**
+> Session 1 and the Session 2 business-truth foundation merged and published as
+> signed Internal.13 but not yet Founder-installed or accepted; repeated-launch
+> performance and full Founder installed evidence remain open; production
+> adoption of the canonical business foundation, route-level AAA, commercial,
+> provider and connected-platform work continues.**
 
 ## Evidence ledger
 
@@ -150,11 +160,12 @@ The correct characterization is:
 | Internal.11 publication | Founder manual GitHub action | Verified draft published after automatic publication was found missing |
 | Internal.10 → Internal.11 update | Founder observation | In-app updater installed the higher version and the app opened; exact preservation/version record pending |
 | Internal.11 performance | Founder T470 observation | First and subsequent launches remain materially slow; not accepted |
-| Protected auto-publication | PR #167 merge `5081fcadb3794ca6e57f7cc4a32c4b5f573532c6` | Protected final publication and monotonic latest-release guard integrated; first combined live run pending Internal.13 |
+| Protected auto-publication | PRs #167 and #177; latest merge `b2776bd3ea8d879a475c26af9d0c720d666671a9` | Exact draft target and source-bound tag are verified while the release remains protected; automatic publication passed for Internal.13 |
 | Workspace/shop authority | PR #168 merge `d7e6568a46a929d552dbe8bbe0541f23dd8d5fc4` | Registry v2 migration and trusted workspace/shop/incarnation context passed selected source and installed lanes |
 | Startup readiness correction | PR #169 merge `e6e1f16a03464c4338548c8905d9bca17b6df4a7` | Clean-runner packaged/install/reopen/UI evidence passed; no post-change T470 timing yet |
 | Arabic/RTL and chart foundation | PR #171 merge `a8770e1943e1fb2d33c6f0520c77d257d5c5bd15` | Shared bidi/layout/state/chart contracts and generated route inventory passed selected exact-head gates |
 | Session 2 business-truth foundation | PR #170 merge `6cd1103b55c905d26492ecf5436e644d377ce557`; exact-head run `30344619022` | Independent lifecycle contracts, canonical persistence, encrypted trusted idempotent commands, movement/compensation facts, key rotation, reset and legacy-ambiguity proof integrated; production routes not switched |
+| Internal.13 signed publication | Source `fb32faedc5ecfc1718e395824f437b805cbb9ef2`; run `30366866703`; release `sahelflow-v1.0.0-internal.13-fb32faedc5ecfc1718e395824f437b805cbb9ef2` | Signed MSI, staged and installed authenticated UI, close/reopen, deterministic evidence, exact draft assets, exact tag binding and automatic latest publication passed; Founder install/T470 observation pending |
 
 The earlier accepted reopen proves that exact historical attempt only. Clean
 runner results prove the exact artifact on that runner, not T470 performance or
@@ -186,7 +197,7 @@ separate evidence result.
 
 | ID | Capability | Current status | Evidence / implementation | Principal gap |
 |---|---|---|---|---|
-| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.11 installed; protected auto-publication merged | Prove first automatic publication, record exact T470 preservation/lifecycle, meet launch target and prove broader matrix |
+| CAP-001 | Signed Windows install/update/runtime | **Partial internal proof** | Internal.5 accepted; Internal.11 Founder-installed; Internal.13 signed install/reopen and automatic publication passed in run `30366866703` | Install Internal.13 on the Founder machine, record exact T470 preservation/lifecycle, meet launch target and prove broader matrix |
 | CAP-002 | Local database/migrations | **Partial** | Prisma/SQLite, eight migrations, runtime preservation | All-shop journaled migration/preflight/rollback/recovery |
 | CAP-003 | Shop management | **Partial** | Registry v2 workspace/shop/incarnation identity, trusted context, per-shop files and routes | Complete membership/device authority and safe live switching across every background/provider path |
 | CAP-004 | Local PIN/session | **Implemented for local baseline** | `AuthSecret`, `Session`, runtime auth | Not seller identity, team authority, device or recovery model |
@@ -217,7 +228,7 @@ separate evidence result.
 | CAP-029 | AAA design system/page depth | **Partial/broadly unaccepted** | Shared primitives and broad pages | Coherent navigation/system, complete states, premium hierarchy and no prototype UX |
 | CAP-030 | Low-end performance | **Unmet on Founder launch** | Retained trace measured about 110 s; Session 1 readiness-boundary correction passed clean-runner installed gates | Measure post-change cold/warm T470 stages, meet ≤8 s p95, representative data and eight-hour stability |
 | CAP-031 | Security/privacy/legal | **Partial/unverified** | Crypto, PIN, secrets, loopback auth and redaction pieces | Complete threat models, recovery, tenant boundaries, Law 18-07 and review |
-| CAP-032 | Release/operational evidence | **Internal.5 accepted; Internal.11 release/install partial proof** | Exact-source signing, automated installed gates, Founder-reported in-app update and protected auto-publication source | Prove first automatic publication and complete T470 evidence/acceptance |
+| CAP-032 | Release/operational evidence | **Internal.13 signed publication proven; Founder acceptance open** | Exact-source signing, automated installed gates, exact source-bound tag and automatic latest publication passed in run `30366866703`; prior Founder-reported in-app update proves the path separately | Complete Internal.13 preserved-AppData T470 install, lifecycle, timing and Founder acceptance evidence |
 
 ## Provider status
 
@@ -306,17 +317,17 @@ connected planes without replacing canonical desktop authority.
 The superseded runtime boundary was: **Launch the release-verified standalone server on pinned Node.js**.
 Internal.8 achieved that mechanism; the phrase remains for historical continuity.
 
-Internal.13 release verification and the next Golden COD vertical are independent
-lanes once the source candidate is frozen on protected `main`:
+Internal.13 release verification and publication are complete. The next
+boundaries are independent:
 
-1. merge the exact green Internal.13 source request and dispatch the signed
-   protected-main updater workflow;
-2. require signature, install/reopen, authenticated hydrated UI twice,
-   deterministic evidence, manifest and automatic publication;
-3. independently start the first complete observable production vertical that
+1. update the Founder installation to Internal.13 through the in-app updater
+   without deleting AppData;
+2. record exact installed version, preserved registry/database identities,
+   cold/warm T470 launch, authenticated UI, close/reopen and Arabic chart result;
+3. start the first complete observable production vertical that
    adopts the frozen business contracts across UI, API, domain and database;
-4. record Founder T470 installation, preservation and cold/warm timing without
-   blocking that independent vertical.
+4. continue Arabic/RTL, accessibility, complete states and performance as
+   blocking parallel quality tracks.
 
 Shared contracts remain dependency-serialized. Release observation does not
 freeze independent seller or experience work. Exact lane ownership and entry

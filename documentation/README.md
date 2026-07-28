@@ -6,13 +6,16 @@
 > `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
 > **Protected-main combined source checkpoint:** PR #170 at
 > `6cd1103b55c905d26492ecf5436e644d377ce557`
-> **Milestone source request:** `1.0.0-internal.13` / MSI `1.0.0.13`; not signed
-> or published until the exact protected-main release workflow passes
+> **Published milestone source:** `1.0.0-internal.13` / MSI `1.0.0.13` at
+> `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
+> **Latest signed release:** `1.0.0-internal.13`, protected run `30366866703`;
+> exact tag and public updater manifest verified
 > **Accepted installed release:** `1.0.0-internal.5`
 > **Current installation:** Founder reports `1.0.0-internal.11` installed, not
 > Founder-accepted because first and subsequent launches remain materially slow
 > and exact post-install preservation/lifecycle evidence is open
-> **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
+> **Founder acceptance:** Internal.13 install and T470 observation remain open;
+> Internal.5 remains the accepted baseline
 > **Operating model:** FD-027 / SahelFlow Completion Operating Model v2
 > **Execution epic:** issue #164
 > **Last updated:** 2026-07-28
@@ -43,7 +46,7 @@ an eleventh documentation authority.
 7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — Operating Model v2,
    lanes, WIP, review, CI, milestone release and evidence rules.
 8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact
-   execution frontier and exact Session 1 start.
+   execution frontier and exact next move.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — adopted research findings and
    retained research index.
 

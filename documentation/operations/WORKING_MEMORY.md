@@ -4,9 +4,8 @@
 > **Last updated:** 2026-07-28
 > **Protected-main combined source checkpoint:** PR #170 at
 > `6cd1103b55c905d26492ecf5436e644d377ce557`
-> **Active milestone request:** `codex/session2-internal-13`,
-> `1.0.0-internal.13` / MSI `1.0.0.13`
-> **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
+> **Published milestone:** `1.0.0-internal.13` / MSI `1.0.0.13`, exact source
+> `fb32faedc5ecfc1718e395824f437b805cbb9ef2`, run `30366866703`
 > **Founder installation:** Founder reports Internal.11 installed through the
 > in-app updater and usable; exact post-install version/AppData identity is not
 > yet recorded
@@ -15,7 +14,8 @@
 > **Operating authority:** FD-027, `WORKFLOW.md`, `ROADMAP.md`
 > **Execution epic:** issue #164
 > **Current stage:** Session 1 and the Session 2 business-truth foundation are
-> merged; the combined Internal.13 milestone candidate is in flight
+> merged and published as Internal.13; Founder install/observation and the first
+> complete production Golden COD vertical are next
 
 ## Current truth
 
@@ -28,6 +28,21 @@ deterministic evidence and updater manifest.
 The workflow left the release as a draft. The Founder manually published the
 verified draft, then Internal.10 detected and installed Internal.11 through the
 in-app updater.
+
+Internal.13 source `fb32faedc5ecfc1718e395824f437b805cbb9ef2` groups the
+Session 1 packages with the Session 2 business-truth foundation. PR #177 at
+`b2776bd3ea8d879a475c26af9d0c720d666671a9` repaired draft publication by
+verifying the exact draft target, creating or reusing and source-binding the tag
+while the release remained protected as a draft, and publishing only after that
+gate passed. Protected run `30366866703` passed the signed build, staged and
+clean-runner installed authenticated UI, close/reopen, deterministic evidence,
+exact draft assets, tag binding and automatic publication. GitHub latest and
+the public updater endpoint now serve signed `1.0.0-internal.13`.
+
+Do not call Internal.13 Founder-installed or accepted until the preserved-AppData
+T470 update and observation are recorded. Do not call Session 2 fully complete:
+production intake and the first complete Golden COD UI/API/domain/database
+vertical remain ahead.
 
 Founder observation:
 
@@ -147,22 +162,16 @@ At most one frozen signed candidate is in flight.
 
 ## Exact next execution order
 
-1. Pass exact-head authority and selected release-risk gates for the combined
-   Internal.13 milestone request.
-2. Merge it through protected `main`, then dispatch the signed release workflow
-   once with that exact merge commit and combined Session 1 + Session 2 notes.
-3. Require signature, packaged runtime, install/reopen, authenticated hydrated
-   UI twice, deterministic evidence, manifest and monotonic publication gates.
-4. Confirm the verified draft auto-publishes and exposes live `latest.json`; do
-   not publish or rerun a failed unchanged candidate manually.
-5. Install Internal.13 through the existing in-app updater without deleting or
+1. Install Internal.13 through the existing in-app updater without deleting or
    replacing Founder AppData.
-6. Record exact installed version and registry/database identities, one cold and
+2. Record exact installed version and registry/database identities, one cold and
    one warm T470 launch, authenticated UI, normal close/reopen and the Arabic
    dashboard/chart result.
-7. Begin the next complete observable Golden COD vertical as soon as the
-   Internal.13 source is frozen on protected `main`; continue it independently
-   while signing, publication, Founder installation and T470 observation complete.
+3. Start the first complete observable production Golden COD vertical using the
+   frozen business contracts across UI, API, domain and database; include
+   duplicate, retry, interruption, conflict and compensation proof.
+4. Continue route-level Arabic/RTL, accessibility, complete states and startup
+   performance work as blocking parallel quality lanes.
 
 ## Session 1 acceptance contracts
 

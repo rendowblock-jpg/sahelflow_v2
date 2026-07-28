@@ -8,6 +8,25 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### Internal.13 published milestone
+
+- Grouped the four Session 1 packages and the Session 2 business-truth
+  foundation into exact executable source
+  `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Corrected GitHub draft-release publication authority in PR #177: the workflow
+  validates the exact draft target, creates or reuses and verifies the exact
+  source-bound tag while the release remains protected as a draft, then
+  publishes only after that gate succeeds.
+- Protected signed run `30366866703` passed signed build, staged authenticated
+  readiness, MSI/signature verification, installed launch/reopen, authenticated
+  hydrated UI twice, deterministic evidence, byte-identical draft assets, tag
+  binding and automatic publication.
+- Published signed `1.0.0-internal.13` as GitHub latest with MSI, `.msi.sig` and
+  public signed `latest.json` updater metadata.
+- Kept Founder installation and T470 acceptance open; publication does not prove
+  AppData preservation on the Founder machine, target startup performance,
+  route-level Arabic/RTL correctness or complete Session 2 production adoption.
+
 ### Documentation truth reset
 
 - Consolidated the active documentation into ten authoritative documents in

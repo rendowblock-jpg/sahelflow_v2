@@ -5,11 +5,13 @@ sellers.
 
 > **Repository status:** Session 1 and the Session 2 business-truth foundation
 > are merged through PR #170 at `6cd1103b55c905d26492ecf5436e644d377ce557`.
-> The combined milestone source identity is `1.0.0-internal.13` / MSI
-> `1.0.0.13`; it remains a release request until its exact protected-main commit
-> passes the signed workflow. Internal.11 remains the latest confirmed
-> Founder-installed candidate; Founder acceptance and post-change T470 timing
-> remain open.
+> The combined milestone source is `1.0.0-internal.13` / MSI `1.0.0.13` at
+> `fb32faedc5ecfc1718e395824f437b805cbb9ef2`. Protected run `30366866703`
+> signed, installed, reopened and verified that exact source on its clean
+> Windows runner, then automatically published it. Internal.11 remains the
+> latest Founder-reported installation;
+> Internal.13 Founder installation, acceptance and post-change T470 timing are
+> open.
 > `1.0.0-internal.5` remains the latest Founder-accepted baseline. SahelFlow 1.0
 > Stable has not been released.
 
@@ -90,6 +92,17 @@ Founder-reported in-app installation separately. It does not prove Internal.11
 Founder acceptance, target startup performance, complete AppData/lifecycle
 preservation evidence, the whole app's AAA depth, provider certification or
 Stable readiness.
+
+Internal.13 source `fb32faedc5ecfc1718e395824f437b805cbb9ef2` groups the
+merged Session 1 packages with the Session 2 business-truth foundation. Release
+authority fix PR #177 merged at
+`b2776bd3ea8d879a475c26af9d0c720d666671a9`; protected signed run
+`30366866703` passed exact-source/review authority, signed build, staged and
+installed authenticated UI, close/reopen, deterministic evidence, exact draft
+asset verification, source-bound tag verification and automatic publication.
+GitHub `releases/latest` and the public updater endpoint now serve signed
+`1.0.0-internal.13`. This is release proof, not Founder T470 acceptance or
+evidence that Session 2 production/UI adoption is complete.
 
 ## GitHub Actions validation
 
