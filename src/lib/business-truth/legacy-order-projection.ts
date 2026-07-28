@@ -23,6 +23,11 @@ export interface LegacyOrderAuthority {
   codCollected: boolean | null;
   codRemitted: boolean;
   /**
+   * A timestamp produced by the governed legacy transition path. Imported rows
+   * may carry a downstream status without this confirmation evidence.
+   */
+  confirmedAt?: Date | null;
+  /**
    * Whether the compatibility reader explicitly inspected the Delivery relation.
    * Undefined means the caller has only order-level status and must not infer
    * absence of a provider/shipment row.
@@ -77,7 +82,10 @@ function projectOrder(status: OrderStatus): LegacyProjectedState<OrderLifecycleS
   }
 }
 
-function projectConfirmation(status: OrderStatus): LegacyProjectedState<ConfirmationState> {
+function projectConfirmation(
+  authority: LegacyOrderAuthority,
+): LegacyProjectedState<ConfirmationState> {
+  const { status } = authority;
   if (status === "draft") {
     return deterministic("not_requested", "Draft has not entered confirmation");
   }
@@ -90,10 +98,16 @@ function projectConfirmation(status: OrderStatus): LegacyProjectedState<Confirma
       "Legacy cancellation does not preserve whether confirmation was rejected or later cancelled",
     );
   }
-  if (status === "refused") {
-    return deterministic("confirmed", "Legacy refused is reachable only after confirmation in the current transition graph");
+  if (authority.confirmedAt) {
+    return deterministic(
+      "confirmed",
+      `Legacy ${status} retains a confirmation timestamp from the governed transition path`,
+    );
   }
-  return deterministic("confirmed", `Legacy ${status} is downstream of confirmation`);
+  return ambiguous(
+    "confirmed",
+    `Legacy ${status} can be imported directly without passing through confirmation; status alone is not confirmation proof`,
+  );
 }
 
 function projectFulfillment(status: OrderStatus): LegacyProjectedState<FulfillmentState> {
@@ -230,7 +244,7 @@ export function projectLegacyOrderAuthority(
   const projection = {
     source: "legacy_order_projection" as const,
     order: projectOrder(authority.status),
-    confirmation: projectConfirmation(authority.status),
+    confirmation: projectConfirmation(authority),
     fulfillment: projectFulfillment(authority.status),
     delivery: projectDelivery(authority),
     inventory: projectInventory(authority.status),
