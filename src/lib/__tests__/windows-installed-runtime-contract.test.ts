@@ -231,6 +231,8 @@ describe("installed Windows runtime contract", () => {
     );
     expect(uiHarness).toContain("workspace-window-pending");
     expect(uiHarness).toContain("Wait-ForNodeCompileCache");
+    expect(uiHarness).toContain("Reset-NodeCompileCacheForCloseProof");
+    expect(uiHarness).toContain("compileCacheResetAt");
     expect(
       uiHarness.lastIndexOf("$closures += Close-SahelFlowNormally"),
     ).toBeLessThan(
@@ -294,10 +296,12 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain(".run(|_app_handle, _event| {");
     expect(desktop).toContain(".on_window_event(|_window, _event| {");
     expect(desktop).toContain("api.prevent_close();");
+    expect(desktop).toContain("let _ = _window.hide();");
     expect(desktop).toContain("begin_normal_close(_window.app_handle().clone())");
     expect(desktop).toContain("struct ShutdownCoordinator");
     expect(desktop).toContain("struct RuntimeShutdownAuthority");
     expect(desktop).toContain("POST /api/internal/runtime-shutdown");
+    expect(desktop).toContain("Duration::from_secs(2)");
     expect(desktop).toContain("app.exit(0);");
     expect(desktop).not.toContain("cleanup_before_exit();");
     expect(desktop).not.toContain("std::process::exit(0);");
