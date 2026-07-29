@@ -2,7 +2,6 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
-import { flushPackagedCompileCache } from "@/lib/runtime/compile-cache";
 import {
   AUTH_MODE_CONFIGURED,
   AUTH_MODE_ENV,
@@ -212,11 +211,6 @@ export async function GET(request: Request) {
       },
     });
   }
-
-  // The desktop force-stops the contained process tree on close. Persist the
-  // modules compiled for semantic readiness now instead of depending on a normal
-  // Node exit that never occurs in the installed lifecycle.
-  flushPackagedCompileCache();
 
   await clearReadinessFailure();
   const body = JSON.stringify({
