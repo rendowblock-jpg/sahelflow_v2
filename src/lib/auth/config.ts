@@ -23,11 +23,11 @@ export const SESSION_ACTIVITY_WRITE_INTERVAL_MS = 5 * 60 * 1000;
 export const SENSITIVE_REAUTH_WINDOW_MS = 10 * 60 * 1000;
 
 /**
- * Public API routes — these do NOT require seller authentication.
+ * Exact public API routes. No child route inherits public access.
  *
- * Auth routes are intentionally exact rather than exposing the entire
- * `/api/auth/*` namespace. In particular, change-pin and reauthentication remain
- * protected even though login/setup/status/logout are public ceremonies.
+ * In particular, the auth namespace itself is never public: login, logout,
+ * setup and status are listed individually while change-pin, reauthenticate,
+ * and all future auth administration endpoints remain protected by default.
  */
 export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/auth/login",
@@ -39,26 +39,19 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/reports/daily", // self-protects via x-cron-secret
 ];
 
-/** Public pages — accessible without seller authentication. */
+/** Public page prefixes — storefront slugs and setup/login pages are intentional. */
 export const PUBLIC_PAGES: readonly string[] = [
   "/login",
   "/setup",
   "/storefront",
 ];
 
-/**
- * Check if a pathname is a public API route.
- *
- * Two-stage match preserves nested public endpoints where explicitly intended
- * while preventing `/api/auth` from making every future auth route public.
- */
+/** Check if a pathname is one explicitly public API route. */
 export function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
+  return PUBLIC_API_ROUTES.includes(pathname);
 }
 
-/** Check if a pathname is a public page. */
+/** Check if a pathname is a public page or one of its intended child pages. */
 export function isPublicPage(pathname: string): boolean {
   return PUBLIC_PAGES.some(
     (page) => pathname === page || pathname.startsWith(page + "/"),
