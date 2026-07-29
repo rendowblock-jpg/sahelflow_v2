@@ -5,7 +5,10 @@ import {
   resolveSessionAuthority,
   type ResolveSessionAuthorityInput,
 } from "../session-authority";
-import { createCompatibilityLocalOwnerContext } from "../trusted-actor";
+import {
+  createCompatibilityLocalOwnerContext,
+  isTrustedActorContext,
+} from "../trusted-actor";
 
 const baseInput = (): ResolveSessionAuthorityInput => ({
   token: "signed-token",
@@ -153,6 +156,7 @@ describe("createCompatibilityLocalOwnerContext", () => {
       shop,
     });
     expect("personId" in context.actor).toBe(false);
+    expect(isTrustedActorContext(context)).toBe(true);
   });
 
   it("refuses empty or normalized session IDs", () => {
@@ -174,5 +178,20 @@ describe("createCompatibilityLocalOwnerContext", () => {
     expect(Object.isFrozen(context.shop)).toBe(true);
     expect(Object.isFrozen(context.actor)).toBe(true);
     expect(Object.isFrozen(context)).toBe(true);
+  });
+
+  it("does not trust a structurally identical hand-built object", () => {
+    const lookalike = {
+      version: 1,
+      actor: {
+        kind: "compatibility_local_owner",
+        role: "owner",
+        sessionId: "session-1",
+        compatibilityOnly: true,
+      },
+      shop,
+    };
+
+    expect(isTrustedActorContext(lookalike)).toBe(false);
   });
 });
