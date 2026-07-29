@@ -41,7 +41,7 @@ vi.mock("next/headers", () => ({
 // Clear AUTH_SECRET env so getAuthSecret() exercises the DB path
 delete process.env.AUTH_SECRET;
 
-import { dbRaw } from "@/lib/db";
+import { db, dbRaw } from "@/lib/db";
 import {
   setupAuth,
   verifyAuthPin,
@@ -284,6 +284,29 @@ describe("destroySession", () => {
     // No sessions to revoke
     const sessions = await dbRaw.session.findMany();
     expect(sessions).toHaveLength(0);
+  });
+
+  it("preserves the retryable cookie when durable revocation fails", async () => {
+    await setupAuth("12345678");
+    await createSession();
+    const token = cookieJar.map.get(AUTH_COOKIE);
+    const update = vi
+      .spyOn(db.session, "update")
+      .mockRejectedValueOnce(new Error("database unavailable"));
+
+    try {
+      await expect(destroySession()).rejects.toMatchObject({
+        code: "SESSION_REVOCATION_FAILED",
+        statusCode: 503,
+      });
+    } finally {
+      update.mockRestore();
+    }
+
+    expect(cookieJar.delete).not.toHaveBeenCalled();
+    expect(cookieJar.map.get(AUTH_COOKIE)).toBe(token);
+    const session = await dbRaw.session.findFirst();
+    expect(session?.revokedAt).toBeNull();
   });
 });
 
