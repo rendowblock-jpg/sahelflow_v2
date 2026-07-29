@@ -396,11 +396,11 @@ pub fn run() {
                             &app_data_dir,
                             &resource_dir,
                         ) {
-                            Ok(receipt_path) => {
+                            Ok(_) => {
                                 startup_recovery::record_startup_stage(
                                     &app_data_dir,
                                     "installation-root-rotation-complete",
-                                    receipt_path.to_str(),
+                                    None,
                                 );
                                 app_handle.exit(0);
                             }
