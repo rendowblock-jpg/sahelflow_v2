@@ -9,14 +9,25 @@
  */
 import { z } from "zod";
 
-export const orderItemSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  productName: z.string().min(1),
-  productVariantId: z.string().nullable().optional(),
-  productVariantName: z.string().nullable().optional(),
-  quantity: z.number().int().min(1, "Quantity must be at least 1"),
-  unitPrice: z.number().min(0, "Price cannot be negative"),
-});
+export const orderItemSchema = z
+  .object({
+    productId: z.string().min(1, "Product is required"),
+    productName: z.string().min(1),
+    productVariantId: z.string().nullable().optional(),
+    productVariantName: z.string().nullable().optional(),
+    requiresVariant: z.boolean().optional(),
+    quantity: z.number().int().min(1, "Quantity must be at least 1"),
+    unitPrice: z.number().min(0, "Price cannot be negative"),
+  })
+  .superRefine((item, ctx) => {
+    if (item.requiresVariant && !item.productVariantId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["productVariantId"],
+        message: "Please select an exact product variant",
+      });
+    }
+  });
 
 export const orderFormSchema = z.object({
   // Customer

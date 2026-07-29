@@ -1,17 +1,9 @@
 "use client";
 
-/**
- * Orders column definitions for DataTable v2 (Phase 1).
- *
- * Uses TanStack Table's ColumnDef pattern. The columns are defined separately
- * from the table component so they can be reused + customized.
- *
- * Includes: select checkbox, order number (sortable), customer, items, wilaya,
- * total (sortable), status badge, risk badge, date (sortable), actions dropdown.
- */
 import { type ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { MoreVertical, Eye, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,13 +19,10 @@ import { RiskBadge } from "@/components/risk/risk-badge";
 import type { RiskLevel } from "@/lib/risk-engine/types";
 import type { OrderListItem } from "@/hooks/swr/use-orders";
 import { useI18n } from "@/hooks/use-i18n";
-import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 interface UseOrdersColumnsOptions {
   locale: "ar" | "fr" | "en";
-  /** Optional risk assessments: orderId → { level, score }. */
   riskData?: Record<string, { level: string; score: number }>;
-  /** Called when user requests delete (shows confirm dialog). */
   onDelete?: (orderId: string) => void;
 }
 
@@ -44,9 +33,16 @@ function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
     : <ArrowDown className="inline h-3 w-3 ms-1" />;
 }
 
+const AUTHORITY_LABELS = {
+  en: { canonical: "Canonical", legacy: "Legacy" },
+  fr: { canonical: "Canonique", legacy: "Héritée" },
+  ar: { canonical: "موثوق", legacy: "قديم" },
+} as const;
+
 export function useOrdersColumns(opts: UseOrdersColumnsOptions): ColumnDef<OrderListItem, unknown>[] {
   const { t } = useI18n();
   const { locale, riskData, onDelete } = opts;
+  const authorityLabels = AUTHORITY_LABELS[locale];
 
   const columns: ColumnDef<OrderListItem, unknown>[] = [
     selectColumn<OrderListItem>(),
@@ -123,13 +119,22 @@ export function useOrdersColumns(opts: UseOrdersColumnsOptions): ColumnDef<Order
     {
       accessorKey: "status",
       header: () => t("orders.status"),
-      cell: ({ row }) => (
-        <OrderStatusBadge
-          orderId={row.original.id}
-          status={row.original.status as never}
-          size="sm"
-        />
-      ),
+      cell: ({ row }) => {
+        const canonical = row.original.mutationAuthority === "canonical_v1";
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <OrderStatusBadge
+              orderId={row.original.id}
+              status={row.original.status as never}
+              size="sm"
+              disabled={canonical}
+            />
+            <Badge variant={canonical ? "default" : "outline"} className="text-[10px]">
+              {canonical ? authorityLabels.canonical : authorityLabels.legacy}
+            </Badge>
+          </div>
+        );
+      },
       enableSorting: false,
     },
     ...(riskData ? [{

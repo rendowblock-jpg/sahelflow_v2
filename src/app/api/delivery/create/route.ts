@@ -96,6 +96,27 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         );
       }
 
+      // Phase 1A reserves stock canonically but does not yet own shipment
+      // consumption. Fail before creating a local delivery reservation or making
+      // an external provider call; a later governed fulfillment command will
+      // consume/release the reservation atomically.
+      const activeReservations = await tx.$queryRaw<
+        Array<{ present: number | bigint }>
+      >`
+        SELECT 1 AS "present"
+        FROM "InventoryReservation"
+        WHERE "orderId" = ${order.id}
+          AND "state" = 'active'
+        LIMIT 1
+      `;
+      if (activeReservations.length > 0) {
+        throw new SahelFlowError(
+          "This confirmed order has canonical reserved stock; shipment requires the governed fulfillment command",
+          "CANONICAL_FOLLOWUP_REQUIRED",
+          409,
+        );
+      }
+
       const reservation = await tx.delivery.create({
         data: {
           orderId: order.id,
