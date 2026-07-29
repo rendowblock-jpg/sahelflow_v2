@@ -17,28 +17,18 @@ import {
   RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
-function sameOriginRedirectTarget(
-  request: NextRequest,
-  pathname: string,
-): URL {
-  const host = request.headers.get("host")?.trim();
-  if (host) {
-    try {
-      const target = new URL(`${request.nextUrl.protocol}//${host}`);
-      target.pathname = pathname;
-      target.search = "";
-      target.hash = "";
-      return target;
-    } catch {
-      // Fall through to the parsed request URL when an invalid Host is supplied.
-    }
-  }
-
-  const target = request.nextUrl.clone();
-  target.pathname = pathname;
-  target.search = "";
-  target.hash = "";
-  return new URL(target.href);
+function sameOriginRedirect(pathname: "/setup" | "/login"): NextResponse {
+  // A relative Location is deliberate. Packaged WebView cookies are scoped to
+  // the exact loopback host (`127.0.0.1` versus `localhost`), so rebuilding an
+  // absolute URL can silently cross origins. Relative redirects also avoid
+  // trusting caller-controlled Host or forwarded-host headers.
+  return new NextResponse(null, {
+    status: 307,
+    headers: {
+      Location: pathname,
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 /**
@@ -150,9 +140,7 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(
-      sameOriginRedirectTarget(request, decision.destination),
-    );
+    return sameOriginRedirect(decision.destination);
   }
 
   if (!secret) {
@@ -185,7 +173,7 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   const valid = await verifySessionToken(token, secret);
   if (!valid) {
-    return NextResponse.redirect(sameOriginRedirectTarget(request, "/login"));
+    return sameOriginRedirect("/login");
   }
 
   return NextResponse.next();
