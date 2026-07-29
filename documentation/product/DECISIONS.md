@@ -131,8 +131,8 @@ policies without a new numbered Founder decision.
 - Founder verifies the actual receiving-account transaction.
 - Payment verification and license issuance are separate durable state machines.
 - Permanent private signing key remains offline.
-- Fraud, duplicate payment, reused receipt, amount mismatch, interrupted issuance
-  and stale Founder session require explicit controls.
+- Fraud, duplicate payment, reused receipt, repeated approval, amount mismatch,
+  interrupted issuance and stale Founder session require explicit controls.
 
 ## FD-010 — Low-end-first Windows performance and broad compatibility
 
@@ -141,7 +141,8 @@ policies without a new numbered Founder decision.
 - Primary floor: x64 Windows, dual-core class CPU, 4 GB RAM, HDD or SSD,
   1366×768 and required runtime capabilities.
 - Target functional compatibility for Windows 10 22H2, unsupported-CPU Windows
-  11, Tiny11/modified builds, HDD systems and VMs where required components exist.
+  11, Tiny11/modified builds, HDD systems, VMs and systems without TPM or Secure
+  Boot where required components exist.
 - Security certification remains distinct from functional compatibility.
 - Founder ThinkPad T470 is mandatory reference hardware; maintain a materially
   weaker 4 GB dual-core floor device.
