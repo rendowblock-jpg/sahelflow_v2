@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { recordOrderChangeInTx } from "@/lib/data/order-change-service";
@@ -89,32 +90,40 @@ export async function reviseTrustedManualOrder(
       );
     }
 
-    const updated = await tx.order.updateMany({
-      where: {
-        id: orderId,
-        status: "pending",
-        version: data.expectedVersion,
-        deletedAt: null,
-      },
-      data: {
-        wilaya: data.wilaya,
-        commune: data.commune,
-        address: data.address,
-        phone: normalizedPhone,
-        notes: data.notes,
-        version: { increment: 1 },
-      },
-    });
-    if (updated.count !== 1) {
-      throw new ConflictError(
-        `Order ${orderId} changed while the revision command was running`,
-      );
+    let row;
+    try {
+      // Use the intercepted `update` operation—not `updateMany`—so the Order PII
+      // extension encrypts phone/address/notes before SQLite sees them. Prisma's
+      // extended unique where keeps the optimistic version/status check atomic.
+      row = await tx.order.update({
+        where: {
+          id: orderId,
+          status: "pending",
+          version: data.expectedVersion,
+          deletedAt: null,
+        },
+        data: {
+          wilaya: data.wilaya,
+          commune: data.commune,
+          address: data.address,
+          phone: normalizedPhone,
+          notes: data.notes,
+          version: { increment: 1 },
+        },
+        include: { items: true },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new ConflictError(
+          `Order ${orderId} changed while the revision command was running`,
+        );
+      }
+      throw error;
     }
 
-    const row = await tx.order.findUniqueOrThrow({
-      where: { id: orderId },
-      include: { items: true },
-    });
     await recordOrderChangeInTx(tx, {
       orderId,
       actionType: "edit",
