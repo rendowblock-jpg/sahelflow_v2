@@ -1028,7 +1028,10 @@ http.createServer((_request, response) => {
                 OsString::from(node_entrypoint),
             ));
 
-            let child = ContainedChild::spawn_in_capturing_stderr(
+            let mut installation_root_frame = [0_u8; 40];
+            installation_root_frame[..8].copy_from_slice(b"SFRK0001");
+            installation_root_frame[8..].fill(0x5a);
+            let child = ContainedChild::spawn_in_capturing_stderr_with_stdin_frame(
                 &node_path,
                 &[
                     OsString::from("--eval"),
@@ -1036,8 +1039,10 @@ http.createServer((_request, response) => {
                 ],
                 &environment,
                 Some(&test_root),
+                &installation_root_frame,
             )
             .expect("spawn bundled Node.js through the real contained launcher");
+            installation_root_frame.fill(0);
 
             let deadline = Instant::now() + Duration::from_secs(15);
             let mut response = String::new();

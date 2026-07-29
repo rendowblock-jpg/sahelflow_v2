@@ -1440,7 +1440,7 @@ fn installation_authority_footprint_present(app_data_dir: &Path) -> Result<bool,
     Ok(false)
 }
 
-fn installation_identity_before_mutation(
+pub(crate) fn installation_identity_before_mutation(
     app_data_dir: &Path,
     protected_identity: Option<InstallationIdentity>,
 ) -> Result<InstallationIdentity, Box<dyn std::error::Error>> {

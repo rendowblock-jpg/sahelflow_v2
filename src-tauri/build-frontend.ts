@@ -9,7 +9,7 @@
  * Cross-platform: works on Windows, macOS, and Linux (uses Bun, not bash).
  */
 
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import {
   cpSync,
   existsSync,
@@ -139,6 +139,24 @@ if (!existsSync(standaloneServer)) {
 const serverSource = readFileSync(standaloneServer, "utf8");
 writeFileSync(standaloneServer, hardenStandaloneServer(serverSource), "utf8");
 ok("Hardened standalone runtime bootstrap");
+
+const rotationWorker = resolve(standaloneDir, "sahelflow-rotate-master-key.cjs");
+execFileSync(
+  process.execPath,
+  [
+    "build",
+    "scripts/rotate-master-key.ts",
+    "--target=node",
+    "--packages=external",
+    "--conditions=react-server",
+    `--outfile=${rotationWorker}`,
+  ],
+  { stdio: "inherit", cwd: ROOT },
+);
+if (!existsSync(rotationWorker)) {
+  throw new Error(`Protected rotation worker is missing: ${rotationWorker}`);
+}
+ok("Bundled protected installation-root rotation worker");
 
 const standaloneManifest = writeStandaloneManifest(standaloneDir, APP_VERSION);
 ok(

@@ -6,6 +6,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{compiler_fence, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const ROOT_KEY_BYTES: usize = 32;
 const MAX_DOCUMENT_BYTES: u64 = 64 * 1024;
@@ -16,6 +17,8 @@ const WINDOWS_DPAPI_ALGORITHM: &str = "windows-dpapi-current-user";
 const CURRENT_FILE: &str = "installation-root.current.json";
 const CANDIDATE_FILE: &str = "installation-root.candidate.json";
 const BACKUP_FILE: &str = "installation-root.backup.json";
+const ROTATION_JOURNAL_FILE: &str = "installation-root.rotation.json";
+const ROTATION_RECEIPT_FILE: &str = "installation-root.last-rotation.json";
 const LOCK_FILE: &str = "installation-root.lock";
 const RECOVERY_DIRECTORY: &str = "installation-root-recovery";
 const INNER_MAGIC: &[u8] = b"SAHELFLOW-INSTALLATION-ROOT\0";
@@ -68,6 +71,21 @@ pub(crate) struct PreparedInstallationRoot {
     pub(crate) disposition: InstallationRootDisposition,
     pub(crate) protected_path: PathBuf,
     pub(crate) imported_recovery_archives: usize,
+}
+
+pub(crate) enum InstallationRootRotationPreparation {
+    Ready(PreparedInstallationRootRotation),
+    RecoveredCommitted { receipt_path: PathBuf },
+}
+
+/// Holds the installation-root lock across the complete database re-wrap.
+/// This type intentionally implements neither `Clone` nor `Debug`.
+pub(crate) struct PreparedInstallationRootRotation {
+    pub(crate) current_root: InstallationRootKey,
+    pub(crate) candidate_root: InstallationRootKey,
+    system_dir: PathBuf,
+    identity: InstallationIdentity,
+    _lock: File,
 }
 
 /// This type intentionally implements neither `Clone` nor `Debug`.
@@ -154,6 +172,36 @@ struct ProtectedDocument {
     key_id: String,
     protected_payload_hex: String,
     document_sha256: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum RotationJournalState {
+    Prepared,
+    DataRotated,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RotationJournal {
+    format_version: u8,
+    state: RotationJournalState,
+    workspace_id: String,
+    installation_id: String,
+    current_key_id: String,
+    candidate_key_id: String,
+    updated_at_unix_seconds: u64,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RotationReceipt {
+    format_version: u8,
+    workspace_id: String,
+    installation_id: String,
+    previous_key_id: String,
+    current_key_id: String,
+    completed_at_unix_seconds: u64,
 }
 
 struct SensitiveBytes(Vec<u8>);
@@ -259,6 +307,14 @@ fn prepare_installation_root_with<P: PayloadProtector>(
     let _lock = acquire_lock(request.system_dir)?;
 
     reject_incomplete_legacy_rotation(request.legacy_master_key_path)?;
+    if path_exists_regular(&request.system_dir.join(ROTATION_JOURNAL_FILE))?
+        || (path_exists_regular(&request.system_dir.join(CURRENT_FILE))?
+            && path_exists_regular(&request.system_dir.join(CANDIDATE_FILE))?)
+    {
+        return Err(InstallationRootError::InvalidState(
+            "protected installation-root rotation requires native resume".to_owned(),
+        ));
+    }
 
     if let Some(protected_identity) = probe_protected_identity_locked(request.system_dir)? {
         if protected_identity != request.identity {
@@ -321,6 +377,276 @@ fn prepare_installation_root_with<P: PayloadProtector>(
         protected_path: request.system_dir.join(CURRENT_FILE),
         imported_recovery_archives,
     })
+}
+
+pub(crate) fn prepare_installation_root_rotation(
+    system_dir: &Path,
+    identity: InstallationIdentity,
+) -> Result<InstallationRootRotationPreparation, InstallationRootError> {
+    prepare_installation_root_rotation_with(system_dir, identity, &PlatformProtector)
+}
+
+fn prepare_installation_root_rotation_with<P: PayloadProtector>(
+    system_dir: &Path,
+    identity: InstallationIdentity,
+    protector: &P,
+) -> Result<InstallationRootRotationPreparation, InstallationRootError> {
+    validate_identity(&identity)?;
+    if let Some(parent) = system_dir.parent() {
+        reject_symlink(parent)?;
+    }
+    fs::create_dir_all(system_dir)?;
+    reject_symlink(system_dir)?;
+    let lock = acquire_lock(system_dir)?;
+
+    let protected_identity = probe_protected_identity_locked(system_dir)?.ok_or_else(|| {
+        InstallationRootError::InvalidState(
+            "protected rotation requires an existing installation root".to_owned(),
+        )
+    })?;
+    if protected_identity != identity {
+        return Err(InstallationRootError::IdentityMismatch(
+            "protected rotation identity does not match the installed workspace".to_owned(),
+        ));
+    }
+
+    let journal_path = system_dir.join(ROTATION_JOURNAL_FILE);
+    let journal = if path_exists_regular(&journal_path)? {
+        Some(read_rotation_journal(&journal_path, &identity)?)
+    } else {
+        None
+    };
+    let current_path = system_dir.join(CURRENT_FILE);
+    if !path_exists_regular(&current_path)? {
+        if let Some(journal) = &journal {
+            if journal.state == RotationJournalState::DataRotated {
+                let backup = read_and_unprotect_document(
+                    &system_dir.join(BACKUP_FILE),
+                    &identity,
+                    CURRENT_PURPOSE,
+                    protector,
+                )?;
+                let candidate = read_and_unprotect_document(
+                    &system_dir.join(CANDIDATE_FILE),
+                    &identity,
+                    CURRENT_PURPOSE,
+                    protector,
+                )?;
+                if backup.key_id() == journal.current_key_id
+                    && candidate.key_id() == journal.candidate_key_id
+                {
+                    promote_candidate_document(system_dir, &candidate, &identity, protector)?;
+                    let receipt_path = finish_rotation_receipt(system_dir, &identity, journal)?;
+                    return Ok(InstallationRootRotationPreparation::RecoveredCommitted {
+                        receipt_path,
+                    });
+                }
+            }
+        }
+        return Err(InstallationRootError::InvalidState(
+            "protected rotation requires the current installation-root document".to_owned(),
+        ));
+    }
+    let current_root =
+        read_and_unprotect_document(&current_path, &identity, CURRENT_PURPOSE, protector)?;
+
+    if let Some(journal) = &journal {
+        if journal.state == RotationJournalState::DataRotated {
+            let receipt_path = recover_data_rotated_rotation(
+                system_dir,
+                &identity,
+                &current_root,
+                journal,
+                protector,
+            )?;
+            return Ok(InstallationRootRotationPreparation::RecoveredCommitted { receipt_path });
+        }
+        if journal.current_key_id != current_root.key_id() {
+            return Err(InstallationRootError::InvalidState(
+                "rotation journal current key does not match protected authority".to_owned(),
+            ));
+        }
+    }
+
+    let candidate_path = system_dir.join(CANDIDATE_FILE);
+    let candidate_root = if path_exists_regular(&candidate_path)? {
+        read_and_unprotect_document(&candidate_path, &identity, CURRENT_PURPOSE, protector)?
+    } else {
+        let generated = generate_root_key()?;
+        let document = make_document(&generated, &identity, CURRENT_PURPOSE, protector)?;
+        write_document_durable(&candidate_path, &document)?;
+        let verified =
+            read_and_unprotect_document(&candidate_path, &identity, CURRENT_PURPOSE, protector)?;
+        if !keys_equal(generated.as_bytes(), verified.as_bytes()) {
+            return Err(InstallationRootError::InvalidState(
+                "rotation candidate round-trip changed the generated root".to_owned(),
+            ));
+        }
+        generated
+    };
+    if keys_equal(current_root.as_bytes(), candidate_root.as_bytes()) {
+        return Err(InstallationRootError::InvalidState(
+            "rotation candidate matches the current installation root".to_owned(),
+        ));
+    }
+    if let Some(journal) = &journal {
+        if journal.candidate_key_id != candidate_root.key_id() {
+            return Err(InstallationRootError::InvalidState(
+                "rotation journal candidate key does not match protected authority".to_owned(),
+            ));
+        }
+    } else {
+        write_rotation_journal(
+            &journal_path,
+            &RotationJournal {
+                format_version: DOCUMENT_FORMAT_VERSION,
+                state: RotationJournalState::Prepared,
+                workspace_id: identity.workspace_id.clone(),
+                installation_id: identity.installation_id.clone(),
+                current_key_id: current_root.key_id().to_owned(),
+                candidate_key_id: candidate_root.key_id().to_owned(),
+                updated_at_unix_seconds: unix_seconds_now()?,
+            },
+        )?;
+    }
+
+    Ok(InstallationRootRotationPreparation::Ready(
+        PreparedInstallationRootRotation {
+            current_root,
+            candidate_root,
+            system_dir: system_dir.to_path_buf(),
+            identity,
+            _lock: lock,
+        },
+    ))
+}
+
+pub(crate) fn commit_installation_root_rotation(
+    rotation: PreparedInstallationRootRotation,
+) -> Result<PathBuf, InstallationRootError> {
+    commit_installation_root_rotation_with(rotation, &PlatformProtector)
+}
+
+fn commit_installation_root_rotation_with<P: PayloadProtector>(
+    rotation: PreparedInstallationRootRotation,
+    protector: &P,
+) -> Result<PathBuf, InstallationRootError> {
+    let journal_path = rotation.system_dir.join(ROTATION_JOURNAL_FILE);
+    let journal = RotationJournal {
+        format_version: DOCUMENT_FORMAT_VERSION,
+        state: RotationJournalState::DataRotated,
+        workspace_id: rotation.identity.workspace_id.clone(),
+        installation_id: rotation.identity.installation_id.clone(),
+        current_key_id: rotation.current_root.key_id().to_owned(),
+        candidate_key_id: rotation.candidate_root.key_id().to_owned(),
+        updated_at_unix_seconds: unix_seconds_now()?,
+    };
+    write_rotation_journal(&journal_path, &journal)?;
+    promote_candidate_document(
+        &rotation.system_dir,
+        &rotation.candidate_root,
+        &rotation.identity,
+        protector,
+    )?;
+    finish_rotation_receipt(&rotation.system_dir, &rotation.identity, &journal)
+}
+
+fn recover_data_rotated_rotation<P: PayloadProtector>(
+    system_dir: &Path,
+    identity: &InstallationIdentity,
+    current_root: &InstallationRootKey,
+    journal: &RotationJournal,
+    protector: &P,
+) -> Result<PathBuf, InstallationRootError> {
+    if current_root.key_id() == journal.candidate_key_id {
+        let backup = read_and_unprotect_document(
+            &system_dir.join(BACKUP_FILE),
+            identity,
+            CURRENT_PURPOSE,
+            protector,
+        )?;
+        if backup.key_id() != journal.current_key_id {
+            return Err(InstallationRootError::InvalidState(
+                "committed rotation backup does not match the prior root".to_owned(),
+            ));
+        }
+    } else if current_root.key_id() == journal.current_key_id {
+        let candidate = read_and_unprotect_document(
+            &system_dir.join(CANDIDATE_FILE),
+            identity,
+            CURRENT_PURPOSE,
+            protector,
+        )?;
+        if candidate.key_id() != journal.candidate_key_id {
+            return Err(InstallationRootError::InvalidState(
+                "data-rotated candidate does not match the rotation journal".to_owned(),
+            ));
+        }
+        promote_candidate_document(system_dir, &candidate, identity, protector)?;
+    } else {
+        return Err(InstallationRootError::InvalidState(
+            "data-rotated journal matches neither current nor candidate authority".to_owned(),
+        ));
+    }
+    finish_rotation_receipt(system_dir, identity, journal)
+}
+
+fn finish_rotation_receipt(
+    system_dir: &Path,
+    identity: &InstallationIdentity,
+    journal: &RotationJournal,
+) -> Result<PathBuf, InstallationRootError> {
+    let receipt_path = system_dir.join(ROTATION_RECEIPT_FILE);
+    write_json_durable(
+        &receipt_path,
+        &RotationReceipt {
+            format_version: DOCUMENT_FORMAT_VERSION,
+            workspace_id: identity.workspace_id.clone(),
+            installation_id: identity.installation_id.clone(),
+            previous_key_id: journal.current_key_id.clone(),
+            current_key_id: journal.candidate_key_id.clone(),
+            completed_at_unix_seconds: unix_seconds_now()?,
+        },
+    )?;
+    let journal_path = system_dir.join(ROTATION_JOURNAL_FILE);
+    if path_exists_regular(&journal_path)? {
+        fs::remove_file(&journal_path)?;
+        sync_directory(system_dir)?;
+    }
+    Ok(receipt_path)
+}
+
+fn read_rotation_journal(
+    path: &Path,
+    identity: &InstallationIdentity,
+) -> Result<RotationJournal, InstallationRootError> {
+    reject_symlink(path)?;
+    let metadata = fs::metadata(path)?;
+    if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_DOCUMENT_BYTES {
+        return Err(InstallationRootError::InvalidState(
+            "rotation journal size is invalid".to_owned(),
+        ));
+    }
+    let journal: RotationJournal = serde_json::from_slice(&fs::read(path)?)?;
+    if journal.format_version != DOCUMENT_FORMAT_VERSION
+        || journal.workspace_id != identity.workspace_id
+        || journal.installation_id != identity.installation_id
+        || !valid_key_id(&journal.current_key_id)
+        || !valid_key_id(&journal.candidate_key_id)
+        || journal.current_key_id == journal.candidate_key_id
+    {
+        return Err(InstallationRootError::InvalidState(
+            "rotation journal authority is invalid".to_owned(),
+        ));
+    }
+    Ok(journal)
+}
+
+fn write_rotation_journal(
+    path: &Path,
+    journal: &RotationJournal,
+) -> Result<(), InstallationRootError> {
+    write_json_durable(path, journal)
 }
 
 fn probe_protected_identity_locked(
@@ -476,9 +802,7 @@ fn commit_current_document<P: PayloadProtector>(
     expected_root: &InstallationRootKey,
     protector: &P,
 ) -> Result<(), InstallationRootError> {
-    let current = system_dir.join(CURRENT_FILE);
     let candidate = system_dir.join(CANDIDATE_FILE);
-    let backup = system_dir.join(BACKUP_FILE);
     write_document_durable(&candidate, document)?;
     let verified = read_and_unprotect_document(
         &candidate,
@@ -495,8 +819,36 @@ fn commit_current_document<P: PayloadProtector>(
         ));
     }
 
-    if current.exists() {
-        if backup.exists() {
+    promote_candidate_document(
+        system_dir,
+        expected_root,
+        &InstallationIdentity {
+            workspace_id: document.workspace_id.clone(),
+            installation_id: document.installation_id.clone(),
+        },
+        protector,
+    )
+}
+
+fn promote_candidate_document<P: PayloadProtector>(
+    system_dir: &Path,
+    expected_root: &InstallationRootKey,
+    identity: &InstallationIdentity,
+    protector: &P,
+) -> Result<(), InstallationRootError> {
+    let current = system_dir.join(CURRENT_FILE);
+    let candidate = system_dir.join(CANDIDATE_FILE);
+    let backup = system_dir.join(BACKUP_FILE);
+    let candidate_root =
+        read_and_unprotect_document(&candidate, identity, CURRENT_PURPOSE, protector)?;
+    if !keys_equal(expected_root.as_bytes(), candidate_root.as_bytes()) {
+        return Err(InstallationRootError::InvalidState(
+            "protected rotation candidate changed before promotion".to_owned(),
+        ));
+    }
+
+    if path_exists_regular(&current)? {
+        if path_exists_regular(&backup)? {
             reject_symlink(&backup)?;
             fs::remove_file(&backup)?;
             sync_directory(system_dir)?;
@@ -504,15 +856,7 @@ fn commit_current_document<P: PayloadProtector>(
         move_file_durable(&current, &backup)?;
     }
     move_file_durable(&candidate, &current)?;
-    let committed = read_and_unprotect_document(
-        &current,
-        &InstallationIdentity {
-            workspace_id: document.workspace_id.clone(),
-            installation_id: document.installation_id.clone(),
-        },
-        CURRENT_PURPOSE,
-        protector,
-    )?;
+    let committed = read_and_unprotect_document(&current, identity, CURRENT_PURPOSE, protector)?;
     if !keys_equal(expected_root.as_bytes(), committed.as_bytes()) {
         return Err(InstallationRootError::InvalidState(
             "committed installation root failed verification".to_owned(),
@@ -664,6 +1008,35 @@ fn write_document_durable(
     file.sync_all()?;
     sync_parent_directory(path)?;
     Ok(())
+}
+
+fn write_json_durable<T: Serialize>(path: &Path, value: &T) -> Result<(), InstallationRootError> {
+    if path.exists() {
+        reject_symlink(path)?;
+    }
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| {
+            InstallationRootError::InvalidState(
+                "rotation authority path has no valid file name".to_owned(),
+            )
+        })?;
+    let temporary = path.with_file_name(format!("{file_name}.new"));
+    if temporary.exists() {
+        reject_symlink(&temporary)?;
+    }
+    let bytes = serde_json::to_vec_pretty(value)?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&temporary)?;
+    file.write_all(&bytes)?;
+    file.write_all(b"\n")?;
+    file.sync_all()?;
+    drop(file);
+    replace_file_durable(&temporary, path)
 }
 
 fn acquire_lock(system_dir: &Path) -> Result<File, InstallationRootError> {
@@ -972,8 +1345,36 @@ fn move_file_durable(source: &Path, target: &Path) -> Result<(), InstallationRoo
     Ok(())
 }
 
+#[cfg(windows)]
+fn replace_file_durable(source: &Path, target: &Path) -> Result<(), InstallationRootError> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
+
+    let source_wide: Vec<u16> = source.as_os_str().encode_wide().chain(Some(0)).collect();
+    let target_wide: Vec<u16> = target.as_os_str().encode_wide().chain(Some(0)).collect();
+    if unsafe {
+        MoveFileExW(
+            source_wide.as_ptr(),
+            target_wide.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    } == 0
+    {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    Ok(())
+}
+
 #[cfg(not(windows))]
 fn move_file_durable(source: &Path, target: &Path) -> Result<(), InstallationRootError> {
+    fs::rename(source, target)?;
+    sync_parent_directory(target)
+}
+
+#[cfg(not(windows))]
+fn replace_file_durable(source: &Path, target: &Path) -> Result<(), InstallationRootError> {
     fs::rename(source, target)?;
     sync_parent_directory(target)
 }
@@ -1069,6 +1470,21 @@ fn hex_nibble(value: u8) -> Result<u8, InstallationRootError> {
 
 fn sha256_hex(bytes: &[u8]) -> String {
     hex_encode(&Sha256::digest(bytes))
+}
+
+fn valid_key_id(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn unix_seconds_now() -> Result<u64, InstallationRootError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .map_err(|error| {
+            InstallationRootError::InvalidState(format!(
+                "system clock is before the Unix epoch: {error}"
+            ))
+        })
 }
 
 fn keys_equal(left: &[u8; ROOT_KEY_BYTES], right: &[u8; ROOT_KEY_BYTES]) -> bool {
@@ -1260,7 +1676,6 @@ fn platform_unprotect(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     struct TestProtector;
 
@@ -1335,6 +1750,12 @@ mod tests {
             },
             &TestProtector,
         )
+    }
+
+    fn prepare_rotation_test(
+        root: &Path,
+    ) -> Result<InstallationRootRotationPreparation, InstallationRootError> {
+        prepare_installation_root_rotation_with(&root.join("system"), identity(), &TestProtector)
     }
 
     #[test]
@@ -1474,5 +1895,110 @@ mod tests {
         ));
         assert!(directory.0.join("master.key").exists());
         assert!(!directory.0.join("system").join(CURRENT_FILE).exists());
+    }
+
+    #[test]
+    fn protected_rotation_reuses_candidate_and_commits_with_backup() {
+        let directory = TestDirectory::new("protected-rotation");
+        let initial = prepare_test(&directory.0, false, true).expect("fresh root");
+        let previous = *initial.root_key.as_bytes();
+        drop(initial);
+
+        let first = match prepare_rotation_test(&directory.0).expect("prepare rotation") {
+            InstallationRootRotationPreparation::Ready(rotation) => rotation,
+            InstallationRootRotationPreparation::RecoveredCommitted { .. } => {
+                panic!("new rotation unexpectedly completed")
+            }
+        };
+        let candidate = *first.candidate_root.as_bytes();
+        assert_ne!(candidate, previous);
+        drop(first);
+
+        assert!(matches!(
+            prepare_test(&directory.0, true, false),
+            Err(InstallationRootError::InvalidState(_))
+        ));
+        let resumed = match prepare_rotation_test(&directory.0).expect("resume rotation") {
+            InstallationRootRotationPreparation::Ready(rotation) => rotation,
+            InstallationRootRotationPreparation::RecoveredCommitted { .. } => {
+                panic!("prepared rotation unexpectedly committed")
+            }
+        };
+        assert_eq!(resumed.current_root.as_bytes(), &previous);
+        assert_eq!(resumed.candidate_root.as_bytes(), &candidate);
+        let receipt = commit_installation_root_rotation_with(resumed, &TestProtector)
+            .expect("commit protected rotation");
+        assert!(receipt.exists());
+
+        let system = directory.0.join("system");
+        let current = read_and_unprotect_document(
+            &system.join(CURRENT_FILE),
+            &identity(),
+            CURRENT_PURPOSE,
+            &TestProtector,
+        )
+        .expect("current root");
+        let backup = read_and_unprotect_document(
+            &system.join(BACKUP_FILE),
+            &identity(),
+            CURRENT_PURPOSE,
+            &TestProtector,
+        )
+        .expect("backup root");
+        assert_eq!(current.as_bytes(), &candidate);
+        assert_eq!(backup.as_bytes(), &previous);
+        assert!(!system.join(CANDIDATE_FILE).exists());
+        assert!(!system.join(ROTATION_JOURNAL_FILE).exists());
+    }
+
+    #[test]
+    fn data_rotated_journal_finishes_commit_without_rewriting_databases() {
+        let directory = TestDirectory::new("rotation-resume-after-data");
+        let initial = prepare_test(&directory.0, false, true).expect("fresh root");
+        drop(initial);
+        let rotation = match prepare_rotation_test(&directory.0).expect("prepare rotation") {
+            InstallationRootRotationPreparation::Ready(rotation) => rotation,
+            InstallationRootRotationPreparation::RecoveredCommitted { .. } => {
+                panic!("new rotation unexpectedly completed")
+            }
+        };
+        let previous_id = rotation.current_root.key_id().to_owned();
+        let candidate_id = rotation.candidate_root.key_id().to_owned();
+        let system = directory.0.join("system");
+        write_rotation_journal(
+            &system.join(ROTATION_JOURNAL_FILE),
+            &RotationJournal {
+                format_version: DOCUMENT_FORMAT_VERSION,
+                state: RotationJournalState::DataRotated,
+                workspace_id: identity().workspace_id,
+                installation_id: identity().installation_id,
+                current_key_id: previous_id,
+                candidate_key_id: candidate_id.clone(),
+                updated_at_unix_seconds: unix_seconds_now().expect("clock"),
+            },
+        )
+        .expect("record data-rotated state");
+        fs::rename(system.join(CURRENT_FILE), system.join(BACKUP_FILE))
+            .expect("simulate crash after current moved to backup");
+        drop(rotation);
+
+        let receipt = match prepare_rotation_test(&directory.0).expect("recover commit") {
+            InstallationRootRotationPreparation::RecoveredCommitted { receipt_path } => {
+                receipt_path
+            }
+            InstallationRootRotationPreparation::Ready(_) => {
+                panic!("data-rotated state reran database rotation")
+            }
+        };
+        assert!(receipt.exists());
+        let current = read_and_unprotect_document(
+            &system.join(CURRENT_FILE),
+            &identity(),
+            CURRENT_PURPOSE,
+            &TestProtector,
+        )
+        .expect("committed current root");
+        assert_eq!(current.key_id(), candidate_id);
+        assert!(!system.join(ROTATION_JOURNAL_FILE).exists());
     }
 }

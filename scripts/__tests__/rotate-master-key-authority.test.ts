@@ -8,6 +8,18 @@ const contextPath = resolve(process.cwd(), "src", "lib", "shops", "context.ts");
 const authorityPath = resolve(process.cwd(), "src", "lib", "shops", "authority.ts");
 const contextSource = readFileSync(contextPath, "utf8");
 const authoritySource = readFileSync(authorityPath, "utf8");
+const nativeRotationSource = readFileSync(
+  resolve(process.cwd(), "src-tauri", "src", "installation_root_rotation.rs"),
+  "utf8",
+);
+const installationRootSource = readFileSync(
+  resolve(process.cwd(), "src-tauri", "src", "installation_root_key.rs"),
+  "utf8",
+);
+const desktopBuildSource = readFileSync(
+  resolve(process.cwd(), "src-tauri", "build-frontend.ts"),
+  "utf8",
+);
 
 describe("installation-wide master-key rotation authority", () => {
   it("discovers registered shops and includes the provisioning template", () => {
@@ -127,5 +139,40 @@ describe("installation-wide master-key rotation authority", () => {
     expect(source).toContain(
       "it intentionally blocks SahelFlow until a successful resume",
     );
+  });
+
+  it("delegates protected installations to the installed native authority", () => {
+    expect(source).toContain('spawnSync(executable, ["--rotate-installation-root"]');
+    expect(source).toContain("Protected rotation delegation is restricted");
+    expect(source).toContain('Buffer.from("SFRKRT01", "ascii")');
+    expect(source).toContain("readSync(0, frame");
+    expect(source).toContain("frame.fill(0)");
+  });
+
+  it("bundles and contains the native rotation worker", () => {
+    expect(desktopBuildSource).toContain('"sahelflow-rotate-master-key.cjs"');
+    expect(desktopBuildSource).toContain('"--conditions=react-server"');
+    expect(nativeRotationSource).toContain(
+      "spawn_in_capturing_stderr_with_stdin_frame",
+    );
+    expect(nativeRotationSource).toContain("installation_root_key::clear_secret_bytes");
+    expect(nativeRotationSource).not.toContain("SF_MASTER_KEY");
+  });
+
+  it("journals database completion before protected candidate promotion", () => {
+    const dataRotated = installationRootSource.indexOf(
+      "state: RotationJournalState::DataRotated",
+    );
+    const promote = installationRootSource.indexOf(
+      "promote_candidate_document(",
+      dataRotated,
+    );
+    const receipt = installationRootSource.indexOf(
+      "finish_rotation_receipt(",
+      promote,
+    );
+    expect(dataRotated).toBeGreaterThan(-1);
+    expect(promote).toBeGreaterThan(dataRotated);
+    expect(receipt).toBeGreaterThan(promote);
   });
 });

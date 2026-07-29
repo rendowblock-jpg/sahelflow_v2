@@ -11,6 +11,7 @@
 
 mod child_containment;
 mod installation_root_key;
+mod installation_root_rotation;
 mod migration_coordinator;
 mod packaged_auth;
 mod packaged_runtime;
@@ -350,6 +351,8 @@ pub fn run() {
             {
                 use tauri::Manager;
                 let app_data_dir = app.path().app_data_dir()?;
+                let rotate_installation_root = std::env::args_os()
+                    .any(|argument| argument == "--rotate-installation-root");
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
@@ -375,9 +378,47 @@ pub fn run() {
                                 "SF-RUNTIME-STARTUP-BLOCKED",
                                 &detail,
                             );
+                            if rotate_installation_root {
+                                app_handle.exit(1);
+                            }
                             return;
                         }
                     };
+
+                    if rotate_installation_root {
+                        runtime_protocol::remove_manifest(&app_data_dir);
+                        startup_recovery::record_startup_stage(
+                            &app_data_dir,
+                            "installation-root-rotation-started",
+                            None,
+                        );
+                        match installation_root_rotation::rotate_packaged_installation_root(
+                            &app_data_dir,
+                            &resource_dir,
+                        ) {
+                            Ok(receipt_path) => {
+                                startup_recovery::record_startup_stage(
+                                    &app_data_dir,
+                                    "installation-root-rotation-complete",
+                                    receipt_path.to_str(),
+                                );
+                                app_handle.exit(0);
+                            }
+                            Err(error) => {
+                                let detail = error.to_string();
+                                eprintln!(
+                                    "[sahelflow] FATAL: protected installation-root rotation blocked: {detail}"
+                                );
+                                let _ = startup_recovery::show_blocked(
+                                    &app_handle,
+                                    "SF-INSTALLATION-ROOT-ROTATION-BLOCKED",
+                                    &detail,
+                                );
+                                app_handle.exit(1);
+                            }
+                        }
+                        return;
+                    }
 
                     // Validate the registry and migrate every registered shop
                     // before any business server can observe a database.

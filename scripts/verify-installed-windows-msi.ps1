@@ -51,6 +51,12 @@ $runtimeWorkRoot = Join-Path $localRoot "runtime-work"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
+$legacyMasterKeyPath = Join-Path $roamingRoot "master.key"
+$protectedInstallationRootPath = Join-Path $roamingRoot "system\installation-root.current.json"
+$protectedInstallationRootCandidatePath = Join-Path $roamingRoot "system\installation-root.candidate.json"
+$protectedInstallationRootBackupPath = Join-Path $roamingRoot "system\installation-root.backup.json"
+$protectedInstallationRootJournalPath = Join-Path $roamingRoot "system\installation-root.rotation.json"
+$protectedInstallationRootReceiptPath = Join-Path $roamingRoot "system\installation-root.last-rotation.json"
 $migrationSnapshotRoot = Join-Path $roamingRoot "migration-snapshots"
 $migrationJournalRoot = Join-Path $roamingRoot "migration-journal"
 $migrationJournalPath = Join-Path $migrationJournalRoot "current.json"
@@ -428,6 +434,16 @@ $legacySecondDatabasePath = Join-Path $legacyShopsRoot "second.db"
 $legacyInstallationId = [Guid]::NewGuid().ToString("N")
 New-Item -ItemType Directory -Path $legacyShopsRoot -Force | Out-Null
 
+$legacyMasterKeyHex = [string]$env:SF_MASTER_KEY
+if ($legacyMasterKeyHex -cnotmatch '^[0-9a-fA-F]{64}$') {
+    throw "The installed preservation fixture requires one exact 32-byte legacy master key."
+}
+[System.IO.File]::WriteAllText(
+    $legacyMasterKeyPath,
+    $legacyMasterKeyHex.ToLowerInvariant(),
+    [System.Text.Encoding]::ASCII
+)
+
 $previousDatabaseUrl = [Environment]::GetEnvironmentVariable("DATABASE_URL", "Process")
 try {
     $env:DATABASE_URL = "file:$legacyDatabasePath"
@@ -626,6 +642,7 @@ $databaseIdentity = $null
 $shopSetIdentity = $null
 $registryMigrationIdentity = $null
 $migrationRecoveryDrill = $null
+$installationRootRotation = $null
 $lifecyclePasses = 3
 
 for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
@@ -639,6 +656,15 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
 
     if ($launch.outcome -ne "ready") {
         break
+    }
+
+    if ($attempt -eq 1) {
+        if (-not (Test-Path -LiteralPath $protectedInstallationRootPath -PathType Leaf)) {
+            throw "Installed launch did not publish the protected installation root."
+        }
+        if (Test-Path -LiteralPath $legacyMasterKeyPath) {
+            throw "Installed launch did not erase the imported plaintext legacy master key."
+        }
     }
 
     $runtimeCacheEntries = @(
@@ -994,6 +1020,86 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     }
 }
 
+$beforeRotation = Read-JsonFile $protectedInstallationRootPath
+if (
+    $null -eq $beforeRotation -or
+    [string]$beforeRotation.keyId -notmatch '^[0-9a-f]{64}$'
+) {
+    throw "Protected installation-root authority is invalid before rotation."
+}
+$rotationProcess = Start-Process -FilePath $exe `
+    -ArgumentList @("--rotate-installation-root") `
+    -Wait -PassThru -WindowStyle Hidden
+if ($rotationProcess.ExitCode -ne 0) {
+    throw "Native protected installation-root rotation failed with exit code $($rotationProcess.ExitCode)."
+}
+if (@(Get-SahelFlowProcessTree).Count -ne 0) {
+    throw "Native protected rotation left an installed process running."
+}
+$afterRotation = Read-JsonFile $protectedInstallationRootPath
+$rotationBackup = Read-JsonFile $protectedInstallationRootBackupPath
+$rotationReceipt = Read-JsonFile $protectedInstallationRootReceiptPath
+if (
+    $null -eq $afterRotation -or
+    $null -eq $rotationBackup -or
+    $null -eq $rotationReceipt -or
+    [int]$rotationReceipt.formatVersion -ne 1 -or
+    [string]$rotationReceipt.previousKeyId -cne [string]$beforeRotation.keyId -or
+    [string]$rotationReceipt.currentKeyId -cne [string]$afterRotation.keyId -or
+    [string]$rotationBackup.keyId -cne [string]$beforeRotation.keyId -or
+    [string]$afterRotation.keyId -ceq [string]$beforeRotation.keyId -or
+    (Test-Path -LiteralPath $protectedInstallationRootCandidatePath) -or
+    (Test-Path -LiteralPath $protectedInstallationRootJournalPath) -or
+    (Test-Path -LiteralPath $legacyMasterKeyPath)
+) {
+    throw "Native protected rotation did not publish an exact current/backup/receipt authority set."
+}
+
+$rotationLaunchStartedAt = Get-Date
+$rotationLaunchProcess = Start-Process -FilePath $exe -PassThru
+$rotationLaunch = Wait-ForLaunchOutcome `
+    -Process $rotationLaunchProcess `
+    -StartedAt $rotationLaunchStartedAt `
+    -Phase "launch-after-protected-rotation"
+$launches += $rotationLaunch
+if ($rotationLaunch.outcome -ne "ready") {
+    throw "SahelFlow did not reopen with the rotated protected installation root."
+}
+$closures += Close-SahelFlowNormally -Process $rotationLaunchProcess
+
+$rotatedRegistry = Read-JsonFile $registryPath
+if (
+    $null -eq $rotatedRegistry -or
+    [string]$rotatedRegistry.workspaceId -cne [string]$registryIdentity.workspaceId -or
+    [string]$rotatedRegistry.installationId -cne [string]$registryIdentity.installationId -or
+    [string]$rotatedRegistry.activeShopId -cne [string]$registryIdentity.activeShopId -or
+    @($rotatedRegistry.shops).Count -ne $shopSetIdentity.Count
+) {
+    throw "Protected rotation changed registry or shop authority."
+}
+foreach ($expectedShop in @($shopSetIdentity)) {
+    $rotatedShop = @($rotatedRegistry.shops | Where-Object { $_.id -ceq $expectedShop.shopId })
+    if (
+        $rotatedShop.Count -ne 1 -or
+        [string]$rotatedShop[0].incarnationId -cne [string]$expectedShop.incarnationId -or
+        [string]$rotatedShop[0].databaseFile -cne [string]$expectedShop.databaseFile
+    ) {
+        throw "Protected rotation changed shop identity for $($expectedShop.shopId)."
+    }
+    $rotatedDatabasePath = Join-Path (Join-Path $roamingRoot "shops") $rotatedShop[0].databaseFile
+    $rotatedSentinel = Get-FounderSentinel -DatabasePath $rotatedDatabasePath -Mode "read"
+    if ($rotatedSentinel.value -cne $shopSentinelValues[$expectedShop.shopId]) {
+        throw "Protected rotation did not preserve seller data for $($expectedShop.shopId)."
+    }
+}
+$installationRootRotation = [ordered]@{
+    previousKeyId = [string]$beforeRotation.keyId
+    currentKeyId = [string]$afterRotation.keyId
+    backupKeyId = [string]$rotationBackup.keyId
+    receipt = $rotationReceipt
+    reopened = $rotationLaunch
+}
+
 $instanceIds = @(
     $launches |
         Where-Object { $_.outcome -eq "ready" } |
@@ -1019,6 +1125,7 @@ $result = [ordered]@{
     registry = $registryIdentity
     registryMigration = $registryMigrationIdentity
     migrationRecovery = $migrationRecoveryDrill
+    installationRootRotation = $installationRootRotation
     database = $databaseIdentity
     shops = $shopSetIdentity
     finalProcesses = Get-SahelFlowProcessTree
@@ -1034,6 +1141,9 @@ Copy-Item -LiteralPath $registryPath -Destination (Join-Path $evidenceRoot "shop
 Copy-Item -LiteralPath $migrationRecoveryReceiptPath `
     -Destination (Join-Path $evidenceRoot "migration-last-recovery.json") `
     -Force -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath $protectedInstallationRootReceiptPath `
+    -Destination (Join-Path $evidenceRoot "installation-root-last-rotation.json") `
+    -Force -ErrorAction SilentlyContinue
 
 $failed = @($launches | Where-Object { $_.outcome -ne "ready" })
 if ($failed.Count -gt 0) {
@@ -1041,8 +1151,9 @@ if ($failed.Count -gt 0) {
     throw "Installed SahelFlow did not reach ready state: $($failed[0].outcome)."
 }
 
-if ($launches.Count -ne $lifecyclePasses -or $closures.Count -ne $lifecyclePasses) {
-    throw "Installed SahelFlow did not complete all $lifecyclePasses launch and normal-close passes."
+$expectedLaunches = $lifecyclePasses + 1
+if ($launches.Count -ne $expectedLaunches -or $closures.Count -ne $expectedLaunches) {
+    throw "Installed SahelFlow did not complete all $expectedLaunches launch and normal-close passes."
 }
 
 Write-Host "Installed MSI launch/reopen proof passed for $expectedVersion."

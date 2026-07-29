@@ -1,7 +1,7 @@
 import "server-only";
 
 import { PrismaClient } from "@prisma/client";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -12,6 +12,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   renameSync,
   unlinkSync,
   writeFileSync,
@@ -60,6 +61,11 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const FORCE = process.argv.includes("--force");
 const RECOVER_STALE_LOCK = process.argv.includes("--recover-stale-lock");
 const KEY_BYTES = 32;
+const NATIVE_ROTATION_SOURCE = "native-stdin-v1";
+const NATIVE_ROTATION_MAGIC = Buffer.from("SFRKRT01", "ascii");
+const NATIVE_ROTATION_FRAME_BYTES = NATIVE_ROTATION_MAGIC.length + KEY_BYTES * 2;
+const NATIVE_ROTATION =
+  process.env.SF_INSTALLATION_ROOT_ROTATION_SOURCE === NATIVE_ROTATION_SOURCE;
 const REGISTRY_FORMAT_VERSION = 2;
 const RUNTIME_MANIFEST_FORMAT_VERSION = 1;
 
@@ -98,6 +104,62 @@ interface RuntimeEndpointManifest {
   processId: number;
 }
 
+interface NativeRotationRoots {
+  oldKey: Buffer;
+  newKey: Buffer;
+}
+
+let nativeRotationRoots: NativeRotationRoots | null = null;
+
+function readNativeRotationRoots(): NativeRotationRoots {
+  if (!NATIVE_ROTATION) {
+    throw new Error("The native protected rotation frame was not requested");
+  }
+  if (nativeRotationRoots) return nativeRotationRoots;
+  if (DRY_RUN || FORCE) {
+    throw new Error("Native protected rotation does not accept --dry-run or --force");
+  }
+
+  const frame = Buffer.alloc(NATIVE_ROTATION_FRAME_BYTES);
+  try {
+    let offset = 0;
+    while (offset < frame.length) {
+      const read = readSync(0, frame, offset, frame.length - offset, null);
+      if (read === 0) {
+        throw new Error("The native protected rotation frame is incomplete");
+      }
+      offset += read;
+    }
+    const extra = Buffer.alloc(1);
+    try {
+      if (
+        readSync(0, extra, 0, 1, null) !== 0 ||
+        !timingSafeEqual(frame.subarray(0, NATIVE_ROTATION_MAGIC.length), NATIVE_ROTATION_MAGIC)
+      ) {
+        throw new Error("The native protected rotation frame is invalid");
+      }
+    } finally {
+      extra.fill(0);
+    }
+    nativeRotationRoots = {
+      oldKey: Buffer.from(frame.subarray(8, 8 + KEY_BYTES)),
+      newKey: Buffer.from(frame.subarray(8 + KEY_BYTES)),
+    };
+    if (timingSafeEqual(nativeRotationRoots.oldKey, nativeRotationRoots.newKey)) {
+      throw new Error("The native protected rotation candidate matches the current root");
+    }
+    return nativeRotationRoots;
+  } finally {
+    frame.fill(0);
+  }
+}
+
+function clearNativeRotationRoots(): void {
+  nativeRotationRoots?.oldKey.fill(0);
+  nativeRotationRoots?.newKey.fill(0);
+  nativeRotationRoots = null;
+}
+
 function dataDir(): string {
   return process.env.SF_DATA_DIR
     ? resolve(process.env.SF_DATA_DIR)
@@ -116,6 +178,41 @@ const PROTECTED_INSTALLATION_ROOT_PATHS = [
   join(dataDir(), "system", "installation-root.candidate.json"),
   join(dataDir(), "system", "installation-root.backup.json"),
 ] as const;
+
+function delegateProtectedRotation(): void {
+  if (process.platform !== "win32") {
+    throw new Error("Native protected installation-root rotation is available only on Windows");
+  }
+  if (DRY_RUN || FORCE) {
+    throw new Error("Native protected rotation does not accept --dry-run or --force");
+  }
+  const appData = process.env.APPDATA;
+  const programFiles = process.env.ProgramW6432 ?? process.env.ProgramFiles;
+  if (!appData || !programFiles) {
+    throw new Error("Windows AppData or Program Files authority is unavailable");
+  }
+  const installedDataDir = resolve(appData, "com.sahelflow.desktop");
+  if (resolve(dataDir()).toLowerCase() !== installedDataDir.toLowerCase()) {
+    throw new Error(
+      "Protected rotation delegation is restricted to the installed SahelFlow AppData directory",
+    );
+  }
+  const executable = resolve(programFiles, "SahelFlow", "sahelflow.exe");
+  if (!existsSync(executable)) {
+    throw new Error(`Installed SahelFlow rotation authority is missing: ${executable}`);
+  }
+  const result = spawnSync(executable, ["--rotate-installation-root"], {
+    stdio: "inherit",
+    windowsHide: true,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(
+      `Native protected installation-root rotation failed with exit code ${result.status ?? "unknown"}`,
+    );
+  }
+  console.log("Native protected installation-root rotation completed.");
+}
 
 function errorCode(error: unknown): string | undefined {
   return error && typeof error === "object" && "code" in error
@@ -149,6 +246,7 @@ function readKey(path: string): Buffer {
 }
 
 function loadOldKey(): Buffer {
+  if (NATIVE_ROTATION) return Buffer.from(readNativeRotationRoots().oldKey);
   if (process.env.SF_MASTER_KEY) {
     throw new Error(
       "SF_MASTER_KEY is set. Unset it before rotating the installation keyfile.",
@@ -245,6 +343,13 @@ function writeDurableSidecar(newKey: Buffer): void {
 }
 
 function loadOrCreateNewKey(oldKey: Buffer): Buffer {
+  if (NATIVE_ROTATION) {
+    const roots = readNativeRotationRoots();
+    if (!timingSafeEqual(oldKey, roots.oldKey)) {
+      throw new Error("The native current installation root changed during rotation startup");
+    }
+    return Buffer.from(roots.newKey);
+  }
   if (existsSync(SIDECAR_PATH)) {
     const resumed = readKey(SIDECAR_PATH);
     if (!resumed.equals(oldKey)) {
@@ -844,6 +949,13 @@ async function rotateTarget(
 }
 
 function commitKeyfile(newKey: Buffer): string {
+  if (NATIVE_ROTATION) {
+    const roots = readNativeRotationRoots();
+    if (!timingSafeEqual(newKey, roots.newKey)) {
+      throw new Error("The rotated databases do not match the native protected candidate");
+    }
+    return "native protected installation-root backup";
+  }
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupPath = `${KEYFILE_PATH}.old-${timestamp}`;
   copyFileSync(KEYFILE_PATH, backupPath);
@@ -892,15 +1004,16 @@ function printStats(allStats: readonly ModelStats[]): void {
 }
 
 async function main(): Promise<void> {
-  if (PROTECTED_INSTALLATION_ROOT_PATHS.some((path) => existsSync(path))) {
-    throw new Error(
-      "This legacy script cannot rotate a native protected installation root. Use the native protected rotation path.",
-    );
+  if (!NATIVE_ROTATION && PROTECTED_INSTALLATION_ROOT_PATHS.some((path) => existsSync(path))) {
+    delegateProtectedRotation();
+    return;
   }
   const lease = acquireRotationLease();
   let mutationWindowEntered = false;
   let keyfileCommitted = false;
   let retainMaintenanceLease = false;
+  let oldKey: Buffer | null = null;
+  let newKey: Buffer | null = null;
 
   try {
     // Acquire the maintenance lease first, then prove the old runtime is gone.
@@ -909,8 +1022,8 @@ async function main(): Promise<void> {
     await assertApplicationStopped();
 
     const targets = loadRotationTargets();
-    const oldKey = loadOldKey();
-    const newKey = loadOrCreateNewKey(oldKey);
+    oldKey = loadOldKey();
+    newKey = loadOrCreateNewKey(oldKey);
     if (oldKey.equals(newKey)) {
       throw new Error("The old and new master keys are identical");
     }
@@ -920,7 +1033,11 @@ async function main(): Promise<void> {
         ? "Master-key rotation dry run"
         : "Installation-wide master-key rotation",
     );
-    console.log(`Keyfile: ${KEYFILE_PATH}`);
+    console.log(
+      NATIVE_ROTATION
+        ? "Key authority: native protected current/candidate"
+        : `Keyfile: ${KEYFILE_PATH}`,
+    );
     console.log(`Maintenance lease: ${LOCK_PATH}`);
     console.log(`Registered database targets: ${targets.length}`);
     for (const target of targets) {
@@ -950,7 +1067,11 @@ async function main(): Promise<void> {
     keyfileCommitted = true;
     console.log("\nRotation complete.");
     console.log(`Old key backup: ${backupPath}`);
-    console.log(`New keyfile: ${KEYFILE_PATH}`);
+    console.log(
+      NATIVE_ROTATION
+        ? "New key authority: native candidate awaiting protected commit"
+        : `New keyfile: ${KEYFILE_PATH}`,
+    );
     console.log(
       "All registered shop Secrets—including business-truth envelope wrappers—were re-wrapped before the shared keyfile commit.",
     );
@@ -965,12 +1086,15 @@ async function main(): Promise<void> {
     throw error;
   } finally {
     finishRotationLease(lease, !retainMaintenanceLease);
+    oldKey?.fill(0);
+    newKey?.fill(0);
+    clearNativeRotationRoots();
   }
 }
 
 main().catch((error) => {
   console.error("Master-key rotation failed.");
-  if (existsSync(SIDECAR_PATH)) {
+  if (!NATIVE_ROTATION && existsSync(SIDECAR_PATH)) {
     console.error(
       `Keep ${SIDECAR_PATH}; rerunning will resume with the same new key.`,
     );
