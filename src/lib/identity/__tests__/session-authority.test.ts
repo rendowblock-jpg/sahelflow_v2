@@ -1,14 +1,35 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ShopContext } from "@/lib/shops/context";
 import {
   resolveSessionAuthority,
   type ResolveSessionAuthorityInput,
 } from "../session-authority";
-import {
-  createCompatibilityLocalOwnerContext,
-  isTrustedActorContext,
-} from "../trusted-actor";
+
+const trustedActorHarness = vi.hoisted(() => ({
+  authority: {
+    status: "authenticated",
+    sessionId: "session-1",
+  } as unknown,
+  shop: {
+    workspaceId: "1".repeat(32),
+    installationId: "2".repeat(32),
+    shopId: "default",
+    shopIncarnationId: "3".repeat(32),
+    registryRevision: 7,
+    databaseFileId: "default.db",
+    migrationSetSha256: "4".repeat(64),
+  },
+}));
+
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentSessionAuthority: vi.fn(async () => trustedActorHarness.authority),
+}));
+
+vi.mock("@/lib/db", () => ({
+  shopContext: trustedActorHarness.shop,
+}));
+
+import * as trustedActorModule from "../trusted-actor";
 
 const baseInput = (): ResolveSessionAuthorityInput => ({
   token: "signed-token",
@@ -19,15 +40,23 @@ const baseInput = (): ResolveSessionAuthorityInput => ({
   findSession: vi.fn(async () => ({ id: "session-1", revokedAt: null })),
 });
 
-const shop: ShopContext = Object.freeze({
-  workspaceId: "1".repeat(32),
-  installationId: "2".repeat(32),
-  shopId: "default",
-  shopIncarnationId: "3".repeat(32),
-  registryRevision: 7,
-  databaseFileId: "default.db",
-  migrationSetSha256: "4".repeat(64),
-});
+const resetTrustedActorHarness = () => {
+  trustedActorHarness.authority = {
+    status: "authenticated",
+    sessionId: "session-1",
+  };
+  Object.assign(trustedActorHarness.shop, {
+    workspaceId: "1".repeat(32),
+    installationId: "2".repeat(32),
+    shopId: "default",
+    shopIncarnationId: "3".repeat(32),
+    registryRevision: 7,
+    databaseFileId: "default.db",
+    migrationSetSha256: "4".repeat(64),
+  });
+};
+
+beforeEach(resetTrustedActorHarness);
 
 describe("resolveSessionAuthority", () => {
   it("distinguishes genuine pre-setup mode from authentication", async () => {
@@ -141,9 +170,14 @@ describe("resolveSessionAuthority", () => {
   });
 });
 
-describe("createCompatibilityLocalOwnerContext", () => {
-  it("binds the exact session and complete trusted ShopContext without inventing person identity", () => {
-    const context = createCompatibilityLocalOwnerContext("session-1", shop);
+describe("requireTrustedActor", () => {
+  it("is the only exported minting path", () => {
+    expect("createCompatibilityLocalOwnerContext" in trustedActorModule).toBe(false);
+    expect(typeof trustedActorModule.requireTrustedActor).toBe("function");
+  });
+
+  it("binds the exact authenticated session without inventing person identity", async () => {
+    const context = await trustedActorModule.requireTrustedActor();
 
     expect(context).toEqual({
       version: 1,
@@ -153,26 +187,60 @@ describe("createCompatibilityLocalOwnerContext", () => {
         sessionId: "session-1",
         compatibilityOnly: true,
       },
-      shop,
+      shop: trustedActorHarness.shop,
     });
     expect("personId" in context.actor).toBe(false);
-    expect(isTrustedActorContext(context)).toBe(true);
+    expect(trustedActorModule.isTrustedActorContext(context)).toBe(true);
   });
 
-  it("refuses empty or normalized session IDs", () => {
-    expect(() => createCompatibilityLocalOwnerContext("   ", shop)).toThrow(
-      "requires an exact session ID",
-    );
-    expect(() => createCompatibilityLocalOwnerContext(" session-1 ", shop)).toThrow(
+  it("cannot mint authority during setup mode", async () => {
+    trustedActorHarness.authority = { status: "setup" };
+
+    await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
+      code: "TRUSTED_ACTOR_REQUIRED",
+      statusCode: 401,
+    });
+  });
+
+  it("cannot mint authority from a rejected or revoked session", async () => {
+    trustedActorHarness.authority = {
+      status: "rejected",
+      code: "SESSION_REVOKED",
+    };
+
+    await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      statusCode: 401,
+    });
+  });
+
+  it("preserves authority-store failures as service unavailable", async () => {
+    trustedActorHarness.authority = {
+      status: "rejected",
+      code: "SESSION_AUTHORITY_UNAVAILABLE",
+    };
+
+    await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
+      code: "SESSION_AUTHORITY_UNAVAILABLE",
+      statusCode: 503,
+    });
+  });
+
+  it("refuses a non-exact authenticated session ID", async () => {
+    trustedActorHarness.authority = {
+      status: "authenticated",
+      sessionId: " session-1 ",
+    };
+
+    await expect(trustedActorModule.requireTrustedActor()).rejects.toThrow(
       "requires an exact session ID",
     );
   });
 
-  it("captures an immutable ShopContext snapshot", () => {
-    const mutableShop = { ...shop };
-    const context = createCompatibilityLocalOwnerContext("session-1", mutableShop);
+  it("captures an immutable ShopContext snapshot", async () => {
+    const context = await trustedActorModule.requireTrustedActor();
 
-    mutableShop.shopId = "changed-after-authority-resolution";
+    trustedActorHarness.shop.shopId = "changed-after-authority-resolution";
 
     expect(context.shop.shopId).toBe("default");
     expect(Object.isFrozen(context.shop)).toBe(true);
@@ -189,9 +257,9 @@ describe("createCompatibilityLocalOwnerContext", () => {
         sessionId: "session-1",
         compatibilityOnly: true,
       },
-      shop,
+      shop: trustedActorHarness.shop,
     };
 
-    expect(isTrustedActorContext(lookalike)).toBe(false);
+    expect(trustedActorModule.isTrustedActorContext(lookalike)).toBe(false);
   });
 });
