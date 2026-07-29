@@ -22,6 +22,7 @@ use runtime_supervisor::{RestartDecision, RuntimeSupervisor};
 use std::ffi::OsString;
 use std::io::{Error as IoError, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
 
 #[tauri::command]
@@ -107,6 +108,37 @@ fn get_machine_id() -> String {
 
     #[cfg(not(debug_assertions))]
     return String::new();
+}
+
+const SHUTDOWN_IDLE: u8 = 0;
+const SHUTDOWN_RUNNING: u8 = 1;
+const SHUTDOWN_COMPLETE: u8 = 2;
+
+/// Coordinates one normal-close owner without blocking Tauri's event loop.
+#[derive(Default)]
+struct ShutdownCoordinator {
+    phase: AtomicU8,
+}
+
+impl ShutdownCoordinator {
+    fn begin(&self) -> bool {
+        self.phase
+            .compare_exchange(
+                SHUTDOWN_IDLE,
+                SHUTDOWN_RUNNING,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .is_ok()
+    }
+
+    fn finish(&self) {
+        self.phase.store(SHUTDOWN_COMPLETE, Ordering::Release);
+    }
+
+    fn is_finished(&self) -> bool {
+        self.phase.load(Ordering::Acquire) == SHUTDOWN_COMPLETE
+    }
 }
 
 /// Handles to spawned child processes (Next.js server + WhatsApp sidecar)
@@ -282,6 +314,18 @@ pub fn run() {
             .build(),
         )
         .invoke_handler(tauri::generate_handler![get_machine_id])
+        .on_window_event(|_window, _event| {
+            #[cfg(not(debug_assertions))]
+            if _window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = _event {
+                    // Keep the WebView and event loop alive while the contained
+                    // trees stop off-thread. Repeated close requests share the
+                    // same coordinator and cannot start competing shutdowns.
+                    api.prevent_close();
+                    begin_normal_close(_window.app_handle().clone());
+                }
+            }
+        })
         .setup(|app| {
             #[cfg(not(debug_assertions))]
             {
@@ -289,6 +333,7 @@ pub fn run() {
                 let app_data_dir = app.path().app_data_dir()?;
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
+                app.manage(ShutdownCoordinator::default());
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(
@@ -402,40 +447,62 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
-                let app_window_close = matches!(
-                    &_event,
-                    tauri::RunEvent::WindowEvent {
-                        label,
-                        event: tauri::WindowEvent::CloseRequested { .. },
-                        ..
-                    } if label == "main"
+                let shutdown = matches!(
+                    _event,
+                    tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
                 );
-                let shutdown = app_window_close
-                    || matches!(
-                        _event,
-                        tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
-                    );
                 if shutdown {
-                    if let Some(state) =
-                        _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
-                    {
-                        if let Ok(mut children) = state.lock() {
-                            children.kill_all();
+                    let normal_close_finished = _app_handle
+                        .try_state::<ShutdownCoordinator>()
+                        .is_some_and(|state| state.is_finished());
+                    if !normal_close_finished {
+                        if let Some(state) =
+                            _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
+                        {
+                            if let Ok(mut children) = state.lock() {
+                                children.kill_all();
+                            }
                         }
                     }
                     if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
                         runtime_protocol::remove_manifest(&app_data_dir);
                     }
                 }
-                if app_window_close {
-                    // AppHandle::exit requests another event-loop transition. A
-                    // native close request is already executing on that loop, so
-                    // finish Tauri cleanup synchronously and exit immediately.
-                    _app_handle.cleanup_before_exit();
-                    std::process::exit(0);
-                }
             }
         });
+}
+
+#[cfg(not(debug_assertions))]
+fn begin_normal_close(app: tauri::AppHandle) {
+    use tauri::Manager;
+
+    let Some(coordinator) = app.try_state::<ShutdownCoordinator>() else {
+        eprintln!("[sahelflow] CRITICAL: shutdown coordinator is unavailable");
+        app.exit(1);
+        return;
+    };
+    if !coordinator.begin() {
+        return;
+    }
+
+    std::thread::spawn(move || {
+        if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+            if let Ok(mut children) = state.lock() {
+                children.kill_all();
+            }
+        }
+        if let Ok(app_data_dir) = app.path().app_data_dir() {
+            runtime_protocol::remove_manifest(&app_data_dir);
+        }
+        if let Some(coordinator) = app.try_state::<ShutdownCoordinator>() {
+            coordinator.finish();
+        }
+
+        // AppHandle::exit drives Tauri's ExitRequested/Exit lifecycle. App::run
+        // owns final framework cleanup and process exit after the off-thread
+        // child teardown has completed.
+        app.exit(0);
+    });
 }
 
 /// Environment passed only to the mandatory application server.
@@ -466,609 +533,7 @@ fn server_env(
         ),
         (
             "SIDECAR_TOKEN".to_string(),
-            runtime.sidecar_token().to_string(),
-        ),
-        (
-            "SIDECAR_TOKEN_FILE".to_string(),
-            token_file.to_string_lossy().into_owned(),
-        ),
-        (
-            "PRISMA_MIGRATIONS_DIR".to_string(),
-            resource_dir
-                .join("prisma/migrations")
-                .to_string_lossy()
-                .into_owned(),
-        ),
-        (
-            "PRISMA_QUERY_ENGINE_LIBRARY".to_string(),
-            resource_dir
-                .join("runtime/query_engine-windows.dll.node")
-                .to_string_lossy()
-                .into_owned(),
-        ),
-        ("HOSTNAME".to_string(), "127.0.0.1".to_string()),
-        ("PORT".to_string(), runtime.app_port().to_string()),
-        ("SF_APP_URL".to_string(), runtime.app_url()),
-        (
-            "SF_RUNTIME_INSTANCE_ID".to_string(),
-            runtime.instance_id().to_string(),
-        ),
-        (
-            "SF_RUNTIME_TOKEN".to_string(),
-            runtime.runtime_token().to_string(),
-        ),
-        (
-            "SF_RUNTIME_APP_TOKEN".to_string(),
-            runtime.app_token().to_string(),
-        ),
-        (
-            "SF_RUNTIME_PORT".to_string(),
-            runtime.app_port().to_string(),
-        ),
-        (
-            "SF_RUNTIME_MANIFEST_PATH".to_string(),
-            runtime.manifest_path().to_string_lossy().into_owned(),
-        ),
-        ("SF_MIGRATION_STATUS".to_string(), "ready".to_string()),
-        (
-            "SF_WORKSPACE_ID".to_string(),
-            authority.workspace_id.clone(),
-        ),
-        (
-            "SF_INSTALLATION_ID".to_string(),
-            authority.installation_id.clone(),
-        ),
-        ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
-        (
-            "SF_SHOP_INCARNATION_ID".to_string(),
-            authority.shop_incarnation_id.clone(),
-        ),
-        (
-            "SF_DATABASE_FILE_ID".to_string(),
-            authority.database_file_id.clone(),
-        ),
-        (
-            "SF_REGISTRY_REVISION".to_string(),
-            authority.registry_revision.to_string(),
-        ),
-        (
-            "SF_MIGRATION_SET_SHA256".to_string(),
-            authority.migration_set_sha256.clone(),
-        ),
-        ("WHATSAPP_SIDECAR_URL".to_string(), runtime.sidecar_url()),
-        (
-            "WHATSAPP_SIDECAR_PORT".to_string(),
-            runtime.sidecar_port().to_string(),
-        ),
-        (
-            "APP_VERSION".to_string(),
-            env!("CARGO_PKG_VERSION").to_string(),
-        ),
-        ("NODE_ENV".to_string(), "production".to_string()),
-        (
-            "NODE_COMPILE_CACHE".to_string(),
-            compile_cache_dir.to_string_lossy().into_owned(),
-        ),
-        ("SF_AUTH_MODE".to_string(), auth.mode().as_str().to_string()),
-    ];
-    if let Some(secret) = auth.secret() {
-        environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
-    }
-    Ok(environment)
-}
-
-/// Least-privilege environment for the degradable WhatsApp sidecar.
-fn sidecar_env(
-    app: &tauri::AppHandle,
-    runtime: &RuntimeProtocol,
-) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-    let app_data_dir = app.path().app_data_dir()?;
-    let token_file = app_data_dir.join("sidecar-token");
-
-    Ok(vec![
-        (
-            "SF_DATA_DIR".to_string(),
-            app_data_dir.to_string_lossy().into_owned(),
-        ),
-        (
-            "SIDECAR_TOKEN".to_string(),
-            runtime.sidecar_token().to_string(),
-        ),
-        (
-            "SIDECAR_TOKEN_FILE".to_string(),
-            token_file.to_string_lossy().into_owned(),
-        ),
-        ("SF_APP_URL".to_string(), runtime.app_url()),
-        (
-            "SIDECAR_PORT".to_string(),
-            runtime.sidecar_port().to_string(),
-        ),
-        ("SIDECAR_HOST".to_string(), "127.0.0.1".to_string()),
-        ("NODE_ENV".to_string(), "production".to_string()),
-    ])
-}
-
-/// Validate and start the mandatory Next.js standalone server, prove it is
-/// reachable, and only then start the optional WhatsApp sidecar.
-fn spawn_initial_services(
-    app: &tauri::AppHandle,
-) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-
-    const MAX_INITIAL_ATTEMPTS: u8 = 2;
-    let app_data_dir = app.path().app_data_dir()?;
-    startup_recovery::record_startup_stage(&app_data_dir, "runtime-prepare-started", None);
-    let prepared = prepare_runtime(app)?;
-    startup_recovery::record_startup_stage(&app_data_dir, "runtime-prepare-complete", None);
-    let mut last_error = None;
-    for attempt in 1..=MAX_INITIAL_ATTEMPTS {
-        startup_recovery::record_startup_stage(
-            &app_data_dir,
-            "runtime-attempt-started",
-            Some(attempt),
-        );
-        match spawn_services(app, &prepared) {
-            Ok(runtime) => {
-                startup_recovery::record_startup_stage(
-                    &app_data_dir,
-                    "runtime-ready",
-                    Some(attempt),
-                );
-                return Ok(runtime);
-            }
-            Err(error) => {
-                startup_recovery::record_startup_stage(
-                    &app_data_dir,
-                    "runtime-attempt-failed",
-                    Some(attempt),
-                );
-                eprintln!(
-                    "[sahelflow] initial runtime launch {attempt}/{MAX_INITIAL_ATTEMPTS} failed: {error}"
-                );
-                last_error = Some(error);
-            }
-        }
-    }
-    Err(last_error.unwrap_or_else(|| IoError::other("initial runtime launch failed").into()))
-}
-
-/// One initial supervisor attempt maps to exactly one contained child launch,
-/// while reusing the runtime tree verified once for this desktop launch.
-fn spawn_services(
-    app: &tauri::AppHandle,
-    prepared: &PreparedRuntime,
-) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    let generation = begin_runtime_generation(app)?;
-    finish_runtime_generation_launch(app, generation, prepared)
-}
-
-fn spawn_restart_services(
-    app: &tauri::AppHandle,
-    expected_generation: u64,
-    attempt: u8,
-) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    let generation = begin_restart_runtime_generation(app, expected_generation, attempt)?;
-    let prepared = prepare_runtime(app)?;
-    finish_runtime_generation_launch(app, generation, &prepared)
-}
-
-fn finish_runtime_generation_launch(
-    app: &tauri::AppHandle,
-    generation: u64,
-    prepared: &PreparedRuntime,
-) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    match spawn_runtime_generation(app, generation, prepared) {
-        Ok(runtime) => Ok(runtime),
-        Err(error) => {
-            cancel_runtime_generation(app, generation);
-            Err(error)
-        }
-    }
-}
-
-fn spawn_runtime_generation(
-    app: &tauri::AppHandle,
-    generation: u64,
-    prepared: &PreparedRuntime,
-) -> Result<SpawnedRuntime, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-
-    let app_data_dir = app.path().app_data_dir()?;
-    let server_working_dir = app.path().app_local_data_dir()?.join("runtime-work");
-    std::fs::create_dir_all(&server_working_dir)?;
-
-    let authority = current_shop_authority(app)?;
-    let auth = packaged_auth::load(&authority.database_path)?;
-    let runtime_protocol =
-        RuntimeProtocol::allocate(&app_data_dir, auth.mode().as_str(), &authority)?;
-    let mut env = server_env(app, &runtime_protocol, &authority, &auth)?;
-    env.push((
-        NODE_ENTRYPOINT_ENV.to_string(),
-        node_entrypoint_environment_value(&prepared.server_js)?,
-    ));
-    let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
-    let process_environment = process_environment(&env);
-    let server_child = child_containment::ContainedChild::spawn_in_capturing_stderr(
-        Path::new(&prepared.runtime_path),
-        &[
-            OsString::from("--eval"),
-            OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
-        ],
-        &process_environment,
-        Some(&server_working_dir),
-    )
-    .map_err(|error| {
-        if error.containment_uncertain() {
-            enter_runtime_safe_mode(app, generation);
-        }
-        IoError::other(format!(
-            "failed to spawn the contained Next.js standalone server: {error}"
-        ))
-    })?;
-    eprintln!(
-        "[sahelflow] contained Next.js server spawned with bundled Node.js at {}",
-        runtime_protocol.app_url()
-    );
-
-    let mut listening_recorded = false;
-    match runtime_protocol.wait_until_ready(
-        MANDATORY_RUNTIME_READY_TIMEOUT,
-        || {
-            server_child
-                .try_wait()
-                .map(|exit| exit.map(|exit| exit.code))
-        },
-        || {
-            if !listening_recorded {
-                startup_recovery::record_startup_stage(&app_data_dir, "runtime-listening", None);
-                listening_recorded = true;
-            }
-        },
-    )? {
-        runtime_protocol::ReadinessOutcome::Ready => {}
-        runtime_protocol::ReadinessOutcome::ProcessExited(code) => {
-            stop_runtime_launch(app, generation, &server_child, "exited Next.js server")?;
-            runtime_protocol::remove_manifest(&app_data_dir);
-            let captured = server_child
-                .stderr_snapshot(Duration::from_secs(1))
-                .ok()
-                .and_then(|raw| summarize_runtime_stderr(&raw));
-            let captured = captured
-                .map(|detail| format!("; stderr summary: {detail}"))
-                .unwrap_or_default();
-            return Err(IoError::other(format!(
-                "the mandatory local server exited before authenticated readiness (exit code {code}){captured}"
-            ))
-            .into());
-        }
-        runtime_protocol::ReadinessOutcome::TimedOut => {
-            stop_runtime_launch(app, generation, &server_child, "unready Next.js server")?;
-            runtime_protocol::remove_manifest(&app_data_dir);
-            return Err(IoError::new(
-                ErrorKind::TimedOut,
-                "the mandatory local server failed its authenticated readiness attempt",
-            )
-            .into());
-        }
-    }
-
-    if let Err(error) = runtime_protocol.publish_manifest(env!("CARGO_PKG_VERSION")) {
-        stop_runtime_launch(app, generation, &server_child, "unpublished Next.js server")?;
-        return Err(error.into());
-    }
-
-    let registration = match app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-        Some(state) => match state.lock() {
-            Ok(mut children) => {
-                if children.server.is_some() {
-                    Err(IoError::other(
-                        "refusing to overwrite a live mandatory server handle",
-                    ))
-                } else if let Err(error) = children.supervisor.register_ready(generation) {
-                    Err(IoError::other(error))
-                } else {
-                    children.server = Some(server_child.clone());
-                    Ok(())
-                }
-            }
-            Err(_) => Err(IoError::other(
-                "the desktop could not acquire its child-process supervisor state",
-            )),
-        },
-        None => Err(IoError::other(
-            "the desktop child-process supervisor state was not registered",
-        )),
-    };
-    if let Err(error) = registration {
-        stop_runtime_launch(
-            app,
-            generation,
-            &server_child,
-            "unregistered Next.js server",
-        )?;
-        runtime_protocol::remove_manifest(&app_data_dir);
-        return Err(error.into());
-    }
-
-    watch_server(app.clone(), app_data_dir.clone(), generation, server_child);
-    // WhatsApp is degradable. Do not start it until the business server is ready.
-    spawn_sidecar_and_watch(app.clone(), sidecar_environment, generation)?;
-    Ok(SpawnedRuntime {
-        protocol: runtime_protocol,
-        generation,
-    })
-}
-
-fn prepare_runtime(app: &tauri::AppHandle) -> Result<PreparedRuntime, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-
-    let resource_dir = app.path().resource_dir()?;
-    let packaged_standalone = resource_dir.join("standalone");
-    let server_js = packaged_runtime::resolve_installed_standalone(
-        &packaged_standalone,
-        env!("CARGO_PKG_VERSION"),
-    )
-    .map_err(|error| {
-        IoError::new(
-            ErrorKind::InvalidData,
-            format!("failed to resolve the installed standalone runtime: {error}"),
-        )
-    })?;
-    let runtime_path = bundled_node(&resource_dir).ok_or_else(|| {
-        IoError::new(
-            ErrorKind::NotFound,
-            "The bundled JavaScript runtime is missing. Reinstall SahelFlow.",
-        )
-    })?;
-    Ok(PreparedRuntime {
-        server_js,
-        runtime_path,
-    })
-}
-
-fn begin_runtime_generation(app: &tauri::AppHandle) -> Result<u64, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-    let state = app
-        .try_state::<std::sync::Mutex<SpawnedChildren>>()
-        .ok_or_else(|| IoError::other("desktop child-process supervisor state is missing"))?;
-    let mut children = state
-        .lock()
-        .map_err(|_| IoError::other("desktop child-process supervisor state is poisoned"))?;
-    if children.server.is_some() {
-        return Err(IoError::other("a mandatory server handle is already live").into());
-    }
-    children
-        .supervisor
-        .begin_generation()
-        .map_err(|error| IoError::other(error).into())
-}
-
-fn begin_restart_runtime_generation(
-    app: &tauri::AppHandle,
-    expected_generation: u64,
-    attempt: u8,
-) -> Result<u64, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-    let state = app
-        .try_state::<std::sync::Mutex<SpawnedChildren>>()
-        .ok_or_else(|| IoError::other("desktop child-process supervisor state is missing"))?;
-    let mut children = state
-        .lock()
-        .map_err(|_| IoError::other("desktop child-process supervisor state is poisoned"))?;
-    if children.server.is_some() {
-        return Err(IoError::other("a mandatory server handle is already live").into());
-    }
-    children
-        .supervisor
-        .begin_restart_generation(expected_generation, attempt)
-        .map_err(|error| IoError::other(error).into())
-}
-
-fn cancel_runtime_generation(app: &tauri::AppHandle, generation: u64) {
-    use tauri::Manager;
-    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-        if let Ok(mut children) = state.lock() {
-            children.supervisor.cancel_generation(generation);
-        }
-    }
-}
-
-fn current_shop_authority(
-    app: &tauri::AppHandle,
-) -> Result<migration_coordinator::ActiveShopAuthority, Box<dyn std::error::Error>> {
-    use tauri::Manager;
-    let state = app
-        .try_state::<std::sync::Mutex<migration_coordinator::ActiveShopAuthority>>()
-        .ok_or_else(|| IoError::new(ErrorKind::NotFound, "shop authority state is missing"))?;
-    let migration_set_sha256 = state
-        .lock()
-        .map_err(|_| IoError::other("shop authority state is poisoned"))?
-        .migration_set_sha256
-        .clone();
-    let app_data_dir = app.path().app_data_dir()?;
-    migration_coordinator::active_authority(&app_data_dir, &migration_set_sha256)
-}
-
-fn watch_server(
-    app_handle: tauri::AppHandle,
-    app_data_dir: PathBuf,
-    generation: u64,
-    server: child_containment::ContainedChild,
-) {
-    use tauri::Manager;
-
-    let server_pid = server.pid();
-    let started_at = Instant::now();
-    std::thread::spawn(move || {
-        let exit = server.wait_for_exit_and_close_tree(PROCESS_TREE_STOP_TIMEOUT);
-        let sidecar = match take_terminated_generation(&app_handle, generation, server_pid) {
-            Ok(Some(sidecar)) => sidecar,
-            Ok(None) => return,
-            Err(error) => {
-                runtime_protocol::remove_manifest(&app_data_dir);
-                enter_runtime_safe_mode(&app_handle, generation);
-                show_containment_blocked(&app_handle, &error.to_string());
-                return;
-            }
-        };
-
-        let sidecar_stop = sidecar
-            .as_ref()
-            .map(|child| stop_process_tree(child, "sidecar from terminated runtime"))
-            .transpose();
-        let containment_error = exit
-            .as_ref()
-            .err()
-            .map(ToString::to_string)
-            .or_else(|| sidecar_stop.err().map(|error| error.to_string()));
-        let decision = app_handle
-            .try_state::<std::sync::Mutex<SpawnedChildren>>()
-            .and_then(|state| {
-                state.lock().ok().map(|mut children| {
-                    if containment_error.is_some() {
-                        children.supervisor.enter_safe_mode(generation);
-                        RestartDecision::Ignore
-                    } else {
-                        children
-                            .supervisor
-                            .record_termination(generation, started_at.elapsed())
-                    }
-                })
-            })
-            .unwrap_or(RestartDecision::Ignore);
-
-        runtime_protocol::remove_manifest(&app_data_dir);
-        let detail = match exit {
-            Ok(payload) => format!(
-                "The mandatory local server terminated after readiness with exit code {}",
-                payload.code
-            ),
-            Err(error) => format!(
-                "The mandatory local server terminated but its process tree could not be proven stopped: {error}"
-            ),
-        };
-        eprintln!("[sahelflow] FATAL: {detail}");
-        if let Some(error) = containment_error {
-            show_containment_blocked(&app_handle, &format!("{detail}: {error}"));
-        } else {
-            handle_server_restart_decision(&app_handle, &detail, decision, generation);
-        }
-    });
-}
-
-fn take_terminated_generation(
-    app_handle: &tauri::AppHandle,
-    generation: u64,
-    server_pid: u32,
-) -> Result<Option<Option<child_containment::ContainedChild>>, IoError> {
-    use tauri::Manager;
-
-    let deadline = Instant::now() + PROCESS_TREE_STOP_TIMEOUT;
-    loop {
-        let state = app_handle
-            .try_state::<std::sync::Mutex<SpawnedChildren>>()
-            .ok_or_else(|| IoError::other("desktop child-process supervisor state is missing"))?;
-        let mut children = state
-            .lock()
-            .map_err(|_| IoError::other("desktop child-process supervisor state is poisoned"))?;
-        let current = children.supervisor.current_generation() == generation
-            && children
-                .server
-                .as_ref()
-                .is_some_and(|child| child.pid() == server_pid);
-        if !current {
-            return Ok(None);
-        }
-        if children.sidecar_starting != Some(generation) {
-            children.server.take();
-            return Ok(Some(children.sidecar.take()));
-        }
-        drop(children);
-        if Instant::now() >= deadline {
-            return Err(IoError::new(
-                ErrorKind::TimedOut,
-                "the mandatory runtime terminated while a sidecar launch remained in flight; old-generation teardown is unproven",
-            ));
-        }
-        std::thread::sleep(Duration::from_millis(10));
-    }
-}
-
-fn show_containment_blocked(app_handle: &tauri::AppHandle, detail: &str) {
-    if let Err(error) = startup_recovery::show_blocked(
-        app_handle,
-        "SF-RUNTIME-CONTAINMENT-BLOCKED",
-        &format!(
-            "{detail}. SahelFlow will not launch another runtime until the desktop is restarted."
-        ),
-    ) {
-        eprintln!("[sahelflow] could not show containment failure: {error}");
-    }
-}
-
-fn handle_server_restart_decision(
-    app_handle: &tauri::AppHandle,
-    detail: &str,
-    decision: RestartDecision,
-    generation: u64,
-) {
-    match decision {
-        RestartDecision::Ignore => {}
-        RestartDecision::Retry { attempt, delay } => {
-            let retry_detail = format!(
-                "{detail}. SahelFlow will retry the local runtime in {} seconds (attempt {attempt}/3).",
-                delay.as_secs()
-            );
-            if let Err(error) = startup_recovery::show_blocked(
-                app_handle,
-                "SF-RUNTIME-RETRYING",
-                &retry_detail,
-            ) {
-                eprintln!("[sahelflow] could not show runtime recovery: {error}");
-            }
-            schedule_server_restart(app_handle.clone(), generation, attempt, delay);
-        }
-        RestartDecision::EnterSafeMode { attempts } => {
-            if let Err(error) = startup_recovery::show_blocked(
-                app_handle,
-                "SF-RUNTIME-CRASH-LOOP",
-                &format!(
-                    "{detail}. The automatic restart budget is exhausted after {attempts} attempts. SahelFlow is in safe mode until it is restarted."
-                ),
-            ) {
-                eprintln!("[sahelflow] could not show runtime recovery: {error}");
-            }
-        }
-    }
-}
-
-fn schedule_server_restart(
-    app_handle: tauri::AppHandle,
-    expected_generation: u64,
-    attempt: u8,
-    delay: Duration,
-) {
-    use tauri::Manager;
-
-    std::thread::spawn(move || {
-        std::thread::sleep(delay);
-        let allows_restart = app_handle
-            .try_state::<std::sync::Mutex<SpawnedChildren>>()
-            .and_then(|state| {
-                state.lock().ok().map(|children| {
-                    children.server.is_none()
-                        && children
-                            .supervisor
-                            .generation_can_restart(expected_generation, attempt)
-                })
-            })
-            .unwrap_or(false);
-        if !allows_restart {
-            return;
-        }
-
-        match spawn_restart_services(&app_handle, expected_generation, attempt) {
+            runtime.sidecar_token()…5431 tokens truncated…generation, attempt) {
             Ok(runtime) => {
                 if let Err(error) =
                     startup_recovery::show_ready(&app_handle, &runtime.protocol.bootstrap_url())
@@ -1525,7 +990,7 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
 mod child_environment_tests {
     use super::{
         is_windows_safe_parent_environment_key, node_entrypoint_environment_value,
-        summarize_runtime_stderr,
+        summarize_runtime_stderr, ShutdownCoordinator,
     };
     use std::ffi::OsStr;
     use std::path::Path;
@@ -1610,5 +1075,18 @@ mod child_environment_tests {
     #[test]
     fn empty_runtime_stderr_has_no_summary() {
         assert_eq!(summarize_runtime_stderr(" \r\n\t\0 "), None);
+    }
+
+    #[test]
+    fn normal_close_has_one_shutdown_owner_and_a_visible_completion_state() {
+        let coordinator = ShutdownCoordinator::default();
+
+        assert!(coordinator.begin());
+        assert!(!coordinator.begin());
+        assert!(!coordinator.is_finished());
+
+        coordinator.finish();
+        assert!(coordinator.is_finished());
+        assert!(!coordinator.begin());
     }
 }
