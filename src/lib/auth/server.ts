@@ -149,9 +149,39 @@ export async function createSession(ip?: string): Promise<void> {
   void authContext.prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
 }
 
+async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult> {
+  if (process.env.NODE_ENV === "production") {
+    assertProcessShopAuthority(shopContext);
+  }
+
+  const token = await getSessionToken();
+  const secret = await getAuthSecret();
+  let authSetup: boolean;
+  try {
+    authSetup = secret ? true : await isAuthSetup();
+  } catch {
+    return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
+  }
+
+  return resolveSessionAuthority({
+    token,
+    secret,
+    authSetup,
+    verifyToken: verifySessionToken,
+    getSessionId: getSessionIdFromToken,
+    findSession: async (sessionId) =>
+      authContext.prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { id: true, revokedAt: true },
+      }),
+  });
+}
+
+export const getCurrentSessionAuthority = cache(resolveCurrentSessionAuthority);
+
 export async function destroySession(): Promise<void> {
   try {
-    const authority = await getCurrentSessionAuthority();
+    const authority = await resolveCurrentSessionAuthority();
     if (authority.status === "authenticated") {
       try {
         await authContext.prisma.session.update({
@@ -174,36 +204,6 @@ export async function getSessionToken(): Promise<string | undefined> {
   return store.get(AUTH_COOKIE)?.value;
 }
 
-export const getCurrentSessionAuthority = cache(
-  async (): Promise<SessionAuthorityResult> => {
-    if (process.env.NODE_ENV === "production") {
-      assertProcessShopAuthority(shopContext);
-    }
-
-    const token = await getSessionToken();
-    const secret = await getAuthSecret();
-    let authSetup: boolean;
-    try {
-      authSetup = secret ? true : await isAuthSetup();
-    } catch {
-      return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
-    }
-
-    return resolveSessionAuthority({
-      token,
-      secret,
-      authSetup,
-      verifyToken: verifySessionToken,
-      getSessionId: getSessionIdFromToken,
-      findSession: async (sessionId) =>
-        authContext.prisma.session.findUnique({
-          where: { id: sessionId },
-          select: { id: true, revokedAt: true },
-        }),
-    });
-  },
-);
-
 export const isAuthenticated = cache(async (): Promise<boolean> => {
   const authority = await getCurrentSessionAuthority();
   return authority.status === "setup" || authority.status === "authenticated";
@@ -223,7 +223,7 @@ function sessionAuthorityError(
     );
   }
 
-  return new SahelFlowError("Unauthorized", authority.code, 401);
+  return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
 }
 
 export async function requireAuth(): Promise<void> {
