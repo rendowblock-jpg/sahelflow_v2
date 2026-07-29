@@ -52,13 +52,11 @@ function walk(directory: string): string[] {
   for (const name of readdirSync(directory)) {
     if ([".git", "node_modules", ".next", "target"].includes(name)) continue;
     const absolutePath = resolve(directory, name);
-    const relativePath = absolutePath.slice(repoRoot.length + 1).replaceAll("\\", "/");
+    const relativePath = absolutePath
+      .slice(repoRoot.length + 1)
+      .replaceAll("\\", "/");
 
-    if (
-      relativePath.startsWith("documentation/archive/")
-    ) {
-      continue;
-    }
+    if (relativePath.startsWith("documentation/archive/")) continue;
 
     const metadata = statSync(absolutePath);
     if (metadata.isDirectory()) output.push(...walk(absolutePath));
@@ -74,7 +72,6 @@ function normalizeLink(rawTarget: string): string | null {
     target = target.slice(1, -1);
   }
 
-  // Drop an optional Markdown title after the path.
   const titleMatch = target.match(/^(\S+)(?:\s+["'].*["'])$/);
   if (titleMatch?.[1]) target = titleMatch[1];
 
@@ -102,7 +99,9 @@ const activeDocumentationFiles = walk(resolve(repoRoot, "documentation"));
 const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
 
 for (const absoluteFile of markdownFiles) {
-  const relativeFile = absoluteFile.slice(repoRoot.length + 1).replaceAll("\\", "/");
+  const relativeFile = absoluteFile
+    .slice(repoRoot.length + 1)
+    .replaceAll("\\", "/");
   const content = readFileSync(absoluteFile, "utf8");
   let match: RegExpExecArray | null;
 
@@ -204,6 +203,7 @@ const entrypointChecks: Array<[string, string[]]> = [
       "documentation/README.md",
       "documentation/operations/WORKING_MEMORY.md",
       "documentation/operations/WORKFLOW.md",
+      "documentation/system/ROADMAP.md",
     ],
   ],
 ];
@@ -223,36 +223,83 @@ for (const [relativePath, markers] of entrypointChecks) {
   }
 }
 
+/**
+ * These markers prove that the current authority describes the active FD-028
+ * program and current release boundary. They intentionally replace the old
+ * Session 1–4 continuity phrases, which became drift once FD-028 superseded that
+ * execution overlay.
+ */
 const semanticRequirements: Array<[string, string[]]> = [
   [
     "AGENTS.md",
     [
-      "Documentation-reset merge checkpoint",
-      "Protected-main Internal.",
-      "Does not run source builds, automated tests",
+      "FD-028",
+      "Phase 0–9",
+      "Research-first gate",
+      "Does not run source builds, full automated tests",
+      "1.0.0-internal.13",
     ],
   ],
   [
     "documentation/README.md",
-    ["Documentation-reset merge", "Protected-main Internal."],
+    [
+      "FD-028",
+      "Phase 0–9",
+      "Research-first rule",
+      "1.0.0-internal.13",
+    ],
+  ],
+  [
+    "documentation/product/DECISIONS.md",
+    [
+      "## FD-028",
+      "Superseded execution structure",
+      "Research-first requirement",
+      "Definition of completion",
+    ],
   ],
   [
     "documentation/system/ROADMAP.md",
-    ["**Current phase:** Phase 1", "**Status:** Complete in PR #154"],
+    [
+      "**Active phase:** Phase 0",
+      "# Phase 1 — Canonical Golden COD business core",
+      "## Research gate",
+      "# Phase 9 — Certification, representative beta and Stable",
+    ],
   ],
   [
     "documentation/system/CURRENT_STATE.md",
     [
-      "**Current installed status:**",
-      "Post-acceptance startup incident",
-      "Launch the release-verified standalone server on pinned Node.js",
+      "**Published release:** `1.0.0-internal.13`",
+      "Internal.13 is not yet Founder-installed",
+      "Commerce checkpoint safety",
+      "The central completion task is therefore production adoption",
     ],
   ],
   [
     "documentation/operations/WORKFLOW.md",
     [
-      "Does not run source builds, automated tests",
-      "GitHub Actions on the exact pushed commit",
+      "## 3. Research-to-implementation gate",
+      "The Desktop Agent",
+      "GitHub Actions for builds",
+      "No-research-drift rule",
+      "latest.json` is public updater metadata",
+    ],
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    [
+      "**Active phase:** Phase 0",
+      "first complete manual-order",
+      "Research-to-Implementation Gate",
+    ],
+  ],
+  [
+    "documentation/research/RESEARCH.md",
+    [
+      "Research-first quality rule",
+      "No-AI-slop frontend rule",
+      "Research-to-implementation gate",
     ],
   ],
 ];
@@ -275,11 +322,15 @@ for (const [relativePath, markers] of semanticRequirements) {
 const staleContinuityMarkers: Array<[string, string]> = [
   ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
   ["documentation/operations/WORKING_MEMORY.md", "Publication is the only remaining step"],
-  ["documentation/system/ROADMAP.md", "**Current phase:** Phase 0"],
+  ["documentation/operations/WORKING_MEMORY.md", "### Session 1"],
+  ["documentation/system/ROADMAP.md", "## Four-session compressed execution overlay"],
+  ["documentation/system/ROADMAP.md", "**Current phase:** Phase 1"],
+  ["documentation/system/ROADMAP.md", "**Immediate execution:** Session 1"],
   [
     "AGENTS.md",
     "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
   ],
+  ["AGENTS.md", "The compressed program uses four planned sessions"],
 ];
 
 for (const [relativePath, marker] of staleContinuityMarkers) {
@@ -299,7 +350,9 @@ console.log(
 );
 
 if (findings.length === 0) {
-  console.log("PASS: required authorities, shared scripts and relative links are coherent.");
+  console.log(
+    "PASS: FD-028 authorities, shared scripts and relative links are coherent.",
+  );
   process.exit(0);
 }
 
