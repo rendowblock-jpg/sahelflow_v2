@@ -263,7 +263,9 @@ Founder decisions.
 
 #### Phase 0 acceptance and evidence
 
-Phase 0 is complete only when:
+Phase 0 completed through PR #179 at protected-main merge
+`18c45e474f58744b6f837372509154ca500044b0`. Exact-head CI run `30430538958`
+passed. The accepted evidence is:
 
 - exactly ten active documentation Markdown files remain;
 - FD-028 states exact supersession and preserved clauses;
@@ -272,11 +274,11 @@ Phase 0 is complete only when:
   non-authoritative;
 - no active current-owned document contains an obsolete Session 1–4 execution or
   next-action instruction;
-- `sf-version`, `sf-audit` and every risk-selected latest-head CI gate pass;
-- the branch is not behind protected `main`;
-- independent latest-head review has no unresolved P0/P1 finding;
+- `sf-version`, `sf-audit` and every risk-selected latest-head CI gate passed;
+- the reviewed head was current with protected `main` before merge;
+- independent latest-head review had no unresolved P0/P1 finding;
 - the exact first Phase 1 production outcome can be reconstructed without chat;
-- no application, schema, updater or release behavior is changed by the reset.
+- no application, schema, updater or release behavior was changed by the reset.
 
 #### Phase 0 revalidation trigger
 

@@ -1,11 +1,11 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected `main` and named evidence only
-> **Protected-main baseline:** `b2776bd3ea8d879a475c26af9d0c720d666671a9`
+> **Protected-main baseline:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
-> **Founder-installed release:** Internal.11 reported installed; exact identity/lifecycle record incomplete
+> **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Last assessed:** 2026-07-29
@@ -79,16 +79,40 @@ Internal.13 is non-draft, non-prerelease and GitHub latest. Public `latest.json`
 is verified updater metadata containing the signature for the signed MSI; the JSON
 document itself is not independently cryptographically signed.
 
-Internal.13 is not yet Founder-installed or T470-accepted. The required Founder
-record remains:
+The Founder reports Internal.13 installed. Desktop observation on 2026-07-29
+confirmed uninstall version `1.0.0.13`, executable product version
+`1.0.0-internal.13` and executable SHA-256
+`30C49C3E0C38A228D8939622C4B57EC5CC7DFF346B11A642CCF131148F6643A8`.
+No AppData, registry, database, migration or key deletion occurred during this
+observation.
 
-- in-place update without AppData deletion;
-- exact installed version;
-- workspace/installation/shop/incarnation/registry/database identities;
-- cold and warm startup stages;
-- authenticated UI and Arabic chart observation;
-- normal close and reopen;
-- preservation and acceptance decision.
+The retained identity snapshot was captured locally without publishing raw
+identifiers:
+
+| Identity/evidence | Captured result |
+|---|---|
+| workspace ID SHA-256 | `1DAEEBBCB6D23E142106E718D7F66B5AA03CA7B030336EB22F68C3B416282F8F` |
+| installation ID SHA-256 | `A0E8D1E34B8E131A6525E2D9F4752576CFDCDA3221F7CDD31B92300895B0D2DE` |
+| active shop ID SHA-256 | `37A8EEC1CE19687D132FE29051DCA629D164E2C4958BA141D5F4133A33F0688F` |
+| shop-incarnation ID SHA-256 | `9F4DCA0B7DE6990F468A01D03607FB939A626E8CA2A0A79699AE42F8711FF594` |
+| registry SHA-256 | `305A3922C326BB4680C34E94340A0C8F188373C70A99F3FBF6B5D9A9DA5D712E` |
+| retained previous-registry SHA-256 | `1395C61C1809836F78615A5A4932D38466A761AC55E54082B396C5BEBE11A81C` |
+| shop database path and SHA-256 | `shops/dev.db`; `5C0DDBE3A10A66D87D6482DE5853F71D8E2E5F044A817E542AE2377DBCCFF77C` |
+| migration authority | format v2/revision 2; 9 packaged, 9 applied, 0 pending |
+
+The first current-session launch from stopped SahelFlow processes reached the
+authenticated Arabic UI-ready marker in 68.863 seconds (92.014 seconds wall
+observation). Immediate reopen reached the same marker in 31.834 seconds (41.092
+seconds wall). Both exceed the eight-second cold-launch product contract. The
+first normal close exited the host and packaged runtime. During immediate-reopen
+observation, the window closed but the host and packaged runtime remained alive
+for more than 50 seconds; after the Founder closed the app, both exited and the
+database hash remained unchanged.
+
+Authenticated Arabic locale and UI-ready behavior are confirmed. Visual Arabic
+chart correctness was not captured without exposing private seller data, so that
+Founder observation remains open. Founder acceptance is not inferred from
+installation and remains an explicit open decision.
 
 ## Current implementation shape
 
@@ -329,8 +353,10 @@ T470 target.
 
 ## Current exact boundary
 
-The active work is Phase 0 authority reset. After it merges, the first production
-vertical is:
+Phase 0 completed through PR #179 at protected main
+`18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
+passed. Phase 1 research is complete on issue #164. After the Phase 0 closeout
+reconciliation merges, the first production vertical is:
 
 > Manual order intake and confirmation under trusted authority, exact idempotency
 > and optimistic versioning, with atomic stock availability/reservation,
@@ -338,5 +364,5 @@ vertical is:
 > AR/FR/EN UI states; duplicate/concurrency/interruption/recovery proof; and removal
 > of the migrated direct-stock legacy path.
 
-Internal.13 Founder installation and T470 observation proceed independently in
-the platform lane.
+The remaining Internal.13 Arabic-chart and Founder-acceptance observations stay
+independent in the platform lane.

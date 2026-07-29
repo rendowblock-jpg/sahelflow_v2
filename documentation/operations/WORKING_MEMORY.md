@@ -2,16 +2,16 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-07-29
-> **Protected-main source:** `b2776bd3ea8d879a475c26af9d0c720d666671a9`
+> **Protected-main source:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
-> **Founder-installed release:** Internal.11 reported installed; exact identity and lifecycle record incomplete
+> **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`
 > **Execution epic:** issue #164
-> **Active branch:** `agent/final-completion-program`
-> **Active phase:** Phase 0 — authority freeze and execution reset
+> **Active branch:** `agent/phase0-closeout`
+> **Active phase:** Phase 1 — research complete; implementation waits for closeout merge
 
 ## Current truth
 
@@ -21,10 +21,20 @@ readiness, MSI and signature verification, installed launch/reopen,
 authenticated hydrated UI twice, deterministic evidence, exact asset comparison,
 source-bound tag verification and automatic publication.
 
-Internal.13 is not yet Founder-installed or T470-accepted. The Founder must still
-record the exact installed version, registry and database identities, AppData
-preservation, cold and warm startup stages, authenticated UI, Arabic chart
-behavior, normal close and reopen.
+Phase 0 completed in PR #179, merged as protected main
+`18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
+passed. This closeout reconciles stale post-merge state and does not reopen the
+completed phase.
+
+Internal.13 is Founder-installed and exact-version confirmed on the T470. The
+workspace, installation, active-shop, shop-incarnation, registry and database
+identity snapshot is captured by non-reversible SHA-256 fingerprints in
+`../system/CURRENT_STATE.md`; the database remained unchanged across observation.
+Authenticated Arabic UI-ready behavior passed. Stopped-process and immediate
+reopen trace timings were 68.863 and 31.834 seconds, both beyond the eight-second
+cold-launch contract. Normal close/reopen was exercised; one close left the host
+and runtime alive for more than 50 seconds before the Founder closed them. Arabic
+chart visual behavior and explicit Founder acceptance remain open.
 
 The application is broad and technically substantial, but it is not yet a
 commercially complete or class-AAA SahelFlow 1.0 product. The new canonical
@@ -32,9 +42,12 @@ business command, event, outbox, reservation, inventory movement, financial
 movement and compensation foundation exists, while production order, delivery,
 refund, provider and automation paths still mainly use legacy behavior.
 
-Issue #164 has already been converted into the live Phase 0–9 execution dashboard
-and explicitly remains non-authoritative. It must be synchronized with merged
-PRs, evidence and phase exits rather than used to redefine the roadmap.
+Issue #164 is the live non-authoritative Phase 0–9 execution dashboard. The Web
+Agent recorded and completed the bounded Phase 1 research package there: SQLite
+runtime/journal evidence, exact variant-or-parent stock authority, reservation and
+movement semantics, idempotent optimistic confirmation/rejection, unsafe-bypass
+inventory and fail-closed legacy boundaries. It owns no Phase 0 closeout files and
+will not create the implementation branch before this closeout merges.
 
 ## Active blockers and discontinuities
 
@@ -99,16 +112,12 @@ evidence.
 
 ## Exact next execution order
 
-1. Complete this documentation-only authority reset and pass `sf-version`,
-   `sf-audit` and every risk-selected latest-head gate.
-2. Close every current-head P0/P1 independent-review finding and merge the final
-   completion authority through protected `main`.
-3. Keep the already-converted issue #164 synchronized with the PR #179 merge,
-   exact evidence and phase-status transition.
-4. Install Internal.13 through the existing updater without deleting or replacing
-   Founder AppData and record the full T470 lifecycle in parallel.
-5. Begin Phase 1 research and implementation for the first complete manual-order
-   confirmation vertical:
+1. Merge the documentation-only `agent/phase0-closeout` PR after latest-head CI
+   and independent Web Agent review have no unresolved P0/P1.
+2. Update issue #164 with the closeout merge and exact evidence boundary.
+3. Branch `agent/phase1-manual-confirmation` from the new protected main and begin
+   implementation of the researched first complete manual-order confirmation
+   vertical:
    - trusted order intake;
    - optimistic version and idempotency;
    - stock availability and reservation;
@@ -117,14 +126,14 @@ evidence.
    - audit, event, outbox and projection invalidation;
    - complete UI states in AR/FR/EN;
    - duplicate, concurrency, interruption and recovery proof.
-6. Remove or disable the corresponding legacy mutation path after parity and
+4. Remove or disable the corresponding legacy mutation path after parity and
    migration proof.
-7. Continue the Golden COD Journey through fulfillment, delivery, COD,
+5. Continue the Golden COD Journey through fulfillment, delivery, COD,
    return/refund and compensation before expanding breadth.
 
 ## Active acceptance contract
 
-The authority reset is complete only when:
+Phase 0 completed when:
 
 - FD-028 is present and explicit about what it supersedes;
 - the roadmap contains one final Phase 0–9 program;
@@ -135,8 +144,8 @@ The authority reset is complete only when:
 - documentation entry points all reference the same authority and current state;
 - issue #164 tracks the same phases without becoming a competing authority;
 - no new permanent plan document is created;
-- latest-head validation passes;
-- independent latest-head review has no unresolved P0/P1;
+- latest-head validation passed;
+- independent latest-head review had no unresolved P0/P1;
 - another agent can identify the exact next implementation outcome without chat.
 
 ## Completion truth

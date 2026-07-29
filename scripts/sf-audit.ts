@@ -267,7 +267,8 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/system/ROADMAP.md",
     [
-      "**Active phase:** Phase 0",
+      "**Phase 0 status:** Complete",
+      "**Active phase:** Phase 1",
       "# Phase 1 — Canonical Golden COD business core",
       "## Research gate",
       "# Phase 9 — Certification, representative beta and Stable",
@@ -277,7 +278,8 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/CURRENT_STATE.md",
     [
       "**Published release:** `1.0.0-internal.13`",
-      "Internal.13 is not yet Founder-installed",
+      "**Founder-installed release:** Internal.13",
+      "Phase 1 research is complete",
       "Commerce checkpoint safety",
       "The central completion task is therefore production adoption",
     ],
@@ -295,10 +297,11 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 0",
+      "**Active phase:** Phase 1",
+      "Phase 0 completed in PR #179",
       "first complete manual-order",
       "research-to-implementation gate",
-      "Issue #164 has already been converted",
+      "Issue #164 is the live non-authoritative",
     ],
   ],
   [
@@ -341,6 +344,11 @@ const exactStaleMarkers: Array<[string, string]> = [
     "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
   ],
   ["AGENTS.md", "The compressed program uses four planned sessions"],
+  ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
+  ["documentation/README.md", "**Active phase:** Phase 0"],
+  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 0"],
+  ["documentation/system/CURRENT_STATE.md", "Internal.13 is not yet Founder-installed"],
+  ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
 ];
 
 for (const [relativePath, marker] of exactStaleMarkers) {

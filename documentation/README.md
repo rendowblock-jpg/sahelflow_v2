@@ -2,12 +2,12 @@
 
 > **Status:** Active documentation entry point
 > **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
-> **Protected-main baseline:** `b2776bd3ea8d879a475c26af9d0c720d666671a9`
+> **Protected-main baseline:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
-> **Founder-installed release:** Internal.11 reported installed; complete identity/lifecycle evidence open
+> **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 0 — authority freeze and execution reset
+> **Active phase:** Phase 1 — research complete; implementation waits for closeout merge
 > **Execution epic:** issue #164
 > **Last updated:** 2026-07-29
 
@@ -75,10 +75,12 @@ SahelFlow separates these realities:
 
 A lower reality cannot claim a higher one.
 
-Internal.13 is published and passed the protected signed workflow. It is not yet
-Founder-installed or accepted on the T470, and publication does not prove the
-full Golden COD Journey, whole-route AAA quality, provider certification or
-Stable readiness.
+Internal.13 is published, Founder-installed and exact-version confirmed on the
+T470. The preserved AppData identity/database snapshot and authenticated Arabic
+UI were observed, but startup remains over budget. Arabic chart visual behavior
+and explicit Founder acceptance remain open. Neither publication nor installation
+proves the full Golden COD Journey, whole-route AAA quality, provider
+certification or Stable readiness.
 
 ## Final completion model
 
