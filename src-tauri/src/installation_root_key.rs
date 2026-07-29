@@ -1048,6 +1048,7 @@ fn acquire_lock(system_dir: &Path) -> Result<File, InstallationRootError> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(false)
         .open(path)?;
     file.lock_exclusive()?;
     Ok(file)
@@ -1539,11 +1540,11 @@ fn platform_protect(
         InstallationRootError::InvalidState("installation root payload is too large".to_owned())
     })?;
     let mut entropy = dpapi_entropy(identity);
-    let mut input = CRYPT_INTEGER_BLOB {
+    let input = CRYPT_INTEGER_BLOB {
         cbData: input_length,
         pbData: plaintext.as_ptr().cast_mut(),
     };
-    let mut entropy_blob = CRYPT_INTEGER_BLOB {
+    let entropy_blob = CRYPT_INTEGER_BLOB {
         cbData: entropy.len() as u32,
         pbData: entropy.as_mut_ptr(),
     };
@@ -1553,9 +1554,9 @@ fn platform_protect(
     };
     let succeeded = unsafe {
         CryptProtectData(
-            &mut input,
+            &input,
             null(),
-            &mut entropy_blob,
+            &entropy_blob,
             null_mut(),
             null_mut(),
             CRYPTPROTECT_UI_FORBIDDEN,
@@ -1605,11 +1606,11 @@ fn platform_unprotect(
         InstallationRootError::InvalidState("protected installation root is too large".to_owned())
     })?;
     let mut entropy = dpapi_entropy(identity);
-    let mut input = CRYPT_INTEGER_BLOB {
+    let input = CRYPT_INTEGER_BLOB {
         cbData: input_length,
         pbData: ciphertext.as_ptr().cast_mut(),
     };
-    let mut entropy_blob = CRYPT_INTEGER_BLOB {
+    let entropy_blob = CRYPT_INTEGER_BLOB {
         cbData: entropy.len() as u32,
         pbData: entropy.as_mut_ptr(),
     };
@@ -1619,9 +1620,9 @@ fn platform_unprotect(
     };
     let succeeded = unsafe {
         CryptUnprotectData(
-            &mut input,
+            &input,
             null_mut(),
-            &mut entropy_blob,
+            &entropy_blob,
             null_mut(),
             null_mut(),
             CRYPTPROTECT_UI_FORBIDDEN,

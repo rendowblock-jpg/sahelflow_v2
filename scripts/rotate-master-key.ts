@@ -96,6 +96,21 @@ interface RotationLease {
   record: MasterKeyRotationLockRecord;
 }
 
+type RotationStage =
+  | "lease"
+  | "runtime-stop"
+  | "target-discovery"
+  | "root-loading"
+  | "database-client"
+  | "database-connect"
+  | "customers"
+  | "orders"
+  | "conversations"
+  | "messages"
+  | "secrets"
+  | "database-disconnect"
+  | "root-commit";
+
 interface RuntimeEndpointManifest {
   formatVersion: number;
   state: string;
@@ -929,22 +944,38 @@ async function rotateTarget(
   target: RotationTarget,
   oldKey: Buffer,
   newKey: Buffer,
+  reportStage: (stage: RotationStage) => void,
 ): Promise<ModelStats[]> {
+  reportStage("database-client");
   const client = new PrismaClient({
     datasourceUrl: `file:${target.databasePath}`,
     log: ["error"],
   });
   try {
+    reportStage("database-connect");
     await client.$connect();
-    return [
-      await rotateCustomers(client, target.id, oldKey, newKey),
-      await rotateOrders(client, target.id, oldKey, newKey),
-      await rotateConversations(client, target.id, oldKey, newKey),
-      await rotateMessages(client, target.id, oldKey, newKey),
-      await rotateSecrets(client, target.id, oldKey, newKey),
-    ];
-  } finally {
+    const result: ModelStats[] = [];
+    reportStage("customers");
+    result.push(await rotateCustomers(client, target.id, oldKey, newKey));
+    reportStage("orders");
+    result.push(await rotateOrders(client, target.id, oldKey, newKey));
+    reportStage("conversations");
+    result.push(await rotateConversations(client, target.id, oldKey, newKey));
+    reportStage("messages");
+    result.push(await rotateMessages(client, target.id, oldKey, newKey));
+    reportStage("secrets");
+    result.push(await rotateSecrets(client, target.id, oldKey, newKey));
+    reportStage("database-disconnect");
     await client.$disconnect();
+    return result;
+  } catch (error) {
+    try {
+      await client.$disconnect();
+    } catch (disconnectError) {
+      reportStage("database-disconnect");
+      throw disconnectError;
+    }
+    throw error;
   }
 }
 
@@ -1008,20 +1039,25 @@ async function main(): Promise<void> {
     delegateProtectedRotation();
     return;
   }
-  const lease = acquireRotationLease();
+  let lease: RotationLease | null = null;
   let mutationWindowEntered = false;
   let keyfileCommitted = false;
   let retainMaintenanceLease = false;
   let oldKey: Buffer | null = null;
   let newKey: Buffer | null = null;
+  let stage: RotationStage = "lease";
 
   try {
+    lease = acquireRotationLease();
+    stage = "runtime-stop";
     // Acquire the maintenance lease first, then prove the old runtime is gone.
     // A packaged Node process launched after this point refuses startup, and an
     // already-running process refuses every process-bound production write.
     await assertApplicationStopped();
 
+    stage = "target-discovery";
     const targets = loadRotationTargets();
+    stage = "root-loading";
     oldKey = loadOldKey();
     newKey = loadOrCreateNewKey(oldKey);
     if (oldKey.equals(newKey)) {
@@ -1054,7 +1090,11 @@ async function main(): Promise<void> {
     // shop and the provisioning template have been processed with this exact
     // old/new key pair. A crash leaves the old keyfile plus reusable sidecar.
     for (const target of targets) {
-      allStats.push(...(await rotateTarget(target, oldKey, newKey)));
+      allStats.push(
+        ...(await rotateTarget(target, oldKey, newKey, (nextStage) => {
+          stage = nextStage;
+        })),
+      );
     }
     printStats(allStats);
 
@@ -1063,6 +1103,7 @@ async function main(): Promise<void> {
       return;
     }
 
+    stage = "root-commit";
     const backupPath = commitKeyfile(newKey);
     keyfileCommitted = true;
     console.log("\nRotation complete.");
@@ -1076,6 +1117,9 @@ async function main(): Promise<void> {
       "All registered shop Secrets—including business-truth envelope wrappers—were re-wrapped before the shared keyfile commit.",
     );
   } catch (error) {
+    console.error(
+      `SF_ROTATION_STAGE_${stage.replaceAll("-", "_").toUpperCase()}`,
+    );
     retainMaintenanceLease =
       !DRY_RUN && mutationWindowEntered && !keyfileCommitted;
     if (retainMaintenanceLease) {
@@ -1085,7 +1129,7 @@ async function main(): Promise<void> {
     }
     throw error;
   } finally {
-    finishRotationLease(lease, !retainMaintenanceLease);
+    if (lease) finishRotationLease(lease, !retainMaintenanceLease);
     oldKey?.fill(0);
     newKey?.fill(0);
     clearNativeRotationRoots();

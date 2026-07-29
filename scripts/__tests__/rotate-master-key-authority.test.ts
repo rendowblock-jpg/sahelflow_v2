@@ -26,6 +26,8 @@ describe("installation-wide master-key rotation authority", () => {
     expect(source).toContain('"shop-registry.json"');
     expect(source).toContain('"shops"');
     expect(source).toContain('"shop-template.db"');
+    expect(source).toContain("encryptCustomerData(oldPlaintext, newKey)");
+    expect(source).toContain("SF_ROTATION_STAGE_");
     expect(source).toContain("parsed.shops.map(validateRegistryTarget)");
   });
 

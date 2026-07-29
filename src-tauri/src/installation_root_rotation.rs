@@ -41,6 +41,10 @@ fn run_rotation_worker(
     rotation: PreparedInstallationRootRotation,
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let node = canonical_resource_file(resource_dir, Path::new("runtime").join("node.exe"))?;
+    let prisma_engine = canonical_resource_file(
+        resource_dir,
+        Path::new("runtime").join("query_engine-windows.dll.node"),
+    )?;
     let worker =
         canonical_resource_file(resource_dir, Path::new("standalone").join(ROTATION_WORKER))?;
     let working_dir = worker.parent().ok_or_else(|| {
@@ -62,6 +66,19 @@ fn run_rotation_worker(
     environment.push((
         OsString::from("SF_INSTALLATION_ROOT_ROTATION_SOURCE"),
         OsString::from("native-stdin-v1"),
+    ));
+    // Rotation receives both roots through its own bounded frame and must pass
+    // them explicitly to every crypto helper. Mark the process as protected so
+    // an omitted argument fails closed instead of recreating master.key.
+    environment.push((
+        OsString::from("SF_INSTALLATION_ROOT_SOURCE"),
+        OsString::from("native-stdin-v1"),
+    ));
+    // The worker is a separate bundle from the Next.js server. Bind Prisma to
+    // the exact installed engine instead of relying on bundle-relative lookup.
+    environment.push((
+        OsString::from("PRISMA_QUERY_ENGINE_LIBRARY"),
+        prisma_engine.as_os_str().to_owned(),
     ));
 
     let mut frame = [0_u8; 72];

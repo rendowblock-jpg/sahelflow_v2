@@ -243,6 +243,40 @@ const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
+    ("SF_ROTATION_STAGE_LEASE", "rotation-lease-stage"),
+    (
+        "SF_ROTATION_STAGE_RUNTIME_STOP",
+        "rotation-runtime-stop-stage",
+    ),
+    (
+        "SF_ROTATION_STAGE_TARGET_DISCOVERY",
+        "rotation-target-discovery-stage",
+    ),
+    (
+        "SF_ROTATION_STAGE_ROOT_LOADING",
+        "rotation-root-loading-stage",
+    ),
+    ("SF_ROTATION_STAGE_DATABASE_CLIENT", "rotation-client-stage"),
+    (
+        "SF_ROTATION_STAGE_DATABASE_CONNECT",
+        "rotation-connect-stage",
+    ),
+    ("SF_ROTATION_STAGE_CUSTOMERS", "rotation-customers-stage"),
+    ("SF_ROTATION_STAGE_ORDERS", "rotation-orders-stage"),
+    (
+        "SF_ROTATION_STAGE_CONVERSATIONS",
+        "rotation-conversations-stage",
+    ),
+    ("SF_ROTATION_STAGE_MESSAGES", "rotation-messages-stage"),
+    ("SF_ROTATION_STAGE_SECRETS", "rotation-secrets-stage"),
+    (
+        "SF_ROTATION_STAGE_DATABASE_DISCONNECT",
+        "rotation-disconnect-stage",
+    ),
+    (
+        "SF_ROTATION_STAGE_ROOT_COMMIT",
+        "rotation-root-commit-stage",
+    ),
     ("SF_NODE_ENTRYPOINT_MISSING", "node-entrypoint-missing"),
     ("SF_NODE_ENTRYPOINT_INVALID", "node-entrypoint-invalid"),
     (
@@ -402,7 +436,7 @@ pub fn run() {
                                     "installation-root-rotation-complete",
                                     None,
                                 );
-                                app_handle.exit(0);
+                                std::process::exit(0);
                             }
                             Err(error) => {
                                 let detail = error.to_string();
@@ -414,7 +448,7 @@ pub fn run() {
                                     "SF-INSTALLATION-ROOT-ROTATION-BLOCKED",
                                     &detail,
                                 );
-                                app_handle.exit(1);
+                                std::process::exit(1);
                             }
                         }
                         return;
