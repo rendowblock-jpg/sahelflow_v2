@@ -2140,7 +2140,9 @@ fn replace_file_durable(
     target: &Path,
     retain_previous: bool,
 ) -> Result<(), IoError> {
-    replace_file_durable_non_windows_with(staged, target, retain_previous, fs::rename)
+    replace_file_durable_non_windows_with(staged, target, retain_previous, |source, destination| {
+        fs::rename(source, destination)
+    })
 }
 
 fn replace_file_durable_non_windows_with<F>(
