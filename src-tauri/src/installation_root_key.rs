@@ -1473,7 +1473,7 @@ fn sha256_hex(bytes: &[u8]) -> String {
 }
 
 fn valid_key_id(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+    value.len() == 32 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn unix_seconds_now() -> Result<u64, InstallationRootError> {

@@ -1023,7 +1023,7 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
 $beforeRotation = Read-JsonFile $protectedInstallationRootPath
 if (
     $null -eq $beforeRotation -or
-    [string]$beforeRotation.keyId -notmatch '^[0-9a-f]{64}$'
+    [string]$beforeRotation.keyId -notmatch '^[0-9a-f]{32}$'
 ) {
     throw "Protected installation-root authority is invalid before rotation."
 }
