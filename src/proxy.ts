@@ -17,6 +17,30 @@ import {
   RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
+function sameOriginRedirectTarget(
+  request: NextRequest,
+  pathname: string,
+): URL {
+  const host = request.headers.get("host")?.trim();
+  if (host) {
+    try {
+      const target = new URL(`${request.nextUrl.protocol}//${host}`);
+      target.pathname = pathname;
+      target.search = "";
+      target.hash = "";
+      return target;
+    } catch {
+      // Fall through to the parsed request URL when an invalid Host is supplied.
+    }
+  }
+
+  const target = request.nextUrl.clone();
+  target.pathname = pathname;
+  target.search = "";
+  target.hash = "";
+  return new URL(target.href);
+}
+
 /**
  * Auth proxy (Next 16 middleware entry).
  *
@@ -127,7 +151,7 @@ export async function proxy(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      new URL(decision.destination, request.url),
+      sameOriginRedirectTarget(request, decision.destination),
     );
   }
 
@@ -161,7 +185,7 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   const valid = await verifySessionToken(token, secret);
   if (!valid) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(sameOriginRedirectTarget(request, "/login"));
   }
 
   return NextResponse.next();
