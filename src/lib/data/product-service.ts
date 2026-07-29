@@ -214,6 +214,17 @@ export const productService = {
 
         if (Array.isArray(legacyVariants)) {
           const existing = existingProduct.productVariants;
+          const existingIds = new Set(existing.map((variant) => variant.id));
+          const foreignVariant = legacyVariants.find(
+            (variant) => variant.id && !existingIds.has(variant.id),
+          );
+          if (foreignVariant?.id) {
+            throw new ValidationError(
+              `Variant '${foreignVariant.id}' does not belong to product '${id}'`,
+              "variants.id",
+            );
+          }
+
           const incomingIds = legacyVariants
             .filter((variant) => variant.id)
             .map((variant) => variant.id!);
