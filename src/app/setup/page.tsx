@@ -19,15 +19,25 @@ export default function SetupPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/auth/status")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.setup) {
+    let active = true;
+    void fetch("/api/auth/status", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok || data.authorityAvailable === false) {
+          throw new Error("authentication authority unavailable");
+        }
+        if (active && data.setup === true) {
           router.replace("/login");
         }
       })
-      .catch(() => {});
-  }, [router]);
+      .catch(() => {
+        if (active) setError(t("error.networkFailure"));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router, t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
