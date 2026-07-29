@@ -15,6 +15,10 @@ import { basename, isAbsolute, resolve } from "node:path";
 import { STANDALONE_MANIFEST_FILE } from "./standalone-manifest";
 
 type BunSubprocess = Readonly<{
+  stdin: {
+    write: (data: Uint8Array) => number;
+    end: () => void;
+  };
   stdout: ReadableStream<Uint8Array>;
   stderr: ReadableStream<Uint8Array>;
   exited: Promise<number>;
@@ -30,6 +34,7 @@ type BunRuntime = Readonly<{
       env: Record<string, string>;
       stdout: "pipe";
       stderr: "pipe";
+      stdin: "pipe";
     }>,
   ) => BunSubprocess;
   sleep: (milliseconds: number) => Promise<void>;
@@ -37,7 +42,7 @@ type BunRuntime = Readonly<{
 
 const bunRuntime = (globalThis as unknown as { Bun: BunRuntime }).Bun;
 const NODE_ENTRYPOINT_BOOTSTRAP =
-  "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
+  "(entry=>{const fs=require('fs'),crypto=require('crypto'),frame=Buffer.alloc(40);let offset=0;while(offset<frame.length){const read=fs.readSync(0,frame,offset,frame.length-offset,null);if(read===0){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_missing')}offset+=read}const extra=Buffer.alloc(1),extraRead=fs.readSync(0,extra,0,1,null);extra.fill(0);const expected=Buffer.from('SFRK0001','ascii');if(extraRead!==0||!crypto.timingSafeEqual(frame.subarray(0,8),expected)){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_invalid')}const key=Buffer.alloc(32);frame.copy(key,0,8);frame.fill(0);let used=false;const symbol=Symbol.for('sahelflow.installation-root.v1');Object.defineProperty(globalThis,symbol,{configurable:true,enumerable:false,value:()=>{if(used)throw Error('SF_INSTALLATION_ROOT_FRAME_consumed');used=true;delete globalThis[symbol];return key}});if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
 function nodeEntrypointPath(value: string): string {
   const conventional = value.startsWith("\\\\?\\") ? value.slice(4) : value;
@@ -254,16 +259,25 @@ try {
     APP_VERSION: authority.version,
     NODE_ENV: "production",
     SF_AUTH_MODE: "setup",
+    SF_INSTALLATION_ROOT_SOURCE: "native-stdin-v1",
     SF_NODE_ENTRYPOINT: stagedNodeEntrypoint,
     NEXT_TELEMETRY_DISABLED: "1",
   };
 
+  const installationRootFrame = Buffer.concat([
+    Buffer.from("SFRK0001", "ascii"),
+    randomBytes(32),
+  ]);
   child = bunRuntime.spawn([stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP], {
     cwd: stagedWork,
     env: environment,
+    stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
   });
+  child.stdin.write(installationRootFrame);
+  child.stdin.end();
+  installationRootFrame.fill(0);
   stdoutPromise = new Response(child.stdout).text();
   stderrPromise = new Response(child.stderr).text();
 

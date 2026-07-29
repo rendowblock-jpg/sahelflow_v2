@@ -162,6 +162,10 @@ impl SensitiveBytes {
     fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
     }
+
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        self.0.as_mut_slice()
+    }
 }
 
 impl Drop for SensitiveBytes {

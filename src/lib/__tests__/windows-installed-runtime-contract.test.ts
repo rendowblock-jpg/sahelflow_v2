@@ -212,7 +212,7 @@ describe("installed Windows runtime contract", () => {
     const desktop = read("src-tauri/src/lib.rs");
     const containment = read("src-tauri/src/child_containment.rs");
     const expectedNodeBootstrap =
-      "(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
+      "(entry=>{const fs=require('fs'),crypto=require('crypto'),frame=Buffer.alloc(40);let offset=0;while(offset<frame.length){const read=fs.readSync(0,frame,offset,frame.length-offset,null);if(read===0){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_missing')}offset+=read}const extra=Buffer.alloc(1),extraRead=fs.readSync(0,extra,0,1,null);extra.fill(0);const expected=Buffer.from('SFRK0001','ascii');if(extraRead!==0||!crypto.timingSafeEqual(frame.subarray(0,8),expected)){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_invalid')}const key=Buffer.alloc(32);frame.copy(key,0,8);frame.fill(0);let used=false;const symbol=Symbol.for('sahelflow.installation-root.v1');Object.defineProperty(globalThis,symbol,{configurable:true,enumerable:false,value:()=>{if(used)throw Error('SF_INSTALLATION_ROOT_FRAME_consumed');used=true;delete globalThis[symbol];return key}});if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
     expect(workflow).toContain("contents: read");
     expect(workflow).toContain("workflow_call:");
@@ -270,7 +270,7 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain("ToLowerInvariant");
     expect(harness).toContain("runtimeIdentityProblems");
     expect(desktop).toContain('app_local_data_dir()?.join("runtime-work")');
-    expect(desktop).toContain("spawn_in_capturing_stderr");
+    expect(desktop).toContain("spawn_in_capturing_stderr_with_stdin_frame");
     expect(desktop).toContain("summarize_runtime_stderr");
     expect(desktop).toContain("raw output suppressed");
     expect(desktop).toContain('NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT"');
@@ -287,6 +287,10 @@ describe("installed Windows runtime contract", () => {
       "SF_NODE_ENTRYPOINT: stagedNodeEntrypoint",
     );
     expect(packagedRuntimeHarness).toContain(expectedNodeBootstrap);
+    expect(packagedRuntimeHarness).toContain(
+      'SF_INSTALLATION_ROOT_SOURCE: "native-stdin-v1"',
+    );
+    expect(packagedRuntimeHarness).toContain("installationRootFrame.fill(0)");
     expect(packagedRuntimeHarness).toContain(
       '[stagedNode, "--eval", NODE_ENTRYPOINT_BOOTSTRAP]',
     );

@@ -1,4 +1,4 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::fmt;
 use std::io::{Error as IoError, Read};
 use std::path::Path;
@@ -111,10 +111,11 @@ impl std::error::Error for SpawnError {
 #[cfg(windows)]
 mod platform {
     use super::{
-        completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError, OsStr,
+        completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError,
         OsString, Path, ProcessExit, SharedStderr, SpawnError,
     };
     use std::collections::BTreeMap;
+    use std::ffi::OsStr;
     use std::fs::File;
     use std::io::Write;
     use std::mem::{size_of, zeroed};
@@ -1249,7 +1250,7 @@ mod platform {
                 .map_err(|_| IoError::other("contained process state is poisoned"))?;
             match child.kill() {
                 Ok(()) => {}
-                Err(error) if child.try_wait()?.is_some() => return Ok(()),
+                Err(_error) if child.try_wait()?.is_some() => return Ok(()),
                 Err(error) => return Err(error),
             }
             drop(child);
