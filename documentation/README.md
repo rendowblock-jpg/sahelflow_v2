@@ -1,7 +1,7 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Governing decision:** proposed FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 > **Protected-main baseline:** `b2776bd3ea8d879a475c26af9d0c720d666671a9`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
@@ -28,7 +28,7 @@ adopted by an active owner.
 2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — capabilities, journeys,
    operational states, page completion and AAA experience standard.
 3. [`product/DECISIONS.md`](product/DECISIONS.md) — numbered Founder decisions;
-   FD-028 governs final completion and research-first implementation once merged.
+   FD-028 governs final completion and research-first implementation.
 4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — target system, data
    authority, protocols, invariants, security and recovery.
 5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged implementation,
