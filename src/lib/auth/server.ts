@@ -219,10 +219,12 @@ function sessionAuthorityError(
   return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
 }
 
-async function requireAuthenticatedSession(): Promise<
-  Extract<SessionAuthorityResult, { status: "authenticated" }>
-> {
-  const authority = await getCurrentSessionAuthority();
+async function requireAuthenticatedSession(
+  fresh = false,
+): Promise<Extract<SessionAuthorityResult, { status: "authenticated" }>> {
+  const authority = fresh
+    ? await resolveCurrentSessionAuthority()
+    : await getCurrentSessionAuthority();
   if (authority.status === "authenticated") return authority;
   if (authority.status === "setup") {
     throw new SahelFlowError("Authentication setup is required", "AUTH_SETUP_REQUIRED", 409);
@@ -272,7 +274,7 @@ export async function reauthenticateCurrentSession(
   pin: string,
   ip?: string,
 ): Promise<{ reauthenticated: boolean; reason?: "pin_invalid" }> {
-  const authority = await requireAuthenticatedSession();
+  const authority = await requireAuthenticatedSession(true);
   const { valid } = await verifyAuthPinAndMaybeRehash(pin);
   if (!valid) return { reauthenticated: false, reason: "pin_invalid" };
 
@@ -314,7 +316,7 @@ export async function requireRecentReauthentication(
   if (!Number.isSafeInteger(maxAgeMs) || maxAgeMs <= 0) {
     throw new TypeError("Reauthentication age must be a positive integer");
   }
-  const authority = await requireAuthenticatedSession();
+  const authority = await requireAuthenticatedSession(true);
   const ageMs = Date.now() - authority.issuedAt.getTime();
   if (ageMs < 0 || ageMs >= maxAgeMs) {
     throw new SahelFlowError(
@@ -335,7 +337,7 @@ export async function changeAuthPin(
   newPin: string,
   ip?: string,
 ): Promise<{ changed: boolean; reason?: "current_pin_invalid" }> {
-  await requireAuthenticatedSession();
+  await requireAuthenticatedSession(true);
   const valid = await verifyAuthPin(currentPin);
   if (!valid) return { changed: false, reason: "current_pin_invalid" };
 
