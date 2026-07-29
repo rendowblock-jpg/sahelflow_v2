@@ -323,6 +323,18 @@ function Wait-ForNodeCompileCache {
     throw "${Phase}: packaged Node did not persist its version-scoped compile cache."
 }
 
+function Reset-NodeCompileCacheForCloseProof {
+    param([Parameter(Mandatory = $true)][string]$Phase)
+
+    if (Test-Path -LiteralPath $nodeCompileCacheRoot) {
+        Remove-Item -LiteralPath $nodeCompileCacheRoot -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $nodeCompileCacheRoot) {
+        throw "${Phase}: could not reset the CI-only compile cache before normal close."
+    }
+    return (Get-Date).ToString("o")
+}
+
 function Close-SahelFlowNormally {
     param(
         [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process,
@@ -445,11 +457,18 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     Copy-Item -LiteralPath $runtimeUiDiagnosticPath -Destination $uiDiagnosticEvidence -Force
     Copy-Item -LiteralPath $startupTracePath -Destination $startupTraceEvidence -Force
 
+    # The runner is ephemeral. Reset only this version-scoped cache after UI
+    # readiness so each post-close cache is attributable to this exact runtime
+    # instance while the next launch can still exercise the preceding cache.
+    $compileCacheResetAt = Reset-NodeCompileCacheForCloseProof `
+        -Phase "ui-close-$attempt"
     $closures += Close-SahelFlowNormally `
         -Process $process `
         -WindowHandles @($launch.visibleWindowHandles) `
         -Phase "ui-close-$attempt"
     $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-close-$attempt"
+    $launch | Add-Member -NotePropertyName compileCacheResetAt `
+        -NotePropertyValue $compileCacheResetAt
     $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
     $launches += $launch
 
