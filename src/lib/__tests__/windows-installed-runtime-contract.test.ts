@@ -57,6 +57,7 @@ describe("installed Windows runtime contract", () => {
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
     const runtimeRoute = read("src/app/api/internal/runtime-ready/route.ts");
+    const shutdownRoute = read("src/app/api/internal/runtime-shutdown/route.ts");
     const compileCache = read("src/lib/runtime/compile-cache.ts");
     const rootLayout = read("src/app/layout.tsx");
     const dashboardRouteLayout = read("src/app/(dashboard)/layout.tsx");
@@ -120,12 +121,13 @@ describe("installed Windows runtime contract", () => {
     expect(compileCache).toContain("moduleApi.flushCompileCache()");
     expect(uiRoute).toContain('locale: runtimeLocale(request)');
     expect(runtimeRoute).not.toContain("flushPackagedCompileCache");
-    expect(uiRoute.indexOf("writeJsonAtomically(ackPath, acknowledgment)")).toBeLessThan(
-      uiRoute.indexOf("flushPackagedCompileCache();"),
+    expect(uiRoute).not.toContain("flushPackagedCompileCache");
+    expect(shutdownRoute).toContain("flushPackagedCompileCache()");
+    expect(shutdownRoute).toContain('request.headers.get("authorization")');
+    expect(shutdownRoute).toContain(
+      'request.headers.get("x-sahelflow-runtime-instance")',
     );
-    expect(uiRoute.indexOf('code: "RUNTIME_UI_READY_PERSISTED"')).toBeLessThan(
-      uiRoute.indexOf("flushPackagedCompileCache();"),
-    );
+    expect(shutdownRoute).toContain("constantTimeEqual(suppliedToken, expectedToken)");
     expect(compileCache).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
@@ -229,6 +231,11 @@ describe("installed Windows runtime contract", () => {
     );
     expect(uiHarness).toContain("workspace-window-pending");
     expect(uiHarness).toContain("Wait-ForNodeCompileCache");
+    expect(
+      uiHarness.lastIndexOf("$closures += Close-SahelFlowNormally"),
+    ).toBeLessThan(
+      uiHarness.lastIndexOf("Wait-ForNodeCompileCache"),
+    );
     expect(uiHarness).toContain("Wait-ForCompleteStartupTrace");
     expect(uiHarness).toContain("startup trace did not settle within 5 seconds");
     expect(uiHarness).toContain("executableOrSourceFiles = 0");
@@ -289,6 +296,8 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("api.prevent_close();");
     expect(desktop).toContain("begin_normal_close(_window.app_handle().clone())");
     expect(desktop).toContain("struct ShutdownCoordinator");
+    expect(desktop).toContain("struct RuntimeShutdownAuthority");
+    expect(desktop).toContain("POST /api/internal/runtime-shutdown");
     expect(desktop).toContain("app.exit(0);");
     expect(desktop).not.toContain("cleanup_before_exit();");
     expect(desktop).not.toContain("std::process::exit(0);");
