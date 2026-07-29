@@ -8,9 +8,11 @@ const RUNTIME_TOKEN = "e".repeat(64);
 const INSTANCE_ID = "a".repeat(32);
 const AUTH_SECRET = "proxy-test-auth-secret";
 
+type NextRequestInit = NonNullable<ConstructorParameters<typeof NextRequest>[1]>;
+
 function request(
   pathname: string,
-  init: RequestInit = {},
+  init: NextRequestInit = {},
   cookies: string[] = [`sf_runtime=${RUNTIME_TOKEN}`],
 ): NextRequest {
   const headers = new Headers(init.headers);
@@ -43,7 +45,6 @@ describe("runtime proxy boundary", () => {
   it("allows the exact setup ceremony with a matching runtime cookie", async () => {
     for (const pathname of [
       "/setup",
-      "/setup/profile",
       "/api/auth/setup",
       "/api/auth/status",
       "/api/health",
@@ -74,7 +75,13 @@ describe("runtime proxy boundary", () => {
   });
 
   it("redirects non-setup pages to the setup ceremony", async () => {
-    for (const pathname of ["/", "/login", "/orders", "/storefront/example"]) {
+    for (const pathname of [
+      "/",
+      "/login",
+      "/orders",
+      "/storefront/example",
+      "/setup/profile",
+    ]) {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(
@@ -180,6 +187,19 @@ describe("runtime proxy boundary", () => {
     ]) {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(401);
+    }
+  });
+
+  it("keeps login and setup descendants protected in configured mode", async () => {
+    process.env.SF_AUTH_MODE = "configured";
+    process.env.AUTH_SECRET = AUTH_SECRET;
+
+    for (const pathname of ["/login/recovery", "/setup/profile"]) {
+      const response = await proxy(request(pathname));
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(
+        "http://127.0.0.1:49152/login",
+      );
     }
   });
 
