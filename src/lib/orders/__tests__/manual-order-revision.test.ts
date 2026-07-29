@@ -4,10 +4,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { cleanDb, rawDb } from "@/app/api/__tests__/helpers";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { db, shopContext } from "@/lib/db";
 import { trustedManualOrderSourceMetadata } from "../manual-order-authority";
 import { reviseTrustedManualOrder } from "../manual-order-revision";
 
-const context = { prisma: rawDb as never } satisfies ServiceContext;
+const context = { prisma: db, shop: shopContext } satisfies ServiceContext;
 
 beforeEach(cleanDb);
 afterAll(async () => {
@@ -53,7 +54,7 @@ async function seedPendingTrustedOrder() {
 }
 
 describe("trusted manual revision", () => {
-  it("commits one expected-version edit and rejects a stale second tab", async () => {
+  it("commits one encrypted expected-version edit and rejects a stale second tab", async () => {
     const order = await seedPendingTrustedOrder();
 
     const first = await reviseTrustedManualOrder(context, order.id, {
@@ -67,21 +68,30 @@ describe("trusted manual revision", () => {
       notes: "Committed note",
     });
 
+    const encrypted = await rawDb.order.findUniqueOrThrow({
+      where: { id: order.id },
+      select: { address: true, notes: true },
+    });
+    expect(encrypted.address).not.toBe("Committed address");
+    expect(encrypted.notes).not.toBe("Committed note");
+    expect(encrypted.address).toContain("ciphertext");
+    expect(encrypted.notes).toContain("ciphertext");
+
     await expect(
       reviseTrustedManualOrder(context, order.id, {
         expectedVersion: 1,
         address: "Stale overwrite",
       }),
-    ).rejects.toThrow(/version conflict/i);
+    ).rejects.toThrow(/version conflict|changed while/i);
 
-    expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
+    expect(await db.order.findUnique({ where: { id: order.id } })).toMatchObject({
       version: 2,
       address: "Committed address",
       notes: "Committed note",
     });
   });
 
-  it("normalizes Algerian phones and rejects invalid contact revisions", async () => {
+  it("normalizes and encrypts Algerian phones while rejecting invalid revisions", async () => {
     const order = await seedPendingTrustedOrder();
 
     const updated = await reviseTrustedManualOrder(context, order.id, {
@@ -90,6 +100,13 @@ describe("trusted manual revision", () => {
     });
     expect(updated.phone).toBe("0555000902");
 
+    const encrypted = await rawDb.order.findUniqueOrThrow({
+      where: { id: order.id },
+      select: { phone: true },
+    });
+    expect(encrypted.phone).not.toBe("0555000902");
+    expect(encrypted.phone).toContain("ciphertext");
+
     await expect(
       reviseTrustedManualOrder(context, order.id, {
         expectedVersion: 2,
@@ -97,7 +114,7 @@ describe("trusted manual revision", () => {
       }),
     ).rejects.toThrow(/invalid algerian phone/i);
 
-    expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
+    expect(await db.order.findUnique({ where: { id: order.id } })).toMatchObject({
       version: 2,
       phone: "0555000902",
     });
