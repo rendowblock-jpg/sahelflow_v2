@@ -189,12 +189,18 @@ async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult>
     now.getTime() - authority.lastSeenAt.getTime() >=
       SESSION_ACTIVITY_WRITE_INTERVAL_MS
   ) {
-    await authContext.prisma.session.updateMany({
-      where: { id: authority.sessionId, revokedAt: null },
-      data: { lastSeenAt: now },
-    }).catch(() => {
-      // A later request may require login if activity persistence remains unavailable.
-    });
+    try {
+      const refreshed = await authContext.prisma.session.updateMany({
+        where: { id: authority.sessionId, revokedAt: null },
+        data: { lastSeenAt: now },
+      });
+      if (refreshed.count !== 1) {
+        return { status: "rejected", code: "SESSION_REVOKED" };
+      }
+      return { ...authority, lastSeenAt: now };
+    } catch {
+      return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
+    }
   }
 
   return authority;
