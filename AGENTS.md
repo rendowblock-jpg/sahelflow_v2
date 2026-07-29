@@ -93,22 +93,25 @@ begins.
 
 ## Current baseline
 
-- Protected main: `b2776bd3ea8d879a475c26af9d0c720d666671a9`.
+- Phase 0 closeout base: `18c45e474f58744b6f837372509154ca500044b0`.
 - Published executable source:
   `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Published release: `1.0.0-internal.13`, run `30366866703`.
 - Internal.13 passed protected signed build, staged runtime, install/reopen,
   authenticated UI, deterministic evidence, tag and publication gates.
-- Internal.13 is not yet Founder-installed or T470-accepted.
+- Internal.13 is Founder-installed and locally version-confirmed on the T470; it
+  is not yet Founder-accepted.
 - Internal.5 remains the Founder-accepted baseline.
 - The new canonical command/event/outbox/reservation/movement foundation is
   merged, but production business routes still mainly use legacy paths.
-- Active phase: Phase 0 authority reset, followed by the first canonical manual
-  order-confirmation vertical.
+- Phase 0 completed through PR #179. Phase 1 research for the first canonical
+  manual order-confirmation vertical is complete and implementation is ready.
+- Next implementation branch: `agent/phase1-manual-confirmation`, created from
+  the then-current protected `main`.
 
 ## Exact next outcome
 
-After the authority reset merges, begin Phase 1 research and implementation for:
+Begin Phase 1 implementation from current protected `main` for:
 
 > A manual order is created under trusted authority, confirmed or rejected using
 > optimistic version and exact idempotency, reserves available product/variant
@@ -116,7 +119,9 @@ After the authority reset merges, begin Phase 1 research and implementation for:
 > invalidation, exposes complete AR/FR/EN UI states, survives duplicate and
 > concurrent submissions, and removes the migrated direct-stock legacy path.
 
-Internal.13 T470 install/observation runs independently in the platform lane.
+Internal.13 T470 observation remains independent in the platform lane. Installed
+version and preservation evidence are captured; Arabic chart visual acceptance
+and the Founder acceptance decision remain open.
 
 ## Work rules
 

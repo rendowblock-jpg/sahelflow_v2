@@ -3,14 +3,14 @@
 SahelFlow is a Windows-first operations system for Algerian cash-on-delivery
 sellers.
 
-> **Protected-main baseline:** `b2776bd3ea8d879a475c26af9d0c720d666671a9`
+> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
-> **Founder-installed release:** Internal.11 reported installed; exact
-> identity/lifecycle evidence remains incomplete
+> **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Current program:** FD-028 Final Completion Program and Research-First Quality
-> Protocol, Phase 0 authority reset in progress
+> Protocol; Phase 0 complete and the first Phase 1 manual-confirmation vertical
+> research complete
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -21,10 +21,14 @@ MSI/signature verification, installed launch/reopen, authenticated hydrated UI
 twice, deterministic evidence, exact asset comparison, source-bound tag
 verification and publication.
 
-Internal.13 is not yet Founder-installed or accepted on the ThinkPad T470.
-Publication does not prove Founder AppData preservation, target T470 performance,
-the complete Golden COD Journey, whole-route AAA quality, provider certification
-or Stable readiness.
+Internal.13 is Founder-installed and exact-version confirmed on the ThinkPad T470.
+The preserved registry/database identity snapshot and authenticated Arabic UI were
+observed without deleting AppData. A stopped-process launch reached UI-ready in
+68.863 seconds and the immediate reopen in 31.834 seconds, both beyond the
+eight-second cold-launch contract. Arabic chart visual behavior and explicit
+Founder acceptance remain open. Publication or installation does not prove the
+complete Golden COD Journey, whole-route AAA quality, provider certification or
+Stable readiness.
 
 SahelFlow is a broad real internal product, not an empty prototype. Its strongest
 new canonical command/event/outbox/reservation/movement foundation is merged, but

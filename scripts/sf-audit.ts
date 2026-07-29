@@ -234,6 +234,15 @@ for (const [relativePath, markers] of entrypointChecks) {
  */
 const semanticRequirements: Array<[string, string[]]> = [
   [
+    "README.md",
+    [
+      "FD-028 Final Completion Program",
+      "Phase 0 complete",
+      "first Phase 1 manual-confirmation vertical",
+      "SahelFlow 1.0 Stable has not been released",
+    ],
+  ],
+  [
     "AGENTS.md",
     [
       "FD-028",
@@ -241,6 +250,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first gate",
       "Do not run source builds, full automated tests",
       "1.0.0-internal.13",
+      "Next implementation branch: `agent/phase1-manual-confirmation`",
     ],
   ],
   [
@@ -250,6 +260,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
+      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
     ],
   ],
   [
@@ -267,7 +278,8 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/system/ROADMAP.md",
     [
-      "**Active phase:** Phase 0",
+      "**Phase 0 status:** Complete",
+      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
       "# Phase 1 — Canonical Golden COD business core",
       "## Research gate",
       "# Phase 9 — Certification, representative beta and Stable",
@@ -277,7 +289,9 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/CURRENT_STATE.md",
     [
       "**Published release:** `1.0.0-internal.13`",
-      "Internal.13 is not yet Founder-installed",
+      "**Founder-installed release:** Internal.13",
+      "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
+      "Windows profile fingerprint SHA-256",
       "Commerce checkpoint safety",
       "The central completion task is therefore production adoption",
     ],
@@ -295,10 +309,13 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 0",
+      "**Active implementation branch:** None; Phase 1 implementation ready",
+      "**Next branch:** `agent/phase1-manual-confirmation`",
+      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+      "Phase 0 completed in PR #179",
       "first complete manual-order",
       "research-to-implementation gate",
-      "Issue #164 has already been converted",
+      "Issue #164 is the live non-authoritative",
     ],
   ],
   [
@@ -341,6 +358,11 @@ const exactStaleMarkers: Array<[string, string]> = [
     "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
   ],
   ["AGENTS.md", "The compressed program uses four planned sessions"],
+  ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
+  ["documentation/README.md", "**Active phase:** Phase 0"],
+  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 0"],
+  ["documentation/system/CURRENT_STATE.md", "Internal.13 is not yet Founder-installed"],
+  ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
 ];
 
 for (const [relativePath, marker] of exactStaleMarkers) {
@@ -370,6 +392,39 @@ const currentOwnedDocuments = [
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/research/RESEARCH.md",
 ];
+
+const postMergeFrontierPatterns: Array<{
+  name: string;
+  pattern: RegExp;
+}> = [
+  {
+    name: "temporary Phase 0 closeout branch",
+    pattern: /agent\/phase0-closeout/i,
+  },
+  {
+    name: "pre-merge closeout gate",
+    pattern:
+      /(?:\b(?:before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+)?merge(?:s|d)?\b|\bafter\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+merged|merges)\b)/i,
+  },
+];
+
+for (const relativePath of currentOwnedDocuments) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) continue;
+  const normalizedContent = normalizeSemanticText(
+    readFileSync(absolutePath, "utf8"),
+  );
+
+  for (const { name, pattern } of postMergeFrontierPatterns) {
+    if (pattern.test(normalizedContent)) {
+      findings.push({
+        kind: "drift",
+        file: relativePath,
+        detail: `post-merge authority still contains ${name}`,
+      });
+    }
+  }
+}
 
 const optionalListPrefix = String.raw`(?:(?:[-*+]|\d+\.)\s+)?`;
 const obsoleteSessionExecutionPatterns: Array<{

@@ -54,6 +54,9 @@ or updater authority changes.
   operational-state foundations plus generated route-risk inventory.
 - Corrected GitHub draft publication authority in PR #177 at
   `b2776bd3ea8d879a475c26af9d0c720d666671a9`.
+- Adopted FD-028 and the final Phase 0–9 completion program in PR #179, merged as
+  `18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
+  passed.
 - Protected run `30366866703` passed exact-source authority, signed build, staged
   readiness, MSI/signature verification, installed launch/reopen, authenticated
   hydrated UI twice, deterministic evidence, exact release-asset comparison,
@@ -61,9 +64,10 @@ or updater authority changes.
 - Published `1.0.0-internal.13` as GitHub latest with the signed MSI, its detached
   signature and public `latest.json` updater metadata containing that MSI
   signature.
-- Kept Founder installation and T470 acceptance open. Publication does not prove
-  Founder AppData preservation, target startup performance, route-level AAA,
-  complete Golden COD production adoption, provider certification or Stable.
+- Confirmed the Founder-installed Internal.13 executable and preserved T470
+  AppData identity/database snapshot. Startup remained over budget at 68.863
+  seconds from a stopped process and 31.834 seconds on immediate reopen; Arabic
+  chart visual behavior and explicit Founder acceptance remain open.
 
 ### Documentation truth reset
 
