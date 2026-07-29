@@ -191,6 +191,7 @@ describe("requireTrustedActor", () => {
     });
     expect("personId" in context.actor).toBe(false);
     expect(trustedActorModule.isTrustedActorContext(context)).toBe(true);
+    expect(Object.getOwnPropertySymbols(context)).toHaveLength(0);
   });
 
   it("cannot mint authority during setup mode", async () => {
@@ -261,5 +262,41 @@ describe("requireTrustedActor", () => {
     };
 
     expect(trustedActorModule.isTrustedActorContext(lookalike)).toBe(false);
+  });
+
+  it("does not trust a spread clone of a minted context", async () => {
+    const context = await trustedActorModule.requireTrustedActor();
+    const clone = {
+      ...context,
+      actor: {
+        ...context.actor,
+        sessionId: "forged-session",
+      },
+    };
+
+    expect(trustedActorModule.isTrustedActorContext(clone)).toBe(false);
+  });
+
+  it("does not trust an object inheriting from a minted context", async () => {
+    const context = await trustedActorModule.requireTrustedActor();
+    const inherited = Object.create(context) as Record<string, unknown>;
+    Object.defineProperty(inherited, "actor", {
+      value: {
+        kind: "compatibility_local_owner",
+        role: "owner",
+        sessionId: "forged-session",
+        compatibilityOnly: true,
+      },
+      enumerable: true,
+    });
+    Object.defineProperty(inherited, "shop", {
+      value: {
+        ...context.shop,
+        shopId: "forged-shop",
+      },
+      enumerable: true,
+    });
+
+    expect(trustedActorModule.isTrustedActorContext(inherited)).toBe(false);
   });
 });
