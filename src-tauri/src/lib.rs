@@ -24,6 +24,8 @@ use std::io::{Error as IoError, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
+#[cfg(not(debug_assertions))]
+use tauri::Manager;
 
 #[tauri::command]
 fn get_machine_id() -> String {
