@@ -19,6 +19,7 @@ function request(
   cookies: string[] = [`sf_runtime=${RUNTIME_TOKEN}`],
 ): NextRequest {
   const headers = new Headers(init.headers);
+  if (!headers.has("host")) headers.set("host", "127.0.0.1:49152");
   if (cookies.length > 0) headers.set("cookie", cookies.join("; "));
   return new NextRequest(`http://127.0.0.1:49152${pathname}`, {
     method: init.method,
@@ -77,7 +78,7 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("redirects non-setup pages to the setup ceremony", async () => {
+  it("redirects non-setup pages without changing the 127.0.0.1 origin", async () => {
     for (const pathname of [
       "/",
       "/login",
@@ -193,7 +194,7 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("keeps login and setup descendants protected in configured mode", async () => {
+  it("keeps login and setup descendants protected on the same origin", async () => {
     process.env.SF_AUTH_MODE = "configured";
     process.env.AUTH_SECRET = AUTH_SECRET;
 
