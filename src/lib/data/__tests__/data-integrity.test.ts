@@ -56,9 +56,9 @@
  *     Shared with `src/app/api/__tests__/helpers.ts` so this file interops
  *     with the API-route integration tests (same SQLite file, same Prisma
  *     connection — no double-cleanAll races).
- *   - Mocks `next/headers` so API routes that call `requireAuth()` pass
- *     (clean DB = no AuthSecret row = setup mode = allowed). The locale
- *     cookie is mutable per-test (scenario #12 sets it to ar/fr/en).
+ *   - Mocks `next/headers` with a real mutable seller-session cookie
+ *     created through `setupAuth()` + `createSession()` per scenario. The
+ *     locale cookie remains mutable for scenario #12 (ar/fr/en).
  *   - Mocks the delivery adapter (`@/lib/integrations/delivery`) so
  *     /api/delivery/create + /api/delivery/sync don't hit a real provider.
  *   - Mocks the e-commerce adapter registry (`@/lib/integrations/ecommerce`)
@@ -73,20 +73,25 @@ import { existsSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node
 import { join } from "node:path";
 
 // ── Mock next/headers ───────────────────────────────────────────────────────
-// requireAuth() reads cookies via next/headers. With a clean DB (no AuthSecret
-// row), isAuthenticated() returns true (setup mode). The locale cookie is
-// served per-test via a mutable holder (scenario #12 sets it to ar/fr/en).
+// Protected API routes resolve the real revocable session created in beforeEach.
+// Scenario #12 also mutates the locale cookie through the same isolated jar.
 const localeHolder: { value: string | undefined } = { value: undefined };
+const cookieJar = new Map<string, string>();
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: (name: string) => {
       if (name === "sahelflow-locale" && localeHolder.value) {
         return { value: localeHolder.value };
       }
-      return undefined;
+      const value = cookieJar.get(name);
+      return value === undefined ? undefined : { value };
     },
-    set: () => undefined,
-    delete: () => undefined,
+    set: (name: string, value: string) => {
+      cookieJar.set(name, value);
+    },
+    delete: (name: string) => {
+      cookieJar.delete(name);
+    },
   })),
 }));
 
@@ -158,6 +163,9 @@ import { POST as deliverySyncPost } from "@/app/api/delivery/sync/route";
 import { PATCH as deliveryPatch } from "@/app/api/delivery/[id]/route";
 import { GET as notificationsGet } from "@/app/api/notifications/route";
 import { GET as confirmationQueueGet } from "@/app/api/orders/confirmation-queue/route";
+import { createSession, setupAuth } from "@/lib/auth/server";
+
+const SAVED_AUTH_SECRET = process.env.AUTH_SECRET;
 
 // ── Test setup ──────────────────────────────────────────────────────────────
 
@@ -192,12 +200,17 @@ async function cleanAll() {
     rawDb.wilayaRiskProfile.deleteMany(),
     rawDb.phoneReputation.deleteMany(),
   ]);
-  // Reset locale cookie between tests
+  // Reset request authority and locale between tests.
+  cookieJar.clear();
   localeHolder.value = undefined;
+  delete process.env.AUTH_SECRET;
 }
 
 beforeEach(async () => {
   await cleanAll();
+  const { secret } = await setupAuth("12345678");
+  process.env.AUTH_SECRET = secret;
+  await createSession("127.0.0.1");
   mockDeliveryAdapter.createShipment.mockReset();
   mockDeliveryAdapter.syncTracking.mockReset();
   listOrdersMock.mockReset();
@@ -212,6 +225,8 @@ afterAll(async () => {
   // next file's setup, e.g. `get_sales_by_wilaya > returns empty array when
   // no non-cancelled orders exist` would find 1 order instead of 0.)
   await cleanAll();
+  if (SAVED_AUTH_SECRET === undefined) delete process.env.AUTH_SECRET;
+  else process.env.AUTH_SECRET = SAVED_AUTH_SECRET;
   await rawDb.$disconnect();
 });
 
