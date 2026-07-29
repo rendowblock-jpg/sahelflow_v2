@@ -14,6 +14,7 @@ $roamingRoot = Join-Path $env:APPDATA "com.sahelflow.desktop"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $runtimeUiReadyPath = Join-Path $roamingRoot "runtime-ui-ready.json"
 $runtimeUiDiagnosticPath = Join-Path $roamingRoot "runtime-ui-diagnostic.json"
+$runtimeShutdownDiagnosticPath = Join-Path $roamingRoot "runtime-shutdown-diagnostic.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $startupTracePath = Join-Path $roamingRoot "startup-trace.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
@@ -323,6 +324,33 @@ function Wait-ForNodeCompileCache {
     throw "${Phase}: packaged Node did not persist its version-scoped compile cache."
 }
 
+function Wait-ForRuntimeShutdownDiagnostic {
+    param(
+        [Parameter(Mandatory = $true)][string]$InstanceId,
+        [Parameter(Mandatory = $true)][string]$Phase
+    )
+
+    $deadline = (Get-Date).AddSeconds(15)
+    do {
+        $diagnostic = Read-JsonFile -Path $runtimeShutdownDiagnosticPath
+        if (
+            $null -ne $diagnostic -and
+            $diagnostic.formatVersion -eq 1 -and
+            $diagnostic.state -eq "flushed" -and
+            $diagnostic.code -eq "RUNTIME_COMPILE_CACHE_FLUSHED" -and
+            $diagnostic.instanceId -eq $InstanceId -and
+            $diagnostic.appVersion -eq $expectedVersion -and
+            [int64]$diagnostic.cacheFileCount -gt 0 -and
+            [int64]$diagnostic.cacheBytes -gt 0
+        ) {
+            return $diagnostic
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    throw "${Phase}: no matching durable shutdown/cache receipt was persisted."
+}
+
 function Close-SahelFlowNormally {
     param(
         [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process,
@@ -374,17 +402,18 @@ if ((Get-SahelFlowProcesses).Count -ne 0) {
 $baseline = Get-BusinessIdentity
 $launches = @()
 $closures = @()
+$lifecyclePasses = 3
 
-for ($attempt = 1; $attempt -le 2; $attempt++) {
+for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     Remove-Item -LiteralPath $runtimeEndpointPath, $runtimeUiReadyPath, `
-        $runtimeUiDiagnosticPath, $startupDiagnosticPath, $startupTracePath `
+        $runtimeUiDiagnosticPath, $runtimeShutdownDiagnosticPath, `
+        $startupDiagnosticPath, $startupTracePath `
         -Force -ErrorAction SilentlyContinue
 
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
     $launch = Wait-ForAuthenticatedUi -Process $process -StartedAt $startedAt `
         -Phase "ui-launch-$attempt"
-    $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-launch-$attempt"
     $requiredStages = @(
         'native-started',
         'workspace-window-pending',
@@ -431,12 +460,10 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     ) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
-    $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
     $launch | Add-Member -NotePropertyName uiDiagnostic -NotePropertyValue $uiDiagnostic
-    $launches += $launch
 
     $endpointEvidence = Join-Path $evidenceRoot "runtime-endpoint-ui-launch-$attempt.json"
     $uiEvidence = Join-Path $evidenceRoot "runtime-ui-ready-launch-$attempt.json"
@@ -451,6 +478,17 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
         -Process $process `
         -WindowHandles @($launch.visibleWindowHandles) `
         -Phase "ui-close-$attempt"
+    $shutdownDiagnostic = Wait-ForRuntimeShutdownDiagnostic `
+        -InstanceId $launch.endpoint.instanceId `
+        -Phase "ui-close-$attempt"
+    $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-close-$attempt"
+    $shutdownEvidence = Join-Path $evidenceRoot "runtime-shutdown-launch-$attempt.json"
+    Copy-Item -LiteralPath $runtimeShutdownDiagnosticPath `
+        -Destination $shutdownEvidence -Force
+    $launch | Add-Member -NotePropertyName shutdownDiagnostic `
+        -NotePropertyValue $shutdownDiagnostic
+    $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
+    $launches += $launch
 
     $current = Get-BusinessIdentity
     if (
@@ -468,11 +506,13 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     }
 }
 
-if ($launches.Count -ne 2 -or $closures.Count -ne 2) {
-    throw "Installed UI verification did not complete two launch and normal-close passes."
+if ($launches.Count -ne $lifecyclePasses -or $closures.Count -ne $lifecyclePasses) {
+    throw "Installed UI verification did not complete all $lifecyclePasses launch and normal-close passes."
 }
-if ($launches[0].endpoint.instanceId -eq $launches[1].endpoint.instanceId) {
-    throw "Second authenticated UI launch reused the first runtime instance identity."
+$instanceIds = @($launches | ForEach-Object { $_.endpoint.instanceId })
+$uniqueInstanceIds = @($instanceIds | Sort-Object -Unique)
+if ($uniqueInstanceIds.Count -ne $instanceIds.Count) {
+    throw "An authenticated UI launch reused an earlier runtime instance identity."
 }
 
 $result = [ordered]@{

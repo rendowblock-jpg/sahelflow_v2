@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
-import { CommandPalette } from "@/components/command-palette";
-import { CheatsheetModal } from "@/components/shared/cheatsheet-modal";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { Locale } from "@/lib/i18n";
 import { useI18n } from "@/hooks/use-i18n";
+
+const CommandPalette = dynamic(() =>
+  import("@/components/command-palette").then((module) => module.CommandPalette),
+);
+const CheatsheetModal = dynamic(() =>
+  import("@/components/shared/cheatsheet-modal").then(
+    (module) => module.CheatsheetModal,
+  ),
+);
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -97,10 +105,17 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
       </div>
 
       {/* Command Palette */}
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      {commandOpen && (
+        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      )}
 
       {/* Keyboard Shortcuts Cheatsheet (? to open) */}
-      <CheatsheetModal open={cheatsheetOpen} onOpenChange={setCheatsheetOpen} />
+      {cheatsheetOpen && (
+        <CheatsheetModal
+          open={cheatsheetOpen}
+          onOpenChange={setCheatsheetOpen}
+        />
+      )}
 
     </div>
   );

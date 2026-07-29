@@ -20,9 +20,13 @@ mod startup_recovery;
 use runtime_protocol::RuntimeProtocol;
 use runtime_supervisor::{RestartDecision, RuntimeSupervisor};
 use std::ffi::OsString;
-use std::io::{Error as IoError, ErrorKind};
+use std::io::{Error as IoError, ErrorKind, Read, Write};
+use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
+#[cfg(not(debug_assertions))]
+use tauri::Manager;
 
 #[tauri::command]
 fn get_machine_id() -> String {
@@ -109,12 +113,44 @@ fn get_machine_id() -> String {
     return String::new();
 }
 
+const SHUTDOWN_IDLE: u8 = 0;
+const SHUTDOWN_RUNNING: u8 = 1;
+const SHUTDOWN_COMPLETE: u8 = 2;
+
+/// Coordinates one normal-close owner without blocking Tauri's event loop.
+#[derive(Default)]
+struct ShutdownCoordinator {
+    phase: AtomicU8,
+}
+
+impl ShutdownCoordinator {
+    fn begin(&self) -> bool {
+        self.phase
+            .compare_exchange(
+                SHUTDOWN_IDLE,
+                SHUTDOWN_RUNNING,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .is_ok()
+    }
+
+    fn finish(&self) {
+        self.phase.store(SHUTDOWN_COMPLETE, Ordering::Release);
+    }
+
+    fn is_finished(&self) -> bool {
+        self.phase.load(Ordering::Acquire) == SHUTDOWN_COMPLETE
+    }
+}
+
 /// Handles to spawned child processes (Next.js server + WhatsApp sidecar)
 /// kept in app state so they can be killed on app exit.
 struct SpawnedChildren {
     server: Option<child_containment::ContainedChild>,
     sidecar: Option<child_containment::ContainedChild>,
     sidecar_starting: Option<u64>,
+    shutdown_authority: Option<RuntimeShutdownAuthority>,
     supervisor: RuntimeSupervisor,
 }
 
@@ -124,6 +160,7 @@ impl SpawnedChildren {
             server: None,
             sidecar: None,
             sidecar_starting: None,
+            shutdown_authority: None,
             supervisor: RuntimeSupervisor::default(),
         }
     }
@@ -131,6 +168,15 @@ impl SpawnedChildren {
     fn kill_all(&mut self) {
         self.supervisor.begin_shutdown();
         self.sidecar_starting = None;
+        if self.server.is_some() {
+            if let Some(authority) = self.shutdown_authority.take() {
+                if let Err(error) = authority.flush_compile_cache() {
+                    eprintln!(
+                        "[sahelflow] compile cache could not be flushed before shutdown: {error}"
+                    );
+                }
+            }
+        }
         if let Some(child) = self.server.take() {
             match stop_process_tree(&child, "Next.js server") {
                 Ok(()) => eprintln!("[sahelflow] killed Next.js server tree on exit"),
@@ -282,6 +328,22 @@ pub fn run() {
             .build(),
         )
         .invoke_handler(tauri::generate_handler![get_machine_id])
+        .on_window_event(|_window, _event| {
+            #[cfg(not(debug_assertions))]
+            if _window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = _event {
+                    // Keep the WebView and event loop alive while the contained
+                    // trees stop off-thread. Repeated close requests share the
+                    // same coordinator and cannot start competing shutdowns.
+                    api.prevent_close();
+                    // Remove the workspace from interaction synchronously so a
+                    // seller cannot begin another mutation while the shutdown
+                    // worker flushes the cache and stops the contained trees.
+                    let _ = _window.hide();
+                    begin_normal_close(_window.app_handle().clone());
+                }
+            }
+        })
         .setup(|app| {
             #[cfg(not(debug_assertions))]
             {
@@ -289,6 +351,7 @@ pub fn run() {
                 let app_data_dir = app.path().app_data_dir()?;
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
+                app.manage(ShutdownCoordinator::default());
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(
@@ -402,40 +465,62 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
-                let app_window_close = matches!(
-                    &_event,
-                    tauri::RunEvent::WindowEvent {
-                        label,
-                        event: tauri::WindowEvent::CloseRequested { .. },
-                        ..
-                    } if label == "main"
+                let shutdown = matches!(
+                    _event,
+                    tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
                 );
-                let shutdown = app_window_close
-                    || matches!(
-                        _event,
-                        tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
-                    );
                 if shutdown {
-                    if let Some(state) =
-                        _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
-                    {
-                        if let Ok(mut children) = state.lock() {
-                            children.kill_all();
+                    let normal_close_finished = _app_handle
+                        .try_state::<ShutdownCoordinator>()
+                        .is_some_and(|state| state.is_finished());
+                    if !normal_close_finished {
+                        if let Some(state) =
+                            _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
+                        {
+                            if let Ok(mut children) = state.lock() {
+                                children.kill_all();
+                            }
                         }
                     }
                     if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
                         runtime_protocol::remove_manifest(&app_data_dir);
                     }
                 }
-                if app_window_close {
-                    // AppHandle::exit requests another event-loop transition. A
-                    // native close request is already executing on that loop, so
-                    // finish Tauri cleanup synchronously and exit immediately.
-                    _app_handle.cleanup_before_exit();
-                    std::process::exit(0);
-                }
             }
         });
+}
+
+#[cfg(not(debug_assertions))]
+fn begin_normal_close(app: tauri::AppHandle) {
+    use tauri::Manager;
+
+    let Some(coordinator) = app.try_state::<ShutdownCoordinator>() else {
+        eprintln!("[sahelflow] CRITICAL: shutdown coordinator is unavailable");
+        app.exit(1);
+        return;
+    };
+    if !coordinator.begin() {
+        return;
+    }
+
+    std::thread::spawn(move || {
+        if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+            if let Ok(mut children) = state.lock() {
+                children.kill_all();
+            }
+        }
+        if let Ok(app_data_dir) = app.path().app_data_dir() {
+            runtime_protocol::remove_manifest(&app_data_dir);
+        }
+        if let Some(coordinator) = app.try_state::<ShutdownCoordinator>() {
+            coordinator.finish();
+        }
+
+        // AppHandle::exit drives Tauri's ExitRequested/Exit lifecycle. App::run
+        // owns final framework cleanup and process exit after the off-thread
+        // child teardown has completed.
+        app.exit(0);
+    });
 }
 
 /// Environment passed only to the mandatory application server.
@@ -768,6 +853,8 @@ fn spawn_runtime_generation(
                 } else if let Err(error) = children.supervisor.register_ready(generation) {
                     Err(IoError::other(error))
                 } else {
+                    children.shutdown_authority =
+                        Some(RuntimeShutdownAuthority::from_protocol(&runtime_protocol));
                     children.server = Some(server_child.clone());
                     Ok(())
                 }
@@ -982,6 +1069,7 @@ fn take_terminated_generation(
         }
         if children.sidecar_starting != Some(generation) {
             children.server.take();
+            children.shutdown_authority = None;
             return Ok(Some(children.sidecar.take()));
         }
         drop(children);
@@ -1141,6 +1229,7 @@ fn fail_runtime_generation(
                     return None;
                 }
                 children.sidecar_starting = None;
+                children.shutdown_authority = None;
                 Some((children.server.take(), children.sidecar.take()))
             })
         });
@@ -1521,11 +1610,57 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
         .any(|allowed| key.eq_ignore_ascii_case(allowed))
 }
 
+/// In-memory authority for the one authenticated shutdown-only cache flush.
+/// The runtime token is never serialized or written to diagnostics.
+struct RuntimeShutdownAuthority {
+    app_port: u16,
+    instance_id: String,
+    runtime_token: String,
+}
+
+impl RuntimeShutdownAuthority {
+    fn from_protocol(protocol: &RuntimeProtocol) -> Self {
+        Self {
+            app_port: protocol.app_port(),
+            instance_id: protocol.instance_id().to_string(),
+            runtime_token: protocol.runtime_token().to_string(),
+        }
+    }
+
+    fn flush_compile_cache(&self) -> Result<(), IoError> {
+        const RESPONSE_LIMIT: u64 = 8 * 1024;
+        // Connection, write and read can consume at most seven seconds in total,
+        // leaving 23 seconds of the installed close gate for both 10-second
+        // contained-tree stop bounds and Tauri lifecycle completion.
+        const IO_TIMEOUT: Duration = Duration::from_secs(3);
+
+        let address = SocketAddr::from((Ipv4Addr::LOCALHOST, self.app_port));
+        let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(1))?;
+        stream.set_read_timeout(Some(IO_TIMEOUT))?;
+        stream.set_write_timeout(Some(IO_TIMEOUT))?;
+        let request = format!(
+            "POST /api/internal/runtime-shutdown HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nx-sahelflow-runtime-instance: {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            self.app_port, self.runtime_token, self.instance_id
+        );
+        stream.write_all(request.as_bytes())?;
+
+        let mut response = Vec::new();
+        stream.take(RESPONSE_LIMIT).read_to_end(&mut response)?;
+        let response = String::from_utf8_lossy(&response);
+        if !response.starts_with("HTTP/1.1 200 ") && !response.starts_with("HTTP/1.0 200 ") {
+            return Err(IoError::other(
+                "the authenticated runtime shutdown flush did not return HTTP 200",
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod child_environment_tests {
     use super::{
         is_windows_safe_parent_environment_key, node_entrypoint_environment_value,
-        summarize_runtime_stderr,
+        summarize_runtime_stderr, ShutdownCoordinator,
     };
     use std::ffi::OsStr;
     use std::path::Path;
@@ -1610,5 +1745,18 @@ mod child_environment_tests {
     #[test]
     fn empty_runtime_stderr_has_no_summary() {
         assert_eq!(summarize_runtime_stderr(" \r\n\t\0 "), None);
+    }
+
+    #[test]
+    fn normal_close_has_one_shutdown_owner_and_a_visible_completion_state() {
+        let coordinator = ShutdownCoordinator::default();
+
+        assert!(coordinator.begin());
+        assert!(!coordinator.begin());
+        assert!(!coordinator.is_finished());
+
+        coordinator.finish();
+        assert!(coordinator.is_finished());
+        assert!(!coordinator.begin());
     }
 }

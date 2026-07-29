@@ -11,7 +11,6 @@ import {
 import { dirname, resolve } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
-import { flushPackagedCompileCache } from "@/lib/runtime/compile-cache";
 import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
 
 export const dynamic = "force-dynamic";
@@ -158,11 +157,6 @@ export async function POST(request: NextRequest) {
     instanceId,
     appVersion,
   });
-
-  // Implementation lives in compile-cache.ts and uses
-  // process.getBuiltinModule?.("node:module") plus moduleApi.flushCompileCache().
-  // Keep this route focused on the authenticated UI-ready transaction.
-  flushPackagedCompileCache();
 
   try {
     writeJsonAtomically(ackPath, acknowledgment);

@@ -9,6 +9,7 @@ import {
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
   RUNTIME_READY_PATH,
+  RUNTIME_SHUTDOWN_PATH,
   RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
@@ -44,6 +45,42 @@ export async function proxy(request: NextRequest) {
     if (!expected || !supplied || !constantTimeEqual(supplied, expected)) {
       return NextResponse.json(
         { status: "rejected", code: "RUNTIME_CREDENTIAL_REJECTED" },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // Normal close is initiated by the native desktop after the WebView has
+  // been hidden. It cannot present the HttpOnly WebView cookie or a seller
+  // session, so authenticate this one loopback-only path with the same
+  // memory-only launch authority that the route validates again.
+  if (pathname === RUNTIME_SHUTDOWN_PATH) {
+    const loopback =
+      request.nextUrl.hostname === "127.0.0.1" ||
+      request.nextUrl.hostname === "localhost";
+    const expectedToken = process.env.SF_RUNTIME_TOKEN;
+    const expectedInstanceId = process.env.SF_RUNTIME_INSTANCE_ID;
+    const authorization = request.headers.get("authorization") ?? "";
+    const suppliedToken = /^Bearer\s+([0-9a-f]{64})$/i.exec(authorization)?.[1];
+    const suppliedInstanceId = request.headers.get(
+      "x-sahelflow-runtime-instance",
+    );
+    if (
+      request.method !== "POST" ||
+      !loopback ||
+      !expectedToken ||
+      !/^[0-9a-f]{64}$/i.test(expectedToken) ||
+      !expectedInstanceId ||
+      !/^[0-9a-f]{32}$/i.test(expectedInstanceId) ||
+      !suppliedToken ||
+      !suppliedInstanceId ||
+      !/^[0-9a-f]{32}$/i.test(suppliedInstanceId) ||
+      !constantTimeEqual(suppliedToken, expectedToken) ||
+      !constantTimeEqual(suppliedInstanceId, expectedInstanceId)
+    ) {
+      return NextResponse.json(
+        { status: "rejected", code: "RUNTIME_SHUTDOWN_CREDENTIAL_REJECTED" },
         { status: 401, headers: { "Cache-Control": "no-store" } },
       );
     }

@@ -533,8 +533,9 @@ $installedRuntimeIdentity = $null
 $registryIdentity = $null
 $databaseIdentity = $null
 $registryMigrationIdentity = $null
+$lifecyclePasses = 3
 
-for ($attempt = 1; $attempt -le 2; $attempt++) {
+for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     if ($attempt -eq 1) {
         Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
     }
@@ -681,7 +682,7 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
             $currentInstalledRuntimeIdentity.nodeLicenseSha256 -ne $installedRuntimeIdentity.nodeLicenseSha256 -or
             $currentInstalledRuntimeIdentity.bunProductionRuntimePresent -or
             $currentInstalledRuntimeIdentity.appDataRuntimeCacheEntryCount -ne 0) {
-            throw "Second launch changed the protected installed runtime or staged an AppData copy."
+            throw "A later launch changed the protected installed runtime or staged an AppData copy."
         }
         if ($currentRegistryIdentity.workspaceId -ne $registryIdentity.workspaceId -or
             $currentRegistryIdentity.installationId -ne $registryIdentity.installationId -or
@@ -689,17 +690,24 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
             $currentRegistryIdentity.activeShopId -ne $registryIdentity.activeShopId -or
             $currentRegistryIdentity.shopIncarnationId -ne $registryIdentity.shopIncarnationId -or
             $currentRegistryIdentity.registrySha256 -ne $registryIdentity.registrySha256) {
-            throw "Second launch changed registry authority."
+            throw "A later launch changed registry authority."
         }
         if ($currentDatabaseIdentity.path -ne $databaseIdentity.path -or
             $currentDatabaseIdentity.length -ne $databaseIdentity.length -or
             $currentDatabaseIdentity.sha256 -ne $databaseIdentity.sha256) {
-            throw "Second launch changed the active shop database identity."
-        }
-        if ($launches[1].endpoint.instanceId -eq $launches[0].endpoint.instanceId) {
-            throw "Second launch reused the first runtime instance identity."
+            throw "A later launch changed the active shop database identity."
         }
     }
+}
+
+$instanceIds = @(
+    $launches |
+        Where-Object { $_.outcome -eq "ready" } |
+        ForEach-Object { $_.endpoint.instanceId }
+)
+$uniqueInstanceIds = @($instanceIds | Sort-Object -Unique)
+if ($uniqueInstanceIds.Count -ne $instanceIds.Count) {
+    throw "An installed launch reused an earlier runtime instance identity."
 }
 
 $result = [ordered]@{
@@ -734,8 +742,8 @@ if ($failed.Count -gt 0) {
     throw "Installed SahelFlow did not reach ready state: $($failed[0].outcome)."
 }
 
-if ($launches.Count -ne 2 -or $closures.Count -ne 2) {
-    throw "Installed SahelFlow did not complete both launch and normal-close passes."
+if ($launches.Count -ne $lifecyclePasses -or $closures.Count -ne $lifecyclePasses) {
+    throw "Installed SahelFlow did not complete all $lifecyclePasses launch and normal-close passes."
 }
 
 Write-Host "Installed MSI launch/reopen proof passed for $expectedVersion."
