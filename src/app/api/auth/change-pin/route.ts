@@ -24,11 +24,17 @@ export const POST = withErrorHandler(async (req: Request) => {
       { status: 400 },
     );
   }
-  const result = await changeAuthPin(parsed.data.currentPin, parsed.data.newPin);
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const result = await changeAuthPin(
+    parsed.data.currentPin,
+    parsed.data.newPin,
+    ip,
+  );
   if (!result.changed) {
     return NextResponse.json({ error: "Current PIN is incorrect" }, { status: 401 });
   }
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  void auditLog("auth.pin.change", {}, ip);
-  return NextResponse.json({ success: true });
+
+  void auditLog("auth.pin.change", { sessionsRotated: true }, ip);
+  return NextResponse.json({ success: true, sessionRotated: true });
 }, "POST /api/auth/change-pin");
