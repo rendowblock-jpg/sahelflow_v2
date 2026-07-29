@@ -1,142 +1,191 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative founder-approved register
-> **Consolidated:** 2026-07-27
-> **Supersedes:** scattered Excellence Reset addenda and conflicting provisional product policies
+> **Status:** Authoritative Founder-approved register
+> **Consolidated:** 2026-07-29
+> **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates the approved product decisions. Detailed engineering mechanisms remain subject to the Architecture Reset, security review, provider certification, and evidence gates, but engineering may not contradict these product policies without a new founder decision.
+This register consolidates approved product and execution decisions. Engineering
+mechanisms remain subject to architecture, research, security review, provider
+certification and evidence gates, but engineering may not contradict these
+policies without a new numbered Founder decision.
 
 ---
 
 ## FD-001 — One complete one-time edition
 
 - Public price is governed by FD-012: **35,000 DZD one-time**.
-- One complete edition; no subscription, feature tiers, team plan, per-seat fee, or mandatory recurring SahelFlow fee.
-- Buyer receives perpetual local use of the purchased major release.
-- Same-major security, compatibility, bug-fix, and quality updates are included under FD-013.
+- One complete edition; no subscription, feature tiers, team plan, per-seat fee or
+  mandatory recurring SahelFlow fee.
+- The buyer receives perpetual local use of the purchased major release.
+- Same-major security, compatibility, bug-fix and quality updates are included
+  under FD-013.
 - Future major releases may be optional paid upgrades.
 - No forced upgrade or silent cross-major migration.
 
 ## FD-002 — Complete lockout after trial expiry
 
-- Trial lasts 7 days.
-- Expiry blocks the entire operational product, including desktop, API, sidecars, background jobs, mobile, cached routes, integrations, storefront management, AI, and exports.
-- Only the dedicated licensing/payment/extension/support/minimal-diagnostic shell remains.
-- Data is preserved untouched and becomes accessible after valid activation.
-- Paid permanent-license recovery is separate from unpaid trial lockout.
+- Trial lasts exactly seven days.
+- Expiry blocks the operational product, including desktop, API, sidecars,
+  background jobs, remote clients, cached routes, integrations, storefront
+  management, AI and exports.
+- Only licensing, payment, extension, support and minimal diagnostics remain.
+- Data is preserved and becomes accessible after valid activation.
+- Paid permanent-license recovery is distinct from unpaid trial lockout.
 
 ## FD-003 — Online machine-bound signed trial
 
 - Initial trial issuance requires the minimal online licensing service.
 - One trial per privacy-preserving recognized machine identity.
-- Reinstall or local-state deletion recovers the original issue/expiry dates; it never creates a new trial.
-- Trial/extension signing key is separate from the offline permanent-license key.
+- Reinstall or local-state deletion recovers the original issue/expiry; it never
+  creates a new trial.
+- Trial/extension signing authority is separate from the offline permanent key.
 - Permanent licenses validate offline.
-- Production license state uses a Tauri/OS-protected storage abstraction, not browser localStorage.
-- Clock rollback, replay, key rotation, service outage, and false machine mismatch require tested recovery paths.
+- Production license state uses Tauri/OS-protected storage, not browser
+  localStorage.
+- Clock rollback, replay, key rotation, outage and false machine mismatch require
+  tested recovery.
 
 ## FD-004 — Full operational Android/browser companion with limited administration
 
-- Installable PWA and responsive browser product are first-class operational companions.
-- Desktop remains canonical; remote clients receive minimized projections and submit authenticated, versioned, idempotent commands.
-- Approved workflows include dashboards, orders, confirmation, AI-draft review, customer contact handoff, notes, customer risk/history, products/stock, delivery/returns, inbox preview, limited analytics, team queues, and command status.
-- Licensing, key recovery, backup restore, secrets, destructive shop administration, advanced diagnostics, and other high-risk administration remain desktop-only until separately certified.
+- Installable PWA and responsive browser product are first-class operational
+  companions.
+- Desktop remains canonical; remote clients receive minimized projections and
+  submit authenticated, versioned, idempotent commands.
+- Approved work includes dashboards, orders, confirmation, AI-draft review,
+  customer contact handoff, notes, customer risk/history, products/stock,
+  delivery/returns, inbox preview, limited analytics, team queues and command
+  status.
+- Licensing, key recovery, backup restore, secrets, destructive shop
+  administration and other high-risk administration remain desktop-only until
+  separately certified.
 
 ## FD-005 — Hybrid Cloudflare control plane and cost discipline
 
-- Paid Cloudflare platform is used for Workers, D1, Queues, hibernating Durable Objects, R2, and approved custom-hostname infrastructure.
+- Paid Cloudflare platform is used for Workers, D1, Queues, hibernating Durable
+  Objects, R2 and approved custom-hostname infrastructure.
 - Desktop remains the authoritative business database.
-- Cloud must not become an undocumented full business-database replica.
+- Cloud never becomes an undocumented full operational database replica.
 - Queues and ephemeral Durable Object state are never the sole durable record.
-- Private projections, commands, results, notifications, and backups use application-layer encryption.
-- Valid permanent local desktop operation must survive cloud outage.
-- 20% of every sale enters a continuity reserve; at 35,000 DZD this is 7,000 DZD.
-- Maintain at least 24 months of forecast infrastructure coverage; revalidate provider pricing quarterly.
+- Private projections, commands, results, notifications and backups use
+  application-layer encryption.
+- Valid permanent local operation survives cloud outage.
+- 20% of each base sale enters the continuity reserve: 7,000 DZD at the approved
+  price.
+- Maintain at least 24 months of forecast infrastructure coverage and revalidate
+  provider pricing quarterly.
 
 ## FD-006 — Shared multi-tenant COD storefront and AAA standard
 
-- One shared storefront platform, not one deployment/repository per seller.
-- One hosted storefront per entitled shop with default `seller-slug.sahelflow.app` hostname and certified custom-subdomain capability.
-- Immutable releases, private preview, atomic publish, history, and rollback.
-- Desktop owns physical stock; cloud may consume only delegated storefront allocation.
-- Checkout is durably accepted before customer success and remains pending until canonical desktop import.
-- Three distinct launch templates: Minimal Conversion, Visual Editorial, Bold COD Landing.
-- North-star metric: profitable confirmed and delivered COD orders per 1,000 qualified visitors.
-- `Best` claims require comparative and production evidence.
+- One shared storefront platform, not one repository/deployment per seller.
+- One hosted storefront per entitled shop with default
+  `seller-slug.sahelflow.app` and certified custom-subdomain capability.
+- Immutable releases, private preview, atomic publish, history and rollback.
+- Desktop owns physical stock; cloud may consume only delegated storefront
+  allocation.
+- Checkout is durably accepted before customer success and remains pending until
+  canonical desktop import.
+- Three launch templates: Minimal Conversion, Visual Editorial and Bold COD
+  Landing.
+- North-star metric: profitable confirmed and delivered COD orders per 1,000
+  qualified visitors.
+- “Best” claims require comparative and production evidence.
 
 ## FD-007 — Zero-knowledge backup and disaster recovery
 
-- Mandatory cloud backup for public launch.
+- Cloud backup is mandatory for public launch.
 - Encrypt on desktop before upload.
-- Per-license Backup Root Key; unique key per backup; envelope encryption.
+- Per-license Backup Root Key, unique key per backup and envelope encryption.
 - Seller recovery kit enables independent restore.
-- Optional assisted recovery requires both an enrolled-device share and separate founder offline share.
+- Optional assisted recovery requires an enrolled-device share and separate
+  Founder offline share.
 - Neither SahelFlow nor Cloudflare alone can decrypt backups.
-- Normal retention: 7 daily, 4 weekly, 6 monthly, and up to 3 pinned points per shop.
-- Base backup boundary: 20 GB actual encrypted storage shared across included shops.
-- Trial receives one rolling encrypted cloud point, retained 30 days after expiry.
-- Restore must be atomic, integrity-checked, migration-safe, and periodically tested.
+- Normal retention: 7 daily, 4 weekly, 6 monthly and up to 3 pinned points per
+  shop.
+- Base allowance: 20 GB actual encrypted backup storage shared across included
+  shops.
+- Trial receives one rolling encrypted point retained 30 days after expiry.
+- Restore is atomic, integrity checked, migration safe and periodically tested.
 
 ## FD-008 — Hybrid commerce synchronization
 
-- Webhooks/REST Hooks provide speed; scheduled reconciliation provides correctness.
+- Webhooks/REST Hooks provide speed; scheduled reconciliation provides
+  correctness.
 - Webhooks are never the sole source of truth.
-- Provider events are authenticated, deduplicated, durably stored before acknowledgement, encrypted before persistent private storage, and processed idempotently.
+- Provider events are authenticated, deduplicated, durably stored before
+  acknowledgement, encrypted before persistent private storage and processed
+  idempotently.
 - Checkpoints cannot advance past uncommitted or untracked failures.
-- Shopify and WooCommerce: full hybrid after certification.
-- YouCan: conservative new-order hooks plus polling and wider reconciliation until update/cancellation hooks are proven.
-- Target normal online event-to-desktop import p95 is 5 seconds; reconciliation must repair intentionally dropped events.
-- No material incremental synchronization cost at launch scale beyond the existing Cloudflare budget.
+- Shopify and WooCommerce use full hybrid synchronization after certification.
+- YouCan uses conservative hooks plus polling and wider reconciliation until
+  update/cancellation behavior is proven.
+- Target normal online event-to-desktop import p95 is five seconds.
+- Reconciliation must repair intentionally dropped events.
 
 ## FD-009 — Professional manual BaridiMob/CCP verification
 
-- No payment gateway/API, account scraping, OCR approval, SMS-reading bot, credential storage, or automatic permanent-license issuance.
-- Payment request is structured, versioned, machine/license bound, and priced through one authority.
+- No payment gateway/API, account scraping, OCR approval, SMS-reading bot,
+  credential storage or automatic permanent-license issuance.
+- Payment request is structured, versioned, machine/license bound and priced
+  through one authority.
 - Customer evidence is supporting information only.
 - Founder verifies the actual receiving-account transaction.
 - Payment verification and license issuance are separate durable state machines.
 - Permanent private signing key remains offline.
-- Fraud, duplicate payment, reused receipt, repeated approval, amount mismatch, interrupted issuance, and stale founder session require explicit controls.
+- Fraud, duplicate payment, reused receipt, amount mismatch, interrupted issuance
+  and stale Founder session require explicit controls.
 
 ## FD-010 — Low-end-first Windows performance and broad compatibility
 
-- Same product capability on low-end systems; adaptive execution may change timing/batching, not feature ownership or correctness.
-- Primary floor: x64 Windows, dual-core class CPU, 4 GB RAM, HDD or SSD, 1366×768, required runtime capabilities.
-- Target functional compatibility for Windows 10 22H2, unsupported-CPU Windows 11, Tiny11/modified builds, HDD systems, VMs, and systems without TPM/Secure Boot where required components exist.
+- Same product capability on low-end systems; adaptive execution may change
+  timing/batching, never authority or correctness.
+- Primary floor: x64 Windows, dual-core class CPU, 4 GB RAM, HDD or SSD,
+  1366×768 and required runtime capabilities.
+- Target functional compatibility for Windows 10 22H2, unsupported-CPU Windows
+  11, Tiny11/modified builds, HDD systems and VMs where required components exist.
 - Security certification remains distinct from functional compatibility.
-- Founder ThinkPad T470 is a mandatory reference device; maintain a materially weaker 4 GB dual-core floor machine.
-- Architecture must change if it cannot meet the envelope.
-- Low-resource mode limits heavy concurrency, streams work, virtualizes tables, bounds sidecars/caches, and keeps UI responsive.
+- Founder ThinkPad T470 is mandatory reference hardware; maintain a materially
+  weaker 4 GB dual-core floor device.
+- Architecture changes if it cannot meet the envelope.
+- Low-resource mode limits heavy concurrency, streams work, virtualizes tables,
+  bounds sidecars/caches and preserves UI responsiveness.
 
 ## FD-011 — Professional multi-user team operations
 
-- One owner plus 10 active team members in the complete edition.
+- One owner plus 10 active team members.
 - Two personal devices per team member.
-- Individual cryptographic identities; shared staff accounts prohibited.
-- Per-shop roles, custom permissions, field-level access, workgroups, assignments, queues, comments, mentions, handovers, and optional high-risk approval workflows.
+- Individual cryptographic identities; shared staff accounts are prohibited.
+- Per-shop roles, custom permissions, field access, workgroups, assignments,
+  queues, comments, mentions, handovers and optional high-risk approvals.
 - Local profiles and secure remote browser/PWA access.
 - Immediate revocation and complete trusted-actor audit.
 - No client-only authorization or silent last-write-wins.
-- Architecture must be tested for at least 25 active members.
-- No new mandatory SMS/email/SSO provider or per-seat charge.
+- Architecture is tested for at least 25 active members.
+- No mandatory SMS/email/SSO provider or per-seat charge.
 
 ## FD-012 — 35,000 DZD launch price
 
 - SahelFlow 1.0 costs **35,000 DZD one-time**.
-- Includes all launch-approved systems and team functionality within published boundaries.
+- Includes all launch-approved systems and team functionality within published
+  boundaries.
 - 20% continuity reserve equals 7,000 DZD per base sale.
 - Existing valid earlier licenses are not retroactively charged.
-- Discounts or exceptional settlements require founder-authored adjustment records and audit reasons.
-- Price comes from one versioned authority across UI, payment request, founder panel, license metadata, terms, and support material.
+- Discounts or exceptional settlements require Founder-authored adjustment and
+  audit reason.
+- Price comes from one versioned authority across product, payment, license,
+  Founder operations, terms and support.
 
 ## FD-013 — Five-year maintenance and connected-service continuity
 
-- Minimum five-year guarantee from the public Stable launch date of the purchased major release.
-- Covers same-major security, compatibility, bug, quality, recovery, team, storefront, synchronization, licensing, and SahelFlow-controlled connected-service continuity.
+- Major release 1 receives at least five years of guaranteed same-major
+  maintenance from official Stable launch.
+- Covers security, compatibility, bugs, quality, recovery, teams, storefront,
+  synchronization, licensing and SahelFlow-controlled connected services.
 - Local use remains perpetual after the guarantee.
-- Exact support-end date is shown before payment and recorded in license/payment metadata.
-- Planned material service discontinuation after the guarantee normally requires 12 months' notice and applicable exports/migration support.
-- Must be financially validated before public payment.
+- Exact support end is shown before payment and stored in license/payment
+  metadata.
+- Planned material service discontinuation normally requires 12 months' notice
+  and applicable export/migration support.
+- The promise is financially validated before public payment.
 
 ## FD-014 — Complete-edition boundaries
 
@@ -147,286 +196,314 @@ Base license includes:
 - 2 devices per team member;
 - 3 owner remote devices;
 - 5 shops;
-- 1 hosted storefront and default subdomain per shop;
+- 1 hosted storefront/default subdomain per shop;
 - 1 certified custom subdomain per shop after certification;
 - 20 GB backup storage;
-- 2 GB media per storefront / 10 GB shared base media allowance.
+- 2 GB media per storefront / 10 GB shared base media.
 
-- Initial maximum after expansions is 10 shops.
-- Cloud fair-use targets include up to 250,000 remote commands, 100,000 notifications, 250,000 storefront sessions, and 25,000 durable COD submissions per month per license before capacity review.
-- Boundaries do not authorize deletion, local lockout, or hidden recurring usage fees.
+Up to five additional shops may be purchased, for an initial maximum of 10.
+Cloud fair-use targets include up to 250,000 remote commands, 100,000
+notifications, 250,000 storefront sessions and 25,000 durable COD submissions per
+month per license before capacity review. Boundaries never authorize hidden
+recurring fees, destructive retention or local lockout.
 
 ## FD-015 — Seller-owned Google AI Studio / Gemini model
 
-- Seller supplies and owns the Google AI Studio Gemini API key.
-- Launch default model: `gemini-3.5-flash`, subject to versioned provider-policy updates.
-- SahelFlow does not fund normal inference or pool requests through a shared SahelFlow key.
-- Free-tier availability and limits remain controlled by Google.
-- Default `free_privacy_safe` mode does not silently send raw PII, confidential records, full WhatsApp histories, credentials, or sensitive finance data.
+- Seller supplies and owns the Google AI Studio Gemini key.
+- Launch default is `gemini-3.5-flash`, subject to versioned provider-policy
+  updates and certification.
+- SahelFlow does not fund ordinary seller inference or pool normal requests
+  through a shared key.
+- Default `free_privacy_safe` mode does not silently send raw PII, confidential
+  records, full WhatsApp histories, credentials or sensitive finance.
 - Local redaction/tokenization and deterministic/manual fallback are mandatory.
-- Professional AR/FR/EN wizard guides key creation, privacy, restrictions, secure storage, test, errors, quota, rotation, and disconnection.
-- Key remains only in the authoritative protected desktop secret architecture.
+- Professional AR/FR/EN setup guides privacy, restrictions, secure storage,
+  testing, errors, quota, rotation and disconnection.
+- Key remains in the protected desktop secret architecture.
 
 ## FD-016 — Permanent-license transfer and ownership recovery
 
-- One authoritative Windows installation active at a time.
-- Legitimate hardware replacement, loss, theft, upgrade, reinstall, or recovery is included without activation fee.
-- Planned transfer uses backup verification, matching-code confirmation, cutover, old-machine revocation, and post-transfer health checks.
-- Emergency recovery does not require the old device online.
-- Business ownership transfer requires protected founder review, outgoing-owner approval where available, identity/business evidence, new recovery configuration, and complete revocation of old owner access.
-- Repeated suspicious transfers may be investigated but cannot silently destroy data or strand a valid customer.
+- One authoritative Windows installation is active at a time.
+- Legitimate replacement, loss, theft, upgrade, reinstall or recovery has no
+  activation fee.
+- Planned transfer uses verified backup, matching code, cutover, old-machine
+  revocation and post-transfer health.
+- Emergency recovery does not require the old machine online.
+- Business ownership transfer requires protected Founder review, available
+  outgoing-owner approval, identity/business evidence, new recovery setup and
+  complete old-owner revocation.
+- Suspicious transfers may be investigated but cannot silently destroy or strand
+  valid data.
 
 ## FD-017 — 5,000 DZD one-time extra shop
 
-- Each shop beyond the five included slots costs **5,000 DZD one-time**.
+- Each shop beyond five costs **5,000 DZD one-time**.
 - No recurring shop fee.
-- Initial maximum is 10 shops total.
-- Each expansion includes one shop, complete features, storefront, default/custom-subdomain entitlements, 2 GB media, and 4 GB backup allowance.
-- Expansion inherits the existing major release and support-end date.
-- 20% continuity reserve equals 1,000 DZD per expansion.
+- Initial maximum is 10 shops.
+- Each expansion includes complete features, storefront, subdomain entitlement,
+  2 GB media and 4 GB backup allowance.
+- Expansion inherits the major release and support end.
+- 20% reserve equals 1,000 DZD per expansion.
 - Uses manual payment verification and offline signed entitlement amendment.
 
 ## FD-018 — SahelFlow 1.0 public identity and version authority
 
 - First public release: **SahelFlow 1.0**.
-- First stable app version: `1.0.0`.
+- First Stable version: `1.0.0`.
 - Purchased major release identifier: `1`.
 - Historical v3/v4/session/design-system labels are internal history only.
-- Separate version dimensions exist for app, database schema, cloud API, mobile/team protocol, storefront engine, storefront data schema, backup format, license payload, provider contracts, entitlement policy, and support policy.
-- Release channels: Internal, Beta, Stable.
-- One generated version manifest feeds all official surfaces; CI fails on drift.
-- Five-year support begins on the official Stable launch date, not internal or beta dates.
+- Version dimensions exist for app, database schema, cloud API, remote protocol,
+  storefront engine/data, backup, license, provider and entitlement/support
+  policy.
+- Channels: Internal, Beta and Stable.
+- One generated version manifest feeds official surfaces; CI fails on drift.
+- Five-year support starts on official Stable launch, not Internal/Beta.
 
 ## FD-019 — Shared SahelFlow cloud; default seller BYOC rejected
 
-- SahelFlow retains one shared, multi-tenant Cloudflare architecture for the
-  control plane, relay, storefront and encrypted backup services.
-- A separate seller-owned Cloudflare account/deployment is not the default
-  product architecture.
-- The BYOC alternative was examined and rejected because onboarding,
-  cross-account routing, version drift, security authority and support cost
-  would damage the seller experience and operational reliability.
-- Shared connected services remain provisional until a unit-economics gate
-  validates p50, p95 and maximum cost at 10, 100, 1,000 and 10,000 sellers.
-- Every license requires metering, quotas, rate limits, storage ceilings,
-  abuse controls and cost alarms before public connected entitlements are
-  finalized.
-- The 7,000 DZD base-sale continuity reserve must be validated against the
-  five-year promise; product limits may not be invented merely to hide an
-  unmeasured cost model.
-
-This decision narrows the deployment choice in FD-005 without weakening its
-desktop-authority, encryption, outage-survival or continuity requirements.
+- SahelFlow retains one shared multi-tenant Cloudflare architecture for control,
+  relay, storefront and encrypted backup.
+- Seller-owned Cloudflare is not the default architecture.
+- BYOC was rejected because onboarding, routing, drift, security authority and
+  support cost would damage reliability and seller experience.
+- Shared services remain provisional until unit economics pass at 10, 100, 1,000
+  and 10,000 sellers.
+- Every license requires metering, quotas, rate limits, storage ceilings, abuse
+  controls and cost alarms.
+- The 7,000 DZD reserve must support the five-year promise; limits cannot be
+  invented to hide unmeasured economics.
 
 ## FD-020 — Private Founder Console
 
-- SahelFlow includes a separate private web control plane for seller accounts,
-  signups, trials, payment review, licenses, entitlements, devices, transfers,
-  usage, infrastructure cost, support, incidents, providers and releases.
-- It is Founder-only at launch but its authorization model may support future
-  trusted finance, support, release and audit roles.
-- Every sensitive action is strongly authenticated and immutably audited.
-- The console may access bounded control/support metadata only. It does not
-  expose seller orders, customer messages, accounting records or decrypted
-  backups.
-- The permanent license-signing private key never enters the online console.
-  The console records approval/authorization; permanent signing stays offline.
-- The console cannot mutate canonical seller operations.
+- Separate private web control plane for signups, trials, payment review,
+  licenses, entitlements, devices, transfers, usage, cost, support, incidents,
+  providers and releases.
+- Founder-only at launch with least-privilege role design for future trusted
+  operators.
+- Sensitive actions are strongly authenticated and immutably audited.
+- Console accesses bounded control/support metadata only, never seller
+  operational plaintext or decrypted backups.
+- Permanent signing private key never enters the online console.
+- Console records authorization; offline process performs permanent signing.
+- Console cannot mutate canonical seller operations.
 
 ## FD-021 — Person, workspace and license are separate
 
-- A person has one durable internal identity independent of changeable email,
-  phone and device details.
-- A seller workspace represents one independently licensed business and owns
-  its shops, members, devices, entitlements, cloud limits and support history.
-- A person may own multiple seller workspaces.
-- Each workspace requires its own base license; ownership of several
-  workspaces never turns one license into an unlimited multi-business license.
-- Shops belong to a workspace, not directly to an email, device or Windows
-  installation.
+- Person has durable identity independent of changeable contact/device details.
+- Seller workspace is one independently licensed business and owns shops,
+  members, devices, entitlements, cloud limits and support history.
+- A person may own multiple workspaces.
+- Each workspace requires its own base license.
+- Shops belong to workspace, not directly to email, device or installation.
 
 ## FD-022 — Safe demo before the signed trial
 
-- A prospective seller may explore an isolated sample-data demo without
-  creating an account.
-- The demo cannot become a real production workspace, accept real customer
-  operations or bypass trial/licensing controls.
-- A verified owner account and seller workspace are required to start the real
-  seven-day signed trial.
-- Trial and permanent activation do not make normal local desktop operation
-  permanently internet-dependent.
+- Prospect may explore isolated sample data without account creation.
+- Demo cannot become production, accept real customer operations or bypass
+  licensing.
+- Verified owner and workspace are required for the real seven-day trial.
+- Trial/permanent activation does not make normal local operation permanently
+  internet-dependent.
 
-## FD-023 — Founder continuous internal-update acceptance
+## FD-023 — Founder continuous Internal-update acceptance
 
-> **Cadence note:** FD-027 supersedes the one-version-per-work-package cadence.
-> Exact-source signing, automated gates, in-place updating, preservation and
-> Founder milestone acceptance remain required.
+> **Cadence note:** FD-027 superseded one-version-per-package cadence; FD-028
+> preserves milestone-based releases.
 
-- Every completed work package that changes the installed application receives
-  a new immutable Internal version after merge to protected `main`.
-- The exact-source signed artifact must pass automated release, signature,
-  runtime and visible-UI gates before it reaches the Founder update channel.
-- The Founder installs the update over the existing version without deleting
-  AppData, reopens the real application and verifies the intended change.
-- App-changing work is not finally complete until source integration, signed
-  release and Founder-installed acceptance all pass.
-- Documentation-only changes do not manufacture a pointless MSI unless they
-  alter packaging, updater or release authority.
-- Pilot and Stable channels remain separate from the frequent Founder-only
-  Internal channel.
+- Exact-source signed artifacts pass release, runtime and visible-UI gates before
+  the Founder update channel.
+- Founder installs in place without deleting AppData, observes the named
+  milestone, closes and reopens.
+- App-changing work is not Founder-accepted until source, signed release and
+  installed observation pass.
+- Documentation-only changes do not manufacture an MSI unless executable release
+  authority changed.
+- Internal, Beta and Stable remain separate channels.
 
 ## FD-024 — Two coding agents with GitHub as durable truth
 
-- The active coding system contains the ChatGPT Web Agentic Coding Agent and
-  the Desktop Agent.
-- GLM and Codex Cloud are removed from the active workflow and are not fallback
-  authorities.
-- Either active agent may implement; one agent owns each task/branch and the
-  other reviews.
-- Both agents branch, commit, push, test and review through GitHub. Neither
-  works directly on protected `main`.
-- The Desktop Agent codes in the local checkout and additionally owns
-  installed-Windows, MSI, preservation, UI and reference-hardware evidence.
-- GitHub Actions is infrastructure and clean-checkout/artifact authority, not
-  a third coding agent.
-- Heavy builds and repeated dependency caches remain off the storage-constrained
-  Founder machine whenever GitHub Actions can perform them.
+- Active agents are ChatGPT Web Agentic Coding Agent and Desktop Agent.
+- GLM, Codex Cloud and legacy handoff systems are not fallback authority.
+- Either agent may implement; one owns each branch/package and the other reviews.
+- Neither works directly on protected `main`.
+- Desktop additionally owns installed Windows, MSI, preservation, UI and
+  reference-hardware evidence.
+- Actions is infrastructure and artifact authority, not a third agent.
+- Heavy builds/caches remain off the storage-constrained Founder machine when
+  Actions can perform them.
 
 ## FD-025 — Authenticated workspace is the first normal-launch window
 
-- A successful desktop launch does not show a splash, startup shell, fake
-  dashboard or intermediate window.
-- The single main window remains non-visible only while the signed local runtime
-  starts, the session is authenticated and the real workspace hydrates; the
-  authenticated workspace is the first visible normal-launch surface.
-- If startup is blocked, that same main window shows the bounded recovery surface
-  and diagnostic code. No business workspace is exposed before readiness.
-- Installed acceptance proves the workspace never becomes visible before
-  matching authenticated readiness evidence, then proves visible responsive UI,
-  normal close and reopen.
-- This supersedes Internal.9's visible full-size startup-shell implementation;
-  it does not weaken fail-closed startup, migration, runtime integrity or
-  recovery requirements.
+- Successful launch shows no splash, fake dashboard or intermediate shell.
+- The single window remains hidden only while the signed local runtime starts,
+  session authority resolves and the real workspace hydrates.
+- The authenticated workspace is the first visible normal surface.
+- Blocked startup uses the same bounded recovery window with diagnostic code.
+- Installed acceptance proves readiness-before-visibility, responsive UI, normal
+  close and reopen.
+- This does not weaken migration, runtime integrity, containment or recovery.
 
-## FD-026 — One-month AAA completion program and fast agentic delivery
+## FD-026 — Maximum AAA-candidate target and fast agentic delivery
 
-> **Execution note:** FD-027 supersedes the one-version-per-package cadence and
-> defines the approved multi-phase session model. The 2026-08-27 maximum target,
-> full AAA depth and evidence honesty remain.
+> **Execution note:** FD-028 governs the final phase structure. The maximum
+> 2026-08-27 target, full AAA depth and evidence honesty remain unless changed by
+> a later Founder decision.
 
-- The maximum target for a complete SahelFlow 1.0 AAA Stable candidate is
-  **2026-08-27**.
-- Work proceeds as dependency-correct vertical outcomes across product rules,
-  data/domain authority, application code, UI states, localization,
-  accessibility, security, migration/recovery, diagnostics, tests,
-  documentation and installed evidence. It does not freeze completed layers or
-  degrade into line-by-line task ceremony.
-- Day-to-day feedback is path- and risk-aware: draft synchronization stays on
-  the fast authority lane; selected heavy checks run once when a coherent head
-  becomes reviewable; signed MSI production runs only for merged app-changing
-  work or release-authority changes.
-- Each app-changing package still receives one immutable Internal version and
-  must pass exact-source, signed-release and Founder-installed acceptance. The
-  deadline does not authorize skipped safety, data preservation, AAA depth or
-  false readiness claims.
-- If measured throughput or evidence makes the date materially at risk, agents
-  surface the precise critical-path or scope decision immediately. They do not
-  silently defer a Required capability, repeat known work or hide delay behind
-  process.
+- Maximum target for complete Founder AAA Candidate is **2026-08-27**.
+- Work proceeds as dependency-correct vertical outcomes across product, data,
+  application, UI, localization, accessibility, security, recovery, diagnostics,
+  tests, documentation and installed evidence.
+- Fast feedback is risk-aware; heavy checks run once for coherent frozen heads;
+  signed MSI runs for milestone/release risk.
+- Deadline never authorizes skipped safety, preservation, AAA depth or false
+  readiness.
+- If the target is materially at risk, agents surface the exact critical path or
+  consequential scope choice; they do not silently defer Required capability.
 
 ## FD-027 — SahelFlow Completion Operating Model v2
 
-This decision governs the compressed implementation program approved on
-2026-07-27.
+This decision established milestone-based Internal releases, bounded WIP,
+dependency-correct parallelism, independent review, P0/P1 blocking, continuous
+Arabic/RTL/accessibility/performance quality and evidence honesty.
 
-### Superseded cadence rules
+FD-028 supersedes only FD-027’s four-session execution overlay and any Session
+1–4 next-action mapping. These retained rules remain binding:
 
-- This supersedes FD-023's statement that every completed app-changing work
-  package receives its own Internal version.
-- This supersedes FD-026's statement that every app-changing package receives an
-  immutable Internal version.
-- Source-complete packages may merge independently without version bumps and may
-  be grouped into one coherent milestone/session Internal candidate.
-- Every milestone candidate still receives one unique immutable version, exact
-  source binding, signed artifact, automated installed gates and Founder
-  observation.
-- An unaccepted candidate does not globally freeze independent work. Dependent
-  work remains blocked by an unproven shared contract, P0 or unresolved P1.
-- At most one frozen signed candidate may be in flight.
+- ordinary source-complete packages may merge without version bumps;
+- coherent merged outcomes receive one exact immutable Internal milestone;
+- every milestone requires exact source, signed artifact, automated gates and
+  Founder observation;
+- at most one frozen signed candidate is in flight;
+- unaccepted candidate does not freeze independent work;
+- core authority WIP 1, seller vertical WIP 2, experience/Arabic WIP 1 and
+  platform/performance WIP 1;
+- shared contracts are serialized before dependent parallel work;
+- normal branches deliver coherent outcomes and remain short;
+- current frontend is not accepted as AAA;
+- Arabic/RTL parity is blocking;
+- P0 stops, P1 blocks, P2/P3 receive bounded follow-up;
+- draft candidates publish only after every protected post-build gate;
+- failed candidates remain drafts;
+- Beta and Stable require explicit Founder approval;
+- no AppData deletion, unsafe migration, weakened authority, false provider,
+  performance or Stable claim is authorized.
 
-### Multi-phase execution
+## FD-028 — Final Completion Program and Research-First Quality Protocol
 
-- The Founder target is a complete class-AAA, top-tier SahelFlow candidate across
-  every required product layer as fast as professionally possible.
-- Work advances multiple roadmap phases in each intensive session when their
-  dependencies permit.
-- The compressed program uses four planned sessions: foundation/delivery/global
-  experience; business truth/Golden COD core; complete local product plus
-  identity/provider foundations; whole-product AAA integration and Founder
-  candidate.
-- These sessions target a complete Founder AAA candidate. They do not fabricate
-  representative seller beta, live provider certification, independent
-  security/privacy/Law 18-07 review, incident/restore drills, compatibility
-  evidence or Stable promotion.
+This decision governs SahelFlow completion from 2026-07-29 until the Founder
+explicitly replaces or closes it.
 
-### Work lanes and WIP
+### Superseded execution structure
 
-- Core authority lane: WIP 1.
-- Seller vertical lanes: WIP 2 total after shared contracts are frozen.
-- Experience and Arabic lane: WIP 1 and continuous across all sessions.
-- Platform and performance lane: WIP 1.
-- Shared schema, migration, domain and design-system contracts are serialized
-  before dependent parallel work.
-- Normal branches deliver one coherent outcome and normally live less than two
-  working days.
+- Supersedes FD-027’s fixed four-session overlay and every active Session 1–4
+  execution map or next action.
+- Supersedes any lower plan, working-memory instruction, issue wording or agent
+  prompt that conflicts with the final Phase 0–9 roadmap.
+- Does not weaken product scope, AAA depth, security, preservation, evidence,
+  milestone release or external Stable gates.
 
-### Frontend, Arabic and AAA quality
+### Binding final phases
 
-- The current frontend and UX are broadly unaccepted as AAA.
-- Arabic/RTL parity is a blocking product requirement, not optional polish.
-- The program must systematically correct visual hierarchy, information
-  architecture, consistency, typography, mixed-direction content, RTL geometry,
-  tables, charts, icons, forms, dialogs, navigation, focus, accessibility,
-  responsiveness and all operational states across the application.
-- A major unusable Arabic/RTL or UX defect in the named outcome is P1.
-- No screenshot, route existence, mocked happy path or source-only test completes
-  a page or capability.
+0. Authority freeze and execution reset.
+1. Canonical Golden COD business core.
+2. Identity, authorization, licensing and multi-shop.
+3. Durable providers, inbox, AI and automations.
+4. Data protection, recovery, migrations and security.
+5. Whole-product AAA UI/UX and frontend redesign.
+6. Arabic, RTL and accessibility parity.
+7. Performance and reliability.
+8. Connected SahelFlow platform.
+9. Certification, representative beta and Stable.
 
-### Review severity
+Each phase has an objective, current-research gate, implementation scope,
+measurable exit gate and required evidence. A phase is not complete because a
+session ended or a large number of files changed.
 
-- P0 stops immediately: data loss, security compromise, cross-shop leakage,
-  corrupt update/restore or irreversible stock/money damage.
-- P1 blocks merge/release: required journey or authority failure, duplicate
-  effect, unsafe migration, startup/install failure or major unusable Arabic/UX
-  defect in the named outcome.
-- P2 is scheduled focused hardening that does not invalidate the outcome.
-- P3 is low-impact polish or optional cleanup.
-- P2/P3 findings do not repeatedly reopen a frozen green candidate.
+### Research-first requirement
 
-### CI and release
+Before every major phase, durable contract or material implementation:
 
-- Draft heads run fast authority and targeted checks.
-- One frozen review head runs selected full source/database/native lanes.
-- An unchanged passing exact head is not rerun.
-- Installed-MSI testing is risk-selected rather than mandatory for every
-  business/UI PR.
-- Routine Internal candidates build as drafts, pass every post-build signature,
-  install, reopen, authenticated-UI and manifest gate, then publish
-  automatically in a protected final step.
-- Failed candidates remain drafts and never reach the updater.
-- Beta and Stable always require explicit Founder approval.
+- inspect exact current SahelFlow source, tests, migrations and production paths;
+- research current standards, law, official OS/framework/platform/provider
+  documentation and primary security evidence;
+- inspect mature implementation code and relevant best-in-class operational
+  products;
+- include Algerian COD, Arabic/French, Windows, low-end hardware and constrained
+  network reality;
+- compare alternatives across correctness, migration, security/privacy,
+  Arabic/RTL, accessibility, performance, recovery, maintainability and
+  continuity economics;
+- adopt one SahelFlow-specific decision with measurable acceptance/evidence and a
+  revalidation trigger.
 
-### Preservation and honesty
+Generic AI recommendations, trend articles, visual inspiration, screenshots,
+mock behavior, adapter presence and test count are not authority.
 
-- The operating model does not authorize AppData deletion, unsafe migration,
-  weakened authority, skipped security/privacy/accessibility/localization gates,
-  false provider support, false performance claims or false Stable readiness.
-- If the target becomes materially at risk, agents surface the exact critical
-  path or consequential scope choice immediately instead of hiding delay or
-  lowering the bar.
+Research is bounded: once enough evidence exists for a safe decision,
+implementation begins. Research may not become another roadmap or permanent
+report collection.
+
+### Complete vertical outcomes
+
+- Work packages deliver named observable seller/Founder outcomes across every
+  required layer.
+- A new foundation must be adopted by a production vertical immediately or in
+  the directly following dependency package.
+- After canonical migration, competing legacy mutation paths are removed or made
+  read-only after parity and recovery proof.
+- No cosmetic page work can declare completion before real authority, data,
+  permissions, states and actions exist.
+- No feature expansion bypasses unfinished money, inventory, identity, recovery
+  or Golden COD authority.
+
+### Whole-product AAA rule
+
+Every page and journey is completed against current researched standards for:
+
+- information architecture and navigation;
+- operational density and data UX;
+- forms, bulk work and destructive ceremonies;
+- complete loading, empty, permission, offline, stale, pending, conflict, error,
+  retry and recovery states;
+- Arabic/French/English parity and real RTL/mixed content;
+- keyboard, focus, screen reader, zoom, reduced motion and responsive redesign;
+- low-end rendering, navigation and mutation performance;
+- trust cues for shop, actor, source, stock, money, provider and canonical commit.
+
+Reject generic gradient dashboards, excessive decorative cards, glass effects,
+fake charts, arbitrary animation, machine-sounding copy, icon-only critical
+actions, compressed desktop mobile layouts and superficial RTL.
+
+### Anti-drift and change control
+
+- `ROADMAP.md` is the sole phase/dependency program.
+- `WORKFLOW.md` is the sole research/execution/review/evidence process.
+- `WORKING_MEMORY.md` contains only current truth and exact next outcome.
+- Issue #164 tracks phase status and PR/evidence links; it is not another
+  authority.
+- No new permanent masterplan, gap report, wave, prompt, status or handoff is
+  created.
+- New scope requires a new Founder decision.
+- P0/P1 cannot be deferred through schedule pressure.
+- Public Stable cannot be declared through internal confidence.
+
+### Definition of completion
+
+A capability is complete only when every defined acceptance gate has objective
+evidence, all known P0/P1 findings are closed and no contradiction remains between
+product promise, source, installed behavior and claim.
+
+Founder AAA Candidate requires complete Required implementation and internal
+proof. Public Stable additionally requires representative Algerian seller beta,
+live provider certification, independent security/privacy and Law 18-07 review,
+restore/incident drills, compatibility evidence, rollout readiness and explicit
+Founder promotion. These external results cannot be fabricated by accelerated
+implementation.
 
 ---
 
 ## Change control
 
-A founder decision can be changed only by a new numbered decision that states exactly what it supersedes. Engineering documents, code comments, agents, tests, and provider research cannot silently amend this register.
+A Founder decision can be changed only by a new numbered decision that states
+exactly what it supersedes. Engineering documents, code comments, agents, tests,
+issues and external research cannot silently amend this register.
