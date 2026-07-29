@@ -2,7 +2,7 @@
 
 > **Status:** Research reference and adopted-evidence index; not product, current-state or roadmap authority
 > **Last consolidated:** 2026-07-29
-> **Governing decision:** proposed FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 
 Research is mandatory before every major phase and material implementation.
 Research informs the owning product, experience, architecture, roadmap or
