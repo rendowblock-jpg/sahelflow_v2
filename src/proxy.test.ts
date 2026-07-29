@@ -8,17 +8,20 @@ const RUNTIME_TOKEN = "e".repeat(64);
 const INSTANCE_ID = "a".repeat(32);
 const AUTH_SECRET = "proxy-test-auth-secret";
 
-type NextRequestInit = NonNullable<ConstructorParameters<typeof NextRequest>[1]>;
+type RequestOptions = Readonly<{
+  method?: string;
+  headers?: HeadersInit;
+}>;
 
 function request(
   pathname: string,
-  init: NextRequestInit = {},
+  init: RequestOptions = {},
   cookies: string[] = [`sf_runtime=${RUNTIME_TOKEN}`],
 ): NextRequest {
   const headers = new Headers(init.headers);
   if (cookies.length > 0) headers.set("cookie", cookies.join("; "));
   return new NextRequest(`http://127.0.0.1:49152${pathname}`, {
-    ...init,
+    method: init.method,
     headers,
   });
 }
