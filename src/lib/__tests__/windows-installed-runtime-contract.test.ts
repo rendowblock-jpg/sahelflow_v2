@@ -311,6 +311,11 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("begin_normal_close(_window.app_handle().clone())");
     expect(desktop).toContain("struct ShutdownCoordinator");
     expect(desktop).toContain("struct RuntimeShutdownAuthority");
+    expect(desktop).toContain(
+      "RuntimeShutdownAuthority::from_protocol(&runtime_protocol)",
+    );
+    expect(desktop).toContain("children.shutdown_authority = None;");
+    expect(desktop).not.toContain("remember_runtime_shutdown_authority");
     expect(desktop).toContain("POST /api/internal/runtime-shutdown");
     expect(desktop).toContain("Duration::from_secs(3)");
     expect(desktop).toContain("app.exit(0);");
