@@ -32,6 +32,10 @@ business command, event, outbox, reservation, inventory movement, financial
 movement and compensation foundation exists, while production order, delivery,
 refund, provider and automation paths still mainly use legacy behavior.
 
+Issue #164 has already been converted into the live Phase 0–9 execution dashboard
+and explicitly remains non-authoritative. It must be synchronized with merged
+PRs, evidence and phase exits rather than used to redefine the roadmap.
+
 ## Active blockers and discontinuities
 
 - Production confirmation still directly decrements mutable product stock rather
@@ -95,10 +99,12 @@ evidence.
 
 ## Exact next execution order
 
-1. Complete this documentation-only authority reset and pass `sf-version` plus
-   `sf-audit` on the exact branch head.
-2. Merge the final completion authority through protected `main` after review.
-3. Update issue #164 into the Phase 0–9 execution dashboard.
+1. Complete this documentation-only authority reset and pass `sf-version`,
+   `sf-audit` and every risk-selected latest-head gate.
+2. Close every current-head P0/P1 independent-review finding and merge the final
+   completion authority through protected `main`.
+3. Keep the already-converted issue #164 synchronized with the PR #179 merge,
+   exact evidence and phase-status transition.
 4. Install Internal.13 through the existing updater without deleting or replacing
    Founder AppData and record the full T470 lifecycle in parallel.
 5. Begin Phase 1 research and implementation for the first complete manual-order
@@ -123,11 +129,14 @@ The authority reset is complete only when:
 - FD-028 is present and explicit about what it supersedes;
 - the roadmap contains one final Phase 0–9 program;
 - the workflow contains the mandatory research-to-implementation gate;
+- the Phase 0 research package records primary sources, alternatives, acceptance
+  evidence and revalidation;
 - Working Memory contains no obsolete session or release instructions;
 - documentation entry points all reference the same authority and current state;
 - issue #164 tracks the same phases without becoming a competing authority;
 - no new permanent plan document is created;
-- documentation-only validation passes;
+- latest-head validation passes;
+- independent latest-head review has no unresolved P0/P1;
 - another agent can identify the exact next implementation outcome without chat.
 
 ## Completion truth
