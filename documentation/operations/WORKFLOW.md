@@ -1,7 +1,7 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decision:** proposed FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** protected `main`, branches, PRs, Actions, releases, issue #164 and the ten active documentation authorities
 > **Last consolidated:** 2026-07-29
@@ -270,7 +270,7 @@ Before changing anything:
 
 1. Declare the actual environment: Web checkout, Desktop local Windows, Actions
    Linux/Windows or installed artifact.
-2. Read `AGENTS.md`, `../README.md`, proposed FD-028, this workflow, the active
+2. Read `AGENTS.md`, `../README.md`, FD-028, this workflow, the active
    roadmap phase and Working Memory.
 3. Read the governing Product, Experience, Architecture and Current State sections.
 4. Synchronize with protected `main` and inspect status.
