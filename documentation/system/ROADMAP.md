@@ -170,7 +170,7 @@ process designed for much larger teams.
 
 Make the new canonical business foundation the real operating path of the app.
 
-## Golden COD Journey
+## Golden COD business slice
 
 ```text
 Product or variant
@@ -187,8 +187,17 @@ Product or variant
 → return, exchange or refund
 → inventory and financial compensation
 → analytics and audit
-→ restart, update, backup and restore preservation
+→ restart and in-place update preservation
+→ backup-compatible canonical facts
 ```
+
+Phase 1 completes the canonical business path and proves that its facts survive
+process restart and in-place application update. It must also prove, with a
+disposable snapshot/restore fixture, that the new records are compatible with the
+current local backup primitive. It does **not** claim production native all-shop
+restore, replacement-install recovery or zero-knowledge retention. Phase 4 owns
+those recovery mechanisms and closes the backup/restore clause of the complete
+product Golden COD Journey.
 
 ## Research gate
 
@@ -308,8 +317,8 @@ Implement:
 
 ## Exit gate
 
-One representative order passes the full Golden COD Journey through UI, API,
-domain and database using:
+One representative order passes the Phase 1 canonical business slice through UI,
+API, domain and database using:
 
 - trusted principal and exact shop authority;
 - optimistic aggregate version;
@@ -320,9 +329,13 @@ domain and database using:
 - effect receipt and reconciliation;
 - compensation and governed projections.
 
-The journey passes happy, validation, permission, duplicate, concurrency,
-interruption, stale, conflict, provider-failure, cancellation, return, restart,
-update and recovery cases in AR/FR/EN.
+The slice passes happy, validation, permission, duplicate, concurrency,
+interruption, stale, conflict, provider-failure, cancellation, return, process
+restart, in-place update and interrupted-command recovery cases in AR/FR/EN. A
+disposable snapshot/restore fixture proves that canonical facts remain backup
+compatible. Production native all-shop restore remains a Phase 4 exit gate, and
+the complete product Golden COD Journey is not declared Proven until that gate
+also passes.
 
 ---
 
@@ -552,6 +565,7 @@ Complete:
 - retention and pinned points;
 - independent recovery kit;
 - optional assisted recovery shares;
+- production native all-shop restore;
 - replacement-install restore;
 - atomic restore preserving current data after failure;
 - corruption, low-disk, missing-object and interrupted-restore behavior;
@@ -588,8 +602,10 @@ Complete:
 ## Exit gate
 
 A full installation can be backed up, corrupted, replaced and restored without
-silent loss, authority confusion or key compromise. Migration and restore drills
-pass. Independent review has no unresolved P0/P1 finding.
+silent loss, authority confusion or key compromise. Production native all-shop
+restore and replacement-install recovery close the backup/restore clause of the
+complete Golden COD Journey. Migration and restore drills pass. Independent
+review has no unresolved P0/P1 finding.
 
 ---
 
