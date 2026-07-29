@@ -5,10 +5,18 @@ import {
   type ResolveSessionAuthorityInput,
 } from "../session-authority";
 
+const NOW = new Date("2026-07-30T00:00:00.000Z");
+const ISSUED_AT = new Date("2026-07-29T22:00:00.000Z");
+const LAST_SEEN_AT = new Date("2026-07-29T23:55:00.000Z");
+const OVERALL_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
+
 const trustedActorHarness = vi.hoisted(() => ({
   authority: {
     status: "authenticated",
     sessionId: "session-1",
+    issuedAt: new Date("2026-07-29T22:00:00.000Z"),
+    lastSeenAt: new Date("2026-07-29T23:55:00.000Z"),
   } as unknown,
   shop: {
     workspaceId: "1".repeat(32),
@@ -35,15 +43,25 @@ const baseInput = (): ResolveSessionAuthorityInput => ({
   token: "signed-token",
   secret: "session-secret",
   authSetup: true,
+  now: NOW,
+  overallTimeoutMs: OVERALL_TIMEOUT_MS,
+  inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
   verifyToken: vi.fn(async () => true),
   getSessionId: vi.fn(() => "session-1"),
-  findSession: vi.fn(async () => ({ id: "session-1", revokedAt: null })),
+  findSession: vi.fn(async () => ({
+    id: "session-1",
+    issuedAt: ISSUED_AT,
+    lastSeenAt: LAST_SEEN_AT,
+    revokedAt: null,
+  })),
 });
 
 const resetTrustedActorHarness = () => {
   trustedActorHarness.authority = {
     status: "authenticated",
     sessionId: "session-1",
+    issuedAt: ISSUED_AT,
+    lastSeenAt: LAST_SEEN_AT,
   };
   Object.assign(trustedActorHarness.shop, {
     workspaceId: "1".repeat(32),
@@ -114,7 +132,12 @@ describe("resolveSessionAuthority", () => {
   });
 
   it("rejects a non-exact session ID before reading the authority store", async () => {
-    const findSession = vi.fn(async () => ({ id: "session-1", revokedAt: null }));
+    const findSession = vi.fn(async () => ({
+      id: "session-1",
+      issuedAt: ISSUED_AT,
+      lastSeenAt: LAST_SEEN_AT,
+      revokedAt: null,
+    }));
     const result = await resolveSessionAuthority({
       ...baseInput(),
       getSessionId: vi.fn(() => " session-1 "),
@@ -139,7 +162,9 @@ describe("resolveSessionAuthority", () => {
       ...baseInput(),
       findSession: vi.fn(async () => ({
         id: "session-1",
-        revokedAt: new Date("2026-07-29T20:00:00.000Z"),
+        issuedAt: ISSUED_AT,
+        lastSeenAt: LAST_SEEN_AT,
+        revokedAt: new Date("2026-07-29T23:59:00.000Z"),
       })),
     });
 
@@ -160,12 +185,69 @@ describe("resolveSessionAuthority", () => {
     });
   });
 
-  it("returns the exact authenticated session ID", async () => {
+  it("rejects a session at the exact overall timeout", async () => {
+    const result = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: new Date(NOW.getTime() - OVERALL_TIMEOUT_MS),
+        lastSeenAt: LAST_SEEN_AT,
+        revokedAt: null,
+      })),
+    });
+
+    expect(result).toEqual({
+      status: "rejected",
+      code: "SESSION_OVERALL_EXPIRED",
+    });
+  });
+
+  it("rejects a session at the exact inactivity timeout", async () => {
+    const result = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: ISSUED_AT,
+        lastSeenAt: new Date(NOW.getTime() - INACTIVITY_TIMEOUT_MS),
+        revokedAt: null,
+      })),
+    });
+
+    expect(result).toEqual({ status: "rejected", code: "SESSION_INACTIVE" });
+  });
+
+  it("rejects future or internally inconsistent session timestamps", async () => {
+    const future = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: new Date(NOW.getTime() + 1),
+        lastSeenAt: new Date(NOW.getTime() + 1),
+        revokedAt: null,
+      })),
+    });
+    const beforeIssue = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: ISSUED_AT,
+        lastSeenAt: new Date(ISSUED_AT.getTime() - 1),
+        revokedAt: null,
+      })),
+    });
+
+    expect(future).toEqual({ status: "rejected", code: "SESSION_INVALID" });
+    expect(beforeIssue).toEqual({ status: "rejected", code: "SESSION_INVALID" });
+  });
+
+  it("returns the exact authenticated session and freshness timestamps", async () => {
     const result = await resolveSessionAuthority(baseInput());
 
     expect(result).toEqual({
       status: "authenticated",
       sessionId: "session-1",
+      issuedAt: ISSUED_AT,
+      lastSeenAt: LAST_SEEN_AT,
     });
   });
 });
@@ -231,6 +313,8 @@ describe("requireTrustedActor", () => {
     trustedActorHarness.authority = {
       status: "authenticated",
       sessionId: " session-1 ",
+      issuedAt: ISSUED_AT,
+      lastSeenAt: LAST_SEEN_AT,
     };
 
     await expect(trustedActorModule.requireTrustedActor()).rejects.toThrow(
