@@ -120,6 +120,8 @@ policies without a new numbered Founder decision.
   update/cancellation behavior is proven.
 - Target normal online event-to-desktop import p95 is five seconds.
 - Reconciliation must repair intentionally dropped events.
+- No material incremental synchronization cost at launch scale may exceed the
+  existing approved Cloudflare budget.
 
 ## FD-009 — Professional manual BaridiMob/CCP verification
 
