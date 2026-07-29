@@ -9,6 +9,7 @@ const testTimeout = process.platform === "win32" ? 30_000 : 15_000;
 export default defineConfig({
   test: {
     environment: "node",
+    setupFiles: ["./scripts/vitest-auth-compat.ts"],
     // Auto-restore mocks + globals after each test — prevents cross-file
     // pollution (e.g. one file's `vi.stubGlobal("fetch", ...)` leaking into
     // the next file's tests when running sequentially with fileParallelism:false).
