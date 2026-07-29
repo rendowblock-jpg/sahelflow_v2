@@ -51,8 +51,17 @@ $runtimeWorkRoot = Join-Path $localRoot "runtime-work"
 $runtimeEndpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $startupDiagnosticPath = Join-Path $roamingRoot "startup-diagnostic.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
+$migrationSnapshotRoot = Join-Path $roamingRoot "migration-snapshots"
+$migrationJournalRoot = Join-Path $roamingRoot "migration-journal"
+$migrationJournalPath = Join-Path $migrationJournalRoot "current.json"
+$migrationCompatibilityPath = Join-Path $migrationJournalRoot "compatibility.json"
+$migrationRecoveryReceiptPath = Join-Path $migrationJournalRoot "last-recovery.json"
 $founderSentinelKey = "founder_ci_sentinel"
 $founderSentinelValue = "preserve-v1-founder-row"
+$shopSentinelValues = @{
+    default = $founderSentinelValue
+    second = "preserve-v1-second-shop-row"
+}
 $installedProductRoot = "C:\Program Files\SahelFlow"
 $installedRuntimeRoot = Join-Path $installedProductRoot "standalone"
 $installedRuntimeManifestPath = Join-Path $installedRuntimeRoot `
@@ -368,6 +377,7 @@ if ($existing.Count -ne 0) {
 Remove-Item -LiteralPath $roamingRoot, $localRoot -Recurse -Force -ErrorAction SilentlyContinue
 $legacyShopsRoot = Join-Path $roamingRoot "shops"
 $legacyDatabasePath = Join-Path $legacyShopsRoot "dev.db"
+$legacySecondDatabasePath = Join-Path $legacyShopsRoot "second.db"
 $legacyInstallationId = [Guid]::NewGuid().ToString("N")
 New-Item -ItemType Directory -Path $legacyShopsRoot -Force | Out-Null
 
@@ -396,6 +406,21 @@ if (
 ) {
     throw "The v1 Founder database fixture did not retain its seeded sentinel row."
 }
+Copy-Item -LiteralPath $legacyDatabasePath -Destination $legacySecondDatabasePath -Force
+$preservedSentinelValue = $founderSentinelValue
+try {
+    $founderSentinelValue = $shopSentinelValues.second
+    $legacySecondFounderSentinel = Get-FounderSentinel `
+        -DatabasePath $legacySecondDatabasePath -Mode "seed"
+} finally {
+    $founderSentinelValue = $preservedSentinelValue
+}
+if (
+    $legacySecondFounderSentinel.key -cne $founderSentinelKey -or
+    $legacySecondFounderSentinel.value -cne $shopSentinelValues.second
+) {
+    throw "The second v1 shop fixture did not retain its seeded sentinel row."
+}
 $legacyRegistry = [ordered]@{
     formatVersion = 1
     revision = 1
@@ -408,6 +433,13 @@ $legacyRegistry = [ordered]@{
             databaseFile = "dev.db"
             icon = $null
             createdAt = "2026-01-01T00:00:00.000Z"
+        },
+        [ordered]@{
+            id = "second"
+            name = "Second Shop"
+            databaseFile = "second.db"
+            icon = $null
+            createdAt = "2026-01-02T00:00:00.000Z"
         }
     )
 }
@@ -422,10 +454,22 @@ $legacyCompatibilityIdentity = [pscustomobject]@{
     registryRevision = 1
     installationId = $legacyInstallationId
     registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
-    databasePath = $legacyDatabasePath
-    databaseLength = (Get-Item -LiteralPath $legacyDatabasePath).Length
-    databaseSha256 = (Get-FileHash -LiteralPath $legacyDatabasePath -Algorithm SHA256).Hash
-    founderSentinel = $legacyFounderSentinel
+    databases = @(
+        [pscustomobject]@{
+            shopId = "default"
+            path = $legacyDatabasePath
+            length = (Get-Item -LiteralPath $legacyDatabasePath).Length
+            sha256 = (Get-FileHash -LiteralPath $legacyDatabasePath -Algorithm SHA256).Hash
+            founderSentinel = $legacyFounderSentinel
+        },
+        [pscustomobject]@{
+            shopId = "second"
+            path = $legacySecondDatabasePath
+            length = (Get-Item -LiteralPath $legacySecondDatabasePath).Length
+            sha256 = (Get-FileHash -LiteralPath $legacySecondDatabasePath -Algorithm SHA256).Hash
+            founderSentinel = $legacySecondFounderSentinel
+        }
+    )
 }
 
 $arguments = @(
@@ -532,7 +576,9 @@ $closures = @()
 $installedRuntimeIdentity = $null
 $registryIdentity = $null
 $databaseIdentity = $null
+$shopSetIdentity = $null
 $registryMigrationIdentity = $null
+$migrationRecoveryDrill = $null
 $lifecyclePasses = 3
 
 for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
@@ -618,6 +664,14 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     ) {
         throw "Installed launch did not create a valid active shop registry."
     }
+    if (@($registry.shops).Count -ne 2) {
+        throw "Installed migration did not preserve the complete two-shop fixture."
+    }
+    foreach ($shop in @($registry.shops)) {
+        if ([string]$shop.incarnationId -notmatch '^[0-9a-f]{32}$') {
+            throw "Installed launch did not resolve a valid incarnation for shop $($shop.id)."
+        }
+    }
     $activeShop = @($registry.shops | Where-Object { $_.id -eq $registry.activeShopId })
     if ($activeShop.Count -ne 1) {
         throw "Installed launch did not resolve exactly one active shop."
@@ -655,6 +709,32 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     ) {
         throw "Installed migration did not preserve the seeded Founder row."
     }
+    $currentShopSetIdentity = @(
+        foreach ($shop in @($registry.shops | Sort-Object id)) {
+            $shopDatabasePath = Join-Path (Join-Path $roamingRoot "shops") $shop.databaseFile
+            if (-not (Test-Path -LiteralPath $shopDatabasePath -PathType Leaf)) {
+                throw "Installed migration lost registered shop database $($shop.id)."
+            }
+            $shopSentinel = Get-FounderSentinel -DatabasePath $shopDatabasePath -Mode "read"
+            $expectedShopSentinel = $shopSentinelValues[[string]$shop.id]
+            if (
+                $shopSentinel.key -cne $founderSentinelKey -or
+                [string]::IsNullOrWhiteSpace($expectedShopSentinel) -or
+                $shopSentinel.value -cne $expectedShopSentinel
+            ) {
+                throw "Installed migration did not preserve the sentinel for shop $($shop.id)."
+            }
+            [pscustomobject]@{
+                shopId = [string]$shop.id
+                incarnationId = [string]$shop.incarnationId
+                databaseFile = [string]$shop.databaseFile
+                path = $shopDatabasePath
+                length = (Get-Item -LiteralPath $shopDatabasePath).Length
+                sha256 = (Get-FileHash -LiteralPath $shopDatabasePath -Algorithm SHA256).Hash
+                founderSentinel = $shopSentinel
+            }
+        }
+    )
 
     if ($attempt -eq 1) {
         if (
@@ -668,10 +748,126 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
         $installedRuntimeIdentity = $currentInstalledRuntimeIdentity
         $registryIdentity = $currentRegistryIdentity
         $databaseIdentity = $currentDatabaseIdentity
+        $shopSetIdentity = $currentShopSetIdentity
         $registryMigrationIdentity = [pscustomobject]@{
             before = $legacyCompatibilityIdentity
             after = $currentRegistryIdentity
+            shopsAfter = $currentShopSetIdentity
             founderSentinelAfter = $currentFounderSentinel
+        }
+
+        $compatibility = Read-JsonFile $migrationCompatibilityPath
+        if (
+            $null -eq $compatibility -or
+            $compatibility.sqliteEngine -cne "rusqlite-migration-coordinator" -or
+            [string]$compatibility.migrationSetSha256 -notmatch '^[0-9a-f]{64}$' -or
+            @($compatibility.shops).Count -ne 2 -or
+            @(
+                $compatibility.shops | Where-Object {
+                    [string]::IsNullOrWhiteSpace([string]$_.sqliteVersion) -or
+                    [string]::IsNullOrWhiteSpace([string]$_.journalMode)
+                }
+            ).Count -ne 0
+        ) {
+            throw "Installed migration did not emit complete two-shop compatibility evidence."
+        }
+        New-Item -ItemType Directory -Path $migrationSnapshotRoot -Force | Out-Null
+        $snapshotEntries = @()
+        foreach ($shop in @($registry.shops | Sort-Object id)) {
+            $shopDatabasePath = Join-Path (Join-Path $roamingRoot "shops") $shop.databaseFile
+            $snapshotFile = "installed-recovery-$($shop.id).db"
+            $snapshotPath = Join-Path $migrationSnapshotRoot $snapshotFile
+            Copy-Item -LiteralPath $shopDatabasePath -Destination $snapshotPath -Force
+            $snapshotSha256 = (
+                Get-FileHash -LiteralPath $snapshotPath -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+            $shopCompatibility = @(
+                $compatibility.shops | Where-Object { $_.shopId -ceq $shop.id }
+            )
+            if ($shopCompatibility.Count -ne 1) {
+                throw "Installed compatibility evidence did not resolve shop $($shop.id)."
+            }
+            $snapshotEntries += [ordered]@{
+                shopId = [string]$shop.id
+                databaseFile = [string]$shop.databaseFile
+                snapshotFile = $snapshotFile
+                snapshotSha256 = $snapshotSha256
+                sqliteVersion = [string]$shopCompatibility[0].sqliteVersion
+                journalMode = [string]$shopCompatibility[0].journalMode
+                state = "migrated-verified"
+            }
+        }
+
+        $preservedSentinelValue = $founderSentinelValue
+        try {
+            $founderSentinelValue = "injected-partial-migration-generation"
+            foreach ($shop in @($registry.shops)) {
+                $shopDatabasePath = Join-Path (Join-Path $roamingRoot "shops") $shop.databaseFile
+                Get-FounderSentinel -DatabasePath $shopDatabasePath -Mode "seed" | Out-Null
+            }
+        } finally {
+            $founderSentinelValue = $preservedSentinelValue
+        }
+
+        # Simulate termination after the first shop has been rolled back while
+        # the second still contains the partial generation. The next installed
+        # launch must keep startup blocked and idempotently restore both.
+        $firstSnapshot = Join-Path $migrationSnapshotRoot $snapshotEntries[0].snapshotFile
+        $firstDatabase = Join-Path (Join-Path $roamingRoot "shops") $snapshotEntries[0].databaseFile
+        Copy-Item -LiteralPath $firstSnapshot -Destination $firstDatabase -Force
+        $injectedMixedShopSet = @(
+            foreach ($entry in @($snapshotEntries | Sort-Object shopId)) {
+                $entryDatabase = Join-Path (Join-Path $roamingRoot "shops") $entry.databaseFile
+                $expectedShop = @($shopSetIdentity | Where-Object { $_.shopId -ceq $entry.shopId })
+                if ($expectedShop.Count -ne 1) {
+                    throw "Injected recovery fixture lost baseline identity for shop $($entry.shopId)."
+                }
+                $entrySentinel = Get-FounderSentinel -DatabasePath $entryDatabase -Mode "read"
+                $entryHash = (Get-FileHash -LiteralPath $entryDatabase -Algorithm SHA256).Hash
+                [pscustomobject]@{
+                    shopId = [string]$entry.shopId
+                    sha256 = $entryHash
+                    founderSentinel = $entrySentinel
+                    matchesSnapshot = $entryHash.ToLowerInvariant() -ceq $entry.snapshotSha256
+                    matchesBaseline = $entryHash -ceq $expectedShop[0].sha256
+                }
+            }
+        )
+        if (
+            $injectedMixedShopSet.Count -ne 2 -or
+            $injectedMixedShopSet[0].matchesSnapshot -ne $true -or
+            $injectedMixedShopSet[0].matchesBaseline -ne $true -or
+            $injectedMixedShopSet[0].founderSentinel.value -cne $shopSentinelValues.default -or
+            $injectedMixedShopSet[1].matchesSnapshot -ne $false -or
+            $injectedMixedShopSet[1].matchesBaseline -ne $false -or
+            $injectedMixedShopSet[1].founderSentinel.value -cne "injected-partial-migration-generation"
+        ) {
+            throw "Installed recovery fixture did not create the exact intended mixed generation."
+        }
+        $injectedJournal = [ordered]@{
+            formatVersion = 1
+            state = "restore-applying"
+            migrationSetSha256 = [string]$compatibility.migrationSetSha256
+            registrySha256 = (
+                Get-FileHash -LiteralPath $registryPath -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+            startedAtUnixSeconds = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+            shops = $snapshotEntries
+            failure = "installed CI interruption after first all-shop rollback replacement"
+        }
+        New-Item -ItemType Directory -Path $migrationJournalRoot -Force | Out-Null
+        [System.IO.File]::WriteAllText(
+            $migrationJournalPath,
+            "$(($injectedJournal | ConvertTo-Json -Depth 10))$([Environment]::NewLine)",
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $migrationRecoveryDrill = [ordered]@{
+            injectedState = $injectedJournal.state
+            registrySha256 = $injectedJournal.registrySha256
+            migrationSetSha256 = $injectedJournal.migrationSetSha256
+            snapshots = $snapshotEntries
+            injectedShops = $injectedMixedShopSet
+            recovered = $null
         }
     } else {
         if ($currentInstalledRuntimeIdentity.directory -ne $installedRuntimeIdentity.directory -or
@@ -696,6 +892,57 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
             $currentDatabaseIdentity.length -ne $databaseIdentity.length -or
             $currentDatabaseIdentity.sha256 -ne $databaseIdentity.sha256) {
             throw "A later launch changed the active shop database identity."
+        }
+        if ($currentShopSetIdentity.Count -ne $shopSetIdentity.Count) {
+            throw "Recovery changed the registered shop count."
+        }
+        for ($shopIndex = 0; $shopIndex -lt $shopSetIdentity.Count; $shopIndex++) {
+            $expectedShop = $shopSetIdentity[$shopIndex]
+            $currentShop = $currentShopSetIdentity[$shopIndex]
+            if (
+                $currentShop.shopId -cne $expectedShop.shopId -or
+                $currentShop.incarnationId -cne $expectedShop.incarnationId -or
+                $currentShop.databaseFile -cne $expectedShop.databaseFile -or
+                $currentShop.path -cne $expectedShop.path -or
+                $currentShop.length -ne $expectedShop.length -or
+                $currentShop.sha256 -cne $expectedShop.sha256
+            ) {
+                throw "Installed recovery changed shop authority or data for $($expectedShop.shopId)."
+            }
+        }
+        if ($attempt -eq 2) {
+            $recoveryReceipt = Read-JsonFile $migrationRecoveryReceiptPath
+            if (
+                $null -eq $recoveryReceipt -or
+                [int]$recoveryReceipt.formatVersion -ne 1 -or
+                $recoveryReceipt.state -cne "interrupted-restored" -or
+                $recoveryReceipt.registrySha256 -cne $migrationRecoveryDrill.registrySha256 -or
+                $recoveryReceipt.migrationSetSha256 -cne $migrationRecoveryDrill.migrationSetSha256 -or
+                @($recoveryReceipt.shops).Count -ne 2 -or
+                @($recoveryReceipt.shops | Where-Object { $_.state -cne "restored" }).Count -ne 0
+            ) {
+                throw "Installed restart did not emit a complete all-shop recovery receipt."
+            }
+            $receiptShops = @($recoveryReceipt.shops | Sort-Object shopId)
+            $expectedReceiptShops = @($snapshotEntries | Sort-Object shopId)
+            for ($receiptIndex = 0; $receiptIndex -lt $expectedReceiptShops.Count; $receiptIndex++) {
+                $expectedReceiptShop = $expectedReceiptShops[$receiptIndex]
+                $actualReceiptShop = $receiptShops[$receiptIndex]
+                if (
+                    $actualReceiptShop.shopId -cne $expectedReceiptShop.shopId -or
+                    $actualReceiptShop.databaseFile -cne $expectedReceiptShop.databaseFile -or
+                    $actualReceiptShop.snapshotFile -cne $expectedReceiptShop.snapshotFile -or
+                    $actualReceiptShop.snapshotSha256 -cne $expectedReceiptShop.snapshotSha256 -or
+                    $actualReceiptShop.sqliteVersion -cne $expectedReceiptShop.sqliteVersion -or
+                    $actualReceiptShop.journalMode -cne $expectedReceiptShop.journalMode
+                ) {
+                    throw "Installed recovery receipt identity mismatch for shop $($expectedReceiptShop.shopId)."
+                }
+            }
+            $migrationRecoveryDrill.recovered = [ordered]@{
+                receipt = $recoveryReceipt
+                shops = $currentShopSetIdentity
+            }
         }
     }
 }
@@ -724,7 +971,9 @@ $result = [ordered]@{
     installedRuntime = $installedRuntimeIdentity
     registry = $registryIdentity
     registryMigration = $registryMigrationIdentity
+    migrationRecovery = $migrationRecoveryDrill
     database = $databaseIdentity
+    shops = $shopSetIdentity
     finalProcesses = Get-SahelFlowProcessTree
 }
 $result | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath $resultPath -Encoding UTF8
@@ -734,6 +983,9 @@ Copy-Item -LiteralPath $startupDiagnosticPath -Destination (Join-Path $evidenceR
 Copy-Item -LiteralPath $runtimeEndpointPath -Destination (Join-Path $evidenceRoot "runtime-endpoint.json") `
     -Force -ErrorAction SilentlyContinue
 Copy-Item -LiteralPath $registryPath -Destination (Join-Path $evidenceRoot "shop-registry.json") `
+    -Force -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath $migrationRecoveryReceiptPath `
+    -Destination (Join-Path $evidenceRoot "migration-last-recovery.json") `
     -Force -ErrorAction SilentlyContinue
 
 $failed = @($launches | Where-Object { $_.outcome -ne "ready" })

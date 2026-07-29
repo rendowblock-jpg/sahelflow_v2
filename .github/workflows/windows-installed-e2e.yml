@@ -174,7 +174,8 @@ jobs:
             'startup-trace.json',
             'shop-registry.json',
             'migration-journal\current.json',
-            'migration-journal\compatibility.json'
+            'migration-journal\compatibility.json',
+            'migration-journal\last-recovery.json'
           )
           foreach ($relative in $evidenceFiles) {
             $source = Join-Path $roaming $relative

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{self, OpenOptions};
-use std::io::{Error as IoError, ErrorKind, Read, Write};
+use std::io::{copy as copy_io, Error as IoError, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -14,6 +14,7 @@ const LEGACY_REGISTRY_FORMAT_VERSION: u8 = 1;
 const REGISTRY_FORMAT_VERSION: u8 = 2;
 const JOURNAL_FORMAT_VERSION: u8 = 1;
 const COMPATIBILITY_REPORT_FORMAT_VERSION: u8 = 1;
+const SQLITE_ENGINE_ID: &str = "rusqlite-migration-coordinator";
 const MIGRATION_SET_HASH_DOMAIN: &[u8] = b"sahelflow-migration-set-v1\n";
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -69,6 +70,8 @@ struct MigrationJournal {
     format_version: u8,
     state: String,
     migration_set_sha256: String,
+    #[serde(default)]
+    registry_sha256: Option<String>,
     started_at_unix_seconds: u64,
     shops: Vec<ShopJournal>,
     failure: Option<String>,
@@ -81,6 +84,10 @@ struct ShopJournal {
     database_file: String,
     snapshot_file: Option<String>,
     snapshot_sha256: Option<String>,
+    #[serde(default)]
+    sqlite_version: Option<String>,
+    #[serde(default)]
+    journal_mode: Option<String>,
     state: String,
 }
 
@@ -89,7 +96,9 @@ struct ShopJournal {
 struct MigrationCompatibilityReport {
     format_version: u8,
     state: String,
+    sqlite_engine: String,
     migration_set_sha256: String,
+    registry_sha256: Option<String>,
     generated_at_unix_seconds: u64,
     packaged_migration_count: usize,
     required_snapshot_bytes: u64,
@@ -107,6 +116,8 @@ struct ShopCompatibility {
     applied_migration_count: usize,
     pending_migration_count: usize,
     legacy_baseline_inferred: bool,
+    sqlite_version: Option<String>,
+    journal_mode: Option<String>,
     failure: Option<String>,
 }
 
@@ -114,6 +125,8 @@ struct DatabaseCompatibility {
     applied_migration_count: usize,
     pending_migration_count: usize,
     legacy_baseline_inferred: bool,
+    sqlite_version: String,
+    journal_mode: String,
 }
 
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -192,6 +205,17 @@ struct VerifiedSnapshot {
     sha256: String,
 }
 
+struct PreparedRestore {
+    database_path: PathBuf,
+    staged_path: PathBuf,
+    sha256: String,
+}
+
+struct RestorePlan {
+    rollback: PreparedRestore,
+    compensation: Option<VerifiedSnapshot>,
+}
+
 pub fn prepare_installation(
     app_data_dir: &Path,
     resource_dir: &Path,
@@ -231,6 +255,7 @@ where
     let mut registry = load_or_import_registry(app_data_dir)?;
     ensure_initial_shop(app_data_dir, &mut registry)?;
     validate_registry(app_data_dir, &registry)?;
+    let registry_sha256 = sha256_file(&app_data_dir.join(REGISTRY_FILE))?;
 
     let timestamp = unix_seconds();
     // Seconds remain the seller/support-facing journal time, while a per-run
@@ -258,6 +283,8 @@ where
                     applied_migration_count: database.applied_migration_count,
                     pending_migration_count: database.pending_migration_count,
                     legacy_baseline_inferred: database.legacy_baseline_inferred,
+                    sqlite_version: Some(database.sqlite_version),
+                    journal_mode: Some(database.journal_mode),
                     failure: None,
                 });
             }
@@ -273,12 +300,15 @@ where
                     applied_migration_count: 0,
                     pending_migration_count: 0,
                     legacy_baseline_inferred: false,
+                    sqlite_version: None,
+                    journal_mode: None,
                     failure: Some(failure),
                 });
             }
         }
     }
 
+    let recovery_copy_multiplier = if cfg!(windows) { 3 } else { 4 };
     let required_bytes = if pending.is_empty() {
         0
     } else {
@@ -288,7 +318,11 @@ where
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .sum::<u64>()
-            .saturating_mul(2)
+            // Windows requires one immutable snapshot, one staged rollback, and
+            // one same-call compensation snapshot; ReplaceFileW retains the
+            // prior generation by renaming it. The non-Windows CI adapter also
+            // copies that prior file, so it covers a four-copy peak.
+            .saturating_mul(recovery_copy_multiplier)
             .saturating_add(64 * 1024 * 1024)
     };
     let available_bytes = available_space(&snapshot_dir)?;
@@ -299,7 +333,9 @@ where
         } else {
             "migration-required".to_string()
         },
+        sqlite_engine: SQLITE_ENGINE_ID.to_string(),
         migration_set_sha256: migration_set_sha256.clone(),
+        registry_sha256: Some(registry_sha256.clone()),
         generated_at_unix_seconds: timestamp,
         packaged_migration_count: migrations.len(),
         required_snapshot_bytes: required_bytes,
@@ -338,6 +374,7 @@ where
         format_version: JOURNAL_FORMAT_VERSION,
         state: "preflight".to_string(),
         migration_set_sha256: migration_set_sha256.clone(),
+        registry_sha256: Some(registry_sha256),
         started_at_unix_seconds: timestamp,
         shops: pending
             .iter()
@@ -346,6 +383,16 @@ where
                 database_file: shop.database_file.clone(),
                 snapshot_file: None,
                 snapshot_sha256: None,
+                sqlite_version: compatibility
+                    .shops
+                    .iter()
+                    .find(|entry| entry.shop_id == shop.id)
+                    .and_then(|entry| entry.sqlite_version.clone()),
+                journal_mode: compatibility
+                    .shops
+                    .iter()
+                    .find(|entry| entry.shop_id == shop.id)
+                    .and_then(|entry| entry.journal_mode.clone()),
                 state: "pending".to_string(),
             })
             .collect(),
@@ -383,14 +430,18 @@ where
     write_json_atomic(&journal_path, &journal)?;
     for (index, (_, database_path)) in pending.iter().enumerate() {
         if let Err(error) = migrate_database(database_path, &migrations) {
-            journal.state = "restoring".to_string();
+            journal.state = "restore-preparing".to_string();
             journal.failure = Some(error.to_string());
             write_json_atomic(&journal_path, &journal)?;
-            restore_all(&snapshots)?;
+            restore_all(&snapshots, || {
+                journal.state = "restore-applying".to_string();
+                write_json_atomic(&journal_path, &journal)
+            })?;
             journal.state = "failed-restored".to_string();
             for shop in &mut journal.shops {
                 shop.state = "restored".to_string();
             }
+            write_json_atomic(&journal_dir.join("last-recovery.json"), &journal)?;
             write_terminal_journal(&journal_path, &journal)?;
             compatibility.state = "blocked".to_string();
             compatibility.failure = Some(error.to_string());
@@ -466,10 +517,25 @@ fn recover_interrupted_migration(
         )
         .into());
     }
+    if matches!(
+        journal.state.as_str(),
+        "complete" | "failed-restored" | "interrupted-restored"
+    ) {
+        return Ok(());
+    }
+    if let Some(expected_registry_sha256) = journal.registry_sha256.as_deref() {
+        let registry_path = app_data_dir.join(REGISTRY_FILE);
+        if sha256_file(&registry_path)? != expected_registry_sha256 {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "the shop registry changed during migration recovery; automatic rollback is blocked",
+            )
+            .into());
+        }
+    }
 
     match journal.state.as_str() {
-        "complete" | "failed-restored" | "interrupted-restored" => return Ok(()),
-        "preflight" | "migrating" | "restoring" => {}
+        "preflight" | "migrating" | "restoring" | "restore-preparing" | "restore-applying" => {}
         state => {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
@@ -482,6 +548,7 @@ fn recover_interrupted_migration(
     let shops_root = validated_shops_root(app_data_dir)?;
     let snapshot_root = validated_snapshot_root(app_data_dir, snapshot_dir)?;
     let mut identities = HashSet::new();
+    let mut database_files = HashSet::new();
     let mut snapshots = Vec::new();
     for shop in &journal.shops {
         let Some(snapshot_file) = shop.snapshot_file.as_deref() else {
@@ -516,22 +583,53 @@ fn recover_interrupted_migration(
             )
             .into());
         }
-        let identity = validated_database_identity(&shops_root, database_file)?;
-        if !identities.insert(identity) {
+        if !database_files.insert(database_file.to_string()) {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
-                "interrupted migration aliases one physical shop database",
+                "interrupted migration contains duplicate shop database identities",
+            )
+            .into());
+        }
+        let database_path = shops_root.join(database_file);
+        if database_path.exists() {
+            let identity = validated_database_identity(&shops_root, database_file)?;
+            if !identities.insert(identity) {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "interrupted migration aliases one physical shop database",
+                )
+                .into());
+            }
+        } else if !matches!(
+            journal.state.as_str(),
+            "restoring" | "restore-preparing" | "restore-applying"
+        ) {
+            return Err(IoError::new(
+                ErrorKind::NotFound,
+                format!(
+                    "interrupted migration lost registered shop database {} before rollback began",
+                    database_path.display()
+                ),
             )
             .into());
         }
         snapshots.push(VerifiedSnapshot {
-            database_path: shops_root.join(database_file),
+            database_path,
             snapshot_path: validated_snapshot_path(&snapshot_root, snapshot_file)?,
             sha256: snapshot_sha256.to_string(),
         });
     }
 
-    restore_all(&snapshots)?;
+    journal.state = "restore-preparing".to_string();
+    journal.failure = Some(
+        "the previous migration run was interrupted; verified snapshots are being restored"
+            .to_string(),
+    );
+    write_json_atomic(journal_path, &journal)?;
+    restore_all(&snapshots, || {
+        journal.state = "restore-applying".to_string();
+        write_json_atomic(journal_path, &journal)
+    })?;
     journal.state = "interrupted-restored".to_string();
     journal.failure = Some(
         "the previous migration run was interrupted; verified snapshots were restored".to_string(),
@@ -543,6 +641,13 @@ fn recover_interrupted_migration(
             "unchanged".to_string()
         };
     }
+    let journal_dir = journal_path.parent().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "migration journal has no recovery directory",
+        )
+    })?;
+    write_json_atomic(&journal_dir.join("last-recovery.json"), &journal)?;
     write_terminal_journal(journal_path, &journal)
 }
 
@@ -648,6 +753,7 @@ fn database_compatibility(
 ) -> Result<DatabaseCompatibility, Box<dyn std::error::Error>> {
     preflight_database(database_path)?;
     let connection = Connection::open(database_path)?;
+    let (sqlite_version, journal_mode) = sqlite_runtime_facts(&connection)?;
     let applied = applied_migrations(&connection)?;
     if applied.is_empty() && database_has_business_schema(&connection)? {
         let baseline = infer_legacy_baseline(&connection, migrations)?;
@@ -662,6 +768,8 @@ fn database_compatibility(
             applied_migration_count: baseline,
             pending_migration_count: migrations.len().saturating_sub(baseline),
             legacy_baseline_inferred: true,
+            sqlite_version,
+            journal_mode,
         });
     }
     verify_applied_checksums(&applied, migrations)?;
@@ -669,7 +777,18 @@ fn database_compatibility(
         applied_migration_count: applied.len(),
         pending_migration_count: migrations.len().saturating_sub(applied.len()),
         legacy_baseline_inferred: false,
+        sqlite_version,
+        journal_mode,
     })
+}
+
+fn sqlite_runtime_facts(connection: &Connection) -> rusqlite::Result<(String, String)> {
+    let sqlite_version =
+        connection.query_row("SELECT sqlite_version()", [], |row| row.get::<_, String>(0))?;
+    let journal_mode = connection
+        .query_row("PRAGMA journal_mode", [], |row| row.get::<_, String>(0))?
+        .to_ascii_lowercase();
+    Ok((sqlite_version, journal_mode))
 }
 
 fn migrate_database(
@@ -830,26 +949,52 @@ fn create_verified_snapshot(
         .into());
     }
     let staged = target.with_extension(format!("{}.tmp", random_hex(8)));
-    let source_connection = Connection::open_with_flags(
-        source,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
-    )?;
-    source_connection.busy_timeout(std::time::Duration::from_secs(10))?;
-    let backup_result = source_connection.backup(DatabaseName::Main, &staged, None);
-    drop(source_connection);
-    if let Err(error) = backup_result {
-        let _ = fs::remove_file(&staged);
-        return Err(error.into());
-    }
+    let outcome = (|| -> Result<String, Box<dyn std::error::Error>> {
+        let source_connection = Connection::open_with_flags(
+            source,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        source_connection.busy_timeout(std::time::Duration::from_secs(10))?;
+        source_connection.backup(DatabaseName::Main, &staged, None)?;
+        drop(source_connection);
 
-    preflight_database(&staged)?;
-    sync_file(&staged)?;
-    replace_file_durable(&staged, target, false)?;
-    preflight_database(target)?;
-    sha256_file(target).map_err(Into::into)
+        preflight_database(&staged)?;
+        sync_file(&staged)?;
+        replace_file_durable(&staged, target, false)?;
+        preflight_database(target)?;
+        sha256_file(target).map_err(Into::into)
+    })();
+    if outcome.is_err() {
+        warn_sqlite_file_set_cleanup(&staged, "failed snapshot staging set");
+        warn_sqlite_file_set_cleanup(target, "unrecorded failed snapshot set");
+    }
+    outcome
 }
 
-fn restore_all(snapshots: &[VerifiedSnapshot]) -> Result<(), Box<dyn std::error::Error>> {
+fn restore_all<F>(
+    snapshots: &[VerifiedSnapshot],
+    before_apply: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnOnce() -> Result<(), Box<dyn std::error::Error>>,
+{
+    restore_all_with(snapshots, before_apply, |staged, target| {
+        replace_file_durable(staged, target, true)
+    })
+}
+
+fn restore_all_with<F, R>(
+    snapshots: &[VerifiedSnapshot],
+    before_apply: F,
+    mut replace: R,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnOnce() -> Result<(), Box<dyn std::error::Error>>,
+    R: FnMut(&Path, &Path) -> Result<(), IoError>,
+{
+    // The live installation must remain untouched until every rollback input is
+    // independently usable. In particular, a corrupt later-shop snapshot must
+    // never leave an earlier shop rolled back while another remains migrated.
     for snapshot in snapshots {
         preflight_database(&snapshot.snapshot_path)?;
         if sha256_file(&snapshot.snapshot_path)? != snapshot.sha256 {
@@ -862,29 +1007,313 @@ fn restore_all(snapshots: &[VerifiedSnapshot]) -> Result<(), Box<dyn std::error:
             )
             .into());
         }
-        let mut destination = Connection::open(&snapshot.database_path)?;
-        destination.busy_timeout(std::time::Duration::from_secs(10))?;
-        destination.restore(
-            DatabaseName::Main,
-            &snapshot.snapshot_path,
-            None::<fn(rusqlite::backup::Progress)>,
-        )?;
-        let checkpoint: (i64, i64, i64) =
-            destination.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| {
-                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-            })?;
-        if checkpoint.0 != 0 {
-            return Err(IoError::other(format!(
-                "restored database WAL could not be checkpointed for {}",
-                snapshot.database_path.display()
-            ))
-            .into());
+    }
+
+    let mut plans = Vec::with_capacity(snapshots.len());
+    let mut cleanup_compensation = true;
+    let outcome = (|| -> Result<(), Box<dyn std::error::Error>> {
+        for snapshot in snapshots {
+            plans.push(prepare_restore_plan(snapshot)?);
         }
-        drop(destination);
-        sync_sqlite_database(&snapshot.database_path)?;
-        preflight_database(&snapshot.database_path)?;
+
+        // The caller durably records the applying state only after the complete
+        // set is staged and verified. Startup recovery can then repeat the same
+        // idempotent replacement after interruption without exposing a mixed set
+        // to Next.js, a sidecar, or the WebView.
+        before_apply()?;
+
+        let mut applied = Vec::with_capacity(plans.len());
+        for (index, plan) in plans.iter().enumerate() {
+            let restore = &plan.rollback;
+            let replace_result = replace(&restore.staged_path, &restore.database_path);
+            if let Err(error) = replace_result {
+                // A durable replacement adapter can report a flush error after
+                // the name swap has already happened. Include this shop in the
+                // compensation set when the live digest proves that outcome.
+                if sha256_file(&restore.database_path).is_ok_and(|digest| digest == restore.sha256)
+                {
+                    applied.push(index);
+                }
+                if let Err(compensation_error) = compensate_applied(&plans, &applied) {
+                    cleanup_compensation = false;
+                    return Err(IoError::other(format!(
+                        "all-shop rollback replacement failed ({error}); current-generation compensation also failed ({compensation_error})"
+                    ))
+                    .into());
+                }
+                return Err(error.into());
+            }
+            applied.push(index);
+
+            let verification = (|| -> Result<(), Box<dyn std::error::Error>> {
+                remove_sqlite_sidecars(&restore.database_path)?;
+                preflight_database(&restore.database_path)?;
+                if sha256_file(&restore.database_path)? != restore.sha256 {
+                    return Err(IoError::new(
+                        ErrorKind::InvalidData,
+                        format!(
+                            "restored database digest does not match for {}",
+                            restore.database_path.display()
+                        ),
+                    )
+                    .into());
+                }
+                Ok(())
+            })();
+            if let Err(error) = verification {
+                if let Err(compensation_error) = compensate_applied(&plans, &applied) {
+                    cleanup_compensation = false;
+                    return Err(IoError::other(format!(
+                        "all-shop rollback verification failed ({error}); current-generation compensation also failed ({compensation_error})"
+                    ))
+                    .into());
+                }
+                return Err(error);
+            }
+        }
+
+        // Per-file prior generations are retained through verification of the
+        // complete set, then removed. The immutable migration snapshots remain
+        // the durable rollback authority recorded by the journal.
+        for plan in &plans {
+            warn_file_cleanup(
+                &previous_generation_path(&plan.rollback.database_path),
+                "verified prior generation",
+            );
+        }
+        Ok(())
+    })();
+
+    if cleanup_compensation {
+        for plan in &plans {
+            warn_sqlite_file_set_cleanup(&plan.rollback.staged_path, "rollback staging set");
+            if let Some(compensation) = &plan.compensation {
+                warn_sqlite_file_set_cleanup(
+                    &compensation.snapshot_path,
+                    "current-generation compensation set",
+                );
+            }
+        }
+    }
+    outcome
+}
+
+fn prepare_restore_plan(
+    snapshot: &VerifiedSnapshot,
+) -> Result<RestorePlan, Box<dyn std::error::Error>> {
+    let parent = snapshot.snapshot_path.parent().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "migration snapshot has no compensation directory",
+        )
+    })?;
+    let snapshot_file = snapshot
+        .snapshot_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                "migration snapshot compensation identity is invalid",
+            )
+        })?;
+    let compensation_path = parent.join(format!("{snapshot_file}.current-generation.db"));
+    let rollback = stage_verified_restore(snapshot)?;
+    // Compensation is an in-process hardening layer, not rollback authority.
+    // An interrupted/corrupt current generation must never prevent restoration
+    // from the immutable, already-verified migration snapshot.
+    let compensation = match remove_sqlite_file_set(&compensation_path) {
+        Ok(()) => match create_verified_snapshot(&snapshot.database_path, &compensation_path) {
+            Ok(digest) => Some(VerifiedSnapshot {
+                database_path: snapshot.database_path.clone(),
+                snapshot_path: compensation_path.clone(),
+                sha256: digest,
+            }),
+            Err(error) => {
+                eprintln!(
+                    "[sahelflow] WARN: current generation for {} cannot be used for same-call compensation: {error}",
+                    snapshot.database_path.display()
+                );
+                warn_sqlite_file_set_cleanup(
+                    &compensation_path,
+                    "unusable current-generation compensation set",
+                );
+                None
+            }
+        },
+        Err(error) => {
+            eprintln!(
+                "[sahelflow] WARN: stale compensation set {} cannot be reused; immutable-snapshot recovery will continue without same-call compensation: {error}",
+                compensation_path.display()
+            );
+            None
+        }
+    };
+    Ok(RestorePlan {
+        rollback,
+        compensation,
+    })
+}
+
+fn compensate_applied(
+    plans: &[RestorePlan],
+    applied: &[usize],
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(index) = applied
+        .iter()
+        .copied()
+        .find(|index| plans[*index].compensation.is_none())
+    {
+        return Err(IoError::other(format!(
+            "current-generation compensation is unavailable for {}",
+            plans[index].rollback.database_path.display()
+        ))
+        .into());
+    }
+    for index in applied.iter().rev().copied() {
+        let plan = &plans[index];
+        let compensation = plan
+            .compensation
+            .as_ref()
+            .expect("compensation availability was checked above");
+        let staged = stage_verified_restore(compensation)?;
+        let outcome = (|| -> Result<(), Box<dyn std::error::Error>> {
+            replace_file_durable(&staged.staged_path, &staged.database_path, true)?;
+            remove_sqlite_sidecars(&staged.database_path)?;
+            preflight_database(&staged.database_path)?;
+            if sha256_file(&staged.database_path)? != staged.sha256 {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    format!(
+                        "compensated database digest does not match for {}",
+                        staged.database_path.display()
+                    ),
+                )
+                .into());
+            }
+            warn_file_cleanup(
+                &previous_generation_path(&staged.database_path),
+                "compensated prior generation",
+            );
+            Ok(())
+        })();
+        if outcome.is_ok() {
+            warn_sqlite_file_set_cleanup(&staged.staged_path, "compensation staging set");
+        }
+        outcome?;
     }
     Ok(())
+}
+
+fn stage_verified_restore(
+    snapshot: &VerifiedSnapshot,
+) -> Result<PreparedRestore, Box<dyn std::error::Error>> {
+    let parent = snapshot.snapshot_path.parent().ok_or_else(|| {
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "migration snapshot has no staging directory",
+        )
+    })?;
+    let snapshot_file = snapshot
+        .snapshot_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                "migration snapshot staging identity is invalid",
+            )
+        })?;
+    let staged_path = parent.join(format!("{snapshot_file}.restore-staged"));
+    // A hard process termination may leave only this deterministic, non-live
+    // staging file. The migration lock gives this coordinator exclusive access,
+    // so a retry can remove and recreate it before the applying transition.
+    remove_sqlite_file_set(&staged_path)?;
+    let mut source = OpenOptions::new()
+        .read(true)
+        .open(&snapshot.snapshot_path)?;
+    let outcome = (|| -> Result<PreparedRestore, Box<dyn std::error::Error>> {
+        let mut staged = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&staged_path)?;
+        let copied = copy_io(&mut source, &mut staged)?;
+        staged.sync_all()?;
+        drop(staged);
+
+        let expected_size = fs::metadata(&snapshot.snapshot_path)?.len();
+        if copied != expected_size {
+            return Err(IoError::new(
+                ErrorKind::UnexpectedEof,
+                format!(
+                    "staged rollback copy is incomplete for {}",
+                    snapshot.database_path.display()
+                ),
+            )
+            .into());
+        }
+        preflight_database(&staged_path)?;
+        if sha256_file(&staged_path)? != snapshot.sha256 {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                format!(
+                    "staged rollback digest does not match for {}",
+                    snapshot.database_path.display()
+                ),
+            )
+            .into());
+        }
+
+        Ok(PreparedRestore {
+            database_path: snapshot.database_path.clone(),
+            staged_path: staged_path.clone(),
+            sha256: snapshot.sha256.clone(),
+        })
+    })();
+    if outcome.is_err() {
+        warn_sqlite_file_set_cleanup(&staged_path, "failed rollback staging set");
+    }
+    outcome
+}
+
+fn remove_sqlite_sidecars(database_path: &Path) -> Result<(), IoError> {
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let mut sidecar = database_path.as_os_str().to_os_string();
+        sidecar.push(suffix);
+        remove_file_if_present(&PathBuf::from(sidecar))?;
+    }
+    sync_parent(database_path)
+}
+
+fn remove_sqlite_file_set(database_path: &Path) -> Result<(), IoError> {
+    remove_file_if_present(database_path)?;
+    remove_sqlite_sidecars(database_path)
+}
+
+fn warn_file_cleanup(path: &Path, label: &str) {
+    if let Err(error) = remove_file_if_present(path) {
+        eprintln!(
+            "[sahelflow] WARN: could not remove {label} {}: {error}",
+            path.display()
+        );
+    }
+}
+
+fn warn_sqlite_file_set_cleanup(path: &Path, label: &str) {
+    if let Err(error) = remove_sqlite_file_set(path) {
+        eprintln!(
+            "[sahelflow] WARN: could not remove {label} {}: {error}",
+            path.display()
+        );
+    }
+}
+
+fn remove_file_if_present(path: &Path) -> Result<(), IoError> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
 }
 
 fn create_shop_template(
@@ -1540,31 +1969,10 @@ fn replace_file_durable(
     retain_previous: bool,
 ) -> Result<(), IoError> {
     use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MoveFileExW, ReplaceFileW, MOVEFILE_WRITE_THROUGH,
-    };
+    use windows_sys::Win32::Storage::FileSystem::ReplaceFileW;
 
     if !target.exists() {
-        let staged_wide = staged
-            .as_os_str()
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect::<Vec<_>>();
-        let target_wide = target
-            .as_os_str()
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect::<Vec<_>>();
-        if unsafe {
-            MoveFileExW(
-                staged_wide.as_ptr(),
-                target_wide.as_ptr(),
-                MOVEFILE_WRITE_THROUGH,
-            )
-        } == 0
-        {
-            return Err(IoError::last_os_error());
-        }
+        move_file_write_through(staged, target)?;
         sync_file(target)?;
         return sync_parent(target);
     }
@@ -1609,7 +2017,31 @@ fn replace_file_durable(
         )
     };
     if replaced == 0 {
-        return Err(IoError::last_os_error());
+        let error = IoError::last_os_error();
+        // ERROR_UNABLE_TO_MOVE_REPLACEMENT_2 means ReplaceFileW already moved
+        // the target to the backup name but left the replacement staged. The
+        // target path is absent, so treating this as a no-op would strand the
+        // installation and the generic cleanup would delete the viable staged
+        // generation. Complete the promotion when possible; otherwise restore
+        // the retained prior generation before returning the failure.
+        match error.raw_os_error() {
+            Some(1176) if !target.exists() => {
+                return promote_missing_replacement(staged, target, error, move_file_write_through);
+            }
+            Some(1177) if !target.exists() => {
+                if let Some(previous) = previous.as_deref() {
+                    return reconcile_partial_replacement(
+                        staged,
+                        target,
+                        previous,
+                        move_file_write_through,
+                    );
+                }
+                return promote_missing_replacement(staged, target, error, move_file_write_through);
+            }
+            _ => {}
+        }
+        return Err(error);
     }
     sync_file(target)?;
     if let Some(previous) = previous {
@@ -1618,14 +2050,127 @@ fn replace_file_durable(
     sync_parent(target)
 }
 
+#[cfg(windows)]
+fn move_file_write_through(source: &Path, target: &Path) -> Result<(), IoError> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_WRITE_THROUGH};
+
+    let source_wide = source
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let target_wide = target
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    if unsafe {
+        MoveFileExW(
+            source_wide.as_ptr(),
+            target_wide.as_ptr(),
+            MOVEFILE_WRITE_THROUGH,
+        )
+    } == 0
+    {
+        return Err(IoError::last_os_error());
+    }
+    Ok(())
+}
+
+fn reconcile_partial_replacement<F>(
+    staged: &Path,
+    target: &Path,
+    previous: &Path,
+    mut move_file: F,
+) -> Result<(), IoError>
+where
+    F: FnMut(&Path, &Path) -> Result<(), IoError>,
+{
+    if target.exists() || !staged.is_file() || !previous.is_file() {
+        return Err(IoError::other(
+            "partial replacement state is inconsistent with retained files",
+        ));
+    }
+    match move_file(staged, target) {
+        Ok(()) => {
+            sync_file(target)?;
+            sync_file(previous)?;
+            sync_parent(target)
+        }
+        Err(promotion_error) => match move_file(previous, target) {
+            Ok(()) => {
+                sync_file(target)?;
+                sync_parent(target)?;
+                Err(IoError::other(format!(
+                    "replacement promotion failed ({promotion_error}); the retained prior generation was restored"
+                )))
+            }
+            Err(restoration_error) => Err(IoError::other(format!(
+                "replacement promotion failed ({promotion_error}) and the retained prior generation could not be restored ({restoration_error})"
+            ))),
+        },
+    }
+}
+
+fn promote_missing_replacement<F>(
+    staged: &Path,
+    target: &Path,
+    original_error: IoError,
+    mut move_file: F,
+) -> Result<(), IoError>
+where
+    F: FnMut(&Path, &Path) -> Result<(), IoError>,
+{
+    if target.exists() || !staged.is_file() {
+        return Err(original_error);
+    }
+    move_file(staged, target).map_err(|promotion_error| {
+        IoError::other(format!(
+            "replacement left the target absent ({original_error}) and promotion failed ({promotion_error})"
+        ))
+    })?;
+    sync_file(target)?;
+    sync_parent(target)
+}
+
 #[cfg(not(windows))]
 fn replace_file_durable(
     staged: &Path,
     target: &Path,
-    _retain_previous: bool,
+    retain_previous: bool,
 ) -> Result<(), IoError> {
-    fs::rename(staged, target)?;
+    replace_file_durable_non_windows_with(staged, target, retain_previous, fs::rename)
+}
+
+fn replace_file_durable_non_windows_with<F>(
+    staged: &Path,
+    target: &Path,
+    retain_previous: bool,
+    mut rename_file: F,
+) -> Result<(), IoError>
+where
+    F: FnMut(&Path, &Path) -> Result<(), IoError>,
+{
+    let previous = (retain_previous && target.is_file()).then(|| previous_generation_path(target));
+    if let Some(previous) = &previous {
+        remove_file_if_present(previous)?;
+        fs::copy(target, previous)?;
+        if let Err(error) = sync_file(previous).and_then(|_| sync_parent(previous)) {
+            warn_file_cleanup(previous, "failed pre-swap prior generation");
+            return Err(error);
+        }
+    }
+    if let Err(error) = rename_file(staged, target) {
+        if let Some(previous) = &previous {
+            warn_file_cleanup(previous, "unused pre-swap prior generation");
+        }
+        return Err(error);
+    }
     sync_file(target)?;
+    if let Some(previous) = previous {
+        sync_file(&previous)?;
+    }
     sync_parent(target)
 }
 
@@ -1812,6 +2357,18 @@ mod tests {
         assert_eq!(report.shops.len(), 1);
         assert_eq!(report.shops[0].state, "current");
         assert_eq!(report.shops[0].pending_migration_count, 0);
+        assert_eq!(
+            report.registry_sha256,
+            Some(sha256_file(&app_data.join(REGISTRY_FILE)).expect("hash prepared registry"))
+        );
+        assert!(report.shops[0]
+            .sqlite_version
+            .as_deref()
+            .is_some_and(|version| !version.is_empty()));
+        assert!(report.shops[0]
+            .journal_mode
+            .as_deref()
+            .is_some_and(|mode| !mode.is_empty()));
         #[cfg(windows)]
         {
             let previous: MigrationJournal = read_json(&previous_generation_path(
@@ -1886,6 +2443,35 @@ mod tests {
             )
             .expect("read preserved founder row");
         assert_eq!(preserved_name, "Preserved Founder");
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn terminal_journal_does_not_pin_a_later_valid_registry_revision() {
+        let root = test_root("terminal-registry-revision");
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE Business (id TEXT PRIMARY KEY);",
+        );
+        let first =
+            prepare_installation(&app_data, &resources).expect("prepare initial installation");
+        let mut registry: ShopRegistry =
+            read_json(&app_data.join(REGISTRY_FILE)).expect("read prepared registry");
+        registry.revision += 1;
+        registry.shops[0].name = "Renamed Shop".to_string();
+        write_json_atomic(&app_data.join(REGISTRY_FILE), &registry)
+            .expect("write valid later registry revision");
+
+        let reopened = prepare_installation(&app_data, &resources)
+            .expect("terminal migration journal must not pin registry authority");
+
+        assert_eq!(reopened.workspace_id, first.workspace_id);
+        assert_eq!(reopened.installation_id, first.installation_id);
+        assert_eq!(reopened.shop_incarnation_id, first.shop_incarnation_id);
+        assert_eq!(reopened.registry_revision, registry.revision);
         fs::remove_dir_all(root).expect("remove test root");
     }
 
@@ -2238,8 +2824,371 @@ mod tests {
         let journal: serde_json::Value =
             read_json(&app_data.join("migration-journal/current.json")).expect("journal");
         assert_eq!(journal["state"], "failed-restored");
+        let receipt: serde_json::Value =
+            read_json(&app_data.join("migration-journal/last-recovery.json"))
+                .expect("recovery receipt");
+        assert_eq!(receipt["state"], "failed-restored");
 
         drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn rollback_verifies_every_snapshot_before_replacing_any_shop() {
+        let root = test_root("restore-preflight-all");
+        let snapshot_dir = root.join("snapshots");
+        fs::create_dir_all(&snapshot_dir).expect("create snapshot directory");
+        let first = root.join("first.db");
+        let second = root.join("second.db");
+        let first_snapshot = snapshot_dir.join("first-before.db");
+        let second_snapshot = snapshot_dir.join("second-before.db");
+
+        for (path, value) in [(&first, "before-first"), (&second, "before-second")] {
+            let connection = Connection::open(path).expect("create shop database");
+            connection
+                .execute_batch(&format!(
+                    "CREATE TABLE SellerData (value TEXT NOT NULL); INSERT INTO SellerData VALUES ('{value}');"
+                ))
+                .expect("write original seller state");
+        }
+        let first_sha256 =
+            create_verified_snapshot(&first, &first_snapshot).expect("snapshot first shop");
+        let second_sha256 =
+            create_verified_snapshot(&second, &second_snapshot).expect("snapshot second shop");
+        for (path, value) in [(&first, "migrated-first"), (&second, "migrated-second")] {
+            let connection = Connection::open(path).expect("open shop database");
+            connection
+                .execute("UPDATE SellerData SET value = ?1", params![value])
+                .expect("write migrated seller state");
+        }
+        fs::write(&second_snapshot, b"corrupt second rollback input")
+            .expect("corrupt second snapshot");
+
+        let snapshots = vec![
+            VerifiedSnapshot {
+                database_path: first.clone(),
+                snapshot_path: first_snapshot,
+                sha256: first_sha256,
+            },
+            VerifiedSnapshot {
+                database_path: second.clone(),
+                snapshot_path: second_snapshot,
+                sha256: second_sha256,
+            },
+        ];
+        let mut applying = false;
+        let error = restore_all(&snapshots, || {
+            applying = true;
+            Ok(())
+        })
+        .expect_err("corrupt later snapshot must block before replacement")
+        .to_string();
+
+        assert!(!applying, "the applying transition must not be recorded");
+        assert!(error.contains("SQLite") || error.contains("database"));
+        for (path, expected) in [(&first, "migrated-first"), (&second, "migrated-second")] {
+            let connection = Connection::open(path).expect("open unchanged shop");
+            let value: String = connection
+                .query_row("SELECT value FROM SellerData", [], |row| row.get(0))
+                .expect("read unchanged seller state");
+            assert_eq!(value, expected);
+        }
+
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn failed_multi_shop_rollback_compensates_then_retry_is_idempotent() {
+        let root = test_root("restore-interrupted-apply");
+        let snapshot_dir = root.join("snapshots");
+        fs::create_dir_all(&snapshot_dir).expect("create snapshot directory");
+        let first = root.join("first.db");
+        let second = root.join("second.db");
+        let mut snapshots = Vec::new();
+
+        for (index, (path, before)) in [(&first, "before-first"), (&second, "before-second")]
+            .into_iter()
+            .enumerate()
+        {
+            let connection = Connection::open(path).expect("create shop database");
+            connection
+                .execute_batch(&format!(
+                    "CREATE TABLE SellerData (value TEXT NOT NULL); INSERT INTO SellerData VALUES ('{before}');"
+                ))
+                .expect("write original seller state");
+            drop(connection);
+            let snapshot_path = snapshot_dir.join(format!("shop-{index}-before.db"));
+            let digest =
+                create_verified_snapshot(path, &snapshot_path).expect("create shop snapshot");
+            snapshots.push(VerifiedSnapshot {
+                database_path: path.clone(),
+                snapshot_path,
+                sha256: digest,
+            });
+            let connection = Connection::open(path).expect("reopen shop database");
+            connection
+                .execute(
+                    "UPDATE SellerData SET value = ?1",
+                    params![format!("migrated-{index}")],
+                )
+                .expect("write migrated seller state");
+        }
+
+        // A terminated prior attempt can leave deterministic scratch names and
+        // SQLite sidecars. Reuse must clear the complete file sets first.
+        for snapshot in &snapshots {
+            let parent = snapshot.snapshot_path.parent().expect("snapshot parent");
+            let snapshot_file = snapshot
+                .snapshot_path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .expect("snapshot file");
+            for scratch in [
+                parent.join(format!("{snapshot_file}.restore-staged")),
+                parent.join(format!("{snapshot_file}.current-generation.db")),
+            ] {
+                fs::write(&scratch, b"stale scratch generation").expect("seed stale scratch");
+                for suffix in ["-wal", "-shm", "-journal"] {
+                    let mut sidecar = scratch.as_os_str().to_os_string();
+                    sidecar.push(suffix);
+                    fs::write(PathBuf::from(sidecar), b"stale scratch sidecar")
+                        .expect("seed stale scratch sidecar");
+                }
+            }
+        }
+
+        let mut replacements = 0;
+        let interrupted = restore_all_with(
+            &snapshots,
+            || Ok(()),
+            |staged, target| {
+                replacements += 1;
+                let result = replace_file_durable(staged, target, true);
+                if replacements == 2 {
+                    result?;
+                    return Err(IoError::other(
+                        "injected durability error after second replacement",
+                    ));
+                }
+                result
+            },
+        );
+        assert!(interrupted.is_err());
+        assert_eq!(replacements, 2);
+
+        for (path, expected) in [(&first, "migrated-0"), (&second, "migrated-1")] {
+            let connection = Connection::open(path).expect("open compensated shop");
+            let value: String = connection
+                .query_row("SELECT value FROM SellerData", [], |row| row.get(0))
+                .expect("read compensated seller state");
+            assert_eq!(value, expected);
+        }
+
+        for database in [&first, &second] {
+            for suffix in ["-wal", "-shm", "-journal"] {
+                let mut sidecar = database.as_os_str().to_os_string();
+                sidecar.push(suffix);
+                fs::write(PathBuf::from(sidecar), b"stale partial-generation sidecar")
+                    .expect("write stale sidecar");
+            }
+        }
+
+        restore_all(&snapshots, || Ok(())).expect("retry complete all-shop rollback");
+
+        for (path, expected) in [(&first, "before-first"), (&second, "before-second")] {
+            let connection = Connection::open(path).expect("open recovered shop");
+            let value: String = connection
+                .query_row("SELECT value FROM SellerData", [], |row| row.get(0))
+                .expect("read recovered seller state");
+            assert_eq!(value, expected);
+            drop(connection);
+            for suffix in ["-wal", "-shm", "-journal"] {
+                let mut sidecar = path.as_os_str().to_os_string();
+                sidecar.push(suffix);
+                assert!(!PathBuf::from(sidecar).exists());
+            }
+        }
+
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn corrupt_current_generation_does_not_block_verified_snapshot_recovery() {
+        let root = test_root("restore-corrupt-current");
+        let snapshot_dir = root.join("snapshots");
+        fs::create_dir_all(&snapshot_dir).expect("create snapshot directory");
+        let database = root.join("seller.db");
+        let snapshot_path = snapshot_dir.join("seller-before.db");
+        let connection = Connection::open(&database).expect("create seller database");
+        connection
+            .execute_batch(
+                "CREATE TABLE SellerData (value TEXT NOT NULL); INSERT INTO SellerData VALUES ('preserved');",
+            )
+            .expect("write preserved seller state");
+        drop(connection);
+        let sha256 =
+            create_verified_snapshot(&database, &snapshot_path).expect("create verified snapshot");
+        fs::write(&database, b"corrupt interrupted migration generation")
+            .expect("corrupt current generation");
+
+        restore_all(
+            &[VerifiedSnapshot {
+                database_path: database.clone(),
+                snapshot_path,
+                sha256,
+            }],
+            || Ok(()),
+        )
+        .expect("verified snapshot must recover corrupt current generation");
+
+        let recovered = Connection::open(&database).expect("open recovered database");
+        let value: String = recovered
+            .query_row("SELECT value FROM SellerData", [], |row| row.get(0))
+            .expect("read recovered seller state");
+        assert_eq!(value, "preserved");
+        drop(recovered);
+        let remaining_snapshot_files = fs::read_dir(&snapshot_dir)
+            .expect("read snapshot directory")
+            .map(|entry| {
+                entry
+                    .expect("read snapshot entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(remaining_snapshot_files, vec!["seller-before.db"]);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn unusable_optional_compensation_path_does_not_block_snapshot_recovery() {
+        let root = test_root("restore-unusable-compensation");
+        let snapshot_dir = root.join("snapshots");
+        fs::create_dir_all(&snapshot_dir).expect("create snapshot directory");
+        let database = root.join("seller.db");
+        let snapshot_path = snapshot_dir.join("seller-before.db");
+        let connection = Connection::open(&database).expect("create seller database");
+        connection
+            .execute_batch(
+                "CREATE TABLE SellerData (value TEXT NOT NULL); INSERT INTO SellerData VALUES ('preserved');",
+            )
+            .expect("write preserved seller state");
+        drop(connection);
+        let sha256 =
+            create_verified_snapshot(&database, &snapshot_path).expect("create verified snapshot");
+        let connection = Connection::open(&database).expect("open migrated generation");
+        connection
+            .execute("UPDATE SellerData SET value = 'migrated'", [])
+            .expect("write migrated state");
+        drop(connection);
+        fs::create_dir(snapshot_dir.join("seller-before.db.current-generation.db"))
+            .expect("create non-file compensation obstacle");
+
+        restore_all(
+            &[VerifiedSnapshot {
+                database_path: database.clone(),
+                snapshot_path,
+                sha256,
+            }],
+            || Ok(()),
+        )
+        .expect("optional compensation obstacle must not block recovery");
+
+        let recovered = Connection::open(&database).expect("open recovered database");
+        let value: String = recovered
+            .query_row("SELECT value FROM SellerData", [], |row| row.get(0))
+            .expect("read recovered seller state");
+        assert_eq!(value, "preserved");
+        drop(recovered);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn partial_replacement_promotes_staged_generation_and_retains_previous() {
+        let root = test_root("partial-replacement-promote");
+        let staged = root.join("staged.db");
+        let target = root.join("target.db");
+        let previous = root.join("target.db.previous");
+        fs::write(&staged, b"new generation").expect("write staged generation");
+        fs::write(&previous, b"old generation").expect("write previous generation");
+
+        reconcile_partial_replacement(&staged, &target, &previous, fs::rename)
+            .expect("promote partial replacement");
+
+        assert_eq!(fs::read(&target).expect("read target"), b"new generation");
+        assert_eq!(
+            fs::read(&previous).expect("read previous"),
+            b"old generation"
+        );
+        assert!(!staged.exists());
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn failed_partial_promotion_restores_retained_previous_generation() {
+        let root = test_root("partial-replacement-restore");
+        let staged = root.join("staged.db");
+        let target = root.join("target.db");
+        let previous = root.join("target.db.previous");
+        fs::write(&staged, b"new generation").expect("write staged generation");
+        fs::write(&previous, b"old generation").expect("write previous generation");
+        let mut moves = 0;
+
+        let error = reconcile_partial_replacement(&staged, &target, &previous, |source, target| {
+            moves += 1;
+            if moves == 1 {
+                Err(IoError::other("injected promotion failure"))
+            } else {
+                fs::rename(source, target)
+            }
+        })
+        .expect_err("promotion failure must be reported");
+
+        assert!(error.to_string().contains("prior generation was restored"));
+        assert_eq!(fs::read(&target).expect("read target"), b"old generation");
+        assert_eq!(fs::read(&staged).expect("read staged"), b"new generation");
+        assert!(!previous.exists());
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn missing_target_promotion_completes_the_documented_partial_state() {
+        let root = test_root("missing-target-promote");
+        let staged = root.join("staged.db");
+        let target = root.join("target.db");
+        fs::write(&staged, b"new generation").expect("write staged generation");
+
+        promote_missing_replacement(
+            &staged,
+            &target,
+            IoError::other("documented ReplaceFileW partial state"),
+            fs::rename,
+        )
+        .expect("promote missing target");
+
+        assert_eq!(fs::read(&target).expect("read target"), b"new generation");
+        assert!(!staged.exists());
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn pre_swap_failure_removes_unused_non_windows_prior_copy() {
+        let root = test_root("pre-swap-cleanup");
+        let staged = root.join("staged.db");
+        let target = root.join("target.db");
+        let previous = previous_generation_path(&target);
+        fs::write(&staged, b"new generation").expect("write staged generation");
+        fs::write(&target, b"old generation").expect("write live generation");
+
+        replace_file_durable_non_windows_with(&staged, &target, true, |_source, _target| {
+            Err(IoError::other("injected pre-swap rename failure"))
+        })
+        .expect_err("rename failure must be reported");
+
+        assert_eq!(fs::read(&target).expect("read target"), b"old generation");
+        assert_eq!(fs::read(&staged).expect("read staged"), b"new generation");
+        assert!(!previous.exists());
         fs::remove_dir_all(root).expect("remove test root");
     }
 
@@ -2308,6 +3257,7 @@ mod tests {
             format_version: JOURNAL_FORMAT_VERSION,
             state: "migrating".to_string(),
             migration_set_sha256: "0".repeat(64),
+            registry_sha256: None,
             started_at_unix_seconds: unix_seconds(),
             shops: vec![ShopJournal {
                 shop_id: authority.shop_id.clone(),
@@ -2325,6 +3275,8 @@ mod tests {
                         .into_owned(),
                 ),
                 snapshot_sha256: Some(snapshot_digest),
+                sqlite_version: None,
+                journal_mode: None,
                 state: "snapshot-verified".to_string(),
             }],
             failure: None,
@@ -2343,6 +3295,86 @@ mod tests {
             Connection::open(&authority.database_path).expect("open recovered database");
         assert!(!table_exists(&recovered, "InterruptedPartial").expect("partial table lookup"));
         assert!(table_exists(&recovered, "ResumedMigration").expect("resumed table lookup"));
+        let receipt: MigrationJournal =
+            read_json(&app_data.join("migration-journal/last-recovery.json"))
+                .expect("read interrupted recovery receipt");
+        assert_eq!(receipt.state, "interrupted-restored");
+        assert_eq!(receipt.shops.len(), 1);
+        assert_eq!(receipt.shops[0].state, "restored");
+        drop(recovered);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn restore_applying_restart_rebuilds_a_missing_live_target() {
+        let root = test_root("interrupted-missing-target");
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE Business (id TEXT PRIMARY KEY);",
+        );
+        let authority =
+            prepare_installation(&app_data, &resources).expect("prepare baseline installation");
+        let snapshot_dir = app_data.join("migration-snapshots");
+        let snapshot_path = snapshot_dir.join("missing-target-default.db");
+        let snapshot_sha256 = create_verified_snapshot(&authority.database_path, &snapshot_path)
+            .expect("create verified recovery snapshot");
+        let database_file = authority
+            .database_path
+            .file_name()
+            .expect("database file")
+            .to_string_lossy()
+            .into_owned();
+        let journal = MigrationJournal {
+            format_version: JOURNAL_FORMAT_VERSION,
+            state: "restore-applying".to_string(),
+            migration_set_sha256: "0".repeat(64),
+            registry_sha256: Some(
+                sha256_file(&app_data.join(REGISTRY_FILE)).expect("hash shop registry"),
+            ),
+            started_at_unix_seconds: unix_seconds(),
+            shops: vec![ShopJournal {
+                shop_id: authority.shop_id.clone(),
+                database_file,
+                snapshot_file: Some(
+                    snapshot_path
+                        .file_name()
+                        .expect("snapshot file")
+                        .to_string_lossy()
+                        .into_owned(),
+                ),
+                snapshot_sha256: Some(snapshot_sha256),
+                sqlite_version: None,
+                journal_mode: None,
+                state: "snapshot-verified".to_string(),
+            }],
+            failure: Some("injected ReplaceFileW partial state".to_string()),
+        };
+        write_json_atomic(&app_data.join("migration-journal/current.json"), &journal)
+            .expect("write restore-applying journal");
+
+        let previous = previous_generation_path(&authority.database_path);
+        fs::rename(&authority.database_path, &previous).expect("retain displaced live generation");
+        let snapshot_file = snapshot_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("snapshot identity");
+        let stale_staged = snapshot_dir.join(format!("{snapshot_file}.restore-staged"));
+        fs::copy(&snapshot_path, &stale_staged).expect("seed interrupted staged generation");
+        assert!(!authority.database_path.exists());
+        assert!(previous.is_file());
+        assert!(stale_staged.is_file());
+
+        prepare_installation(&app_data, &resources)
+            .expect("restart must rebuild the missing live target from the snapshot");
+
+        assert!(authority.database_path.is_file());
+        assert!(!previous.exists());
+        assert!(!stale_staged.exists());
+        let recovered = Connection::open(&authority.database_path).expect("open recovered target");
+        assert!(table_exists(&recovered, "Business").expect("business table lookup"));
         drop(recovered);
         fs::remove_dir_all(root).expect("remove test root");
     }
@@ -2438,12 +3470,15 @@ mod tests {
             format_version: JOURNAL_FORMAT_VERSION,
             state: "migrating".to_string(),
             migration_set_sha256: "0".repeat(64),
+            registry_sha256: None,
             started_at_unix_seconds: unix_seconds(),
             shops: vec![ShopJournal {
                 shop_id: "seller".to_string(),
                 database_file: "seller.db".to_string(),
                 snapshot_file: Some("seller-pre-migration.db".to_string()),
                 snapshot_sha256: Some(snapshot_sha256),
+                sqlite_version: None,
+                journal_mode: None,
                 state: "migrated-verified".to_string(),
             }],
             failure: None,
