@@ -1,6 +1,10 @@
 import "server-only";
 
+import { getCurrentSessionAuthority } from "@/lib/auth/server";
+import { shopContext } from "@/lib/db";
 import type { ShopContext } from "@/lib/shops/context";
+import { SahelFlowError } from "@/types/errors";
+import type { SessionAuthorityResult } from "./session-authority";
 
 export const TRUSTED_ACTOR_CONTEXT_VERSION = 1 as const;
 
@@ -63,7 +67,24 @@ export function isTrustedActorContext(value: unknown): value is TrustedActorCont
   );
 }
 
-export function createCompatibilityLocalOwnerContext(
+function sessionAuthorityError(
+  authority: Extract<SessionAuthorityResult, { status: "rejected" }>,
+): SahelFlowError {
+  if (
+    authority.code === "AUTH_SECRET_UNAVAILABLE" ||
+    authority.code === "SESSION_AUTHORITY_UNAVAILABLE"
+  ) {
+    return new SahelFlowError(
+      "Authentication authority is temporarily unavailable",
+      authority.code,
+      503,
+    );
+  }
+
+  return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
+}
+
+function createCompatibilityLocalOwnerContext(
   sessionId: string,
   shop: ShopContext,
 ): TrustedActorContext {
@@ -91,4 +112,26 @@ export function createCompatibilityLocalOwnerContext(
   });
 
   return Object.freeze(context) as TrustedActorContext;
+}
+
+/**
+ * Resolve and mint the exact trusted actor for a consequential command.
+ *
+ * This is the only exported minting path. The raw constructor and runtime brand
+ * remain private to this module, so callers cannot bypass session revocation or
+ * substitute a caller-created ShopContext.
+ */
+export async function requireTrustedActor(): Promise<TrustedActorContext> {
+  const authority = await getCurrentSessionAuthority();
+  if (authority.status === "authenticated") {
+    return createCompatibilityLocalOwnerContext(authority.sessionId, shopContext);
+  }
+  if (authority.status === "setup") {
+    throw new SahelFlowError(
+      "A trusted actor is unavailable before authentication setup completes",
+      "TRUSTED_ACTOR_REQUIRED",
+      401,
+    );
+  }
+  throw sessionAuthorityError(authority);
 }
