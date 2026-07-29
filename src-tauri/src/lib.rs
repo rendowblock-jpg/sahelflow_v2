@@ -433,7 +433,6 @@ pub fn run() {
                         }
                     };
 
-                    remember_runtime_shutdown_authority(&app_handle, &runtime.protocol);
                     if let Err(error) = startup_recovery::show_ready(
                         &app_handle,
                         &runtime.protocol.bootstrap_url(),
@@ -522,16 +521,6 @@ fn begin_normal_close(app: tauri::AppHandle) {
         // child teardown has completed.
         app.exit(0);
     });
-}
-
-fn remember_runtime_shutdown_authority(app: &tauri::AppHandle, protocol: &RuntimeProtocol) {
-    use tauri::Manager;
-
-    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-        if let Ok(mut children) = state.lock() {
-            children.shutdown_authority = Some(RuntimeShutdownAuthority::from_protocol(protocol));
-        }
-    }
 }
 
 /// Environment passed only to the mandatory application server.
@@ -864,6 +853,8 @@ fn spawn_runtime_generation(
                 } else if let Err(error) = children.supervisor.register_ready(generation) {
                     Err(IoError::other(error))
                 } else {
+                    children.shutdown_authority =
+                        Some(RuntimeShutdownAuthority::from_protocol(&runtime_protocol));
                     children.server = Some(server_child.clone());
                     Ok(())
                 }
@@ -1078,6 +1069,7 @@ fn take_terminated_generation(
         }
         if children.sidecar_starting != Some(generation) {
             children.server.take();
+            children.shutdown_authority = None;
             return Ok(Some(children.sidecar.take()));
         }
         drop(children);
@@ -1166,7 +1158,6 @@ fn schedule_server_restart(
 
         match spawn_restart_services(&app_handle, expected_generation, attempt) {
             Ok(runtime) => {
-                remember_runtime_shutdown_authority(&app_handle, &runtime.protocol);
                 if let Err(error) =
                     startup_recovery::show_ready(&app_handle, &runtime.protocol.bootstrap_url())
                 {
