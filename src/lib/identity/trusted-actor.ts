@@ -8,7 +8,8 @@ import type { SessionAuthorityResult } from "./session-authority";
 
 export const TRUSTED_ACTOR_CONTEXT_VERSION = 1 as const;
 
-const TRUSTED_ACTOR_CONTEXT_BRAND = Symbol("sahelflow.trusted-actor-context.v1");
+declare const TRUSTED_ACTOR_CONTEXT_TYPE_BRAND: unique symbol;
+const trustedActorContexts = new WeakSet<object>();
 
 export type BuiltInRole = "owner" | "manager" | "operator" | "viewer";
 
@@ -54,17 +55,11 @@ export type TrustedActorContext = Readonly<{
   version: typeof TRUSTED_ACTOR_CONTEXT_VERSION;
   actor: TrustedActor;
   shop: ShopContext;
-  readonly [TRUSTED_ACTOR_CONTEXT_BRAND]: true;
+  readonly [TRUSTED_ACTOR_CONTEXT_TYPE_BRAND]: true;
 }>;
 
 export function isTrustedActorContext(value: unknown): value is TrustedActorContext {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { [TRUSTED_ACTOR_CONTEXT_BRAND]?: unknown })[
-      TRUSTED_ACTOR_CONTEXT_BRAND
-    ] === true
-  );
+  return typeof value === "object" && value !== null && trustedActorContexts.has(value);
 }
 
 function sessionAuthorityError(
@@ -93,7 +88,7 @@ function createCompatibilityLocalOwnerContext(
   }
 
   const shopSnapshot: ShopContext = Object.freeze({ ...shop });
-  const context = {
+  const context = Object.freeze({
     version: TRUSTED_ACTOR_CONTEXT_VERSION,
     actor: Object.freeze({
       kind: "compatibility_local_owner" as const,
@@ -102,24 +97,19 @@ function createCompatibilityLocalOwnerContext(
       compatibilityOnly: true as const,
     }),
     shop: shopSnapshot,
-  };
-
-  Object.defineProperty(context, TRUSTED_ACTOR_CONTEXT_BRAND, {
-    value: true,
-    enumerable: false,
-    configurable: false,
-    writable: false,
   });
 
-  return Object.freeze(context) as TrustedActorContext;
+  trustedActorContexts.add(context);
+  return context as TrustedActorContext;
 }
 
 /**
  * Resolve and mint the exact trusted actor for a consequential command.
  *
- * This is the only exported minting path. The raw constructor and runtime brand
- * remain private to this module, so callers cannot bypass session revocation or
- * substitute a caller-created ShopContext.
+ * This is the only exported minting path. The raw constructor, compile-time
+ * nominal brand and runtime membership set remain private to this module, so
+ * callers cannot bypass session revocation or substitute a caller-created
+ * Session ID or ShopContext.
  */
 export async function requireTrustedActor(): Promise<TrustedActorContext> {
   const authority = await getCurrentSessionAuthority();
