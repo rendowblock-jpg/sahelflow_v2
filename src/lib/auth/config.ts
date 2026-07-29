@@ -39,21 +39,30 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/reports/daily", // self-protects via x-cron-secret
 ];
 
-/** Public page prefixes — storefront slugs and setup/login pages are intentional. */
+/** Public page roots retained as repository-visible authority. */
 export const PUBLIC_PAGES: readonly string[] = [
   "/login",
   "/setup",
   "/storefront",
 ];
 
+const EXACT_PUBLIC_PAGES = new Set(["/login", "/setup"]);
+const PUBLIC_PAGE_PREFIXES: readonly string[] = ["/storefront"];
+
 /** Check if a pathname is one explicitly public API route. */
 export function isPublicApiRoute(pathname: string): boolean {
   return PUBLIC_API_ROUTES.includes(pathname);
 }
 
-/** Check if a pathname is a public page or one of its intended child pages. */
+/**
+ * Login and setup are exact public pages. Only storefront intentionally exposes
+ * descendants, so future `/login/*` or `/setup/*` pages are protected by default.
+ */
 export function isPublicPage(pathname: string): boolean {
-  return PUBLIC_PAGES.some(
-    (page) => pathname === page || pathname.startsWith(page + "/"),
+  return (
+    EXACT_PUBLIC_PAGES.has(pathname) ||
+    PUBLIC_PAGE_PREFIXES.some(
+      (page) => pathname === page || pathname.startsWith(page + "/"),
+    )
   );
 }
