@@ -385,7 +385,6 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     $process = Start-Process -FilePath $exe -PassThru
     $launch = Wait-ForAuthenticatedUi -Process $process -StartedAt $startedAt `
         -Phase "ui-launch-$attempt"
-    $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-launch-$attempt"
     $requiredStages = @(
         'native-started',
         'workspace-window-pending',
@@ -432,12 +431,10 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     ) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
-    $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
     $launch | Add-Member -NotePropertyName uiDiagnostic -NotePropertyValue $uiDiagnostic
-    $launches += $launch
 
     $endpointEvidence = Join-Path $evidenceRoot "runtime-endpoint-ui-launch-$attempt.json"
     $uiEvidence = Join-Path $evidenceRoot "runtime-ui-ready-launch-$attempt.json"
@@ -452,6 +449,9 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
         -Process $process `
         -WindowHandles @($launch.visibleWindowHandles) `
         -Phase "ui-close-$attempt"
+    $nodeCompileCache = Wait-ForNodeCompileCache -Phase "ui-close-$attempt"
+    $launch | Add-Member -NotePropertyName nodeCompileCache -NotePropertyValue $nodeCompileCache
+    $launches += $launch
 
     $current = Get-BusinessIdentity
     if (
