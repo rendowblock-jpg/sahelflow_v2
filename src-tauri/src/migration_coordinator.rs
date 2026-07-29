@@ -3115,8 +3115,10 @@ mod tests {
         fs::write(&staged, b"new generation").expect("write staged generation");
         fs::write(&previous, b"old generation").expect("write previous generation");
 
-        reconcile_partial_replacement(&staged, &target, &previous, fs::rename)
-            .expect("promote partial replacement");
+        reconcile_partial_replacement(&staged, &target, &previous, |source, destination| {
+            fs::rename(source, destination)
+        })
+        .expect("promote partial replacement");
 
         assert_eq!(fs::read(&target).expect("read target"), b"new generation");
         assert_eq!(
@@ -3165,7 +3167,7 @@ mod tests {
             &staged,
             &target,
             IoError::other("documented ReplaceFileW partial state"),
-            fs::rename,
+            |source, destination| fs::rename(source, destination),
         )
         .expect("promote missing target");
 
