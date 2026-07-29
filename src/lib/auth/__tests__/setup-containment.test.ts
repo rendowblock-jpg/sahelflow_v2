@@ -9,7 +9,6 @@ import {
 describe("setup request containment", () => {
   it.each([
     "/setup",
-    "/setup/profile",
     "/api/auth/setup",
     "/api/auth/status",
     "/api/health",
@@ -35,7 +34,7 @@ describe("setup request containment", () => {
     });
   });
 
-  it.each(["/", "/login", "/orders", "/storefront/example"])(
+  it.each(["/", "/login", "/orders", "/storefront/example", "/setup/profile"])(
     "redirects non-setup pages: %s",
     (pathname) => {
       expect(classifySetupRequestPath(pathname)).toEqual({
