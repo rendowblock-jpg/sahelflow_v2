@@ -234,6 +234,15 @@ for (const [relativePath, markers] of entrypointChecks) {
  */
 const semanticRequirements: Array<[string, string[]]> = [
   [
+    "README.md",
+    [
+      "FD-028 Final Completion Program",
+      "Phase 0 complete",
+      "first Phase 1 manual-confirmation vertical",
+      "SahelFlow 1.0 Stable has not been released",
+    ],
+  ],
+  [
     "AGENTS.md",
     [
       "FD-028",
@@ -395,7 +404,7 @@ const postMergeFrontierPatterns: Array<{
   {
     name: "pre-merge closeout gate",
     pattern:
-      /(?:\b(?:before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\bmerge(?:s)?\b|\bafter\b.{0,120}\bcloseout\b.{0,120}\bmerges\b)/i,
+      /(?:\b(?:before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+)?merge(?:s|d)?\b|\bafter\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+merged|merges)\b)/i,
   },
 ];
 

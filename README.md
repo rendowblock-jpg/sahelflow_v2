@@ -9,7 +9,8 @@ sellers.
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Current program:** FD-028 Final Completion Program and Research-First Quality
-> Protocol; Phase 0 complete and Phase 1 research complete
+> Protocol; Phase 0 complete and the first Phase 1 manual-confirmation vertical
+> research complete
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
