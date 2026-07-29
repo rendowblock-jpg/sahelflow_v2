@@ -1,9 +1,21 @@
 -- Defense-in-depth for canonical manual-order stock and catalog authority.
 -- Service boundaries reject seller/AI stock edits while reservations are active.
--- These triggers additionally block the dangerous raw-write case: increasing
--- available stock behind an active reservation, which could overcommit units.
--- Canonical reservation decrements and variant parent-projection decreases remain
--- allowed so products with multiple available units can confirm multiple orders.
+-- These triggers additionally block dangerous raw stock increases behind active
+-- reservations. Legitimate compatibility returns receive a transaction-scoped
+-- permit that is inserted and removed in the same SQLite transaction.
+
+CREATE TABLE IF NOT EXISTS "StockAdjustmentPermit" (
+    "permitKey" TEXT NOT NULL PRIMARY KEY,
+    "productId" TEXT NOT NULL,
+    "productVariantId" TEXT,
+    "direction" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "StockAdjustmentPermit_direction_check"
+        CHECK ("direction" IN ('increase'))
+);
+
+CREATE INDEX IF NOT EXISTS "StockAdjustmentPermit_product_direction_idx"
+    ON "StockAdjustmentPermit"("productId", "productVariantId", "direction");
 
 CREATE TRIGGER IF NOT EXISTS "Product_block_stock_increase_with_active_reservation"
 BEFORE UPDATE OF "stock" ON "Product"
@@ -14,6 +26,13 @@ WHEN NEW."stock" > OLD."stock"
     FROM "InventoryReservation"
     WHERE "productId" = OLD."id"
       AND "state" = 'active'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "StockAdjustmentPermit"
+    WHERE "productId" = OLD."id"
+      AND "productVariantId" IS NULL
+      AND "direction" = 'increase'
   )
 BEGIN
   SELECT RAISE(ABORT, 'product stock cannot increase behind an active canonical reservation');
@@ -28,6 +47,13 @@ WHEN NEW."stock" > OLD."stock"
     FROM "InventoryReservation"
     WHERE "productVariantId" = OLD."id"
       AND "state" = 'active'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "StockAdjustmentPermit"
+    WHERE "productId" = OLD."productId"
+      AND "productVariantId" = OLD."id"
+      AND "direction" = 'increase'
   )
 BEGIN
   SELECT RAISE(ABORT, 'variant stock cannot increase behind an active canonical reservation');
