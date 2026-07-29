@@ -121,14 +121,15 @@ export async function isAuthSetup(): Promise<boolean> {
   await migrateAuthSecretsIfNeeded();
   try {
     const row = await authContext.prisma.authSecret.findUnique({ where: { id: "default" } });
-    return !!row?.pinHash;
+    if (row?.pinHash) return true;
+    const setting = await authContext.prisma.setting.findUnique({ where: { key: LEGACY_AUTH_PIN_KEY } });
+    return !!setting?.value;
   } catch {
-    try {
-      const setting = await authContext.prisma.setting.findUnique({ where: { key: LEGACY_AUTH_PIN_KEY } });
-      return !!setting?.value;
-    } catch {
-      return false;
-    }
+    throw new SahelFlowError(
+      "Authentication authority is temporarily unavailable",
+      "SESSION_AUTHORITY_UNAVAILABLE",
+      503,
+    );
   }
 }
 
@@ -175,7 +176,12 @@ export const getCurrentSessionAuthority = cache(
 
     const token = await getSessionToken();
     const secret = await getAuthSecret();
-    const authSetup = secret ? true : await isAuthSetup();
+    let authSetup: boolean;
+    try {
+      authSetup = secret ? true : await isAuthSetup();
+    } catch {
+      return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
+    }
 
     return resolveSessionAuthority({
       token,
