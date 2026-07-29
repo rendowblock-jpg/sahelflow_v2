@@ -280,7 +280,7 @@ describe("installed Windows runtime contract", () => {
       "appDataRuntimeCacheEntryCount = $runtimeCacheEntries.Count",
     );
     expect(harness).toContain(
-      "Second launch changed the protected installed runtime or staged an AppData copy",
+      "A later launch changed the protected installed runtime or staged an AppData copy",
     );
     expect(desktop).toContain("resolve_installed_standalone");
     expect(desktop).not.toContain("stage_standalone");
