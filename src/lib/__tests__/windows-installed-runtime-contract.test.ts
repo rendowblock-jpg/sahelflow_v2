@@ -129,6 +129,12 @@ describe("installed Windows runtime contract", () => {
       'request.headers.get("x-sahelflow-runtime-instance")',
     );
     expect(shutdownRoute).toContain("constantTimeEqual(suppliedToken, expectedToken)");
+    expect(shutdownRoute).toContain(
+      'SHUTDOWN_DIAGNOSTIC_FILE = "runtime-shutdown-diagnostic.json"',
+    );
+    expect(shutdownRoute).toContain('code: "RUNTIME_COMPILE_CACHE_FLUSHED"');
+    expect(shutdownRoute).toContain("cacheFileCount: cache.fileCount");
+    expect(shutdownRoute).toContain("fsyncSync(handle)");
     expect(proxy).toContain("pathname === RUNTIME_SHUTDOWN_PATH");
     expect(proxy).toContain('request.method !== "POST"');
     expect(proxy).toContain("constantTimeEqual(suppliedInstanceId, expectedInstanceId)");
@@ -235,8 +241,9 @@ describe("installed Windows runtime contract", () => {
     );
     expect(uiHarness).toContain("workspace-window-pending");
     expect(uiHarness).toContain("Wait-ForNodeCompileCache");
-    expect(uiHarness).toContain("Reset-NodeCompileCacheForCloseProof");
-    expect(uiHarness).toContain("compileCacheResetAt");
+    expect(uiHarness).toContain("Wait-ForRuntimeShutdownDiagnostic");
+    expect(uiHarness).toContain("runtime-shutdown-launch-$attempt.json");
+    expect(uiHarness).not.toContain("Reset-NodeCompileCacheForCloseProof");
     expect(
       uiHarness.lastIndexOf("$closures += Close-SahelFlowNormally"),
     ).toBeLessThan(
@@ -305,7 +312,7 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("struct ShutdownCoordinator");
     expect(desktop).toContain("struct RuntimeShutdownAuthority");
     expect(desktop).toContain("POST /api/internal/runtime-shutdown");
-    expect(desktop).toContain("Duration::from_secs(2)");
+    expect(desktop).toContain("Duration::from_secs(3)");
     expect(desktop).toContain("app.exit(0);");
     expect(desktop).not.toContain("cleanup_before_exit();");
     expect(desktop).not.toContain("std::process::exit(0);");
