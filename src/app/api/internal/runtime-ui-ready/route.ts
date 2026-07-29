@@ -159,11 +159,6 @@ export async function POST(request: NextRequest) {
     appVersion,
   });
 
-  // Implementation lives in compile-cache.ts and uses
-  // process.getBuiltinModule?.("node:module") plus moduleApi.flushCompileCache().
-  // Keep this route focused on the authenticated UI-ready transaction.
-  flushPackagedCompileCache();
-
   try {
     writeJsonAtomically(ackPath, acknowledgment);
   } catch {
@@ -194,6 +189,12 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: noStoreHeaders() },
     );
   }
+
+  // Readiness evidence is already durable. Persist the compile cache only after
+  // the desktop can observe and reveal the authenticated workspace, so a slow
+  // disk flush cannot extend either semantic runtime readiness or UI readiness.
+  // The helper remains best-effort and never changes the acknowledgment result.
+  flushPackagedCompileCache();
 
   return NextResponse.json(
     { status: "ready", instanceId },
