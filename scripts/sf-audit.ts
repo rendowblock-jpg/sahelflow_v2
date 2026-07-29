@@ -257,7 +257,8 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first requirement",
       "Definition of completion",
       "repeated approval",
-      "without TPM or Secure Boot",
+      "systems without TPM",
+      "Secure Boot",
     ],
   ],
   [
