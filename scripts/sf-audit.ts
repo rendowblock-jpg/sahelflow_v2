@@ -256,6 +256,8 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Superseded execution structure",
       "Research-first requirement",
       "Definition of completion",
+      "repeated approval",
+      "without TPM or Secure Boot",
     ],
   ],
   [
@@ -292,6 +294,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "**Active phase:** Phase 0",
       "first complete manual-order",
       "research-to-implementation gate",
+      "Issue #164 has already been converted",
     ],
   ],
   [
@@ -300,6 +303,11 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first quality rule",
       "No-AI-slop frontend rule",
       "Research-to-implementation gate",
+      "#### External evidence reviewed",
+      "#### Alternatives evaluated",
+      "#### Phase 0 acceptance and evidence",
+      "#### Phase 0 revalidation trigger",
+      "NIST SP 800-218",
     ],
   ],
 ];
@@ -319,13 +327,9 @@ for (const [relativePath, markers] of semanticRequirements) {
   }
 }
 
-const staleContinuityMarkers: Array<[string, string]> = [
+const exactStaleMarkers: Array<[string, string]> = [
   ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
   ["documentation/operations/WORKING_MEMORY.md", "Publication is the only remaining step"],
-  ["documentation/operations/WORKING_MEMORY.md", "### Session 1"],
-  ["documentation/system/ROADMAP.md", "## Four-session compressed execution overlay"],
-  ["documentation/system/ROADMAP.md", "**Current phase:** Phase 1"],
-  ["documentation/system/ROADMAP.md", "**Immediate execution:** Session 1"],
   [
     "AGENTS.md",
     "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
@@ -333,7 +337,7 @@ const staleContinuityMarkers: Array<[string, string]> = [
   ["AGENTS.md", "The compressed program uses four planned sessions"],
 ];
 
-for (const [relativePath, marker] of staleContinuityMarkers) {
+for (const [relativePath, marker] of exactStaleMarkers) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
   if (readFileSync(absolutePath, "utf8").includes(marker)) {
@@ -341,6 +345,69 @@ for (const [relativePath, marker] of staleContinuityMarkers) {
       kind: "drift",
       file: relativePath,
       detail: `stale continuity marker remains active: ${marker}`,
+    });
+  }
+}
+
+/**
+ * Reject active Session 1–4 execution structures even when wording changes.
+ * Historical prose that explains FD-028 supersession is allowed; only headings
+ * and current/active/immediate/next metadata are treated as execution authority.
+ */
+const currentOwnedDocuments = [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/operations/WORKFLOW.md",
+  "documentation/operations/WORKING_MEMORY.md",
+  "documentation/research/RESEARCH.md",
+];
+
+const obsoleteSessionExecutionPatterns: Array<{
+  name: string;
+  pattern: RegExp;
+}> = [
+  {
+    name: "Session 1–4 heading",
+    pattern: /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
+  },
+  {
+    name: "session map heading",
+    pattern: /^#{2,4}\s+session\s+map\b.*$/gim,
+  },
+  {
+    name: "four-session execution heading",
+    pattern:
+      /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
+  },
+  {
+    name: "bold current/active/immediate/next Session metadata",
+    pattern:
+      /^\s*(?:>\s*)?\*\*(?:current|active|immediate|next)[^*:\n]{0,48}:\*\*[^\n]*\bsession\s+[1-4]\b.*$/gim,
+  },
+  {
+    name: "plain current/active/immediate/next Session metadata",
+    pattern:
+      /^\s*(?:current|active|immediate|next)[^:\n]{0,48}:[^\n]*\bsession\s+[1-4]\b.*$/gim,
+  },
+];
+
+for (const relativePath of currentOwnedDocuments) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) continue;
+  const content = readFileSync(absolutePath, "utf8");
+
+  for (const { name, pattern } of obsoleteSessionExecutionPatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(content);
+    if (!match) continue;
+
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `obsolete ${name} remains active: ${match[0].trim()}`,
     });
   }
 }
