@@ -81,6 +81,18 @@ describe("resolveSessionAuthority", () => {
     });
   });
 
+  it("rejects a non-exact session ID before reading the authority store", async () => {
+    const findSession = vi.fn(async () => ({ id: "session-1", revokedAt: null }));
+    const result = await resolveSessionAuthority({
+      ...baseInput(),
+      getSessionId: vi.fn(() => " session-1 "),
+      findSession,
+    });
+
+    expect(result).toEqual({ status: "rejected", code: "SESSION_INVALID" });
+    expect(findSession).not.toHaveBeenCalled();
+  });
+
   it("rejects a session missing from the authority store", async () => {
     const result = await resolveSessionAuthority({
       ...baseInput(),
@@ -128,7 +140,7 @@ describe("resolveSessionAuthority", () => {
 
 describe("createCompatibilityLocalOwnerContext", () => {
   it("binds the exact session and complete trusted ShopContext without inventing person identity", () => {
-    const context = createCompatibilityLocalOwnerContext(" session-1 ", shop);
+    const context = createCompatibilityLocalOwnerContext("session-1", shop);
 
     expect(context).toEqual({
       version: 1,
@@ -143,9 +155,24 @@ describe("createCompatibilityLocalOwnerContext", () => {
     expect("personId" in context.actor).toBe(false);
   });
 
-  it("refuses an empty session ID", () => {
+  it("refuses empty or normalized session IDs", () => {
     expect(() => createCompatibilityLocalOwnerContext("   ", shop)).toThrow(
       "requires an exact session ID",
     );
+    expect(() => createCompatibilityLocalOwnerContext(" session-1 ", shop)).toThrow(
+      "requires an exact session ID",
+    );
+  });
+
+  it("captures an immutable ShopContext snapshot", () => {
+    const mutableShop = { ...shop };
+    const context = createCompatibilityLocalOwnerContext("session-1", mutableShop);
+
+    mutableShop.shopId = "changed-after-authority-resolution";
+
+    expect(context.shop.shopId).toBe("default");
+    expect(Object.isFrozen(context.shop)).toBe(true);
+    expect(Object.isFrozen(context.actor)).toBe(true);
+    expect(Object.isFrozen(context)).toBe(true);
   });
 });
