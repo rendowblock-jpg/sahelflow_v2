@@ -1638,10 +1638,10 @@ impl RuntimeShutdownAuthority {
 
     fn flush_compile_cache(&self) -> Result<(), IoError> {
         const RESPONSE_LIMIT: u64 = 8 * 1024;
-        // Connection, write and read can consume at most five seconds in total,
-        // leaving 25 seconds of the installed close gate for both 10-second
+        // Connection, write and read can consume at most seven seconds in total,
+        // leaving 23 seconds of the installed close gate for both 10-second
         // contained-tree stop bounds and Tauri lifecycle completion.
-        const IO_TIMEOUT: Duration = Duration::from_secs(2);
+        const IO_TIMEOUT: Duration = Duration::from_secs(3);
 
         let address = SocketAddr::from((Ipv4Addr::LOCALHOST, self.app_port));
         let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(1))?;
