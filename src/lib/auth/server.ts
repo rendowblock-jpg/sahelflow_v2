@@ -343,7 +343,7 @@ export async function changeAuthPin(
   newPin: string,
   ip?: string,
 ): Promise<{ changed: boolean; reason?: "current_pin_invalid" }> {
-  await requireAuthenticatedSession(true);
+  const authority = await requireAuthenticatedSession(true);
   const valid = await verifyAuthPin(currentPin);
   if (!valid) return { changed: false, reason: "current_pin_invalid" };
 
@@ -359,13 +359,20 @@ export async function changeAuthPin(
   const newHash = await hashPin(newPin);
   const now = new Date();
   const newSession = await authContext.prisma.$transaction(async (tx) => {
-    await tx.authSecret.update({
-      where: { id: "default" },
-      data: { pinHash: newHash },
+    const currentRevoked = await tx.session.updateMany({
+      where: { id: authority.sessionId, revokedAt: null },
+      data: { revokedAt: now },
     });
+    if (currentRevoked.count !== 1) {
+      throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
+    }
     await tx.session.updateMany({
       where: { revokedAt: null },
       data: { revokedAt: now },
+    });
+    await tx.authSecret.update({
+      where: { id: "default" },
+      data: { pinHash: newHash },
     });
     return tx.session.create({
       data: {
