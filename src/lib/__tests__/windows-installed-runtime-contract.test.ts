@@ -58,6 +58,7 @@ describe("installed Windows runtime contract", () => {
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
     const runtimeRoute = read("src/app/api/internal/runtime-ready/route.ts");
     const shutdownRoute = read("src/app/api/internal/runtime-shutdown/route.ts");
+    const proxy = read("src/proxy.ts");
     const compileCache = read("src/lib/runtime/compile-cache.ts");
     const rootLayout = read("src/app/layout.tsx");
     const dashboardRouteLayout = read("src/app/(dashboard)/layout.tsx");
@@ -128,6 +129,9 @@ describe("installed Windows runtime contract", () => {
       'request.headers.get("x-sahelflow-runtime-instance")',
     );
     expect(shutdownRoute).toContain("constantTimeEqual(suppliedToken, expectedToken)");
+    expect(proxy).toContain("pathname === RUNTIME_SHUTDOWN_PATH");
+    expect(proxy).toContain('request.method !== "POST"');
+    expect(proxy).toContain("constantTimeEqual(suppliedInstanceId, expectedInstanceId)");
     expect(compileCache).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
