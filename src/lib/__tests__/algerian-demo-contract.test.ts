@@ -189,6 +189,7 @@ describe("Algerian Founder demo contract", () => {
     const helper = read("src/lib/runtime/compile-cache.ts");
     const readiness = read("src/app/api/internal/runtime-ready/route.ts");
     const uiReady = read("src/app/api/internal/runtime-ui-ready/route.ts");
+    const shutdown = read("src/app/api/internal/runtime-shutdown/route.ts");
     const dashboardLoading = read(
       "src/app/(dashboard)/dashboard/loading.tsx",
     );
@@ -196,10 +197,8 @@ describe("Algerian Founder demo contract", () => {
     expect(helper).toContain('getBuiltinModule?.(\n      "node:module"');
     expect(helper).toContain("moduleApi.flushCompileCache()");
     expect(readiness).not.toContain("flushPackagedCompileCache");
-    expect(uiReady).toContain("flushPackagedCompileCache();");
-    expect(uiReady.indexOf("writeJsonAtomically(ackPath, acknowledgment)")).toBeLessThan(
-      uiReady.indexOf("flushPackagedCompileCache();"),
-    );
+    expect(uiReady).not.toContain("flushPackagedCompileCache");
+    expect(shutdown).toContain("flushPackagedCompileCache();");
     expect(dashboardLoading).toContain('className="app-content page-sections"');
     expect(dashboardLoading).toContain('aria-busy="true"');
     expect(dashboardLoading).not.toContain("FullPageSkeleton");
