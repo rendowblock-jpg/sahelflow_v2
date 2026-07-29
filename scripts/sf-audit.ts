@@ -261,6 +261,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Definition of completion",
       "repeated approval",
       "without TPM or Secure Boot",
+      "No material incremental synchronization cost",
     ],
   ],
   [
@@ -370,6 +371,7 @@ const currentOwnedDocuments = [
   "documentation/research/RESEARCH.md",
 ];
 
+const optionalListPrefix = String.raw`(?:(?:[-*+]|\d+\.)\s+)?`;
 const obsoleteSessionExecutionPatterns: Array<{
   name: string;
   pattern: RegExp;
@@ -389,13 +391,17 @@ const obsoleteSessionExecutionPatterns: Array<{
   },
   {
     name: "bold current/active/immediate/next Session metadata",
-    pattern:
-      /^\s*(?:>\s*)?\*\*(?:current|active|immediate|next)[^*:\n]{0,48}:\*\*[^\n]*\bsession\s+[1-4]\b.*$/gim,
+    pattern: new RegExp(
+      String.raw`^\s*(?:>\s*)?${optionalListPrefix}\*\*(?:current|active|immediate|next)[^*:\n]{0,48}:\*\*[^\n]*\bsession\s+[1-4]\b.*$`,
+      "gim",
+    ),
   },
   {
     name: "plain current/active/immediate/next Session metadata",
-    pattern:
-      /^\s*(?:current|active|immediate|next)[^:\n]{0,48}:[^\n]*\bsession\s+[1-4]\b.*$/gim,
+    pattern: new RegExp(
+      String.raw`^\s*(?:>\s*)?${optionalListPrefix}(?:current|active|immediate|next)[^:\n]{0,48}:[^\n]*\bsession\s+[1-4]\b.*$`,
+      "gim",
+    ),
   },
 ];
 
