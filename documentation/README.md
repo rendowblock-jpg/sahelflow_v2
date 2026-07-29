@@ -7,7 +7,7 @@
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 1 — research complete; implementation ready
+> **Active phase:** Phase 1 — first vertical research complete; implementation ready
 > **Execution epic:** issue #164
 > **Last updated:** 2026-07-29
 

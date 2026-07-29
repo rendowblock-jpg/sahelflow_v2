@@ -87,10 +87,13 @@ No AppData, registry, database, migration or key deletion occurred during this
 observation.
 
 The retained identity snapshot was captured locally without publishing raw
-identifiers:
+identifiers. The Windows-profile fingerprint is SHA-256 over the UTF-8 bytes of
+the current Windows SID, a literal `|`, and the normalized lowercase roaming
+AppData path; the raw SID and profile path remain local:
 
 | Identity/evidence | Captured result |
 |---|---|
+| Windows profile fingerprint SHA-256 | `D2C70CF5394020289F4E5C4FC8506897DE7975502E37550AC5E5FA3A09EBC008` |
 | workspace ID SHA-256 | `1DAEEBBCB6D23E142106E718D7F66B5AA03CA7B030336EB22F68C3B416282F8F` |
 | installation ID SHA-256 | `A0E8D1E34B8E131A6525E2D9F4752576CFDCDA3221F7CDD31B92300895B0D2DE` |
 | active shop ID SHA-256 | `37A8EEC1CE19687D132FE29051DCA629D164E2C4958BA141D5F4133A33F0688F` |
@@ -355,8 +358,9 @@ T470 target.
 
 Phase 0 completed through PR #179 at protected main
 `18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
-passed. Phase 1 research is complete on issue #164 and implementation is ready.
-The first production vertical is:
+passed. Research for the first Phase 1 manual-order confirmation vertical is
+complete on issue #164 and that vertical is ready for implementation. The first
+production vertical is:
 
 > Manual order intake and confirmation under trusted authority, exact idempotency
 > and optimistic versioning, with atomic stock availability/reservation,

@@ -7,7 +7,7 @@
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
-> **Active phase:** Phase 1 — research complete; implementation ready
+> **Active phase:** Phase 1 — first vertical research complete; implementation ready
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-07-29
 

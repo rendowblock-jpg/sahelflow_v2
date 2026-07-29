@@ -251,7 +251,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
-      "**Active phase:** Phase 1 — research complete; implementation ready",
+      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
     ],
   ],
   [
@@ -270,7 +270,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 1 — research complete; implementation ready",
+      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
       "# Phase 1 — Canonical Golden COD business core",
       "## Research gate",
       "# Phase 9 — Certification, representative beta and Stable",
@@ -281,7 +281,8 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Published release:** `1.0.0-internal.13`",
       "**Founder-installed release:** Internal.13",
-      "Phase 1 research is complete on issue #164 and implementation is ready",
+      "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
+      "Windows profile fingerprint SHA-256",
       "Commerce checkpoint safety",
       "The central completion task is therefore production adoption",
     ],
@@ -301,7 +302,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Active implementation branch:** None; Phase 1 implementation ready",
       "**Next branch:** `agent/phase1-manual-confirmation`",
-      "**Active phase:** Phase 1 — research complete; implementation ready",
+      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
       "Phase 0 completed in PR #179",
       "first complete manual-order",
       "research-to-implementation gate",
@@ -394,7 +395,7 @@ const postMergeFrontierPatterns: Array<{
   {
     name: "pre-merge closeout gate",
     pattern:
-      /\b(?:after|before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\bmerge(?:s|d)?\b/i,
+      /(?:\b(?:before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\bmerge(?:s)?\b|\bafter\b.{0,120}\bcloseout\b.{0,120}\bmerges\b)/i,
   },
 ];
 

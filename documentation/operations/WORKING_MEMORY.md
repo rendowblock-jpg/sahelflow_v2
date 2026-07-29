@@ -12,7 +12,7 @@
 > **Execution epic:** issue #164
 > **Active implementation branch:** None; Phase 1 implementation ready
 > **Next branch:** `agent/phase1-manual-confirmation` from current protected `main`
-> **Active phase:** Phase 1 — research complete; implementation ready
+> **Active phase:** Phase 1 — first vertical research complete; implementation ready
 
 ## Current truth
 
@@ -44,10 +44,11 @@ movement and compensation foundation exists, while production order, delivery,
 refund, provider and automation paths still mainly use legacy behavior.
 
 Issue #164 is the live non-authoritative Phase 0–9 execution dashboard. The Web
-Agent recorded and completed the bounded Phase 1 research package there: SQLite
-runtime/journal evidence, exact variant-or-parent stock authority, reservation and
-movement semantics, idempotent optimistic confirmation/rejection, unsafe-bypass
-inventory and fail-closed legacy boundaries. The next owner creates
+Agent recorded and completed the bounded research package for the first Phase 1
+manual-confirmation vertical there: SQLite runtime/journal evidence, exact
+variant-or-parent stock authority, reservation and movement semantics, idempotent
+optimistic confirmation/rejection, unsafe-bypass inventory and fail-closed legacy
+boundaries. The next owner creates
 `agent/phase1-manual-confirmation` from current protected `main` and begins the
 frozen vertical.
 
