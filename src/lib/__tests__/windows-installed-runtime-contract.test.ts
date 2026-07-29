@@ -57,6 +57,7 @@ describe("installed Windows runtime contract", () => {
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
     const runtimeRoute = read("src/app/api/internal/runtime-ready/route.ts");
+    const compileCache = read("src/lib/runtime/compile-cache.ts");
     const rootLayout = read("src/app/layout.tsx");
     const dashboardRouteLayout = read("src/app/(dashboard)/layout.tsx");
     const setupPage = read("src/app/setup/page.tsx");
@@ -114,9 +115,9 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');
     expect(uiRoute).toContain('code: "RUNTIME_SESSION_REQUIRED"');
     expect(uiRoute).toContain('code: "RUNTIME_UI_READY_PERSIST_FAILED"');
-    expect(uiRoute).toContain("getBuiltinModule?.(");
-    expect(uiRoute).toContain('"node:module"');
-    expect(uiRoute).toContain("moduleApi.flushCompileCache()");
+    expect(compileCache).toContain("getBuiltinModule?.(");
+    expect(compileCache).toContain('"node:module"');
+    expect(compileCache).toContain("moduleApi.flushCompileCache()");
     expect(uiRoute).toContain('locale: runtimeLocale(request)');
     expect(runtimeRoute).not.toContain("flushPackagedCompileCache");
     expect(uiRoute.indexOf("writeJsonAtomically(ackPath, acknowledgment)")).toBeLessThan(
@@ -125,7 +126,7 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute.indexOf('code: "RUNTIME_UI_READY_PERSISTED"')).toBeLessThan(
       uiRoute.indexOf("flushPackagedCompileCache();"),
     );
-    expect(uiRoute).not.toContain('await import("node:module")');
+    expect(compileCache).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*suppliedToken/s);
   });
@@ -344,3 +345,4 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("Protected signed candidate dispatched");
   });
 });
+
