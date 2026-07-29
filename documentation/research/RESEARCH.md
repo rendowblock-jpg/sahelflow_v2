@@ -163,19 +163,131 @@ implementation begins and the result is tested against the adopted standard.
 
 ### Phase 0 — Authority and execution
 
-Research focus:
+#### Research question
 
-- documentation authority models;
-- traceable engineering decisions;
-- risk-based CI and release evidence;
-- high-throughput work packaging without weakening review.
+What is the smallest durable authority and delivery model that prevents planning
+and evidence drift in a two-agent SahelFlow repository while preserving fast,
+independently reviewed and exact-source delivery?
 
-Adopted direction:
+#### Current SahelFlow baseline
 
-- one existing owner per kind of truth;
-- no additional permanent masterplan document;
-- one live execution epic;
-- outcome packages rather than micro-task ceremony.
+Before FD-028, the repository already had ten active documentation authorities,
+protected `main`, risk-selected CI, exact-source release evidence, two coding
+agents, issue #164 and an authority audit. The remaining failure was semantic:
+Session 1–4 instructions, stale release language and duplicated execution wording
+could remain active after their underlying milestone had changed.
+
+The reset therefore needed to preserve the useful authority, branch protection,
+review, release and evidence machinery while removing the time-boxed session map
+and preventing a second masterplan from competing with existing owners.
+
+#### External evidence reviewed
+
+Reviewed on 2026-07-29 unless another date is stated:
+
+1. **NIST SP 800-218, Secure Software Development Framework v1.1** — final
+   publication dated 2022-02-03. It organizes secure development around defined
+   practices, tasks and implementation examples that can be integrated into an
+   existing lifecycle rather than imposing one universal process. SahelFlow
+   adopts the principle of explicit practices, responsibilities and verifiable
+   outcomes. NIST SP 800-218 Revision 1 v1.2 was an initial public draft dated
+   2025-12-17 at review time, so the final v1.1 remains the stable normative
+   baseline until a final revision is published.
+   Source: `https://csrc.nist.gov/pubs/sp/800/218/final` and draft status at
+   `https://csrc.nist.gov/pubs/sp/800/218/r1/ipd`.
+2. **GitHub protected-branch and required-status-check documentation** — current
+   official documentation reviewed 2026-07-29. GitHub supports required approving
+   reviews, resolved conversations, required status checks, no-bypass enforcement
+   and validation against the latest pull-request head SHA. SahelFlow adopts the
+   exact-head, selected-gate and non-author review model rather than treating an
+   earlier green commit as merge authority.
+   Sources:
+   `https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches`
+   and
+   `https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks`.
+3. **Google Engineering Practices — Code Review** — current published guidance
+   reviewed 2026-07-29. The guidance emphasizes review by another engineer,
+   design, functionality, complexity, tests, documentation, code health and small
+   understandable changes. SahelFlow adopts independent review and coherent
+   outcome packages, while avoiding micro-change ceremony that would fragment a
+   seller journey.
+   Sources: `https://google.github.io/eng-practices/review/` and
+   `https://google.github.io/eng-practices/review/reviewer/standard.html`.
+4. **Google SRE Book — Release Engineering** — current online edition reviewed
+   2026-07-29. It emphasizes repeatable, automated and hermetic releases, exact
+   source revisions, policy enforcement, review and auditable release history.
+   SahelFlow applies these principles through protected exact-source Internal
+   artifacts and evidence, not through a larger-company release bureaucracy.
+   Source: `https://sre.google/sre-book/release-engineering/`.
+5. **IETF RFC 2119 and RFC 8174 normative-language convention** — reviewed
+   2026-07-29. They distinguish requirement words such as MUST, SHOULD and MAY
+   when used normatively. SahelFlow adopts explicit blocking and optional language
+   in Founder, roadmap, workflow and audit contracts so lower documents cannot
+   silently reinterpret a requirement.
+   Source: `https://www.rfc-editor.org/info/rfc2119/`.
+
+These sources support governance, review, release and requirement-language
+practices. They do not define SahelFlow product scope, COD behavior, pricing or
+Founder authority; those remain owned by the active product documents and
+Founder decisions.
+
+#### Alternatives evaluated
+
+1. **Create the masterplan and research protocol as two new permanent documents.**
+   Rejected because it would exceed the ten-document authority set and recreate
+   duplicate roadmap/workflow ownership.
+2. **Put the complete program only in issue #164.** Rejected because an issue is
+   suitable for live tracking but can be edited chronologically and would compete
+   with Product, Experience, Architecture, Roadmap and Workflow authority.
+3. **Keep the four-session overlay and add more completion detail beneath it.**
+   Rejected because elapsed sessions are not evidence gates and the old map had
+   already become stale while major Required capabilities remained incomplete.
+4. **Distribute the final program into existing owners, retain issue #164 as the
+   live dashboard and update `sf-audit` to enforce the new continuity contract.**
+   Adopted because it preserves one owner per truth type, exact-head review and a
+   compact execution frontier without adding authority.
+
+#### Adopted Phase 0 standard
+
+- FD-028 is the explicit Founder change-control decision.
+- `ROADMAP.md` solely owns Phase 0–9 dependency and exit order.
+- `WORKFLOW.md` solely owns research, implementation, review, CI and evidence.
+- `WORKING_MEMORY.md` contains current truth and one exact next outcome.
+- Issue #164 is a live dashboard, never an eleventh authority.
+- Existing Product, Experience and Architecture requirements remain unchanged
+  unless an explicit Founder or owning-authority decision changes them.
+- The authority audit requires FD-028/current-release markers and rejects obsolete
+  active Session 1–4 execution or next-action language.
+- Material work is reviewed against the latest exact PR head by a non-authoring
+  reviewer and the selected required checks.
+
+#### Phase 0 acceptance and evidence
+
+Phase 0 is complete only when:
+
+- exactly ten active documentation Markdown files remain;
+- FD-028 states exact supersession and preserved clauses;
+- all entry points reference the same Phase 0–9 program and Internal.13 boundary;
+- issue #164 is the Phase 0–9 execution dashboard and is explicitly
+  non-authoritative;
+- no active current-owned document contains an obsolete Session 1–4 execution or
+  next-action instruction;
+- `sf-version`, `sf-audit` and every risk-selected latest-head CI gate pass;
+- the branch is not behind protected `main`;
+- independent latest-head review has no unresolved P0/P1 finding;
+- the exact first Phase 1 production outcome can be reconstructed without chat;
+- no application, schema, updater or release behavior is changed by the reset.
+
+#### Phase 0 revalidation trigger
+
+Revalidate this authority model when:
+
+- GitHub branch-protection, required-check or review behavior changes materially;
+- the set or ownership of active documentation authorities changes;
+- another coding agent, release system or execution tracker becomes active;
+- audit evidence shows contradictory instructions can pass;
+- a new Founder decision changes FD-028;
+- the Stable governance and claims audit begins.
 
 ### Phase 1 — Canonical Golden COD business core
 
