@@ -3109,6 +3109,7 @@ mod tests {
     #[test]
     fn partial_replacement_promotes_staged_generation_and_retains_previous() {
         let root = test_root("partial-replacement-promote");
+        fs::create_dir_all(&root).expect("create test root");
         let staged = root.join("staged.db");
         let target = root.join("target.db");
         let previous = root.join("target.db.previous");
@@ -3132,6 +3133,7 @@ mod tests {
     #[test]
     fn failed_partial_promotion_restores_retained_previous_generation() {
         let root = test_root("partial-replacement-restore");
+        fs::create_dir_all(&root).expect("create test root");
         let staged = root.join("staged.db");
         let target = root.join("target.db");
         let previous = root.join("target.db.previous");
@@ -3159,6 +3161,7 @@ mod tests {
     #[test]
     fn missing_target_promotion_completes_the_documented_partial_state() {
         let root = test_root("missing-target-promote");
+        fs::create_dir_all(&root).expect("create test root");
         let staged = root.join("staged.db");
         let target = root.join("target.db");
         fs::write(&staged, b"new generation").expect("write staged generation");
@@ -3179,6 +3182,7 @@ mod tests {
     #[test]
     fn pre_swap_failure_removes_unused_non_windows_prior_copy() {
         let root = test_root("pre-swap-cleanup");
+        fs::create_dir_all(&root).expect("create test root");
         let staged = root.join("staged.db");
         let target = root.join("target.db");
         let previous = previous_generation_path(&target);
