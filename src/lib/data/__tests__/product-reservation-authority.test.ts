@@ -120,4 +120,47 @@ describe("product reservation authority", () => {
       stock: 5,
     });
   });
+
+  it("rejects a variant identifier owned by another product without mutating it", async () => {
+    const first = await seedProduct(5);
+    const second = await seedProduct(9);
+    const foreignVariant = await rawDb.productVariant.create({
+      data: {
+        productId: second.id,
+        name: "Foreign variant",
+        sku: `FOREIGN-${sequence}`,
+        price: 2400,
+        stock: 9,
+        isActive: true,
+        sortOrder: 0,
+      },
+    });
+
+    await expect(
+      productService.update(context, first.id, {
+        variants: [{
+          id: foreignVariant.id,
+          name: "Hijacked variant",
+          sku: foreignVariant.sku,
+          price: 1,
+          stock: 1,
+          isActive: false,
+          sortOrder: 0,
+        }],
+      }),
+    ).rejects.toThrow(/does not belong to product/i);
+
+    expect(
+      await rawDb.productVariant.findUnique({ where: { id: foreignVariant.id } }),
+    ).toMatchObject({
+      productId: second.id,
+      name: "Foreign variant",
+      price: 2400,
+      stock: 9,
+      isActive: true,
+    });
+    expect(
+      await rawDb.product.findUnique({ where: { id: first.id } }),
+    ).toMatchObject({ stock: 5 });
+  });
 });
