@@ -236,7 +236,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "FD-028",
       "Phase 0–9",
       "Research-first gate",
-      "Does not run source builds, full automated tests",
+      "Do not run source builds, full automated tests",
       "1.0.0-internal.13",
     ],
   ],
@@ -291,7 +291,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Active phase:** Phase 0",
       "first complete manual-order",
-      "Research-to-Implementation Gate",
+      "research-to-implementation gate",
     ],
   ],
   [
