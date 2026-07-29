@@ -345,4 +345,3 @@ describe("installed Windows runtime contract", () => {
     expect(dispatcher).toContain("Protected signed candidate dispatched");
   });
 });
-
