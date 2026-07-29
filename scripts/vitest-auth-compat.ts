@@ -12,12 +12,15 @@ import { expect, vi } from "vitest";
  */
 const testPath = (expect.getState().testPath ?? "").replaceAll("\\", "/");
 const strictAuthorityTest =
+  !testPath ||
   testPath.includes("/src/lib/auth/__tests__/") ||
   testPath.endsWith("/src/app/api/__tests__/auth.test.ts") ||
   testPath.endsWith("/src/lib/identity/__tests__/session-authority.test.ts");
 
 if (!strictAuthorityTest) {
-  vi.mock("@/lib/auth/server", async (importOriginal) => {
+  // `doMock` is intentionally non-hoisted: setup files run before each test file,
+  // so this conditional applies only to the current non-auth evidence file.
+  vi.doMock("@/lib/auth/server", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/lib/auth/server")>();
 
     async function getCompatibleAuthority() {
