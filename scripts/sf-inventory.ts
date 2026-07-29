@@ -11,15 +11,24 @@ interface PackageJson {
   workspaces?: string[];
 }
 
-type OwnerSession = "Session 2" | "Session 3" | "Session 4";
+type PrimaryRoutePhase =
+  | "Phase 1"
+  | "Phase 2"
+  | "Phase 3"
+  | "Phase 5"
+  | "Phase 8";
+
+const CONTINUOUS_QUALITY_PHASES = ["Phase 5", "Phase 6", "Phase 7"] as const;
+type ContinuousQualityPhase = (typeof CONTINUOUS_QUALITY_PHASES)[number];
 
 interface RouteExperienceAudit {
   route: string;
   file: string;
   routeEntries: string[];
   sourceFiles: string[];
-  ownerSession: OwnerSession;
+  primaryPhase: PrimaryRoutePhase;
   ownerOutcome: string;
+  continuousQualityPhases: readonly ContinuousQualityPhase[];
   boundaries: {
     loading: boolean;
     error: boolean;
@@ -58,7 +67,8 @@ interface Inventory {
     contract: string;
     routeAudits: RouteExperienceAudit[];
     highestRiskRoutes: RouteExperienceAudit[];
-    ownerCounts: Record<OwnerSession, number>;
+    ownerCounts: Record<PrimaryRoutePhase, number>;
+    continuousQualityPhases: readonly ContinuousQualityPhase[];
   };
   apiRoutes: Array<{ route: string; file: string }>;
   commands: Record<string, string>;
@@ -121,40 +131,78 @@ function countMatches(content: string, pattern: RegExp): number {
   return [...content.matchAll(pattern)].length;
 }
 
-function ownerForRoute(route: string): Pick<RouteExperienceAudit, "ownerSession" | "ownerOutcome"> {
-  const session2Prefixes = [
+function primaryOwnerForRoute(
+  route: string,
+): Pick<RouteExperienceAudit, "primaryPhase" | "ownerOutcome"> {
+  const phase1Prefixes = [
     "/dashboard",
     "/orders",
     "/customers",
     "/risk",
     "/products",
     "/deliveries",
+    "/returns",
+    "/accounting",
+    "/analytics",
+    "/imports",
   ];
-  if (session2Prefixes.some((prefix) => route === prefix || route.startsWith(`${prefix}/`))) {
-    return { ownerSession: "Session 2", ownerOutcome: "Golden COD core UI" };
+  if (
+    phase1Prefixes.some(
+      (prefix) => route === prefix || route.startsWith(`${prefix}/`),
+    )
+  ) {
+    return {
+      primaryPhase: "Phase 1",
+      ownerOutcome: "Canonical Golden COD business core",
+    };
   }
 
-  const session3Prefixes = [
-    "/accounting",
+  const phase2Prefixes = [
     "/agents",
-    "/analytics",
-    "/automations",
-    "/imports",
-    "/inbox",
     "/login",
     "/onboarding",
     "/profile",
-    "/returns",
-    "/settings",
     "/setup",
-    "/storefront",
-    "/storefronts",
   ];
-  if (route === "/" || session3Prefixes.some((prefix) => route === prefix || route.startsWith(`${prefix}/`))) {
-    return { ownerSession: "Session 3", ownerOutcome: "Complete local product and provider foundations" };
+  if (
+    phase2Prefixes.some(
+      (prefix) => route === prefix || route.startsWith(`${prefix}/`),
+    )
+  ) {
+    return {
+      primaryPhase: "Phase 2",
+      ownerOutcome: "Identity, authorization, licensing and multi-shop",
+    };
   }
 
-  return { ownerSession: "Session 4", ownerOutcome: "Whole-product AAA integration" };
+  const phase3Prefixes = ["/automations", "/inbox"];
+  if (
+    phase3Prefixes.some(
+      (prefix) => route === prefix || route.startsWith(`${prefix}/`),
+    )
+  ) {
+    return {
+      primaryPhase: "Phase 3",
+      ownerOutcome: "Durable providers, inbox, AI and automations",
+    };
+  }
+
+  const phase8Prefixes = ["/storefront", "/storefronts"];
+  if (
+    phase8Prefixes.some(
+      (prefix) => route === prefix || route.startsWith(`${prefix}/`),
+    )
+  ) {
+    return {
+      primaryPhase: "Phase 8",
+      ownerOutcome: "Connected storefront and remote platform",
+    };
+  }
+
+  return {
+    primaryPhase: "Phase 5",
+    ownerOutcome: "Whole-product AAA UI/UX and frontend redesign",
+  };
 }
 
 function routeAncestorDirectories(pageFile: string): string[] {
@@ -276,7 +324,7 @@ function auditRouteExperience(
   const content = sourceFiles
     .map((file) => readUtf8(resolve(repoRoot, file)))
     .join("\n");
-  const owner = ownerForRoute(route.route);
+  const owner = primaryOwnerForRoute(route.route);
   const boundaries = {
     loading: boundaryFiles.loading.length > 0,
     error: boundaryFiles.error.length > 0,
@@ -325,6 +373,7 @@ function auditRouteExperience(
     routeEntries,
     sourceFiles,
     ...owner,
+    continuousQualityPhases: CONTINUOUS_QUALITY_PHASES,
     boundaries,
     boundaryFiles,
     signals,
@@ -359,13 +408,15 @@ const routeAudits = routes.map((route) => auditRouteExperience(fileSet, route));
 const highestRiskRoutes = [...routeAudits]
   .sort((left, right) => right.riskScore - left.riskScore || left.route.localeCompare(right.route))
   .slice(0, 12);
-const ownerCounts: Record<OwnerSession, number> = {
-  "Session 2": 0,
-  "Session 3": 0,
-  "Session 4": 0,
+const ownerCounts: Record<PrimaryRoutePhase, number> = {
+  "Phase 1": 0,
+  "Phase 2": 0,
+  "Phase 3": 0,
+  "Phase 5": 0,
+  "Phase 8": 0,
 };
 for (const routeAudit of routeAudits) {
-  ownerCounts[routeAudit.ownerSession] += 1;
+  ownerCounts[routeAudit.primaryPhase] += 1;
 }
 const apiRoutes = routeFiles
   .filter((file) => /\/route\.(?:ts|tsx|js|jsx)$/.test(file) || /^src\/app\/route\.(?:ts|tsx|js|jsx)$/.test(file))
@@ -457,10 +508,11 @@ const inventory: Inventory = {
   readmes,
   routes,
   experience: {
-    contract: "session1-global-experience-v1",
+    contract: "fd028-route-completion-v1",
     routeAudits,
     highestRiskRoutes,
     ownerCounts,
+    continuousQualityPhases: CONTINUOUS_QUALITY_PHASES,
   },
   apiRoutes,
   commands: pkg.scripts ?? {},
@@ -494,18 +546,21 @@ const summaryLines = [
   "",
   "The JSON file in this directory is machine-generated evidence only; it does not replace repository authority documents.",
   "",
-  "## Experience and Arabic route evidence",
+  "## FD-028 route completion evidence",
   "",
-  `- Session 2 owned routes: ${inventory.experience.ownerCounts["Session 2"]}`,
-  `- Session 3 owned routes: ${inventory.experience.ownerCounts["Session 3"]}`,
-  `- Session 4 owned routes: ${inventory.experience.ownerCounts["Session 4"]}`,
-  "- Every route entry in repository-inventory.json records its page, ancestor layouts/templates, inherited boundaries and conservative static local-dependency surface, plus geometry, bidi, directional-icon, chart, owner-session and deterministic risk signals.",
+  `- Primary Phase 1 owned routes: ${inventory.experience.ownerCounts["Phase 1"]}`,
+  `- Primary Phase 2 owned routes: ${inventory.experience.ownerCounts["Phase 2"]}`,
+  `- Primary Phase 3 owned routes: ${inventory.experience.ownerCounts["Phase 3"]}`,
+  `- Primary Phase 5 owned routes: ${inventory.experience.ownerCounts["Phase 5"]}`,
+  `- Primary Phase 8 owned routes: ${inventory.experience.ownerCounts["Phase 8"]}`,
+  `- Continuous quality phases on every route: ${inventory.experience.continuousQualityPhases.join(", ")}`,
+  "- Every route entry in repository-inventory.json records its page, ancestor layouts/templates, inherited boundaries and conservative static local-dependency surface, plus geometry, bidi, directional-icon, chart, primary functional phase, continuous quality phases and deterministic risk signals.",
   "",
   "### Highest static-risk routes",
   "",
   ...inventory.experience.highestRiskRoutes.map(
     (route) =>
-      `- ${route.route} — ${route.ownerSession}; score ${route.riskScore}; ${route.risks.join(", ") || "no static risks"}`,
+      `- ${route.route} — ${route.primaryPhase}; score ${route.riskScore}; ${route.risks.join(", ") || "no static risks"}`,
   ),
   "",
 ];

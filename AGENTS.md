@@ -3,126 +3,212 @@
 SahelFlow uses two coding agents and GitHub as durable truth:
 
 - ChatGPT Web Agentic Coding Agent;
-- Desktop Agent working in the local checkout.
+- Desktop Agent working in the local Windows checkout.
 
-GitHub Actions supplies clean-checkout checks and exact artifacts. It is not a
-third coding agent. GLM, Codex Cloud, MAWS and `agent-handoff` are not part of
-the active workflow.
+GitHub Actions is clean-checkout and artifact infrastructure, not a third coding
+agent. GLM, Codex Cloud, MAWS and legacy handoff systems are not active authority.
 
 ## Start here
 
 1. Read [`documentation/README.md`](documentation/README.md).
-2. Read
+2. Read FD-028 in
+   [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
+3. Read the active phase and exact exit gate in
+   [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
+4. Read
+   [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md),
+   especially the research-to-implementation gate and work-package contract.
+5. Read
    [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-3. Inspect active PRs/branches and exact source baseline.
-4. Read the governing sections of:
+6. Inspect active branches, PRs and issue #164.
+7. Read the governing sections of:
    - [`PRODUCT.md`](documentation/product/PRODUCT.md);
    - [`EXPERIENCE.md`](documentation/product/EXPERIENCE.md);
-   - [`DECISIONS.md`](documentation/product/DECISIONS.md), especially FD-027;
    - [`ARCHITECTURE.md`](documentation/system/ARCHITECTURE.md);
    - [`CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md);
-   - [`ROADMAP.md`](documentation/system/ROADMAP.md);
-   - [`WORKFLOW.md`](documentation/operations/WORKFLOW.md).
-5. Open issue #164 for the tracked four-session execution epic.
-6. Inspect source and tests before trusting implementation claims.
+   - [`RESEARCH.md`](documentation/research/RESEARCH.md).
+8. Inspect exact source and tests before trusting implementation claims.
 
-Research/archive material is context only unless adopted by an active owner.
+Chat history and archived reports are context only. They never replace current
+GitHub authority.
 
-## Authority
+## Authority precedence
 
-Use this precedence:
+1. Newer explicit Founder decision for the choice it changes.
+2. Product contract.
+3. Experience/capability/journey contract.
+4. Architecture and invariants.
+5. Source-grounded current state.
+6. Final roadmap.
+7. Workflow.
+8. Working Memory.
+9. Research/archive.
 
-1. newer explicit numbered Founder decision for the choice it changes;
-2. product contract;
-3. experience/capability/journey contract;
-4. architecture and invariants;
-5. source-grounded current state;
-6. roadmap;
-7. workflow;
-8. working memory for the execution frontier;
-9. research/archive.
+A lower layer cannot silently weaken a higher one.
 
-A lower layer cannot silently weaken a higher one. Reconcile contradictions in
-the owning document before dependent work continues.
+## Governing completion program
 
-## Completion Operating Model v2
+FD-028 replaces the obsolete four-session execution overlay with one final
+Phase 0–9 program:
 
-FD-027 governs execution:
+0. authority freeze and execution reset;
+1. canonical Golden COD business core;
+2. identity, authorization, licensing and multi-shop;
+3. durable providers, inbox, AI and automations;
+4. data protection, recovery, migrations and security;
+5. whole-product AAA UI/UX and frontend redesign;
+6. Arabic, RTL and accessibility parity;
+7. performance and reliability;
+8. connected SahelFlow platform;
+9. certification, representative beta and Stable.
 
-- advance multiple roadmap phases in each intensive session where dependencies
-  permit;
-- run one core-authority lane, up to two seller verticals, one experience/Arabic
-  lane and one platform/performance lane;
-- freeze shared schema/domain/design-system contracts before dependent parallel
-  work;
-- keep normal branches under roughly two working days and split by usable
-  outcomes;
-- merge ordinary feature PRs without app-version bumps;
-- group coherent merged outcomes into one milestone/session Internal candidate;
-- keep at most one frozen signed candidate while independent work continues;
-- treat Arabic/RTL, accessibility, recovery states and performance as blocking
-  continuous quality, not final polish;
-- classify review findings P0/P1/P2/P3 and do not reopen frozen candidates for
-  non-blocking P2/P3 churn;
-- auto-publish routine Internal drafts only after every protected release gate;
-- require explicit Founder approval for Beta and Stable.
+Valid FD-027 rules remain: bounded WIP, coherent outcome packages, independent
+review, P0/P1 blocking, milestone releases, exact-source evidence and continuous
+Arabic/RTL, accessibility, recovery and performance.
 
-## How to work
+No agent may replace this program with another permanent plan, wave or session
+map without a new Founder decision.
 
-- One owner per task/branch; the other agent reviews material work.
-- Parallelize only independent contracts/files.
+## Research-first gate
+
+Before every major phase, durable contract or material implementation:
+
+- state the exact decision;
+- inspect the current SahelFlow production path and tests;
+- research current primary standards, official documentation and provider
+  contracts;
+- inspect mature implementation code and relevant best-in-class operational
+  products;
+- consider Algerian COD, Arabic/French, Windows and constrained-network reality;
+- compare alternatives across correctness, migration, security, accessibility,
+  RTL, performance, recovery and economics;
+- adopt one SahelFlow-specific decision with measurable acceptance criteria;
+- record the evidence and revalidation trigger.
+
+Generic AI recommendations, visual trends, screenshots, mocks and adapter
+existence are not authority.
+
+Research is bounded. Once the decision is sufficiently supported, implementation
+begins.
+
+## Current baseline
+
+- Protected main: `b2776bd3ea8d879a475c26af9d0c720d666671a9`.
+- Published executable source:
+  `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Published release: `1.0.0-internal.13`, run `30366866703`.
+- Internal.13 passed protected signed build, staged runtime, install/reopen,
+  authenticated UI, deterministic evidence, tag and publication gates.
+- Internal.13 is not yet Founder-installed or T470-accepted.
+- Internal.5 remains the Founder-accepted baseline.
+- The new canonical command/event/outbox/reservation/movement foundation is
+  merged, but production business routes still mainly use legacy paths.
+- Active phase: Phase 0 authority reset, followed by the first canonical manual
+  order-confirmation vertical.
+
+## Exact next outcome
+
+After the authority reset merges, begin Phase 1 research and implementation for:
+
+> A manual order is created under trusted authority, confirmed or rejected using
+> optimistic version and exact idempotency, reserves available product/variant
+> stock atomically, writes inventory movement, audit, event, outbox and projection
+> invalidation, exposes complete AR/FR/EN UI states, survives duplicate and
+> concurrent submissions, and removes the migrated direct-stock legacy path.
+
+Internal.13 T470 install/observation runs independently in the platform lane.
+
+## Work rules
+
+- One owner, branch and PR per outcome.
 - Never push directly to protected `main`.
-- Preserve unrelated user work in a dirty checkout.
-- Record important decisions, evidence and exact next move in GitHub.
-- Update an existing authority instead of creating another permanent plan, gap
-  report, wave, prompt, status or handoff document.
-- Before implementation identify product clause, capability/journey, states,
-  invariants, migration/recovery, Arabic/RTL/accessibility, performance, risk and
-  evidence.
-- Keep current implementation claims separate from target requirements.
-- Adapter code, mocks and test count do not prove provider/public readiness.
-- Do not place credentials, signing material, private seller data or secrets in
-  prompts, docs, commits, PRs, logs or evidence.
+- Preserve unrelated user work and canonical AppData.
+- Freeze shared contracts before dependent parallel work.
+- Core authority WIP 1; seller vertical WIP 2 total; experience/Arabic WIP 1;
+  platform/performance WIP 1.
+- Normal branches are short and coherent.
+- Merge ordinary source-complete packages without app-version bumps.
+- Group coherent outcomes into one Internal milestone candidate.
+- At most one frozen signed candidate is in flight.
+- Remove or disable a legacy mutation path after canonical adoption, migration and
+  recovery proof.
+- No important decision remains only in chat.
+- Do not create another permanent plan, gap report, prompt, status or handoff.
 
-## Agent boundaries
+## Before implementation record
 
-### Web Agent
+- named seller/Founder outcome;
+- phase, capability and journey;
+- governing Founder/product/experience/architecture clauses;
+- exact research package and adopted decision;
+- source baseline and owner;
+- scope/non-goals and dependencies;
+- existing data/behavior to preserve;
+- migration, compatibility and forward repair;
+- security/privacy/authorization implications;
+- Arabic/RTL/accessibility/responsive implications;
+- performance budget;
+- required evidence;
+- legacy path to remove.
 
-- May investigate, design, implement, test, commit, push and open/review PRs.
-- Claims only evidence available in its environment.
-- Does not claim installed local Windows behavior without Desktop evidence.
+## Review severity
 
-### Desktop Agent
+- **P0:** active data loss, secret exposure, cross-shop/tenant effect, corrupt
+  update/restore or irreversible stock/money damage. Stop immediately.
+- **P1:** required journey or authority failure, negative/double stock, incorrect
+  money, duplicate/lost effect, unsafe migration, startup/install/recovery
+  failure, or major unusable Arabic/UX/accessibility defect. Blocks merge/release.
+- **P2:** bounded material hardening with a safe workaround.
+- **P3:** low-impact polish.
 
-- Codes in the local checkout on a normal branch and pushes through GitHub.
-- Does not run source builds, automated tests, coverage, dependency installation
-  or other heavy validation on the Founder machine. Required source checks run
-  from the exact pushed commit in GitHub Actions.
-- Limits local repository work to lightweight inspection, focused edits and Git
-  operations; installed-app work is non-destructive Windows, WebView, AppData
-  preservation and real-UI observation.
-- Owns installed MSI, updater, WebView, AppData preservation, real UI,
-  close/reopen and reference-hardware evidence.
-- Does not delete canonical AppData or rebuild destructively to make a test pass.
+P2/P3 are owned follow-ups. They do not create unbounded review loops.
 
-The Founder machine is storage-constrained. GitHub Actions owns builds, tests,
-coverage, full matrices and signed artifacts. Do not require permanent
-`node_modules`, `.next`, Rust `target` or repeated installer caches locally.
+## Evidence ladder
 
-## Review and CI
+1. Static/source.
+2. Unit/domain.
+3. Integration/API/database.
+4. Development UI.
+5. Clean GitHub Actions.
+6. Signed artifact.
+7. Installed Windows.
+8. T470/floor hardware.
+9. External provider/security/accessibility.
+10. Representative seller/Beta.
 
-- Draft PRs run fast authority and targeted checks.
-- One frozen review head runs every selected full lane.
-- Never rerun an unchanged passing exact head.
-- Installed-MSI lanes are selected for native, migration, packaged-runtime,
-  installer/updater or release-authority risk—not every business/UI PR.
-- P0/P1 block the affected outcome. P2/P3 are scheduled follow-ups.
-- Documentation-only work does not create an MSI unless executable release
-  authority changed.
+A lower layer cannot claim a higher one.
 
-Shared commands used by GitHub Actions include:
+## Completion rule
+
+A model, page, route, adapter, screenshot, mock or passing test does not complete
+a capability. The named outcome must pass every applicable happy, validation,
+permission, duplicate, concurrency, loading, empty, offline, stale, conflict,
+failure, retry, recovery, audit, Arabic/RTL, accessibility, performance and
+preservation case.
+
+Public Stable additionally requires representative seller beta, live provider
+certification, independent security/privacy and Law 18-07 review, restore and
+incident drills, compatibility evidence, rollout readiness and explicit Founder
+promotion.
+
+## Desktop boundaries
+
+The Founder machine is storage constrained.
+
+- Do not run source builds, full automated tests, coverage or dependency
+  installation locally when Actions can prove them.
+- Do not require permanent `node_modules`, `.next`, Rust `target` or repeated
+  installer caches.
+- Do not delete canonical AppData, registry, databases, migrations or keys.
+- Use exact signed artifacts for install and observation.
+- Record exact machine, profile, artifact, version, identities and timing.
+
+## Shared validation commands
+
+GitHub Actions uses commands including:
 
 ```bash
+bun run sf-version
 bun run sf-audit
 bun run sf-inventory
 bun run sf-verify
@@ -130,37 +216,18 @@ bun run sf-verify --fast
 ```
 
 These commands prove only what they execute. Linux/source checks cannot prove
-installed Windows behavior. The Desktop Agent does not run them locally; GitHub
-Actions runs required commands from the exact pushed commit.
+installed Windows, T470, provider, legal or Beta behavior.
 
-## Milestone Internal delivery
+## Milestone release truth
 
-1. Merge source-complete packages without ordinary feature version bumps.
-2. Cut one unique immutable Internal version when the merged set forms a coherent
-   Founder test.
-3. Build/sign from exact protected source as a draft.
-4. Pass signature, installed launch/reopen, authenticated UI, deterministic
-   evidence and updater-manifest gates.
-5. Publish automatically only after all protected post-build gates pass.
-6. Install through the in-app updater without deleting AppData.
-7. Observe the named milestone, close/reopen and record Founder result.
+Routine Internal candidates remain draft until every selected signed post-build
+gate passes. The protected workflow verifies exact source, signed MSI, signature,
+staged/installed runtime, authenticated UI, evidence, updater metadata and the
+source-bound release tag before automatic publication.
 
-Failed candidates remain drafts. Manual MSI is bootstrap/recovery only. Beta and
-Stable always require explicit Founder promotion.
+`latest.json` is updater metadata that contains the signature for the signed MSI;
+do not call the JSON document independently signed unless explicit manifest
+signing is implemented.
 
-## Current baseline
-
-- Documentation-reset merge checkpoint: PR #154 at
-  `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
-- Protected-main Internal.11 checkpoint and executable source: PR #163 at
-  `1b9c52235a37d4593c2fffa3c397b85498aba7fd`.
-- Signed Internal.11 run: `30244003253`.
-- Founder-accepted installed release: `1.0.0-internal.5`.
-- Founder reports Internal.11 installed through the in-app updater and usable,
-  but exact post-install version/AppData evidence remains unrecorded.
-- Internal.11 is not Founder-accepted: first and subsequent launches remain
-  materially slow on the T470.
-- Phase 0 is complete. **Current phase:** Phase 1 with the Phase 3 experience and
-  platform tracks active in parallel under Session 1.
-- Exact next action is the four-lane Session 1 start in Working Memory; slow
-  startup does not freeze independent workspace/shop or Arabic/UX work.
+Failed candidates remain drafts. Beta and Stable always require explicit Founder
+promotion.

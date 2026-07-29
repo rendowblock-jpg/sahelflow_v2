@@ -1,53 +1,47 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Documentation-reset merge:** PR #154 at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`
-> **Protected-main Internal.11 signed checkpoint:**
-> `1b9c52235a37d4593c2fffa3c397b85498aba7fd`
-> **Protected-main combined source checkpoint:** PR #170 at
-> `6cd1103b55c905d26492ecf5436e644d377ce557`
-> **Milestone source request:** `1.0.0-internal.13` / MSI `1.0.0.13`; not signed
-> or published until the exact protected-main release workflow passes
-> **Accepted installed release:** `1.0.0-internal.5`
-> **Current installation:** Founder reports `1.0.0-internal.11` installed, not
-> Founder-accepted because first and subsequent launches remain materially slow
-> and exact post-install preservation/lifecycle evidence is open
-> **Latest signed candidate:** `1.0.0-internal.11`, run `30244003253`
-> **Operating model:** FD-027 / SahelFlow Completion Operating Model v2
+> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Protected-main baseline:** `b2776bd3ea8d879a475c26af9d0c720d666671a9`
+> **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
+> **Published release:** `1.0.0-internal.13`, protected run `30366866703`
+> **Founder-installed release:** Internal.11 reported installed; complete identity/lifecycle evidence open
+> **Founder-accepted baseline:** Internal.5
+> **Active phase:** Phase 0 — authority freeze and execution reset
 > **Execution epic:** issue #164
-> **Last updated:** 2026-07-28
+> **Last updated:** 2026-07-29
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
-product, records source-grounded current state, orders the work, and lets the Web
-Agent and Desktop Agent continue through GitHub without depending on chat.
+product, the required experience and engineering invariants, what merged source
+actually proves, the final dependency order, the research and delivery process,
+and the exact current execution frontier.
 
-The active authority is intentionally limited to ten documents. Historical
-research may remain under `archive/`, but it is evidence and context—not current
-product or implementation truth. Issue #164 tracks execution but does not become
-an eleventh documentation authority.
+The active authority remains intentionally limited to ten Markdown documents.
+Issue #164 tracks execution but is not an eleventh documentation authority.
+Historical reports under `archive/` are context only until revalidated and
+adopted by an active owner.
 
 ## Read order
 
-1. [`product/PRODUCT.md`](product/PRODUCT.md) — public promise, launch scope,
-   commercial boundaries and Stable gate.
+1. [`product/PRODUCT.md`](product/PRODUCT.md) — public promise, Stable scope,
+   commercial boundaries, entitlements and exclusions.
 2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — capabilities, journeys,
-   operational states and AAA experience standard.
+   operational states, page completion and AAA experience standard.
 3. [`product/DECISIONS.md`](product/DECISIONS.md) — numbered Founder decisions;
-   FD-027 governs the compressed multi-phase program.
-4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — target system,
-   invariants, security and data authority.
-5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — what merged `main`
-   implements and what exact evidence exists.
-6. [`system/ROADMAP.md`](system/ROADMAP.md) — dependency order plus the four-session
-   execution overlay.
-7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — Operating Model v2,
-   lanes, WIP, review, CI, milestone release and evidence rules.
+   FD-028 governs final completion and research-first implementation.
+4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — target system, data
+   authority, protocols, invariants, security and recovery.
+5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged implementation,
+   named evidence and exact known discontinuities.
+6. [`system/ROADMAP.md`](system/ROADMAP.md) — final Phase 0–9 dependency order,
+   research requirements and objective exit gates.
+7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — research gate, work
+   packages, lanes, review, CI, release, evidence and anti-drift rules.
 8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact
-   execution frontier and exact Session 1 start.
-9. [`research/RESEARCH.md`](research/RESEARCH.md) — adopted research findings and
-   retained research index.
-
-This file is the tenth active document.
+   current frontier and exact next outcome.
+9. [`research/RESEARCH.md`](research/RESEARCH.md) — research protocol, adopted
+   findings, phase questions and source index.
+10. This file — documentation map and authority rules.
 
 ## Authority and precedence
 
@@ -55,89 +49,103 @@ When statements overlap, use this order:
 
 1. newer numbered Founder decision for the choice it explicitly changes;
 2. `PRODUCT.md` for public promise, scope, price, entitlements and Stable;
-3. `EXPERIENCE.md` for capability depth, journeys, states and user quality;
-4. `ARCHITECTURE.md` for boundaries, invariants and technical safety;
+3. `EXPERIENCE.md` for capability, journey, state and user-quality requirements;
+4. `ARCHITECTURE.md` for technical authority, invariants and safety;
 5. `CURRENT_STATE.md` for merged implementation and evidence;
-6. `ROADMAP.md` for dependency and multi-session order;
-7. `WORKFLOW.md` for execution, review, CI, release and evidence;
-8. `WORKING_MEMORY.md` for the current execution frontier;
-9. `RESEARCH.md` and `archive/` for non-authoritative evidence/context.
+6. `ROADMAP.md` for dependency and completion order;
+7. `WORKFLOW.md` for research, execution, review, CI and release;
+8. `WORKING_MEMORY.md` for the current frontier;
+9. `RESEARCH.md` and archive for evidence and context.
 
-A lower layer cannot silently weaken a higher one. Code, tests, research,
-historical plans and agent preferences do not override an explicit Founder
-decision. Reconcile contradictions in the owning document before dependent work.
+A lower layer cannot silently weaken a higher layer. Code, tests, external
+research, issues and agent preference do not override Founder/product authority.
+Reconcile contradictions in the owning document before dependent work continues.
 
 ## Truth model
 
-SahelFlow tracks separate realities:
+SahelFlow separates these realities:
 
 | Reality | Authority |
 |---|---|
 | Integrated source | protected `main` and exact commit |
 | Signed distributable | exact-source signed Internal/Beta/Stable artifact |
-| Founder-observed app | installed version and recorded reference-machine result |
-| Public Stable | representative beta plus external/security/legal/rollout gates |
+| Founder-observed app | exact installed version and recorded machine result |
+| Founder AAA Candidate | all Required internal implementation/evidence gates |
+| Public Stable | representative beta plus provider, security, privacy, legal, recovery, compatibility and rollout evidence |
 
-`CURRENT_STATE.md` describes merged source and names its evidence.
-`WORKING_MEMORY.md` describes the active frontier and next execution.
+A lower reality cannot claim a higher one.
 
-## Completion Operating Model v2
+Internal.13 is published and passed the protected signed workflow. It is not yet
+Founder-installed or accepted on the T470, and publication does not prove the
+full Golden COD Journey, whole-route AAA quality, provider certification or
+Stable readiness.
 
-FD-027 supersedes the old one-version-per-work-package cadence:
+## Final completion model
 
-- ordinary source-complete packages may merge without app-version bumps;
-- one coherent milestone/session receives the unique immutable Internal version;
-- at most one frozen signed candidate is in flight while independent work
-  continues;
-- shared contracts remain dependency-serialized;
-- sessions advance multiple phases through bounded lanes;
-- Arabic/RTL, accessibility, complete page states and performance are blocking
-  continuous requirements;
-- P0/P1 block; P2/P3 become focused follow-ups;
-- routine Internal drafts auto-publish only after every protected release gate;
-- Beta and Stable require explicit Founder approval.
+The obsolete four-session overlay is replaced by the final roadmap:
 
-The four sessions target a complete Founder AAA candidate. They cannot fabricate
-representative seller beta, live provider certification, independent
-security/privacy/Law 18-07 review, restore/incident drills, compatibility matrix
-or Stable promotion.
+0. authority freeze and execution reset;
+1. canonical Golden COD business core;
+2. identity, authorization, licensing and multi-shop;
+3. durable providers, inbox, AI and automations;
+4. data protection, recovery, migrations and security;
+5. whole-product AAA UI/UX and frontend redesign;
+6. Arabic, RTL and accessibility parity;
+7. performance and reliability;
+8. connected SahelFlow platform;
+9. certification, representative beta and Stable.
 
-## Status vocabulary
+Experience, Arabic/RTL, accessibility, performance, security, migration,
+recovery and evidence are continuous tracks across the functional phases.
 
-- **Implemented** — coherent source exists and stated source-level checks pass.
-- **Proven** — required named environment, artifact or real-machine evidence
-  exists.
-- **Partial** — useful implementation exists but depth, authority, recovery or
-  proof is incomplete.
-- **Unsafe** — current behavior can violate a target invariant.
-- **Missing** — target capability is not meaningfully implemented.
-- **Unverified** — source exists but required external/installed proof does not.
-- **Conditional** — may be public only after certification.
+## Research-first rule
 
-The dispositions are **keep**, **harden**, **migrate**, **replace**, **retire
-after proof**, and **defer**.
+Every major phase and material implementation begins by:
 
-## Update rules
+- inspecting exact current SahelFlow source and tests;
+- researching current primary standards and official documentation;
+- evaluating production implementations and relevant best-in-class products;
+- considering Algerian COD, Windows, Arabic/French and constrained-network reality;
+- comparing alternatives;
+- adopting a SahelFlow-specific measurable standard.
 
-- Merged implementation/evidence changes update `CURRENT_STATE.md`.
-- Direction, lane ownership or next action updates `WORKING_MEMORY.md`.
-- Founder decisions update `DECISIONS.md` and the affected owner.
-- Architecture, product, experience, roadmap and workflow changes update their
-  existing owner; they do not create another permanent plan or handoff.
-- Generated inventories remain generated evidence rather than permanent docs.
-- Ordinary chronology belongs in commits, PRs, Actions runs, releases and issue
-  #164 comments.
+Generic AI advice, visual trends, screenshots, adapter existence and unsourced
+claims are not implementation authority.
+
+## Completion rule
+
+A capability or page is complete only when its real journey and every applicable
+happy, validation, permission, duplicate, concurrency, loading, empty, offline,
+stale, conflict, failure, retry, recovery, audit, Arabic/RTL, accessibility,
+performance and preservation behavior pass at the required evidence layers.
+
+Public Stable additionally requires real external and representative evidence.
+
+## Update ownership
+
+- Founder choice → `product/DECISIONS.md` and affected owner.
+- Scope/public promise → `product/PRODUCT.md`.
+- Capability/journey/UI standard → `product/EXPERIENCE.md`.
+- Target invariant/protocol → `system/ARCHITECTURE.md`.
+- Merged implementation/evidence → `system/CURRENT_STATE.md`.
+- Phase/dependency order → `system/ROADMAP.md`.
+- Research procedure/findings → `research/RESEARCH.md`.
+- Delivery process → `operations/WORKFLOW.md`.
+- Current frontier → `operations/WORKING_MEMORY.md`.
+- Execution status → issue #164.
+
+Update an existing owner. Do not create another permanent masterplan, gap report,
+wave, prompt, status or handoff document.
 
 ## Archive policy
 
-`archive/` may retain valuable dated research, design or engineering evidence.
 Archived material:
 
 - is never active authority;
+- may contain stale versions, provider claims and implementation judgments;
 - must be revalidated before adoption;
-- may contain obsolete implementation claims;
-- does not need copying into Working Memory;
+- need not be copied into Working Memory;
 - may be removed when Git history is sufficient.
 
-Credentials, signing material, private seller data and secret values never
-belong in documentation, prompts, commits, PRs or evidence artifacts.
+Credentials, signing material, private seller data and secret values never belong
+in documentation, prompts, commits, PRs, logs or evidence.
