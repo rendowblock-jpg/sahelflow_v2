@@ -10,6 +10,7 @@
 //     the degradable WhatsApp sidecar.
 
 mod child_containment;
+mod installation_root_key;
 mod migration_coordinator;
 mod packaged_auth;
 mod packaged_runtime;
@@ -255,7 +256,7 @@ const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
     ("EISDIR", "path-is-directory"),
 ];
 const NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT";
-const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
+const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{const fs=require('fs'),crypto=require('crypto'),frame=Buffer.alloc(40);let offset=0;while(offset<frame.length){const read=fs.readSync(0,frame,offset,frame.length-offset,null);if(read===0){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_missing')}offset+=read}const extra=Buffer.alloc(1),extraRead=fs.readSync(0,extra,0,1,null);extra.fill(0);const expected=Buffer.from('SFRK0001','ascii');if(extraRead!==0||!crypto.timingSafeEqual(frame.subarray(0,8),expected)){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_invalid')}const key=Buffer.alloc(32);frame.copy(key,0,8);frame.fill(0);let used=false;const symbol=Symbol.for('sahelflow.installation-root.v1');Object.defineProperty(globalThis,symbol,{configurable:true,enumerable:false,value:()=>{if(used)throw Error('SF_INSTALLATION_ROOT_FRAME_consumed');used=true;delete globalThis[symbol];return key}});if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
 
 fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
     let raw = path.to_str().ok_or_else(|| {
@@ -386,11 +387,11 @@ pub fn run() {
                         "migration-started",
                         None,
                     );
-                    let authority = match migration_coordinator::prepare_installation(
+                    let prepared_installation = match migration_coordinator::prepare_packaged_installation(
                         &app_data_dir,
                         &resource_dir,
                     ) {
-                        Ok(authority) => authority,
+                        Ok(prepared) => prepared,
                         Err(error) => {
                             let detail = error.to_string();
                             eprintln!("[sahelflow] FATAL: all-shop migration blocked: {detail}");
@@ -402,11 +403,24 @@ pub fn run() {
                             return;
                         }
                     };
+                    let migration_coordinator::PreparedInstallation {
+                        authority,
+                        installation_root,
+                    } = prepared_installation;
                     startup_recovery::record_startup_stage(
                         &app_data_dir,
                         "migration-complete",
                         None,
                     );
+                    if !app_handle.manage(installation_root) {
+                        let detail = "the desktop could not register installation-root authority";
+                        let _ = startup_recovery::show_blocked(
+                            &app_handle,
+                            "SF-RUNTIME-STARTUP-BLOCKED",
+                            detail,
+                        );
+                        return;
+                    }
                     if !app_handle.manage(std::sync::Mutex::new(authority)) {
                         let detail = "the desktop could not register active shop authority";
                         let _ = startup_recovery::show_blocked(
@@ -631,6 +645,10 @@ fn server_env(
         ),
         ("NODE_ENV".to_string(), "production".to_string()),
         (
+            "SF_INSTALLATION_ROOT_SOURCE".to_string(),
+            "native-stdin-v1".to_string(),
+        ),
+        (
             "NODE_COMPILE_CACHE".to_string(),
             compile_cache_dir.to_string_lossy().into_owned(),
         ),
@@ -774,16 +792,25 @@ fn spawn_runtime_generation(
     ));
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
     let process_environment = process_environment(&env);
-    let server_child = child_containment::ContainedChild::spawn_in_capturing_stderr(
-        Path::new(&prepared.runtime_path),
-        &[
-            OsString::from("--eval"),
-            OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
-        ],
-        &process_environment,
-        Some(&server_working_dir),
-    )
-    .map_err(|error| {
+    let installation_root = app
+        .try_state::<installation_root_key::InstallationRootKey>()
+        .ok_or_else(|| IoError::other("installation-root authority state is missing"))?;
+    let mut installation_root_frame = [0_u8; 40];
+    installation_root_frame[..8].copy_from_slice(b"SFRK0001");
+    installation_root_frame[8..].copy_from_slice(installation_root.as_bytes());
+    let server_spawn =
+        child_containment::ContainedChild::spawn_in_capturing_stderr_with_stdin_frame(
+            Path::new(&prepared.runtime_path),
+            &[
+                OsString::from("--eval"),
+                OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
+            ],
+            &process_environment,
+            Some(&server_working_dir),
+            &installation_root_frame,
+        );
+    installation_root_key::clear_secret_bytes(&mut installation_root_frame);
+    let server_child = server_spawn.map_err(|error| {
         if error.containment_uncertain() {
             enter_runtime_safe_mode(app, generation);
         }

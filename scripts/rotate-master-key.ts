@@ -111,6 +111,11 @@ const RUNTIME_MANIFEST_PATH = join(dataDir(), "runtime-endpoint.json");
 const REGISTRY_PATH = join(dataDir(), "shop-registry.json");
 const SHOPS_DIR = join(dataDir(), "shops");
 const SHOP_TEMPLATE_PATH = join(dataDir(), "system", "shop-template.db");
+const PROTECTED_INSTALLATION_ROOT_PATHS = [
+  join(dataDir(), "system", "installation-root.current.json"),
+  join(dataDir(), "system", "installation-root.candidate.json"),
+  join(dataDir(), "system", "installation-root.backup.json"),
+] as const;
 
 function errorCode(error: unknown): string | undefined {
   return error && typeof error === "object" && "code" in error
@@ -887,6 +892,11 @@ function printStats(allStats: readonly ModelStats[]): void {
 }
 
 async function main(): Promise<void> {
+  if (PROTECTED_INSTALLATION_ROOT_PATHS.some((path) => existsSync(path))) {
+    throw new Error(
+      "This legacy script cannot rotate a native protected installation root. Use the native protected rotation path.",
+    );
+  }
   const lease = acquireRotationLease();
   let mutationWindowEntered = false;
   let keyfileCommitted = false;

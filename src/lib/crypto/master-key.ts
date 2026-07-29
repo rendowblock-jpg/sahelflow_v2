@@ -4,21 +4,26 @@
  * The master key encrypts all `Secret` rows + PII fields. It is a 32-byte
  * (256-bit) random key.
  *
- * STORAGE:
- *   - `data/master.key` as 64 hex chars, file mode 0600.
- *   - The Stronghold plugin is registered for webview-side secure storage,
- *     but the server-side master key uses the keyfile (see ADR-004).
- *   - In the Tauri desktop context, the keyfile lives in the app's data dir.
+ * PACKAGED WINDOWS AUTHORITY:
+ *   - The native Tauri process resolves the installation root through DPAPI.
+ *   - The contained Node server receives it once through an inherited stdin
+ *     pipe. It is never accepted through an environment variable, argument,
+ *     or plaintext keyfile in that runtime.
+ *
+ * DEVELOPMENT / TEST AUTHORITY:
+ *   - `SF_MASTER_KEY` remains an explicit deterministic override.
+ *   - Otherwise `data/master.key` remains the non-packaged compatibility path.
  *
  * OVERRIDE:
  *   `SF_MASTER_KEY=<64 hex chars>` — used by tests to get a deterministic key
  *   without touching the filesystem. Highest priority.
  *
  * RESOLUTION ORDER (getMasterKey):
- *   1. SF_MASTER_KEY env var (tests / CI)
- *   2. In-memory cache (avoid re-reading on every call)
- *   3. Keyfile
- *   4. Generate new key + persist to keyfile
+ *   1. In-memory cache (avoid re-reading on every call)
+ *   2. One-use native bridge (packaged runtime)
+ *   3. SF_MASTER_KEY env var (development / tests only)
+ *   4. Compatibility keyfile (development / tests only)
+ *   5. Generate + persist a compatibility key (development / tests only)
  */
 import "server-only";
 
@@ -34,6 +39,10 @@ import { join } from "path";
 import { randomBytes } from "crypto";
 
 const KEY_LENGTH = 32; // 256 bits
+const NATIVE_ROOT_SOURCE = "native-stdin-v1";
+const NATIVE_ROOT_SYMBOL = Symbol.for("sahelflow.installation-root.v1");
+
+type NativeRootConsumer = () => Buffer;
 
 /** Resolve the data dir: SF_DATA_DIR > cwd/data > repo data/ */
 function getDataDir(): string {
@@ -46,6 +55,34 @@ function getKeyFilePath(): string {
 }
 
 let cachedKey: Buffer | null = null;
+
+function nativeRootIsRequired(): boolean {
+  return process.env.SF_INSTALLATION_ROOT_SOURCE === NATIVE_ROOT_SOURCE;
+}
+
+function consumeNativeRoot(): Buffer | null {
+  const holder = globalThis as { [key: symbol]: unknown };
+  const candidate = holder[NATIVE_ROOT_SYMBOL];
+  if (candidate === undefined) return null;
+  if (typeof candidate !== "function") {
+    delete holder[NATIVE_ROOT_SYMBOL];
+    throw new Error("The native installation-root bridge is invalid");
+  }
+
+  let key: unknown;
+  try {
+    key = (candidate as NativeRootConsumer)();
+  } finally {
+    // The bootstrap also deletes its bridge before returning. Deleting here
+    // makes the one-use property explicit even in focused unit tests.
+    delete holder[NATIVE_ROOT_SYMBOL];
+  }
+  if (!Buffer.isBuffer(key) || key.length !== KEY_LENGTH) {
+    if (Buffer.isBuffer(key)) key.fill(0);
+    throw new Error("The native installation root is not a 256-bit key");
+  }
+  return key;
+}
 
 /**
  * Get the master key, generating + persisting it on first run.
@@ -63,7 +100,20 @@ let cachedKey: Buffer | null = null;
 export function getMasterKey(): Buffer {
   if (cachedKey) return cachedKey;
 
-  // 1. Env override (tests / CI / explicit config)
+  const nativeRoot = consumeNativeRoot();
+  if (nativeRoot) {
+    cachedKey = nativeRoot;
+    return cachedKey;
+  }
+
+  // A packaged server must never silently downgrade to an environment value,
+  // plaintext file, or newly generated replacement when the one-use transfer
+  // is absent or was corrupted.
+  if (nativeRootIsRequired()) {
+    throw new Error("The packaged installation root was not transferred by the native runtime");
+  }
+
+  // Development/test override.
   if (process.env.SF_MASTER_KEY) {
     cachedKey = parseHexKey(process.env.SF_MASTER_KEY, "SF_MASTER_KEY");
     return cachedKey;
@@ -117,6 +167,11 @@ export async function getMasterKeyAsync(): Promise<Buffer> {
  *  caller's responsibility (this only changes what getMasterKey returns going
  *  forward + overwrites the keyfile). Used by the planned key-rotation flow. */
 export function rotateMasterKey(): Buffer {
+  if (nativeRootIsRequired()) {
+    throw new Error(
+      "Packaged installation-root rotation requires the native protected rotation path",
+    );
+  }
   const dataDir = getDataDir();
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });

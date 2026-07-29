@@ -2,6 +2,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
+import { getMasterKey } from "@/lib/crypto/master-key";
 import {
   AUTH_MODE_CONFIGURED,
   AUTH_MODE_ENV,
@@ -170,6 +171,20 @@ export async function GET(request: Request) {
       { status: "rejected", code: "RUNTIME_CREDENTIAL_REJECTED" },
       { status: 401, headers: { "Cache-Control": "no-store" } },
     );
+  }
+
+  if (process.env.SF_INSTALLATION_ROOT_SOURCE === "native-stdin-v1") {
+    try {
+      // This is the semantic consumption gate for the one-use native transfer.
+      // The key remains only in the server module cache after this succeeds.
+      getMasterKey();
+    } catch {
+      return blocked({
+        status: "blocked",
+        code: "RUNTIME_INSTALLATION_ROOT_NOT_READY",
+        checks: { app: "blocked", database: "blocked", auth: "blocked" },
+      });
+    }
   }
 
   let databaseAuth: DatabaseAuthState;

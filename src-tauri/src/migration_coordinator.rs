@@ -1,3 +1,6 @@
+use crate::installation_root_key::{
+    self, InstallationIdentity, InstallationRootKey, InstallationRootRequest,
+};
 use fs2::FileExt;
 use rusqlite::{params, Connection, DatabaseName, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -199,6 +202,13 @@ pub struct ActiveShopAuthority {
     pub migration_set_sha256: String,
 }
 
+/// Packaged startup authority. The native root remains owned by Tauri for the
+/// process lifetime while the ordinary shop authority can be refreshed.
+pub struct PreparedInstallation {
+    pub authority: ActiveShopAuthority,
+    pub installation_root: InstallationRootKey,
+}
+
 struct VerifiedSnapshot {
     database_path: PathBuf,
     snapshot_path: PathBuf,
@@ -225,10 +235,52 @@ pub fn prepare_installation(
     })
 }
 
+/// Windows packaged entry point. Installation-root authority is resolved and
+/// protected before migration recovery, registry writes, or any database open.
+pub fn prepare_packaged_installation(
+    app_data_dir: &Path,
+    resource_dir: &Path,
+) -> Result<PreparedInstallation, Box<dyn std::error::Error>> {
+    let existing_authority_present = installation_authority_footprint_present(app_data_dir)?;
+    let system_dir = app_data_dir.join("system");
+    let protected_identity = installation_root_key::probe_protected_identity(&system_dir)?;
+    let identity = installation_identity_before_mutation(app_data_dir, protected_identity)?;
+    let prepared_root =
+        installation_root_key::prepare_installation_root(InstallationRootRequest {
+            system_dir: &system_dir,
+            legacy_master_key_path: &app_data_dir.join("master.key"),
+            identity: identity.clone(),
+            existing_authority_present,
+            provably_fresh: !existing_authority_present,
+        })?;
+    let authority = prepare_installation_with_identity(
+        app_data_dir,
+        resource_dir,
+        |path| fs2::available_space(path),
+        Some(&identity),
+    )?;
+    Ok(PreparedInstallation {
+        authority,
+        installation_root: prepared_root.root_key,
+    })
+}
+
 fn prepare_installation_with_available_space<F>(
     app_data_dir: &Path,
     resource_dir: &Path,
     available_space: F,
+) -> Result<ActiveShopAuthority, Box<dyn std::error::Error>>
+where
+    F: Fn(&Path) -> Result<u64, IoError>,
+{
+    prepare_installation_with_identity(app_data_dir, resource_dir, available_space, None)
+}
+
+fn prepare_installation_with_identity<F>(
+    app_data_dir: &Path,
+    resource_dir: &Path,
+    available_space: F,
+    installation_identity: Option<&InstallationIdentity>,
 ) -> Result<ActiveShopAuthority, Box<dyn std::error::Error>>
 where
     F: Fn(&Path) -> Result<u64, IoError>,
@@ -252,7 +304,7 @@ where
         return Err(IoError::new(ErrorKind::NotFound, "no packaged migrations were found").into());
     }
     let migration_set_sha256 = migration_set_hash(&migrations);
-    let mut registry = load_or_import_registry(app_data_dir)?;
+    let mut registry = load_or_import_registry(app_data_dir, installation_identity)?;
     ensure_initial_shop(app_data_dir, &mut registry)?;
     validate_registry(app_data_dir, &registry)?;
     let registry_sha256 = sha256_file(&app_data_dir.join(REGISTRY_FILE))?;
@@ -1345,15 +1397,138 @@ fn create_shop_template(
     Ok(())
 }
 
+fn installation_authority_footprint_present(app_data_dir: &Path) -> Result<bool, IoError> {
+    if !app_data_dir.exists() {
+        return Ok(false);
+    }
+    for name in [
+        REGISTRY_FILE,
+        LEGACY_REGISTRY_FILE,
+        "master.key",
+        "master.key.new",
+        "master-key-rotation.lock",
+    ] {
+        if app_data_dir.join(name).exists() {
+            return Ok(true);
+        }
+    }
+    for directory in ["shops", "migration-journal", "migration-snapshots"] {
+        let path = app_data_dir.join(directory);
+        if path.exists() && fs::read_dir(path)?.next().transpose()?.is_some() {
+            return Ok(true);
+        }
+    }
+    let system_dir = app_data_dir.join("system");
+    if system_dir.exists() {
+        for entry in fs::read_dir(system_dir)? {
+            let entry = entry?;
+            if entry.file_name().to_str() != Some("installation-root.lock") {
+                return Ok(true);
+            }
+        }
+    }
+    for entry in fs::read_dir(app_data_dir)? {
+        let entry = entry?;
+        if entry
+            .file_name()
+            .to_str()
+            .is_some_and(|name| name.starts_with("master.key.old-"))
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn installation_identity_before_mutation(
+    app_data_dir: &Path,
+    protected_identity: Option<InstallationIdentity>,
+) -> Result<InstallationIdentity, Box<dyn std::error::Error>> {
+    let registry_path = app_data_dir.join(REGISTRY_FILE);
+    if !registry_path.exists() {
+        return protected_identity
+            .map(Ok)
+            .unwrap_or_else(|| InstallationIdentity::new(random_hex(16), random_hex(16)))
+            .map_err(Into::into);
+    }
+
+    let registry: ShopRegistry = read_json(&registry_path)?;
+    let identity = match registry.format_version {
+        REGISTRY_FORMAT_VERSION => {
+            if !valid_identity(&registry.workspace_id) || !valid_identity(&registry.installation_id)
+            {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "shop registry installation identity is invalid",
+                )
+                .into());
+            }
+            InstallationIdentity::new(
+                registry.workspace_id.clone(),
+                registry.installation_id.clone(),
+            )?
+        }
+        LEGACY_REGISTRY_FORMAT_VERSION => {
+            if !valid_identity(&registry.installation_id) {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "legacy registry installation identity is invalid",
+                )
+                .into());
+            }
+            let workspace_id = protected_identity
+                .as_ref()
+                .map(|identity| identity.workspace_id.clone())
+                .unwrap_or_else(|| random_hex(16));
+            if !valid_identity(&workspace_id) {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "protected workspace identity is invalid",
+                )
+                .into());
+            }
+            InstallationIdentity::new(workspace_id, registry.installation_id.clone())?
+        }
+        _ => {
+            return Err(
+                IoError::new(ErrorKind::InvalidData, "unsupported shop registry format").into(),
+            )
+        }
+    };
+    if protected_identity
+        .as_ref()
+        .is_some_and(|protected| protected != &identity)
+    {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "protected installation-root identity does not match the shop registry",
+        )
+        .into());
+    }
+    Ok(identity)
+}
+
 fn load_or_import_registry(
     app_data_dir: &Path,
+    installation_identity: Option<&InstallationIdentity>,
 ) -> Result<ShopRegistry, Box<dyn std::error::Error>> {
     let registry_path = app_data_dir.join(REGISTRY_FILE);
     if registry_path.exists() {
         let mut registry: ShopRegistry = read_json(&registry_path)?;
         if registry.format_version == LEGACY_REGISTRY_FORMAT_VERSION {
+            if let Some(identity) = installation_identity {
+                if registry.installation_id != identity.installation_id {
+                    return Err(IoError::new(
+                        ErrorKind::InvalidData,
+                        "legacy shop registry installation identity changed after root preflight",
+                    )
+                    .into());
+                }
+            }
             registry.format_version = REGISTRY_FORMAT_VERSION;
-            registry.workspace_id = random_hex(16);
+            registry.workspace_id = installation_identity
+                .map(|identity| identity.workspace_id.clone())
+                .unwrap_or_else(|| random_hex(16));
             for shop in &mut registry.shops {
                 shop.incarnation_id = random_hex(16);
             }
@@ -1361,6 +1536,17 @@ fn load_or_import_registry(
                 IoError::new(ErrorKind::InvalidData, "shop registry revision overflow")
             })?;
             write_json_atomic(&registry_path, &registry)?;
+        }
+        if let Some(identity) = installation_identity {
+            if registry.workspace_id != identity.workspace_id
+                || registry.installation_id != identity.installation_id
+            {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "shop registry identity changed after installation-root preflight",
+                )
+                .into());
+            }
         }
         return Ok(registry);
     }
@@ -1393,8 +1579,12 @@ fn load_or_import_registry(
         ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 1,
-            workspace_id: random_hex(16),
-            installation_id: random_hex(16),
+            workspace_id: installation_identity
+                .map(|identity| identity.workspace_id.clone())
+                .unwrap_or_else(|| random_hex(16)),
+            installation_id: installation_identity
+                .map(|identity| identity.installation_id.clone())
+                .unwrap_or_else(|| random_hex(16)),
             active_shop_id: legacy
                 .active_shop_id
                 .or_else(|| shops.first().map(|shop| shop.id.clone())),
@@ -1404,8 +1594,12 @@ fn load_or_import_registry(
         ShopRegistry {
             format_version: REGISTRY_FORMAT_VERSION,
             revision: 0,
-            workspace_id: random_hex(16),
-            installation_id: random_hex(16),
+            workspace_id: installation_identity
+                .map(|identity| identity.workspace_id.clone())
+                .unwrap_or_else(|| random_hex(16)),
+            installation_id: installation_identity
+                .map(|identity| identity.installation_id.clone())
+                .unwrap_or_else(|| random_hex(16)),
             active_shop_id: None,
             shops: Vec::new(),
         }
@@ -2327,6 +2521,83 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("count applied migrations")
+    }
+
+    #[test]
+    fn installation_footprint_ignores_transient_root_lock_but_detects_authority() {
+        let root = test_root("root-footprint");
+        fs::create_dir_all(root.join("system")).expect("create system directory");
+        fs::create_dir_all(root.join("shops")).expect("create empty shops directory");
+        fs::write(root.join("startup-trace.json"), b"{}\n").expect("write unrelated trace");
+        fs::write(root.join("system/installation-root.lock"), b"").expect("write transient lock");
+
+        assert!(!installation_authority_footprint_present(&root).expect("fresh footprint"));
+
+        fs::write(
+            root.join("system/installation-root.candidate.json"),
+            b"{}\n",
+        )
+        .expect("write protected candidate");
+        assert!(installation_authority_footprint_present(&root).expect("authority footprint"));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn preflight_identity_preserves_v2_registry_and_reuses_v1_protected_workspace() {
+        let root = test_root("root-identity");
+        fs::create_dir_all(&root).expect("create test root");
+        let workspace_id = "a".repeat(32);
+        let installation_id = "b".repeat(32);
+        let v2 = serde_json::json!({
+            "formatVersion": REGISTRY_FORMAT_VERSION,
+            "revision": 1,
+            "workspaceId": workspace_id,
+            "installationId": installation_id,
+            "activeShopId": null,
+            "shops": []
+        });
+        write_json_atomic(&root.join(REGISTRY_FILE), &v2).expect("write v2 registry");
+        let observed = installation_identity_before_mutation(&root, None).expect("v2 identity");
+        assert_eq!(observed.workspace_id, "a".repeat(32));
+        assert_eq!(observed.installation_id, "b".repeat(32));
+
+        let v1 = serde_json::json!({
+            "formatVersion": LEGACY_REGISTRY_FORMAT_VERSION,
+            "revision": 1,
+            "installationId": "b".repeat(32),
+            "activeShopId": null,
+            "shops": []
+        });
+        write_json_atomic(&root.join(REGISTRY_FILE), &v1).expect("write v1 registry");
+        let protected =
+            InstallationIdentity::new("c".repeat(32), "b".repeat(32)).expect("protected identity");
+        let upgraded =
+            installation_identity_before_mutation(&root, Some(protected)).expect("v1 identity");
+        assert_eq!(upgraded.workspace_id, "c".repeat(32));
+        assert_eq!(upgraded.installation_id, "b".repeat(32));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn preflight_identity_rejects_protected_registry_mismatch() {
+        let root = test_root("root-identity-mismatch");
+        fs::create_dir_all(&root).expect("create test root");
+        let registry = serde_json::json!({
+            "formatVersion": REGISTRY_FORMAT_VERSION,
+            "revision": 1,
+            "workspaceId": "a".repeat(32),
+            "installationId": "b".repeat(32),
+            "activeShopId": null,
+            "shops": []
+        });
+        write_json_atomic(&root.join(REGISTRY_FILE), &registry).expect("write registry");
+        let protected =
+            InstallationIdentity::new("c".repeat(32), "b".repeat(32)).expect("protected identity");
+
+        assert!(installation_identity_before_mutation(&root, Some(protected)).is_err());
+        let unchanged: serde_json::Value = read_json(&root.join(REGISTRY_FILE)).expect("registry");
+        assert_eq!(unchanged["workspaceId"], "a".repeat(32));
+        fs::remove_dir_all(root).expect("remove test root");
     }
 
     #[test]
