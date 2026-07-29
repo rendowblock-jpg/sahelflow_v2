@@ -150,15 +150,21 @@ export async function createSession(ip?: string): Promise<void> {
 }
 
 export async function destroySession(): Promise<void> {
-  const authority = await getCurrentSessionAuthority();
-  if (authority.status === "authenticated") {
-    try {
-      await authContext.prisma.session.update({
-        where: { id: authority.sessionId },
-        data: { revokedAt: new Date() },
-      });
-    } catch { /* non-fatal */ }
+  try {
+    const authority = await getCurrentSessionAuthority();
+    if (authority.status === "authenticated") {
+      try {
+        await authContext.prisma.session.update({
+          where: { id: authority.sessionId },
+          data: { revokedAt: new Date() },
+        });
+      } catch { /* non-fatal */ }
+    }
+  } catch {
+    // Clearing the local cookie must remain possible when shop or session
+    // authority is unavailable. No unverified Session ID is ever revoked.
   }
+
   const store = await cookies();
   store.delete(AUTH_COOKIE);
 }
