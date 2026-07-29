@@ -73,23 +73,26 @@ describe("isPublicPage", () => {
   it.each([
     "/login",
     "/setup",
-    "/setup/profile",
     "/storefront",
     "/storefront/example",
   ])("allows public page %s", (pathname) => {
     expect(isPublicPage(pathname)).toBe(true);
   });
 
-  it.each(["/dashboard", "/orders", "/customers", "/risk"])(
-    "rejects dashboard page %s",
-    (pathname) => {
-      expect(isPublicPage(pathname)).toBe(false);
-    },
-  );
+  it.each([
+    "/login/recovery",
+    "/setup/profile",
+    "/dashboard",
+    "/orders",
+    "/customers",
+    "/risk",
+  ])("rejects protected page %s", (pathname) => {
+    expect(isPublicPage(pathname)).toBe(false);
+  });
 });
 
 describe("public authority arrays", () => {
-  it("does not expose a namespace prefix", () => {
+  it("does not expose an API namespace prefix", () => {
     expect(PUBLIC_API_ROUTES).not.toContain("/api/auth");
     expect(PUBLIC_API_ROUTES).not.toContain("/api/storefront/config/");
     expect(PUBLIC_API_ROUTES).not.toContain("/api/whatsapp/qr-image");
