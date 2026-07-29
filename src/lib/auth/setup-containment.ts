@@ -13,10 +13,6 @@ const SETUP_API_ROUTES = new Set([
   "/api/health",
 ]);
 
-function isSetupPage(pathname: string): boolean {
-  return pathname === "/setup" || pathname.startsWith("/setup/");
-}
-
 /**
  * Static browser resources that must remain available before seller auth exists.
  * The proxy matcher excludes most image/static paths already; this function keeps
@@ -33,16 +29,17 @@ export function isAuthenticationStaticPath(pathname: string): boolean {
 }
 
 /**
- * Setup mode is not authentication. It exposes only the setup ceremony, its
- * status probe, health, and static resources. Every other API is rejected and
- * every other page is redirected to setup.
+ * Setup mode is not authentication. It exposes only the exact setup ceremony,
+ * its status probe, health, and static resources. Every other API is rejected
+ * and every other page is redirected to setup. Future `/setup/*` descendants
+ * are therefore protected by default rather than inheriting onboarding access.
  */
 export function classifySetupRequestPath(
   pathname: string,
 ): SetupRequestDecision {
   if (
     isAuthenticationStaticPath(pathname) ||
-    isSetupPage(pathname) ||
+    pathname === "/setup" ||
     SETUP_API_ROUTES.has(pathname)
   ) {
     return { kind: "allow" };
