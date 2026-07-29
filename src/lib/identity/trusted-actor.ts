@@ -52,19 +52,20 @@ export function createCompatibilityLocalOwnerContext(
   sessionId: string,
   shop: ShopContext,
 ): TrustedActorContext {
-  const normalizedSessionId = sessionId.trim();
-  if (!normalizedSessionId) {
+  if (!sessionId || sessionId !== sessionId.trim()) {
     throw new TypeError("A trusted local owner actor requires an exact session ID");
   }
+
+  const shopSnapshot: ShopContext = Object.freeze({ ...shop });
 
   return Object.freeze({
     version: TRUSTED_ACTOR_CONTEXT_VERSION,
     actor: Object.freeze({
       kind: "compatibility_local_owner",
       role: "owner",
-      sessionId: normalizedSessionId,
+      sessionId,
       compatibilityOnly: true,
     }),
-    shop,
+    shop: shopSnapshot,
   });
 }
