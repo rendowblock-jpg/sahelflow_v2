@@ -3,11 +3,14 @@ import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
 
 const TOKEN = "e".repeat(64);
+const INSTANCE_ID = "a".repeat(32);
 
 describe("runtime proxy boundary", () => {
   beforeEach(() => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("SF_RUNTIME_APP_TOKEN", TOKEN);
+    vi.stubEnv("SF_RUNTIME_TOKEN", TOKEN);
+    vi.stubEnv("SF_RUNTIME_INSTANCE_ID", INSTANCE_ID);
     vi.stubEnv("SF_AUTH_MODE", "setup");
     vi.stubEnv("AUTH_SECRET", "");
   });
@@ -27,6 +30,56 @@ describe("runtime proxy boundary", () => {
     }));
     expect(response.status).toBe(200);
     expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("allows only exact loopback shutdown authority without browser cookies", async () => {
+    const allowed = await proxy(
+      new NextRequest(
+        "http://127.0.0.1:49152/api/internal/runtime-shutdown",
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${TOKEN}`,
+            "x-sahelflow-runtime-instance": INSTANCE_ID,
+          },
+        },
+      ),
+    );
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers.get("x-middleware-next")).toBe("1");
+
+    for (const request of [
+      new NextRequest(
+        "http://127.0.0.1:49152/api/internal/runtime-shutdown",
+        { method: "POST" },
+      ),
+      new NextRequest(
+        "http://127.0.0.1:49152/api/internal/runtime-shutdown",
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${TOKEN}`,
+            "x-sahelflow-runtime-instance": "b".repeat(32),
+          },
+        },
+      ),
+      new NextRequest(
+        "http://192.0.2.10:49152/api/internal/runtime-shutdown",
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${TOKEN}`,
+            "x-sahelflow-runtime-instance": INSTANCE_ID,
+          },
+        },
+      ),
+    ]) {
+      const rejected = await proxy(request);
+      expect(rejected.status).toBe(401);
+      await expect(rejected.json()).resolves.toMatchObject({
+        code: "RUNTIME_SHUTDOWN_CREDENTIAL_REJECTED",
+      });
+    }
   });
 
   it("fails closed in production when auth mode is missing or inconsistent", async () => {
