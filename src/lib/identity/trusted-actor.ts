@@ -1,6 +1,10 @@
+import "server-only";
+
 import type { ShopContext } from "@/lib/shops/context";
 
 export const TRUSTED_ACTOR_CONTEXT_VERSION = 1 as const;
+
+const TRUSTED_ACTOR_CONTEXT_BRAND = Symbol("sahelflow.trusted-actor-context.v1");
 
 export type BuiltInRole = "owner" | "manager" | "operator" | "viewer";
 
@@ -46,7 +50,18 @@ export type TrustedActorContext = Readonly<{
   version: typeof TRUSTED_ACTOR_CONTEXT_VERSION;
   actor: TrustedActor;
   shop: ShopContext;
+  readonly [TRUSTED_ACTOR_CONTEXT_BRAND]: true;
 }>;
+
+export function isTrustedActorContext(value: unknown): value is TrustedActorContext {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { [TRUSTED_ACTOR_CONTEXT_BRAND]?: unknown })[
+      TRUSTED_ACTOR_CONTEXT_BRAND
+    ] === true
+  );
+}
 
 export function createCompatibilityLocalOwnerContext(
   sessionId: string,
@@ -57,15 +72,23 @@ export function createCompatibilityLocalOwnerContext(
   }
 
   const shopSnapshot: ShopContext = Object.freeze({ ...shop });
-
-  return Object.freeze({
+  const context = {
     version: TRUSTED_ACTOR_CONTEXT_VERSION,
     actor: Object.freeze({
-      kind: "compatibility_local_owner",
-      role: "owner",
+      kind: "compatibility_local_owner" as const,
+      role: "owner" as const,
       sessionId,
-      compatibilityOnly: true,
+      compatibilityOnly: true as const,
     }),
     shop: shopSnapshot,
+  };
+
+  Object.defineProperty(context, TRUSTED_ACTOR_CONTEXT_BRAND, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
   });
+
+  return Object.freeze(context) as TrustedActorContext;
 }
