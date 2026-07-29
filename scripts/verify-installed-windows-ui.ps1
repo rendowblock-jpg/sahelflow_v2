@@ -374,8 +374,9 @@ if ((Get-SahelFlowProcesses).Count -ne 0) {
 $baseline = Get-BusinessIdentity
 $launches = @()
 $closures = @()
+$lifecyclePasses = 3
 
-for ($attempt = 1; $attempt -le 2; $attempt++) {
+for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     Remove-Item -LiteralPath $runtimeEndpointPath, $runtimeUiReadyPath, `
         $runtimeUiDiagnosticPath, $startupDiagnosticPath, $startupTracePath `
         -Force -ErrorAction SilentlyContinue
@@ -468,11 +469,13 @@ for ($attempt = 1; $attempt -le 2; $attempt++) {
     }
 }
 
-if ($launches.Count -ne 2 -or $closures.Count -ne 2) {
-    throw "Installed UI verification did not complete two launch and normal-close passes."
+if ($launches.Count -ne $lifecyclePasses -or $closures.Count -ne $lifecyclePasses) {
+    throw "Installed UI verification did not complete all $lifecyclePasses launch and normal-close passes."
 }
-if ($launches[0].endpoint.instanceId -eq $launches[1].endpoint.instanceId) {
-    throw "Second authenticated UI launch reused the first runtime instance identity."
+$instanceIds = @($launches | ForEach-Object { $_.endpoint.instanceId })
+$uniqueInstanceIds = @($instanceIds | Sort-Object -Unique)
+if ($uniqueInstanceIds.Count -ne $instanceIds.Count) {
+    throw "An authenticated UI launch reused an earlier runtime instance identity."
 }
 
 $result = [ordered]@{
