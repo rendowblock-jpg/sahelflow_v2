@@ -241,6 +241,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first gate",
       "Do not run source builds, full automated tests",
       "1.0.0-internal.13",
+      "Next implementation branch: `agent/phase1-manual-confirmation`",
     ],
   ],
   [
@@ -250,6 +251,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
+      "**Active phase:** Phase 1 — research complete; implementation ready",
     ],
   ],
   [
@@ -268,7 +270,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 1",
+      "**Active phase:** Phase 1 — research complete; implementation ready",
       "# Phase 1 — Canonical Golden COD business core",
       "## Research gate",
       "# Phase 9 — Certification, representative beta and Stable",
@@ -279,7 +281,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Published release:** `1.0.0-internal.13`",
       "**Founder-installed release:** Internal.13",
-      "Phase 1 research is complete",
+      "Phase 1 research is complete on issue #164 and implementation is ready",
       "Commerce checkpoint safety",
       "The central completion task is therefore production adoption",
     ],
@@ -297,7 +299,9 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 1",
+      "**Active implementation branch:** None; Phase 1 implementation ready",
+      "**Next branch:** `agent/phase1-manual-confirmation`",
+      "**Active phase:** Phase 1 — research complete; implementation ready",
       "Phase 0 completed in PR #179",
       "first complete manual-order",
       "research-to-implementation gate",
@@ -378,6 +382,39 @@ const currentOwnedDocuments = [
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/research/RESEARCH.md",
 ];
+
+const postMergeFrontierPatterns: Array<{
+  name: string;
+  pattern: RegExp;
+}> = [
+  {
+    name: "temporary Phase 0 closeout branch",
+    pattern: /agent\/phase0-closeout/i,
+  },
+  {
+    name: "pre-merge closeout gate",
+    pattern:
+      /\b(?:after|before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\bmerge(?:s|d)?\b/i,
+  },
+];
+
+for (const relativePath of currentOwnedDocuments) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) continue;
+  const normalizedContent = normalizeSemanticText(
+    readFileSync(absolutePath, "utf8"),
+  );
+
+  for (const { name, pattern } of postMergeFrontierPatterns) {
+    if (pattern.test(normalizedContent)) {
+      findings.push({
+        kind: "drift",
+        file: relativePath,
+        detail: `post-merge authority still contains ${name}`,
+      });
+    }
+  }
+}
 
 const optionalListPrefix = String.raw`(?:(?:[-*+]|\d+\.)\s+)?`;
 const obsoleteSessionExecutionPatterns: Array<{

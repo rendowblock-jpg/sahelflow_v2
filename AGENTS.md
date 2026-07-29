@@ -93,7 +93,7 @@ begins.
 
 ## Current baseline
 
-- Protected main: `18c45e474f58744b6f837372509154ca500044b0`.
+- Phase 0 closeout base: `18c45e474f58744b6f837372509154ca500044b0`.
 - Published executable source:
   `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Published release: `1.0.0-internal.13`, run `30366866703`.
@@ -105,12 +105,13 @@ begins.
 - The new canonical command/event/outbox/reservation/movement foundation is
   merged, but production business routes still mainly use legacy paths.
 - Phase 0 completed through PR #179. Phase 1 research for the first canonical
-  manual order-confirmation vertical is complete; implementation waits for the
-  Phase 0 closeout reconciliation to merge.
+  manual order-confirmation vertical is complete and implementation is ready.
+- Next implementation branch: `agent/phase1-manual-confirmation`, created from
+  the then-current protected `main`.
 
 ## Exact next outcome
 
-After the closeout reconciliation merges, begin Phase 1 implementation for:
+Begin Phase 1 implementation from current protected `main` for:
 
 > A manual order is created under trusted authority, confirmed or rejected using
 > optimistic version and exact idempotency, reserves available product/variant

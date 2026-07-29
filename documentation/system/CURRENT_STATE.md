@@ -1,7 +1,7 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected `main` and named evidence only
-> **Protected-main baseline:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
@@ -355,8 +355,8 @@ T470 target.
 
 Phase 0 completed through PR #179 at protected main
 `18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
-passed. Phase 1 research is complete on issue #164. After the Phase 0 closeout
-reconciliation merges, the first production vertical is:
+passed. Phase 1 research is complete on issue #164 and implementation is ready.
+The first production vertical is:
 
 > Manual order intake and confirmation under trusted authority, exact idempotency
 > and optimistic versioning, with atomic stock availability/reservation,

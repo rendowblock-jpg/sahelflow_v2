@@ -2,12 +2,12 @@
 
 > **Status:** Active documentation entry point
 > **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
-> **Protected-main baseline:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 1 — research complete; implementation waits for closeout merge
+> **Active phase:** Phase 1 — research complete; implementation ready
 > **Execution epic:** issue #164
 > **Last updated:** 2026-07-29
 

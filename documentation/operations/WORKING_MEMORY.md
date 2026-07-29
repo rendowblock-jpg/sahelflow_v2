@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-07-29
-> **Protected-main source:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
@@ -10,8 +10,9 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`
 > **Execution epic:** issue #164
-> **Active branch:** `agent/phase0-closeout`
-> **Active phase:** Phase 1 — research complete; implementation waits for closeout merge
+> **Active implementation branch:** None; Phase 1 implementation ready
+> **Next branch:** `agent/phase1-manual-confirmation` from current protected `main`
+> **Active phase:** Phase 1 — research complete; implementation ready
 
 ## Current truth
 
@@ -23,8 +24,8 @@ source-bound tag verification and automatic publication.
 
 Phase 0 completed in PR #179, merged as protected main
 `18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
-passed. This closeout reconciles stale post-merge state and does not reopen the
-completed phase.
+passed. The closeout evidence is anchored to that Phase 0 base; issue #164 records
+the current protected-main head after each merge. Phase 0 remains complete.
 
 Internal.13 is Founder-installed and exact-version confirmed on the T470. The
 workspace, installation, active-shop, shop-incarnation, registry and database
@@ -46,8 +47,9 @@ Issue #164 is the live non-authoritative Phase 0–9 execution dashboard. The We
 Agent recorded and completed the bounded Phase 1 research package there: SQLite
 runtime/journal evidence, exact variant-or-parent stock authority, reservation and
 movement semantics, idempotent optimistic confirmation/rejection, unsafe-bypass
-inventory and fail-closed legacy boundaries. It owns no Phase 0 closeout files and
-will not create the implementation branch before this closeout merges.
+inventory and fail-closed legacy boundaries. The next owner creates
+`agent/phase1-manual-confirmation` from current protected `main` and begins the
+frozen vertical.
 
 ## Active blockers and discontinuities
 
@@ -112,10 +114,7 @@ evidence.
 
 ## Exact next execution order
 
-1. Merge the documentation-only `agent/phase0-closeout` PR after latest-head CI
-   and independent Web Agent review have no unresolved P0/P1.
-2. Update issue #164 with the closeout merge and exact evidence boundary.
-3. Branch `agent/phase1-manual-confirmation` from the new protected main and begin
+1. Branch `agent/phase1-manual-confirmation` from current protected `main` and begin
    implementation of the researched first complete manual-order confirmation
    vertical:
    - trusted order intake;
@@ -126,9 +125,9 @@ evidence.
    - audit, event, outbox and projection invalidation;
    - complete UI states in AR/FR/EN;
    - duplicate, concurrency, interruption and recovery proof.
-4. Remove or disable the corresponding legacy mutation path after parity and
+2. Remove or disable the corresponding legacy mutation path after parity and
    migration proof.
-5. Continue the Golden COD Journey through fulfillment, delivery, COD,
+3. Continue the Golden COD Journey through fulfillment, delivery, COD,
    return/refund and compensation before expanding breadth.
 
 ## Active acceptance contract

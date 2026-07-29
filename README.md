@@ -3,7 +3,7 @@
 SahelFlow is a Windows-first operations system for Algerian cash-on-delivery
 sellers.
 
-> **Protected-main baseline:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
