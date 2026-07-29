@@ -66,6 +66,36 @@ function canonicalConfirmationError(): SahelFlowError {
   );
 }
 
+async function restoreLegacyProductStock(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+  itemId: string,
+  productId: string,
+  quantity: number,
+): Promise<void> {
+  const permitKey = `legacy-stock-restore:${orderId}:${itemId}`;
+  await tx.$executeRaw`
+    INSERT INTO "StockAdjustmentPermit" (
+      "permitKey", "productId", "productVariantId", "direction", "createdAt"
+    ) VALUES (
+      ${permitKey}, ${productId}, NULL, 'increase', CURRENT_TIMESTAMP
+    )
+  `;
+
+  await tx.product.update({
+    where: { id: productId },
+    data: { stock: { increment: quantity } },
+  });
+
+  const cleared = await tx.$executeRaw`
+    DELETE FROM "StockAdjustmentPermit"
+    WHERE "permitKey" = ${permitKey}
+  `;
+  if (cleared !== 1) {
+    throw new Error(`Stock restoration permit '${permitKey}' was not cleared`);
+  }
+}
+
 function adoptedManualMetadata(sourceMetadata: unknown): string {
   let existing: Record<string, unknown> = {};
   if (typeof sourceMetadata === "string") {
@@ -202,10 +232,13 @@ async function updateStatusInTransaction(
   if (triggersStockRestoration(from, to)) {
     for (const item of order.items) {
       if (!item.productId) continue;
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-      });
+      await restoreLegacyProductStock(
+        tx,
+        order.id,
+        item.id,
+        item.productId,
+        item.quantity,
+      );
       const lowStock = await detectLowStock(tx, item.productId);
       if (lowStock) lowStockProducts.push(lowStock);
     }
