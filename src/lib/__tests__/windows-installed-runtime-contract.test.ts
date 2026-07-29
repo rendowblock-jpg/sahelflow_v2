@@ -54,7 +54,9 @@ describe("installed Windows runtime contract", () => {
       }
     ).app?.windows;
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
+    const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
+    const runtimeRoute = read("src/app/api/internal/runtime-ready/route.ts");
     const rootLayout = read("src/app/layout.tsx");
     const dashboardRouteLayout = read("src/app/(dashboard)/layout.tsx");
     const setupPage = read("src/app/setup/page.tsx");
@@ -104,6 +106,11 @@ describe("installed Windows runtime contract", () => {
     expect(setupPage).toContain("<RuntimeUiReadyBeacon />");
     expect(loginPage).toContain("<RuntimeUiReadyBeacon />");
 
+    expect(dashboardLayout).toContain('import dynamic from "next/dynamic"');
+    expect(dashboardLayout).toContain('import("@/components/command-palette")');
+    expect(dashboardLayout).toContain("{commandOpen && (");
+    expect(dashboardLayout).toContain("{cheatsheetOpen && (");
+
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');
     expect(uiRoute).toContain('code: "RUNTIME_SESSION_REQUIRED"');
     expect(uiRoute).toContain('code: "RUNTIME_UI_READY_PERSIST_FAILED"');
@@ -111,8 +118,12 @@ describe("installed Windows runtime contract", () => {
     expect(uiRoute).toContain('"node:module"');
     expect(uiRoute).toContain("moduleApi.flushCompileCache()");
     expect(uiRoute).toContain('locale: runtimeLocale(request)');
-    expect(uiRoute.indexOf("flushPackagedCompileCache();")).toBeLessThan(
-      uiRoute.indexOf("writeJsonAtomically(ackPath, acknowledgment)"),
+    expect(runtimeRoute).not.toContain("flushPackagedCompileCache");
+    expect(uiRoute.indexOf("writeJsonAtomically(ackPath, acknowledgment)")).toBeLessThan(
+      uiRoute.indexOf("flushPackagedCompileCache();"),
+    );
+    expect(uiRoute.indexOf('code: "RUNTIME_UI_READY_PERSISTED"')).toBeLessThan(
+      uiRoute.indexOf("flushPackagedCompileCache();"),
     );
     expect(uiRoute).not.toContain('await import("node:module")');
     expect(uiRoute).not.toMatch(/recordUiDiagnostic\([^)]*expectedToken/s);
@@ -202,7 +213,14 @@ describe("installed Windows runtime contract", () => {
     expect(workflow).toContain("runtime-probe-diagnostic.json");
     expect(harness).toContain('$env:GITHUB_ACTIONS -cne "true"');
     expect(harness).toContain('"C:\\Program Files\\SahelFlow\\sahelflow.exe"');
-    expect(harness).toContain("for ($attempt = 1; $attempt -le 2; $attempt++)");
+    expect(harness).toContain("$lifecyclePasses = 3");
+    expect(harness).toContain(
+      "for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++)",
+    );
+    expect(uiHarness).toContain("$lifecyclePasses = 3");
+    expect(uiHarness).toContain(
+      "for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++)",
+    );
     expect(uiHarness).not.toContain("Wait-ForPromptVisibleWindow");
     expect(uiHarness).not.toContain("StartupWindowHandle");
     expect(uiHarness).toContain(
@@ -266,8 +284,13 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("resolve_installed_standalone");
     expect(desktop).not.toContain("stage_standalone");
     expect(desktop).toContain(".run(|_app_handle, _event| {");
-    expect(desktop).toContain("_app_handle.cleanup_before_exit();");
-    expect(desktop).toContain("std::process::exit(0);");
+    expect(desktop).toContain(".on_window_event(|_window, _event| {");
+    expect(desktop).toContain("api.prevent_close();");
+    expect(desktop).toContain("begin_normal_close(_window.app_handle().clone())");
+    expect(desktop).toContain("struct ShutdownCoordinator");
+    expect(desktop).toContain("app.exit(0);");
+    expect(desktop).not.toContain("cleanup_before_exit();");
+    expect(desktop).not.toContain("std::process::exit(0);");
   });
 
   it("installs the exact signed MSI and dispatches only from protected-main release authority", () => {
