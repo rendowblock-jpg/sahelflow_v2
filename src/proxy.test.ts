@@ -78,7 +78,7 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("redirects non-setup pages without changing the 127.0.0.1 origin", async () => {
+  it("redirects non-setup pages with a relative same-origin location", async () => {
     for (const pathname of [
       "/",
       "/login",
@@ -88,10 +88,16 @@ describe("runtime proxy boundary", () => {
     ]) {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe(
-        "http://127.0.0.1:49152/setup",
-      );
+      expect(response.headers.get("location")).toBe("/setup");
     }
+  });
+
+  it("does not trust Host when constructing setup redirects", async () => {
+    const response = await proxy(
+      request("/", { headers: { host: "attacker.example" } }),
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/setup");
   });
 
   it("allows only exact loopback shutdown authority without browser cookies", async () => {
@@ -194,16 +200,14 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("keeps login and setup descendants protected on the same origin", async () => {
+  it("keeps login and setup descendants protected with a relative redirect", async () => {
     process.env.SF_AUTH_MODE = "configured";
     process.env.AUTH_SECRET = AUTH_SECRET;
 
     for (const pathname of ["/login/recovery", "/setup/profile"]) {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe(
-        "http://127.0.0.1:49152/login",
-      );
+      expect(response.headers.get("location")).toBe("/login");
     }
   });
 
