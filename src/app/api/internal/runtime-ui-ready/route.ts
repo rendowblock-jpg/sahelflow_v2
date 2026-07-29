@@ -11,7 +11,6 @@ import {
 import { dirname, resolve } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
-import { flushPackagedCompileCache } from "@/lib/runtime/compile-cache";
 import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
 
 export const dynamic = "force-dynamic";
@@ -189,12 +188,6 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: noStoreHeaders() },
     );
   }
-
-  // Readiness evidence is already durable. Persist the compile cache only after
-  // the desktop can observe and reveal the authenticated workspace, so a slow
-  // disk flush cannot extend either semantic runtime readiness or UI readiness.
-  // The helper remains best-effort and never changes the acknowledgment result.
-  flushPackagedCompileCache();
 
   return NextResponse.json(
     { status: "ready", instanceId },
