@@ -8,7 +8,7 @@
 > **Protected signed run:** `30366866703`
 > **Founder-installed release:** Internal.11 reported installed; exact identity and lifecycle record incomplete
 > **Founder-accepted baseline:** Internal.5
-> **Operating authority:** proposed FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`
+> **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`
 > **Execution epic:** issue #164
 > **Active branch:** `agent/final-completion-program`
 > **Active phase:** Phase 0 — authority freeze and execution reset
