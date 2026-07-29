@@ -29,6 +29,17 @@ export type ResolveSessionAuthorityInput = Readonly<{
   findSession: (sessionId: string) => Promise<SessionAuthorityRecord | null>;
 }>;
 
+const MAX_SESSION_ID_LENGTH = 256;
+
+function isExactSessionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_SESSION_ID_LENGTH &&
+    value === value.trim()
+  );
+}
+
 /**
  * Resolve the current local session through one fail-closed authority boundary.
  *
@@ -59,14 +70,17 @@ export async function resolveSessionAuthority(
     return { status: "rejected", code: "SESSION_INVALID" };
   }
 
-  let sessionId: string | null = null;
+  let sessionId: unknown = null;
   try {
     sessionId = input.getSessionId(input.token);
   } catch {
     return { status: "rejected", code: "SESSION_INVALID" };
   }
-  if (!sessionId) {
+  if (sessionId === null) {
     return { status: "rejected", code: "LEGACY_SESSION_UNSUPPORTED" };
+  }
+  if (!isExactSessionId(sessionId)) {
+    return { status: "rejected", code: "SESSION_INVALID" };
   }
 
   let session: SessionAuthorityRecord | null;
