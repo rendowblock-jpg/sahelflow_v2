@@ -6,7 +6,11 @@ import { cookies } from "next/headers";
 import {
   AUTH_COOKIE,
   AUTH_SECRET_ENV,
+  SESSION_ACTIVITY_WRITE_INTERVAL_MS,
+  SESSION_INACTIVITY_TIMEOUT_MS,
+  SESSION_OVERALL_TIMEOUT_MS,
   SESSION_TTL_MS,
+  SENSITIVE_REAUTH_WINDOW_MS,
 } from "./config";
 import {
   createSessionToken,
@@ -45,7 +49,7 @@ async function migrateAuthSecretsIfNeeded(): Promise<void> {
     });
     await authContext.prisma.setting.deleteMany({ where: { key: { in: [LEGACY_AUTH_SECRET_KEY, LEGACY_AUTH_PIN_KEY] } } });
   } catch {
-    // Non-fatal
+    // Non-fatal legacy migration attempt; authority reads below still fail closed.
   }
 }
 
@@ -102,17 +106,6 @@ export async function verifyAuthPin(pin: string): Promise<boolean> {
   return verifyPin(pin, row.pinHash);
 }
 
-export async function changeAuthPin(
-  currentPin: string,
-  newPin: string,
-): Promise<{ changed: boolean; reason?: string }> {
-  const valid = await verifyAuthPin(currentPin);
-  if (!valid) return { changed: false, reason: "current_pin_invalid" };
-  const newHash = await hashPin(newPin);
-  await authContext.prisma.authSecret.update({ where: { id: "default" }, data: { pinHash: newHash } });
-  return { changed: true };
-}
-
 export async function isAuthSetup(): Promise<boolean> {
   await migrateAuthSecretsIfNeeded();
   try {
@@ -129,11 +122,8 @@ export async function isAuthSetup(): Promise<boolean> {
   }
 }
 
-export async function createSession(ip?: string): Promise<void> {
-  const secret = await getAuthSecret();
-  if (!secret) throw new Error("Auth not set up — run setup first");
-  const session = await authContext.prisma.session.create({ data: { ip: ip ?? null } });
-  const token = await createSessionToken(secret, SESSION_TTL_MS, session.id);
+async function setSessionCookie(secret: string, sessionId: string): Promise<void> {
+  const token = await createSessionToken(secret, SESSION_TTL_MS, sessionId);
   const store = await cookies();
   store.set(AUTH_COOKIE, token, {
     httpOnly: true,
@@ -142,7 +132,20 @@ export async function createSession(ip?: string): Promise<void> {
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
   });
-  void authContext.prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
+}
+
+export async function createSession(ip?: string): Promise<void> {
+  const secret = await getAuthSecret();
+  if (!secret) throw new Error("Auth not set up — run setup first");
+  const now = new Date();
+  const session = await authContext.prisma.session.create({
+    data: {
+      ip: ip ?? null,
+      issuedAt: now,
+      lastSeenAt: now,
+    },
+  });
+  await setSessionCookie(secret, session.id);
 }
 
 async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult> {
@@ -159,51 +162,45 @@ async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult>
     return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
   }
 
-  return resolveSessionAuthority({
+  const now = new Date();
+  const authority = await resolveSessionAuthority({
     token,
     secret,
     authSetup,
+    now,
+    overallTimeoutMs: SESSION_OVERALL_TIMEOUT_MS,
+    inactivityTimeoutMs: SESSION_INACTIVITY_TIMEOUT_MS,
     verifyToken: verifySessionToken,
     getSessionId: getSessionIdFromToken,
     findSession: async (sessionId) =>
       authContext.prisma.session.findUnique({
         where: { id: sessionId },
-        select: { id: true, revokedAt: true },
+        select: {
+          id: true,
+          issuedAt: true,
+          lastSeenAt: true,
+          revokedAt: true,
+        },
       }),
   });
+
+  if (
+    authority.status === "authenticated" &&
+    now.getTime() - authority.lastSeenAt.getTime() >=
+      SESSION_ACTIVITY_WRITE_INTERVAL_MS
+  ) {
+    await authContext.prisma.session.updateMany({
+      where: { id: authority.sessionId, revokedAt: null },
+      data: { lastSeenAt: now },
+    }).catch(() => {
+      // A later request may require login if activity persistence remains unavailable.
+    });
+  }
+
+  return authority;
 }
 
 export const getCurrentSessionAuthority = cache(resolveCurrentSessionAuthority);
-
-export async function destroySession(): Promise<void> {
-  try {
-    const authority = await resolveCurrentSessionAuthority();
-    if (authority.status === "authenticated") {
-      try {
-        await authContext.prisma.session.update({
-          where: { id: authority.sessionId },
-          data: { revokedAt: new Date() },
-        });
-      } catch { /* non-fatal */ }
-    }
-  } catch {
-    // Clearing the local cookie must remain possible when shop or session
-    // authority is unavailable. No unverified Session ID is ever revoked.
-  }
-
-  const store = await cookies();
-  store.delete(AUTH_COOKIE);
-}
-
-export async function getSessionToken(): Promise<string | undefined> {
-  const store = await cookies();
-  return store.get(AUTH_COOKIE)?.value;
-}
-
-export const isAuthenticated = cache(async (): Promise<boolean> => {
-  const authority = await getCurrentSessionAuthority();
-  return authority.status === "setup" || authority.status === "authenticated";
-});
 
 function sessionAuthorityError(
   authority: Extract<SessionAuthorityResult, { status: "rejected" }>,
@@ -222,12 +219,157 @@ function sessionAuthorityError(
   return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
 }
 
-export async function requireAuth(): Promise<void> {
+async function requireAuthenticatedSession(): Promise<
+  Extract<SessionAuthorityResult, { status: "authenticated" }>
+> {
   const authority = await getCurrentSessionAuthority();
-  if (authority.status === "setup" || authority.status === "authenticated") {
-    return;
+  if (authority.status === "authenticated") return authority;
+  if (authority.status === "setup") {
+    throw new SahelFlowError("Authentication setup is required", "AUTH_SETUP_REQUIRED", 409);
   }
   throw sessionAuthorityError(authority);
+}
+
+export async function destroySession(): Promise<void> {
+  try {
+    const authority = await resolveCurrentSessionAuthority();
+    if (authority.status === "authenticated") {
+      await authContext.prisma.session.updateMany({
+        where: { id: authority.sessionId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }).catch(() => {
+        // Cookie clearing must remain possible even when revocation persistence fails.
+      });
+    }
+  } catch {
+    // No unverified session identity is ever revoked.
+  }
+
+  const store = await cookies();
+  store.delete(AUTH_COOKIE);
+}
+
+export async function getSessionToken(): Promise<string | undefined> {
+  const store = await cookies();
+  return store.get(AUTH_COOKIE)?.value;
+}
+
+export const isAuthenticated = cache(async (): Promise<boolean> => {
+  const authority = await getCurrentSessionAuthority();
+  return authority.status === "authenticated";
+});
+
+export async function requireAuth(): Promise<void> {
+  await requireAuthenticatedSession();
+}
+
+/**
+ * Rotate the current session after a successful PIN proof. The old cookie's
+ * session ID is revoked transactionally, so possession of the previous token
+ * cannot inherit the new authentication freshness.
+ */
+export async function reauthenticateCurrentSession(
+  pin: string,
+  ip?: string,
+): Promise<{ reauthenticated: boolean; reason?: "pin_invalid" }> {
+  const authority = await requireAuthenticatedSession();
+  const { valid } = await verifyAuthPinAndMaybeRehash(pin);
+  if (!valid) return { reauthenticated: false, reason: "pin_invalid" };
+
+  const secret = await getAuthSecret();
+  if (!secret) {
+    throw new SahelFlowError(
+      "Authentication authority is temporarily unavailable",
+      "AUTH_SECRET_UNAVAILABLE",
+      503,
+    );
+  }
+
+  const now = new Date();
+  const newSession = await authContext.prisma.$transaction(async (tx) => {
+    const revoked = await tx.session.updateMany({
+      where: { id: authority.sessionId, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    if (revoked.count !== 1) {
+      throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
+    }
+    return tx.session.create({
+      data: {
+        ip: ip ?? null,
+        issuedAt: now,
+        lastSeenAt: now,
+      },
+    });
+  });
+
+  await setSessionCookie(secret, newSession.id);
+  return { reauthenticated: true };
+}
+
+/** Require a PIN proof issued within the bounded high-risk window. */
+export async function requireRecentReauthentication(
+  maxAgeMs: number = SENSITIVE_REAUTH_WINDOW_MS,
+): Promise<void> {
+  if (!Number.isSafeInteger(maxAgeMs) || maxAgeMs <= 0) {
+    throw new TypeError("Reauthentication age must be a positive integer");
+  }
+  const authority = await requireAuthenticatedSession();
+  const ageMs = Date.now() - authority.issuedAt.getTime();
+  if (ageMs < 0 || ageMs >= maxAgeMs) {
+    throw new SahelFlowError(
+      "Recent PIN verification is required",
+      "REAUTHENTICATION_REQUIRED",
+      403,
+    );
+  }
+}
+
+/**
+ * Change the local PIN, revoke every prior session, and establish one new
+ * current session. Credential changes therefore cannot leave stolen cookies
+ * active on another browser or device.
+ */
+export async function changeAuthPin(
+  currentPin: string,
+  newPin: string,
+  ip?: string,
+): Promise<{ changed: boolean; reason?: "current_pin_invalid" }> {
+  await requireAuthenticatedSession();
+  const valid = await verifyAuthPin(currentPin);
+  if (!valid) return { changed: false, reason: "current_pin_invalid" };
+
+  const secret = await getAuthSecret();
+  if (!secret) {
+    throw new SahelFlowError(
+      "Authentication authority is temporarily unavailable",
+      "AUTH_SECRET_UNAVAILABLE",
+      503,
+    );
+  }
+
+  const newHash = await hashPin(newPin);
+  const now = new Date();
+  const newSession = await authContext.prisma.$transaction(async (tx) => {
+    await tx.authSecret.update({
+      where: { id: "default" },
+      data: { pinHash: newHash },
+    });
+    await tx.session.updateMany({
+      where: { revokedAt: null },
+      data: { revokedAt: now },
+    });
+    return tx.session.create({
+      data: {
+        ip: ip ?? null,
+        issuedAt: now,
+        lastSeenAt: now,
+      },
+    });
+  });
+
+  await setSessionCookie(secret, newSession.id);
+  return { changed: true };
 }
 
 export async function auditLog(
@@ -241,16 +383,6 @@ export async function auditLog(
   );
 }
 
-/**
- * Returns a stable identifier for the current authenticated user (their
- * auth Session.id from the cookie token). Used as the `userKey` for the AI
- * rate limiter (AI-P1) so the daily cap is enforced across all of a user's
- * AI chat sessions, not shared globally as "default".
- *
- * Returns "default" only when no authenticated session authority exists. This
- * preserves setup/development compatibility without accepting legacy no-JTI
- * tokens or bypassing revocation-store failures.
- */
 export async function getCurrentUserKey(): Promise<string> {
   const authority = await getCurrentSessionAuthority();
   return authority.status === "authenticated" ? authority.sessionId : "default";
