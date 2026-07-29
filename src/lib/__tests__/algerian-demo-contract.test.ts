@@ -198,7 +198,7 @@ describe("Algerian Founder demo contract", () => {
     expect(helper).toContain("moduleApi.flushCompileCache()");
     expect(readiness).not.toContain("flushPackagedCompileCache");
     expect(uiReady).not.toContain("flushPackagedCompileCache");
-    expect(shutdown).toContain("flushPackagedCompileCache();");
+    expect(shutdown).toContain("flushPackagedCompileCache()");
     expect(dashboardLoading).toContain('className="app-content page-sections"');
     expect(dashboardLoading).toContain('aria-busy="true"');
     expect(dashboardLoading).not.toContain("FullPageSkeleton");
