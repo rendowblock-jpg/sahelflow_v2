@@ -94,6 +94,10 @@ function normalizeLink(rawTarget: string): string | null {
   }
 }
 
+function normalizeSemanticText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 const markdownFiles = walk(repoRoot);
 const activeDocumentationFiles = walk(resolve(repoRoot, "documentation"));
 const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
@@ -225,9 +229,8 @@ for (const [relativePath, markers] of entrypointChecks) {
 
 /**
  * These markers prove that the current authority describes the active FD-028
- * program and current release boundary. They intentionally replace the old
- * Session 1–4 continuity phrases, which became drift once FD-028 superseded that
- * execution overlay.
+ * program and current release boundary. Semantic matching collapses whitespace so
+ * Markdown line wrapping cannot create a false authority failure.
  */
 const semanticRequirements: Array<[string, string[]]> = [
   [
@@ -257,8 +260,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first requirement",
       "Definition of completion",
       "repeated approval",
-      "systems without TPM",
-      "Secure Boot",
+      "without TPM or Secure Boot",
     ],
   ],
   [
@@ -317,8 +319,10 @@ for (const [relativePath, markers] of semanticRequirements) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
   const content = readFileSync(absolutePath, "utf8");
+  const normalizedContent = normalizeSemanticText(content);
+
   for (const marker of markers) {
-    if (!content.includes(marker)) {
+    if (!normalizedContent.includes(normalizeSemanticText(marker))) {
       findings.push({
         kind: "drift",
         file: relativePath,
