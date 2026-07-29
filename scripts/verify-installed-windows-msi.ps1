@@ -103,6 +103,33 @@ function Get-SahelFlowProcessTree {
     )
 }
 
+function Get-DescendantProcessIds {
+    param([Parameter(Mandatory = $true)][int64]$RootProcessId)
+
+    $snapshot = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+    $frontier = @($RootProcessId)
+    $seen = @{}
+    $descendants = @()
+    while ($frontier.Count -gt 0) {
+        $next = @()
+        foreach ($parentId in $frontier) {
+            foreach ($child in @($snapshot | Where-Object {
+                [int64]$_.ParentProcessId -eq [int64]$parentId
+            })) {
+                $childId = [int64]$child.ProcessId
+                $key = [string]$childId
+                if (-not $seen.ContainsKey($key)) {
+                    $seen[$key] = $true
+                    $descendants += $childId
+                    $next += $childId
+                }
+            }
+        }
+        $frontier = $next
+    }
+    return @($descendants)
+}
+
 function Read-JsonFile {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -306,6 +333,10 @@ function Close-SahelFlowNormally {
     if ($Process.HasExited) {
         throw "SahelFlow exited before the normal close request could be proven."
     }
+    # WebView2 descendants run outside the SahelFlow installation directory and
+    # may outlive the desktop process briefly. Capture the exact descendant
+    # identities before closing so a relaunch cannot race stale WebView teardown.
+    $descendantProcessIds = @(Get-DescendantProcessIds -RootProcessId $Process.Id)
 
     $handles = @(
         [SahelFlowWindowCloser]::FindTopLevelWindows([uint32]$Process.Id)
@@ -338,19 +369,30 @@ function Close-SahelFlowNormally {
 
     $deadline = (Get-Date).AddSeconds(20)
     do {
+        $processSnapshot = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
         $remaining = @(
-            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            $processSnapshot |
                 Where-Object {
                     $_.Name -ieq "sahelflow.exe" -or
                     $_.Name -ieq "node.exe" -or
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
+        $liveProcessIds = @($processSnapshot | ForEach-Object { [int64]$_.ProcessId })
+        $remainingDescendantIds = @(
+            $descendantProcessIds | Where-Object { $liveProcessIds -contains $_ }
+        )
         $endpointPresent = Test-Path -LiteralPath $runtimeEndpointPath -PathType Leaf
-        if ($remaining.Count -eq 0 -and -not $endpointPresent) {
+        if (
+            $remaining.Count -eq 0 -and
+            $remainingDescendantIds.Count -eq 0 -and
+            -not $endpointPresent
+        ) {
             return [pscustomobject]@{
                 processId = $Process.Id
                 windowHandles = @($posted)
+                descendantProcessIds = @($descendantProcessIds)
+                descendantTreeStopped = $true
                 processTreeStopped = $true
                 runtimeEndpointRemoved = $true
             }
@@ -363,7 +405,12 @@ function Close-SahelFlowNormally {
     } else {
         ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
     }
-    throw "Normal close was incomplete; remaining processes: $remainingSummary; runtime endpoint present: $endpointPresent"
+    $descendantSummary = if ($remainingDescendantIds.Count -eq 0) {
+        "none"
+    } else {
+        $remainingDescendantIds -join ", "
+    }
+    throw "Normal close was incomplete; remaining processes: $remainingSummary; remaining captured descendants: $descendantSummary; runtime endpoint present: $endpointPresent"
 }
 
 $existing = Get-InstalledSahelFlow
