@@ -24,10 +24,6 @@ import {
   resolveSessionAuthority,
   type SessionAuthorityResult,
 } from "@/lib/identity/session-authority";
-import {
-  createCompatibilityLocalOwnerContext,
-  type TrustedActorContext,
-} from "@/lib/identity/trusted-actor";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 const LEGACY_AUTH_SECRET_KEY = "auth_secret";
@@ -230,28 +226,6 @@ export async function requireAuth(): Promise<void> {
   const authority = await getCurrentSessionAuthority();
   if (authority.status === "setup" || authority.status === "authenticated") {
     return;
-  }
-  throw sessionAuthorityError(authority);
-}
-
-/**
- * Return the exact trusted actor for consequential commands.
- *
- * Genuine setup mode remains available to onboarding through `requireAuth`, but
- * cannot produce a trusted actor. Today's PIN owner is explicitly represented as
- * compatibility-only until durable Person/Member/Device authority is available.
- */
-export async function requireTrustedActor(): Promise<TrustedActorContext> {
-  const authority = await getCurrentSessionAuthority();
-  if (authority.status === "authenticated") {
-    return createCompatibilityLocalOwnerContext(authority.sessionId, shopContext);
-  }
-  if (authority.status === "setup") {
-    throw new SahelFlowError(
-      "A trusted actor is unavailable before authentication setup completes",
-      "TRUSTED_ACTOR_REQUIRED",
-      401,
-    );
   }
   throw sessionAuthorityError(authority);
 }
