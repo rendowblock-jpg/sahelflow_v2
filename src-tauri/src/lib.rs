@@ -20,7 +20,8 @@ mod startup_recovery;
 use runtime_protocol::RuntimeProtocol;
 use runtime_supervisor::{RestartDecision, RuntimeSupervisor};
 use std::ffi::OsString;
-use std::io::{Error as IoError, ErrorKind};
+use std::io::{Error as IoError, ErrorKind, Read, Write};
+use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
@@ -149,6 +150,7 @@ struct SpawnedChildren {
     server: Option<child_containment::ContainedChild>,
     sidecar: Option<child_containment::ContainedChild>,
     sidecar_starting: Option<u64>,
+    shutdown_authority: Option<RuntimeShutdownAuthority>,
     supervisor: RuntimeSupervisor,
 }
 
@@ -158,6 +160,7 @@ impl SpawnedChildren {
             server: None,
             sidecar: None,
             sidecar_starting: None,
+            shutdown_authority: None,
             supervisor: RuntimeSupervisor::default(),
         }
     }
@@ -165,6 +168,15 @@ impl SpawnedChildren {
     fn kill_all(&mut self) {
         self.supervisor.begin_shutdown();
         self.sidecar_starting = None;
+        if self.server.is_some() {
+            if let Some(authority) = self.shutdown_authority.take() {
+                if let Err(error) = authority.flush_compile_cache() {
+                    eprintln!(
+                        "[sahelflow] compile cache could not be flushed before shutdown: {error}"
+                    );
+                }
+            }
+        }
         if let Some(child) = self.server.take() {
             match stop_process_tree(&child, "Next.js server") {
                 Ok(()) => eprintln!("[sahelflow] killed Next.js server tree on exit"),
@@ -417,6 +429,7 @@ pub fn run() {
                         }
                     };
 
+                    remember_runtime_shutdown_authority(&app_handle, &runtime.protocol);
                     if let Err(error) = startup_recovery::show_ready(
                         &app_handle,
                         &runtime.protocol.bootstrap_url(),
@@ -505,6 +518,16 @@ fn begin_normal_close(app: tauri::AppHandle) {
         // child teardown has completed.
         app.exit(0);
     });
+}
+
+fn remember_runtime_shutdown_authority(app: &tauri::AppHandle, protocol: &RuntimeProtocol) {
+    use tauri::Manager;
+
+    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+        if let Ok(mut children) = state.lock() {
+            children.shutdown_authority = Some(RuntimeShutdownAuthority::from_protocol(protocol));
+        }
+    }
 }
 
 /// Environment passed only to the mandatory application server.
@@ -1139,6 +1162,7 @@ fn schedule_server_restart(
 
         match spawn_restart_services(&app_handle, expected_generation, attempt) {
             Ok(runtime) => {
+                remember_runtime_shutdown_authority(&app_handle, &runtime.protocol);
                 if let Err(error) =
                     startup_recovery::show_ready(&app_handle, &runtime.protocol.bootstrap_url())
                 {
@@ -1210,6 +1234,7 @@ fn fail_runtime_generation(
                     return None;
                 }
                 children.sidecar_starting = None;
+                children.shutdown_authority = None;
                 Some((children.server.take(), children.sidecar.take()))
             })
         });
@@ -1692,5 +1717,48 @@ mod child_environment_tests {
         coordinator.finish();
         assert!(coordinator.is_finished());
         assert!(!coordinator.begin());
+    }
+}
+
+/// In-memory authority for the one authenticated shutdown-only cache flush.
+/// The runtime token is never serialized or written to diagnostics.
+struct RuntimeShutdownAuthority {
+    app_port: u16,
+    instance_id: String,
+    runtime_token: String,
+}
+
+impl RuntimeShutdownAuthority {
+    fn from_protocol(protocol: &RuntimeProtocol) -> Self {
+        Self {
+            app_port: protocol.app_port(),
+            instance_id: protocol.instance_id().to_string(),
+            runtime_token: protocol.runtime_token().to_string(),
+        }
+    }
+
+    fn flush_compile_cache(&self) -> Result<(), IoError> {
+        const RESPONSE_LIMIT: u64 = 8 * 1024;
+        const IO_TIMEOUT: Duration = Duration::from_secs(15);
+
+        let address = SocketAddr::from((Ipv4Addr::LOCALHOST, self.app_port));
+        let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(1))?;
+        stream.set_read_timeout(Some(IO_TIMEOUT))?;
+        stream.set_write_timeout(Some(IO_TIMEOUT))?;
+        let request = format!(
+            "POST /api/internal/runtime-shutdown HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nx-sahelflow-runtime-instance: {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            self.app_port, self.runtime_token, self.instance_id
+        );
+        stream.write_all(request.as_bytes())?;
+
+        let mut response = Vec::new();
+        stream.take(RESPONSE_LIMIT).read_to_end(&mut response)?;
+        let response = String::from_utf8_lossy(&response);
+        if !response.starts_with("HTTP/1.1 200 ") && !response.starts_with("HTTP/1.0 200 ") {
+            return Err(IoError::other(
+                "the authenticated runtime shutdown flush did not return HTTP 200",
+            ));
+        }
+        Ok(())
     }
 }
