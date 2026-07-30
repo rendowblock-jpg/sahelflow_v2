@@ -128,7 +128,7 @@ async function cancelCanonicalProviderOrder(
     });
     if (!decision.replayed) {
       void dispatchTrigger(
-        { prisma: context.prisma, shop: context.shop },
+        context,
         decision.result.automation.trigger as TriggerEvent,
         decision.result.automation.order,
       );
@@ -242,7 +242,7 @@ async function upsertCanonicalCommerceOrder(
     });
     if (!command.replayed) {
       void dispatchTrigger(
-        { prisma: db, shop: context.shop },
+        context,
         "order.created" as TriggerEvent,
         command.result.automation,
       );
