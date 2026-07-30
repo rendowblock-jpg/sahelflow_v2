@@ -94,6 +94,7 @@ CREATE TABLE "CodSettlementLine" (
   "settlementId" TEXT NOT NULL,
   "providerLineReference" TEXT,
   "orderId" TEXT,
+  "isFinal" BOOLEAN NOT NULL DEFAULT true,
   "grossRemittedAmount" INTEGER NOT NULL,
   "feeAmount" INTEGER NOT NULL,
   "adjustmentAmount" INTEGER NOT NULL,
@@ -115,12 +116,17 @@ CREATE TABLE "CodSettlementLine" (
   CONSTRAINT "CodSettlementLine_authority_check" CHECK (
     ("orderId" IS NULL AND "status" = 'unmatched') OR
     ("orderId" IS NOT NULL AND "status" IN ('matched', 'partial', 'disputed'))
+  ),
+  CONSTRAINT "CodSettlementLine_partial_check" CHECK (
+    "status" <> 'partial' OR "isFinal" = false
   )
 );
 
 CREATE UNIQUE INDEX "CodSettlementLine_lineKey_key" ON "CodSettlementLine"("lineKey");
 CREATE UNIQUE INDEX "CodSettlementLine_settlementId_providerLineReference_key"
   ON "CodSettlementLine"("settlementId", "providerLineReference");
+CREATE UNIQUE INDEX "CodSettlementLine_settlementId_orderId_key"
+  ON "CodSettlementLine"("settlementId", "orderId");
 CREATE INDEX "CodSettlementLine_orderId_createdAt_idx" ON "CodSettlementLine"("orderId", "createdAt");
 CREATE INDEX "CodSettlementLine_settlementId_status_idx" ON "CodSettlementLine"("settlementId", "status");
 
