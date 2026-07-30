@@ -94,7 +94,13 @@ chat memory:
   program.
 
 The current Phase 1–4 completion program is owned by
-`agent/phases1-4-completion-program` under this mode.
+`agent/phases1-4-completion-program` under draft PR #195. The branch currently
+contains source-green canonical COD settlement plus governed pre-shipment
+cancellation, failed/refused delivery, physical-return receipt and item-level
+inspection disposition. Phase 1 remains open: customer-requested returns,
+exchanges/refunds/reversals, remaining intake sources, courier booking/tracking,
+shared analytics, restart/update preservation and backup-compatibility evidence
+are not yet complete.
 
 ## Research-first gate
 
@@ -137,7 +143,8 @@ begins.
 - PR #192 merged canonical `pack -> ship -> deliver`, reservation consumption,
   outbound inventory, delivered customer facts and a DZD COD receivable. Phase 1
   remains incomplete: COD collection/remittance, exceptions, cancellation,
-  returns/refunds/compensation and remaining intake sources are open.
+  returns/refunds/compensation and remaining intake sources are open on protected
+  `main`; draft PR #195 integrates several of those outcomes but is not merged.
 - PR #191 merged a deliberately narrow Phase 2 boundary: the compatibility PIN
   owner can read only the exact process shop and cannot create, switch or delete
   shops. Durable person/workspace/member/device/session authority, licensing and
@@ -146,27 +153,23 @@ begins.
   native rotation path. Exact-head CI passed staged runtime plus MSI install,
   rotation, authenticated launch, close and reopen. Full Phase 4 backup/restore,
   recovery, security/privacy/legal and migration certification remain open.
-- A corrected Phase 3 WhatsApp durable-effect package exists only as local commit
-  `01a595b789d31c600da6af7025b9dff7cb7cd813`; it is not merged, published or
-  independently approved and is behind current protected `main`.
+- Draft PR #195 preserves and extends the corrected Phase 3 WhatsApp durable-effect
+  package; it is not merged, published or independently approved.
 
 ## Exact next outcome
 
-Resume from current protected `main` without reopening completed packages:
+Continue the Phase 1–4 completion program on draft PR #195 without reopening
+completed packages:
 
-> Rebase the corrected local Phase 3 WhatsApp durable-effect commit onto current
-> protected `main`, independently review the exact rebased diff for every P0/P1
-> receipt, scope, lease, trusted-actor, encryption, retry and recovery invariant,
-> and publish it only after a SHIP verdict and clean exact-head CI.
+> Complete Phase 1E customer-requested returns, exchanges, full/partial refunds and
+> refund reversals through the same trusted command, inventory, financial,
+> compensation, audit, event, outbox, AR/FR/EN and recovery authorities.
 
-The next implementation frontier after that integration review is the complete
-Phase 1D COD collection/remittance/fee/discrepancy vertical. The existing
-`C:\tmp\sahelflow-phase1-cod-settlement` worktree is an incomplete uncommitted
-proposal based on an obsolete pre-merge commit; inspect and reconcile it rather
-than trusting or publishing it. The Phase 2 durable-identity worktree is also an
-incomplete local proposal and remains paused while core-authority WIP is occupied.
-PR #186 is a separate open, conflicting session-freshness proposal based on an
-obsolete main; resolve and reconcile it before Phase 2 resumes.
+After Phase 1E, close remaining Phase 1 intake/courier/analytics/preservation and
+backup-compatibility gates before declaring Phase 1 complete. Phase 2 durable
+identity resumes only after the shared Phase 1 authority contracts are stable.
+PR #186 is an obsolete conflicting proposal and must be reconciled rather than
+merged directly.
 
 Internal.13 T470 observation remains independent in the platform lane. Installed
 version and preservation evidence are captured; Arabic chart visual acceptance
@@ -180,8 +183,8 @@ and the Founder acceptance decision remain open.
 - Freeze shared contracts before dependent parallel work.
 - Core authority WIP 1; seller vertical WIP 2 total; experience/Arabic WIP 1;
   platform/performance WIP 1.
-- Normal branches are short and coherent unless a newer Founder decision explicitly
-  binds a larger integration program, as above.
+- Normal branches are short and coherent except the Founder-authorized Phase 1–4
+  integration program.
 - Merge ordinary source-complete packages without app-version bumps.
 - Group coherent outcomes into one Internal milestone candidate.
 - At most one frozen signed candidate is in flight.
