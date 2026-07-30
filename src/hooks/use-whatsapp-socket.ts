@@ -1,51 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { installWhatsAppSendRecovery } from "@/lib/whatsapp/install-send-recovery";
 import { getWhatsAppWsUrlWithToken } from "@/lib/whatsapp/ws-url";
-import type { SidecarEvent, WhatsAppStatus, WhatsAppUser, IncomingMessage } from "@/lib/whatsapp/types";
+import type {
+  IncomingMessage,
+  SidecarEvent,
+  WhatsAppStatus,
+  WhatsAppUser,
+} from "@/lib/whatsapp/types";
+
+installWhatsAppSendRecovery();
 
 interface UseWhatsAppSocketOptions {
-  /** Fired when a 'status' event arrives (connection state change). */
   onStatusChange?: (status: WhatsAppStatus, user: WhatsAppUser | null) => void;
-  /** Fired when a new incoming message arrives. */
   onMessage?: (message: IncomingMessage) => void;
-  /** Session 30 (AUDIT-6 I4): fired when messages are updated (delivery
-   * receipts, read receipts, edits, deletions). Each update has the jid,
-   * message id, fromMe flag, and the partial update object from Baileys. */
-  onMessageUpdate?: (updates: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>) => void;
+  onMessageUpdate?: (
+    updates: Array<{
+      jid: string;
+      id: string;
+      fromMe: boolean;
+      update: Record<string, unknown>;
+    }>,
+  ) => void;
 }
 
 interface UseWhatsAppSocketResult {
-  /** Current connection status (latest 'status' event), or null before first event. */
   status: WhatsAppStatus | null;
   user: WhatsAppUser | null;
-  /** Whether the WS transport itself is open. */
   wsOpen: boolean;
-  /** Manually reconnect (e.g. after the user clicks "retry"). */
   reconnect: () => void;
 }
 
-/**
- * Subscribe to the WhatsApp sidecar's WebSocket event stream.
- *
- * Auto-reconnects with backoff. The server is push-only (we never send frames).
- * State updates flow through the `onStatusChange` / `onMessage` callbacks so
- * callers can update their own state in event handlers (not effects).
- *
- * The latest callbacks are held in refs so callers don't need to memoize them
- * and won't suffer stale closures.
- */
 export function useWhatsAppSocket(
   options: UseWhatsAppSocketOptions = {},
 ): UseWhatsAppSocketResult {
   const { onStatusChange, onMessage, onMessageUpdate } = options;
-
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
   const [user, setUser] = useState<WhatsAppUser | null>(null);
   const [wsOpen, setWsOpen] = useState(false);
   const [retryCounter, setRetryCounter] = useState(0);
 
-  // Latest callbacks in refs (avoid stale closures + avoid re-subscribing)
   const onStatusChangeRef = useRef(onStatusChange);
   const onMessageRef = useRef(onMessage);
   const onMessageUpdateRef = useRef(onMessageUpdate);
@@ -55,33 +51,29 @@ export function useWhatsAppSocket(
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
-
   useEffect(() => {
     onMessageUpdateRef.current = onMessageUpdate;
   }, [onMessageUpdate]);
 
   const reconnectAttempt = useRef(0);
-
   const reconnect = useCallback(() => {
     reconnectAttempt.current = 0;
-    setRetryCounter((c) => c + 1);
+    setRetryCounter((count) => count + 1);
   }, []);
 
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
+    const maxReconnectAttempts = 20;
 
-    const MAX_RECONNECT_ATTEMPTS = 20; // PERF-016: stop after ~5 min of trying
-
-  const scheduleReconnect = () => {
+    const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
-      // PERF-016: stop auto-reconnecting after MAX_RECONNECT_ATTEMPTS
-      if (reconnectAttempt.current >= MAX_RECONNECT_ATTEMPTS) {
+      if (reconnectAttempt.current >= maxReconnectAttempts) {
         setStatus("disconnected");
         return;
       }
-      const delay = Math.min(1000 * 2 ** reconnectAttempt.current, 15000);
+      const delay = Math.min(1000 * 2 ** reconnectAttempt.current, 15_000);
       reconnectAttempt.current += 1;
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null;
@@ -91,8 +83,6 @@ export function useWhatsAppSocket(
 
     const open = () => {
       if (closed) return;
-      // Fetch the WS URL with auth token first (async). If the sidecar is not
-      // ready (token unavailable), schedule a reconnect.
       void getWhatsAppWsUrlWithToken().then((url) => {
         if (closed || !url) {
           if (!closed) scheduleReconnect();
@@ -109,56 +99,47 @@ export function useWhatsAppSocket(
           setWsOpen(true);
           reconnectAttempt.current = 0;
         };
-
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data as string) as SidecarEvent;
-            if (data.type === "status") {
-              if (data.status) {
-                setStatus(data.status);
-                setUser(data.user ?? null);
-                onStatusChangeRef.current?.(data.status, data.user ?? null);
-              }
+            if (data.type === "status" && data.status) {
+              setStatus(data.status);
+              setUser(data.user ?? null);
+              onStatusChangeRef.current?.(data.status, data.user ?? null);
             } else if (data.type === "qr") {
               setStatus("qr");
               onStatusChangeRef.current?.("qr", null);
             } else if (data.type === "message" && data.message) {
               onMessageRef.current?.(data.message);
             } else if (data.type === "message-update" && data.updates) {
-              // Session 30 (AUDIT-6 I4): handle delivery/read receipts, edits, deletions
               onMessageUpdateRef.current?.(data.updates);
             }
           } catch {
-            /* ignore malformed frames */
+            // Ignore malformed push frames.
           }
         };
-
         ws.onclose = () => {
           setWsOpen(false);
           scheduleReconnect();
         };
-
         ws.onerror = () => {
           try {
             ws?.close();
           } catch {
-            /* ignore */
+            // Ignore close races.
           }
         };
       });
     };
 
     open();
-
     return () => {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (ws) {
-        try {
-          ws.close();
-        } catch {
-          /* ignore */
-        }
+      try {
+        ws?.close();
+      } catch {
+        // Ignore cleanup races.
       }
     };
   }, [retryCounter]);

@@ -85,6 +85,8 @@ interface NormalizedMessage {
   // the MessageStatus component (clock/check/double-check/blue). Was hardcoded
   // to "sent" before, making the WhatsApp-style receipts feature non-functional.
   deliveryStatus?: "sending" | "sent" | "delivered" | "read" | "failed";
+  outboxEffectKey?: string;
+  outboxState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
 }
 
 type Mode = "loading" | "live" | "seeded";
@@ -187,6 +189,9 @@ export function InboxLive() {
                 body: messageText(m.message),
                 direction: (m.key.fromMe ? "outbound" : "inbound") as "inbound" | "outbound",
                 timestamp: m.messageTimestamp * 1000,
+                deliveryStatus: m.deliveryStatus,
+                outboxEffectKey: m.effectKey,
+                outboxState: m.effectState,
               })),
             );
             return;
@@ -349,6 +354,96 @@ export function InboxLive() {
   }, [status]);
 
   // ── Send a reply ──────────────────────────────────────────────────────
+  async function monitorWhatsAppEffect(effectKey: string, localMessageId: string) {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 1000 : 3000));
+      try {
+        const res = await fetch(`/api/whatsapp/outbox?effectKey=${encodeURIComponent(effectKey)}`);
+        if (!res.ok) continue;
+        const data = (await res.json()) as {
+          effect: {
+            state: NormalizedMessage["outboxState"];
+            providerMessageId: string | null;
+          };
+        };
+        const state = data.effect.state;
+        if (state === "succeeded") {
+          setMessages((prev) => prev.map((message) =>
+            message.id === localMessageId
+              ? {
+                  ...message,
+                  id: data.effect.providerMessageId ?? message.id,
+                  deliveryStatus: "sent",
+                  outboxState: state,
+                }
+              : message,
+          ));
+          return;
+        }
+        if (state === "ambiguous" || state === "dead_letter") {
+          setMessages((prev) => prev.map((message) =>
+            message.id === localMessageId
+              ? { ...message, deliveryStatus: "failed", outboxState: state }
+              : message,
+          ));
+          setSendError(state === "ambiguous" ? t("inbox.whatsappAmbiguous") : t("inbox.sendFailed"));
+          return;
+        }
+        setMessages((prev) => prev.map((message) =>
+          message.id === localMessageId ? { ...message, outboxState: state } : message,
+        ));
+      } catch {
+        // The intent remains durable; polling resumes while the inbox is open.
+      }
+    }
+  }
+
+  async function retryFailedMessage(message: NormalizedMessage) {
+    if (!message.outboxEffectKey) return;
+    const confirmMayDuplicate = message.outboxState === "ambiguous"
+      ? window.confirm(t("inbox.whatsappAmbiguousRetryWarning"))
+      : false;
+    if (message.outboxState === "ambiguous" && !confirmMayDuplicate) return;
+    setMessages((prev) => prev.map((entry) =>
+      entry.id === message.id ? { ...entry, deliveryStatus: "sending" } : entry,
+    ));
+    setSendError(null);
+    try {
+      const res = await fetch("/api/whatsapp/outbox", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ effectKey: message.outboxEffectKey, confirmMayDuplicate }),
+      });
+      const data = (await res.json()) as {
+        effect?: { state: NormalizedMessage["outboxState"]; providerMessageId: string | null };
+      };
+      if (!data.effect) throw new Error(t("inbox.sendFailed"));
+      if (data.effect.state === "succeeded") {
+        setMessages((prev) => prev.map((entry) =>
+          entry.id === message.id
+            ? {
+                ...entry,
+                id: data.effect?.providerMessageId ?? entry.id,
+                deliveryStatus: "sent",
+                outboxState: "succeeded",
+              }
+            : entry,
+        ));
+        return;
+      }
+      if (res.status === 202) {
+        void monitorWhatsAppEffect(message.outboxEffectKey, message.id);
+        return;
+      }
+      throw new Error(data.effect.state === "ambiguous" ? t("inbox.whatsappAmbiguous") : t("inbox.sendFailed"));
+    } catch (error) {
+      setMessages((prev) => prev.map((entry) =>
+        entry.id === message.id ? { ...entry, deliveryStatus: "failed" } : entry,
+      ));
+      setSendError(error instanceof Error ? error.message : t("inbox.sendFailed"));
+    }
+  }
+
   async function handleSend() {
     const active = chats.find((c) => c.id === activeChatId);
     if (!active || active.channel !== "whatsapp" || !replyText.trim()) return;
@@ -356,7 +451,7 @@ export function InboxLive() {
     // Optimistic update: show the message bubble instantly with "sending" status.
     // WhatsApp/iMessage/Telegram all do this — the user sees their message
     // immediately, not after the server responds.
-    const tempId = `local-${Date.now()}`;
+    const tempId = crypto.randomUUID();
     const messageText = replyText.trim();
     setReplyText(""); // clear input immediately
     setSending(true);
@@ -376,11 +471,37 @@ export function InboxLive() {
       const res = await fetch("/api/whatsapp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: active.id, text: messageText }),
+        body: JSON.stringify({ clientMessageId: tempId, to: active.id, text: messageText }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; id?: string };
+      const data = (await res.json()) as {
+        ok: boolean;
+        accepted?: boolean;
+        id?: string | null;
+        effectKey?: string;
+        state?: NormalizedMessage["outboxState"];
+        requiresDuplicateConfirmation?: boolean;
+      };
+      if (res.status === 202 && data.accepted && data.effectKey) {
+        setMessages((prev) => prev.map((message) =>
+          message.id === tempId
+            ? { ...message, outboxEffectKey: data.effectKey, outboxState: data.state }
+            : message,
+        ));
+        void monitorWhatsAppEffect(data.effectKey, tempId);
+        return;
+      }
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? t("inbox.sendFailed"));
+        setMessages((prev) => prev.map((message) =>
+          message.id === tempId
+            ? {
+                ...message,
+                deliveryStatus: "failed",
+                outboxEffectKey: data.effectKey,
+                outboxState: data.state,
+              }
+            : message,
+        ));
+        throw new Error(data.requiresDuplicateConfirmation ? t("inbox.whatsappAmbiguous") : t("inbox.sendFailed"));
       }
       // Update the optimistic message to "sent" status. Adopt the real WhatsApp
       // message ID (Session 31, AUDIT-6 I4) so subsequent delivery/read receipts
@@ -388,7 +509,13 @@ export function InboxLive() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
-            ? { ...m, deliveryStatus: "sent", ...(data.id ? { id: data.id } : {}) }
+            ? {
+                ...m,
+                deliveryStatus: "sent",
+                outboxEffectKey: data.effectKey,
+                outboxState: "succeeded",
+                ...(data.id ? { id: data.id } : {}),
+              }
             : m
         )
       );
@@ -620,6 +747,19 @@ export function InboxLive() {
                               messageBody={msg.body}
                               knownPhone={activeChat.phone}
                             />
+                          </div>
+                        )}
+                        {msg.direction === "outbound" && msg.deliveryStatus === "failed" && msg.outboxEffectKey && (
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void retryFailedMessage(msg)}
+                            >
+                              <RefreshCw className="me-1.5 size-3.5" />
+                              {t("inbox.retry")}
+                            </Button>
                           </div>
                         )}
                       </div>

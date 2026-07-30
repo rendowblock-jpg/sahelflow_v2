@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { ServiceContext } from "@/lib/data/service-base";
+import {
+  isTrustedActorContext,
+  type TrustedActorContext,
+} from "@/lib/identity/trusted-actor";
 import { SahelFlowError } from "@/types/errors";
 
 const TRUSTED_BUSINESS_PRINCIPAL = Symbol("sahelflow.trusted-business-principal");
@@ -74,6 +78,28 @@ export function providerBusinessPrincipal(
   return createPrincipal("provider", provider);
 }
 
+export function businessPrincipalFromTrustedActor(
+  context: TrustedActorContext,
+): TrustedBusinessPrincipal {
+  if (!isTrustedActorContext(context)) {
+    throw principalError("Business principal requires a server-minted trusted actor");
+  }
+  switch (context.actor.kind) {
+    case "compatibility_local_owner":
+      return createPrincipal(
+        "authenticated-owner",
+        `compatibility_local_owner:${context.actor.sessionId}`,
+      );
+    case "person":
+      return createPrincipal(
+        "authenticated-owner",
+        `person:${context.actor.personId}:session:${context.actor.sessionId}`,
+      );
+    case "system":
+      return createPrincipal("system", context.actor.serviceId);
+  }
+}
+
 /**
  * Test-only factory for proving owner-session renewal behavior without importing
  * Next.js cookies. It is deliberately unavailable in production execution.
@@ -132,7 +158,6 @@ export async function resolveTrustedBusinessPrincipal(
     return createPrincipal("test", "vitest");
   }
 
-  const { getCurrentUserKey, requireAuth } = await import("@/lib/auth/server");
-  await requireAuth();
-  return createPrincipal("authenticated-owner", await getCurrentUserKey());
+  const { requireTrustedActor } = await import("@/lib/identity/trusted-actor");
+  return businessPrincipalFromTrustedActor(await requireTrustedActor());
 }

@@ -1,23 +1,30 @@
 import { NextResponse } from "next/server";
-import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
-import { requireAuth } from "@/lib/auth/server";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  sidecar,
+  SidecarUnavailableError,
+} from "@/lib/whatsapp/sidecar-client";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/whatsapp/status — sidecar connection status. */
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  await requireTrustedActor();
   try {
-    const status = await sidecar.status();
-    return NextResponse.json(status);
-  } catch (err) {
-    if (err instanceof SidecarUnavailableError) {
+    return NextResponse.json(await sidecar.status());
+  } catch (error) {
+    if (error instanceof SidecarUnavailableError) {
       return NextResponse.json(
-        { status: "disconnected", user: null, hasQr: false, sidecarReachable: false },
+        {
+          status: "disconnected",
+          user: null,
+          hasQr: false,
+          sidecarReachable: false,
+        },
         { status: 503 },
       );
     }
-    throw err;
+    throw error;
   }
 }, "GET /api/whatsapp/status");

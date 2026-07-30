@@ -1,0 +1,60 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
+import { db } from "@/lib/db";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  findWhatsAppEffectByMessageId,
+  getWhatsAppEffectStatus,
+  retryWhatsAppEffect,
+} from "@/lib/whatsapp/durable-send";
+
+export const dynamic = "force-dynamic";
+
+const effectKeySchema = z.string().min(1).max(200);
+const messageIdSchema = z.string().uuid();
+const retrySchema = z.object({
+  effectKey: effectKeySchema,
+  confirmMayDuplicate: z.boolean().optional().default(false),
+});
+
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const actorContext = await requireTrustedActor();
+  const context = { prisma: db, shop: actorContext.shop };
+  const rawEffectKey = request.nextUrl.searchParams.get("effectKey");
+  const rawMessageId = request.nextUrl.searchParams.get("messageId");
+  const effect = rawEffectKey
+    ? await getWhatsAppEffectStatus(context, effectKeySchema.parse(rawEffectKey))
+    : await findWhatsAppEffectByMessageId(
+        context,
+        messageIdSchema.parse(rawMessageId),
+      );
+  return NextResponse.json({ ok: true, effect });
+}, "GET /api/whatsapp/outbox");
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const actorContext = await requireTrustedActor();
+  const input = retrySchema.parse(await request.json());
+  const effect = await retryWhatsAppEffect(
+    {
+      prisma: db,
+      shop: actorContext.shop,
+      businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
+    },
+    input.effectKey,
+    input.confirmMayDuplicate,
+  );
+  return NextResponse.json(
+    { ok: effect.state === "succeeded", effect },
+    {
+      status:
+        effect.state === "succeeded"
+          ? 200
+          : effect.state === "retrying" || effect.state === "queued"
+            ? 202
+            : 409,
+    },
+  );
+}, "POST /api/whatsapp/outbox");
