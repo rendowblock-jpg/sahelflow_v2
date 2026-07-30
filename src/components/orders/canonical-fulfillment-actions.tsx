@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CanonicalCodActions } from "@/components/orders/canonical-cod-actions";
+import { CanonicalCustomerReturnActions } from "@/components/orders/canonical-customer-return-actions";
 import { CanonicalOrderRecoveryActions } from "@/components/orders/canonical-order-recovery-actions";
 import { useI18n } from "@/hooks/use-i18n";
 import type {
@@ -389,6 +390,7 @@ export function CanonicalFulfillmentActions({
       ) : null}
 
       <CanonicalOrderRecoveryActions orderId={orderId} />
+      <CanonicalCustomerReturnActions orderId={orderId} />
 
       <AlertDialog
         open={confirming}
