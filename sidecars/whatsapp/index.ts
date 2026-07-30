@@ -5,7 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import QRCode from "qrcode";
 
-import { verifySidecarWebSocketGrant } from "./auth-tokens";
+import {
+  effectKeyMatchesWhatsAppAccount,
+  getWhatsAppEffectAccountHash,
+  verifySidecarWebSocketGrant,
+} from "./auth-tokens";
 import {
   deterministicWhatsAppMessageId,
   findDurableSendReceipt,
@@ -177,7 +181,7 @@ app.post("/send", async (context) => {
       400,
     );
   }
-  if (effectKey && !/^[A-Za-z0-9:_-]{1,200}$/.test(effectKey)) {
+  if (effectKey && !getWhatsAppEffectAccountHash(effectKey)) {
     return context.json(
       {
         error: "Invalid effect key",
@@ -201,7 +205,8 @@ app.post("/send", async (context) => {
   }
 
   try {
-    if (wa.getStatus().status !== "connected") {
+    const status = wa.getStatus();
+    if (status.status !== "connected") {
       return context.json(
         {
           ok: false,
@@ -214,15 +219,39 @@ app.post("/send", async (context) => {
       );
     }
 
-    if (!effectKey) {
-      const result = await wa.sendMessage(to, text);
-      return context.json({ ok: true, ...result, replayed: false, durable: false });
+    if (effectKey) {
+      if (!status.user?.id) {
+        return context.json(
+          {
+            ok: false,
+            error: "WhatsApp account identity is unavailable",
+            code: "WHATSAPP_ACCOUNT_UNAVAILABLE",
+            retryable: true,
+            ambiguous: false,
+          },
+          503,
+        );
+      }
+      if (!effectKeyMatchesWhatsAppAccount(effectKey, status.user.id)) {
+        return context.json(
+          {
+            ok: false,
+            error: "The paired WhatsApp account changed after this send was queued",
+            code: "WHATSAPP_ACCOUNT_CHANGED",
+            retryable: false,
+            ambiguous: false,
+          },
+          409,
+        );
+      }
+      return context.json({
+        ok: true,
+        ...(await executeDurableSend(effectKey, to, text, requestBinding!)),
+      });
     }
 
-    return context.json({
-      ok: true,
-      ...(await executeDurableSend(effectKey, to, text, requestBinding!)),
-    });
+    const result = await wa.sendMessage(to, text);
+    return context.json({ ok: true, ...result, replayed: false, durable: false });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Send failed";
     const conflict = /already bound to different content/i.test(message);
