@@ -3,7 +3,10 @@ import "server-only";
 import { readFileSync } from "node:fs";
 
 import { env } from "@/lib/env";
-import { createSidecarWebSocketGrant } from "../../../sidecars/whatsapp/auth-tokens";
+import {
+  createSidecarWebSocketGrant,
+  SIDECAR_WS_GRANT_TTL_MS,
+} from "../../../sidecars/whatsapp/auth-tokens";
 import type {
   IncomingMessage,
   SidecarChat,
@@ -148,6 +151,24 @@ export const sidecar = {
       ),
     }),
 
+  receipt: async (
+    effectKey: string,
+    requestBinding: string,
+  ): Promise<{ ok: boolean; id: string; status: string } | null> => {
+    const result = await sidecarFetch<{
+      receipt: { id: string; status: string } | null;
+    }>(
+      "/send-receipt",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ effectKey, requestBinding }),
+      },
+      3000,
+    );
+    return result.receipt ? { ok: true, ...result.receipt } : null;
+  },
+
   connect: () =>
     sidecarFetch<{ ok: boolean } & SidecarStatus>("/connect", {
       method: "POST",
@@ -166,4 +187,20 @@ export const sidecar = {
     SIDECAR_REST_TOKEN
       ? createSidecarWebSocketGrant(SIDECAR_REST_TOKEN, subject)
       : undefined,
+
+  wsGrantBundle: (
+    subject: string,
+  ): { token: string; expiresAt: number } | undefined => {
+    if (!SIDECAR_REST_TOKEN) return undefined;
+    const issuedAt = Date.now();
+    return {
+      token: createSidecarWebSocketGrant(
+        SIDECAR_REST_TOKEN,
+        subject,
+        issuedAt,
+        SIDECAR_WS_GRANT_TTL_MS,
+      ),
+      expiresAt: issuedAt + SIDECAR_WS_GRANT_TTL_MS,
+    };
+  },
 };
