@@ -1,757 +1,473 @@
-/**
- * E-commerce sync-engine tests (T-INTEGRATIONS).
- *
- * Tests the full syncPlatform flow with a mocked adapter + real Prisma DB
- * (with PII encryption extension). Verifies:
- *   - Orders + customers + items are created on first sync
- *   - The Integration record is upserted with the new watermark + lastSyncAt
- *   - Re-syncing the same orders does NOT duplicate (dedup by sourceOrderId)
- *   - Syncing a mix of new + existing orders creates only the new ones
- *   - Customer find-or-create (same phone → same customer, multiple orders)
- *   - Empty fetch result is a no-op (still updates Integration.lastSyncAt)
- *   - Adapter fetch error is caught and returned in result.errors
- *   - Missing credentials return an error result
- *   - syncAllPlatforms iterates and skips platforms without creds
- *
- * Pattern: vi.mock("../index") returns a fake adapter whose listOrdersSince
- * is a vi.fn() we configure per-test. Real DB is cleaned beforeEach.
- */
-process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.SF_MASTER_KEY =
+  process.env.SF_MASTER_KEY ??
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { cleanDb, rawDb } from "@/app/api/__tests__/helpers";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
+import { executeCanonicalFulfillment } from "@/lib/orders/canonical-fulfillment";
+import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
+import { readCanonicalSourceOrderAuthority } from "@/lib/orders/manual-order-authority";
 import type {
-  NormalizedOrder,
-  SyncFetchResult,
   EcommerceCredentials,
   EcommercePlatform,
+  NormalizedOrder,
+  SyncFetchResult,
 } from "../types";
 
-// ── Mock the adapter registry + credentials loader ──────────────────────────
-const { mockAdapter, mockCreds, listOrdersMock, mockCredsProvider } = vi.hoisted(() => {
-  const listOrdersMock = vi.fn();
-  // Per-platform credentials provider (so syncAllPlatforms can have creds for
-  // some platforms and not others). Tests mutate this.
-  const credsProvider = vi.fn();
-  return {
-    listOrdersMock,
-    mockAdapter: {
-      platform: "shopify" as const,
-      displayName: "Shopify",
-      listOrdersSince: listOrdersMock,
-    },
-    mockCreds: { shop: "test", accessToken: "tok" } as EcommerceCredentials,
-    mockCredsProvider: credsProvider,
-  };
-});
-
-vi.mock("../index", () => ({
-  getEcommerceAdapter: vi.fn(() => mockAdapter),
-  loadEcommerceCredentials: vi.fn((_context: unknown, platform: string) => mockCredsProvider(platform)),
+const { listOrdersMock, credentialsProvider } = vi.hoisted(() => ({
+  listOrdersMock: vi.fn(),
+  credentialsProvider: vi.fn(),
 }));
 
-// Import AFTER the mock so sync-engine uses the mocked registry.
-import {
-  syncPlatform as syncPlatformWithContext,
-  syncAllPlatforms as syncAllPlatformsWithContext,
-} from "../sync-engine";
-import { db } from "@/lib/db";
-import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
-
-function syncPlatform(platform: EcommercePlatform, maxPages?: number) {
-  return syncPlatformWithContext(
-    { prisma: db, shop: TEST_SHOP_CONTEXT },
+vi.mock("../index", () => ({
+  getEcommerceAdapter: vi.fn((platform: EcommercePlatform) => ({
     platform,
-    maxPages,
-  );
-}
+    displayName: platform,
+    listOrdersSince: listOrdersMock,
+  })),
+  loadEcommerceCredentials: vi.fn(
+    (_context: unknown, platform: EcommercePlatform) =>
+      credentialsProvider(platform),
+  ),
+}));
 
-function syncAllPlatforms(maxPages?: number) {
-  return syncAllPlatformsWithContext(
-    { prisma: db, shop: TEST_SHOP_CONTEXT },
-    maxPages,
-  );
-}
+import { syncAllPlatforms, syncPlatform } from "../sync-engine";
 
-async function cleanDb() {
-  await db.$transaction([
-    db.orderItem.deleteMany(),
-    db.order.deleteMany(),
-    db.customer.deleteMany(),
-    db.integration.deleteMany(),
-    db.counter.deleteMany(),
-  ]);
-}
+const credentials = {
+  shop: "test",
+  accessToken: "token",
+} as EcommerceCredentials;
+const context = { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT };
 
-function makeOrder(overrides: Partial<NormalizedOrder> = {}): NormalizedOrder {
-  const sourceOrderId = overrides.sourceOrderId ?? "shop-001";
-  // Include sourceOrderId in sourceMetadata so the sync engine's dedup
-  // (which checks `sourceMetadata CONTAINS sourceOrderId` on the JSON string)
-  // finds it on re-sync. Mirrors the real Shopify adapter where
-  // sourceMetadata.shopifyOrderId === sourceOrderId.
-  const defaultMetadata: Record<string, unknown> = {
-    shopifyOrderId: 1001,
-    shopifyOrderNumber: 1001,
-    sourceOrderId,
-  };
+function order(
+  overrides: Partial<NormalizedOrder> = {},
+): NormalizedOrder {
+  const source = overrides.source ?? "shopify";
+  const sourceOrderId = overrides.sourceOrderId ?? `${source}-001`;
   return {
     sourceOrderId,
-    orderNumber: "#1001",
-    customerName: "Ahmed Benali",
-    customerPhone: "0555123456",
-    wilaya: "Alger",
-    commune: "Bab Ezzouar",
-    address: "123 Rue Didouche",
-    items: [{ productName: "Widget A", quantity: 2, unitPrice: 2000 }],
-    totalPrice: 4000,
-    source: "shopify",
-    sourceMetadata: defaultMetadata as NormalizedOrder["sourceMetadata"],
-    createdAt: "2026-01-02T10:00:00Z",
-    ...overrides,
+    orderNumber: overrides.orderNumber ?? "#1001",
+    customerName: overrides.customerName ?? "Ahmed Benali",
+    customerPhone: overrides.customerPhone ?? "0555123456",
+    wilaya: overrides.wilaya === undefined ? "Alger" : overrides.wilaya,
+    commune:
+      overrides.commune === undefined ? "Bab Ezzouar" : overrides.commune,
+    address: overrides.address ?? "123 Rue Didouche",
+    items:
+      overrides.items ??
+      [
+        {
+          productName: "Widget A",
+          catalogSku: "WIDGET-A",
+          quantity: 2,
+          unitPrice: 1,
+        },
+      ],
+    totalPrice: overrides.totalPrice ?? 99_999,
+    deliveryCost: overrides.deliveryCost ?? 500,
+    source,
+    sourceRevision: overrides.sourceRevision ?? "rev-1",
+    sourceMetadata:
+      overrides.sourceMetadata ??
+      ({
+        sourceOrderId,
+        rawUpdatedAt: overrides.sourceRevision ?? "rev-1",
+        financialStatus: "pending",
+        fulfillmentStatus: null,
+        cancelReason: null,
+      } satisfies Record<string, unknown>),
+    createdAt: overrides.createdAt ?? "2026-01-02T10:00:00Z",
   };
 }
 
-describe("sync-engine (syncPlatform)", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    listOrdersMock.mockReset();
-    mockCredsProvider.mockReset();
-    mockCredsProvider.mockResolvedValue(mockCreds);
+async function seedProduct(input?: {
+  name?: string;
+  sku?: string;
+  price?: number;
+  stock?: number;
+}) {
+  const name = input?.name ?? "Widget A";
+  const category = await rawDb.category.create({
+    data: { name: `Commerce ${name} ${crypto.randomUUID()}` },
+  });
+  return rawDb.product.create({
+    data: {
+      name,
+      sku: input?.sku ?? "WIDGET-A",
+      price: input?.price ?? 2000,
+      stock: input?.stock ?? 10,
+      isActive: true,
+      categoryId: category.id,
+    },
+  });
+}
+
+function fetched(
+  orders: NormalizedOrder[],
+  nextWatermark = "wm-2",
+): SyncFetchResult {
+  return { orders, nextWatermark, hasMore: false };
+}
+
+async function integrationConfig(platform: EcommercePlatform) {
+  const integration = await rawDb.integration.findUnique({ where: { platform } });
+  return integration?.config
+    ? (JSON.parse(integration.config) as { watermark?: string })
+    : null;
+}
+
+beforeEach(async () => {
+  await cleanDb();
+  listOrdersMock.mockReset();
+  credentialsProvider.mockReset().mockResolvedValue(credentials);
+});
+
+afterAll(async () => {
+  await cleanDb();
+  await rawDb.$disconnect();
+});
+
+describe("canonical commerce sync", () => {
+  it("creates a server-priced pending canonical order and advances the watermark", async () => {
+    const product = await seedProduct({ price: 2000 });
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+
+    const result = await syncPlatform(context, "shopify");
+
+    expect(result).toMatchObject({
+      fetched: 1,
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      errors: [],
+      watermark: "wm-1",
+    });
+    const stored = await rawDb.order.findFirst({ include: { items: true } });
+    expect(stored).toMatchObject({
+      source: "shopify",
+      sourceOrderId: "shopify-001",
+      status: "pending",
+      totalPrice: 4500,
+      deliveryCost: 500,
+      version: 1,
+    });
+    expect(stored?.items[0]).toMatchObject({
+      productId: product.id,
+      unitPrice: 2000,
+      quantity: 2,
+      total: 4000,
+    });
+    expect(
+      readCanonicalSourceOrderAuthority(stored?.source, stored?.sourceMetadata),
+    ).toMatchObject({ sourceRevision: "rev-1" });
+    expect(await integrationConfig("shopify")).toMatchObject({ watermark: "wm-1" });
   });
 
-  afterAll(async () => {
-    await cleanDb();
-    await db.$disconnect();
+  it("skips an unchanged re-fetch without duplicating the order", async () => {
+    await seedProduct();
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+    await syncPlatform(context, "shopify");
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-2"));
+
+    const replay = await syncPlatform(context, "shopify");
+
+    expect(replay).toMatchObject({ created: 0, updated: 0, skipped: 1, errors: [] });
+    expect(await rawDb.order.count()).toBe(1);
+    expect(await integrationConfig("shopify")).toMatchObject({ watermark: "wm-2" });
   });
 
-  it("creates orders + customers + items on first sync", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder(),
-        makeOrder({
-          sourceOrderId: "shop-002",
-          orderNumber: "#1002",
-          customerPhone: "0555999888",
-          customerName: "Imene Ouali",
-          sourceMetadata: { shopifyOrderId: 1002, shopifyOrderNumber: 1002 },
-        }),
-      ],
-      nextWatermark: "1002",
-      hasMore: false,
-    } satisfies SyncFetchResult);
-
-    const result = await syncPlatform("shopify");
-
-    expect(result.platform).toBe("shopify");
-    expect(result.fetched).toBe(2);
-    expect(result.created).toBe(2);
-    expect(result.skipped).toBe(0);
-    expect(result.watermark).toBe("1002");
-    expect(result.hasMore).toBe(false);
-    expect(result.errors).toHaveLength(0);
-
-    // DB: 2 orders, 2 customers, 1 item each
-    const orders = await db.order.findMany({ include: { items: true } });
-    expect(orders).toHaveLength(2);
-
-    const customers = await db.customer.findMany();
-    expect(customers).toHaveLength(2);
-
-    expect(orders[0]!.items).toHaveLength(1);
-    expect(orders[1]!.items).toHaveLength(1);
-
-    for (const o of orders) {
-      expect(o.status).toBe("draft");
-      expect(o.source).toBe("shopify");
-    }
-
-    for (const o of orders) {
-      expect(o.orderNumber).toMatch(/^SYNC-SHOPIFY-\d+$/);
-    }
-  });
-
-  it("persists items with correct quantity + unitPrice + total", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          items: [
-            { productName: "A", quantity: 2, unitPrice: 1500 },
-            { productName: "B", quantity: 3, unitPrice: 1000 },
-          ],
-          totalPrice: 6000,
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
+  it("commits a provider checkpoint without overwriting an internal confirmed status", async () => {
+    await seedProduct();
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+    await syncPlatform(context, "shopify");
+    const created = await rawDb.order.findFirstOrThrow();
+    await executeManualOrderDecision(context, {
+      orderId: created.id,
+      decision: "confirm",
+      expectedVersion: 1,
+      idempotencyKey: "commerce-confirm-before-checkpoint",
     });
 
-    await syncPlatform("shopify");
-
-    const items = await db.orderItem.findMany();
-    expect(items).toHaveLength(2);
-    const a = items.find((i) => i.productName === "A")!;
-    const b = items.find((i) => i.productName === "B")!;
-    expect(a.quantity).toBe(2);
-    expect(a.unitPrice).toBe(1500);
-    expect(a.total).toBe(3000);
-    expect(b.quantity).toBe(3);
-    expect(b.unitPrice).toBe(1000);
-    expect(b.total).toBe(3000);
-  });
-
-  it("creates customer with normalized fields (name, phone, wilaya, commune, address)", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-
-    await syncPlatform("shopify");
-
-    const customers = await db.customer.findMany();
-    expect(customers).toHaveLength(1);
-    const c = customers[0]!;
-    expect(c.name).toBe("Ahmed Benali");
-    expect(c.phone).toBe("0555123456"); // decrypted by PII extension
-    expect(c.wilaya).toBe("Alger");
-    expect(c.commune).toBe("Bab Ezzouar");
-    expect(c.address).toBe("123 Rue Didouche"); // decrypted
-  });
-
-  it("reuses existing customer when phone matches (find-or-create)", async () => {
-    // First sync: 1 order
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    // Second sync: 2 orders, both with the SAME phone as the first
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({ sourceOrderId: "shop-002", orderNumber: "#1002" }),
-        makeOrder({ sourceOrderId: "shop-003", orderNumber: "#1003" }),
-      ],
-      nextWatermark: "3",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    // Should have 3 orders but only 1 customer (same phone)
-    const orders = await db.order.findMany();
-    expect(orders).toHaveLength(3);
-    const customers = await db.customer.findMany();
-    expect(customers).toHaveLength(1);
-  });
-
-  it("stores sourceMetadata as JSON with platform-specific fields", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder({ sourceOrderId: "shop-XYZ-42" })],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    const orders = await db.order.findMany();
-    expect(orders).toHaveLength(1);
-    const meta = JSON.parse(orders[0]!.sourceMetadata ?? "{}");
-    expect(meta.shopifyOrderId).toBe(1001);
-  });
-
-  it("does NOT duplicate orders on re-sync (dedup by sourceOrderId)", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder(), makeOrder({ sourceOrderId: "shop-002" })],
-      nextWatermark: "2",
-      hasMore: false,
-    });
-    const r1 = await syncPlatform("shopify");
-    expect(r1.created).toBe(2);
-    expect(r1.skipped).toBe(0);
-
-    // Re-sync the same orders
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder(), makeOrder({ sourceOrderId: "shop-002" })],
-      nextWatermark: "2",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-    expect(r2.fetched).toBe(2);
-    expect(r2.created).toBe(0);
-    expect(r2.skipped).toBe(2);
-    expect(r2.errors).toHaveLength(0);
-
-    // DB still has only 2 orders
-    const orders = await db.order.findMany();
-    expect(orders).toHaveLength(2);
-  });
-
-  it("creates only new orders on subsequent sync (mixed new + existing)", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder(), makeOrder({ sourceOrderId: "shop-002" })],
-      nextWatermark: "2",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder(), // existing
-        makeOrder({ sourceOrderId: "shop-002" }), // existing
-        makeOrder({ sourceOrderId: "shop-003", orderNumber: "#1003" }), // new
-      ],
-      nextWatermark: "3",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-    expect(r2.fetched).toBe(3);
-    expect(r2.created).toBe(1);
-    expect(r2.skipped).toBe(2);
-
-    const orders = await db.order.findMany();
-    expect(orders).toHaveLength(3);
-  });
-
-  it("updates Integration record with new watermark + lastSyncAt", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "9999",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    const integration = await db.integration.findUnique({ where: { platform: "shopify" } });
-    expect(integration).not.toBeNull();
-    expect(integration!.type).toBe("E-commerce");
-    expect(integration!.isActive).toBe(true);
-    expect(integration!.lastSyncAt).not.toBeNull();
-    const config = JSON.parse(integration!.config ?? "{}");
-    expect(config.watermark).toBe("9999");
-    expect(config.lastSyncAt).toBeTruthy();
-  });
-
-  it("passes the persisted watermark from Integration.config to the adapter", async () => {
-    // Pre-populate the Integration with a watermark
-    await db.integration.create({
-      data: {
-        platform: "shopify",
-        type: "E-commerce",
-        isActive: true,
-        config: JSON.stringify({ watermark: "PREVIOUS-WATERMARK", lastSyncAt: "" }),
+    const changed = order({
+      sourceRevision: "rev-2",
+      sourceMetadata: {
+        sourceOrderId: "shopify-001",
+        rawUpdatedAt: "rev-2",
+        financialStatus: "paid",
+        fulfillmentStatus: "fulfilled",
+        cancelReason: null,
       },
     });
+    listOrdersMock.mockResolvedValueOnce(fetched([changed], "wm-2"));
+    const result = await syncPlatform(context, "shopify");
 
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [],
-      nextWatermark: "",
-      hasMore: false,
+    expect(result).toMatchObject({ updated: 1, errors: [], watermark: "wm-2" });
+    const stored = await rawDb.order.findUniqueOrThrow({ where: { id: created.id } });
+    expect(stored.status).toBe("confirmed");
+    expect(stored.version).toBe(3);
+    expect(
+      readCanonicalSourceOrderAuthority(stored.source, stored.sourceMetadata),
+    ).toMatchObject({ sourceRevision: "rev-2" });
+  });
+
+  it("rejects a pending order when the provider cancels it", async () => {
+    await seedProduct();
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+    await syncPlatform(context, "shopify");
+
+    const cancelled = order({
+      sourceRevision: "rev-2",
+      sourceMetadata: {
+        sourceOrderId: "shopify-001",
+        rawUpdatedAt: "rev-2",
+        financialStatus: "voided",
+        fulfillmentStatus: null,
+        cancelReason: "customer",
+      },
     });
-    await syncPlatform("shopify");
+    listOrdersMock.mockResolvedValueOnce(fetched([cancelled], "wm-2"));
+    const result = await syncPlatform(context, "shopify");
 
-    expect(listOrdersMock).toHaveBeenCalledWith(
-      mockCreds,
-      "PREVIOUS-WATERMARK",
-      10,
+    expect(result).toMatchObject({ updated: 1, errors: [], watermark: "wm-2" });
+    const stored = await rawDb.order.findFirstOrThrow();
+    expect(stored.status).toBe("cancelled");
+    expect(stored.version).toBe(3);
+    expect(
+      readCanonicalSourceOrderAuthority(stored.source, stored.sourceMetadata),
+    ).toMatchObject({ sourceRevision: "rev-2" });
+  });
+
+  it("restores reserved stock when a confirmed provider order is cancelled", async () => {
+    const product = await seedProduct({ stock: 10 });
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+    await syncPlatform(context, "shopify");
+    const created = await rawDb.order.findFirstOrThrow();
+    await executeManualOrderDecision(context, {
+      orderId: created.id,
+      decision: "confirm",
+      expectedVersion: 1,
+      idempotencyKey: "commerce-confirm-before-cancel",
+    });
+    expect(
+      (await rawDb.product.findUniqueOrThrow({ where: { id: product.id } })).stock,
+    ).toBe(8);
+
+    const cancelled = order({
+      sourceRevision: "rev-2",
+      sourceMetadata: {
+        sourceOrderId: "shopify-001",
+        rawUpdatedAt: "rev-2",
+        financialStatus: "voided",
+        fulfillmentStatus: null,
+        cancelReason: "customer",
+      },
+    });
+    listOrdersMock.mockResolvedValueOnce(fetched([cancelled], "wm-2"));
+    const result = await syncPlatform(context, "shopify");
+
+    expect(result.errors).toEqual([]);
+    expect((await rawDb.order.findUniqueOrThrow({ where: { id: created.id } })).status).toBe(
+      "cancelled",
     );
+    expect(
+      (await rawDb.product.findUniqueOrThrow({ where: { id: product.id } })).stock,
+    ).toBe(10);
   });
 
-  it("handles corrupt Integration.config gracefully (starts fresh)", async () => {
-    await db.integration.create({
-      data: {
-        platform: "shopify",
-        type: "E-commerce",
-        isActive: true,
-        config: "not valid json {{{",
+  it("fails closed and retains the watermark when cancellation is unsafe after shipment", async () => {
+    await seedProduct({ stock: 10 });
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+    await syncPlatform(context, "shopify");
+    const created = await rawDb.order.findFirstOrThrow();
+    await executeManualOrderDecision(context, {
+      orderId: created.id,
+      decision: "confirm",
+      expectedVersion: 1,
+      idempotencyKey: "commerce-confirm-before-ship",
+    });
+    await executeCanonicalFulfillment(context, {
+      orderId: created.id,
+      action: "pack",
+      expectedVersion: 2,
+      idempotencyKey: "commerce-pack-before-cancel",
+    });
+    await executeCanonicalFulfillment(context, {
+      orderId: created.id,
+      action: "ship",
+      expectedVersion: 3,
+      idempotencyKey: "commerce-ship-before-cancel",
+    });
+
+    const cancelled = order({
+      sourceRevision: "rev-2",
+      sourceMetadata: {
+        sourceOrderId: "shopify-001",
+        rawUpdatedAt: "rev-2",
+        financialStatus: "voided",
+        fulfillmentStatus: null,
+        cancelReason: "customer",
       },
     });
+    listOrdersMock.mockResolvedValueOnce(fetched([cancelled], "wm-2"));
+    const result = await syncPlatform(context, "shopify");
 
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    const result = await syncPlatform("shopify");
-    expect(result.created).toBe(1);
-    // The adapter should have been called with "" (default watermark)
-    expect(listOrdersMock).toHaveBeenCalledWith(mockCreds, "", 10);
+    expect(result.errors).toEqual([
+      expect.stringMatching(/cannot safely transition/i),
+    ]);
+    expect(result.watermark).toBe("wm-1");
+    expect(await integrationConfig("shopify")).toMatchObject({ watermark: "wm-1" });
+    const stored = await rawDb.order.findUniqueOrThrow({ where: { id: created.id } });
+    expect(stored.status).toBe("shipped");
+    expect(
+      readCanonicalSourceOrderAuthority(stored.source, stored.sourceMetadata),
+    ).toMatchObject({ sourceRevision: "rev-1" });
   });
 
-  it("returns no-creds error when credentials are missing", async () => {
-    mockCredsProvider.mockResolvedValueOnce(null);
+  it("retries the whole provider page after one order fails", async () => {
+    await seedProduct({ name: "Widget A", sku: "WIDGET-A" });
+    const valid = order({ sourceOrderId: "shopify-valid" });
+    const missing = order({
+      sourceOrderId: "shopify-missing",
+      orderNumber: "#1002",
+      items: [
+        {
+          productName: "Widget B",
+          catalogSku: "WIDGET-B",
+          quantity: 1,
+          unitPrice: 1,
+        },
+      ],
+    });
+    listOrdersMock.mockResolvedValueOnce(fetched([valid, missing], "wm-2"));
+    const first = await syncPlatform(context, "shopify");
 
-    const result = await syncPlatform("shopify");
-    expect(result.fetched).toBe(0);
+    expect(first.created).toBe(1);
+    expect(first.errors).toHaveLength(1);
+    expect(first.watermark).toBe("");
+    expect(await rawDb.order.count()).toBe(1);
+
+    await seedProduct({ name: "Widget B", sku: "WIDGET-B", price: 3000 });
+    listOrdersMock.mockResolvedValueOnce(fetched([valid, missing], "wm-2"));
+    const retry = await syncPlatform(context, "shopify");
+
+    expect(retry).toMatchObject({
+      created: 1,
+      skipped: 1,
+      errors: [],
+      watermark: "wm-2",
+    });
+    expect(await rawDb.order.count()).toBe(2);
+  });
+
+  it("resolves an exact variant SKU and uses its server price", async () => {
+    const product = await seedProduct({ name: "T-Shirt", sku: "TSHIRT", price: 2000 });
+    const variant = await rawDb.productVariant.create({
+      data: {
+        productId: product.id,
+        name: "Large",
+        sku: "TS-L",
+        price: 2600,
+        stock: 5,
+        isActive: true,
+      },
+    });
+    listOrdersMock.mockResolvedValueOnce(
+      fetched([
+        order({
+          items: [
+            {
+              productName: "T-Shirt",
+              catalogSku: "TS-L",
+              variantName: "Large",
+              quantity: 1,
+              unitPrice: 1,
+            },
+          ],
+          deliveryCost: 0,
+        }),
+      ]),
+    );
+
+    const result = await syncPlatform(context, "shopify");
+    expect(result.errors).toEqual([]);
+    const item = await rawDb.orderItem.findFirstOrThrow();
+    expect(item).toMatchObject({
+      productId: product.id,
+      productVariantId: variant.id,
+      unitPrice: 2600,
+    });
+  });
+
+  it("does not create or advance when catalog authority is missing", async () => {
+    listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
+    const result = await syncPlatform(context, "shopify");
+
     expect(result.created).toBe(0);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toContain("No credentials");
-    expect(listOrdersMock).not.toHaveBeenCalled();
+    expect(result.watermark).toBe("");
+    expect(await rawDb.order.count()).toBe(0);
+    expect(await integrationConfig("shopify")).toMatchObject({ watermark: "" });
   });
 
-  it("catches adapter fetch errors and returns them in result.errors", async () => {
+  it("returns credential and fetch failures without advancing", async () => {
+    credentialsProvider.mockResolvedValueOnce(null);
+    expect(await syncPlatform(context, "shopify")).toMatchObject({
+      fetched: 0,
+      created: 0,
+      watermark: "",
+      errors: [expect.stringMatching(/No credentials/i)],
+    });
+
+    credentialsProvider.mockResolvedValue(credentials);
     listOrdersMock.mockRejectedValueOnce(new Error("Shopify API 503"));
-
-    const result = await syncPlatform("shopify");
-    expect(result.fetched).toBe(0);
-    expect(result.created).toBe(0);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toContain("Fetch failed");
-    expect(result.errors[0]).toContain("Shopify API 503");
+    expect(await syncPlatform(context, "shopify")).toMatchObject({
+      fetched: 0,
+      watermark: "",
+      errors: [expect.stringMatching(/Shopify API 503/i)],
+    });
   });
 
-  it("empty fetch result updates the watermark but creates no orders", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [],
-      nextWatermark: "new-watermark",
-      hasMore: false,
-    });
-    const result = await syncPlatform("shopify");
-    expect(result.fetched).toBe(0);
-    expect(result.created).toBe(0);
-    expect(result.skipped).toBe(0);
-    expect(result.watermark).toBe("new-watermark");
-    expect(result.errors).toHaveLength(0);
-
-    // Integration still updated
-    const integration = await db.integration.findUnique({ where: { platform: "shopify" } });
-    expect(integration).not.toBeNull();
-    const config = JSON.parse(integration!.config ?? "{}");
-    expect(config.watermark).toBe("new-watermark");
-  });
-
-  it("uses synthetic phone when customerPhone is empty", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceOrderId: "shop-no-phone",
-          customerPhone: "", // empty
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    const result = await syncPlatform("shopify");
-    expect(result.created).toBe(1);
-
-    const customers = await db.customer.findMany();
-    expect(customers).toHaveLength(1);
-    // Synthetic phone starts with "05" + 8 digits
-    expect(customers[0]!.phone).toMatch(/^05\d{8}$/);
-  });
-
-  it("uses itemsTotal when totalPrice is 0", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          items: [
-            { productName: "A", quantity: 2, unitPrice: 1500 },
-            { productName: "B", quantity: 1, unitPrice: 1000 },
-          ],
-          totalPrice: 0, // should fall back to itemsTotal
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    const orders = await db.order.findMany();
-    expect(orders).toHaveLength(1);
-    // 2*1500 + 1*1000 = 4000
-    expect(orders[0]!.totalPrice).toBe(4000);
-  });
-});
-
-describe("sync-engine — I-M3 existing-order updates", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    listOrdersMock.mockReset();
-    mockCredsProvider.mockReset();
-    mockCredsProvider.mockResolvedValue(mockCreds);
-  });
-
-  afterAll(async () => {
-    await cleanDb();
-    await db.$disconnect();
-  });
-
-  it("updates existing order's sourceMetadata when platform state changed", async () => {
-    // First sync: order with financialStatus=paid, no cancelReason
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-    const before = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
-    expect(before).not.toBeNull();
-    expect(before!.status).toBe("draft");
-
-    // Second sync: same sourceOrderId, but platform cancelled the order
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceMetadata: {
-            shopifyOrderId: 1001,
-            shopifyOrderNumber: 1001,
-            sourceOrderId: "shop-001",
-            financialStatus: "voided",
-            fulfillmentStatus: null,
-            cancelReason: "customer",
-          },
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-
-    // No new row created, the existing one was updated
-    expect(r2.fetched).toBe(1);
-    expect(r2.created).toBe(0);
-    expect(r2.updated).toBe(1);
-    expect(r2.skipped).toBe(0);
-    expect(r2.errors).toHaveLength(0);
-
-    const after = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
-    expect(after).not.toBeNull();
-    // Cancellation propagated to internal status
-    expect(after!.status).toBe("cancelled");
-    const meta = JSON.parse(after!.sourceMetadata ?? "{}");
-    expect(meta.cancelReason).toBe("customer");
-    expect(meta.financialStatus).toBe("voided");
-
-    // No duplicate created
-    const all = await db.order.findMany({ where: { sourceOrderId: "shop-001" } });
-    expect(all).toHaveLength(1);
-  });
-
-  it("skips existing order when platform state is unchanged", async () => {
-    // First sync
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    // Second sync: identical order (same sourceMetadata)
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-
-    expect(r2.created).toBe(0);
-    expect(r2.updated).toBe(0);
-    expect(r2.skipped).toBe(1);
-    expect(r2.errors).toHaveLength(0);
-
-    // No duplicate
-    const all = await db.order.findMany();
-    expect(all).toHaveLength(1);
-  });
-
-  it("does NOT overwrite internal status when platform state changed but no cancellation", async () => {
-    // First sync: draft order
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    // Manually advance the internal status (e.g. seller confirmed it)
-    const created = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
-    expect(created).not.toBeNull();
-    await db.order.update({
-      where: { id: created!.id },
-      data: { status: "confirmed" },
-    });
-
-    // Second sync: same sourceOrderId, platform changed fulfillment_status
-    // (but no cancelReason — not a cancellation)
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceMetadata: {
-            shopifyOrderId: 1001,
-            shopifyOrderNumber: 1001,
-            sourceOrderId: "shop-001",
-            financialStatus: "paid",
-            fulfillmentStatus: "fulfilled", // changed from null
-            cancelReason: null,
-          },
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-
-    expect(r2.updated).toBe(1);
-    expect(r2.skipped).toBe(0);
-
-    // sourceMetadata updated, but internal status preserved (not a cancellation)
-    const after = await db.order.findFirst({ where: { sourceOrderId: "shop-001" } });
-    expect(after!.status).toBe("confirmed");
-    const meta = JSON.parse(after!.sourceMetadata ?? "{}");
-    expect(meta.fulfillmentStatus).toBe("fulfilled");
-  });
-
-  it("propagates YouCan cancellation via statusNew='cancelled'", async () => {
-    // First sync: youcan order
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceOrderId: "yc-001",
-          source: "youcan",
-          sourceMetadata: {
-            youcanOrderId: "yc-001",
-            youcanRef: "ORD-YC-1",
-            statusNew: "new",
-            paymentStatusNew: "unpaid",
-            shippingStatus: "pending",
-          },
-        }),
-      ],
-      nextWatermark: "2026-01-02T10:00:00Z",
-      hasMore: false,
-    });
-    await syncPlatform("shopify"); // platform arg unused — adapter is mocked
-
-    // Second sync: platform cancelled
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceOrderId: "yc-001",
-          source: "youcan",
-          sourceMetadata: {
-            youcanOrderId: "yc-001",
-            youcanRef: "ORD-YC-1",
-            statusNew: "cancelled",
-            paymentStatusNew: "unpaid",
-            shippingStatus: "pending",
-          },
-        }),
-      ],
-      nextWatermark: "2026-01-02T10:00:00Z",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-    expect(r2.updated).toBe(1);
-
-    const after = await db.order.findFirst({ where: { sourceOrderId: "yc-001" } });
-    expect(after!.status).toBe("cancelled");
-  });
-
-  it("propagates WooCommerce cancellation via wooStatus='cancelled'", async () => {
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceOrderId: "woo-001",
-          source: "woocommerce",
-          sourceMetadata: {
-            wooOrderId: 1,
-            wooStatus: "processing",
-          },
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    await syncPlatform("shopify");
-
-    listOrdersMock.mockResolvedValueOnce({
-      orders: [
-        makeOrder({
-          sourceOrderId: "woo-001",
-          source: "woocommerce",
-          sourceMetadata: {
-            wooOrderId: 1,
-            wooStatus: "cancelled",
-          },
-        }),
-      ],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-    const r2 = await syncPlatform("shopify");
-    expect(r2.updated).toBe(1);
-
-    const after = await db.order.findFirst({ where: { sourceOrderId: "woo-001" } });
-    expect(after!.status).toBe("cancelled");
-  });
-});
-
-describe("sync-engine (syncAllPlatforms)", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    listOrdersMock.mockReset();
-    mockCredsProvider.mockReset();
-  });
-
-  afterAll(async () => {
-    await cleanDb();
-    await db.$disconnect();
-  });
-
-  it("syncs all platforms that have credentials", async () => {
-    // All 3 platforms have creds. Each call returns a DIFFERENT order so dedup
-    // doesn't kick in across platforms (source/sourceOrderId differ).
-    mockCredsProvider.mockResolvedValue(mockCreds);
+  it("syncs every configured platform through separate canonical identities", async () => {
+    await seedProduct();
+    credentialsProvider.mockResolvedValue(credentials);
     listOrdersMock
-      .mockResolvedValueOnce({
-        orders: [makeOrder({ sourceOrderId: "shop-001", source: "shopify" })],
-        nextWatermark: "1",
-        hasMore: false,
-      })
-      .mockResolvedValueOnce({
-        orders: [makeOrder({ sourceOrderId: "woo-001", source: "woocommerce", orderNumber: "#W1" })],
-        nextWatermark: "1",
-        hasMore: false,
-      })
-      .mockResolvedValueOnce({
-        orders: [makeOrder({ sourceOrderId: "yc-001", source: "youcan", orderNumber: "#Y1" })],
-        nextWatermark: "1",
-        hasMore: false,
-      });
+      .mockResolvedValueOnce(fetched([order({ source: "shopify" })], "s-1"))
+      .mockResolvedValueOnce(
+        fetched(
+          [
+            order({
+              source: "woocommerce",
+              sourceOrderId: "woocommerce-001",
+              sourceRevision: "woo-rev-1",
+              sourceMetadata: { wooStatus: "processing" },
+            }),
+          ],
+          "w-1",
+        ),
+      )
+      .mockResolvedValueOnce(
+        fetched(
+          [
+            order({
+              source: "youcan",
+              sourceOrderId: "youcan-001",
+              sourceRevision: "yc-rev-1",
+              sourceMetadata: { statusNew: "new", shippingPrice: 500 },
+            }),
+          ],
+          "y-1",
+        ),
+      );
 
-    const results = await syncAllPlatforms();
-
-    expect(results).toHaveLength(3); // shopify, woocommerce, youcan
-    for (const r of results) {
-      expect(r.created).toBe(1);
-    }
-    // 3 orders total across all platforms (one per platform — different sources)
-    const orders = await db.order.findMany();
-    expect(orders).toHaveLength(3);
-
-    // Each platform uses its own counter prefix
-    const sources = orders.map((o) => o.source).sort();
-    expect(sources).toEqual(["shopify", "woocommerce", "youcan"]);
-  });
-
-  it("skips platforms without credentials", async () => {
-    // Only shopify has creds
-    mockCredsProvider.mockImplementation(async (platform: string) =>
-      platform === "shopify" ? mockCreds : null,
+    const results = await syncAllPlatforms(context);
+    expect(results).toHaveLength(3);
+    expect(results.every((entry) => entry.created === 1 && entry.errors.length === 0)).toBe(
+      true,
     );
-    listOrdersMock.mockResolvedValue({
-      orders: [makeOrder()],
-      nextWatermark: "1",
-      hasMore: false,
-    });
-
-    const results = await syncAllPlatforms();
-    expect(results).toHaveLength(1); // only shopify
-    expect(results[0]!.platform).toBe("shopify");
-    expect(results[0]!.created).toBe(1);
-  });
-
-  it("returns empty array when no platform has credentials", async () => {
-    mockCredsProvider.mockResolvedValue(null);
-
-    const results = await syncAllPlatforms();
-    expect(results).toHaveLength(0);
+    expect(
+      (await rawDb.order.findMany()).map((entry) => entry.source).sort(),
+    ).toEqual(["shopify", "woocommerce", "youcan"]);
   });
 });
