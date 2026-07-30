@@ -7,7 +7,7 @@ import {
 
 const WS_GRANT_PURPOSE = "sahelflow/whatsapp/websocket-grant/v1";
 const PROVIDER_ACCOUNT_PURPOSE = "sahelflow/whatsapp/provider-account/v1";
-const DEFAULT_TTL_MS = 30_000;
+export const SIDECAR_WS_GRANT_TTL_MS = 30_000;
 const MIN_TTL_MS = 5_000;
 const MAX_TTL_MS = 60_000;
 const DURABLE_EFFECT_PATTERN =
@@ -56,10 +56,6 @@ function signature(restToken: string, encodedPayload: string): string {
     .digest("base64url");
 }
 
-/**
- * Normalize Baileys' account JID to the stable WhatsApp account number. Device
- * suffixes such as `:12` and the server suffix are deliberately excluded.
- */
 export function normalizeWhatsAppAccountId(accountId: string): string {
   const localPart = accountId.trim().split("@")[0] ?? "";
   const primary = localPart.split(":")[0] ?? "";
@@ -70,7 +66,6 @@ export function normalizeWhatsAppAccountId(accountId: string): string {
   return digits;
 }
 
-/** Hash provider identity before it enters a durable effect key or receipt file. */
 export function hashWhatsAppAccountId(accountId: string): string {
   return createHash("sha256")
     .update(PROVIDER_ACCOUNT_PURPOSE)
@@ -79,12 +74,10 @@ export function hashWhatsAppAccountId(accountId: string): string {
     .digest("hex");
 }
 
-/** Return the provider-account hash embedded in a governed durable effect key. */
 export function getWhatsAppEffectAccountHash(effectKey: string): string | null {
   return DURABLE_EFFECT_PATTERN.exec(effectKey)?.[1] ?? null;
 }
 
-/** Fail closed when a queued/replayed effect belongs to another paired account. */
 export function effectKeyMatchesWhatsAppAccount(
   effectKey: string,
   accountId: string,
@@ -98,16 +91,11 @@ export function effectKeyMatchesWhatsAppAccount(
   }
 }
 
-/**
- * Issue a short-lived browser-visible grant for the push-only WebSocket.
- * The private REST credential is never exposed, and a retained browser grant
- * becomes unusable shortly after the authenticated app session stops renewing it.
- */
 export function createSidecarWebSocketGrant(
   restToken: string,
   subject: string,
   now = Date.now(),
-  ttlMs = DEFAULT_TTL_MS,
+  ttlMs = SIDECAR_WS_GRANT_TTL_MS,
 ): string {
   assertRestToken(restToken);
   if (!Number.isFinite(now) || !Number.isInteger(now)) {
@@ -128,7 +116,6 @@ export function createSidecarWebSocketGrant(
   return `${encoded}.${signature(restToken, encoded)}`;
 }
 
-/** Verify signature, version, bounded lifetime and expiry at the sidecar boundary. */
 export function verifySidecarWebSocketGrant(
   grant: string,
   restToken: string,
