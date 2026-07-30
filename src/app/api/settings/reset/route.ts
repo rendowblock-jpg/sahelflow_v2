@@ -26,6 +26,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   await withDemoPolicyLock(() =>
     context.prisma.$transaction(async (tx) => {
+      // Canonical COD facts restrict both BusinessCommand and Order deletion.
+      await tx.codSettlementLineMatch.deleteMany({});
+      await tx.codSettlementCorrection.deleteMany({});
+      await tx.codSettlementLine.deleteMany({});
+      await tx.codSettlement.deleteMany({});
+      await tx.codCollectionCorrection.deleteMany({});
+      await tx.codCollection.deleteMany({});
+
       await tx.compensationFact.deleteMany({});
       await tx.projectionInvalidation.deleteMany({});
       await tx.financialMovement.deleteMany({});
