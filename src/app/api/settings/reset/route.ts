@@ -26,6 +26,19 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   await withDemoPolicyLock(() =>
     context.prisma.$transaction(async (tx) => {
+      // Canonical return/refund facts restrict BusinessCommand, Order, OrderItem,
+      // Product and Delivery deletion. Delete the append-only children first.
+      await tx.canonicalRefundReversal.deleteMany({});
+      await tx.canonicalRefund.deleteMany({});
+      await tx.canonicalExchangeOrder.deleteMany({});
+      await tx.canonicalReturnInspection.deleteMany({});
+      await tx.canonicalExchangeRequestItem.deleteMany({});
+      await tx.canonicalExchangeRequest.deleteMany({});
+      await tx.canonicalReturnItem.deleteMany({});
+      await tx.canonicalReturnEvent.deleteMany({});
+      await tx.canonicalReturnCase.deleteMany({});
+      await tx.canonicalDeliveryEvent.deleteMany({});
+
       // Canonical COD facts restrict both BusinessCommand and Order deletion.
       await tx.codSettlementLineMatch.deleteMany({});
       await tx.codSettlementCorrection.deleteMany({});
