@@ -1,0 +1,49 @@
+name: One-shot auth fixture scan
+
+on:
+  push:
+    branches:
+      - agent/phase2-session-freshness
+    paths:
+      - .github/workflows/agent-scan-auth-fixtures.yml
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/phase2-session-freshness
+          fetch-depth: 0
+
+      - name: Find remaining legacy cookie fixtures
+        shell: bash
+        run: |
+          RESULT="$(python - <<'PY'
+          from pathlib import Path
+
+          matches = []
+          for path in sorted(Path('src').rglob('*.test.ts')) + sorted(Path('src').rglob('*.test.tsx')):
+              text = path.read_text(encoding='utf-8')
+              if 'vi.mock("next/headers"' not in text:
+                  continue
+              legacy = (
+                  'get: () => undefined' in text
+                  or 'get: vi.fn(() => undefined)' in text
+                  or 'setup mode' in text and 'requireAuth' in text
+              )
+              if legacy:
+                  matches.append(str(path))
+          print('remaining legacy auth fixtures:\n' + ('\n'.join(matches) if matches else '(none)'))
+          PY
+          )"
+          printf '%s\n' "$RESULT"
+          git rm .github/workflows/agent-scan-auth-fixtures.yml
+          git config user.name "sahelflow-agent"
+          git config user.email "agent@sahelflow.local"
+          git commit -m "chore(test): scan remaining auth fixtures" -m "$RESULT"
+          git push origin HEAD:agent/phase2-session-freshness
