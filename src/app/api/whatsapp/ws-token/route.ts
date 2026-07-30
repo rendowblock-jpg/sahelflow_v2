@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorHandler(async () => {
   const actor = await requireTrustedActor();
   const principal = businessPrincipalFromTrustedActor(actor);
-  const token = sidecar.wsGrant(principal.subjectId);
-  if (!token) {
+  const grant = sidecar.wsGrantBundle(principal.subjectId);
+  if (!grant) {
     return NextResponse.json(
       { error: "Sidecar WebSocket grant unavailable", token: null },
       { status: 503 },
@@ -21,7 +21,7 @@ export const GET = withErrorHandler(async () => {
     process.env.WHATSAPP_SIDECAR_URL ?? "http://127.0.0.1:3001";
   const wsUrl = `${sidecarUrl.replace(/^http/, "ws")}/ws`;
   return NextResponse.json(
-    { token, wsUrl },
+    { token: grant.token, expiresAt: grant.expiresAt, wsUrl },
     { headers: { "Cache-Control": "no-store" } },
   );
 }, "GET /api/whatsapp/ws-token");
