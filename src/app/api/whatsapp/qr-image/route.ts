@@ -24,7 +24,7 @@ export const GET = withErrorHandler(async () => {
         { status: response.status === 401 ? 503 : 404 },
       );
     }
-    return new Response(await response.arrayBuffer(), {
+    return new NextResponse(await response.arrayBuffer(), {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "no-store",
