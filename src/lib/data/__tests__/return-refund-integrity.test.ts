@@ -36,14 +36,20 @@ import {
   seedProduct,
 } from "@/lib/data/__tests__/helpers";
 
-// ── Mock next/headers — returns/[id] PATCH calls requireAuth() which reads
-//    cookies. With a clean DB (no AuthSecret row), isAuthenticated() returns
-//    true (setup mode) — an empty cookie jar passes requireAuth.
+// The protected return route uses one real revocable session per test.
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -69,15 +75,23 @@ vi.mock("@/lib/automations/engine", () => ({
 }));
 
 import { PATCH as patchReturn } from "@/app/api/returns/[id]/route";
-import { mockPost } from "@/app/api/__tests__/helpers";
+import {
+  establishAuthenticatedTestSession,
+  mockPost,
+} from "@/app/api/__tests__/helpers";
 
 let db: PrismaClient;
 
 beforeEach(async () => {
   db = await createTestPrisma();
+  authCookieStore.clear();
+  delete process.env.AUTH_SECRET;
+  await establishAuthenticatedTestSession();
 });
 
 afterEach(async () => {
+  authCookieStore.clear();
+  delete process.env.AUTH_SECRET;
   await disconnectTestPrisma(db);
 });
 
