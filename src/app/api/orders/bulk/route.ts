@@ -1,12 +1,8 @@
 /**
- * POST /api/orders/bulk — bulk transition multiple orders to a new status.
+ * POST /api/orders/bulk — bulk transition multiple compatibility orders.
  *
- * Body: { ids: string[], status: OrderStatus }
- * Response: { succeeded: string[], failed: [{id, error}] }
- *
- * Each order is validated individually via orderService.updateStatus
- * (which enforces the state machine + stock side effects). Valid orders
- * transition; invalid ones are reported without blocking the rest.
+ * Canonical confirmation is deliberately excluded: each confirmation requires
+ * its own stable idempotency key, expected version and trusted approval.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -17,7 +13,12 @@ import type { OrderStatus } from "@/types/domain";
 import { requireAuth } from "@/lib/auth/server";
 
 const VALID_STATUSES: OrderStatus[] = [
-  "pending", "confirmed", "shipped", "delivered", "returned", "refused", "cancelled",
+  "pending",
+  "shipped",
+  "delivered",
+  "returned",
+  "refused",
+  "cancelled",
 ];
 
 const bulkSchema = z.object({

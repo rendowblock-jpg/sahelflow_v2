@@ -1,30 +1,12 @@
 /**
- * Order status transition rules — the state machine.
- *
- * This is the TypeScript source of truth for which status transitions
- * are allowed. It mirrors the business logic (not a DB constraint):
- *
- *   draft → pending → confirmed → shipped → delivered
- *                                     │         │
- *                                     │         └→ returned (Session 30: post-delivery returns)
- *                                     └→ refused / cancelled
- *
- * Terminal states (returned, refused, cancelled) cannot
- * transition OUT to a different status. "delivered" is no longer terminal
- * — it can move to "returned" for post-delivery COD returns. Same-status transitions are
- * no-ops (allowed, but don't trigger side effects).
- *
- * Stock side effects (handled in the order service, NOT here):
- *   → confirmed (from non-confirmed): deduct stock per item
- *   → returned | cancelled | refused (from confirmed | shipped | delivered): restore stock
- *   → delivered (from non-delivered): increment customer.orderCount + totalSpent
- *   → returned (from delivered): decrement customer.orderCount + totalSpent (SV-M3)
+ * Order status transition rules — the presentation-independent compatibility
+ * state machine. Canonical pending→confirmed is intentionally absent: that
+ * transition is owned exclusively by the trusted manual command.
  */
 
 import type { OrderStatus } from "@/types/domain";
 import { InvalidTransitionError } from "@/types/errors";
 
-/** All 8 order statuses. */
 export const ORDER_STATUSES = [
   "draft",
   "pending",
@@ -36,137 +18,65 @@ export const ORDER_STATUSES = [
   "cancelled",
 ] as const;
 
-/** Terminal statuses — once reached, the order cannot move to a different status. */
 export const TERMINAL_ORDER_STATUSES = [
-  // Session 30 (AUDIT-3 S4): "delivered" is no longer terminal — it can
-  // transition to "returned" for post-delivery COD returns.
   "returned",
   "refused",
   "cancelled",
 ] as const;
 
-/** Active (non-terminal) statuses. */
 export const ACTIVE_ORDER_STATUSES: OrderStatus[] = ORDER_STATUSES.filter(
-  (s): s is OrderStatus => !TERMINAL_ORDER_STATUSES.includes(s as (typeof TERMINAL_ORDER_STATUSES)[number]),
+  (status): status is OrderStatus =>
+    !TERMINAL_ORDER_STATUSES.includes(
+      status as (typeof TERMINAL_ORDER_STATUSES)[number],
+    ),
 );
 
-/** Returns true if the status is terminal. */
 export function isTerminalStatus(status: OrderStatus): boolean {
   return (TERMINAL_ORDER_STATUSES as readonly string[]).includes(status);
 }
 
-/**
- * The transition table: for each status, which statuses can it move to?
- * Same-status is always allowed (no-op). Terminal states can only stay.
- */
 export const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   draft: ["pending", "cancelled"],
-  pending: ["confirmed", "cancelled"],
+  pending: ["cancelled"],
   confirmed: ["shipped", "returned", "refused", "cancelled"],
   shipped: ["delivered", "returned", "refused"],
-  // Session 30 (AUDIT-3 S4): allow delivered → returned so post-delivery
-  // returns (the standard Algerian COD scenario: customer accepts the parcel,
-  // pays, then later refuses/refunds) have a legal transition path. The
-  // refund service uses this to move orders out of "delivered" before
-  // recording the refund, so COD reconciliation stops counting the order
-  // as collected+remitted.
   delivered: ["returned"],
-  returned: [], // terminal
-  refused: [], // terminal
-  cancelled: [], // terminal
+  returned: [],
+  refused: [],
+  cancelled: [],
 };
 
-/**
- * Check if a transition is allowed.
- *
- * Rules:
- * 1. Same-status → always allowed (no-op).
- * 2. Terminal status → cannot move to a different status.
- * 3. Otherwise → must be in the ALLOWED_TRANSITIONS list.
- */
 export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
-  // Same-status is always a no-op
   if (from === to) return true;
-
-  // Terminal states cannot move
   if (isTerminalStatus(from)) return false;
-
-  // Must be in allowed list
-  const allowed = ALLOWED_TRANSITIONS[from];
-  return (allowed as readonly string[]).includes(to);
+  return (ALLOWED_TRANSITIONS[from] as readonly string[]).includes(to);
 }
 
-/**
- * Get the list of statuses this status can transition to (excluding itself).
- * Returns empty array for terminal states.
- */
 export function getAllowedTransitions(from: OrderStatus): OrderStatus[] {
   if (isTerminalStatus(from)) return [];
   return [...ALLOWED_TRANSITIONS[from]];
 }
 
-/**
- * Assert that a transition is allowed. Throws InvalidTransitionError if not.
- */
-export function assertCanTransition(
-  from: OrderStatus,
-  to: OrderStatus,
-): void {
+export function assertCanTransition(from: OrderStatus, to: OrderStatus): void {
   if (!canTransition(from, to)) {
     throw new InvalidTransitionError(from, to, getAllowedTransitions(from));
   }
 }
 
-/**
- * Does transitioning to this status trigger a stock deduction?
- * (confirmed, from a non-confirmed status)
- */
-export function triggersStockDeduction(from: OrderStatus, to: OrderStatus): boolean {
-  return to === "confirmed" && from !== "confirmed";
+/** Compatibility-only predicates; confirmation is no longer compatibility-authorized. */
+export function triggersStockDeduction(_from: OrderStatus, _to: OrderStatus): boolean {
+  return false;
 }
 
-/**
- * Does transitioning to this status trigger a stock restoration?
- * (returned, cancelled, or refused — from confirmed or shipped)
- */
 export function triggersStockRestoration(from: OrderStatus, to: OrderStatus): boolean {
   if (!["returned", "cancelled", "refused"].includes(to)) return false;
-  // F-H1: "delivered" must be in the allow-list. The standard Algerian COD
-  // scenario is: customer accepts the parcel (→ delivered), pays, then later
-  // returns/refunds (delivered → returned). Without "delivered" here, stock
-  // was deducted at confirmation but NEVER restored on the return → silent
-  // stock drift.
   return ["confirmed", "shipped", "delivered"].includes(from);
 }
 
-/**
- * Does transitioning to this status trigger customer stats update?
- * (delivered, from a non-delivered status)
- */
 export function triggersCustomerStatsUpdate(from: OrderStatus, to: OrderStatus): boolean {
   return to === "delivered" && from !== "delivered";
 }
 
-/**
- * Does transitioning to this status trigger a customer stats REVERSAL?
- *
- * SV-M3: when an order moves from "delivered" → "returned", the customer's
- * stats that were incremented on the delivered transition (orderCount +
- * totalSpent) must be decremented. Without this, a customer who ordered
- * 10×, had 5 returned, shows orderCount=10 + inflated totalSpent —
- * misleading the seller about the customer's real value.
- *
- * Only fires when the PREVIOUS status was "delivered" (i.e. the customer
- * stats were actually incremented). returned/refused/cancelled from
- * confirmed/shipped never incremented customer stats, so they don't
- * reverse them either.
- *
- * Note: refund-service handles this same reversal inline (it can't call
- * orderService.updateStatus due to nested-tx visibility) — it decrements
- * totalSpent by the refund amount (which can be partial) + orderCount by 1.
- * orderService.updateStatus handles the non-refund path: full reversal of
- * both orderCount + totalSpent by order.totalPrice.
- */
 export function triggersCustomerStatsReversal(from: OrderStatus, to: OrderStatus): boolean {
   return from === "delivered" && to === "returned";
 }

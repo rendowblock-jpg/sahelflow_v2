@@ -1,21 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+  ACTIVE_ORDER_STATUSES,
   ORDER_STATUSES,
   TERMINAL_ORDER_STATUSES,
-  ACTIVE_ORDER_STATUSES,
-  isTerminalStatus,
   canTransition,
   getAllowedTransitions,
+  isTerminalStatus,
+  triggersCustomerStatsReversal,
+  triggersCustomerStatsUpdate,
   triggersStockDeduction,
   triggersStockRestoration,
-  triggersCustomerStatsUpdate,
-  triggersCustomerStatsReversal,
 } from "@/lib/order-transitions";
 import type { OrderStatus } from "@/types/domain";
 
 describe("ORDER_STATUSES", () => {
   it("has all 8 statuses", () => {
-    expect(ORDER_STATUSES).toHaveLength(8);
     expect(ORDER_STATUSES).toEqual([
       "draft", "pending", "confirmed", "shipped",
       "delivered", "returned", "refused", "cancelled",
@@ -24,36 +23,30 @@ describe("ORDER_STATUSES", () => {
 });
 
 describe("TERMINAL_ORDER_STATUSES", () => {
-  it("has 3 terminal statuses (Session 30 AUDIT-3 S4: delivered no longer terminal)", () => {
-    // Session 30 fix: "delivered" was removed from terminal statuses so
-    // post-delivery returns (delivered → returned) have a legal path.
-    expect(TERMINAL_ORDER_STATUSES).toHaveLength(3);
+  it("keeps returned, refused and cancelled terminal", () => {
     expect(TERMINAL_ORDER_STATUSES).toEqual(["returned", "refused", "cancelled"]);
   });
 });
 
 describe("isTerminalStatus", () => {
-  it("returns true for terminal statuses", () => {
-    for (const s of TERMINAL_ORDER_STATUSES) {
-      expect(isTerminalStatus(s as OrderStatus)).toBe(true);
+  it("classifies terminal and active states", () => {
+    for (const status of TERMINAL_ORDER_STATUSES) {
+      expect(isTerminalStatus(status as OrderStatus)).toBe(true);
     }
-  });
-
-  it("returns false for active statuses", () => {
-    for (const s of ACTIVE_ORDER_STATUSES) {
-      expect(isTerminalStatus(s as OrderStatus)).toBe(false);
+    for (const status of ACTIVE_ORDER_STATUSES) {
+      expect(isTerminalStatus(status as OrderStatus)).toBe(false);
     }
   });
 });
 
 describe("canTransition", () => {
-  it("allows same-status (no-op)", () => {
-    for (const s of ORDER_STATUSES) {
-      expect(canTransition(s as OrderStatus, s as OrderStatus)).toBe(true);
+  it("allows same-status no-ops", () => {
+    for (const status of ORDER_STATUSES) {
+      expect(canTransition(status as OrderStatus, status as OrderStatus)).toBe(true);
     }
   });
 
-  it("blocks transitions OUT of terminal states", () => {
+  it("blocks transitions out of terminal states", () => {
     for (const terminal of TERMINAL_ORDER_STATUSES) {
       for (const other of ORDER_STATUSES) {
         if (terminal === other) continue;
@@ -62,163 +55,73 @@ describe("canTransition", () => {
     }
   });
 
-  it("allows draft → pending", () => {
+  it("allows draft intake and cancellation", () => {
     expect(canTransition("draft", "pending")).toBe(true);
-  });
-
-  it("allows draft → cancelled", () => {
     expect(canTransition("draft", "cancelled")).toBe(true);
-  });
-
-  it("blocks draft → confirmed (must go through pending)", () => {
     expect(canTransition("draft", "confirmed")).toBe(false);
   });
 
-  it("allows pending → confirmed", () => {
-    expect(canTransition("pending", "confirmed")).toBe(true);
-  });
-
-  it("allows pending → cancelled", () => {
+  it("reserves pending confirmation for the canonical command", () => {
+    expect(canTransition("pending", "confirmed")).toBe(false);
     expect(canTransition("pending", "cancelled")).toBe(true);
-  });
-
-  it("blocks pending → shipped (must go through confirmed)", () => {
     expect(canTransition("pending", "shipped")).toBe(false);
   });
 
-  it("allows confirmed → shipped", () => {
+  it("keeps downstream compatibility transitions", () => {
     expect(canTransition("confirmed", "shipped")).toBe(true);
-  });
-
-  it("allows confirmed → returned", () => {
     expect(canTransition("confirmed", "returned")).toBe(true);
-  });
-
-  it("allows confirmed → cancelled", () => {
     expect(canTransition("confirmed", "cancelled")).toBe(true);
-  });
-
-  it("allows shipped → delivered", () => {
     expect(canTransition("shipped", "delivered")).toBe(true);
-  });
-
-  it("allows shipped → returned", () => {
     expect(canTransition("shipped", "returned")).toBe(true);
-  });
-
-  it("blocks shipped → pending (no backwards)", () => {
     expect(canTransition("shipped", "pending")).toBe(false);
-  });
-
-  it("blocks delivered → shipped (terminal)", () => {
     expect(canTransition("delivered", "shipped")).toBe(false);
   });
 });
 
 describe("getAllowedTransitions", () => {
-  it("returns allowed transitions for draft", () => {
-    const allowed = getAllowedTransitions("draft");
-    expect(allowed).toContain("pending");
-    expect(allowed).toContain("cancelled");
-    expect(allowed).not.toContain("draft");
+  it("returns intake choices for draft and only rejection for pending", () => {
+    expect(getAllowedTransitions("draft")).toEqual(["pending", "cancelled"]);
+    expect(getAllowedTransitions("pending")).toEqual(["cancelled"]);
   });
 
-  it("returns empty array for terminal states", () => {
+  it("returns no transitions for terminal states", () => {
     for (const terminal of TERMINAL_ORDER_STATUSES) {
       expect(getAllowedTransitions(terminal as OrderStatus)).toEqual([]);
     }
   });
 });
 
-describe("triggersStockDeduction", () => {
-  it("returns true for pending → confirmed", () => {
-    expect(triggersStockDeduction("pending", "confirmed")).toBe(true);
-  });
-
-  it("returns false for confirmed → confirmed (same status)", () => {
+describe("stock authority", () => {
+  it("never deducts stock through the compatibility transition helper", () => {
+    expect(triggersStockDeduction("pending", "confirmed")).toBe(false);
     expect(triggersStockDeduction("confirmed", "confirmed")).toBe(false);
-  });
-
-  it("returns false for shipped → delivered", () => {
     expect(triggersStockDeduction("shipped", "delivered")).toBe(false);
   });
-});
 
-describe("triggersStockRestoration", () => {
-  it("returns true for confirmed → returned", () => {
+  it("retains compatibility restoration for existing downstream rows", () => {
     expect(triggersStockRestoration("confirmed", "returned")).toBe(true);
-  });
-
-  it("returns true for confirmed → cancelled", () => {
     expect(triggersStockRestoration("confirmed", "cancelled")).toBe(true);
-  });
-
-  it("returns true for shipped → returned", () => {
     expect(triggersStockRestoration("shipped", "returned")).toBe(true);
-  });
-
-  it("returns true for delivered → returned (F-H1: standard COD return flow)", () => {
-    // F-H1: customer accepts parcel (→ delivered), pays, then returns/refunds.
-    // Stock was deducted at confirmation; must be restored on the return.
     expect(triggersStockRestoration("delivered", "returned")).toBe(true);
-  });
-
-  it("returns true for delivered → refused (F-H1)", () => {
     expect(triggersStockRestoration("delivered", "refused")).toBe(true);
-  });
-
-  it("returns false for draft → cancelled (was never confirmed)", () => {
     expect(triggersStockRestoration("draft", "cancelled")).toBe(false);
-  });
-
-  it("returns false for pending → cancelled (was never confirmed)", () => {
     expect(triggersStockRestoration("pending", "cancelled")).toBe(false);
   });
 });
 
-describe("triggersCustomerStatsUpdate", () => {
-  it("returns true for shipped → delivered", () => {
+describe("customer statistics", () => {
+  it("updates only on delivery", () => {
     expect(triggersCustomerStatsUpdate("shipped", "delivered")).toBe(true);
-  });
-
-  it("returns false for delivered → delivered (same status)", () => {
     expect(triggersCustomerStatsUpdate("delivered", "delivered")).toBe(false);
-  });
-
-  it("returns false for confirmed → shipped", () => {
     expect(triggersCustomerStatsUpdate("confirmed", "shipped")).toBe(false);
   });
-});
 
-describe("triggersCustomerStatsReversal (SV-M3)", () => {
-  it("returns true for delivered → returned (the standard COD return flow)", () => {
-    // SV-M3: customer accepted parcel (→ delivered), paid, then later
-    // returned/refunded. The customer stats were incremented on the
-    // delivered transition — they must be decremented on the return.
+  it("reverses only delivered returns", () => {
     expect(triggersCustomerStatsReversal("delivered", "returned")).toBe(true);
-  });
-
-  it("returns false for delivered → delivered (same status)", () => {
     expect(triggersCustomerStatsReversal("delivered", "delivered")).toBe(false);
-  });
-
-  it("returns false for confirmed → returned (stats were never incremented)", () => {
-    // confirmed → returned restores stock but doesn't reverse customer
-    // stats (they were never incremented — only delivered increments them).
     expect(triggersCustomerStatsReversal("confirmed", "returned")).toBe(false);
-  });
-
-  it("returns false for shipped → returned (stats were never incremented)", () => {
     expect(triggersCustomerStatsReversal("shipped", "returned")).toBe(false);
-  });
-
-  it("returns false for shipped → delivered (that's an increment, not a reversal)", () => {
     expect(triggersCustomerStatsReversal("shipped", "delivered")).toBe(false);
-  });
-
-  it("returns false for delivered → cancelled (not a valid transition anyway)", () => {
-    // The state machine blocks this, but the predicate should still be
-    // conservative — only delivered → returned triggers a reversal.
     expect(triggersCustomerStatsReversal("delivered", "cancelled")).toBe(false);
   });
 });

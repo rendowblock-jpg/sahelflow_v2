@@ -2,35 +2,20 @@
  * Zod validation schemas for all input boundaries.
  *
  * Every service function's input is validated against one of these schemas.
- * This is the AAA standard (design system Section 12.2: "Zod validation on
- * all input boundaries — forms, file imports, AI responses, polling responses").
  */
 import { z } from "zod";
 
-// ─── Primitives ───────────────────────────────────────────────────────────────
-
-/** Non-empty string, trimmed */
 export const nonEmptyString = z.string().trim().min(1);
 
-/** Algerian phone: 10 digits starting with 0[5-7] */
 export const dzPhone = z
   .string()
   .trim()
   .regex(/^0[5-7]\d{8}$/, "Invalid Algerian phone (must be 0[5-7]XXXXXXXX)");
 
-/** Non-negative integer (DZD money, quantities, stock) */
 export const nonNegInt = z.number().int().nonnegative();
-
-/** Positive integer */
 export const posInt = z.number().int().positive();
-
-/** Cuid ID */
 export const cuid = z.string().regex(/^c[a-z0-9]{20,}$/i, "Invalid ID format");
-
-/** ISO date string */
 export const isoDate = z.string().datetime();
-
-// ─── Order ────────────────────────────────────────────────────────────────────
 
 export const orderStatusSchema = z.enum([
   "draft",
@@ -47,6 +32,7 @@ export const orderSourceSchema = z.enum([
   "whatsapp",
   "tiktok",
   "manual",
+  "import",
   "webstore",
   "storefront",
   "ai_chat",
@@ -75,18 +61,8 @@ export const createOrderSchema = z.object({
   sourceMetadata: z.record(z.string(), z.unknown()).nullable().optional(),
   notes: z.string().nullable().optional(),
   deliveryCost: nonNegInt.nullable().optional(),
-  // Phase 1 bug 1.3: optional fields so storefront/import/sync/AI paths can
-  // route through orderService.create without losing their per-path data.
-  //   - status: import path creates orders with user-specified status
-  //     (default "pending" — historical imports). Service defaults to "draft".
-  //   - sourceOrderId: e-commerce sync dedupes by [source, sourceOrderId]
-  //     (unique constraint in prisma/schema.prisma).
   status: orderStatusSchema.optional(),
   sourceOrderId: z.string().nullable().optional(),
-  // Phase 1 bug 1.3: optional order-number prefix (e-commerce sync uses
-  // "SYNC-SHOPIFY" / "SYNC-WOOCOMMERCE" / "SYNC-YOUCAN" so synced orders are
-  // distinguishable from manual/AI/storefront orders in the orders list).
-  // Service defaults to "ORD" (the standard SahelFlow order-number prefix).
   orderNumberPrefix: z.string().optional(),
 });
 
@@ -94,13 +70,6 @@ export const updateOrderStatusSchema = z.object({
   status: orderStatusSchema,
 });
 
-/**
- * Schema for `orderService.update` — only notes / deliveryCost / address
- * are updatable via this method (items + status have their own dedicated
- * methods: `updateStatus`, item add/remove). Strict validation prevents
- * callers from passing arbitrary keys (which would be silently ignored
- * by Prisma's strict `data` shape — confusing for the caller).
- */
 export const updateOrderItemSchema = z.object({
   id: z.string().optional(),
   productId: cuid.nullable().optional(),
@@ -115,8 +84,6 @@ export const updateOrderItemSchema = z.object({
 export const updateOrderSchema = z.object({
   notes: z.string().nullable().optional(),
   deliveryCost: nonNegInt.nullable().optional(),
-  // Order.address is a required String in the schema (not nullable) —
-  // it's the delivery destination, always present.
   address: z.string().optional(),
   wilaya: nonEmptyString.optional(),
   commune: nonEmptyString.optional(),
@@ -124,8 +91,6 @@ export const updateOrderSchema = z.object({
   totalPrice: nonNegInt.optional(),
   items: z.array(updateOrderItemSchema).optional(),
 });
-
-// ─── Customer ─────────────────────────────────────────────────────────────────
 
 export const createCustomerSchema = z.object({
   name: nonEmptyString,
@@ -139,13 +104,11 @@ export const createCustomerSchema = z.object({
 
 export const updateCustomerSchema = createCustomerSchema.partial();
 
-// ─── Product ──────────────────────────────────────────────────────────────────
-
 export const productVariantSchema = z.object({
-  id: z.string().optional(), // present when editing existing variant
+  id: z.string().optional(),
   name: nonEmptyString,
   sku: nonEmptyString.nullable().optional(),
-  price: nonNegInt.nullable().optional(), // overrides product.price if set
+  price: nonNegInt.nullable().optional(),
   stock: z.number().int().default(0),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
@@ -156,7 +119,7 @@ export const createProductSchema = z.object({
   sku: nonEmptyString.nullable().optional(),
   price: nonNegInt,
   cost: nonNegInt.nullable().optional(),
-  stock: z.number().int().default(0), // can be negative (backorders)
+  stock: z.number().int().default(0),
   lowStockThreshold: nonNegInt.default(5),
   categoryId: cuid.nullable().optional(),
   variants: z.array(productVariantSchema).nullable().optional(),
@@ -166,25 +129,8 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial();
 
-// ─── Category ─────────────────────────────────────────────────────────────────
+export const createCategorySchema = z.object({ name: nonEmptyString });
 
-export const createCategorySchema = z.object({
-  name: nonEmptyString,
-});
-
-// ─── Delivery ─────────────────────────────────────────────────────────────────
-// (Phase 5) createDeliverySchema + deliveryProviderSchema removed — they were
-// only consumed by deliveryService.create, which was dead production code.
-// The API routes (/api/delivery/create, /sync, /[id]) define their own
-// per-route z.object schemas inline.
-
-// ─── Expense ──────────────────────────────────────────────────────────────────
-
-/**
- * Expense categories (from v2). Stored as a plain string column on the
- * Expense model — no normalized lookup table. Mirrors the 8 fixed buckets
- * the merchant uses to classify operational outflows.
- */
 export const expenseCategorySchema = z.enum([
   "ads",
   "packaging",
@@ -204,8 +150,6 @@ export const createExpenseSchema = z.object({
 });
 
 export const updateExpenseSchema = createExpenseSchema.partial();
-
-// ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
