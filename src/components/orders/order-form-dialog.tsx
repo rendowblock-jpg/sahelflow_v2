@@ -39,7 +39,6 @@ import { usePhoneMask } from "@/hooks/form/use-phone-mask";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
 import { toast } from "@/lib/toast";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
 import type { RiskAssessment } from "@/lib/risk-engine/types";
