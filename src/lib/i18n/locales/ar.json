@@ -1628,6 +1628,7 @@
   "orders.timeline.return": "طلب إرجاع",
   "orders.timeline.ship": "تم شحن الطلب",
   "orders.timeline.status_change": "تغيير الحالة من {{from}} إلى {{to}}",
+  "orders.timeline.rejected": "تم رفض الطلبية: {{reason}}",
   "orders.timeline.unknown": "غير معروف",
   "orders.title": "الطلبيات",
   "orders.todayRevenue": "إيراد اليوم",

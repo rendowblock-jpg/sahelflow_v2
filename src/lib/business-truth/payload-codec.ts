@@ -11,7 +11,8 @@ export type BusinessPayloadKind =
   | "outbox-intent"
   | "compensation-fact"
   | "financial-movement-detail"
-  | "inventory-movement-detail";
+  | "inventory-movement-detail"
+  | "order-change-detail";
 
 export type FinancialMovementDetailField =
   | "counterparty"

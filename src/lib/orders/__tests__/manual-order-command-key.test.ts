@@ -41,7 +41,7 @@ describe("manual order command key persistence", () => {
     expect(reloaded.idempotencyKey).toBe(first.idempotencyKey);
   });
 
-  it("keeps an in-flight key stable while the draft changes", () => {
+  it("keeps an in-flight key and its original request stable while the draft changes", () => {
     const storage = new MemoryStorage();
     const first = resolveManualOrderCommand(
       storage,
@@ -57,7 +57,7 @@ describe("manual order command key persistence", () => {
     );
 
     expect(edited.idempotencyKey).toBe(first.idempotencyKey);
-    expect(edited.requestJson).toBe('{"quantity":2}');
+    expect(edited.requestJson).toBe('{"quantity":1}');
   });
 
   it("advances generation only after success clears the receipt", () => {

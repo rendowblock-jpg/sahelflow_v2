@@ -15,6 +15,8 @@ import "server-only";
 import type { DbClient } from "@/lib/db";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { redactPii } from "@/lib/redact-pii";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
+import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 
 export type OrderChangeTransactionClient = Parameters<
   Parameters<DbClient["$transaction"]>[0]
@@ -63,13 +65,76 @@ export async function getOrderTimeline(
   limit = 50,
 ) {
   try {
-    return await context.prisma.orderChange.findMany({
+    const entries = await context.prisma.orderChange.findMany({
       where: { orderId },
       orderBy: { createdAt: "desc" },
       take: Math.min(Math.max(limit, 1), 200),
     });
+    const hasSealedReason = entries.some((entry) =>
+      entry.payload?.includes('"rejectionReasonEnvelope"'),
+    );
+    if (!hasSealedReason) return entries;
+
+    let envelopeKey: Buffer | null = null;
+    try {
+      envelopeKey = await getBusinessEnvelopeKey(context);
+    } catch {
+      // The timeline remains available without exposing a sealed value.
+    }
+
+    return entries.map((entry) => ({
+      ...entry,
+      payload: materializeRejectionReason(entry.payload, envelopeKey),
+    }));
   } catch {
     return [];
+  }
+}
+
+function materializeRejectionReason(
+  payloadJson: string | null,
+  envelopeKey: Buffer | null,
+): string | null {
+  if (!payloadJson) return payloadJson;
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(payloadJson) as Record<string, unknown>;
+  } catch {
+    return payloadJson;
+  }
+  const sealed = payload.rejectionReasonEnvelope;
+  const commandId = payload.commandId;
+  if (typeof sealed !== "string" || typeof commandId !== "string") {
+    return payloadJson;
+  }
+  const visible = { ...payload };
+  delete visible.rejectionReasonEnvelope;
+  if (!envelopeKey) {
+    return JSON.stringify({
+      ...visible,
+      rejectionReasonUnavailable: true,
+    });
+  }
+  try {
+    const opened = openBusinessPayloadWithKey<{ rejectionReason: string }>(
+      sealed,
+      {
+        kind: "order-change-detail",
+        recordKey: `${commandId}:rejection-reason`,
+        recordType: "order.rejection-reason.v1",
+        commandId,
+      },
+      envelopeKey,
+    );
+    return JSON.stringify({
+      ...visible,
+      rejectionReason: opened.rejectionReason,
+    });
+  } catch {
+    return JSON.stringify({
+      ...visible,
+      rejectionReasonUnavailable: true,
+    });
   }
 }
 

@@ -14,6 +14,8 @@ import type {
   OutboxIntentFact,
 } from "@/lib/business-truth/contracts";
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
+import { sealBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { redactPii } from "@/lib/redact-pii";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
@@ -229,6 +231,8 @@ export async function executeManualOrderDecision(
 ): Promise<BusinessCommandResult<ManualOrderDecisionResult>> {
   const data = manualOrderDecisionSchema.parse(input);
   const correlationId = data.correlationId ?? randomUUID();
+  const rejectionEnvelopeKey =
+    data.decision === "reject" ? await getBusinessEnvelopeKey(context) : null;
 
   return executeBusinessCommand(
     context,
@@ -325,24 +329,40 @@ export async function executeManualOrderDecision(
         );
       }
 
+      const rejectionReasonEnvelope =
+        data.decision === "reject" && rejectionEnvelopeKey
+          ? sealBusinessPayloadWithKey(
+              { rejectionReason: data.reason ?? "" },
+              {
+                kind: "order-change-detail",
+                recordKey: `${commandId}:rejection-reason`,
+                recordType: "order.rejection-reason.v1",
+                commandId,
+              },
+              rejectionEnvelopeKey,
+            )
+          : null;
+      const orderChangePayload = redactPii({
+        from: "pending",
+        to: status,
+        decision: data.decision,
+        rejectionReasonRecorded: data.decision === "reject",
+        commandId,
+        decisionVersion: aggregateVersion,
+        orderVersion,
+        authority: "manual-confirmation-v1",
+      });
+
       await tx.orderChange.create({
         data: {
           orderId: order.id,
           status,
           actionType: "status_change",
           actor: principal.auditActor,
-          payload: JSON.stringify(
-            redactPii({
-              from: "pending",
-              to: status,
-              decision: data.decision,
-              rejectionReasonRecorded: data.decision === "reject",
-              commandId,
-              decisionVersion: aggregateVersion,
-              orderVersion,
-              authority: "manual-confirmation-v1",
-            }),
-          ),
+          payload: JSON.stringify({
+            ...orderChangePayload,
+            ...(rejectionReasonEnvelope ? { rejectionReasonEnvelope } : {}),
+          }),
           confirmedBy: principal.auditActor,
           confirmedAt: new Date(),
         },

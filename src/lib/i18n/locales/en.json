@@ -1628,6 +1628,7 @@
   "orders.timeline.return": "Return requested",
   "orders.timeline.ship": "Order shipped",
   "orders.timeline.status_change": "Status changed from {{from}} to {{to}}",
+  "orders.timeline.rejected": "Order rejected: {{reason}}",
   "orders.timeline.unknown": "unknown",
   "orders.title": "Orders",
   "orders.todayRevenue": "Today's Revenue",

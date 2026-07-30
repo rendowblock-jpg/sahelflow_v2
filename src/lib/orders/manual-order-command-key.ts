@@ -133,7 +133,10 @@ export function resolveManualOrderCommand(
   const requests = activeMap(storage);
   const active = requests.get(storageKey);
   if (active) {
-    return { requestJson, idempotencyKey: active.idempotencyKey };
+    return {
+      requestJson: active.requestJson,
+      idempotencyKey: active.idempotencyKey,
+    };
   }
 
   let scopeId: string;

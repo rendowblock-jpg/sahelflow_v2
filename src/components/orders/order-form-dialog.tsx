@@ -114,19 +114,32 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   function addProduct(productId: string) {
     const product = activeProducts.find((p) => p.id === productId);
     if (!product) return;
-    if (fields.some((f) => f.productId === productId)) return;
     const variants = (product.productVariants ?? []).filter(
       (variant) => variant.isActive,
     );
-    const soleVariant = variants.length === 1 ? variants[0] : null;
+    const selectedVariantIds = new Set(
+      fields
+        .filter((field) => field.productId === productId)
+        .map((field) => field.productVariantId)
+        .filter((variantId): variantId is string => Boolean(variantId)),
+    );
+    if (
+      variants.length === 0 &&
+      fields.some((field) => field.productId === productId)
+    ) {
+      return;
+    }
+    const nextVariant =
+      variants.find((variant) => !selectedVariantIds.has(variant.id)) ?? null;
+    if (variants.length > 0 && !nextVariant) return;
     append({
       productId: product.id,
       productName: product.name,
-      productVariantId: soleVariant?.id ?? null,
-      productVariantName: soleVariant?.name ?? null,
+      productVariantId: nextVariant?.id ?? null,
+      productVariantName: nextVariant?.name ?? null,
       requiresVariant: variants.length > 0,
       quantity: 1,
-      unitPrice: soleVariant?.price ?? product.price,
+      unitPrice: nextVariant?.price ?? product.price,
     });
   }
 
@@ -301,11 +314,14 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   async function createOrder(data: OrderFormValues) {
     const request = buildTrustedRequest(data);
     const command = commandFor(request);
+    const commandRequest = JSON.parse(
+      command.requestJson,
+    ) as ReturnType<typeof buildTrustedRequest>;
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...request,
+        ...commandRequest,
         idempotencyKey: command.idempotencyKey,
         correlationId: `manual-order-ui:${command.idempotencyKey}`,
       }),
@@ -405,7 +421,30 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {activeProducts
-                      .filter((p) => !fields.some((f) => f.productId === p.id))
+                      .filter((product) => {
+                        const variants = (product.productVariants ?? []).filter(
+                          (variant) => variant.isActive,
+                        );
+                        if (variants.length === 0) {
+                          return !fields.some(
+                            (field) => field.productId === product.id,
+                          );
+                        }
+                        const selectedVariantIds = new Set(
+                          fields
+                            .filter(
+                              (field) => field.productId === product.id,
+                            )
+                            .map((field) => field.productVariantId)
+                            .filter(
+                              (variantId): variantId is string =>
+                                Boolean(variantId),
+                            ),
+                        );
+                        return variants.some(
+                          (variant) => !selectedVariantIds.has(variant.id),
+                        );
+                      })
                       .map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name} — {formatDZD(p.price)} (stock: {p.stock})
@@ -419,7 +458,26 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 <div className="space-y-2 rounded-lg border p-3">
                   {fields.map((item, i) => {
                     const product = activeProducts.find((p) => p.id === item.productId);
-                    const variants = product?.productVariants ?? [];
+                    const variants = (product?.productVariants ?? []).filter(
+                      (variant) => variant.isActive,
+                    );
+                    const variantsSelectedByOtherRows = new Set(
+                      fields
+                        .filter(
+                          (field, index) =>
+                            index !== i && field.productId === item.productId,
+                        )
+                        .map((field) => field.productVariantId)
+                        .filter(
+                          (variantId): variantId is string =>
+                            Boolean(variantId),
+                        ),
+                    );
+                    const selectableVariants = variants.filter(
+                      (variant) =>
+                        variant.id === item.productVariantId ||
+                        !variantsSelectedByOtherRows.has(variant.id),
+                    );
                     return (
                       <div key={item.id} className="space-y-2">
                         <div className="flex items-center gap-3">
@@ -442,7 +500,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                         </div>
                         {variants.length > 0 && (
                           <ProductVariantPicker
-                            variants={variants}
+                            variants={selectableVariants}
                             defaultPrice={product?.price ?? item.unitPrice}
                             value={item.productVariantId}
                             onChange={(vId) => updateVariant(i, vId)}

@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { ServiceContext } from "@/lib/data/service-base";
+import { getOrderTimeline } from "@/lib/data/order-change-service";
 import { trustedManualOrderSourceMetadata } from "../manual-order-authority";
 import { executeManualOrderDecision } from "../manual-confirmation";
 
@@ -293,6 +294,15 @@ describe("canonical manual confirmation", () => {
     });
     expect(await count("InventoryReservation")).toBe(0);
     expect(await count("InventoryMovement")).toBe(0);
+    const storedChange = await db.orderChange.findFirstOrThrow({
+      where: { orderId: order.id },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(storedChange.payload).not.toContain("Customer declined by phone");
+    const timeline = await getOrderTimeline(context, order.id);
+    expect(JSON.parse(timeline[0]?.payload ?? "{}")).toMatchObject({
+      rejectionReason: "Customer declined by phone",
+    });
   });
 
   it("emits a low-stock event only when confirmation crosses the threshold", async () => {

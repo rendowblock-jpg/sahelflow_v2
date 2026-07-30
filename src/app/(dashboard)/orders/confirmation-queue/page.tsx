@@ -11,6 +11,11 @@ import { StatCard } from "@/components/shared/stat-card";
 import { formatDZD } from "@/lib/utils";
 import { Clock, AlertTriangle, Phone, CheckCircle2, Banknote } from "lucide-react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { OrderStatusActions } from "@/components/orders/order-status-actions";
+import {
+  isImportPendingOrderAuthority,
+  isTrustedManualOrderAuthority,
+} from "@/lib/orders/manual-order-authority";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +33,17 @@ export default async function ConfirmationQueuePage() {
   const queue = await getConfirmationQueue();
   const staleCount = queue.filter((o) => o.isStale).length;
   const freshCount = queue.length - staleCount;
+  const queueRows = queue.map((order) => ({
+    ...order,
+    mutationAuthority: isTrustedManualOrderAuthority(
+      order.source,
+      order.sourceMetadata,
+    )
+      ? ("canonical_v1" as const)
+      : isImportPendingOrderAuthority(order.source, order.sourceMetadata)
+        ? ("confirmation_blocked" as const)
+        : ("legacy_compatibility" as const),
+  }));
 
   return (
     <div className="app-content page-sections">
@@ -98,7 +114,7 @@ export default async function ConfirmationQueuePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {queue.map((o) => (
+                  {queueRows.map((o) => (
                     <tr
                       key={o.id}
                       className={`transition-colors hover:bg-muted/50 ${o.isStale ? "bg-amber-500/5" : ""}`}
@@ -124,12 +140,26 @@ export default async function ConfirmationQueuePage() {
                         {o.isStale && <AlertTriangle className="inline h-3 w-3 ms-1 text-amber-500" />}
                       </td>
                       <td className="px-4 py-3">
-                        <OrderStatusBadge orderId={o.id} status="pending" size="sm" />
+                        <OrderStatusBadge
+                          orderId={o.id}
+                          status="pending"
+                          size="sm"
+                          disabled={o.mutationAuthority !== "legacy_compatibility"}
+                        />
                       </td>
                       <td className="px-4 py-3 text-end">
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/orders/${o.id}`}>{t("confirmationQueue.confirm")}</Link>
-                        </Button>
+                        {o.mutationAuthority === "legacy_compatibility" ? (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/orders/${o.id}`}>{t("confirmationQueue.confirm")}</Link>
+                          </Button>
+                        ) : (
+                          <OrderStatusActions
+                            orderId={o.id}
+                            currentStatus="pending"
+                            currentVersion={o.version}
+                            mutationAuthority={o.mutationAuthority}
+                          />
+                        )}
                       </td>
                     </tr>
                   ))}
