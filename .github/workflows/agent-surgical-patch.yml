@@ -1,0 +1,40 @@
+name: Agent surgical patch
+
+on:
+  push:
+    branches:
+      - agent/phases1-4-completion-program
+    paths:
+      - .github/workflows/agent-surgical-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phases1-4-completion-program
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply exact test patch
+        run: python scripts/agent-patch-commerce-integrity.py
+
+      - name: Remove temporary patch machinery
+        run: |
+          rm scripts/agent-patch-commerce-integrity.py
+          rm .github/workflows/agent-surgical-patch.yml
+
+      - name: Commit patched integrity scenario
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 1
+          git commit -m "test: align commerce integrity fixture"
+          git push origin HEAD:agent/phases1-4-completion-program
