@@ -155,6 +155,9 @@ begins.
   recovery, security/privacy/legal and migration certification remain open.
 - Draft PR #195 preserves and extends the corrected Phase 3 WhatsApp durable-effect
   package; it is not merged, published or independently approved.
+- The obsolete instruction `Rebase the corrected local Phase 3 WhatsApp durable-effect commit`
+  is historical only: that source is already preserved inside draft PR #195 and
+  must not be repeated as active work.
 
 ## Exact next outcome
 
