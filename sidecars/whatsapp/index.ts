@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import QRCode from "qrcode";
 
-import { deriveSidecarWebSocketToken } from "./auth-tokens";
+import { verifySidecarWebSocketGrant } from "./auth-tokens";
 import {
   deterministicWhatsAppMessageId,
   findDurableSendReceipt,
@@ -42,7 +42,6 @@ function resolveSidecarToken(): string {
 }
 
 const SIDECAR_REST_TOKEN = resolveSidecarToken();
-const SIDECAR_WS_TOKEN = deriveSidecarWebSocketToken(SIDECAR_REST_TOKEN);
 
 function safeEqual(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left, "utf8");
@@ -71,7 +70,7 @@ app.get("/", (context) =>
   context.json({
     service: "sahelflow-whatsapp-sidecar",
     version: "3.0.0",
-    auth: "separate-rest-and-websocket-tokens",
+    auth: "private-rest-token-and-expiring-websocket-grants",
   }),
 );
 
@@ -252,10 +251,22 @@ app.delete("/logout", async (context) => {
   return context.json({ ok: true, message: "Logged out. Auth cleared." });
 });
 
-const wsClients = new Set<WebSocket>();
+const wsClients = new Map<WebSocket, number>();
+function closeExpiredClient(client: WebSocket, expiresAt: number): boolean {
+  if (expiresAt > Date.now()) return false;
+  wsClients.delete(client);
+  try {
+    client.close(1008, "WebSocket grant expired");
+  } catch {
+    // The close may race with a browser disconnect.
+  }
+  return true;
+}
+
 function broadcast(event: SidecarEvent): void {
   const payload = JSON.stringify(event);
-  for (const client of wsClients) {
+  for (const [client, expiresAt] of wsClients) {
+    if (closeExpiredClient(client, expiresAt)) continue;
     if (client.readyState === WebSocket.OPEN) client.send(payload);
   }
 }
@@ -272,31 +283,44 @@ function sendCurrentStatus(client: WebSocket): void {
   );
 }
 
-const server = Bun.serve({
+const wsExpirySweep = setInterval(() => {
+  for (const [client, expiresAt] of wsClients) {
+    closeExpiredClient(client, expiresAt);
+  }
+}, 1_000);
+wsExpirySweep.unref?.();
+
+const server = Bun.serve<{ expiresAt: number }>({
   port: PORT,
   hostname: HOST,
   fetch(request, bunServer) {
     const url = new URL(request.url);
     if (url.pathname === "/ws") {
       const token = url.searchParams.get("token");
-      if (!token || !safeEqual(token, SIDECAR_WS_TOKEN)) {
+      const grant = token
+        ? verifySidecarWebSocketGrant(token, SIDECAR_REST_TOKEN)
+        : null;
+      if (!grant) {
         return new Response("Unauthorized", { status: 401 });
       }
-      if (bunServer.upgrade(request, { data: {} })) return;
+      if (bunServer.upgrade(request, { data: { expiresAt: grant.expiresAt } })) {
+        return;
+      }
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
     return app.fetch(request);
   },
   websocket: {
     open(socket) {
-      wsClients.add(socket);
-      sendCurrentStatus(socket);
+      const client = socket as unknown as WebSocket;
+      wsClients.set(client, socket.data.expiresAt);
+      sendCurrentStatus(client);
     },
     message() {
       // Push-only stream; client frames are ignored.
     },
     close(socket) {
-      wsClients.delete(socket);
+      wsClients.delete(socket as unknown as WebSocket);
     },
   },
   error(error) {
@@ -316,6 +340,7 @@ void wa.start().catch((error) => {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
+    clearInterval(wsExpirySweep);
     server.stop();
     process.exit(0);
   });
