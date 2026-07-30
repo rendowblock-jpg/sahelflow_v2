@@ -56,13 +56,15 @@ describe("WhatsApp sidecar client", () => {
     expect(sidecar.restToken()).toBe(TEST_TOKEN);
   });
 
-  it("issues only a short-lived signed grant to the browser WebSocket route", () => {
+  it("issues a short-lived signed grant with an explicit renewal boundary", () => {
     const subject = "authenticated-owner:test-session";
-    const grant = sidecar.wsGrant(subject);
-    expect(grant).toBeTruthy();
-    expect(grant).not.toBe(TEST_TOKEN);
-    expect(verifySidecarWebSocketGrant(grant!, TEST_TOKEN)).toMatchObject({
+    const bundle = sidecar.wsGrantBundle(subject);
+    expect(bundle?.token).toBeTruthy();
+    expect(bundle?.token).not.toBe(TEST_TOKEN);
+    expect(bundle?.expiresAt).toBeGreaterThan(Date.now());
+    expect(verifySidecarWebSocketGrant(bundle!.token, TEST_TOKEN)).toMatchObject({
       subject,
+      expiresAt: bundle!.expiresAt,
     });
   });
 
@@ -82,6 +84,23 @@ describe("WhatsApp sidecar client", () => {
         requestBinding: REQUEST_BINDING,
       }),
     );
+  });
+
+  it("reads a durable receipt without invoking another provider send", async () => {
+    fetchMock.mockResolvedValue(
+      response(200, { receipt: { id: "WA-1", status: "sent" } }),
+    );
+    await expect(
+      sidecar.receipt(EFFECT_KEY, REQUEST_BINDING),
+    ).resolves.toEqual({ ok: true, id: "WA-1", status: "sent" });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${TEST_URL}/send-receipt`);
+    expect(init.method).toBe("POST");
+  });
+
+  it("returns null when the receipt journal confirms no receipt", async () => {
+    fetchMock.mockResolvedValue(response(200, { receipt: null }));
+    await expect(sidecar.receipt(EFFECT_KEY, REQUEST_BINDING)).resolves.toBeNull();
   });
 
   it("preserves retryability and ambiguity returned by the sidecar", async () => {
@@ -115,7 +134,7 @@ describe("WhatsApp sidecar client", () => {
     expect(caught).toMatchObject({ ambiguous: false });
   });
 
-  it("classifies timeout as ambiguous because the provider may have accepted", async () => {
+  it("classifies timeout as ambiguous because a send may have committed", async () => {
     vi.useFakeTimers();
     fetchMock.mockImplementation(
       (_url: string, init: RequestInit) =>
