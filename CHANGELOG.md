@@ -8,6 +8,30 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### Canonical Golden COD and Windows authority adoption
+
+- Merged PR #190 with trusted manual intake, canonical confirmation/rejection,
+  exact optimistic version and idempotency, exact product-or-variant stock
+  reservation, inventory movement and complete AR/FR/EN decision states.
+- Merged PR #192 with governed packing, manual shipment, reservation consumption,
+  outbound inventory, delivery, customer delivery facts and creation of a DZD COD
+  receivable. Canonical delivered orders are fenced from the unsafe legacy return
+  path until governed return/refund compensation is implemented.
+- Merged PR #191 with a narrow current-shop authorization boundary: the current
+  compatibility PIN actor can read only the exact process shop and cannot create,
+  switch or delete shops or mint a trusted actor context.
+- Merged PR #184 with a Windows DPAPI-protected installation root, exact existing-
+  root import, current/candidate/backup authority, resumable native rotation and
+  recovery journaling. Exact-head CI passed staged runtime and installed-MSI
+  build, install, rotation, authenticated launch, close and reopen.
+- Kept ordinary source packages version-neutral. Internal.13 remains the
+  published and Founder-installed release; a new signed Internal milestone has
+  not yet been cut.
+- Recorded the remaining boundaries explicitly: Phase 1 still needs COD
+  settlement, exceptions, returns/refunds/compensation and remaining intake
+  sources; Phase 2 still needs durable identity/licensing/multi-shop; Phase 4
+  still needs complete backup/restore, replacement recovery and certification.
+
 ### Final Completion Program and Research-First Quality Protocol
 
 - Added Founder decision FD-028.

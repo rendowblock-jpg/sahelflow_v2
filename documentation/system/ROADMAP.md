@@ -3,13 +3,14 @@
 > **Status:** Binding dependency and completion order
 > **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
-> **Active phase:** Phase 1 — first vertical research complete; implementation ready
+> **Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-07-29
+> **Last consolidated:** 2026-07-30
 
 This is the final dependency-correct program for completing SahelFlow 1.0 across
 product, business authority, data, security, recovery, Windows runtime,
@@ -349,6 +350,21 @@ compatible. Production native all-shop restore remains a Phase 4 exit gate, and
 the complete product Golden COD Journey is not declared Proven until that gate
 also passes.
 
+## Current result — in progress
+
+PR #190 merged the first canonical production vertical: trusted manual intake,
+confirmation/rejection, exact request binding and optimistic versioning, exact
+product-or-variant reservation authority, inventory movement, atomic audit/event/
+outbox/projection facts and complete AR/FR/EN decision states. PR #192 extended
+that same authority through packing, manual shipment, reservation consumption,
+outbound inventory, delivery, customer delivery facts and creation of a DZD COD
+receivable. Exact-head CI runs `30516059898` and `30522348699` passed.
+
+Phase 1 is not complete. Courier booking/tracking, failure/refusal/physical
+return, cancellation/release, COD collection/remittance/fees/discrepancy,
+returns/exchanges/refunds/compensation, remaining intake sources, restart/update
+preservation and disposable backup-compatibility evidence remain open.
+
 ---
 
 # Phase 2 — Identity, authorization, licensing and multi-shop
@@ -443,6 +459,17 @@ Every request and command derives verified workspace, member, device, session,
 installation and shop context. Revocation is immediate. Licensing cannot be
 forged through browser or mutable database state. Production shop lifecycle works
 through native authority and preserves data.
+
+## Current result — in progress
+
+PR #191 merged the first narrow authorization boundary. The current
+PIN-unlocked compatibility actor is confined to the exact process shop, can read
+that shop only, cannot create/switch/delete shops, and caller-minted actor
+contexts fail closed. Exact-head CI run `30520060972` passed.
+
+This is not durable identity or Phase 2 completion. Person, workspace membership,
+device/session authority, persisted policy and revocation, licensing,
+entitlements, invitations, recovery and native multi-shop lifecycle remain open.
 
 ---
 
@@ -618,6 +645,19 @@ silent loss, authority confusion or key compromise. Production native all-shop
 restore and replacement-install recovery close the backup/restore clause of the
 complete Golden COD Journey. Migration and restore drills pass. Independent
 review has no unresolved P0/P1 finding.
+
+## Current result — in progress
+
+PR #184 merged the Windows-protected installation root, exact legacy-root import,
+native current/candidate/backup authority, resumable installation-wide rotation,
+maintenance serialization and recovery journaling. Exact-head CI run
+`30520999819` passed quality, Windows database/contained runtime, Linux and
+Windows Rust release parity, MSI build/install, protected rotation,
+authenticated launch, close and reopen.
+
+This proves the protected root and rotation package only. Full encrypted all-shop
+backup/restore, replacement-install recovery, recovery ceremonies, migration
+matrix, security/privacy/Law 18-07 work and independent certification remain open.
 
 ---
 

@@ -3,13 +3,14 @@
 > **Status:** Active documentation entry point
 > **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 1 — first vertical research complete; implementation ready
+> **Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues
 > **Execution epic:** issue #164
-> **Last updated:** 2026-07-29
+> **Last updated:** 2026-07-30
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, the required experience and engineering invariants, what merged source
@@ -81,6 +82,14 @@ UI were observed, but startup remains over budget. Arabic chart visual behavior
 and explicit Founder acceptance remain open. Neither publication nor installation
 proves the full Golden COD Journey, whole-route AAA quality, provider
 certification or Stable readiness.
+
+Protected `main` now also contains the first production canonical Golden COD
+path: trusted manual intake and confirmation/rejection through reservation and
+inventory movement (PR #190), followed by packing, shipment, delivery and COD
+receivable creation (PR #192). A narrow exact-process-shop authorization boundary
+(PR #191) and the Windows-protected installation root with native rotation and
+installed-MSI proof (PR #184) are merged supporting packages. These are partial
+phase results, not completion of Phases 1, 2 or 4.
 
 ## Final completion model
 

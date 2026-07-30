@@ -2,13 +2,14 @@
 
 > **Authority:** merged protected `main` and named evidence only
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-29
+> **Last assessed:** 2026-07-30
 
 This document states what merged source and named evidence prove now. It does not
 convert target architecture, research, adapter presence, mocks, test counts or
@@ -29,9 +30,11 @@ It is not yet a commercially complete or class-AAA SahelFlow 1.0 product.
 The strongest new architecture—trusted business principals, exact shop context,
 optimistic aggregate versions, encrypted idempotent command replay, atomic audit,
 domain events, outbox intents, reservations, inventory movements, financial
-movements, projection invalidations and compensation facts—is merged. Production
-order, delivery, refund, provider, automation and most UI paths still mainly use
-legacy services and fields rather than that canonical foundation.
+movements, projection invalidations and compensation facts—is merged. Trusted
+manual intake, confirmation/rejection and fulfillment through delivered COD
+receivable now use that foundation. Other intake sources, delivery exceptions,
+COD settlement, returns/refunds, providers, automations and most connected paths
+still mainly use legacy services and fields.
 
 The central completion task is therefore production adoption and removal of
 competing legacy authority, not another architecture reset.
@@ -162,6 +165,8 @@ These counts prove breadth, not completeness.
 - clean-runner staged and installed runtime proof;
 - authenticated readiness and UI verification;
 - process containment and crash-loop handling;
+- Windows-protected installation-root current/candidate/backup authority;
+- resumable native installation-wide root rotation and recovery journaling;
 - in-place release model and deterministic evidence.
 
 ### Local data and migration
@@ -201,19 +206,22 @@ licensing, recovery or legal model.
 
 ## Source-grounded blocking discontinuities
 
-### 1. Production business paths remain legacy
+### 1. Canonical production adoption remains incomplete
 
-The manual order API and status route use `orderService`, whose legacy transition
-path directly updates mutable order status, product stock and customer counters.
-They do not yet commit through canonical commands, reservations, inventory and
-financial movements, outbox and compensation.
+The trusted manual-order path now uses canonical intake, confirmation/rejection,
+packing, shipment and delivery commands. Its direct-stock and unsafe follow-up
+legacy paths fail closed, and delivered orders create a COD receivable movement.
+Imports, storefront, WhatsApp, commerce and AI intake plus cancellation,
+exceptions, settlement, return/refund and compensation are not yet migrated end
+to end.
 
 ### 2. Stock concurrency and authority
 
-Legacy confirmation decrements product stock without the canonical availability
-and reservation boundary. The code does not structurally prevent concurrent
-confirmation from overcommitting the same product/variant. Canonical reservation
-adoption is blocking.
+Canonical trusted manual confirmation now selects exact active variant-or-parent
+authority, opens reservations atomically and consumes them into outbound
+inventory on shipment. Non-adopted order sources and legacy services still use
+scalar stock behavior; their migration and reconciliation remain blocking before
+the inventory contract can be called complete.
 
 ### 3. Commerce checkpoint safety
 
@@ -239,8 +247,10 @@ live-certified with durable ingress/effect/reconciliation proof.
 ### 6. Identity and commercial authority
 
 Local PIN/session is a useful local baseline, not person/workspace/member/device
-authority. Teams, permissions, invitations, devices, revocation and high-risk
-approval remain incomplete.
+authority. The compatibility actor is now restricted to read-only access to the
+exact process shop; create, switch, delete and cross-shop access fail closed.
+Durable people, memberships, teams, permissions, invitations, devices,
+revocation and high-risk approval remain incomplete.
 
 Licensing still contains self-issued trial behavior, production Stronghold-to-
 localStorage fallback, weak password derivation and a legacy status-only trust
@@ -249,10 +259,12 @@ contract.
 
 ### 7. Backup and recovery
 
-Local backup creation verifies SQLite integrity and hashes. Production live
-restore is intentionally blocked until the native supervisor owns replacement.
-All-shop encrypted recovery, independent recovery kit, replacement install,
-zero-knowledge cloud retention and drills remain incomplete.
+The packaged Windows runtime now owns a DPAPI-protected installation root and a
+resumable native rotation/recovery journal proven through installed-MSI rotation,
+launch and reopen. Local backup creation verifies SQLite integrity and hashes.
+Production live restore remains intentionally blocked until the native supervisor
+owns replacement. All-shop encrypted recovery, independent recovery kit,
+replacement install, zero-knowledge cloud retention and drills remain incomplete.
 
 ### 8. Storefront, PWA and cloud
 
@@ -298,16 +310,16 @@ T470 target.
 |---|---|---|
 | Signed Windows runtime/update | Strong internal proof | Founder Internal.13 install, T470 lifecycle/performance, wider compatibility |
 | Local database/migrations | Strong partial | full restore/replacement drills and every prior-version matrix |
-| Workspace/shop authority | Partial foundation | production native create/switch/archive/recover/delete and membership/device authority |
+| Workspace/shop authority | Partial, exact current-shop read boundary | production native create/switch/archive/recover/delete and membership/device authority |
 | Local PIN/session | Implemented baseline | person/member/device identity and fail-closed recovery |
 | Teams and permissions | Missing/fragmentary | complete identity, roles, fields, assignments, approval and revocation |
 | Licensing/entitlements | Unsafe partial | online signed trial, offline permanent issuance, protected storage, transfer/recovery |
 | Catalog/customers/risk | Broad partial | canonical authority, duplicate/permission/data-rights and scale proof |
-| Orders/confirmation | Partial foundation | production command/reservation adoption and Golden COD proof |
-| Inventory | Partial foundation | availability, reservation, movement and reconciliation across every journey |
-| Delivery/couriers | Partial/unverified | durable provider protocol, exceptions, reconciliation and live certification |
+| Orders/confirmation | Canonical trusted-manual vertical | remaining intake sources, cancellation/edit policy and complete Golden COD proof |
+| Inventory | Canonical manual reservation/dispatch partial | remaining sources, return/compensation and reconciliation across every journey |
+| Delivery/couriers | Canonical manual fulfillment partial | booking/tracking, exceptions, returns, durable provider protocol and live certification |
 | Returns/refunds | Partial foundation | canonical compensation and end-to-end money/stock proof |
-| COD/accounting | Partial foundation | receivable/remittance/fee/discrepancy ledger adoption |
+| COD/accounting | Canonical delivered receivable partial | collection/remittance/fee/discrepancy ledger adoption |
 | Audit/outbox | Strong foundation | production adoption and durable effect workers |
 | Imports/exports | Implemented/partial | preview, mapping, resumability and scale consistency |
 | Backup/recovery | Partial/unsafe | native all-shop encrypted restore and recovery ceremonies |
@@ -323,7 +335,7 @@ T470 target.
 | Accessibility | Partial/unverified | journey-level WCAG, keyboard, screen reader and zoom proof |
 | AAA frontend | Broad partial | research-backed navigation/design system and every page-completion gate |
 | Low-end performance | Unproven/unmet on Founder history | Internal.13 T470 measurement, representative data and eight-hour stability |
-| Security/privacy/legal | Partial/unverified | threat models, key/recovery, tenant boundaries, Law 18-07 and independent review |
+| Security/privacy/legal | Protected Windows root partial | backup/recovery keys, threat models, tenant boundaries, Law 18-07 and independent review |
 | Public Stable | Not ready | all Required implementation plus external evidence and Founder promotion |
 
 ## Keep and harden
@@ -356,17 +368,31 @@ T470 target.
 
 ## Current exact boundary
 
-Phase 0 completed through PR #179 at protected main
-`18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
-passed. Research for the first Phase 1 manual-order confirmation vertical is
-complete on issue #164 and that vertical is ready for implementation. The first
-production vertical is:
+Phase 0 remains complete through PR #179. Protected application source is now
+`731fb11528345354388b2716f3bd94f0fc73eafb`, assembled from these verified
+packages:
 
-> Manual order intake and confirmation under trusted authority, exact idempotency
-> and optimistic versioning, with atomic stock availability/reservation,
-> inventory movement, audit, event, outbox and projection invalidation; complete
-> AR/FR/EN UI states; duplicate/concurrency/interruption/recovery proof; and removal
-> of the migrated direct-stock legacy path.
+- PR #190 -> `f0821fb7885be4eeec7efcc2e5ef5a27254f6ac1`:
+  trusted manual intake and confirmation/rejection, reservation/movement and
+  complete decision states; exact-head CI run `30516059898` passed.
+- PR #191 -> `bcdc4fe5643c407dddcc96d47c421d0417a83563`:
+  narrow current-shop compatibility authorization; exact-head CI run
+  `30520060972` passed.
+- PR #184 -> `deb148de737b7906d899cbb41764faa929823a24`:
+  Windows-protected installation root and native rotation/recovery; exact-head CI
+  run `30520999819` passed through installed MSI, rotation, authenticated launch,
+  close and reopen.
+- PR #192 -> `731fb11528345354388b2716f3bd94f0fc73eafb`:
+  canonical packing, shipment, delivery and COD receivable; exact-head CI run
+  `30522348699` passed all selected source, Windows runtime and installed-MSI
+  gates.
+
+These packages do not complete Phases 1, 2 or 4. Phase 1 still requires COD
+settlement, exceptions, cancellation, return/refund/compensation, remaining
+intake sources and preservation/recovery evidence. Phase 2 still requires durable
+identity, licensing and native multi-shop. Phase 4 still requires full
+backup/restore, replacement-install recovery, migration/security/privacy/legal
+and certification gates.
 
 The remaining Internal.13 Arabic-chart and Founder-acceptance observations stay
 independent in the platform lane.
