@@ -1,8 +1,8 @@
--- Phase 1D: append-only COD collection, remittance batch, line and correction facts.
+-- Phase 1D: append-only COD collection, remittance batch, line, correction and matching facts.
 --
 -- Existing Order.cod* columns remain compatibility projections. Canonical money
 -- authority is the delivered receivable FinancialMovement plus these immutable
--- collection/settlement facts and explicit correction deltas.
+-- collection/settlement facts and explicit correction/reconciliation rows.
 
 CREATE TABLE "CodCollection" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -159,8 +159,33 @@ CREATE UNIQUE INDEX "CodSettlementCorrection_createdByCommandId_key" ON "CodSett
 CREATE INDEX "CodSettlementCorrection_settlementLineId_occurredAt_idx"
   ON "CodSettlementCorrection"("settlementLineId", "occurredAt");
 
--- Canonical settlement facts are immutable. Corrections are appended in dedicated
--- tables; mutable compatibility projections live on Order.
+CREATE TABLE "CodSettlementLineMatch" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "matchKey" TEXT NOT NULL,
+  "settlementLineId" TEXT NOT NULL,
+  "orderId" TEXT NOT NULL,
+  "status" TEXT NOT NULL,
+  "discrepancyAmount" INTEGER NOT NULL,
+  "reasonCode" TEXT NOT NULL,
+  "occurredAt" DATETIME NOT NULL,
+  "createdByCommandId" TEXT NOT NULL,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "CodSettlementLineMatch_line_fkey"
+    FOREIGN KEY ("settlementLineId") REFERENCES "CodSettlementLine" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "CodSettlementLineMatch_order_fkey"
+    FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "CodSettlementLineMatch_command_fkey"
+    FOREIGN KEY ("createdByCommandId") REFERENCES "BusinessCommand" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "CodSettlementLineMatch_status_check" CHECK ("status" IN ('matched', 'disputed'))
+);
+
+CREATE UNIQUE INDEX "CodSettlementLineMatch_matchKey_key" ON "CodSettlementLineMatch"("matchKey");
+CREATE UNIQUE INDEX "CodSettlementLineMatch_settlementLineId_key" ON "CodSettlementLineMatch"("settlementLineId");
+CREATE UNIQUE INDEX "CodSettlementLineMatch_createdByCommandId_key" ON "CodSettlementLineMatch"("createdByCommandId");
+CREATE INDEX "CodSettlementLineMatch_orderId_occurredAt_idx" ON "CodSettlementLineMatch"("orderId", "occurredAt");
+
+-- Canonical settlement facts are immutable. Corrections and matches are appended in
+-- dedicated tables; mutable compatibility projections live on Order.
 CREATE TRIGGER "CodCollection_append_only_update"
 BEFORE UPDATE ON "CodCollection"
 BEGIN
@@ -189,4 +214,10 @@ CREATE TRIGGER "CodSettlementCorrection_append_only_update"
 BEFORE UPDATE ON "CodSettlementCorrection"
 BEGIN
   SELECT RAISE(ABORT, 'CodSettlementCorrection is append-only');
+END;
+
+CREATE TRIGGER "CodSettlementLineMatch_append_only_update"
+BEFORE UPDATE ON "CodSettlementLineMatch"
+BEGIN
+  SELECT RAISE(ABORT, 'CodSettlementLineMatch is append-only');
 END;
