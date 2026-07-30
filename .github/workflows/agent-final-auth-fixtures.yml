@@ -27,32 +27,14 @@ jobs:
           from pathlib import Path
           import re
 
-          # Already-authenticated API suites: remove only obsolete setup-bypass comments.
-          for filename in [
-              'src/app/api/__tests__/delivery-patch.test.ts',
-              'src/app/api/__tests__/orders.test.ts',
-              'src/app/api/__tests__/risk.test.ts',
-          ]:
-              path = Path(filename)
-              text = path.read_text(encoding='utf-8')
-              text, count = re.subn(
-                  r'//[^\n]*Mock next/headers[^\n]*\n(?:(?://[^\n]*\n)+?)(?=const authCookieStore)',
-                  '// Protected route scenarios create a real revocable session in beforeEach.\n',
-                  text,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit(f'{path}: stale comment block not found')
-              path.write_text(text, encoding='utf-8')
-
           empty_mock = re.compile(
-              r'vi\.mock\("next/headers", \(\) => \(\{\n'
-              r'\s*cookies: vi\.fn\(async \(\) => \(\{\n'
-              r'\s*get: \(\) => undefined,\n'
-              r'\s*set: \(\) => undefined,\n'
-              r'\s*delete: \(\) => undefined,\n'
-              r'\s*\}\)\),\n'
-              r'\s*\}\)\);'
+              r'vi\.mock\("next/headers", \(\) => \(\{\s*'
+              r'cookies: vi\.fn\(async \(\) => \(\{\s*'
+              r'get: \(\) => undefined,\s*'
+              r'set: \(\) => undefined,\s*'
+              r'delete: \(\) => undefined,\s*'
+              r'\}\)\),\s*\}\)\);',
+              re.S,
           )
 
           def cookie_mock(store: str) -> str:
@@ -72,147 +54,133 @@ jobs:
             }})),
           }}));'''.replace('          ', '')
 
-          # order-create-paths: protected import route plus public/domain paths.
+          def write(path: Path, text: str) -> None:
+              path.write_text(text, encoding='utf-8')
+
+          # Comment-only cleanup in suites already migrated to real sessions.
+          for filename in [
+              'src/app/api/__tests__/delivery-patch.test.ts',
+              'src/app/api/__tests__/orders.test.ts',
+              'src/app/api/__tests__/risk.test.ts',
+          ]:
+              path = Path(filename)
+              text = path.read_text(encoding='utf-8')
+              start = text.find('// ── Mock next/headers')
+              end = text.find('const authCookieStore', start)
+              if start < 0 or end < 0:
+                  raise SystemExit(f'{path}: stale comment boundaries not found')
+              text = (
+                  text[:start]
+                  + '// Protected route scenarios create a real revocable session in beforeEach.\n'
+                  + text[end:]
+              )
+              write(path, text)
+
+          # order-create paths.
           path = Path('src/lib/data/__tests__/order-create-paths.test.ts')
           text = path.read_text(encoding='utf-8')
-          text, count = re.subn(
-              r'// ── Mock next/headers cookies\(\).*?(?=vi\.mock\("next/headers")',
-              '// Protected import-route scenarios use one real revocable session.\n',
-              text,
-              count=1,
-              flags=re.S,
-          )
-          if count != 1:
-              raise SystemExit(f'{path}: comment block not found')
+          start = text.find('// ── Mock next/headers cookies()')
+          mock_start = text.find('vi.mock("next/headers"', start)
+          if start < 0 or mock_start < 0:
+              raise SystemExit(f'{path}: comment boundaries not found')
+          text = text[:start] + '// Protected import-route scenarios use one real revocable session.\n' + text[mock_start:]
           text, count = empty_mock.subn(cookie_mock('authCookieStore'), text, count=1)
           if count != 1:
               raise SystemExit(f'{path}: empty cookie mock not found')
-          old_import = '''  seedStorefront,
-            seedProduct,
-          } from "@/app/api/__tests__/helpers";'''.replace('          ', '')
-          new_import = '''  seedStorefront,
-            seedProduct,
-            establishAuthenticatedTestSession,
-          } from "@/app/api/__tests__/helpers";'''.replace('          ', '')
-          if text.count(old_import) != 1:
-              raise SystemExit(f'{path}: helpers import shape not found')
-          text = text.replace(old_import, new_import, 1)
-          old_before = '''beforeEach(async () => {
-            await cleanDb();
-            listOrdersMock.mockReset();'''.replace('          ', '')
-          new_before = '''beforeEach(async () => {
-            await cleanDb();
-            authCookieStore.clear();
-            delete process.env.AUTH_SECRET;
-            await establishAuthenticatedTestSession();
-            listOrdersMock.mockReset();'''.replace('          ', '')
-          if text.count(old_before) != 1:
-              raise SystemExit(f'{path}: beforeEach not found')
-          text = text.replace(old_before, new_before, 1)
-          text = text.replace(
-              '''afterAll(async () => {
-            await rawDb.$disconnect();
-          });'''.replace('          ', ''),
-              '''afterAll(async () => {
-            authCookieStore.clear();
-            delete process.env.AUTH_SECRET;
-            await rawDb.$disconnect();
-          });'''.replace('          ', ''),
-              1,
+          helper = re.compile(r'import \{([\s\S]*?)\} from "@/app/api/__tests__/helpers";')
+          match = helper.search(text)
+          if not match or 'seedStorefront' not in match.group(1):
+              raise SystemExit(f'{path}: API helpers import not found')
+          names = match.group(1)
+          if 'establishAuthenticatedTestSession' not in names:
+              names = names.rstrip() + ',\n  establishAuthenticatedTestSession,\n'
+              text = text[:match.start(1)] + names + text[match.end(1):]
+          text, count = re.subn(
+              r'beforeEach\(async \(\) => \{\s*await cleanDb\(\);',
+              'beforeEach(async () => {\n  await cleanDb();\n  authCookieStore.clear();\n  delete process.env.AUTH_SECRET;\n  await establishAuthenticatedTestSession();',
+              text,
+              count=1,
           )
-          path.write_text(text, encoding='utf-8')
+          if count != 1:
+              raise SystemExit(f'{path}: beforeEach not found')
+          text, count = re.subn(
+              r'afterAll\(async \(\) => \{\s*await rawDb\.\$disconnect\(\);\s*\}\);',
+              'afterAll(async () => {\n  authCookieStore.clear();\n  delete process.env.AUTH_SECRET;\n  await rawDb.$disconnect();\n});',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f'{path}: afterAll not found')
+          write(path, text)
 
-          # automation route integration fixture.
+          # shipped automation route fixture.
           path = Path('src/lib/automations/__tests__/order-triggers.test.ts')
           text = path.read_text(encoding='utf-8')
-          text, count = re.subn(
-              r'// ── Mock next/headers cookies\(\).*?(?=vi\.mock\("next/headers")',
-              '// Protected delivery-route scenarios use one real revocable session.\n',
-              text,
-              count=1,
-              flags=re.S,
-          )
-          if count != 1:
-              raise SystemExit(f'{path}: comment block not found')
+          start = text.find('// ── Mock next/headers cookies()')
+          mock_start = text.find('vi.mock("next/headers"', start)
+          if start < 0 or mock_start < 0:
+              raise SystemExit(f'{path}: comment boundaries not found')
+          text = text[:start] + '// Protected delivery-route scenarios use one real revocable session.\n' + text[mock_start:]
           text, count = empty_mock.subn(cookie_mock('authCookieStore'), text, count=1)
           if count != 1:
               raise SystemExit(f'{path}: empty cookie mock not found')
-          helper_line = 'import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";'
-          replacement = 'import { rawDb, cleanDb, mockPost, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";'
-          if text.count(helper_line) != 1:
+          old = 'import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";'
+          new = 'import { rawDb, cleanDb, mockPost, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";'
+          if text.count(old) != 1:
               raise SystemExit(f'{path}: helper import not found')
-          text = text.replace(helper_line, replacement, 1)
-          text = text.replace(
-              '''  beforeEach(async () => {
-              await cleanDb();
-              mockAdapter.createShipment.mockReset();'''.replace('            ', ''),
-              '''  beforeEach(async () => {
-              await cleanDb();
-              authCookieStore.clear();
-              delete process.env.AUTH_SECRET;
-              await establishAuthenticatedTestSession();
-              mockAdapter.createShipment.mockReset();'''.replace('            ', ''),
-              1,
+          text = text.replace(old, new, 1)
+          text, count = re.subn(
+              r'beforeEach\(async \(\) => \{\s*await cleanDb\(\);',
+              'beforeEach(async () => {\n    await cleanDb();\n    authCookieStore.clear();\n    delete process.env.AUTH_SECRET;\n    await establishAuthenticatedTestSession();',
+              text,
+              count=1,
           )
-          text = text.replace(
-              '''  afterAll(async () => {
-              await rawDb.$disconnect();
-            });'''.replace('            ', ''),
-              '''  afterAll(async () => {
-              authCookieStore.clear();
-              delete process.env.AUTH_SECRET;
-              await rawDb.$disconnect();
-            });'''.replace('            ', ''),
-              1,
+          if count != 1:
+              raise SystemExit(f'{path}: beforeEach not found')
+          text, count = re.subn(
+              r'afterAll\(async \(\) => \{\s*await rawDb\.\$disconnect\(\);\s*\}\);',
+              'afterAll(async () => {\n    authCookieStore.clear();\n    delete process.env.AUTH_SECRET;\n    await rawDb.$disconnect();\n  });',
+              text,
+              count=1,
           )
-          path.write_text(text, encoding='utf-8')
+          if count != 1:
+              raise SystemExit(f'{path}: afterAll not found')
+          write(path, text)
 
-          # return/refund route integration uses createTestPrisma on the same sandbox DB.
+          # return/refund route fixture.
           path = Path('src/lib/data/__tests__/return-refund-integrity.test.ts')
           text = path.read_text(encoding='utf-8')
-          text, count = re.subn(
-              r'// ── Mock next/headers.*?(?=vi\.mock\("next/headers")',
-              '// The protected return route uses one real revocable session per test.\n',
-              text,
-              count=1,
-              flags=re.S,
-          )
-          if count != 1:
-              raise SystemExit(f'{path}: comment block not found')
+          start = text.find('// ── Mock next/headers')
+          mock_start = text.find('vi.mock("next/headers"', start)
+          if start < 0 or mock_start < 0:
+              raise SystemExit(f'{path}: comment boundaries not found')
+          text = text[:start] + '// The protected return route uses one real revocable session per test.\n' + text[mock_start:]
           text, count = empty_mock.subn(cookie_mock('authCookieStore'), text, count=1)
           if count != 1:
               raise SystemExit(f'{path}: empty cookie mock not found')
-          helper_line = 'import { mockPost } from "@/app/api/__tests__/helpers";'
-          replacement = 'import { establishAuthenticatedTestSession, mockPost } from "@/app/api/__tests__/helpers";'
-          if text.count(helper_line) != 1:
+          old = 'import { mockPost } from "@/app/api/__tests__/helpers";'
+          new = 'import { establishAuthenticatedTestSession, mockPost } from "@/app/api/__tests__/helpers";'
+          if text.count(old) != 1:
               raise SystemExit(f'{path}: helper import not found')
-          text = text.replace(helper_line, replacement, 1)
-          text = text.replace(
-              '''beforeEach(async () => {
-            db = await createTestPrisma();
-          });'''.replace('          ', ''),
-              '''beforeEach(async () => {
-            db = await createTestPrisma();
-            authCookieStore.clear();
-            delete process.env.AUTH_SECRET;
-            await establishAuthenticatedTestSession();
-          });'''.replace('          ', ''),
-              1,
+          text = text.replace(old, new, 1)
+          text, count = re.subn(
+              r'beforeEach\(async \(\) => \{\s*db = await createTestPrisma\(\);\s*\}\);',
+              'beforeEach(async () => {\n  db = await createTestPrisma();\n  authCookieStore.clear();\n  delete process.env.AUTH_SECRET;\n  await establishAuthenticatedTestSession();\n});',
+              text,
+              count=1,
           )
-          text = text.replace(
-              '''afterEach(async () => {
-            await disconnectTestPrisma(db);
-          });'''.replace('          ', ''),
-              '''afterEach(async () => {
-            authCookieStore.clear();
-            delete process.env.AUTH_SECRET;
-            await disconnectTestPrisma(db);
-          });'''.replace('          ', ''),
-              1,
+          if count != 1:
+              raise SystemExit(f'{path}: beforeEach not found')
+          text, count = re.subn(
+              r'afterEach\(async \(\) => \{\s*await disconnectTestPrisma\(db\);\s*\}\);',
+              'afterEach(async () => {\n  authCookieStore.clear();\n  delete process.env.AUTH_SECRET;\n  await disconnectTestPrisma(db);\n});',
+              text,
+              count=1,
           )
-          path.write_text(text, encoding='utf-8')
+          if count != 1:
+              raise SystemExit(f'{path}: afterEach not found')
+          write(path, text)
 
-          # Prove the legacy pattern is gone repository-wide.
           remaining = []
           for candidate in sorted(Path('src').rglob('*.test.ts')) + sorted(Path('src').rglob('*.test.tsx')):
               value = candidate.read_text(encoding='utf-8')
