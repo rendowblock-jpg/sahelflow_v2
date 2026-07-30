@@ -135,13 +135,17 @@ export const sidecar = {
   send: (
     to: string,
     text: string,
-    effectKey: string,
-    requestBinding: string,
+    effectKey?: string,
+    requestBinding?: string,
   ) =>
     sidecarFetch<{ ok: boolean; id: string; status: string }>("/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, text, effectKey, requestBinding }),
+      body: JSON.stringify(
+        effectKey && requestBinding
+          ? { to, text, effectKey, requestBinding }
+          : { to, text },
+      ),
     }),
 
   connect: () =>
