@@ -20,12 +20,19 @@ const db = new PrismaClient();
 const context = { prisma: db as never } satisfies ServiceContext;
 let sequence = 0;
 
+function required<T>(value: T | null | undefined, label: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`${label} is required by the test fixture`);
+  }
+  return value;
+}
+
 async function clean(): Promise<void> {
   await db.$executeRawUnsafe('DELETE FROM "CanonicalReturnInspection"');
   await db.$executeRawUnsafe('DELETE FROM "CanonicalReturnEvent"');
   await db.$executeRawUnsafe('DELETE FROM "CanonicalReturnCase"');
   await db.$executeRawUnsafe('DELETE FROM "CanonicalDeliveryEvent"');
-  await db.$executeRawUnsafe('DELETE FROM "CodSettlementMatch"');
+  await db.$executeRawUnsafe('DELETE FROM "CodSettlementLineMatch"');
   await db.$executeRawUnsafe('DELETE FROM "CodSettlementCorrection"');
   await db.$executeRawUnsafe('DELETE FROM "CodSettlementLine"');
   await db.$executeRawUnsafe('DELETE FROM "CodSettlement"');
@@ -178,7 +185,9 @@ function recover(
     expectedVersion,
     reasonCode: `test-${action.replaceAll("_", "-")}`,
     providerEventId: extra.providerEventId,
-    occurredAt: new Date(`2026-07-30T12:${String(sequence % 60).padStart(2, "0")}:00.000Z`),
+    occurredAt: new Date(
+      `2026-07-30T12:${String(sequence % 60).padStart(2, "0")}:00.000Z`,
+    ),
     items: extra.items,
     idempotencyKey: key,
     correlationId: `${key}:correlation`,
@@ -266,19 +275,19 @@ describe("canonical cancellation and physical return recovery", () => {
       stock: 12,
       variant: true,
     });
-    expect(variant).not.toBeNull();
-    expect(await db.productVariant.findUnique({ where: { id: variant!.id } })).toMatchObject({
-      stock: 9,
-    });
+    const exactVariant = required(variant, "variant");
+    expect(
+      await db.productVariant.findUnique({ where: { id: exactVariant.id } }),
+    ).toMatchObject({ stock: 9 });
     expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({
       stock: 9,
     });
 
     await recover(order.id, "cancel", 2, "recovery-variant-cancel");
 
-    expect(await db.productVariant.findUnique({ where: { id: variant!.id } })).toMatchObject({
-      stock: 12,
-    });
+    expect(
+      await db.productVariant.findUnique({ where: { id: exactVariant.id } }),
+    ).toMatchObject({ stock: 12 });
     expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({
       stock: 12,
     });
@@ -309,7 +318,7 @@ describe("canonical cancellation and physical return recovery", () => {
 
   it("keeps failed delivery stock unavailable until receipt and inspection", async () => {
     const { order, product } = await seedShippedOrder({ quantity: 2, stock: 10 });
-    const orderItem = order.items[0]!;
+    const orderItem = required(order.items[0], "order item");
 
     const failed = await recover(
       order.id,
@@ -381,7 +390,7 @@ describe("canonical cancellation and physical return recovery", () => {
       await db.canonicalReturnInspection.findUnique({
         where: {
           returnId_orderItemId: {
-            returnId: inspected.result.returnCaseId as string,
+            returnId: String(inspected.result.returnCaseId),
             orderItemId: orderItem.id,
           },
         },
@@ -389,13 +398,13 @@ describe("canonical cancellation and physical return recovery", () => {
     ).toMatchObject({ disposition: "available", quantity: 2 });
   });
 
-  it("records damaged or lost goods as explicit losses without restoring available stock", async () => {
+  it("records lost goods as an explicit loss without restoring available stock", async () => {
     const { order, product } = await seedShippedOrder({
       quantity: 1,
       stock: 10,
       cost: 700,
     });
-    const orderItem = order.items[0]!;
+    const orderItem = required(order.items[0], "order item");
     await recover(
       order.id,
       "delivery_refused",
@@ -435,14 +444,15 @@ describe("canonical cancellation and physical return recovery", () => {
     expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({
       stock: 9,
     });
-    const losses = await db.financialMovement.findMany({
-      where: {
-        orderId: order.id,
-        movementType: "returned_inventory_lost_loss",
-      },
-      select: { amount: true },
-    });
-    expect(losses).toEqual([{ amount: -700 }]);
+    expect(
+      await db.financialMovement.findMany({
+        where: {
+          orderId: order.id,
+          movementType: "returned_inventory_lost_loss",
+        },
+        select: { amount: true },
+      }),
+    ).toEqual([{ amount: -700 }]);
     expect(
       await db.compensationFact.count({
         where: { factType: "return.item.disposition.v1" },
@@ -490,7 +500,7 @@ describe("canonical cancellation and physical return recovery", () => {
 
   it("rejects out-of-order inspection without partial facts or stock changes", async () => {
     const { order, product } = await seedShippedOrder({ quantity: 1, stock: 10 });
-    const orderItem = order.items[0]!;
+    const orderItem = required(order.items[0], "order item");
 
     await expect(
       recover(
