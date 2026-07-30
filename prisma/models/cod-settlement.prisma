@@ -1,0 +1,104 @@
+// Phase 1D canonical COD collection, remittance and reconciliation authority.
+//
+// These rows are append-only business facts. Order.cod* fields remain compatibility
+// projections while settlement totals are derived from these immutable facts plus
+// explicit correction rows. Order and BusinessCommand foreign keys are enforced by
+// the SQL migration; scalar IDs are used here to avoid coupling legacy models to the
+// additive authority during the migration program.
+
+model CodCollection {
+  id                 String   @id
+  collectionKey      String   @unique
+  orderId             String   @unique
+  provider            String
+  amount              Int
+  currency            String   @default("DZD")
+  reference           String?
+  collectedAt         DateTime
+  createdByCommandId  String   @unique
+  createdAt           DateTime @default(now())
+  corrections         CodCollectionCorrection[]
+
+  @@index([provider, collectedAt])
+  @@index([createdByCommandId])
+}
+
+model CodCollectionCorrection {
+  id                 String        @id
+  correctionKey      String        @unique
+  collectionId       String
+  amountDelta        Int
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String        @unique
+  createdAt          DateTime      @default(now())
+  collection         CodCollection @relation(fields: [collectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([collectionId, occurredAt])
+  @@index([createdByCommandId])
+}
+
+model CodSettlement {
+  id                 String              @id
+  settlementKey      String              @unique
+  provider           String
+  externalReference  String
+  evidenceSha256     String?
+  evidenceName       String?
+  status             String              @default("posted")
+  currency           String              @default("DZD")
+  grossAmount        Int
+  feeAmount          Int
+  adjustmentAmount   Int
+  netAmount          Int
+  discrepancyAmount  Int
+  unmatchedAmount    Int
+  receivedAt         DateTime
+  createdByCommandId String              @unique
+  createdAt          DateTime            @default(now())
+  lines              CodSettlementLine[]
+
+  @@unique([provider, externalReference])
+  @@index([provider, receivedAt])
+  @@index([status, receivedAt])
+  @@index([createdByCommandId])
+}
+
+model CodSettlementLine {
+  id                    String                    @id
+  lineKey               String                    @unique
+  settlementId          String
+  providerLineReference String?
+  orderId               String?
+  grossRemittedAmount   Int
+  feeAmount             Int
+  adjustmentAmount      Int
+  netAmount             Int
+  discrepancyAmount     Int
+  status                String
+  createdAt             DateTime                  @default(now())
+  settlement            CodSettlement             @relation(fields: [settlementId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  corrections           CodSettlementCorrection[]
+
+  @@unique([settlementId, providerLineReference])
+  @@index([orderId, createdAt])
+  @@index([settlementId, status])
+}
+
+model CodSettlementCorrection {
+  id                 String            @id
+  correctionKey      String            @unique
+  settlementLineId   String
+  grossDelta         Int
+  feeDelta           Int
+  adjustmentDelta    Int
+  discrepancyDelta   Int
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String            @unique
+  createdAt          DateTime          @default(now())
+  settlementLine     CodSettlementLine @relation(fields: [settlementLineId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([settlementLineId, occurredAt])
+  @@index([createdByCommandId])
+}
