@@ -9,8 +9,9 @@ export interface CanonicalCodOrderPosition {
   orderNumber: string;
   orderVersion: number;
   customerName: string;
+  collectionId: string | null;
   provider: string | null;
-  codState: string | null;
+  codState: string;
   expectedReceivable: number;
   effectiveCollected: number;
   grossRemitted: number;
@@ -30,7 +31,7 @@ export interface CanonicalCodSettlementSummary {
   settlementId: string;
   provider: string;
   externalReference: string;
-  status: string;
+  status: "posted" | "needs_review";
   receivedAt: string;
   grossAmount: number;
   feeAmount: number;
@@ -39,6 +40,24 @@ export interface CanonicalCodSettlementSummary {
   discrepancyAmount: number;
   unmatchedAmount: number;
   lineCount: number;
+}
+
+export interface CanonicalCodReviewLine {
+  lineId: string;
+  settlementId: string;
+  provider: string;
+  externalReference: string;
+  receivedAt: string;
+  providerLineReference: string | null;
+  orderId: string | null;
+  orderNumber: string | null;
+  orderVersion: number | null;
+  unresolvedUnmatched: boolean;
+  effectiveGross: number;
+  effectiveFee: number;
+  effectiveAdjustment: number;
+  effectiveNet: number;
+  effectiveDiscrepancy: number;
 }
 
 export interface CanonicalCodWorkspaceSummary {
@@ -66,10 +85,32 @@ export interface CanonicalCodWorkspaceSummary {
   awaitingRemittance: CanonicalCodOrderPosition[];
   disputed: CanonicalCodOrderPosition[];
   recentSettlements: CanonicalCodSettlementSummary[];
+  reviewLines: CanonicalCodReviewLine[];
 }
 
 function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
+}
+
+function deriveCodState(input: {
+  expectedReceivable: number;
+  effectiveCollected: number;
+  grossRemitted: number;
+  settlementDiscrepancy: number;
+}): string {
+  if (input.effectiveCollected <= 0) return "receivable";
+  if (
+    input.effectiveCollected !== input.expectedReceivable ||
+    input.settlementDiscrepancy !== 0 ||
+    input.grossRemitted > input.effectiveCollected
+  ) {
+    return "disputed";
+  }
+  if (input.grossRemitted <= 0) return "collected";
+  if (input.grossRemitted < input.effectiveCollected) {
+    return "partially_remitted";
+  }
+  return "remitted";
 }
 
 function collectionAmount(collection: {
@@ -80,19 +121,62 @@ function collectionAmount(collection: {
   return collection.amount + sum(collection.corrections.map((entry) => entry.amountDelta));
 }
 
-function lineAmounts(lines: Array<{
+type SettlementLineShape = {
+  id: string;
+  orderId: string | null;
   grossRemittedAmount: number;
   feeAmount: number;
   adjustmentAmount: number;
   discrepancyAmount: number;
+  providerLineReference: string | null;
   corrections: Array<{
     grossDelta: number;
     feeDelta: number;
     adjustmentDelta: number;
     discrepancyDelta: number;
   }>;
-  settlement: { externalReference: string; receivedAt: Date };
-}>): {
+  match: {
+    orderId: string;
+    discrepancyAmount: number;
+  } | null;
+  settlement: {
+    id: string;
+    provider: string;
+    externalReference: string;
+    receivedAt: Date;
+  };
+};
+
+function effectiveLineAmounts(line: SettlementLineShape): {
+  gross: number;
+  fees: number;
+  adjustments: number;
+  net: number;
+  discrepancy: number;
+} {
+  const gross =
+    line.grossRemittedAmount +
+    sum(line.corrections.map((entry) => entry.grossDelta));
+  const fees =
+    line.feeAmount +
+    sum(line.corrections.map((entry) => entry.feeDelta));
+  const adjustments =
+    line.adjustmentAmount +
+    sum(line.corrections.map((entry) => entry.adjustmentDelta));
+  const discrepancy =
+    line.discrepancyAmount +
+    sum(line.corrections.map((entry) => entry.discrepancyDelta)) +
+    (line.match?.discrepancyAmount ?? 0);
+  return {
+    gross,
+    fees,
+    adjustments,
+    net: gross - fees + adjustments,
+    discrepancy,
+  };
+}
+
+function lineAmounts(lines: SettlementLineShape[]): {
   gross: number;
   fees: number;
   adjustments: number;
@@ -107,14 +191,11 @@ function lineAmounts(lines: Array<{
   let discrepancy = 0;
   let latest: { externalReference: string; receivedAt: Date } | null = null;
   for (const line of lines) {
-    gross += line.grossRemittedAmount + sum(line.corrections.map((entry) => entry.grossDelta));
-    fees += line.feeAmount + sum(line.corrections.map((entry) => entry.feeDelta));
-    adjustments +=
-      line.adjustmentAmount +
-      sum(line.corrections.map((entry) => entry.adjustmentDelta));
-    discrepancy +=
-      line.discrepancyAmount +
-      sum(line.corrections.map((entry) => entry.discrepancyDelta));
+    const effective = effectiveLineAmounts(line);
+    gross += effective.gross;
+    fees += effective.fees;
+    adjustments += effective.adjustments;
+    discrepancy += effective.discrepancy;
     if (!latest || line.settlement.receivedAt > latest.receivedAt) {
       latest = line.settlement;
     }
@@ -146,8 +227,6 @@ async function buildOrderPositions(
       version: true,
       source: true,
       sourceMetadata: true,
-      totalPrice: true,
-      codState: true,
       customer: { select: { name: true } },
     },
     orderBy: { deliveredAt: "desc" },
@@ -159,47 +238,89 @@ async function buildOrderPositions(
   const orderIds = canonical.map((order) => order.id);
   if (orderIds.length === 0) return [];
 
-  const [collections, lines] = await Promise.all([
+  const [receivableMovements, collections, lines] = await Promise.all([
+    context.prisma.financialMovement.findMany({
+      where: {
+        orderId: { in: orderIds },
+        movementType: "cod_receivable_created",
+        currency: "DZD",
+      },
+      select: { orderId: true, amount: true },
+    }),
     context.prisma.codCollection.findMany({
       where: { orderId: { in: orderIds } },
       include: { corrections: true },
     }),
     context.prisma.codSettlementLine.findMany({
-      where: { orderId: { in: orderIds } },
+      where: {
+        OR: [
+          { orderId: { in: orderIds } },
+          { match: { is: { orderId: { in: orderIds } } } },
+        ],
+      },
       include: {
         corrections: true,
-        settlement: { select: { externalReference: true, receivedAt: true } },
+        match: true,
+        settlement: {
+          select: {
+            id: true,
+            provider: true,
+            externalReference: true,
+            receivedAt: true,
+          },
+        },
       },
     }),
   ]);
-  const collectionByOrder = new Map(collections.map((entry) => [entry.orderId, entry]));
-  const linesByOrder = new Map<string, typeof lines>();
+
+  const receivableByOrder = new Map<string, number>();
+  for (const movement of receivableMovements) {
+    if (!movement.orderId) continue;
+    receivableByOrder.set(
+      movement.orderId,
+      (receivableByOrder.get(movement.orderId) ?? 0) + movement.amount,
+    );
+  }
+  const collectionByOrder = new Map(
+    collections.map((entry) => [entry.orderId, entry]),
+  );
+  const linesByOrder = new Map<string, SettlementLineShape[]>();
   for (const line of lines) {
-    if (!line.orderId) continue;
-    const current = linesByOrder.get(line.orderId) ?? [];
-    current.push(line);
-    linesByOrder.set(line.orderId, current);
+    const orderId = line.orderId ?? line.match?.orderId;
+    if (!orderId) continue;
+    const current = linesByOrder.get(orderId) ?? [];
+    current.push(line as SettlementLineShape);
+    linesByOrder.set(orderId, current);
   }
 
   return canonical.map((order) => {
     const collection = collectionByOrder.get(order.id) ?? null;
+    const expectedReceivable = receivableByOrder.get(order.id) ?? 0;
     const collected = collectionAmount(collection);
     const lineSummary = lineAmounts(linesByOrder.get(order.id) ?? []);
+    const codState = deriveCodState({
+      expectedReceivable,
+      effectiveCollected: collected,
+      grossRemitted: lineSummary.gross,
+      settlementDiscrepancy: lineSummary.discrepancy,
+    });
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
       orderVersion: order.version,
       customerName: order.customer.name,
+      collectionId: collection?.id ?? null,
       provider: collection?.provider ?? null,
-      codState: order.codState,
-      expectedReceivable: order.totalPrice,
+      codState,
+      expectedReceivable,
       effectiveCollected: collected,
       grossRemitted: lineSummary.gross,
       fees: lineSummary.fees,
       adjustments: lineSummary.adjustments,
       netReceived: lineSummary.net,
-      discrepancy: lineSummary.discrepancy,
-      outstandingCollection: Math.max(0, order.totalPrice - collected),
+      discrepancy:
+        collected - expectedReceivable + lineSummary.discrepancy,
+      outstandingCollection: Math.max(0, expectedReceivable - collected),
       outstandingRemittance: Math.max(0, collected - lineSummary.gross),
       collectionReference: collection?.reference ?? null,
       collectedAt: collection?.collectedAt.toISOString() ?? null,
@@ -207,6 +328,112 @@ async function buildOrderPositions(
       lastSettlementAt: lineSummary.lastAt,
     };
   });
+}
+
+async function buildSettlementSummaries(
+  context: BusinessPrincipalContext,
+): Promise<{
+  summaries: CanonicalCodSettlementSummary[];
+  reviewLines: CanonicalCodReviewLine[];
+}> {
+  const settlements = await context.prisma.codSettlement.findMany({
+    orderBy: { receivedAt: "desc" },
+    take: 100,
+    include: {
+      lines: {
+        include: {
+          corrections: true,
+          match: true,
+        },
+      },
+    },
+  });
+  const matchedOrderIds = Array.from(
+    new Set(
+      settlements.flatMap((settlement) =>
+        settlement.lines.flatMap((line) => {
+          const orderId = line.orderId ?? line.match?.orderId;
+          return orderId ? [orderId] : [];
+        }),
+      ),
+    ),
+  );
+  const orders = matchedOrderIds.length
+    ? await context.prisma.order.findMany({
+        where: { id: { in: matchedOrderIds }, deletedAt: null },
+        select: { id: true, orderNumber: true, version: true },
+      })
+    : [];
+  const orderById = new Map(orders.map((order) => [order.id, order]));
+
+  const summaries: CanonicalCodSettlementSummary[] = [];
+  const reviewLines: CanonicalCodReviewLine[] = [];
+  for (const settlement of settlements) {
+    let grossAmount = 0;
+    let feeAmount = 0;
+    let adjustmentAmount = 0;
+    let discrepancyAmount = 0;
+    let unmatchedAmount = 0;
+    let needsReview = false;
+
+    for (const rawLine of settlement.lines) {
+      const line = {
+        ...rawLine,
+        settlement: {
+          id: settlement.id,
+          provider: settlement.provider,
+          externalReference: settlement.externalReference,
+          receivedAt: settlement.receivedAt,
+        },
+      } as SettlementLineShape;
+      const effective = effectiveLineAmounts(line);
+      const orderId = line.orderId ?? line.match?.orderId ?? null;
+      const unresolvedUnmatched = !orderId;
+      grossAmount += effective.gross;
+      feeAmount += effective.fees;
+      adjustmentAmount += effective.adjustments;
+      discrepancyAmount += effective.discrepancy;
+      if (unresolvedUnmatched) unmatchedAmount += effective.gross;
+      if (unresolvedUnmatched || effective.discrepancy !== 0) {
+        needsReview = true;
+        const order = orderId ? orderById.get(orderId) : null;
+        reviewLines.push({
+          lineId: line.id,
+          settlementId: settlement.id,
+          provider: settlement.provider,
+          externalReference: settlement.externalReference,
+          receivedAt: settlement.receivedAt.toISOString(),
+          providerLineReference: line.providerLineReference,
+          orderId,
+          orderNumber: order?.orderNumber ?? null,
+          orderVersion: order?.version ?? null,
+          unresolvedUnmatched,
+          effectiveGross: effective.gross,
+          effectiveFee: effective.fees,
+          effectiveAdjustment: effective.adjustments,
+          effectiveNet: effective.net,
+          effectiveDiscrepancy: effective.discrepancy,
+        });
+      }
+    }
+
+    summaries.push({
+      settlementId: settlement.id,
+      provider: settlement.provider,
+      externalReference: settlement.externalReference,
+      status: needsReview ? "needs_review" : "posted",
+      receivedAt: settlement.receivedAt.toISOString(),
+      grossAmount,
+      feeAmount,
+      adjustmentAmount,
+      netAmount: grossAmount - feeAmount + adjustmentAmount,
+      discrepancyAmount,
+      unmatchedAmount,
+      lineCount: settlement.lines.length,
+    });
+  }
+
+  return { summaries, reviewLines };
 }
 
 export async function getCanonicalCodOrderPosition(
@@ -222,14 +449,12 @@ export async function getCanonicalCodOrderPosition(
 export async function getCanonicalCodWorkspaceSummary(
   context: BusinessPrincipalContext,
 ): Promise<CanonicalCodWorkspaceSummary> {
-  const positions = await buildOrderPositions(context);
-  const recentSettlements = await context.prisma.codSettlement.findMany({
-    orderBy: { receivedAt: "desc" },
-    take: 100,
-    include: { _count: { select: { lines: true } } },
-  });
+  const [positions, settlementData] = await Promise.all([
+    buildOrderPositions(context),
+    buildSettlementSummaries(context),
+  ]);
   const awaitingCollection = positions.filter(
-    (entry) => entry.outstandingCollection > 0 && entry.codState === "receivable",
+    (entry) => entry.outstandingCollection > 0,
   );
   const awaitingRemittance = positions.filter(
     (entry) =>
@@ -239,22 +464,6 @@ export async function getCanonicalCodWorkspaceSummary(
   );
   const disputed = positions.filter(
     (entry) => entry.codState === "disputed" || entry.discrepancy !== 0,
-  );
-  const settlementSummaries: CanonicalCodSettlementSummary[] = recentSettlements.map(
-    (settlement) => ({
-      settlementId: settlement.id,
-      provider: settlement.provider,
-      externalReference: settlement.externalReference,
-      status: settlement.status,
-      receivedAt: settlement.receivedAt.toISOString(),
-      grossAmount: settlement.grossAmount,
-      feeAmount: settlement.feeAmount,
-      adjustmentAmount: settlement.adjustmentAmount,
-      netAmount: settlement.netAmount,
-      discrepancyAmount: settlement.discrepancyAmount,
-      unmatchedAmount: settlement.unmatchedAmount,
-      lineCount: settlement._count.lines,
-    }),
   );
 
   return {
@@ -266,7 +475,9 @@ export async function getCanonicalCodWorkspaceSummary(
       adjustments: sum(positions.map((entry) => entry.adjustments)),
       netReceived: sum(positions.map((entry) => entry.netReceived)),
       discrepancy: sum(positions.map((entry) => entry.discrepancy)),
-      unmatched: sum(settlementSummaries.map((entry) => entry.unmatchedAmount)),
+      unmatched: sum(
+        settlementData.summaries.map((entry) => entry.unmatchedAmount),
+      ),
       outstandingCollection: sum(
         positions.map((entry) => entry.outstandingCollection),
       ),
@@ -280,13 +491,14 @@ export async function getCanonicalCodWorkspaceSummary(
       awaitingRemittance: awaitingRemittance.length,
       disputed: disputed.length,
       remitted: positions.filter((entry) => entry.codState === "remitted").length,
-      settlementsNeedingReview: settlementSummaries.filter(
+      settlementsNeedingReview: settlementData.summaries.filter(
         (entry) => entry.status === "needs_review",
       ).length,
     },
     awaitingCollection,
     awaitingRemittance,
     disputed,
-    recentSettlements: settlementSummaries,
+    recentSettlements: settlementData.summaries,
+    reviewLines: settlementData.reviewLines,
   };
 }
