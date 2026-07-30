@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-
-import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
-import { orderService } from "@/lib/data/order-service";
+import { orderStatusSchema } from "@/lib/validation";
 import { db, shopContext } from "@/lib/db";
 import {
-  autoDetectMapping,
-  mapRows,
   parseFile,
+  mapRows,
   validateRows,
+  autoDetectMapping,
 } from "@/lib/import/engine";
-import {
-  normalizePhone,
-  ORDER_FIELDS,
-  parseNumber,
-} from "@/lib/import/fields";
+import { ORDER_FIELDS, parseNumber, normalizePhone } from "@/lib/import/fields";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
-import { orderStatusSchema } from "@/lib/validation";
+import { orderService } from "@/lib/data/order-service";
+import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -31,17 +26,15 @@ const orderImportSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: z.number().int().nonnegative(),
   deliveryCost: z.number().int().nonnegative().optional(),
-  status: orderStatusSchema.optional(),
+  status: z.string().optional(),
   orderNumber: z.string().optional(),
 });
 
-type ImportRow = z.infer<typeof orderImportSchema>;
-
 /** POST /api/import/orders */
-export const POST = withErrorHandler(async (request: NextRequest) => {
+export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const { t } = await getI18n();
-  const formData = await request.formData();
+  const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const commit = formData.get("commit") === "true";
   const mappingJson = formData.get("mapping") as string | null;
@@ -50,43 +43,38 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
   }
 
-  const parsed = parseFile(await file.arrayBuffer(), file.name);
+  const buffer = await file.arrayBuffer();
+  const parsed = parseFile(buffer, file.name);
+
   if (parsed.rows.length === 0) {
     return NextResponse.json({ error: t("import.emptyFile") }, { status: 400 });
   }
 
-  const mapping = mappingJson
-    ? (JSON.parse(mappingJson) as Record<string, string>)
-    : autoDetectMapping(
-        parsed.headers,
-        ORDER_FIELDS.map((field) => ({
-          key: field.key,
-          aliases: field.aliases,
-        })),
-      );
+  let mapping: Record<string, string>;
+  if (mappingJson) {
+    mapping = JSON.parse(mappingJson) as Record<string, string>;
+  } else {
+    mapping = autoDetectMapping(
+      parsed.headers,
+      ORDER_FIELDS.map((f) => ({ key: f.key, aliases: f.aliases })),
+    );
+  }
 
-  const mapped = mapRows<ImportRow>(parsed.rows, mapping);
-  const normalized: Array<{
-    rowIndex: number;
-    data: Partial<ImportRow>;
-  }> = mapped.map((entry) => {
-    const rawStatus = entry.data.status
-      ? String(entry.data.status).trim().toLowerCase()
-      : undefined;
-    const rawOrderNumber = String(entry.data.orderNumber ?? "").trim();
+  const mapped = mapRows<{ customerName: string; phone: string; wilaya: string; commune?: string; address?: string; productName: string; quantity: number; unitPrice: number; deliveryCost?: number; status?: string; orderNumber?: string }>(parsed.rows, mapping);
+  const normalized = mapped.map((m) => {
+    const row = m.data;
     return {
-      rowIndex: entry.rowIndex,
+      rowIndex: m.rowIndex,
       data: {
-        ...entry.data,
-        quantity: parseNumber(String(entry.data.quantity ?? "1")),
-        unitPrice: parseNumber(String(entry.data.unitPrice ?? "0")),
-        deliveryCost: parseNumber(String(entry.data.deliveryCost ?? "0")),
-        phone: normalizePhone(String(entry.data.phone ?? "")),
-        status: rawStatus,
-        orderNumber: rawOrderNumber || undefined,
-      } as Partial<ImportRow>,
+        ...row,
+        quantity: parseNumber(String(row.quantity ?? "1")),
+        unitPrice: parseNumber(String(row.unitPrice ?? "0")),
+        deliveryCost: parseNumber(String(row.deliveryCost ?? "0")),
+        phone: normalizePhone(String(row.phone ?? "")),
+      },
     };
   });
+
   const validation = validateRows(normalized, orderImportSchema);
 
   if (!commit) {
@@ -97,21 +85,26 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       invalidCount: validation.invalid.length,
       errors: validation.invalid.slice(0, 10),
       mapping,
-      authorityNotice:
-        "Imported rows remain explicit compatibility records. Valid lifecycle states are preserved, and pending imports use the legacy confirmation path until exact catalog mapping is available.",
     });
   }
 
+  // Insert orders — for each row, find or create the customer, then create the order
   const context = { prisma: db, shop: shopContext };
   let inserted = 0;
   const errors: Array<{ rowIndex: number; error: string }> = [];
 
   for (const validRow of validation.valid) {
     try {
+      // A-H4: wrap each row's customer-find-or-create + order-create in a
+      // per-row $transaction. Previously a failed order.create (after
+      // nextOrderNumber already incremented the counter) left gaps in
+      // order numbering + a partial customer create. Now each row is atomic.
       const afterCommit: Array<() => void> = [];
       await context.prisma.$transaction(async (tx) => {
-        const data = validRow.data;
+        const data = validRow.data as { customerName: string; phone: string; wilaya: string; commune?: string; address?: string; productName: string; quantity: number; unitPrice: number; deliveryCost?: number; status?: string; orderNumber?: string };
         const phone = data.phone;
+
+        // Find or create customer (inside tx)
         let customer = await tx.customer.findUnique({ where: { phone } });
         if (!customer) {
           customer = await tx.customer.create({
@@ -126,30 +119,39 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         }
 
         const deliveryCost = data.deliveryCost ?? 0;
-        const sourceOrderId = data.orderNumber?.trim() || null;
+        const parsedStatus = orderStatusSchema.safeParse(data.status);
+        const status = parsedStatus.success ? parsedStatus.data : "pending";
+
+        // Phase 1 bug 1.3: route through orderService.create so imported
+        // orders get the OrderChange "created" ledger entry + the
+        // `order.created` automation trigger (same as manual UI orders). The
+        // service runs inside this per-row tx (opts.tx) so customer-find-or-
+        // create + order-create + ledger entry stay atomic.
+        //
+        // Note: the import path allows user-specified status (default
+        // "pending" — historical imports). createOrderSchema was extended to
+        // accept an optional `status` field for this purpose.
+        //
+        // Note: data.orderNumber (if provided) is currently ignored — the
+        // service generates its own order number atomically via nextOrderNumber.
+        // Acceptable trade-off: imported orders get SahelFlow order numbers,
+        // preserving the sequential counter invariant.
         await orderService.create(
-          context,
+          { prisma: db, shop: shopContext },
           {
             customerId: customer.id,
-            items: [
-              {
-                productName: data.productName,
-                quantity: data.quantity,
-                unitPrice: data.unitPrice,
-              },
-            ],
+            items: [{
+              productName: data.productName,
+              quantity: data.quantity,
+              unitPrice: data.unitPrice,
+            }],
             wilaya: data.wilaya,
             commune: data.commune ?? "",
             address: data.address ?? "",
             phone,
-            source: "import",
-            sourceOrderId,
-            sourceMetadata: {
-              authority: "legacy-import-compatibility",
-              originalOrderNumber: sourceOrderId,
-            },
+            source: "manual",
             deliveryCost: deliveryCost > 0 ? deliveryCost : null,
-            status: data.status ?? "pending",
+            status,
           },
           {
             tx: tx as never,
@@ -158,11 +160,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         );
       });
       afterCommit.forEach((effect) => effect());
-      inserted += 1;
-    } catch (error) {
+      inserted++;
+    } catch (err) {
       errors.push({
         rowIndex: validRow.rowIndex,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: err instanceof Error ? err.message : "Unknown error",
       });
     }
   }

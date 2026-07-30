@@ -1,117 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-
+import { db, shopContext } from "@/lib/db";
+import { orderService } from "@/lib/data/order-service";
+import { assessOrderRisk } from "@/lib/risk-engine";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { scheduleAutomationOutbox } from "@/lib/business-truth/outbox-worker";
-import { orderService } from "@/lib/data/order-service";
-import { db, shopContext } from "@/lib/db";
-import { createTrustedManualOrder } from "@/lib/orders/manual-order";
-import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
-import { assessOrderRisk } from "@/lib/risk-engine";
 import { orderStatusSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
-const context = { prisma: db, shop: shopContext };
-
-/** GET /api/orders — list orders with pagination (optional ?status= filter). */
+/** GET /api/orders — list orders with pagination (optional ?status= filter)
+ *
+ * Phase 1: added `total` + `hasNextPage` for the DataTable v2 pagination UI.
+ * Supports both offset (`limit`/`offset`) and page-based (`page`/`pageSize`)
+ * query params. The DataTable uses page-based.
+ */
 export async function GET(req: NextRequest) {
   await requireAuth();
-  scheduleAutomationOutbox(context, { limit: 20 });
-
   const searchParams = req.nextUrl.searchParams;
   const rawStatus = searchParams.get("status");
-  const status = rawStatus && orderStatusSchema.safeParse(rawStatus).success
-    ? rawStatus
-    : undefined;
+  const status = rawStatus && orderStatusSchema.safeParse(rawStatus).success ? rawStatus : undefined;
 
+  // Page-based pagination (1-based page, pageSize). Falls back to limit/offset.
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") ?? "50", 10);
   const limit = Math.min(pageSize, 100);
   const offset = (page - 1) * limit;
 
-  const statusFilter = status as
-    | "draft"
-    | "pending"
-    | "confirmed"
-    | "shipped"
-    | "delivered"
-    | "returned"
-    | "refused"
-    | "cancelled"
-    | undefined;
+  const statusFilter = (status as "draft" | "pending" | "confirmed" | "shipped" | "delivered" | "returned" | "refused" | "cancelled") ?? undefined;
 
+  // Fetch page + total count in parallel (single round-trip feel)
   const [orders, total] = await Promise.all([
-    orderService.list(context, { status: statusFilter, limit, offset }),
-    db.order.count({
-      where: {
-        deletedAt: null,
-        ...(statusFilter ? { status: statusFilter } : {}),
-      },
-    }),
+    orderService.list({ prisma: db, shop: shopContext }, { status: statusFilter, limit, offset }),
+    db.order.count({ where: { deletedAt: null, ...(statusFilter ? { status: statusFilter } : {}) } }),
   ]);
 
-  const listOrders = orders.map((order) => ({
-    ...order,
-    mutationAuthority: isTrustedManualOrderAuthority(
-      order.source,
-      order.sourceMetadata,
-    )
-      ? "canonical_v1"
-      : "legacy_compatibility",
-  }));
-
   const hasNextPage = offset + orders.length < total;
-  return NextResponse.json({
-    orders: listOrders,
-    total,
-    hasNextPage,
-    page,
-    pageSize: limit,
-  });
+
+  return NextResponse.json({ orders, total, hasNextPage, page, pageSize: limit });
 }
 
-/** POST /api/orders — canonical trusted manual intake or compatibility intake. */
+/** POST /api/orders — create a new order + auto-assess risk (withErrorHandler pattern) */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
   const body = await req.json();
+  const order = await orderService.create({ prisma: db, shop: shopContext }, body);
 
-  const effectiveSource = body?.source ?? "manual";
-  const manualCommand = effectiveSource === "manual"
-    ? await createTrustedManualOrder(context, { ...body, source: "manual" })
-    : null;
-  const manualResult = manualCommand?.result;
-  const order = manualResult?.order ?? await orderService.create(context, body);
-
-  if (manualCommand) {
-    // The command freezes zero or more automation snapshots as separate intents.
-    // Schedule a batch drain rather than assuming one legacy effect key.
-    scheduleAutomationOutbox(context, { limit: 20 });
-  }
-
+  // Auto-assess risk on creation (fire-and-forget — don't block the response
+  // if the risk engine has an issue; the assessment is also available via
+  // GET /api/risk/assess/[orderId] on demand).
   let risk: Awaited<ReturnType<typeof assessOrderRisk>> = null;
-  if (!manualCommand?.replayed) {
-    try {
-      risk = await assessOrderRisk(context, order.id);
-    } catch {
-      // Risk assessment is advisory and may be recomputed on demand.
-    }
+  try {
+    risk = await assessOrderRisk({ prisma: db, shop: shopContext }, order.id);
+  } catch {
+    // Risk assessment is non-critical — the order was created successfully.
   }
 
-  return NextResponse.json(
-    {
-      order,
-      risk,
-      customerCreated: manualResult?.customerCreated ?? false,
-      authority: manualCommand ? "trusted-manual-v1" : "legacy-compatibility",
-      command: manualCommand
-        ? {
-            id: manualCommand.commandId,
-            aggregateVersion: manualCommand.aggregateVersion,
-            replayed: manualCommand.replayed,
-          }
-        : null,
-    },
-    { status: 201 },
-  );
+  return NextResponse.json({ order, risk }, { status: 201 });
 }, "POST /api/orders");

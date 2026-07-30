@@ -1,36 +1,37 @@
+/**
+ * Order service — CRUD + lifecycle management (the AAA surface).
+ *
+ * This is part of the Magic Moment flow (design system Section 12.3):
+ *   message → AI extraction → draft order → confirm → ship → deliver
+ *
+ * Status transitions are enforced via the order state machine
+ * (src/lib/order-transitions.ts). Stock side-effects + customer stats
+ * updates happen on transitions.
+ */
 import type { Order, OrderStatus } from "@/types/domain";
-import { NotFoundError, SahelFlowError } from "@/types/errors";
+import { NotFoundError } from "@/types/errors";
 import { createOrderSchema, updateOrderSchema } from "@/lib/validation";
 import {
   assertCanTransition,
-  triggersCustomerStatsReversal,
-  triggersCustomerStatsUpdate,
   triggersStockDeduction,
   triggersStockRestoration,
+  triggersCustomerStatsUpdate,
+  triggersCustomerStatsReversal,
 } from "@/lib/order-transitions";
+import type { ServiceContext } from "./service-base";
 import {
   recordOrderChangeInTx,
   recordStatusChangeInTx,
   type OrderChangeTransactionClient,
 } from "@/lib/data/order-change-service";
+import { withServiceError, nextOrderNumber } from "./service-base";
 import {
-  dispatchLowStock,
   dispatchTrigger,
   detectLowStock,
+  dispatchLowStock,
   type TriggerEvent,
   type TriggerPayload,
 } from "@/lib/automations/engine";
-import { scheduleAutomationOutbox } from "@/lib/business-truth/outbox-worker";
-import {
-  executeManualOrderDecision,
-  hasCanonicalActiveReservation,
-} from "@/lib/orders/manual-confirmation";
-import {
-  isTrustedManualOrderAuthority,
-  TRUSTED_MANUAL_ORDER_AUTHORITY,
-} from "@/lib/orders/manual-order-authority";
-import type { ServiceContext } from "./service-base";
-import { nextOrderNumber, withServiceError } from "./service-base";
 
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
@@ -50,139 +51,6 @@ export interface OrderStatusTransitionEffects {
   lowStockProducts: LowStockProduct[];
 }
 
-function canonicalFollowupError(orderId: string): SahelFlowError {
-  return new SahelFlowError(
-    `Order '${orderId}' has an active canonical reservation; use the next governed fulfillment command`,
-    "CANONICAL_FOLLOWUP_REQUIRED",
-    409,
-  );
-}
-
-function canonicalConfirmationError(): SahelFlowError {
-  return new SahelFlowError(
-    "Pending manual orders must be confirmed or rejected through the canonical confirmation command",
-    "CANONICAL_CONFIRMATION_REQUIRED",
-    409,
-  );
-}
-
-async function restoreLegacyProductStock(
-  tx: OrderChangeTransactionClient,
-  orderId: string,
-  itemId: string,
-  productId: string,
-  quantity: number,
-): Promise<void> {
-  const permitKey = `legacy-stock-restore:${orderId}:${itemId}`;
-  await tx.$executeRaw`
-    INSERT INTO "StockAdjustmentPermit" (
-      "permitKey", "productId", "productVariantId", "direction", "createdAt"
-    ) VALUES (
-      ${permitKey}, ${productId}, NULL, 'increase', CURRENT_TIMESTAMP
-    )
-  `;
-
-  await tx.product.update({
-    where: { id: productId },
-    data: { stock: { increment: quantity } },
-  });
-
-  const cleared = await tx.$executeRaw`
-    DELETE FROM "StockAdjustmentPermit"
-    WHERE "permitKey" = ${permitKey}
-  `;
-  if (cleared !== 1) {
-    throw new Error(`Stock restoration permit '${permitKey}' was not cleared`);
-  }
-}
-
-function adoptedManualMetadata(sourceMetadata: unknown): string {
-  let existing: Record<string, unknown> = {};
-  if (typeof sourceMetadata === "string") {
-    try {
-      const parsed = JSON.parse(sourceMetadata) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        existing = parsed as Record<string, unknown>;
-      }
-    } catch {
-      existing = {};
-    }
-  } else if (
-    sourceMetadata &&
-    typeof sourceMetadata === "object" &&
-    !Array.isArray(sourceMetadata)
-  ) {
-    existing = sourceMetadata as Record<string, unknown>;
-  }
-  return JSON.stringify({
-    ...existing,
-    authority: TRUSTED_MANUAL_ORDER_AUTHORITY,
-    adoptedFromLegacy: true,
-  });
-}
-
-async function maybeConfirmMappedHistoricalManualOrder(
-  context: ServiceContext,
-  id: string,
-  to: OrderStatus,
-  actor: string,
-): Promise<Order | null> {
-  if (to !== "confirmed" || actor !== "user") return null;
-
-  const order = await context.prisma.order.findFirst({
-    where: { id, deletedAt: null },
-    include: { items: true },
-  });
-  if (!order) throw new NotFoundError("Order", id);
-  if (order.status !== "pending" || order.source !== "manual") return null;
-
-  // The frozen Phase 1 contract permits governed adoption only when historical
-  // manual rows already carry exact catalog identity. Unmapped imports and
-  // ambiguous rows fail closed and require a future reconciliation command.
-  if (order.items.length === 0 || order.items.some((item) => !item.productId)) {
-    throw canonicalConfirmationError();
-  }
-
-  if (!isTrustedManualOrderAuthority(order.source, order.sourceMetadata)) {
-    const adopted = await context.prisma.order.updateMany({
-      where: {
-        id: order.id,
-        status: "pending",
-        version: order.version,
-        source: "manual",
-        deletedAt: null,
-      },
-      data: {
-        sourceMetadata: adoptedManualMetadata(order.sourceMetadata),
-      },
-    });
-    if (adopted.count !== 1) {
-      throw new SahelFlowError(
-        `Order '${order.id}' changed while legacy manual authority was being adopted`,
-        "VERSION_CONFLICT",
-        409,
-      );
-    }
-  }
-
-  const operationKey = `manual-adoption:${order.id}:v${order.version}`;
-  await executeManualOrderDecision(context, {
-    orderId: order.id,
-    decision: "confirm",
-    expectedVersion: order.version,
-    idempotencyKey: operationKey,
-    correlationId: operationKey,
-  });
-  scheduleAutomationOutbox(context, { limit: 20 });
-
-  const updated = await context.prisma.order.findFirst({
-    where: { id: order.id, deletedAt: null },
-    include: { items: true },
-  });
-  if (!updated) throw new NotFoundError("Order", order.id);
-  return toDomain(updated as unknown as Record<string, unknown>);
-}
-
 async function updateStatusInTransaction(
   tx: OrderChangeTransactionClient,
   id: string,
@@ -196,6 +64,8 @@ async function updateStatusInTransaction(
   if (!order) throw new NotFoundError("Order", id);
 
   const from = order.status as OrderStatus;
+  assertCanTransition(from, to);
+
   if (from === to) {
     return {
       order: toDomain(order as unknown as Record<string, unknown>),
@@ -204,43 +74,31 @@ async function updateStatusInTransaction(
     };
   }
 
-  const isManualDecision =
-    isTrustedManualOrderAuthority(order.source, order.sourceMetadata) &&
-    from === "pending" &&
-    (to === "confirmed" || to === "cancelled");
-  if (isManualDecision) throw canonicalConfirmationError();
-
-  if (await hasCanonicalActiveReservation(tx, id)) {
-    throw canonicalFollowupError(id);
-  }
-
-  assertCanTransition(from, to);
   const lowStockProducts: LowStockProduct[] = [];
 
   if (triggersStockDeduction(from, to)) {
     for (const item of order.items) {
-      if (!item.productId) continue;
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
-      });
-      const lowStock = await detectLowStock(tx, item.productId);
-      if (lowStock) lowStockProducts.push(lowStock);
+      if (item.productId) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+        const lowStockInfo = await detectLowStock(tx, item.productId);
+        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
+      }
     }
   }
 
   if (triggersStockRestoration(from, to)) {
     for (const item of order.items) {
-      if (!item.productId) continue;
-      await restoreLegacyProductStock(
-        tx,
-        order.id,
-        item.id,
-        item.productId,
-        item.quantity,
-      );
-      const lowStock = await detectLowStock(tx, item.productId);
-      if (lowStock) lowStockProducts.push(lowStock);
+      if (item.productId) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+        const lowStockInfo = await detectLowStock(tx, item.productId);
+        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
+      }
     }
   }
 
@@ -264,10 +122,7 @@ async function updateStatusInTransaction(
     });
   }
 
-  const data: Record<string, unknown> = {
-    status: to,
-    version: { increment: 1 },
-  };
+  const data: Record<string, unknown> = { status: to };
   if (to === "confirmed" && !order.confirmedAt) data.confirmedAt = new Date();
   if (to === "shipped" && !order.shippedAt) data.shippedAt = new Date();
   if (to === "delivered" && !order.deliveredAt) data.deliveredAt = new Date();
@@ -277,6 +132,7 @@ async function updateStatusInTransaction(
     data,
     include: { items: true },
   });
+
   await recordStatusChangeInTx(tx, id, from, to, actor);
 
   return {
@@ -287,17 +143,17 @@ async function updateStatusInTransaction(
 }
 
 function dispatchCommittedStatusTransition(
-  context: ServiceContext,
+  ctx: ServiceContext,
   effects: OrderStatusTransitionEffects,
 ): void {
   if (!effects.changed) return;
 
   for (const product of effects.lowStockProducts) {
-    void dispatchLowStock(context, product);
+    void dispatchLowStock(ctx, product);
   }
 
   const order = effects.order;
-  void dispatchTrigger(context, `order.${order.status}` as TriggerEvent, {
+  void dispatchTrigger(ctx, `order.${order.status}` as TriggerEvent, {
     orderId: order.id,
     orderNumber: order.orderNumber,
     customerId: order.customerId,
@@ -318,30 +174,24 @@ type OrderCreateOptions =
     };
 
 export const orderService = {
-  async list(
-    context: ServiceContext,
-    options?: {
-      limit?: number;
-      offset?: number;
-      status?: OrderStatus;
-    },
-  ): Promise<Order[]> {
-    const rows = await context.prisma.order.findMany({
-      where: {
-        deletedAt: null,
-        ...(options?.status ? { status: options.status } : {}),
-      },
+  async list(ctx: ServiceContext, opts?: {
+    limit?: number;
+    offset?: number;
+    status?: OrderStatus;
+  }): Promise<Order[]> {
+    const rows = await ctx.prisma.order.findMany({
+      where: { deletedAt: null, ...(opts?.status ? { status: opts.status } : {}) },
       include: { items: true },
       orderBy: { createdAt: "desc" },
-      take: options?.limit ?? 50,
-      skip: options?.offset ?? 0,
+      take: opts?.limit ?? 50,
+      skip: opts?.offset ?? 0,
     });
-    return rows.map((row) => toDomain(row as unknown as Record<string, unknown>));
+    return rows.map((r) => toDomain(r as unknown as Record<string, unknown>));
   },
 
-  async getById(context: ServiceContext, id: string): Promise<Order> {
+  async getById(ctx: ServiceContext, id: string): Promise<Order> {
     return withServiceError(async () => {
-      const row = await context.prisma.order.findFirst({
+      const row = await ctx.prisma.order.findFirst({
         where: { id, deletedAt: null },
         include: { items: true },
       });
@@ -350,45 +200,67 @@ export const orderService = {
     }, "Order");
   },
 
-  async getByOrderNumber(
-    context: ServiceContext,
-    orderNumber: string,
-  ): Promise<Order | null> {
-    const row = await context.prisma.order.findFirst({
+  async getByOrderNumber(ctx: ServiceContext, orderNumber: string): Promise<Order | null> {
+    const row = await ctx.prisma.order.findFirst({
       where: { orderNumber, deletedAt: null },
       include: { items: true },
     });
     return row ? toDomain(row as unknown as Record<string, unknown>) : null;
   },
 
+  /**
+   * Create a new order (draft status by default).
+   * Calculates totalPrice from items + deliveryCost.
+   * Does NOT deduct stock (that happens on confirmation).
+   *
+   * Phase 1 bug 1.3: accepts an optional \`tx\` so the 4 order-creation paths
+   * (storefront/submit, import/orders, ecommerce sync-engine, AI core-tools)
+   * can route through this canonical service instead of bypassing it. This
+   * ensures every created order gets:
+   *   - an OrderChange "created" ledger entry (powers the order timeline)
+   *   - the \`order.created\` automation trigger (so "new order → WhatsApp
+   *     notify" automations fire for storefront/import/sync/AI orders, not
+   *     just manual UI orders)
+   * If \`opts.tx\` is provided, the order.create + ledger entry participate in
+   * the caller's $transaction (atomic with the caller's customer-find-or-
+   * create, etc.). Callers that own the transaction must collect the supplied
+   * post-commit effect and invoke it only after `$transaction` resolves.
+   */
   async create(
-    context: ServiceContext,
+    ctx: ServiceContext,
     input: unknown,
-    options?: OrderCreateOptions,
+    opts?: OrderCreateOptions,
   ): Promise<Order> {
     return withServiceError(async () => {
       const data = createOrderSchema.parse(input);
-      if (options?.tx && !options.afterCommit) {
-        throw new Error(
-          "Caller-owned order transactions require an afterCommit collector",
-        );
+
+      if (opts?.tx && !opts.afterCommit) {
+        throw new Error("Caller-owned order transactions require an afterCommit collector");
       }
 
-      const client = options?.tx ?? context.prisma;
-      const customer = await client.customer.findFirst({
-        where: { id: data.customerId, deletedAt: null },
-      });
+      // Pick the client: caller's tx if provided, else the context's prisma.
+      const client = opts?.tx ?? ctx.prisma;
+
+      // Verify customer exists
+      const customer = await client.customer.findFirst({ where: { id: data.customerId, deletedAt: null } });
       if (!customer) throw new NotFoundError("Customer", data.customerId);
 
+      // Calculate total
       const itemsTotal = data.items.reduce(
         (sum, item) => sum + item.unitPrice * item.quantity,
         0,
       );
       const totalPrice = itemsTotal + (data.deliveryCost ?? 0);
+
+      // Generate order number atomically (D-005/T-011: was racy count()+1).
+      // Phase 1 bug 1.3: caller can override the prefix (e-commerce sync uses
+      // "SYNC-SHOPIFY" etc. so synced orders are distinguishable).
       const orderNumber = await nextOrderNumber(
         client as ServiceContext["prisma"],
         data.orderNumberPrefix ?? "ORD",
       );
+
+      // The order.create payload — shared between the tx + non-tx paths.
       const orderCreateData = {
         orderNumber,
         status: data.status ?? "draft",
@@ -401,9 +273,7 @@ export const orderService = {
         phone: data.phone,
         source: data.source,
         sourceOrderId: data.sourceOrderId ?? null,
-        sourceMetadata: data.sourceMetadata
-          ? JSON.stringify(data.sourceMetadata)
-          : null,
+        sourceMetadata: data.sourceMetadata ? JSON.stringify(data.sourceMetadata) : null,
         notes: data.notes ?? null,
         items: {
           create: data.items.map((item) => ({
@@ -418,35 +288,22 @@ export const orderService = {
         },
       } as const;
 
+      // Create order + items — either inside the caller's tx, or in a new tx.
       let row;
-      if (options?.tx) {
-        row = await options.tx.order.create({
-          data: orderCreateData,
-          include: { items: true },
-        });
-        await recordOrderChangeInTx(options.tx, {
+      if (opts?.tx) {
+        row = await opts.tx.order.create({ data: orderCreateData, include: { items: true } });
+        await recordOrderChangeInTx(opts.tx, {
           orderId: row.id,
           actionType: "created",
-          payload: {
-            orderNumber: row.orderNumber,
-            itemCount: row.items.length,
-            totalPrice,
-          },
+          payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
         });
       } else {
-        row = await context.prisma.$transaction(async (tx) => {
-          const created = await tx.order.create({
-            data: orderCreateData,
-            include: { items: true },
-          });
+        row = await ctx.prisma.$transaction(async (tx) => {
+          const created = await tx.order.create({ data: orderCreateData, include: { items: true } });
           await recordOrderChangeInTx(tx, {
             orderId: created.id,
             actionType: "created",
-            payload: {
-              orderNumber: created.orderNumber,
-              itemCount: created.items.length,
-              totalPrice,
-            },
+            payload: { orderNumber: created.orderNumber, itemCount: created.items.length, totalPrice },
           });
           return created;
         });
@@ -461,116 +318,77 @@ export const orderService = {
         totalPrice: row.totalPrice,
         wilaya: row.wilaya,
       };
+
       const dispatchCreated = () => {
-        void dispatchTrigger(
-          context,
-          "order.created" as TriggerEvent,
-          triggerPayload,
-        );
+        void dispatchTrigger(ctx, "order.created" as TriggerEvent, triggerPayload);
       };
-      if (options?.tx) options.afterCommit(dispatchCreated);
-      else dispatchCreated();
+      if (opts?.tx) {
+        opts.afterCommit(dispatchCreated);
+      } else {
+        dispatchCreated();
+      }
 
       return toDomain(row as unknown as Record<string, unknown>);
     }, "Order");
   },
 
+  /**
+   * Transition an order to a new status.
+   * Enforces the state machine + triggers stock/customer side effects.
+   */
   async updateStatus(
-    context: ServiceContext,
+    ctx: ServiceContext,
     id: string,
     to: OrderStatus,
-    options?: { actor?: string },
+    /** AI-M4: caller can specify the actor for the OrderChange ledger
+     *  (default "user"). AI tools pass "ai" so AI-initiated mutations are
+     *  distinguishable from human ones in the order timeline. */
+    opts?: { actor?: string },
   ): Promise<Order> {
     return withServiceError(async () => {
-      const actor = options?.actor ?? "user";
-      const governed = await maybeConfirmMappedHistoricalManualOrder(
-        context,
-        id,
-        to,
-        actor,
+      const effects = await ctx.prisma.$transaction((tx) =>
+        updateStatusInTransaction(tx, id, to, opts?.actor ?? "user"),
       );
-      if (governed) return governed;
-
-      const effects = await context.prisma.$transaction((tx) =>
-        updateStatusInTransaction(tx, id, to, actor),
-      );
-      dispatchCommittedStatusTransition(context, effects);
+      dispatchCommittedStatusTransition(ctx, effects);
       return effects.order;
     }, "Order");
   },
 
+  /**
+   * Apply an order transition inside a caller-owned transaction. The caller
+   * must invoke `dispatchStatusTransition` only after that transaction commits.
+   */
   async updateStatusInTx(
     tx: OrderChangeTransactionClient,
     id: string,
     to: OrderStatus,
-    options?: { actor?: string },
+    opts?: { actor?: string },
   ): Promise<OrderStatusTransitionEffects> {
-    return updateStatusInTransaction(tx, id, to, options?.actor ?? "user");
+    return updateStatusInTransaction(tx, id, to, opts?.actor ?? "user");
   },
 
   dispatchStatusTransition(
-    context: ServiceContext,
+    ctx: ServiceContext,
     effects: OrderStatusTransitionEffects,
   ): void {
-    dispatchCommittedStatusTransition(context, effects);
+    dispatchCommittedStatusTransition(ctx, effects);
   },
 
-  async update(
-    context: ServiceContext,
-    id: string,
-    input: unknown,
-  ): Promise<Order> {
+  async update(ctx: ServiceContext, id: string, input: unknown): Promise<Order> {
     return withServiceError(async () => {
       const data = updateOrderSchema.parse(input);
 
-      return context.prisma.$transaction(async (tx) => {
-        const order = await tx.order.findFirst({
-          where: { id, deletedAt: null },
-          select: {
-            id: true,
-            status: true,
-            source: true,
-            sourceMetadata: true,
-          },
-        });
-        if (!order) throw new NotFoundError("Order", id);
-
-        // Any active canonical reservation freezes the complete legacy edit
-        // surface, not only item/price fields. Future callers must use a
-        // governed expected-version edit command.
-        if (await hasCanonicalActiveReservation(tx, id)) {
-          throw canonicalFollowupError(id);
-        }
-
-        const changesPricingBasis =
-          data.items !== undefined ||
-          data.deliveryCost !== undefined ||
-          data.totalPrice !== undefined;
-        const trustedManualCreation =
-          changesPricingBasis &&
-          isTrustedManualOrderAuthority(order.source, order.sourceMetadata);
-        if (trustedManualCreation) {
-          throw new SahelFlowError(
-            "Manual order items and prices require a governed edit command",
-            "CANONICAL_ORDER_EDIT_REQUIRED",
-            409,
-          );
-        }
-
+      // SEC-016/CODE-003: wrap item sync + order update in a single $transaction
+      // so a failure on any item operation rolls back all changes.
+      const updated = await ctx.prisma.$transaction(async (tx) => {
         if (data.items) {
-          const existing = await tx.orderItem.findMany({
-            where: { orderId: id },
-          });
-          const incomingIds = data.items
-            .filter((item) => item.id)
-            .map((item) => item.id);
-          const toDelete = existing
-            .filter((item) => !incomingIds.includes(item.id))
-            .map((item) => item.id);
+          const existing = await tx.orderItem.findMany({ where: { orderId: id } });
+          const incomingIds = data.items.filter(i => i.id).map(i => i.id);
+          const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
 
           await Promise.all([
-            ...toDelete.map((itemId) =>
-              tx.orderItem.delete({ where: { id: itemId } }),
+            ...toDelete.map(itemId =>
+              tx.orderItem.delete({ where: { id: itemId } })
             ),
             ...data.items.map((item) => {
               const payload = {
@@ -582,9 +400,12 @@ export const orderService = {
                 unitPrice: item.unitPrice,
                 total: item.total,
               };
-              return item.id
-                ? tx.orderItem.update({ where: { id: item.id }, data: payload })
-                : tx.orderItem.create({ data: { ...payload, orderId: id } });
+              if (item.id) {
+                return tx.orderItem.update({ where: { id: item.id }, data: payload });
+              }
+              return tx.orderItem.create({
+                data: { ...payload, orderId: id },
+              });
             }),
           ]);
         }
@@ -599,46 +420,43 @@ export const orderService = {
             commune: data.commune,
             phone: data.phone,
             totalPrice: data.totalPrice,
-            version: { increment: 1 },
           },
           include: { items: true },
         });
         await recordOrderChangeInTx(tx, {
           orderId: id,
           actionType: "edit",
-          payload: {
-            fields: Object.keys(data),
-            version: row.version,
-          },
+          payload: { fields: Object.keys(data) },
         });
         return toDomain(row as unknown as Record<string, unknown>);
       });
+      return updated;
     }, "Order");
   },
 
-  async countByStatus(
-    context: ServiceContext,
-  ): Promise<Record<OrderStatus, number>> {
-    const groups = await context.prisma.order.groupBy({
+  /** Count orders by status (for dashboard stats). */
+  async countByStatus(ctx: ServiceContext): Promise<Record<OrderStatus, number>> {
+    const groups = await ctx.prisma.order.groupBy({
       by: ["status"],
       where: { deletedAt: null },
       _count: { _all: true },
     });
     const result = {} as Record<OrderStatus, number>;
-    for (const group of groups) {
-      result[group.status as OrderStatus] = group._count._all;
+    for (const g of groups) {
+      result[g.status as OrderStatus] = g._count._all;
     }
     return result;
   },
 
-  async listToday(context: ServiceContext): Promise<Order[]> {
+  /** Get orders created today (for dashboard). */
+  async listToday(ctx: ServiceContext): Promise<Order[]> {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const rows = await context.prisma.order.findMany({
+    const rows = await ctx.prisma.order.findMany({
       where: { createdAt: { gte: startOfDay }, deletedAt: null },
       include: { items: true },
       orderBy: { createdAt: "desc" },
     });
-    return rows.map((row) => toDomain(row as unknown as Record<string, unknown>));
+    return rows.map((r) => toDomain(r as unknown as Record<string, unknown>));
   },
 };
