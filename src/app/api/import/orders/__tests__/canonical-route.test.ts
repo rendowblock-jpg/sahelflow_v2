@@ -2,8 +2,8 @@ process.env.SF_MASTER_KEY =
   process.env.SF_MASTER_KEY ??
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -13,8 +13,44 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
-import { POST } from "@/app/api/import/orders/route";
+const trustedImportActor = vi.hoisted(() => ({
+  context: {
+    version: 1,
+    actor: {
+      kind: "compatibility_local_owner",
+      role: "owner",
+      sessionId: "import-route-test-session",
+      compatibilityOnly: true,
+    },
+    shop: {
+      workspaceId: "a".repeat(32),
+      installationId: "b".repeat(32),
+      shopId: "test",
+      shopIncarnationId: "c".repeat(32),
+      registryRevision: 1,
+      databaseFileId: "test.db",
+      migrationSetSha256: "0".repeat(64),
+    },
+  },
+}));
+
+vi.mock("@/lib/identity/trusted-actor", () => ({
+  requireTrustedActor: vi.fn().mockResolvedValue(trustedImportActor.context),
+}));
+
+vi.mock("@/lib/business-truth/principal", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/business-truth/principal")>();
+  return {
+    ...actual,
+    businessPrincipalFromTrustedActor: vi.fn(() =>
+      actual.testAuthenticatedOwnerBusinessPrincipal("import-route-test-owner"),
+    ),
+  };
+});
+
 import { cleanDb, getJson, rawDb } from "@/app/api/__tests__/helpers";
+import { POST } from "@/app/api/import/orders/route";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 const mapping = {
