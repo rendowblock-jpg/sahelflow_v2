@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CanonicalCodActions } from "@/components/orders/canonical-cod-actions";
 import { useI18n } from "@/hooks/use-i18n";
 import type {
   CanonicalDeliveryState,
@@ -124,6 +125,11 @@ const STATE_LABELS = {
     settled: "Settled",
     not_expected: "Not expected",
     receivable: "Awaiting collection",
+    collected: "Collected by courier",
+    partially_remitted: "Partially remitted",
+    remitted: "Remitted",
+    disputed: "Disputed",
+    corrected: "Corrected",
   },
   fr: {
     unfulfilled: "Non préparée",
@@ -139,6 +145,11 @@ const STATE_LABELS = {
     settled: "Soldé",
     not_expected: "Non attendu",
     receivable: "En attente d'encaissement",
+    collected: "Encaissé par le transporteur",
+    partially_remitted: "Partiellement versé",
+    remitted: "Versé",
+    disputed: "En litige",
+    corrected: "Corrigé",
   },
   ar: {
     unfulfilled: "غير مجهّزة",
@@ -154,6 +165,11 @@ const STATE_LABELS = {
     settled: "مسوّى",
     not_expected: "غير مستحق",
     receivable: "بانتظار التحصيل",
+    collected: "محصّل لدى شركة التوصيل",
+    partially_remitted: "محول جزئيًا",
+    remitted: "محول",
+    disputed: "متنازع عليه",
+    corrected: "مصحّح",
   },
 } as const;
 
@@ -258,41 +274,54 @@ export function CanonicalFulfillmentActions({
   const Icon = action === "ship" ? Truck : action === "deliver" ? CheckCircle2 : PackageCheck;
   const title = action ? copy[`${action}Title`] : "";
   const description = action ? copy[`${action}Body`] : "";
+  const showCodAuthority =
+    currentStatus === "delivered" &&
+    deliveryState === "delivered" &&
+    codState !== null &&
+    codState !== "not_expected";
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium">{copy.heading}</p>
-          <Badge variant="outline" className="mt-1">{copy.authority}</Badge>
+    <div className="space-y-5">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium">{copy.heading}</p>
+            <Badge variant="outline" className="mt-1">{copy.authority}</Badge>
+          </div>
+          {action ? (
+            <Button size="sm" onClick={() => setConfirming(true)} disabled={loading}>
+              <Icon className="me-1.5 h-4 w-4" />
+              {copy[action]}
+            </Button>
+          ) : null}
         </div>
-        {action ? (
-          <Button size="sm" onClick={() => setConfirming(true)} disabled={loading}>
-            <Icon className="me-1.5 h-4 w-4" />
-            {copy[action]}
-          </Button>
-        ) : null}
+
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+          {[
+            [copy.fulfillment, fulfillmentState],
+            [copy.delivery, deliveryState],
+            [copy.inventory, inventoryState],
+            [copy.cod, codState],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="truncate font-medium" dir="auto">
+                {value ? stateLabels[value] ?? value : copy.legacy}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        {!action && !showCodAuthority ? <p className="text-sm text-muted-foreground">{copy.noAction}</p> : null}
+        {notice ? <p className="text-sm text-success" role="status">{notice}</p> : null}
+        {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
-        {[
-          [copy.fulfillment, fulfillmentState],
-          [copy.delivery, deliveryState],
-          [copy.inventory, inventoryState],
-          [copy.cod, codState],
-        ].map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="truncate font-medium" dir="auto">
-              {value ? stateLabels[value] ?? value : copy.legacy}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      {!action ? <p className="text-sm text-muted-foreground">{copy.noAction}</p> : null}
-      {notice ? <p className="text-sm text-success" role="status">{notice}</p> : null}
-      {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+      {showCodAuthority ? (
+        <div className="border-t pt-5">
+          <CanonicalCodActions orderId={orderId} />
+        </div>
+      ) : null}
 
       <AlertDialog open={confirming} onOpenChange={(open) => !loading && setConfirming(open)}>
         <AlertDialogContent>
