@@ -31,15 +31,20 @@ import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { NormalizedOrder, SyncFetchResult, EcommerceCredentials } from "@/lib/integrations/ecommerce/types";
 
-// ── Mock next/headers cookies() — the import route calls requireAuth() which
-//    reads the auth cookie. With a clean DB (no AuthSecret row),
-//    isAuthenticated() returns true (setup mode), so an empty cookie jar
-//    passes requireAuth.
+// The protected import-route scenario uses one real revocable session.
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -94,14 +99,20 @@ import {
   getJson,
   seedStorefront,
   seedProduct,
+  establishAuthenticatedTestSession,
 } from "@/app/api/__tests__/helpers";
 
 afterAll(async () => {
+  authCookieStore.clear();
+  delete process.env.AUTH_SECRET;
   await rawDb.$disconnect();
 });
 
 beforeEach(async () => {
   await cleanDb();
+  authCookieStore.clear();
+  delete process.env.AUTH_SECRET;
+  await establishAuthenticatedTestSession();
   listOrdersMock.mockReset();
   mockCredsProvider.mockReset();
   mockCredsProvider.mockResolvedValue(mockCreds);
