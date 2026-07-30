@@ -147,7 +147,12 @@ execFileSync(
     "build",
     "scripts/rotate-master-key.ts",
     "--target=node",
-    "--packages=external",
+    // This is a separate installed entrypoint, so Next's standalone tracer has
+    // not proven that its package imports are present. Bundle the worker's
+    // ordinary JavaScript dependencies and leave only Prisma external: Prisma
+    // must resolve its generated client beside the exact packaged native
+    // engine selected by PRISMA_QUERY_ENGINE_LIBRARY at runtime.
+    "--external=@prisma/client",
     "--conditions=react-server",
     `--outfile=${rotationWorker}`,
   ],

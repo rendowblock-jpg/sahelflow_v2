@@ -161,6 +161,8 @@ describe("installation-wide master-key rotation authority", () => {
 
   it("bundles and contains the native rotation worker", () => {
     expect(desktopBuildSource).toContain('"sahelflow-rotate-master-key.cjs"');
+    expect(desktopBuildSource).toContain('"--external=@prisma/client"');
+    expect(desktopBuildSource).not.toContain('"--packages=external"');
     expect(desktopBuildSource).toContain('"--conditions=react-server"');
     expect(nativeRotationSource).toContain(
       "spawn_in_capturing_stderr_with_stdin_frame",
