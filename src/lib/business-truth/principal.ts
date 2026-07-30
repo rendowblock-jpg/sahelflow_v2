@@ -5,6 +5,7 @@ import {
   isTrustedActorContext,
   type TrustedActorContext,
 } from "@/lib/identity/trusted-actor";
+import type { CanonicalOrderSource } from "@/lib/orders/manual-order-authority";
 import { SahelFlowError } from "@/types/errors";
 
 const TRUSTED_BUSINESS_PRINCIPAL = Symbol("sahelflow.trusted-business-principal");
@@ -14,6 +15,7 @@ export type BusinessPrincipalKind =
   | "system"
   | "ai"
   | "provider"
+  | "source"
   | "test";
 
 export interface TrustedBusinessPrincipal {
@@ -78,6 +80,20 @@ export function providerBusinessPrincipal(
   return createPrincipal("provider", provider);
 }
 
+/**
+ * Mint authorship for an externally initiated order only after the server has
+ * validated the source boundary. Request bodies can never construct this sealed
+ * principal directly.
+ */
+export function sourceBusinessPrincipal(
+  source: CanonicalOrderSource,
+  sourceIdentity: string,
+): TrustedBusinessPrincipal {
+  const identity = sourceIdentity.trim();
+  if (!identity) throw principalError("Canonical source identity must not be empty");
+  return createPrincipal("source", `${source}:${identity}`);
+}
+
 export function businessPrincipalFromTrustedActor(
   context: TrustedActorContext,
 ): TrustedBusinessPrincipal {
@@ -122,8 +138,8 @@ export function testAuthenticatedOwnerBusinessPrincipal(
  * Authenticated owner sessions are ephemeral audit identities, but this is a
  * single-owner, process-bound shop. Any currently authenticated owner session
  * therefore retains replay access to commands authored by an earlier owner
- * session in the same validated shop. System, AI, provider and test principals
- * remain subject-specific unless an explicit replay authorizer grants access.
+ * session in the same validated shop. Other principal kinds remain
+ * subject-specific unless an explicit replay authorizer grants access.
  */
 export function hasDefaultBusinessReplayAuthority(
   storedAuditActor: string,
@@ -140,9 +156,9 @@ export function hasDefaultBusinessReplayAuthority(
  *
  * Request handlers normally omit `businessPrincipal`; the resolver verifies the
  * authenticated cookie and binds the command to the current Session.id for
- * audit attribution. Trusted background boundaries must attach a principal
- * produced by one of the fixed factories above. Tests receive a sealed test
- * principal without importing the Next.js cookie runtime.
+ * audit attribution. Trusted background and source boundaries must attach a
+ * principal produced by one of the fixed factories above. Tests receive a
+ * sealed test principal without importing the Next.js cookie runtime.
  */
 export async function resolveTrustedBusinessPrincipal(
   context: BusinessPrincipalContext,
