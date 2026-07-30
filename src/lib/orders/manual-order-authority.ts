@@ -26,6 +26,8 @@ export interface CanonicalSourceOrderAuthorityMetadata {
   source: CanonicalOrderSource;
   sourceIdentity: string;
   sourceOrderId: string;
+  sourceRevision?: string;
+  sourceDetails?: Record<string, unknown>;
 }
 
 export function trustedManualOrderSourceMetadata(): string {
@@ -36,9 +38,12 @@ export function canonicalSourceOrderSourceMetadata(input: {
   source: CanonicalOrderSource;
   sourceIdentity: string;
   sourceOrderId: string;
+  sourceRevision?: string | null;
+  sourceDetails?: Record<string, unknown> | null;
 }): string {
   const sourceIdentity = input.sourceIdentity.trim();
   const sourceOrderId = input.sourceOrderId.trim();
+  const sourceRevision = input.sourceRevision?.trim() || undefined;
   if (!sourceIdentity || !sourceOrderId) {
     throw new SahelFlowError(
       "Canonical source order identity must not be empty",
@@ -51,6 +56,8 @@ export function canonicalSourceOrderSourceMetadata(input: {
     source: input.source,
     sourceIdentity,
     sourceOrderId,
+    ...(sourceRevision ? { sourceRevision } : {}),
+    ...(input.sourceDetails ? { sourceDetails: input.sourceDetails } : {}),
   } satisfies CanonicalSourceOrderAuthorityMetadata);
 }
 
@@ -76,6 +83,41 @@ function parsedMetadata(sourceMetadata: unknown): Record<string, unknown> | null
     : null;
 }
 
+export function readCanonicalSourceOrderAuthority(
+  source: unknown,
+  sourceMetadata: unknown,
+): CanonicalSourceOrderAuthorityMetadata | null {
+  if (
+    typeof source !== "string" ||
+    !CANONICAL_ORDER_SOURCES.includes(source as CanonicalOrderSource)
+  ) {
+    return null;
+  }
+  const metadata = parsedMetadata(sourceMetadata);
+  if (
+    metadata?.authority !== CANONICAL_SOURCE_ORDER_AUTHORITY ||
+    metadata.source !== source ||
+    typeof metadata.sourceIdentity !== "string" ||
+    !metadata.sourceIdentity.trim() ||
+    typeof metadata.sourceOrderId !== "string" ||
+    !metadata.sourceOrderId.trim()
+  ) {
+    return null;
+  }
+  return {
+    authority: CANONICAL_SOURCE_ORDER_AUTHORITY,
+    source: source as CanonicalOrderSource,
+    sourceIdentity: metadata.sourceIdentity,
+    sourceOrderId: metadata.sourceOrderId,
+    ...(typeof metadata.sourceRevision === "string" && metadata.sourceRevision.trim()
+      ? { sourceRevision: metadata.sourceRevision }
+      : {}),
+    ...(metadata.sourceDetails && typeof metadata.sourceDetails === "object"
+      ? { sourceDetails: metadata.sourceDetails as Record<string, unknown> }
+      : {}),
+  };
+}
+
 function hasAuthority(sourceMetadata: unknown, authority: string): boolean {
   return parsedMetadata(sourceMetadata)?.authority === authority;
 }
@@ -90,22 +132,7 @@ export function isCanonicalOrderAuthority(
   ) {
     return true;
   }
-
-  if (
-    typeof source !== "string" ||
-    !CANONICAL_ORDER_SOURCES.includes(source as CanonicalOrderSource)
-  ) {
-    return false;
-  }
-  const metadata = parsedMetadata(sourceMetadata);
-  return Boolean(
-    metadata?.authority === CANONICAL_SOURCE_ORDER_AUTHORITY &&
-      metadata.source === source &&
-      typeof metadata.sourceIdentity === "string" &&
-      metadata.sourceIdentity.trim().length > 0 &&
-      typeof metadata.sourceOrderId === "string" &&
-      metadata.sourceOrderId.trim().length > 0,
-  );
+  return readCanonicalSourceOrderAuthority(source, sourceMetadata) !== null;
 }
 
 /**
