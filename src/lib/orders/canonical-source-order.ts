@@ -40,6 +40,8 @@ export const canonicalSourceOrderSchema = z
     source: sourceSchema,
     sourceIdentity: z.string().trim().min(1).max(200),
     sourceOrderId: z.string().trim().min(1).max(200),
+    sourceRevision: z.string().trim().min(1).max(240).optional(),
+    sourceDetails: z.record(z.string(), z.unknown()).optional(),
     customerId: z.string().min(1).optional(),
     newCustomer: newCustomerSchema.optional(),
     items: z.array(sourceOrderItemSchema).min(1).max(200),
@@ -123,6 +125,8 @@ export async function createCanonicalSourceOrder(
         source: data.source,
         sourceIdentity: data.sourceIdentity,
         sourceOrderId: data.sourceOrderId,
+        sourceRevision: data.sourceRevision ?? null,
+        sourceDetails: data.sourceDetails ?? null,
         customerId: data.customerId ?? null,
         newCustomer: normalizedNewCustomer ?? null,
         items: data.items,
@@ -245,6 +249,8 @@ export async function createCanonicalSourceOrder(
         source: data.source,
         sourceIdentity: data.sourceIdentity,
         sourceOrderId: data.sourceOrderId,
+        sourceRevision: data.sourceRevision,
+        sourceDetails: data.sourceDetails,
       });
 
       const order = await tx.order.create({
@@ -290,6 +296,7 @@ export async function createCanonicalSourceOrder(
           source: data.source,
           sourceIdentity: data.sourceIdentity,
           sourceOrderId: data.sourceOrderId,
+          sourceRevision: data.sourceRevision ?? null,
         },
       });
 
@@ -318,6 +325,7 @@ export async function createCanonicalSourceOrder(
         source: data.source,
         sourceIdentity: data.sourceIdentity,
         sourceOrderId: data.sourceOrderId,
+        sourceRevision: data.sourceRevision ?? null,
       };
 
       return {
@@ -341,6 +349,7 @@ export async function createCanonicalSourceOrder(
             customerCreated,
             sourceIdentity: data.sourceIdentity,
             sourceOrderId: data.sourceOrderId,
+            sourceRevision: data.sourceRevision ?? null,
             principal: principal.auditActor,
           },
         },
