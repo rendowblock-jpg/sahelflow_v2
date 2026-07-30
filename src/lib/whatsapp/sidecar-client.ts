@@ -3,7 +3,7 @@ import "server-only";
 import { readFileSync } from "node:fs";
 
 import { env } from "@/lib/env";
-import { deriveSidecarWebSocketToken } from "../../../sidecars/whatsapp/auth-tokens";
+import { createSidecarWebSocketGrant } from "../../../sidecars/whatsapp/auth-tokens";
 import type {
   IncomingMessage,
   SidecarChat,
@@ -161,9 +161,9 @@ export const sidecar = {
   /** Private server-to-sidecar REST credential. Never return this to a browser. */
   restToken: (): string | undefined => SIDECAR_REST_TOKEN,
 
-  /** Browser-visible push-only WebSocket credential, derived one-way from REST. */
-  wsToken: (): string | undefined =>
+  /** Issue a short-lived push-only WebSocket grant for one trusted subject. */
+  wsGrant: (subject: string): string | undefined =>
     SIDECAR_REST_TOKEN
-      ? deriveSidecarWebSocketToken(SIDECAR_REST_TOKEN)
+      ? createSidecarWebSocketGrant(SIDECAR_REST_TOKEN, subject)
       : undefined,
 };
