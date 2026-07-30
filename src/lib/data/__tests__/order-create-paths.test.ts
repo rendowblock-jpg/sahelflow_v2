@@ -19,6 +19,42 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
+const trustedImportActor = vi.hoisted(() => ({
+  context: {
+    version: 1,
+    actor: {
+      kind: "compatibility_local_owner",
+      role: "owner",
+      sessionId: "creation-path-test-session",
+      compatibilityOnly: true,
+    },
+    shop: {
+      workspaceId: "a".repeat(32),
+      installationId: "b".repeat(32),
+      shopId: "test",
+      shopIncarnationId: "c".repeat(32),
+      registryRevision: 1,
+      databaseFileId: "test.db",
+      migrationSetSha256: "0".repeat(64),
+    },
+  },
+}));
+
+vi.mock("@/lib/identity/trusted-actor", () => ({
+  requireTrustedActor: vi.fn().mockResolvedValue(trustedImportActor.context),
+}));
+
+vi.mock("@/lib/business-truth/principal", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/business-truth/principal")>();
+  return {
+    ...actual,
+    businessPrincipalFromTrustedActor: vi.fn(() =>
+      actual.testAuthenticatedOwnerBusinessPrincipal("creation-path-test-owner"),
+    ),
+  };
+});
+
 const { mockAdapter, listOrdersMock, mockCredentialsProvider } = vi.hoisted(() => {
   const listOrders = vi.fn();
   const credentialsProvider = vi.fn();
@@ -56,8 +92,6 @@ vi.mock("@/lib/integrations/delivery", () => ({
   }),
 }));
 
-import { POST as importPost } from "@/app/api/import/orders/route";
-import { POST as storefrontPost } from "@/app/api/storefront/submit/route";
 import {
   cleanDb,
   getJson,
@@ -66,6 +100,8 @@ import {
   seedProduct,
   seedStorefront,
 } from "@/app/api/__tests__/helpers";
+import { POST as importPost } from "@/app/api/import/orders/route";
+import { POST as storefrontPost } from "@/app/api/storefront/submit/route";
 import "@/lib/ai/chat/tools/core-tools";
 import { getTool, type ToolContext } from "@/lib/ai/chat/tools/registry";
 import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
