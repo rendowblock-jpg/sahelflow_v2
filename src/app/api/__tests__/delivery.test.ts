@@ -14,13 +14,21 @@
  * (Phase 1 bug 1.2) — NOT re-tested here. The [id] route has no GET handler.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -118,6 +126,9 @@ describe("POST /api/delivery/create — create shipment", () => {
   beforeEach(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_create_shipment_ledger"');
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
     mockAdapter.createShipment.mockReset();
     mockAdapter.createShipment.mockResolvedValue({
       success: true,
@@ -129,6 +140,7 @@ describe("POST /api/delivery/create — create shipment", () => {
   });
   afterAll(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_create_shipment_ledger"');
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
@@ -419,9 +431,7 @@ describe("POST /api/delivery/create — create shipment", () => {
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const { order } = await seedOrderAtStatus("confirmed");
     const res = await POSTCreate(
       mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
@@ -434,10 +444,14 @@ describe("POST /api/delivery/sync — sync tracking", () => {
   beforeEach(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_sync_conflict"');
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
     mockAdapter.syncTracking.mockReset();
   });
   afterAll(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_sync_conflict"');
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
@@ -596,9 +610,7 @@ describe("POST /api/delivery/sync — sync tracking", () => {
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const { delivery } = await seedShippedOrderWithDelivery();
     mockAdapter.syncTracking.mockResolvedValue({ status: "in_transit", estimatedDelivery: null, events: [] });
     const res = await POSTSync(

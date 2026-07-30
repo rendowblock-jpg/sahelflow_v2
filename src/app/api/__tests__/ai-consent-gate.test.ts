@@ -18,16 +18,22 @@
  * opted in via Settings → AI.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, getJson, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
-// Mock next/headers — requireAuth() reads cookies. With a clean DB (no
-// AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
-// cookie jar passes requireAuth. We never test 401 here (covered elsewhere).
+// Mock next/headers — requireAuth() reads cookies. Protected route scenarios create a real revocable session in beforeEach. We never test 401 here (covered elsewhere).
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -64,9 +70,13 @@ function geminiOkResponse(text: string): Response {
 describe("fix-B6: POST /api/extraction — consent gate", () => {
   beforeEach(async () => {
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
   });
 
   afterAll(async () => {
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
@@ -141,9 +151,13 @@ describe("fix-B6: POST /api/extraction — consent gate", () => {
 describe("fix-B6: POST /api/ai/sessions/[id]/messages — consent gate", () => {
   beforeEach(async () => {
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
   });
 
   afterAll(async () => {
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
@@ -174,9 +188,13 @@ describe("fix-B6: POST /api/ai/sessions/[id]/messages — consent gate", () => {
 describe("fix-B6: POST /api/ai/sessions/[id]/messages/stream — consent gate", () => {
   beforeEach(async () => {
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
   });
 
   afterAll(async () => {
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 

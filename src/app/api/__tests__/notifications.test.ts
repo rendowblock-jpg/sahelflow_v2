@@ -12,17 +12,16 @@
  *
  * Auth + i18n cookie isolation:
  *   - `cookies()` is mocked with a stateful Map so we can set the locale
- *     cookie per test. With an empty cookie jar + clean DB → setup mode →
- *     requireAuth() passes.
- *   - To test 401 we seed an AuthSecret row + clear the cookie jar.
+ *     cookie per test. A real revocable sf_session is created per test.
+ *   - To test 401 we remove only the session cookie.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
 // ── Stateful cookie store (cleared between tests) ───────────────────────────
 // We need to set both `sahelflow-locale` (for i18n) and `sf_session` (for
 // auth, when an AuthSecret row exists) per test.
-const cookieStore = new Map<string, string>();
+const cookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: (name: string) => (cookieStore.has(name) ? { value: cookieStore.get(name)! } : undefined),
@@ -61,9 +60,13 @@ describe("GET /api/notifications — derived notification feed", () => {
   beforeEach(async () => {
     await cleanDb();
     cookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
+    cookieStore.clear();
   });
 
   afterAll(async () => {
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
@@ -260,9 +263,7 @@ describe("GET /api/notifications — derived notification feed", () => {
 
   // ─── Auth ───────────────────────────────────────────────────────────────
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    cookieStore.delete("sf_session");
     // No sf_session cookie → requireAuth throws
     const res = await GETNotifications();
     expect(res.status).toBe(401);

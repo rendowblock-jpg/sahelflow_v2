@@ -16,17 +16,25 @@
  * delivery-patch.test.ts (Phase 1 bug 1.2) — NOT re-tested here.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
 // ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
 //    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
 //    cookie jar passes requireAuth. To test 401 auth rejection we seed an
 //    AuthSecret row (setup=true) and leave the cookie jar empty.
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -82,9 +90,13 @@ function orderBody(customerId: string, productId: string, opts?: { deliveryCost?
 }
 
 describe("POST /api/orders — create order", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
 
-  afterAll(async () => { await rawDb.$disconnect(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("creates a draft order on valid input (201) + writes OrderChange 'created' ledger", async () => {
     const product = await seedProduct({ price: 2500, stock: 100 });
@@ -149,9 +161,7 @@ describe("POST /api/orders — create order", () => {
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
     // Seed an AuthSecret row → isAuthSetup()=true → empty cookie jar fails requireAuth.
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const product = await seedProduct();
     const customer = await seedCustomer();
 
@@ -161,9 +171,13 @@ describe("POST /api/orders — create order", () => {
 });
 
 describe("PATCH /api/orders/[id]/status — transition status", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
 
-  afterAll(async () => { await rawDb.$disconnect(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   /** Seed an order at the given status, returns the order id. */
   async function seedOrderAtStatus(status: "draft" | "pending" | "confirmed" | "shipped" | "delivered") {
@@ -265,9 +279,7 @@ describe("PATCH /api/orders/[id]/status — transition status", () => {
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const { order } = await seedOrderAtStatus("pending");
     const res = await PATCHStatus(
       mockPost(`http://localhost/api/orders/${order.id}/status`, { status: "confirmed" }),
@@ -278,9 +290,13 @@ describe("PATCH /api/orders/[id]/status — transition status", () => {
 });
 
 describe("POST /api/orders/bulk — bulk status transition", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
 
-  afterAll(async () => { await rawDb.$disconnect(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   /** Seed N pending orders. */
   async function seedPendingOrders(n: number) {
@@ -422,9 +438,7 @@ describe("POST /api/orders/bulk — bulk status transition", () => {
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const { orders } = await seedPendingOrders(1);
     const res = await POSTBulk(
       mockPost("http://localhost/api/orders/bulk", { ids: [orders[0]!.id], status: "confirmed" }),

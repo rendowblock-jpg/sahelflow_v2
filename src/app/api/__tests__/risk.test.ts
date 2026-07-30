@@ -26,18 +26,26 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { rawDb, cleanDb, mockPost, mockGet, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, mockGet, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 import { db } from "@/lib/db";
 
 // ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
 //    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
 //    cookie jar passes requireAuth. To test 401 we seed an AuthSecret row
 //    (setup=true) and leave the cookie jar empty.
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -128,15 +136,17 @@ async function seedOrderForAssessment(opts?: { totalPrice?: number }) {
  *  will reject requests without a valid sf_session cookie. Used by the
  *  POST/PUT 401 tests (the wrapped routes convert the throw to a 401 Response). */
 async function seedAuthSecret() {
-  await rawDb.authSecret.create({
-    data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-  });
+    authCookieStore.delete("sf_session");
 }
 
 // ─── GET /api/risk/blacklist ─────────────────────────────────────────────────
 describe("GET /api/risk/blacklist — list blacklisted customers", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("returns 200 + empty list on a clean DB", async () => {
     const res = await GETBlacklist();
@@ -171,8 +181,12 @@ describe("GET /api/risk/blacklist — list blacklisted customers", () => {
 
 // ─── POST /api/risk/blacklist ────────────────────────────────────────────────
 describe("POST /api/risk/blacklist — add to blacklist", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("marks a customer as blacklisted (201) + sets isBlacklisted/blacklistReason/blacklistedAt in DB", async () => {
     const customer = await seedCustomer();
@@ -232,8 +246,12 @@ describe("POST /api/risk/blacklist — add to blacklist", () => {
 
 // ─── GET /api/risk/analytics ─────────────────────────────────────────────────
 describe("GET /api/risk/analytics — analytics report", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("returns 200 + well-formed report (empty KPIs on a clean DB)", async () => {
     const res = await GETAnalytics(mockGet("http://localhost/api/risk/analytics"));
@@ -274,8 +292,12 @@ describe("GET /api/risk/analytics — analytics report", () => {
 
 // ─── GET / PUT /api/risk/config ──────────────────────────────────────────────
 describe("GET / PUT /api/risk/config — risk engine config", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("GET returns 200 + default config on a clean DB", async () => {
     const res = await GETConfig();
@@ -334,8 +356,12 @@ describe("GET / PUT /api/risk/config — risk engine config", () => {
 
 // ─── GET / PUT /api/risk/rules ───────────────────────────────────────────────
 describe("GET / PUT /api/risk/rules — risk rules", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("GET returns 200 + default rules (seeded on first access) with triggerCount=0", async () => {
     const res = await GETRules();
@@ -405,8 +431,12 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
 
 // ─── GET / POST /api/risk/assess/[orderId] ───────────────────────────────────
 describe("GET / POST /api/risk/assess/[orderId] — assess order risk", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("GET returns 200 + assessment for a real order (new customer, no history)", async () => {
     const { order } = await seedOrderForAssessment();

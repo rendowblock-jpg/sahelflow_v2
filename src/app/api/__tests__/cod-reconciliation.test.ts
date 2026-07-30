@@ -11,13 +11,21 @@
  * is the key correctness invariant — verified here.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, getJson, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -75,8 +83,12 @@ async function seedOrderWithCodState(state: CodState, totalPrice = 5000) {
 }
 
 describe("GET /api/accounting/cod-reconciliation — summary", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("returns zeroed summary on a clean DB", async () => {
     const res = await GETSummary(new Request("http://localhost/api/accounting/cod-reconciliation") as never);
@@ -123,17 +135,19 @@ describe("GET /api/accounting/cod-reconciliation — summary", () => {
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const res = await GETSummary(new Request("http://localhost/api/accounting/cod-reconciliation") as never);
     expect(res.status).toBe(401);
   });
 });
 
 describe("POST /api/accounting/cod-reconciliation/bulk — bulk mark remitted", () => {
-  beforeEach(async () => { await cleanDb(); });
-  afterAll(async () => { await rawDb.$disconnect(); });
+  beforeEach(async () => { await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession(); });
+  afterAll(async () => { delete process.env.AUTH_SECRET;
+    await rawDb.$disconnect(); });
 
   it("marks collected-not-remitted orders as remitted + records ledger entries", async () => {
     const o1 = await seedOrderWithCodState("collected", 5000);
@@ -228,9 +242,7 @@ describe("POST /api/accounting/cod-reconciliation/bulk — bulk mark remitted", 
   });
 
   it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+    authCookieStore.delete("sf_session");
     const res = await POSTBulk(
       mockPost("http://localhost/api/accounting/cod-reconciliation/bulk", {
         orderIds: ["x"],

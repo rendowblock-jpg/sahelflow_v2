@@ -15,16 +15,24 @@
  * transaction, then dispatch automations after commit.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
 // ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
 //    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
 //    cookie jar passes requireAuth.
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -89,10 +97,14 @@ describe("PATCH /api/delivery/[id] — order side effects (Phase 1 bug 1.2)", ()
   beforeEach(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_status_ledger"');
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
   });
 
   afterAll(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_status_ledger"');
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
