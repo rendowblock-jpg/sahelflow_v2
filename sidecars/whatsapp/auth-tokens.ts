@@ -1,13 +1,17 @@
 import {
+  createHash,
   createHmac,
   randomBytes,
   timingSafeEqual,
 } from "node:crypto";
 
 const WS_GRANT_PURPOSE = "sahelflow/whatsapp/websocket-grant/v1";
+const PROVIDER_ACCOUNT_PURPOSE = "sahelflow/whatsapp/provider-account/v1";
 const DEFAULT_TTL_MS = 30_000;
 const MIN_TTL_MS = 5_000;
 const MAX_TTL_MS = 60_000;
+const DURABLE_EFFECT_PATTERN =
+  /^wa:[0-9a-f]{32}:([0-9a-f]{64}):(text|daily-report):[A-Za-z0-9_-]{1,80}$/;
 
 interface WebSocketGrantPayload {
   v: 1;
@@ -35,6 +39,15 @@ function normalizedSubject(subject: string): string {
   return value;
 }
 
+function safeEqual(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  );
+}
+
 function signature(restToken: string, encodedPayload: string): string {
   return createHmac("sha256", restToken)
     .update(WS_GRANT_PURPOSE)
@@ -43,13 +56,46 @@ function signature(restToken: string, encodedPayload: string): string {
     .digest("base64url");
 }
 
-function safeEqual(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left, "utf8");
-  const rightBuffer = Buffer.from(right, "utf8");
-  return (
-    leftBuffer.length === rightBuffer.length &&
-    timingSafeEqual(leftBuffer, rightBuffer)
-  );
+/**
+ * Normalize Baileys' account JID to the stable WhatsApp account number. Device
+ * suffixes such as `:12` and the server suffix are deliberately excluded.
+ */
+export function normalizeWhatsAppAccountId(accountId: string): string {
+  const localPart = accountId.trim().split("@")[0] ?? "";
+  const primary = localPart.split(":")[0] ?? "";
+  const digits = primary.replace(/\D/g, "");
+  if (!/^\d{6,20}$/.test(digits)) {
+    throw new Error("WhatsApp account identity is invalid");
+  }
+  return digits;
+}
+
+/** Hash provider identity before it enters a durable effect key or receipt file. */
+export function hashWhatsAppAccountId(accountId: string): string {
+  return createHash("sha256")
+    .update(PROVIDER_ACCOUNT_PURPOSE)
+    .update("\0")
+    .update(normalizeWhatsAppAccountId(accountId))
+    .digest("hex");
+}
+
+/** Return the provider-account hash embedded in a governed durable effect key. */
+export function getWhatsAppEffectAccountHash(effectKey: string): string | null {
+  return DURABLE_EFFECT_PATTERN.exec(effectKey)?.[1] ?? null;
+}
+
+/** Fail closed when a queued/replayed effect belongs to another paired account. */
+export function effectKeyMatchesWhatsAppAccount(
+  effectKey: string,
+  accountId: string,
+): boolean {
+  const expected = getWhatsAppEffectAccountHash(effectKey);
+  if (!expected) return false;
+  try {
+    return safeEqual(expected, hashWhatsAppAccountId(accountId));
+  } catch {
+    return false;
+  }
 }
 
 /**
