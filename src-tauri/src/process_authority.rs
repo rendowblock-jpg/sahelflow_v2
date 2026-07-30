@@ -78,7 +78,7 @@ fn acquire_named(name: &str) -> Result<ProcessAuthorityGuard, IoError> {
 #[cfg(windows)]
 fn mutex_owner(wide_name: Vec<u16>, ready: Sender<Result<(), IoError>>, release: Receiver<()>) {
     let handle = unsafe { CreateMutexW(std::ptr::null(), 0, wide_name.as_ptr()) };
-    if handle == 0 {
+    if handle.is_null() {
         let _ = ready.send(Err(IoError::last_os_error()));
         return;
     }

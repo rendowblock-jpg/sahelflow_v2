@@ -270,7 +270,7 @@ fn assert_runtime_stopped(app_data_dir: &Path) -> Result<(), IoError> {
 #[cfg(windows)]
 fn process_is_alive(process_id: u32) -> bool {
     let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id) };
-    if handle == 0 {
+    if handle.is_null() {
         return IoError::last_os_error().raw_os_error() != Some(ERROR_INVALID_PARAMETER as i32);
     }
     let mut exit_code = 0_u32;
