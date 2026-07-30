@@ -61,6 +61,8 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const FORCE = process.argv.includes("--force");
 const RECOVER_STALE_LOCK = process.argv.includes("--recover-stale-lock");
 const KEY_BYTES = 32;
+const ROTATION_TRANSACTION_MAX_WAIT_MS = 30_000;
+const ROTATION_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
 const NATIVE_ROTATION_SOURCE = "native-stdin-v1";
 const NATIVE_ROTATION_MAGIC = Buffer.from("SFRKRT01", "ascii");
 const NATIVE_ROTATION_FRAME_BYTES = NATIVE_ROTATION_MAGIC.length + KEY_BYTES * 2;
@@ -950,6 +952,14 @@ async function rotateTarget(
   const client = new PrismaClient({
     datasourceUrl: `file:${target.databasePath}`,
     log: ["error"],
+    // Rotation runs only while the application is stopped and the maintenance
+    // lease blocks every packaged writer. Prisma's five-second interactive
+    // transaction default is too short for a realistic HDD-backed seller
+    // table, so keep each atomic model re-wrap explicitly bounded instead.
+    transactionOptions: {
+      maxWait: ROTATION_TRANSACTION_MAX_WAIT_MS,
+      timeout: ROTATION_TRANSACTION_TIMEOUT_MS,
+    },
   });
   try {
     reportStage("database-connect");

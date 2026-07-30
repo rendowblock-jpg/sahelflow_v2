@@ -324,7 +324,54 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).toContain("Duration::from_secs(3)");
     expect(desktop).toContain("app.exit(0);");
     expect(desktop).not.toContain("cleanup_before_exit();");
-    expect(desktop).not.toContain("std::process::exit(0);");
+    const rotationBranchStart = desktop.indexOf("if rotate_installation_root {");
+    const ordinaryStartupStart = desktop.indexOf(
+      "// Validate the registry and migrate every registered shop",
+      rotationBranchStart,
+    );
+    expect(rotationBranchStart).toBeGreaterThan(-1);
+    expect(ordinaryStartupStart).toBeGreaterThan(rotationBranchStart);
+    const rotationBranch = desktop.slice(rotationBranchStart, ordinaryStartupStart);
+    const ordinaryDesktop =
+      desktop.slice(0, rotationBranchStart) + desktop.slice(ordinaryStartupStart);
+    expect(rotationBranch).toContain("std::process::exit(0);");
+    expect(rotationBranch).toContain("std::process::exit(1);");
+    expect(rotationBranch).not.toContain("runtime_protocol::remove_manifest");
+    expect(ordinaryDesktop).not.toContain("std::process::exit(0);");
+    expect(ordinaryDesktop).not.toContain("std::process::exit(1);");
+    expect(desktop).toContain("let builder = if rotate_installation_root");
+  });
+
+  it("holds native process authority before migration or root rotation", () => {
+    const desktop = read("src-tauri/src/lib.rs");
+    const authority = read("src-tauri/src/process_authority.rs");
+    const acquire = desktop.indexOf(
+      "let process_authority = process_authority::acquire()?",
+    );
+    const migration = desktop.indexOf(
+      "migration_coordinator::prepare_packaged_installation(",
+      acquire,
+    );
+    const rotation = desktop.indexOf(
+      "installation_root_rotation::rotate_packaged_installation_root(",
+      acquire,
+    );
+
+    expect(desktop).toContain("let builder = if rotate_installation_root");
+    expect(acquire).toBeGreaterThan(-1);
+    expect(migration).toBeGreaterThan(acquire);
+    expect(rotation).toBeGreaterThan(acquire);
+    expect(desktop).toContain("app.manage(process_authority)");
+    expect(authority).toContain(
+      'PROCESS_AUTHORITY_MUTEX: &str = "Local\\\\SahelFlow.NativeProcessAuthority.v1"',
+    );
+    expect(authority).toContain("WaitForSingleObject(handle, 0)");
+    expect(authority).toContain("WAIT_OBJECT_0 | WAIT_ABANDONED");
+    expect(authority).toContain(
+      "another SahelFlow desktop or installation-root rotation process is active",
+    );
+    expect(authority).toContain("concurrent_process_authority_is_rejected");
+    expect(authority).toContain("released_process_authority_can_be_reacquired");
   });
 
   it("installs the exact signed MSI and dispatches only from protected-main release authority", () => {

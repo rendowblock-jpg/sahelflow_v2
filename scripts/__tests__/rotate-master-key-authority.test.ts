@@ -37,7 +37,7 @@ describe("installation-wide master-key rotation authority", () => {
       source.indexOf("const allStats"),
     );
     const rotateTarget = source.indexOf(
-      "rotateTarget(target, oldKey, newKey)",
+      "rotateTarget(target, oldKey, newKey, (nextStage)",
       targetLoop,
     );
     const commitKeyfile = source.indexOf("commitKeyfile(newKey)", rotateTarget);
@@ -93,7 +93,7 @@ describe("installation-wide master-key rotation authority", () => {
   });
 
   it("proves the desktop runtime is stopped before scanning databases", () => {
-    const lease = source.indexOf("const lease = acquireRotationLease()");
+    const lease = source.indexOf("lease = acquireRotationLease()");
     const stopped = source.indexOf("await assertApplicationStopped()", lease);
     const targets = source.indexOf("const targets = loadRotationTargets()", stopped);
 
@@ -103,6 +103,14 @@ describe("installation-wide master-key rotation authority", () => {
     expect(lease).toBeGreaterThan(-1);
     expect(stopped).toBeGreaterThan(lease);
     expect(targets).toBeGreaterThan(stopped);
+  });
+
+  it("uses an explicit bounded maintenance transaction budget", () => {
+    expect(source).toContain("ROTATION_TRANSACTION_MAX_WAIT_MS = 30_000");
+    expect(source).toContain("ROTATION_TRANSACTION_TIMEOUT_MS = 5 * 60_000");
+    expect(source).toContain("transactionOptions: {");
+    expect(source).toContain("maxWait: ROTATION_TRANSACTION_MAX_WAIT_MS");
+    expect(source).toContain("timeout: ROTATION_TRANSACTION_TIMEOUT_MS");
   });
 
   it("blocks packaged startup and production writes while the lease exists", () => {
@@ -156,6 +164,20 @@ describe("installation-wide master-key rotation authority", () => {
     expect(desktopBuildSource).toContain('"--conditions=react-server"');
     expect(nativeRotationSource).toContain(
       "spawn_in_capturing_stderr_with_stdin_frame",
+    );
+    expect(nativeRotationSource).toContain("assert_runtime_stopped(app_data_dir)");
+    expect(nativeRotationSource).toContain(
+      "crate::node_entrypoint_environment_value(&worker)",
+    );
+    expect(nativeRotationSource).toContain(
+      "crate::node_entrypoint_environment_value(&prisma_engine)",
+    );
+    expect(nativeRotationSource).toContain(
+      "MAX_RUNTIME_MANIFEST_BYTES: u64 = 16 * 1024",
+    );
+    expect(nativeRotationSource).toContain("fs::symlink_metadata(&manifest_path)");
+    expect(nativeRotationSource).toContain(
+      "file.take(MAX_RUNTIME_MANIFEST_BYTES + 1)",
     );
     expect(nativeRotationSource).toContain("installation_root_key::clear_secret_bytes");
     expect(nativeRotationSource).not.toContain("SF_MASTER_KEY");

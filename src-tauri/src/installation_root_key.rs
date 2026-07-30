@@ -699,7 +699,11 @@ fn load_best_protected_root<P: PayloadProtector>(
 ) -> Result<Option<(InstallationRootKey, PathBuf)>, InstallationRootError> {
     let mut state_seen = false;
     let mut failures = Vec::new();
-    for file_name in [CURRENT_FILE, CANDIDATE_FILE, BACKUP_FILE] {
+    // BACKUP_FILE intentionally contains the prior root after a committed
+    // rotation. It is authority only for the journaled native recovery path;
+    // normal startup must never promote it over databases already using the
+    // new current root.
+    for file_name in [CURRENT_FILE, CANDIDATE_FILE] {
         let path = system_dir.join(file_name);
         if !path_exists_regular(&path)? {
             continue;
@@ -1950,6 +1954,42 @@ mod tests {
         assert_eq!(backup.as_bytes(), &previous);
         assert!(!system.join(CANDIDATE_FILE).exists());
         assert!(!system.join(ROTATION_JOURNAL_FILE).exists());
+    }
+
+    #[test]
+    fn normal_startup_never_promotes_the_prior_rotation_backup() {
+        let directory = TestDirectory::new("protected-rotation-backup-is-not-current");
+        let initial = prepare_test(&directory.0, false, true).expect("fresh root");
+        drop(initial);
+
+        let rotation = match prepare_rotation_test(&directory.0).expect("prepare rotation") {
+            InstallationRootRotationPreparation::Ready(rotation) => rotation,
+            InstallationRootRotationPreparation::RecoveredCommitted { .. } => {
+                panic!("new rotation unexpectedly completed")
+            }
+        };
+        let prior_root = *rotation.current_root.as_bytes();
+        let current_root = *rotation.candidate_root.as_bytes();
+        commit_installation_root_rotation_with(rotation, &TestProtector)
+            .expect("commit protected rotation");
+
+        let system = directory.0.join("system");
+        fs::remove_file(system.join(CURRENT_FILE)).expect("remove current authority");
+        assert!(matches!(
+            prepare_test(&directory.0, true, false),
+            Err(InstallationRootError::NoRecoverableKey)
+        ));
+
+        let backup = read_and_unprotect_document(
+            &system.join(BACKUP_FILE),
+            &identity(),
+            CURRENT_PURPOSE,
+            &TestProtector,
+        )
+        .expect("prior backup remains recoverable only by journaled rotation");
+        assert_eq!(backup.as_bytes(), &prior_root);
+        assert_ne!(backup.as_bytes(), &current_root);
+        assert!(!system.join(CURRENT_FILE).exists());
     }
 
     #[test]

@@ -15,6 +15,7 @@ mod installation_root_rotation;
 mod migration_coordinator;
 mod packaged_auth;
 mod packaged_runtime;
+mod process_authority;
 mod runtime_protocol;
 mod runtime_supervisor;
 mod startup_recovery;
@@ -338,8 +339,16 @@ fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let rotate_installation_root =
+        std::env::args_os().any(|argument| argument == "--rotate-installation-root");
+    let builder = tauri::Builder::default();
+    // A rotation invocation must reach its explicit live-runtime proof. The
+    // Windows single-instance plugin otherwise forwards the arguments to the
+    // existing UI process and terminates this command with a false exit 0.
+    let builder = if rotate_installation_root {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             use tauri::Manager;
             if let Some(window) = app.get_webview_window("main") {
                 if window.is_visible().unwrap_or(false) {
@@ -348,6 +357,8 @@ pub fn run() {
                 }
             }
         }))
+    };
+    builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_os::init())
@@ -380,13 +391,16 @@ pub fn run() {
                 }
             }
         })
-        .setup(|app| {
+        .setup(move |app| {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
                 let app_data_dir = app.path().app_data_dir()?;
-                let rotate_installation_root = std::env::args_os()
-                    .any(|argument| argument == "--rotate-installation-root");
+                // This process-lifetime authority is independent of Tauri's UI
+                // single-instance forwarding. Both ordinary startup and root
+                // rotation must own it before migration or key work begins.
+                let process_authority = process_authority::acquire()?;
+                app.manage(process_authority);
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
@@ -420,7 +434,11 @@ pub fn run() {
                     };
 
                     if rotate_installation_root {
-                        runtime_protocol::remove_manifest(&app_data_dir);
+                        // Preserve runtime-endpoint.json until both the native
+                        // preflight and the leased worker prove its PID and
+                        // port are stopped. Removing it here would erase the
+                        // evidence needed to reject rotation against a live or
+                        // orphaned packaged server.
                         startup_recovery::record_startup_stage(
                             &app_data_dir,
                             "installation-root-rotation-started",
