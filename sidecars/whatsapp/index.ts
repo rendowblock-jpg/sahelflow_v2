@@ -23,7 +23,8 @@ if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 
 }
 const PORT = configuredPort;
 const HOST = process.env.SIDECAR_HOST || "127.0.0.1";
-const TOKEN_FILE = process.env.SIDECAR_TOKEN_FILE || join(tmpdir(), "sahelflow-sidecar-token");
+const TOKEN_FILE =
+  process.env.SIDECAR_TOKEN_FILE || join(tmpdir(), "sahelflow-sidecar-token");
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -98,13 +99,17 @@ app.get("/qr.png", async (context) => {
 
 app.get("/chats", (context) => {
   const requested = Number.parseInt(context.req.query("limit") ?? "50", 10);
-  const limit = Number.isFinite(requested) ? Math.max(1, Math.min(requested, 500)) : 50;
+  const limit = Number.isFinite(requested)
+    ? Math.max(1, Math.min(requested, 500))
+    : 50;
   return context.json({ chats: wa.listChats(limit) });
 });
 
 app.get("/chats/:jid/messages", (context) => {
   const requested = Number.parseInt(context.req.query("limit") ?? "100", 10);
-  const limit = Number.isFinite(requested) ? Math.max(1, Math.min(requested, 1000)) : 100;
+  const limit = Number.isFinite(requested)
+    ? Math.max(1, Math.min(requested, 1000))
+    : 100;
   const jid = decodeURIComponent(context.req.param("jid"));
   return context.json({ jid, messages: wa.getMessages(jid, limit) });
 });
@@ -160,6 +165,55 @@ async function executeDurableSend(
     if (current?.promise === promise) durableSendsInFlight.delete(effectKey);
   }
 }
+
+app.post("/send-receipt", async (context) => {
+  const body = await context.req.json().catch(() => ({}));
+  const { effectKey, requestBinding } = body as {
+    effectKey?: string;
+    requestBinding?: string;
+  };
+  if (!effectKey || !getWhatsAppEffectAccountHash(effectKey)) {
+    return context.json(
+      {
+        error: "Invalid effect key",
+        code: "INVALID_EFFECT_KEY",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+  if (!/^[0-9a-f]{64}$/.test(requestBinding ?? "")) {
+    return context.json(
+      {
+        error: "Invalid request binding",
+        code: "INVALID_REQUEST_BINDING",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+  try {
+    const receipt = findDurableSendReceipt(effectKey, requestBinding!);
+    return context.json({
+      receipt: receipt ? { id: receipt.id, status: receipt.status } : null,
+    });
+  } catch (error) {
+    const conflict =
+      error instanceof Error &&
+      /already bound to different content/i.test(error.message);
+    return context.json(
+      {
+        error: conflict ? error.message : "Receipt journal is unavailable",
+        code: conflict ? "EFFECT_KEY_CONFLICT" : "RECEIPT_JOURNAL_UNAVAILABLE",
+        retryable: !conflict,
+        ambiguous: false,
+      },
+      conflict ? 409 : 503,
+    );
+  }
+});
 
 app.post("/send", async (context) => {
   const body = await context.req.json().catch(() => ({}));
