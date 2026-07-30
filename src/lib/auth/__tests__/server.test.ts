@@ -285,6 +285,38 @@ describe("destroySession", () => {
     const sessions = await dbRaw.session.findMany();
     expect(sessions).toHaveLength(0);
   });
+
+  it("preserves the retryable cookie when durable revocation fails", async () => {
+    await setupAuth("12345678");
+    await createSession();
+    const token = cookieJar.map.get(AUTH_COOKIE);
+    await dbRaw.$executeRawUnsafe(
+      "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
+    );
+    await dbRaw.$executeRawUnsafe(`
+      CREATE TRIGGER auth_test_block_session_revoke
+      BEFORE UPDATE OF revokedAt ON Session
+      BEGIN
+        SELECT RAISE(ABORT, 'database unavailable');
+      END
+    `);
+
+    try {
+      await expect(destroySession()).rejects.toMatchObject({
+        code: "SESSION_REVOCATION_FAILED",
+        statusCode: 503,
+      });
+    } finally {
+      await dbRaw.$executeRawUnsafe(
+        "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
+      );
+    }
+
+    expect(cookieJar.delete).not.toHaveBeenCalled();
+    expect(cookieJar.map.get(AUTH_COOKIE)).toBe(token);
+    const session = await dbRaw.session.findFirst();
+    expect(session?.revokedAt).toBeNull();
+  });
 });
 
 describe("getSessionToken", () => {
