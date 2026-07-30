@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CanonicalCodWorkspace } from "@/components/accounting/canonical-cod-workspace";
+import { CanonicalCodDashboard } from "@/components/accounting/canonical-cod-dashboard";
 import { PageHeader } from "@/components/shared/page-header";
 import { getCanonicalCodWorkspaceSummary } from "@/lib/accounting/canonical-cod-projections";
 import { db, shopContext } from "@/lib/db";
@@ -26,7 +26,7 @@ export default async function CodReconciliationPage() {
         title={t("codReconciliation.title")}
         description={t("codReconciliation.description")}
       />
-      <CanonicalCodWorkspace summary={summary} />
+      <CanonicalCodDashboard summary={summary} />
     </div>
   );
 }
