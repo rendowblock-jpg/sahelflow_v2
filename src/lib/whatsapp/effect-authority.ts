@@ -5,6 +5,9 @@ import { createHmac } from "node:crypto";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import type { ServiceContext } from "@/lib/data/service-base";
 import type { ShopContext } from "@/lib/shops/context";
+import { SahelFlowError } from "@/types/errors";
+import { hashWhatsAppAccountId } from "../../../sidecars/whatsapp/auth-tokens";
+import { sidecar } from "./sidecar-client";
 
 const EFFECT_SCOPE_PURPOSE = "sahelflow/whatsapp/effect-scope/v1";
 const REQUEST_BINDING_PURPOSE = "sahelflow/whatsapp/request-binding/v1";
@@ -15,6 +18,10 @@ export interface WhatsAppEffectAuthority {
   effectKey: string;
   requestBinding: string;
 }
+
+type WhatsAppEffectContext = ServiceContext & {
+  readonly whatsAppProviderAccountId?: string;
+};
 
 function canonicalScope(shop: ShopContext): string {
   return JSON.stringify([
@@ -33,19 +40,45 @@ function assertLocalEffectId(value: string): string {
   return normalized;
 }
 
+async function resolveProviderAccountId(
+  context: WhatsAppEffectContext,
+): Promise<string> {
+  if (context.whatsAppProviderAccountId) {
+    return context.whatsAppProviderAccountId;
+  }
+  try {
+    const status = await sidecar.status();
+    if (status.status !== "connected" || !status.user?.id) {
+      throw new SahelFlowError(
+        "WhatsApp account identity is unavailable",
+        "WHATSAPP_ACCOUNT_UNAVAILABLE",
+        409,
+      );
+    }
+    return status.user.id;
+  } catch (error) {
+    if (error instanceof SahelFlowError) throw error;
+    throw new SahelFlowError(
+      "WhatsApp account identity could not be verified",
+      "WHATSAPP_ACCOUNT_UNAVAILABLE",
+      503,
+    );
+  }
+}
+
 /**
  * Derive the opaque authority sent to the sidecar receipt journal.
  *
- * The key is the stable, shop-local business envelope key, which is stored in
- * the shop database wrapped by the installation master key. The scope includes
- * the exact workspace, installation, shop and shop-incarnation identities.
- * Consequently the derived values survive process/sidecar restarts but cannot
- * collide across a different installation, shop or restored shop incarnation.
- * The rotating SIDECAR_TOKEN is intentionally not part of either derivation.
+ * The stable shop-local envelope key scopes the effect to the exact workspace,
+ * installation, shop and shop incarnation. A SHA-256 provider-account hash is
+ * also embedded, so logout/re-pair cannot replay or dispatch the effect under a
+ * different WhatsApp account. Recipient, message and account plaintext never
+ * enter the key or receipt journal.
  */
 export function deriveWhatsAppEffectAuthority(
   shop: ShopContext,
   envelopeKey: Buffer,
+  providerAccountId: string,
   kind: WhatsAppEffectKind,
   localEffectId: string,
   to: string,
@@ -58,7 +91,8 @@ export function deriveWhatsAppEffectAuthority(
     .update(scope)
     .digest("hex")
     .slice(0, 32);
-  const effectKey = `wa:${scopeId}:${kind}:${assertLocalEffectId(localEffectId)}`;
+  const providerAccountHash = hashWhatsAppAccountId(providerAccountId);
+  const effectKey = `wa:${scopeId}:${providerAccountHash}:${kind}:${assertLocalEffectId(localEffectId)}`;
   const requestBinding = createHmac("sha256", envelopeKey)
     .update(REQUEST_BINDING_PURPOSE)
     .update("\0")
@@ -74,18 +108,23 @@ export function deriveWhatsAppEffectAuthority(
 }
 
 export async function createWhatsAppEffectAuthority(
-  context: ServiceContext,
+  context: WhatsAppEffectContext,
   kind: WhatsAppEffectKind,
   localEffectId: string,
   to: string,
   text: string,
 ): Promise<WhatsAppEffectAuthority> {
   if (!context.shop) {
-    throw new Error("WhatsApp effects require an exact trusted ShopContext");
+    throw new SahelFlowError(
+      "WhatsApp effects require an exact trusted ShopContext",
+      "WHATSAPP_SHOP_AUTHORITY_REQUIRED",
+      500,
+    );
   }
   return deriveWhatsAppEffectAuthority(
     context.shop,
     await getBusinessEnvelopeKey(context),
+    await resolveProviderAccountId(context),
     kind,
     localEffectId,
     to,
