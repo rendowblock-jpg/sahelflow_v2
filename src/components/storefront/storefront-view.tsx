@@ -1,25 +1,34 @@
 "use client";
-import { formatDZD } from "@/lib/utils";
 
 import { useState } from "react";
-import { useI18n } from "@/hooks/use-i18n";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Loader2,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  ShoppingCart,
-  Plus,
-  Minus,
-  Loader2,
-  CheckCircle2,
-  Check,
-  AlertCircle,
-  Trash2,
-} from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontConfig } from "@/lib/storefront/service";
+import { formatDZD } from "@/lib/utils";
+
+interface StorefrontVariant {
+  id: string;
+  name: string;
+  price: number | null;
+  stock: number;
+  isActive: boolean;
+}
 
 interface StorefrontProduct {
   id: string;
@@ -28,10 +37,13 @@ interface StorefrontProduct {
   sku: string | null;
   images: string | null;
   stock: number;
+  productVariants: StorefrontVariant[];
 }
 
 interface CartItem {
+  key: string;
   product: StorefrontProduct;
+  variant: StorefrontVariant | null;
   quantity: number;
 }
 
@@ -40,12 +52,40 @@ interface StorefrontViewProps {
   products: StorefrontProduct[];
 }
 
+interface SubmitResult {
+  ok: boolean;
+  message: string;
+  orderNumber?: string;
+}
+
+function imageUrl(images: string | null): string | null {
+  if (!images) return null;
+  try {
+    const parsed = JSON.parse(images) as unknown;
+    if (Array.isArray(parsed) && typeof parsed[0] === "string") return parsed[0];
+  } catch {
+    // Legacy comma-separated image values remain supported.
+  }
+  return images.split(",")[0]?.trim() || null;
+}
+
+function cartKey(productId: string, variantId: string | null): string {
+  return `${productId}:${variantId ?? "base"}`;
+}
+
+function itemPrice(item: Pick<CartItem, "product" | "variant">): number {
+  return item.variant?.price ?? item.product.price;
+}
+
 export function StorefrontView({ config, products }: StorefrontViewProps) {
   const { t } = useI18n();
-  const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(
+    {},
+  );
+  const [addedKey, setAddedKey] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string; orderNumber?: string } | null>(null);
+  const [result, setResult] = useState<SubmitResult | null>(null);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -53,55 +93,92 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     commune: "",
     address: "",
     notes: "",
-    // W3-13: honeypot field. Visually hidden (see the input's className +
-    // inline style below) — real customers never see it. Bots that fill all
-    // form fields indiscriminately will populate it; the API silently rejects
-    // any submission where this is non-empty. Kept in the same form state
-    // object so it's submitted alongside the real fields.
     website: "",
   });
 
-  function addToCart(product: StorefrontProduct) {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
+  const submissionStorageKey = `sf-storefront-submission:${config.slug}`;
+
+  function invalidateSubmission(): void {
+    try {
+      window.localStorage.removeItem(submissionStorageKey);
+    } catch {
+      // Storage can be unavailable in hardened browsers; submission still works.
+    }
   }
 
-  function updateQuantity(productId: string, delta: number) {
-    setCart((prev) =>
-      prev
-        .map((i) =>
-          i.product.id === productId
-            ? { ...i, quantity: Math.max(0, i.quantity + delta) }
-            : i,
+  function submissionId(): string {
+    try {
+      const stored = window.localStorage.getItem(submissionStorageKey);
+      if (stored && /^[0-9a-f-]{36}$/i.test(stored)) return stored;
+      const created = crypto.randomUUID();
+      window.localStorage.setItem(submissionStorageKey, created);
+      return created;
+    } catch {
+      return crypto.randomUUID();
+    }
+  }
+
+  function changeForm<K extends keyof typeof form>(
+    key: K,
+    value: (typeof form)[K],
+  ): void {
+    invalidateSubmission();
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function addToCart(product: StorefrontProduct): void {
+    const activeVariants = product.productVariants.filter((variant) => variant.isActive);
+    const selectedVariantId = selectedVariants[product.id] ?? "";
+    const variant = activeVariants.find((entry) => entry.id === selectedVariantId) ?? null;
+    if (activeVariants.length > 0 && !variant) return;
+
+    invalidateSubmission();
+    const key = cartKey(product.id, variant?.id ?? null);
+    setCart((current) => {
+      const existing = current.find((item) => item.key === key);
+      return existing
+        ? current.map((item) =>
+            item.key === key ? { ...item, quantity: item.quantity + 1 } : item,
+          )
+        : [...current, { key, product, variant, quantity: 1 }];
+    });
+    setAddedKey(key);
+    window.setTimeout(() => setAddedKey(null), 1500);
+  }
+
+  function updateQuantity(key: string, delta: number): void {
+    invalidateSubmission();
+    setCart((current) =>
+      current
+        .map((item) =>
+          item.key === key
+            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+            : item,
         )
-        .filter((i) => i.quantity > 0),
+        .filter((item) => item.quantity > 0),
     );
   }
 
-  function removeFromCart(productId: string) {
-    setCart((prev) => prev.filter((i) => i.product.id !== productId));
+  function removeFromCart(key: string): void {
+    invalidateSubmission();
+    setCart((current) => current.filter((item) => item.key !== key));
   }
 
-  const cartTotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const cartTotal = cart.reduce(
+    (sum, item) => sum + itemPrice(item) * item.quantity,
+    0,
+  );
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent): Promise<void> {
+    event.preventDefault();
     if (cart.length === 0) return;
 
-    // Client-side validation (defense-in-depth — the API also validates)
-    const phoneClean = form.phone.replace(/\s/g, "");
+    const phone = form.phone.replace(/\s/g, "");
     if (!form.name.trim()) {
       setResult({ ok: false, message: t("storefront.view.error.nameRequired") });
       return;
     }
-    if (!/^0[5-7]\d{8}$/.test(phoneClean)) {
+    if (!/^0[5-7]\d{8}$/.test(phone)) {
       setResult({ ok: false, message: t("storefront.view.error.phoneInvalid") });
       return;
     }
@@ -110,57 +187,74 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       return;
     }
 
+    const stableSubmissionId = submissionId();
     setSubmitting(true);
     setResult(null);
     try {
-      const res = await fetch("/api/storefront/submit", {
+      const response = await fetch("/api/storefront/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug: config.slug,
+          submissionId: stableSubmissionId,
           customer: {
-            name: form.name,
-            phone: phoneClean,
+            name: form.name.trim(),
+            phone,
             wilaya: form.wilaya,
             commune: form.commune,
-            address: form.address,
+            address: form.address.trim(),
           },
-          items: cart.map((i) => ({
-            productId: i.product.id,
-            quantity: i.quantity,
+          items: cart.map((item) => ({
+            productId: item.product.id,
+            productVariantId: item.variant?.id ?? null,
+            quantity: item.quantity,
           })),
-          notes: form.notes || undefined,
-          // W3-13: honeypot — sent on every submission. The API silently
-          // rejects if non-empty. Real customers never fill this (the input
-          // is hidden off-screen + aria-hidden + tabIndex=-1 + autocomplete=off).
+          notes: form.notes.trim() || undefined,
           website: form.website,
-          // W3-13: Cloudflare Turnstile token (non-Tauri web deployments).
-          // Undefined in Tauri (no widget rendered). When a Turnstile widget
-          // is mounted (future web-deployment work), it writes its token to
-          // window.__TURNSTILE_TOKEN__ and we read it here. For now this is
-          // always undefined — the API only requires it when
-          // TURNSTILE_SECRET_KEY is set + the request is non-Tauri.
-          "cf-turnstile-response":
-            typeof window !== "undefined"
-              ? (window as unknown as { __TURNSTILE_TOKEN__?: string }).__TURNSTILE_TOKEN__
-              : undefined,
+          "cf-turnstile-response": (
+            window as unknown as { __TURNSTILE_TOKEN__?: string }
+          ).__TURNSTILE_TOKEN__,
         }),
       });
-      const data = (await res.json()) as {
-        ok: boolean;
-        message: string;
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
         orderNumber?: string;
         error?: string;
       };
-      if (data.ok) {
-        setResult(data);
-        setCart([]);
-        setForm({ name: "", phone: "", wilaya: "", commune: "", address: "", notes: "", website: "" });
-      } else {
-        setResult({ ok: false, message: data.error ?? t("storefront.view.error.orderFailed") });
+      if (!response.ok || !data.ok) {
+        setResult({
+          ok: false,
+          message: data.error ?? t("storefront.view.error.orderFailed"),
+        });
+        return;
       }
+
+      invalidateSubmission();
+      setResult({
+        ok: true,
+        message:
+          data.message ??
+          "Order placed successfully! The seller will contact you soon.",
+        orderNumber: data.orderNumber,
+      });
+      setCart([]);
+      setForm({
+        name: "",
+        phone: "",
+        wilaya: "",
+        commune: "",
+        address: "",
+        notes: "",
+        website: "",
+      });
     } catch {
-      setResult({ ok: false, message: t("storefront.view.error.connectionFailed") });
+      // Keep the submission ID: retrying the unchanged checkout safely replays
+      // the exact committed result after a response-loss or network failure.
+      setResult({
+        ok: false,
+        message: t("storefront.view.error.connectionFailed"),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -168,18 +262,22 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
 
   if (result?.ok) {
     return (
-      <div className="min-h-full flex items-center justify-center bg-background p-4" >
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-success mx-auto" />
-            <h1 className="text-2xl font-bold">{t("storefront.view.orderConfirmed")}</h1>
+      <div className="flex min-h-full items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="space-y-4 pt-6 text-center">
+            <CheckCircle2 className="mx-auto h-16 w-16 text-success" />
+            <h1 className="text-2xl font-bold">
+              {t("storefront.view.orderConfirmed")}
+            </h1>
             <p className="text-muted-foreground">{result.message}</p>
-            {result.orderNumber && (
+            {result.orderNumber ? (
               <div className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">{t("storefront.view.orderNumber")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("storefront.view.orderNumber")}
+                </p>
                 <p className="font-mono text-lg font-bold">{result.orderNumber}</p>
               </div>
-            )}
+            ) : null}
             <Button onClick={() => setResult(null)} variant="outline">
               {t("storefront.view.anotherOrder")}
             </Button>
@@ -190,88 +288,140 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
   }
 
   return (
-    <div className="min-h-full" >
-      {/* Header */}
+    <div className="min-h-full">
       <header
         className="border-b"
-        style={{ backgroundColor: config.theme.primaryColor, borderColor: config.theme.primaryColor }}
+        style={{
+          backgroundColor: config.theme.primaryColor,
+          borderColor: config.theme.primaryColor,
+        }}
       >
-        <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="mx-auto max-w-5xl px-4 py-6">
           <h1 className="text-2xl font-bold text-white">{config.name}</h1>
-          {config.description && (
-            <p className="text-white/80 text-sm mt-1">{config.description}</p>
-          )}
+          {config.description ? (
+            <p className="mt-1 text-sm text-white/80">{config.description}</p>
+          ) : null}
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 grid md:grid-cols-3 gap-6">
-        {/* Product grid */}
-        <div className="md:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold">{t("storefront.view.ourProducts")}</h2>
+      <div className="mx-auto grid max-w-5xl gap-6 px-4 py-8 md:grid-cols-3">
+        <div className="space-y-4 md:col-span-2">
+          <h2 className="text-lg font-semibold">
+            {t("storefront.view.ourProducts")}
+          </h2>
           {products.length === 0 ? (
-            <p className="text-muted-foreground">{t("storefront.view.noProducts")}</p>
+            <p className="text-muted-foreground">
+              {t("storefront.view.noProducts")}
+            </p>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              {products.map((product) => (
-                <Card key={product.id}>
-                  <CardContent className="pt-4 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        {product.images && (
-                      <div className="aspect-square w-full rounded-lg bg-muted overflow-hidden mb-3">
-                        <img
-                          src={(() => { try { return JSON.parse(product.images)[0]; } catch { return product.images.split(",")[0]; } })()}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {products.map((product) => {
+                const variants = product.productVariants.filter(
+                  (variant) => variant.isActive,
+                );
+                const selectedVariant = variants.find(
+                  (variant) => variant.id === selectedVariants[product.id],
+                );
+                const visiblePrice = selectedVariant?.price ?? product.price;
+                const visibleStock = selectedVariant?.stock ?? product.stock;
+                const key = cartKey(product.id, selectedVariant?.id ?? null);
+                const image = imageUrl(product.images);
+                return (
+                  <Card key={product.id}>
+                    <CardContent className="space-y-3 pt-4">
+                      {image ? (
+                        <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+                          <img
+                            src={image}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-medium">{product.name}</h3>
+                          {product.sku ? (
+                            <p className="font-mono text-xs text-muted-foreground">
+                              {product.sku}
+                            </p>
+                          ) : null}
+                        </div>
+                        {config.theme.showStock ? (
+                          <Badge variant={visibleStock > 0 ? "default" : "destructive"}>
+                            {visibleStock > 0
+                              ? t("storefront.view.inStock", { count: visibleStock })
+                              : t("storefront.view.outOfStock")}
+                          </Badge>
+                        ) : null}
                       </div>
-                    )}
-                    <h3 className="font-medium">{product.name}</h3>
-                        {product.sku && (
-                          <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
+
+                      {variants.length > 0 ? (
+                        <div className="space-y-1">
+                          <Label htmlFor={`storefront-variant-${product.id}`}>
+                            {t("products.variant")}
+                          </Label>
+                          <select
+                            id={`storefront-variant-${product.id}`}
+                            value={selectedVariants[product.id] ?? ""}
+                            onChange={(event) => {
+                              invalidateSubmission();
+                              setSelectedVariants((current) => ({
+                                ...current,
+                                [product.id]: event.target.value,
+                              }));
+                            }}
+                            className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+                          >
+                            <option value="">—</option>
+                            {variants.map((variant) => (
+                              <option key={variant.id} value={variant.id}>
+                                {variant.name} · {formatDZD(variant.price ?? product.price)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
+
+                      {config.theme.showPrices ? (
+                        <p
+                          className="text-lg font-bold"
+                          style={{ color: config.theme.primaryColor }}
+                        >
+                          {formatDZD(visiblePrice)}
+                        </p>
+                      ) : null}
+                      <Button
+                        onClick={() => addToCart(product)}
+                        disabled={
+                          (variants.length > 0 && !selectedVariant) ||
+                          (config.theme.showStock && visibleStock === 0)
+                        }
+                        size="sm"
+                        className="w-full"
+                        style={{ backgroundColor: config.theme.primaryColor }}
+                      >
+                        {addedKey === key ? (
+                          <Check className="me-1 h-4 w-4" />
+                        ) : (
+                          <Plus className="me-1 h-4 w-4" />
                         )}
-                      </div>
-                      {config.theme.showStock && (
-                        <Badge variant={product.stock > 0 ? "default" : "destructive"}>
-                          {product.stock > 0
-                            ? t("storefront.view.inStock", { count: product.stock })
-                            : t("storefront.view.outOfStock")}
-                        </Badge>
-                      )}
-                    </div>
-                    {config.theme.showPrices && (
-                      <p className="text-lg font-bold" style={{ color: config.theme.primaryColor }}>
-                        {formatDZD(product.price)}
-                      </p>
-                    )}
-                    <Button
-                      onClick={() => {
-                      addToCart(product);
-                      setAddedProductId(product.id);
-                      setTimeout(() => setAddedProductId(null), 1500);
-                    }}
-                      disabled={config.theme.showStock && product.stock === 0}
-                      size="sm"
-                      className="w-full"
-                      style={{ backgroundColor: config.theme.primaryColor }}
-                    >
-                      {addedProductId === product.id ? (
-                        <Check className="h-4 w-4 me-1" />
-                      ) : (
-                        <Plus className="h-4 w-4 me-1" />
-                      )}
-                      {addedProductId === product.id ? t("storefront.view.added") : t("storefront.view.addToCart")}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                        {addedKey === key
+                          ? t("storefront.view.added")
+                          : t("storefront.view.addToCart")}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Cart + checkout */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -282,34 +432,62 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {cart.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="py-4 text-center text-sm text-muted-foreground">
                   {t("storefront.view.emptyCart")}
                 </p>
               ) : (
                 <>
                   {cart.map((item) => (
-                    <div key={item.product.id} className="flex items-center justify-between text-sm">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.product.name}</p>
+                    <div
+                      key={item.key}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{item.product.name}</p>
+                        {item.variant ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {item.variant.name}
+                          </p>
+                        ) : null}
                         <p className="text-xs text-muted-foreground">
-                          {formatDZD(item.product.price)}
+                          {formatDZD(itemPrice(item))}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.product.id, -1)} aria-label={t("storefront.view.decreaseQty")}>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-11 w-11"
+                          onClick={() => updateQuantity(item.key, -1)}
+                          aria-label={t("storefront.view.decreaseQty")}
+                        >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 text-center text-xs">{item.quantity}</span>
-                        <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.product.id, 1)} aria-label={t("storefront.view.increaseQty")}>
+                        <span className="w-6 text-center text-xs">
+                          {item.quantity}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-11 w-11"
+                          onClick={() => updateQuantity(item.key, 1)}
+                          aria-label={t("storefront.view.increaseQty")}
+                        >
                           <Plus className="h-3 w-3" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeFromCart(item.product.id)} aria-label={t("storefront.view.removeItem")}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => removeFromCart(item.key)}
+                          aria-label={t("storefront.view.removeItem")}
+                        >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   ))}
-                  <div className="border-t pt-2 flex justify-between font-bold">
+                  <div className="flex justify-between border-t pt-2 font-bold">
                     <span>{t("storefront.view.total")}</span>
                     <span>{formatDZD(cartTotal)}</span>
                   </div>
@@ -318,67 +496,99 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             </CardContent>
           </Card>
 
-          {/* COD checkout form */}
-          {cart.length > 0 && (
+          {cart.length > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("storefront.view.checkout")}</CardTitle>
+                <CardTitle className="text-base">
+                  {t("storefront.view.checkout")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-3">
-                  {/* W3-13: honeypot field — hidden from real users, bait for bots. */}
-                  {/* Visually hidden via absolute off-screen positioning (not */}
-                  {/* display:none, which some bots skip). aria-hidden + tabIndex=-1 */}
-                  {/* + autocomplete=off ensure screen readers + browsers ignore it. */}
                   <div
                     aria-hidden="true"
-                    style={{ position: "absolute", left: "-9999px", top: "auto", width: 1, height: 1, overflow: "hidden" }}
+                    style={{
+                      position: "absolute",
+                      left: "-9999px",
+                      width: 1,
+                      height: 1,
+                      overflow: "hidden",
+                    }}
                   >
                     <Label htmlFor="website">Website (leave empty)</Label>
                     <Input
                       id="website"
                       name="website"
-                      type="text"
                       tabIndex={-1}
                       autoComplete="off"
                       value={form.website}
-                      onChange={(e) => setForm({ ...form, website: e.target.value })}
+                      onChange={(event) => changeForm("website", event.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="name">{t("storefront.view.fullName")} *</Label>
-                    <Input id="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    <Label htmlFor="name">
+                      {t("storefront.view.fullName")} *
+                    </Label>
+                    <Input
+                      id="name"
+                      required
+                      value={form.name}
+                      onChange={(event) => changeForm("name", event.target.value)}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="phone">{t("storefront.view.phone")} *</Label>
-                    <Input id="phone" required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0XXXXXXXXX" />
+                    <Input
+                      id="phone"
+                      required
+                      type="tel"
+                      value={form.phone}
+                      onChange={(event) => changeForm("phone", event.target.value)}
+                      placeholder="0XXXXXXXXX"
+                    />
                   </div>
                   <WilayaCommuneSelect
                     wilaya={form.wilaya}
                     commune={form.commune}
-                    onWilayaChange={(v) => setForm({ ...form, wilaya: v })}
-                    onCommuneChange={(v) => setForm({ ...form, commune: v })}
+                    onWilayaChange={(value) => changeForm("wilaya", value)}
+                    onCommuneChange={(value) => changeForm("commune", value)}
                     wilayaLabel={`${t("storefront.view.wilaya")} *`}
                     communeLabel={`${t("storefront.view.commune")} *`}
                   />
                   <div className="space-y-1">
-                    <Label htmlFor="address">{t("storefront.view.address")} *</Label>
-                    <Input id="address" required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                    <Label htmlFor="address">
+                      {t("storefront.view.address")} *
+                    </Label>
+                    <Input
+                      id="address"
+                      required
+                      value={form.address}
+                      onChange={(event) => changeForm("address", event.target.value)}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="notes">{t("storefront.view.notes")}</Label>
-                    <Input id="notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                    <Input
+                      id="notes"
+                      value={form.notes}
+                      onChange={(event) => changeForm("notes", event.target.value)}
+                    />
                   </div>
-                  {result && !result.ok && (
+                  {result && !result.ok ? (
                     <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
-                      <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                       <span>{result.message}</span>
                     </div>
-                  )}
-                  <Button type="submit" disabled={submitting} className="w-full" style={{ backgroundColor: config.theme.primaryColor }}>
+                  ) : null}
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full"
+                    style={{ backgroundColor: config.theme.primaryColor }}
+                  >
                     {submitting ? (
                       <>
-                        <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
+                        <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
                         {t("storefront.view.sending")}
                       </>
                     ) : (
@@ -388,19 +598,26 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                 </form>
               </CardContent>
             </Card>
-          )}
+          ) : null}
 
-          {/* Contact info */}
-          {config.contact && (
+          {config.contact ? (
             <Card>
-              <CardContent className="pt-4 text-sm space-y-1">
+              <CardContent className="space-y-1 pt-4 text-sm">
                 <p className="font-medium">{t("storefront.view.contact")}</p>
-                {config.contact.phone && <p className="text-muted-foreground"><span aria-hidden="true">📞</span> {config.contact.phone}</p>}
-                {config.contact.whatsapp && <p className="text-muted-foreground"><span aria-hidden="true">💬</span> {config.contact.whatsapp}</p>}
-                {config.contact.email && <p className="text-muted-foreground"><span aria-hidden="true">✉️</span> {config.contact.email}</p>}
+                {config.contact.phone ? (
+                  <p className="text-muted-foreground">📞 {config.contact.phone}</p>
+                ) : null}
+                {config.contact.whatsapp ? (
+                  <p className="text-muted-foreground">
+                    💬 {config.contact.whatsapp}
+                  </p>
+                ) : null}
+                {config.contact.email ? (
+                  <p className="text-muted-foreground">✉️ {config.contact.email}</p>
+                ) : null}
               </CardContent>
             </Card>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
