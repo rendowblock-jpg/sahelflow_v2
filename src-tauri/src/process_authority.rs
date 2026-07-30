@@ -36,7 +36,7 @@ pub(crate) struct ProcessAuthorityGuard {
 pub(crate) fn acquire() -> Result<ProcessAuthorityGuard, IoError> {
     #[cfg(windows)]
     {
-        return acquire_named(PROCESS_AUTHORITY_MUTEX);
+        acquire_named(PROCESS_AUTHORITY_MUTEX)
     }
 
     #[cfg(not(windows))]
