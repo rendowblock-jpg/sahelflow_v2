@@ -4,6 +4,7 @@ import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { NotFoundError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
+import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -60,12 +61,19 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Verify the order exists
   const order = await db.order.findUnique({
     where: { id: input.orderId },
-    select: { id: true, orderNumber: true, status: true },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      source: true,
+      sourceMetadata: true,
+    },
   });
 
   if (!order) {
     throw new NotFoundError("Order", input.orderId);
   }
+  assertLegacyOrderFollowupAllowed(order.source, order.sourceMetadata);
 
   // Append item count to notes if provided (the Return model has no
   // dedicated itemCount field, so we store it alongside merchant notes).

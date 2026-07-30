@@ -1608,6 +1608,7 @@
   "orders.statusActions.markDelivered": "Mark delivered",
   "orders.statusActions.markPending": "Mark as pending",
   "orders.statusActions.noActions": "No actions available for this order.",
+  "orders.statusActions.packed": "Packed",
   "orders.statusActions.returnButton": "Return",
   "orders.statusActions.selectStatus": "Select status",
   "orders.statusActions.updateFailed": "Failed to update",

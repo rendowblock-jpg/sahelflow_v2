@@ -320,6 +320,11 @@ export async function executeManualOrderDecision(
         data: {
           status,
           version: orderVersion,
+          fulfillmentState: "unfulfilled",
+          deliveryState: "not_created",
+          inventoryState:
+            data.decision === "confirm" ? "reserved" : "unreserved",
+          codState: "not_expected",
           ...(confirmedAt ? { confirmedAt } : {}),
         },
       });

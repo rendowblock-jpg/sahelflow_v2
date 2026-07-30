@@ -36,6 +36,7 @@ vi.mock("@/lib/automations/engine", () => ({
 
 import { POST as POSTReturn } from "@/app/api/returns/route";
 import { PATCH as PATCHReturn } from "@/app/api/returns/[id]/route";
+import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -141,6 +142,24 @@ describe("POST /api/returns — create return request", () => {
     expect(res.status).toBe(201);
     const body = await getJson(res);
     expect((body.return as { type: string }).type).toBe("return");
+  });
+
+  it("does not create a legacy return for a canonical delivered order", async () => {
+    const { order } = await seedOrderAtStatus("delivered");
+    await rawDb.order.update({
+      where: { id: order.id },
+      data: { sourceMetadata: trustedManualOrderSourceMetadata() },
+    });
+
+    const res = await POSTReturn(
+      mockPost("http://localhost/api/returns", {
+        orderId: order.id,
+        reason: "Requires the governed return command",
+      }),
+    );
+
+    expect(res.status).toBe(409);
+    expect(await rawDb.return.count({ where: { orderId: order.id } })).toBe(0);
   });
 
   it("returns 400 on missing required reason", async () => {

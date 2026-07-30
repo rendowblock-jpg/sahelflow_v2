@@ -159,8 +159,15 @@ model Order {
   sourceMetadata  String?
   notes           String?
   confirmedAt     DateTime?
+  packedAt        DateTime?
   shippedAt       DateTime?
   deliveredAt     DateTime?
+  // Canonical independent lifecycle projections. NULL means the legacy row has
+  // not been adopted by a governed command and must never be inferred as proof.
+  fulfillmentState String?
+  deliveryState    String?
+  inventoryState   String?
+  codState         String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   delivery        Delivery?
@@ -191,6 +198,9 @@ model Order {
   @@index([wilaya])
   @@index([deliveredAt])
   @@index([confirmedAt])
+  @@index([fulfillmentState])
+  @@index([deliveryState])
+  @@index([codState])
   // W3-9 (Session 39): composite indexes for high-traffic query paths.
   // These cover the orders-page list filter (status + time window + soft-delete),
   // the customer-detail order history, and the multi-source isolation filter.

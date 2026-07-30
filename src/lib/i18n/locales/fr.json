@@ -1608,6 +1608,7 @@
   "orders.statusActions.markDelivered": "Marquer livrée",
   "orders.statusActions.markPending": "Marquer en attente",
   "orders.statusActions.noActions": "Aucune action possible sur cette commande.",
+  "orders.statusActions.packed": "Emballée",
   "orders.statusActions.returnButton": "Retour",
   "orders.statusActions.selectStatus": "Sélectionner le statut",
   "orders.statusActions.updateFailed": "Échec de la mise à jour",
