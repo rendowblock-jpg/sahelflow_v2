@@ -14,11 +14,16 @@ import {
   hashPin,
   verifyPin,
   verifyPinDetailed,
+  verifySessionToken,
   getSessionIdFromToken,
   CURRENT_PBKDF2_ITERATIONS,
 } from "./crypto";
 import { SahelFlowError } from "@/types/errors";
 import type { ServiceContext } from "@/lib/data/service-base";
+import {
+  resolveSessionAuthority,
+  type SessionAuthorityResult,
+} from "@/lib/identity/session-authority";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 const LEGACY_AUTH_SECRET_KEY = "auth_secret";
@@ -112,14 +117,15 @@ export async function isAuthSetup(): Promise<boolean> {
   await migrateAuthSecretsIfNeeded();
   try {
     const row = await authContext.prisma.authSecret.findUnique({ where: { id: "default" } });
-    return !!row?.pinHash;
+    if (row?.pinHash) return true;
+    const setting = await authContext.prisma.setting.findUnique({ where: { key: LEGACY_AUTH_PIN_KEY } });
+    return !!setting?.value;
   } catch {
-    try {
-      const setting = await authContext.prisma.setting.findUnique({ where: { key: LEGACY_AUTH_PIN_KEY } });
-      return !!setting?.value;
-    } catch {
-      return false;
-    }
+    throw new SahelFlowError(
+      "Authentication authority is temporarily unavailable",
+      "SESSION_AUTHORITY_UNAVAILABLE",
+      503,
+    );
   }
 }
 
@@ -139,14 +145,52 @@ export async function createSession(ip?: string): Promise<void> {
   void authContext.prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
 }
 
-export async function destroySession(): Promise<void> {
-  const token = await getSessionToken();
-  const sid = getSessionIdFromToken(token);
-  if (sid) {
-    try {
-      await authContext.prisma.session.update({ where: { id: sid }, data: { revokedAt: new Date() } });
-    } catch { /* non-fatal */ }
+async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult> {
+  if (process.env.NODE_ENV === "production") {
+    assertProcessShopAuthority(shopContext);
   }
+
+  const token = await getSessionToken();
+  const secret = await getAuthSecret();
+  let authSetup: boolean;
+  try {
+    authSetup = secret ? true : await isAuthSetup();
+  } catch {
+    return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
+  }
+
+  return resolveSessionAuthority({
+    token,
+    secret,
+    authSetup,
+    verifyToken: verifySessionToken,
+    getSessionId: getSessionIdFromToken,
+    findSession: async (sessionId) =>
+      authContext.prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { id: true, revokedAt: true },
+      }),
+  });
+}
+
+export const getCurrentSessionAuthority = cache(resolveCurrentSessionAuthority);
+
+export async function destroySession(): Promise<void> {
+  try {
+    const authority = await resolveCurrentSessionAuthority();
+    if (authority.status === "authenticated") {
+      try {
+        await authContext.prisma.session.update({
+          where: { id: authority.sessionId },
+          data: { revokedAt: new Date() },
+        });
+      } catch { /* non-fatal */ }
+    }
+  } catch {
+    // Clearing the local cookie must remain possible when shop or session
+    // authority is unavailable. No unverified Session ID is ever revoked.
+  }
+
   const store = await cookies();
   store.delete(AUTH_COOKIE);
 }
@@ -157,45 +201,33 @@ export async function getSessionToken(): Promise<string | undefined> {
 }
 
 export const isAuthenticated = cache(async (): Promise<boolean> => {
-  if (process.env.NODE_ENV === "production") {
-    assertProcessShopAuthority(shopContext);
-  }
-  const token = await getSessionToken();
-  const secret = await getAuthSecret();
-  // Fail-OPEN only when auth is genuinely not set up (no AuthSecret row).
-  // If auth IS set up but the secret is missing/corrupted, fail CLOSED.
-  if (!secret) {
-    const setup = await isAuthSetup();
-    return !setup; // not setup → allow (setup mode); setup but no secret → deny
-  }
-  if (!token) return false;
-  const { verifySessionToken } = await import("./crypto");
-  const hmacValid = await verifySessionToken(token, secret);
-  if (!hmacValid) return false;
-  const sid = getSessionIdFromToken(token);
-  if (!sid) return true; // legacy token — allow, will expire naturally
-  try {
-    const session = await authContext.prisma.session.findUnique({ where: { id: sid } });
-    if (!session) return false;
-    if (session.revokedAt) return false;
-    return true;
-  } catch {
-    // DB error during session revocation check — HMAC is valid, so the token
-    // itself is legitimate. Fail-open here is defense-in-depth (the HMAC is
-    // the primary gate), but revoked sessions may briefly work until the DB
-    // recovers. Acceptable for a local-first single-user app.
-    return true;
-  }
+  const authority = await getCurrentSessionAuthority();
+  return authority.status === "setup" || authority.status === "authenticated";
 });
 
+function sessionAuthorityError(
+  authority: Extract<SessionAuthorityResult, { status: "rejected" }>,
+): SahelFlowError {
+  if (
+    authority.code === "AUTH_SECRET_UNAVAILABLE" ||
+    authority.code === "SESSION_AUTHORITY_UNAVAILABLE"
+  ) {
+    return new SahelFlowError(
+      "Authentication authority is temporarily unavailable",
+      authority.code,
+      503,
+    );
+  }
+
+  return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
+}
+
 export async function requireAuth(): Promise<void> {
-  if (process.env.NODE_ENV === "production") {
-    assertProcessShopAuthority(shopContext);
+  const authority = await getCurrentSessionAuthority();
+  if (authority.status === "setup" || authority.status === "authenticated") {
+    return;
   }
-  const ok = await isAuthenticated();
-  if (!ok) {
-    throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
-  }
+  throw sessionAuthorityError(authority);
 }
 
 export async function auditLog(
@@ -215,13 +247,11 @@ export async function auditLog(
  * rate limiter (AI-P1) so the daily cap is enforced across all of a user's
  * AI chat sessions, not shared globally as "default".
  *
- * Returns "default" if no session token is present or the token is
- * unverifiable — this preserves backward-compatible behavior in setups
- * where auth isn't fully configured (e.g. dev mode).
+ * Returns "default" only when no authenticated session authority exists. This
+ * preserves setup/development compatibility without accepting legacy no-JTI
+ * tokens or bypassing revocation-store failures.
  */
 export async function getCurrentUserKey(): Promise<string> {
-  const token = await getSessionToken();
-  if (!token) return "default";
-  const sid = getSessionIdFromToken(token);
-  return sid ?? "default";
+  const authority = await getCurrentSessionAuthority();
+  return authority.status === "authenticated" ? authority.sessionId : "default";
 }
