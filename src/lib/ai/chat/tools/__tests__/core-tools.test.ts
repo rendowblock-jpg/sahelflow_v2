@@ -318,6 +318,17 @@ describe("get_stats", () => {
 // ── update_order_status ──────────────────────────────────────────────────────
 
 describe("update_order_status", () => {
+  it("never falls back to legacy confirmation", async () => {
+    const tool = getTool("update_order_status")!;
+    const result = await tool.execute(
+      { orderId: "any-order", status: "confirmed" },
+      ctx(),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/confirmation/i);
+  });
+
   it("transitions an order draft → pending", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     const order = await db.order.create({

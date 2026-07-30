@@ -128,6 +128,10 @@ export function useOrdersColumns(opts: UseOrdersColumnsOptions): ColumnDef<Order
           orderId={row.original.id}
           status={row.original.status as never}
           size="sm"
+          disabled={
+            row.original.mutationAuthority === "canonical_v1" ||
+            row.original.mutationAuthority === "confirmation_blocked"
+          }
         />
       ),
       enableSorting: false,
@@ -181,13 +185,17 @@ export function useOrdersColumns(opts: UseOrdersColumnsOptions): ColumnDef<Order
                   {t("orders.viewDetails")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/orders/${order.id}`}>
-                  <Pencil className="me-2 h-4 w-4" />
-                  {t("orders.edit")}
-                </Link>
-              </DropdownMenuItem>
-              {(order.status === "draft" || order.status === "cancelled") && onDelete && (
+              {order.mutationAuthority !== "canonical_v1" && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/orders/${order.id}`}>
+                    <Pencil className="me-2 h-4 w-4" />
+                    {t("orders.edit")}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {order.mutationAuthority !== "canonical_v1" &&
+                (order.status === "draft" || order.status === "cancelled") &&
+                onDelete && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

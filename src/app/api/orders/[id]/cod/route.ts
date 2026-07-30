@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth/server";
 import { markCodCollected, markCodRemitted } from "@/lib/data/cod-service";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
+import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -20,6 +21,13 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Ctx) 
   const body = await req.json();
   const parsed = codSchema.parse(body);
   const context = { prisma: db, shop: shopContext };
+  const authority = await db.order.findFirst({
+    where: { id, deletedAt: null },
+    select: { source: true, sourceMetadata: true },
+  });
+  if (authority) {
+    assertLegacyOrderFollowupAllowed(authority.source, authority.sourceMetadata);
+  }
 
   const order = parsed.action === "mark_collected"
     ? await markCodCollected(context, id)

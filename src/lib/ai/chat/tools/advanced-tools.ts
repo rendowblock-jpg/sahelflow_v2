@@ -32,6 +32,7 @@ import type { DbClient } from "@/lib/db";
 // person (blind-index mismatch → unfindable customer).
 import { normalizePhone } from "@/lib/import/fields";
 import { orderService } from "@/lib/data/order-service";
+import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -395,6 +396,13 @@ registerTool({
           include: { customer: true, items: true },
         });
         if (!order) throw new Error("Commande introuvable");
+        if (
+          isTrustedManualOrderAuthority(order.source, order.sourceMetadata)
+        ) {
+          throw new Error(
+            "Cette commande canonique exige un flux d’expédition gouverné avant tout appel transporteur",
+          );
+        }
         if (order.status !== "confirmed") {
           throw new Error(
             `La commande doit être confirmée avant la livraison (statut actuel: ${order.status})`,

@@ -28,6 +28,7 @@ import type { ToolContext, ToolResult } from "./registry";
 import { registerTool } from "./registry";
 import { assessOrderRisk } from "@/lib/wilaya-risk/engine";
 import type { DbClient } from "@/lib/db";
+import { productService } from "@/lib/data/product-service";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -670,11 +671,11 @@ registerTool({
         where: { id: input.productId },
         select: { stock: true },
       });
-      const product = await db.product.update({
-        where: { id: input.productId },
-        data: { stock: input.newStock },
-        select: { id: true, name: true, sku: true, stock: true },
-      });
+      const product = await productService.update(
+        { prisma: db, shop: ctx.shop },
+        input.productId,
+        { stock: input.newStock },
+      );
       // AI-P4: record an audit-log entry for the stock adjustment so the
       // `reason` is preserved in the product timeline (AuditLog table).
       // Previously the reason was discarded, leaving no audit trail.
