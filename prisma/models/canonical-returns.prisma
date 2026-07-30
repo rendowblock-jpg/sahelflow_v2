@@ -1,0 +1,85 @@
+// Phase 1C/E canonical cancellation, delivery exception and physical-return facts.
+//
+// Order.*State columns are current projections. Delivery events, return events and
+// inspections are append-only authority. Scalar order, delivery, item and command
+// IDs are linked by the SQL migration so legacy models do not need reverse fields.
+
+model CanonicalDeliveryEvent {
+  id                 String   @id
+  eventKey           String   @unique
+  orderId            String
+  deliveryId         String?
+  eventType          String
+  provider           String
+  providerEventId    String?
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String   @unique
+  createdAt          DateTime @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([orderId, occurredAt])
+  @@index([deliveryId, occurredAt])
+  @@index([eventType, occurredAt])
+}
+
+model CanonicalReturnCase {
+  id                 String                      @id
+  returnKey          String                      @unique
+  orderId            String                      @unique
+  origin             String
+  caseType           String                      @default("return")
+  currentState       String
+  reasonCode         String
+  createdByCommandId String                      @unique
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @default(now()) @updatedAt
+  events             CanonicalReturnEvent[]
+  inspections        CanonicalReturnInspection[]
+
+  @@index([currentState, updatedAt])
+  @@index([origin, createdAt])
+}
+
+model CanonicalReturnEvent {
+  id                 String              @id
+  eventKey           String              @unique
+  returnId           String
+  orderId            String
+  eventType          String
+  fromState          String?
+  toState            String
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String              @unique
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([returnId, occurredAt])
+  @@index([orderId, occurredAt])
+  @@index([eventType, occurredAt])
+}
+
+model CanonicalReturnInspection {
+  id                 String              @id
+  inspectionKey      String              @unique
+  returnId           String
+  orderId            String
+  orderItemId        String
+  productId          String
+  productVariantId   String?
+  quantity           Int
+  disposition        String
+  unitCost           Int?
+  lossAmount         Int?
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([returnId, orderItemId])
+  @@index([orderId, occurredAt])
+  @@index([productId, productVariantId, disposition])
+  @@index([createdByCommandId])
+}
