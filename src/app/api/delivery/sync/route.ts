@@ -7,6 +7,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { recordOrderChangeInTx } from "@/lib/data/order-change-service";
 import { ConflictError, InvalidTransitionError } from "@/types/errors";
+import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       { error: "Pas de numéro de suivi pour cette expédition" },
       { status: 400 },
     );
+  }
+  const authority = await db.order.findFirst({
+    where: { id: delivery.orderId, deletedAt: null },
+    select: { source: true, sourceMetadata: true },
+  });
+  if (authority) {
+    assertLegacyOrderFollowupAllowed(authority.source, authority.sourceMetadata);
   }
 
   const adapter = getDeliveryAdapter(delivery.provider);

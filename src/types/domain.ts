@@ -38,6 +38,7 @@ export interface Order {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  version: number;
   customerId: string;
   items: OrderItem[];
   totalPrice: number;
@@ -57,6 +58,7 @@ export interface Order {
 }
 
 export interface OrderSourceMetadata {
+  authority?: string;
   conversationId?: string;
   messageId?: string;
   platform?: string;

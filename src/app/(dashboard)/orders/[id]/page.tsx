@@ -40,6 +40,10 @@ import { getRefundsForOrder, getTotalRefunded } from "@/lib/data/refund-service"
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { RefundDialog } from "@/components/orders/refund-dialog";
 import { CodControls } from "@/components/orders/cod-controls";
+import {
+  isImportPendingOrderAuthority,
+  isTrustedManualOrderAuthority,
+} from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +67,15 @@ export default async function OrderDetailPage({
     if (err instanceof NotFoundError) notFound();
     throw err;
   }
+
+  const canonicalManual = isTrustedManualOrderAuthority(
+    order.source,
+    order.sourceMetadata,
+  );
+  const importConfirmationBlocked = isImportPendingOrderAuthority(
+    order.source,
+    order.sourceMetadata,
+  );
 
   // Fetch customer + delivery + risk assessment + timeline + refunds + COD fields
   const [customer, delivery, riskAssessment, timelineEntries, refunds, totalRefunded, codData] = await Promise.all([
@@ -123,6 +136,7 @@ export default async function OrderDetailPage({
               <OrderStatusBadge
                 orderId={order.id}
                 status={order.status}
+                disabled={canonicalManual || importConfirmationBlocked}
               />
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -133,13 +147,26 @@ export default async function OrderDetailPage({
               {SOURCE_LABELS[order.source] ?? order.source}
             </p>
           </div>
-          <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
+          {!canonicalManual && (
+            <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
+          )}
         </div>
 
         {/* Status actions (client component) */}
         <Card>
           <CardContent className="pt-6">
-            <OrderStatusActions orderId={order.id} currentStatus={order.status} />
+            <OrderStatusActions
+              orderId={order.id}
+              currentStatus={order.status}
+              currentVersion={order.version}
+              mutationAuthority={
+                canonicalManual
+                  ? "canonical_v1"
+                  : importConfirmationBlocked
+                    ? "confirmation_blocked"
+                    : "legacy_compatibility"
+              }
+            />
           </CardContent>
         </Card>
       </div>
@@ -149,6 +176,7 @@ export default async function OrderDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <OrderEditPanel
             orderId={order.id}
+            readOnly={canonicalManual}
             initialItems={order.items.map((i) => ({
               id: i.id,
               productId: i.productId,
@@ -220,18 +248,20 @@ export default async function OrderDetailPage({
             </Card>
 
             {/* Delivery / shipment */}
-            <CreateShipment
-              orderId={order.id}
-              orderStatus={order.status}
-              delivery={delivery ? {
-                id: delivery.id,
-                provider: delivery.provider,
-                trackingNumber: delivery.trackingNumber,
-                labelUrl: delivery.labelUrl,
-                cost: delivery.cost,
-                status: delivery.status,
-              } : null}
-            />
+            {!canonicalManual && (
+              <CreateShipment
+                orderId={order.id}
+                orderStatus={order.status}
+                delivery={delivery ? {
+                  id: delivery.id,
+                  provider: delivery.provider,
+                  trackingNumber: delivery.trackingNumber,
+                  labelUrl: delivery.labelUrl,
+                  cost: delivery.cost,
+                  status: delivery.status,
+                } : null}
+              />
+            )}
 
             {/* Notes */}
             {order.notes && (
@@ -454,7 +484,7 @@ export default async function OrderDetailPage({
           </Card>
 
           {/* COD reconciliation controls (Phase 4 — killer COD feature) */}
-          {order.status === "delivered" && codData && (
+          {!canonicalManual && order.status === "delivered" && codData && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -478,7 +508,7 @@ export default async function OrderDetailPage({
           )}
 
           {/* Refund section (Phase 4) */}
-          {["delivered", "returned", "refused"].includes(order.status) && (
+          {!canonicalManual && ["delivered", "returned", "refused"].includes(order.status) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">

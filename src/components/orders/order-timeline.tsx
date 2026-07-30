@@ -55,6 +55,11 @@ function formatActionLabel(
     const p = payload ? JSON.parse(payload) : {};
     switch (actionType) {
       case "status_change":
+        if (typeof p.rejectionReason === "string" && p.rejectionReason) {
+          return t("orders.timeline.rejected", {
+            reason: p.rejectionReason,
+          });
+        }
         return t("orders.timeline.status_change", { from: p.from ?? "?", to: p.to ?? "?" });
       case "item_add":
         return t("orders.timeline.item_add", { productName: p.productName ?? t("orders.timeline.unknown") });

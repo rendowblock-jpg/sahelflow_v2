@@ -12,6 +12,7 @@ import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import type { OrderStatus } from "@/types/domain";
+import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,13 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   // happily operate on a soft-deleted delivery. NotFoundError → 404 via
   // withErrorHandler.
   const existing = await deliveryService.getById(context, id);
+  const authority = await db.order.findFirst({
+    where: { id: existing.orderId, deletedAt: null },
+    select: { source: true, sourceMetadata: true },
+  });
+  if (authority) {
+    assertLegacyOrderFollowupAllowed(authority.source, authority.sourceMetadata);
+  }
 
   const targetOrderStatus: OrderStatus | null =
     status === "delivered" ? "delivered" :

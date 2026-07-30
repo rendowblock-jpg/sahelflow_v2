@@ -10,6 +10,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +23,19 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
 
   const order = await db.order.findUnique({
     where: { id },
-    select: { status: true },
+    select: { status: true, source: true, sourceMetadata: true },
   });
 
   if (!order) {
     throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
+  }
+
+  if (isTrustedManualOrderAuthority(order.source, order.sourceMetadata)) {
+    throw new SahelFlowError(
+      "Canonical manual orders require a governed deletion command",
+      "CANONICAL_FOLLOWUP_REQUIRED",
+      409,
+    );
   }
 
   // Only allow deletion of draft or cancelled orders

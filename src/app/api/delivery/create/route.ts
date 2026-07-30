@@ -6,6 +6,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { orderService } from "@/lib/data/order-service";
 import { ConflictError, SahelFlowError } from "@/types/errors";
+import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       });
       if (!order) {
         throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
+      }
+      if (
+        isTrustedManualOrderAuthority(order.source, order.sourceMetadata)
+      ) {
+        throw new SahelFlowError(
+          "Canonical manual orders require a governed fulfillment command before any provider call",
+          "CANONICAL_FOLLOWUP_REQUIRED",
+          409,
+        );
       }
       const existing = await tx.delivery.findUnique({ where: { orderId: order.id } });
       if (existing?.trackingNumber) {

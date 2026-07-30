@@ -2,11 +2,18 @@
  * Product service — CRUD + stock management + low-stock detection.
  */
 import type { Product, Category } from "@/types/domain";
-import { NotFoundError, ConflictError, ValidationError } from "@/types/errors";
+import {
+  NotFoundError,
+  ConflictError,
+  SahelFlowError,
+  ValidationError,
+} from "@/types/errors";
 import { createProductSchema, updateProductSchema, createCategorySchema } from "@/lib/validation";
 import type { ServiceContext } from "./service-base";
 import { withServiceError } from "./service-base";
 import { detectLowStock, dispatchLowStock } from "@/lib/automations/engine";
+import type { OrderChangeTransactionClient } from "@/lib/data/order-change-service";
+import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
 
 function toDomainProduct(row: Record<string, unknown>): Product {
   const r = { ...row };
@@ -23,6 +30,45 @@ function toDomainProduct(row: Record<string, unknown>): Product {
 
 function toDomainCategory(row: Record<string, unknown>): Category {
   return row as unknown as Category;
+}
+
+async function assertCanonicalCatalogMutationAllowed(
+  tx: OrderChangeTransactionClient,
+  productId: string,
+): Promise<void> {
+  const activeReservations = await tx.$queryRaw<Array<{ present: number }>>`
+    SELECT 1 AS "present"
+    FROM "InventoryReservation"
+    WHERE "productId" = ${productId}
+      AND "state" = 'active'
+    LIMIT 1
+  `;
+  if (activeReservations.length > 0) {
+    throw new SahelFlowError(
+      "Product or variant stock is governed by an active reservation",
+      "CANONICAL_STOCK_ADJUSTMENT_REQUIRED",
+      409,
+    );
+  }
+
+  const pendingSelections = await tx.$queryRaw<Array<{ present: number }>>`
+    SELECT 1 AS "present"
+    FROM "OrderItem" AS "item"
+    INNER JOIN "Order" AS "purchase" ON "purchase"."id" = "item"."orderId"
+    WHERE "item"."productId" = ${productId}
+      AND "purchase"."status" = 'pending'
+      AND "purchase"."deletedAt" IS NULL
+      AND "purchase"."source" = 'manual'
+      AND "purchase"."sourceMetadata" = ${trustedManualOrderSourceMetadata()}
+    LIMIT 1
+  `;
+  if (pendingSelections.length > 0) {
+    throw new SahelFlowError(
+      "Product or variant authority is selected by a pending canonical order",
+      "CANONICAL_CATALOG_MUTATION_BLOCKED",
+      409,
+    );
+  }
 }
 
 export const productService = {
@@ -117,9 +163,27 @@ export const productService = {
       // of the just-updated stock) and dispatch AFTER the tx commits.
       const lowStockToDispatch: Array<{ id: string; name: string; sku: string | null; stock: number; lowStockThreshold: number }> = [];
       const row = await ctx.prisma.$transaction(async (tx) => {
+        if (
+          data.stock !== undefined ||
+          data.isActive === false ||
+          Array.isArray(legacyVariants)
+        ) {
+          await assertCanonicalCatalogMutationAllowed(tx, id);
+        }
+
         if (Array.isArray(legacyVariants)) {
           const existing = await tx.productVariant.findMany({ where: { productId: id } });
           const incomingIds = legacyVariants.filter(v => v.id).map(v => v.id);
+          const ownedVariantIds = new Set(existing.map((variant) => variant.id));
+          const foreignVariantId = incomingIds.find(
+            (variantId) => !ownedVariantIds.has(variantId!),
+          );
+          if (foreignVariantId) {
+            throw new ValidationError(
+              `Variant '${foreignVariantId}' does not belong to product '${id}'`,
+              "variants.id",
+            );
+          }
           const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
 
           await Promise.all([
@@ -186,9 +250,12 @@ export const productService = {
     // isActive is a flag, not a soft-delete column; deletedAt is the spec
     // (Phase 2). Now both paths set deletedAt.
     return withServiceError(async () => {
-      await ctx.prisma.product.update({
-        where: { id },
-        data: { deletedAt: new Date(), isActive: false },
+      await ctx.prisma.$transaction(async (tx) => {
+        await assertCanonicalCatalogMutationAllowed(tx, id);
+        await tx.product.update({
+          where: { id },
+          data: { deletedAt: new Date(), isActive: false },
+        });
       });
     }, "Product");
   },

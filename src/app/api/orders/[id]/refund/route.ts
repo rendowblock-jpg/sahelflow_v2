@@ -6,6 +6,7 @@ import { createRefund } from "@/lib/data/refund-service";
 import { db, shopContext } from "@/lib/db";
 import { SahelFlowError } from "@/types/errors";
 import { z } from "zod";
+import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -30,9 +31,16 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: Ctx) =
 
   const order = await db.order.findUnique({
     where: { id },
-    select: { totalPrice: true, status: true, deletedAt: true },
+    select: {
+      totalPrice: true,
+      status: true,
+      deletedAt: true,
+      source: true,
+      sourceMetadata: true,
+    },
   });
   if (!order || order.deletedAt) throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
+  assertLegacyOrderFollowupAllowed(order.source, order.sourceMetadata);
 
   // Session 30 (AUDIT-2 A1): idempotency key — use client-supplied, or
   // derive one from order+amount+method so double-clicks collapse to one refund.
