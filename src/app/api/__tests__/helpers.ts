@@ -42,6 +42,21 @@ export async function cleanDb(): Promise<void> {
   ]);
 }
 
+/**
+ * Establish real revocable seller authority for a protected-route integration
+ * test. The caller's `next/headers` mock must implement mutable get/set/delete
+ * cookie behavior so `createSession()` can publish `sf_session`.
+ */
+export async function establishAuthenticatedTestSession(
+  pin = "12345678",
+  ip = "127.0.0.1",
+): Promise<void> {
+  const { createSession, setupAuth } = await import("@/lib/auth/server");
+  const { secret } = await setupAuth(pin);
+  process.env.AUTH_SECRET = secret;
+  await createSession(ip);
+}
+
 let _ipCounter = 0;
 /** Get a unique IP for each test (avoids rate limiter accumulation). */
 export function uniqueIp(): string {
