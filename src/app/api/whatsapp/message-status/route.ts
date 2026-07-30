@@ -10,13 +10,42 @@ import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
+const deliveryStatusSchema = z.enum([
+  "sending",
+  "sent",
+  "delivered",
+  "read",
+  "failed",
+]);
+type DeliveryStatus = z.infer<typeof deliveryStatusSchema>;
+
 const statusSchema = z.object({
   waMessageId: z.string().min(1).max(256),
   jid: z.string().min(1).max(256),
   fromMe: z.boolean().optional().default(true),
-  deliveryStatus: z.enum(["sending", "sent", "delivered", "read", "failed"]),
+  deliveryStatus: deliveryStatusSchema,
   error: z.string().max(2000).optional(),
 });
+
+const DELIVERY_RANK: Record<Exclude<DeliveryStatus, "failed">, number> = {
+  sending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+};
+
+function shouldAdvanceDeliveryStatus(
+  current: string | null,
+  next: DeliveryStatus,
+): boolean {
+  if (next === "failed") return current !== "failed";
+  if (current === "failed") return false;
+  const currentRank =
+    current && current in DELIVERY_RANK
+      ? DELIVERY_RANK[current as keyof typeof DELIVERY_RANK]
+      : -1;
+  return DELIVERY_RANK[next] > currentRank;
+}
 
 function resolveExpectedRestToken(): string | undefined {
   const fromEnv = env.sidecarToken;
@@ -40,6 +69,24 @@ function authenticateSidecar(request: NextRequest): boolean {
   );
 }
 
+async function updateMessageStatus(
+  messageId: string,
+  deliveryStatus: DeliveryStatus,
+): Promise<boolean> {
+  const message = await db.message.findUnique({
+    where: { id: messageId },
+    select: { deliveryStatus: true },
+  });
+  if (!message || !shouldAdvanceDeliveryStatus(message.deliveryStatus, deliveryStatus)) {
+    return false;
+  }
+  await db.message.update({
+    where: { id: messageId },
+    data: { deliveryStatus },
+  });
+  return true;
+}
+
 export const POST = withErrorHandler(async (request: NextRequest) => {
   if (!authenticateSidecar(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,19 +102,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     select: { messageId: true },
   });
   if (exact) {
-    const updated = await db.message.updateMany({
-      where: { id: exact.messageId },
-      data: { deliveryStatus: input.deliveryStatus },
-    });
-    if (updated.count === 1) updatedMessageId = exact.messageId;
+    if (await updateMessageStatus(exact.messageId, input.deliveryStatus)) {
+      updatedMessageId = exact.messageId;
+    }
   } else {
-    // Compatibility-only fallback for legacy sends without durable receipt rows.
+    // Compatibility-only fallback for legacy sends without a durable effect row.
     const conversation = await db.conversation.findFirst({
       where: { channel: "whatsapp", sourceId: input.jid },
       select: { id: true },
     });
     if (conversation) {
-      const message = await db.message.findFirst({
+      const candidates = await db.message.findMany({
         where: {
           conversationId: conversation.id,
           direction: "outbound",
@@ -75,14 +120,22 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           timestamp: { gte: new Date(Date.now() - 10 * 60_000) },
         },
         orderBy: { timestamp: "desc" },
+        take: 10,
         select: { id: true },
       });
-      if (message) {
-        await db.message.update({
-          where: { id: message.id },
-          data: { deliveryStatus: input.deliveryStatus },
-        });
-        updatedMessageId = message.id;
+      const durable = candidates.length
+        ? await db.whatsAppOutboundEffect.findMany({
+            where: { messageId: { in: candidates.map((message) => message.id) } },
+            select: { messageId: true },
+          })
+        : [];
+      const durableIds = new Set(durable.map((effect) => effect.messageId));
+      const legacy = candidates.find((message) => !durableIds.has(message.id));
+      if (
+        legacy &&
+        (await updateMessageStatus(legacy.id, input.deliveryStatus))
+      ) {
+        updatedMessageId = legacy.id;
       }
     }
   }
