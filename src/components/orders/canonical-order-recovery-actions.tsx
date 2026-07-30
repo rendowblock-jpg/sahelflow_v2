@@ -72,17 +72,23 @@ const COPY = {
     receive_return: "Receive physical return",
     inspect_return: "Inspect returned goods",
     cancelTitle: "Cancel this order before shipment?",
-    cancelBody: "The exact active reservation will be released and available stock restored atomically.",
+    cancelBody:
+      "The exact active reservation will be released and available stock restored atomically.",
     delivery_failedTitle: "Record a failed delivery?",
-    delivery_failedBody: "Stock remains unavailable until the parcel physically returns and is inspected.",
+    delivery_failedBody:
+      "Stock remains unavailable until the parcel physically returns and is inspected.",
     delivery_refusedTitle: "Record a customer refusal?",
-    delivery_refusedBody: "Stock remains with the carrier until physical return and inspection.",
+    delivery_refusedBody:
+      "Stock remains with the carrier until physical return and inspection.",
     return_in_transitTitle: "Mark the parcel as returning?",
-    return_in_transitBody: "This records carrier return transit without restoring sellable stock.",
+    return_in_transitBody:
+      "This records carrier return transit without restoring sellable stock.",
     receive_returnTitle: "Receive the physical parcel?",
-    receive_returnBody: "Goods enter inspection quarantine. They are not available for sale yet.",
+    receive_returnBody:
+      "Goods enter inspection quarantine. They are not available for sale yet.",
     inspect_returnTitle: "Complete returned-goods inspection?",
-    inspect_returnBody: "Every item must be assigned to available, damaged, quarantine or lost stock.",
+    inspect_returnBody:
+      "Every item must be assigned to available, damaged, quarantine or lost stock.",
     reason: "Reason code",
     reasonPlaceholder: "customer-refused",
     providerEvent: "Provider event ID (optional)",
@@ -109,8 +115,10 @@ const COPY = {
     heading: "Annulation et retours physiques",
     authority: "Autorité de récupération gouvernée",
     loading: "Chargement de l'autorité de récupération…",
-    noAction: "Aucune action d'annulation ou de retour physique n'est disponible.",
-    loadFailed: "La position de récupération actuelle n'a pas pu être chargée.",
+    noAction:
+      "Aucune action d'annulation ou de retour physique n'est disponible.",
+    loadFailed:
+      "La position de récupération actuelle n'a pas pu être chargée.",
     cancel: "Annuler avant expédition",
     delivery_failed: "Échec de livraison",
     delivery_refused: "Refus du client",
@@ -118,17 +126,23 @@ const COPY = {
     receive_return: "Recevoir le retour physique",
     inspect_return: "Inspecter les articles retournés",
     cancelTitle: "Annuler cette commande avant expédition ?",
-    cancelBody: "La réservation exacte sera libérée et le stock disponible restauré atomiquement.",
+    cancelBody:
+      "La réservation exacte sera libérée et le stock disponible restauré atomiquement.",
     delivery_failedTitle: "Enregistrer un échec de livraison ?",
-    delivery_failedBody: "Le stock reste indisponible jusqu'au retour physique et à l'inspection.",
+    delivery_failedBody:
+      "Le stock reste indisponible jusqu'au retour physique et à l'inspection.",
     delivery_refusedTitle: "Enregistrer un refus client ?",
-    delivery_refusedBody: "Le stock reste chez le transporteur jusqu'au retour physique et à l'inspection.",
+    delivery_refusedBody:
+      "Le stock reste chez le transporteur jusqu'au retour physique et à l'inspection.",
     return_in_transitTitle: "Marquer le colis en retour ?",
-    return_in_transitBody: "Le transit retour est enregistré sans restaurer le stock vendable.",
+    return_in_transitBody:
+      "Le transit retour est enregistré sans restaurer le stock vendable.",
     receive_returnTitle: "Recevoir physiquement le colis ?",
-    receive_returnBody: "Les articles entrent en quarantaine d'inspection et ne sont pas encore vendables.",
+    receive_returnBody:
+      "Les articles entrent en quarantaine d'inspection et ne sont pas encore vendables.",
     inspect_returnTitle: "Terminer l'inspection du retour ?",
-    inspect_returnBody: "Chaque article doit être classé disponible, endommagé, en quarantaine ou perdu.",
+    inspect_returnBody:
+      "Chaque article doit être classé disponible, endommagé, en quarantaine ou perdu.",
     reason: "Code motif",
     reasonPlaceholder: "customer-refused",
     providerEvent: "ID événement transporteur (facultatif)",
@@ -143,7 +157,8 @@ const COPY = {
     committed: "L'action de récupération a été validée.",
     replayed: "L'action déjà validée a été récupérée sans risque.",
     failed: "L'action n'a pas été validée. Actualisez puis réessayez.",
-    conflict: "La commande ou la livraison a changé. Actualisez avant de réessayer.",
+    conflict:
+      "La commande ou la livraison a changé. Actualisez avant de réessayer.",
     invalid: "Complétez le motif et les champs d'inspection requis.",
     returnCase: "Dossier retour",
     delivery: "Livraison",
@@ -164,17 +179,23 @@ const COPY = {
     receive_return: "استلام الإرجاع فعليًا",
     inspect_return: "فحص السلع المرتجعة",
     cancelTitle: "إلغاء الطلبية قبل الشحن؟",
-    cancelBody: "سيُحرر الحجز الدقيق ويُعاد المخزون المتاح داخل معاملة واحدة.",
+    cancelBody:
+      "سيُحرر الحجز الدقيق ويُعاد المخزون المتاح داخل معاملة واحدة.",
     delivery_failedTitle: "تسجيل فشل التوصيل؟",
-    delivery_failedBody: "يبقى المخزون غير متاح حتى يرجع الطرد فعليًا ويتم فحصه.",
+    delivery_failedBody:
+      "يبقى المخزون غير متاح حتى يرجع الطرد فعليًا ويتم فحصه.",
     delivery_refusedTitle: "تسجيل رفض الزبون؟",
-    delivery_refusedBody: "يبقى المخزون لدى شركة التوصيل حتى الإرجاع والفحص الفعلي.",
+    delivery_refusedBody:
+      "يبقى المخزون لدى شركة التوصيل حتى الإرجاع والفحص الفعلي.",
     return_in_transitTitle: "تعليم الطرد كإرجاع قيد النقل؟",
-    return_in_transitBody: "يسجل مسار الإرجاع دون إعادة المخزون القابل للبيع.",
+    return_in_transitBody:
+      "يسجل مسار الإرجاع دون إعادة المخزون القابل للبيع.",
     receive_returnTitle: "استلام الطرد المرتجع فعليًا؟",
-    receive_returnBody: "تدخل السلع إلى حجر الفحص ولا تصبح متاحة للبيع بعد.",
+    receive_returnBody:
+      "تدخل السلع إلى حجر الفحص ولا تصبح متاحة للبيع بعد.",
     inspect_returnTitle: "إتمام فحص السلع المرتجعة؟",
-    inspect_returnBody: "يجب تصنيف كل عنصر كمتاح أو تالف أو محجور أو مفقود.",
+    inspect_returnBody:
+      "يجب تصنيف كل عنصر كمتاح أو تالف أو محجور أو مفقود.",
     reason: "رمز السبب",
     reasonPlaceholder: "customer-refused",
     providerEvent: "معرّف حدث شركة التوصيل (اختياري)",
@@ -189,7 +210,8 @@ const COPY = {
     committed: "تم اعتماد إجراء الاسترجاع.",
     replayed: "تمت استعادة الإجراء المعتمد سابقًا بأمان.",
     failed: "لم يتم اعتماد الإجراء. حدّث الحالة ثم أعد المحاولة.",
-    conflict: "تغيّرت الطلبية أو الشحنة. حدّث الصفحة قبل إعادة المحاولة.",
+    conflict:
+      "تغيّرت الطلبية أو الشحنة. حدّث الصفحة قبل إعادة المحاولة.",
     invalid: "أكمل رمز السبب وحقول الفحص المطلوبة.",
     returnCase: "ملف الإرجاع",
     delivery: "التوصيل",
@@ -222,7 +244,11 @@ async function fetchPosition(url: string): Promise<RecoveryPosition> {
   return body.position;
 }
 
-export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) {
+export function CanonicalOrderRecoveryActions({
+  orderId,
+}: {
+  orderId: string;
+}) {
   const { locale } = useI18n();
   const copy = COPY[locale];
   const router = useRouter();
@@ -249,7 +275,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
   const inspectionComplete = useMemo(
     () =>
       position?.items.every(
-        (item) => dispositions[item.orderItemId] !== undefined && dispositions[item.orderItemId] !== "",
+        (item) =>
+          dispositions[item.orderItemId] !== undefined &&
+          dispositions[item.orderItemId] !== "",
       ) ?? false,
     [dispositions, position],
   );
@@ -275,7 +303,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
     setError(null);
     if (action === "inspect_return" && position) {
       setDispositions(
-        Object.fromEntries(position.items.map((item) => [item.orderItemId, ""])),
+        Object.fromEntries(
+          position.items.map((item) => [item.orderItemId, ""]),
+        ),
       );
     }
   }
@@ -346,9 +376,15 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
     return <p className="text-sm text-muted-foreground">{copy.loading}</p>;
   }
   if (positionError || !position) {
-    return <p className="text-sm text-destructive" role="alert">{copy.loadFailed}</p>;
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {copy.loadFailed}
+      </p>
+    );
   }
-  if (position.availableActions.length === 0 && !position.returnCase) return null;
+  if (position.availableActions.length === 0 && !position.returnCase) {
+    return null;
+  }
 
   const dialogTitle = selectedAction ? copy[`${selectedAction}Title`] : "";
   const dialogBody = selectedAction ? copy[`${selectedAction}Body`] : "";
@@ -358,7 +394,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium">{copy.heading}</p>
-          <Badge variant="outline" className="mt-1">{copy.authority}</Badge>
+          <Badge variant="outline" className="mt-1">
+            {copy.authority}
+          </Badge>
         </div>
         <div className="flex flex-wrap gap-2">
           {position.availableActions.map((action) => {
@@ -367,7 +405,11 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
               <Button
                 key={action}
                 size="sm"
-                variant={action === "cancel" || action === "delivery_refused" ? "destructive" : "outline"}
+                variant={
+                  action === "cancel" || action === "delivery_refused"
+                    ? "destructive"
+                    : "outline"
+                }
                 onClick={() => open(action)}
                 disabled={committing}
               >
@@ -382,15 +424,21 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div>
           <dt className="text-xs text-muted-foreground">{copy.delivery}</dt>
-          <dd className="font-medium" dir="auto">{position.deliveryState ?? "—"}</dd>
+          <dd className="font-medium" dir="auto">
+            {position.deliveryState ?? "—"}
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.inventory}</dt>
-          <dd className="font-medium" dir="auto">{position.inventoryState ?? "—"}</dd>
+          <dd className="font-medium" dir="auto">
+            {position.inventoryState ?? "—"}
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.returns}</dt>
-          <dd className="font-medium" dir="auto">{position.returnState ?? "—"}</dd>
+          <dd className="font-medium" dir="auto">
+            {position.returnState ?? "—"}
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.returnCase}</dt>
@@ -403,8 +451,16 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
       {position.availableActions.length === 0 ? (
         <p className="text-sm text-muted-foreground">{copy.noAction}</p>
       ) : null}
-      {notice ? <p className="text-sm text-success" role="status">{notice}</p> : null}
-      {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+      {notice ? (
+        <p className="text-sm text-success" role="status">
+          {notice}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <AlertDialog
         open={selectedAction !== null}
@@ -433,7 +489,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
 
             {selectedAction && PROVIDER_ACTIONS.has(selectedAction) ? (
               <div className="space-y-1.5">
-                <Label htmlFor="recovery-provider-event">{copy.providerEvent}</Label>
+                <Label htmlFor="recovery-provider-event">
+                  {copy.providerEvent}
+                </Label>
                 <Input
                   id="recovery-provider-event"
                   value={providerEventId}
@@ -453,14 +511,22 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
                     className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_180px] sm:items-center"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium" dir="auto">
+                      <p
+                        className="truncate text-sm font-medium"
+                        dir="auto"
+                      >
                         {item.productName}
                         {item.variantName ? ` · ${item.variantName}` : ""}
                       </p>
-                      <p className="text-xs text-muted-foreground">× {item.quantity}</p>
+                      <p className="text-xs text-muted-foreground">
+                        × {item.quantity}
+                      </p>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`disposition-${item.orderItemId}`} className="text-xs">
+                      <Label
+                        htmlFor={`disposition-${item.orderItemId}`}
+                        className="text-xs"
+                      >
                         {copy.disposition}
                       </Label>
                       <select
@@ -469,7 +535,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
                         onChange={(event) =>
                           setDispositions((current) => ({
                             ...current,
-                            [item.orderItemId]: event.target.value as CanonicalReturnDisposition | "",
+                            [item.orderItemId]: event.target.value as
+                              | CanonicalReturnDisposition
+                              | "",
                           }))
                         }
                         disabled={committing}
@@ -489,7 +557,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={committing}>{copy.cancelDialog}</AlertDialogCancel>
+            <AlertDialogCancel disabled={committing}>
+              {copy.cancelDialog}
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={
                 committing ||
@@ -501,7 +571,9 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
                 void commit();
               }}
             >
-              {committing ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
+              {committing ? (
+                <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+              ) : null}
               {copy.commit}
             </AlertDialogAction>
           </AlertDialogFooter>
