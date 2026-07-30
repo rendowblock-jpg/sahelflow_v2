@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -71,7 +73,10 @@ async function verifyTurnstileToken(
 
 const submitSchema = z.object({
   slug: z.string().trim().min(1).max(120),
-  submissionId: z.string().uuid(),
+  // Current clients persist this UUID across response-loss retries. It remains
+  // optional only so already-deployed storefront pages can transition safely;
+  // the server mints a one-shot identity for those legacy requests.
+  submissionId: z.string().uuid().optional(),
   customer: z.object({
     name: z.string().trim().min(1).max(100),
     phone: dzPhone,
@@ -164,6 +169,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     );
   }
 
+  const sourceOrderId = input.submissionId ?? randomUUID();
   const command = await createCanonicalSourceOrder(
     {
       prisma: db,
@@ -171,11 +177,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       businessPrincipal: sourceBusinessPrincipal("storefront", config.slug),
     },
     {
-      idempotencyKey: `storefront:${input.submissionId}`,
-      correlationId: `storefront:${config.slug}:${input.submissionId}`,
+      idempotencyKey: `storefront:${sourceOrderId}`,
+      correlationId: `storefront:${config.slug}:${sourceOrderId}`,
       source: "storefront",
       sourceIdentity: config.slug,
-      sourceOrderId: input.submissionId,
+      sourceOrderId,
       newCustomer: input.customer,
       items: input.items,
       wilaya: input.customer.wilaya,
