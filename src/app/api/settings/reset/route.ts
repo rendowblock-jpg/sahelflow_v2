@@ -17,13 +17,6 @@ const RESET_TRANSACTION_OPTIONS = {
   timeout: 60_000,
 } as const;
 
-/**
- * POST /api/settings/reset — wipe all business data and seller-created
- * operational configuration while preserving authentication, license authority,
- * reference data and existing integration credentials.
- *
- * Requires `confirm: "RESET"` in the body (defense against accidental clicks).
- */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth();
 
@@ -31,14 +24,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const input = resetSchema.parse(body);
   const context = { prisma: db, shop: shopContext };
 
-  // Serialize with demo lifecycle and report effects so reset cannot remove the
-  // marker halfway through a concurrent send or seed. The one transaction keeps
-  // the public storefront, catalog, demo markers and dependent records aligned.
   await withDemoPolicyLock(() =>
     context.prisma.$transaction(async (tx) => {
-      // Delete canonical business-truth children before their command and
-      // aggregate authorities. The stable wrapped envelope key remains in Secret
-      // so reset does not silently rotate or orphan encrypted key authority.
       await tx.compensationFact.deleteMany({});
       await tx.projectionInvalidation.deleteMany({});
       await tx.financialMovement.deleteMany({});
@@ -49,8 +36,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await tx.businessCommand.deleteMany({});
       await tx.businessAggregateVersion.deleteMany({});
 
-      // Delete legacy/current business records in dependency order (children
-      // before parents).
       await tx.extractionMetric.deleteMany({});
       await tx.returnNote.deleteMany({});
       await tx.orderChange.deleteMany({});
@@ -59,6 +44,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await tx.delivery.deleteMany({});
       await tx.orderItem.deleteMany({});
       await tx.order.deleteMany({});
+      // The durable effect row restricts deletion of its Message authority.
+      await tx.whatsAppOutboundEffect.deleteMany({});
       await tx.message.deleteMany({});
       await tx.conversation.deleteMany({});
       await tx.cannedResponse.deleteMany({});
@@ -77,11 +64,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await tx.counter.deleteMany({});
       await tx.auditLog.deleteMany({});
 
-      // Preserve authentication/license and legacy integration credentials. All
-      // demo markers, daily-report destinations and ordinary business settings
-      // are removed. Dedicated Secret/Integration tables are intentionally
-      // preserved by the reset contract, including the internal wrapped
-      // business-envelope key.
       const protectedExactKeys = [
         "active_machine_id",
         "gemini_api_key",
