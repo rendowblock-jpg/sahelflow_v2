@@ -19,6 +19,7 @@ const context = {
   prisma: db,
   shop: shopContext,
   businessPrincipal: testAuthenticatedOwnerBusinessPrincipal("phase3-test-session"),
+  whatsAppProviderAccountId: "213555999000:12@s.whatsapp.net",
 };
 const messageId = "11111111-1111-4111-8111-111111111111";
 
@@ -52,7 +53,9 @@ describe("durable WhatsApp text send", () => {
       to: "0555 00 01 11",
       text: "Bonjour secret client",
     });
-    expect(first.effectKey).toMatch(/^wa:[0-9a-f]{32}:text:/);
+    expect(first.effectKey).toMatch(
+      /^wa:[0-9a-f]{32}:[0-9a-f]{64}:text:/,
+    );
     expect(first.replayed).toBe(false);
     expect(replay).toMatchObject({ effectKey: first.effectKey, replayed: true });
 
@@ -61,6 +64,7 @@ describe("durable WhatsApp text send", () => {
     });
     expect(outbox.payloadJson).not.toContain("0555000111");
     expect(outbox.payloadJson).not.toContain("Bonjour secret client");
+    expect(outbox.payloadJson).not.toContain("213555999000");
     await expect(
       db.whatsAppOutboundEffect.findUniqueOrThrow({
         where: { effectKey: first.effectKey },
