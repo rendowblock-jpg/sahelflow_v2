@@ -3,9 +3,9 @@
 //
 // Order.*State columns and CanonicalReturnCase.currentState are current
 // projections. Delivery events, return events, requested items, inspections,
-// refunds, reversals and exchange links are append-only authority. Scalar order,
-// item and command IDs are linked by SQL migrations so legacy models do not need
-// reverse fields.
+// refunds, reversals and exchange agreements/links are append-only authority.
+// Scalar order, item and command IDs are linked by SQL migrations so legacy
+// models do not need reverse fields.
 
 model CanonicalDeliveryEvent {
   id                 String   @id
@@ -39,6 +39,7 @@ model CanonicalReturnCase {
   updatedAt            DateTime                       @default(now()) @updatedAt
   events               CanonicalReturnEvent[]
   items                CanonicalReturnItem[]
+  exchangeRequest      CanonicalExchangeRequest?
   exchangeRequestItems CanonicalExchangeRequestItem[]
   inspections          CanonicalReturnInspection[]
   refunds              CanonicalRefund[]
@@ -84,6 +85,16 @@ model CanonicalReturnItem {
   @@index([orderId, createdAt])
   @@index([productId, productVariantId])
   @@index([createdByCommandId])
+}
+
+model CanonicalExchangeRequest {
+  id                 String              @id
+  requestKey         String              @unique
+  returnId           String              @unique
+  deliveryCost       Int                 @default(0)
+  createdByCommandId String              @unique
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 }
 
 model CanonicalExchangeRequestItem {
