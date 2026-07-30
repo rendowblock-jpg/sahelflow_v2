@@ -18,7 +18,7 @@ vi.mock("@/lib/env", async (importOriginal) => {
   };
 });
 
-import { deriveSidecarWebSocketToken } from "../../../../sidecars/whatsapp/auth-tokens";
+import { verifySidecarWebSocketGrant } from "../../../../sidecars/whatsapp/auth-tokens";
 import {
   sidecar,
   SidecarRequestError,
@@ -28,6 +28,7 @@ import {
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 const REQUEST_BINDING = "ab".repeat(32);
+const EFFECT_KEY = `wa:${"11".repeat(16)}:${"22".repeat(32)}:text:id`;
 
 function response(status: number, body: unknown): Response {
   return {
@@ -55,9 +56,14 @@ describe("WhatsApp sidecar client", () => {
     expect(sidecar.restToken()).toBe(TEST_TOKEN);
   });
 
-  it("exposes only a one-way derived token to the browser WebSocket route", () => {
-    expect(sidecar.wsToken()).toBe(deriveSidecarWebSocketToken(TEST_TOKEN));
-    expect(sidecar.wsToken()).not.toBe(TEST_TOKEN);
+  it("issues only a short-lived signed grant to the browser WebSocket route", () => {
+    const subject = "authenticated-owner:test-session";
+    const grant = sidecar.wsGrant(subject);
+    expect(grant).toBeTruthy();
+    expect(grant).not.toBe(TEST_TOKEN);
+    expect(verifySidecarWebSocketGrant(grant!, TEST_TOKEN)).toMatchObject({
+      subject,
+    });
   });
 
   it("sends a request-bound durable effect", async () => {
@@ -65,14 +71,14 @@ describe("WhatsApp sidecar client", () => {
       response(200, { ok: true, id: "WA-1", status: "sent" }),
     );
     await expect(
-      sidecar.send("213555000111", "Hello", "wa:scope:text:id", REQUEST_BINDING),
+      sidecar.send("213555000111", "Hello", EFFECT_KEY, REQUEST_BINDING),
     ).resolves.toEqual({ ok: true, id: "WA-1", status: "sent" });
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.body).toBe(
       JSON.stringify({
         to: "213555000111",
         text: "Hello",
-        effectKey: "wa:scope:text:id",
+        effectKey: EFFECT_KEY,
         requestBinding: REQUEST_BINDING,
       }),
     );
@@ -88,7 +94,7 @@ describe("WhatsApp sidecar client", () => {
       }),
     );
     const error = await sidecar
-      .send("213555000111", "Hello", "wa:scope:text:id", REQUEST_BINDING)
+      .send("213555000111", "Hello", EFFECT_KEY, REQUEST_BINDING)
       .catch((caught) => caught);
     expect(error).toBeInstanceOf(SidecarRequestError);
     expect(error).toMatchObject({
