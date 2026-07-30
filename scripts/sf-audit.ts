@@ -250,7 +250,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first gate",
       "Do not run source builds, full automated tests",
       "1.0.0-internal.13",
-      "Next implementation branch: `agent/phase1-manual-confirmation`",
+      "Rebase the corrected local Phase 3 WhatsApp durable-effect commit",
     ],
   ],
   [
@@ -260,7 +260,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
-      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+      "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues",
     ],
   ],
   [
@@ -279,7 +279,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+      "**Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete",
       "# Phase 1 — Canonical Golden COD business core",
       "## Research gate",
       "# Phase 9 — Certification, representative beta and Stable",
@@ -290,7 +290,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Published release:** `1.0.0-internal.13`",
       "**Founder-installed release:** Internal.13",
-      "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
+      "Trusted manual intake, confirmation/rejection and fulfillment through delivered COD receivable now use that foundation",
       "Windows profile fingerprint SHA-256",
       "Commerce checkpoint safety",
       "The central completion task is therefore production adoption",
@@ -309,13 +309,13 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active implementation branch:** None; Phase 1 implementation ready",
-      "**Next branch:** `agent/phase1-manual-confirmation`",
-      "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-      "Phase 0 completed in PR #179",
-      "first complete manual-order",
-      "research-to-implementation gate",
-      "Issue #164 is the live non-authoritative",
+      "**Active code PR:** None at this checkpoint",
+      "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete",
+      "Phase 0 remains complete through PR #179",
+      "PR #190 — trusted manual confirmation",
+      "### Corrected Phase 3 durable WhatsApp proposal",
+      "## Exact next session order",
+      "**Execution epic:** issue #164",
     ],
   ],
   [
@@ -359,10 +359,35 @@ const exactStaleMarkers: Array<[string, string]> = [
   ],
   ["AGENTS.md", "The compressed program uses four planned sessions"],
   ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
+  ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
   ["documentation/README.md", "**Active phase:** Phase 0"],
+  [
+    "documentation/README.md",
+    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+  ],
   ["documentation/system/ROADMAP.md", "**Active phase:** Phase 0"],
+  [
+    "documentation/system/ROADMAP.md",
+    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+  ],
   ["documentation/system/CURRENT_STATE.md", "Internal.13 is not yet Founder-installed"],
+  [
+    "documentation/system/CURRENT_STATE.md",
+    "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
+  ],
   ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "**Active implementation branch:** None; Phase 1 implementation ready",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "**Next branch:** `agent/phase1-manual-confirmation`",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+  ],
 ];
 
 for (const [relativePath, marker] of exactStaleMarkers) {
