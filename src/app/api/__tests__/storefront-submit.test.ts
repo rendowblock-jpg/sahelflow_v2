@@ -1,85 +1,127 @@
 /**
  * Integration test: POST /api/storefront/submit
  *
- * Tests the public COD checkout flow: customer places an order via the
- * storefront, the route creates a customer (find-or-create) + a draft order.
- *
- * This is the highest-risk API surface (public, unauthenticated, writes PII +
- * creates orders). TEST-002 (P0): zero API route tests existed before this.
+ * Tests the public COD checkout boundary: the route validates the storefront,
+ * mints exact source authority, and commits a pending canonical order with PII,
+ * audit, event, outbox and replay facts.
  */
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+
 import { POST } from "../storefront/submit/route";
-import { rawDb, cleanDb, mockPost, getJson, seedStorefront, seedProduct } from "./helpers";
+import {
+  cleanDb,
+  getJson,
+  mockPost,
+  rawDb,
+  seedProduct,
+  seedStorefront,
+} from "./helpers";
+import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 describe("POST /api/storefront/submit", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(cleanDb);
 
-  afterAll(async () => { await rawDb.$disconnect(); });
+  afterAll(async () => {
+    await rawDb.$disconnect();
+  });
 
-  it("creates a customer + draft order on valid submit", async () => {
+  it("creates a customer and pending canonical order on valid submit", async () => {
     const product = await seedProduct({ price: 2500 });
     const storefront = await seedStorefront({ productIds: [product.id] });
 
-    const res = await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: storefront.slug,
-      customer: {
-        name: "Ahmed Test",
-        phone: "0555123456",
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue Test",
-      },
-      items: [{ productId: product.id, quantity: 2 }],
-    }));
+    const response = await POST(
+      mockPost("http://localhost/api/storefront/submit", {
+        slug: storefront.slug,
+        submissionId: "10101010-1010-4010-8010-101010101010",
+        customer: {
+          name: "Ahmed Test",
+          phone: "0555123456",
+          wilaya: "Alger",
+          commune: "Bab Ezzouar",
+          address: "123 Rue Test",
+        },
+        items: [{ productId: product.id, quantity: 2 }],
+      }),
+    );
 
-    expect(res.status).toBe(201);
-    const body = await getJson(res);
-    expect(body.ok).toBe(true);
+    expect(response.status).toBe(201);
+    const body = await getJson(response);
+    expect(body).toMatchObject({ ok: true, total: 5000, replayed: false });
     expect(body.orderNumber).toBeTruthy();
-    expect(body.total).toBe(5000);
 
-    // Verify customer was created
-    const customers = await rawDb.customer.findMany();
-    expect(customers).toHaveLength(1);
-
-    // Verify order was created
-    const orders = await rawDb.order.findMany();
-    expect(orders).toHaveLength(1);
-    expect(orders[0]!.status).toBe("draft");
-    expect(orders[0]!.totalPrice).toBe(5000);
-    expect(orders[0]!.source).toBe("storefront");
+    expect(await rawDb.customer.count()).toBe(1);
+    const order = await rawDb.order.findUnique({
+      where: { id: body.orderId as string },
+    });
+    expect(order).toMatchObject({
+      status: "pending",
+      totalPrice: 5000,
+      source: "storefront",
+      sourceOrderId: "10101010-1010-4010-8010-101010101010",
+    });
+    expect(
+      isCanonicalOrderAuthority(order?.source, order?.sourceMetadata),
+    ).toBe(true);
+    expect(await rawDb.businessCommand.count()).toBe(1);
   });
 
   it("returns 404 for inactive storefront", async () => {
     const product = await seedProduct();
-    const storefront = await seedStorefront({ active: false, productIds: [product.id] });
+    const storefront = await seedStorefront({
+      active: false,
+      productIds: [product.id],
+    });
 
-    const res = await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: storefront.slug,
-      customer: { name: "Test", phone: "0555123456", wilaya: "Alger", commune: "B", address: "C" },
-      items: [{ productId: product.id, quantity: 1 }],
-    }));
+    const response = await POST(
+      mockPost("http://localhost/api/storefront/submit", {
+        slug: storefront.slug,
+        customer: {
+          name: "Test",
+          phone: "0555123456",
+          wilaya: "Alger",
+          commune: "B",
+          address: "C",
+        },
+        items: [{ productId: product.id, quantity: 1 }],
+      }),
+    );
 
-    expect(res.status).toBe(404);
+    expect(response.status).toBe(404);
   });
 
   it("returns 404 for nonexistent storefront", async () => {
     const product = await seedProduct();
-    const res = await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: "nonexistent",
-      customer: { name: "Test", phone: "0555123456", wilaya: "Alger", commune: "B", address: "C" },
-      items: [{ productId: product.id, quantity: 1 }],
-    }));
-    expect(res.status).toBe(404);
+    const response = await POST(
+      mockPost("http://localhost/api/storefront/submit", {
+        slug: "nonexistent",
+        customer: {
+          name: "Test",
+          phone: "0555123456",
+          wilaya: "Alger",
+          commune: "B",
+          address: "C",
+        },
+        items: [{ productId: product.id, quantity: 1 }],
+      }),
+    );
+    expect(response.status).toBe(404);
   });
 
-  it("returns 400 for invalid input (missing required fields)", async () => {
-    const res = await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: "test",
-      customer: { name: "", phone: "invalid", wilaya: "", commune: "", address: "" },
-      items: [],
-    }));
-    expect(res.status).toBe(400);
+  it("returns 400 for invalid input", async () => {
+    const response = await POST(
+      mockPost("http://localhost/api/storefront/submit", {
+        slug: "test",
+        customer: {
+          name: "",
+          phone: "invalid",
+          wilaya: "",
+          commune: "",
+          address: "",
+        },
+        items: [],
+      }),
+    );
+    expect(response.status).toBe(400);
   });
 
   it("returns 400 when product is not in storefront", async () => {
@@ -87,36 +129,48 @@ describe("POST /api/storefront/submit", () => {
     const otherProduct = await seedProduct({ name: "Other Product" });
     await seedStorefront({ productIds: [product.id] });
 
-    const res = await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: "test-store",
-      customer: { name: "Test", phone: "0555123456", wilaya: "Alger", commune: "B", address: "C" },
-      items: [{ productId: otherProduct.id, quantity: 1 }],
-    }));
-    expect(res.status).toBe(400);
+    const response = await POST(
+      mockPost("http://localhost/api/storefront/submit", {
+        slug: "test-store",
+        customer: {
+          name: "Test",
+          phone: "0555123456",
+          wilaya: "Alger",
+          commune: "B",
+          address: "C",
+        },
+        items: [{ productId: otherProduct.id, quantity: 1 }],
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await rawDb.businessCommand.count()).toBe(0);
   });
 
-  it("reuses existing customer on repeat submit (find-or-create)", async () => {
+  it("reuses an existing customer for two distinct submissions", async () => {
     const product = await seedProduct();
     await seedStorefront({ productIds: [product.id] });
 
-    // First order
-    await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: "test-store",
-      customer: { name: "Repeat Customer", phone: "0555123456", wilaya: "Alger", commune: "B", address: "C" },
-      items: [{ productId: product.id, quantity: 1 }],
-    }));
+    for (const submissionId of [
+      "20202020-2020-4020-8020-202020202020",
+      "30303030-3030-4030-8030-303030303030",
+    ]) {
+      await POST(
+        mockPost("http://localhost/api/storefront/submit", {
+          slug: "test-store",
+          submissionId,
+          customer: {
+            name: "Repeat Customer",
+            phone: "0555123456",
+            wilaya: "Alger",
+            commune: "B",
+            address: "C",
+          },
+          items: [{ productId: product.id, quantity: 1 }],
+        }),
+      );
+    }
 
-    // Second order with same phone
-    await POST(mockPost("http://localhost/api/storefront/submit", {
-      slug: "test-store",
-      customer: { name: "Repeat Customer", phone: "0555123456", wilaya: "Alger", commune: "B", address: "C" },
-      items: [{ productId: product.id, quantity: 1 }],
-    }));
-
-    // Should have 1 customer, 2 orders
-    const customers = await rawDb.customer.findMany();
-    expect(customers).toHaveLength(1);
-    const orders = await rawDb.order.findMany();
-    expect(orders).toHaveLength(2);
+    expect(await rawDb.customer.count()).toBe(1);
+    expect(await rawDb.order.count()).toBe(2);
   });
 });
