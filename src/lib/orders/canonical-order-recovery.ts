@@ -97,6 +97,16 @@ export type CanonicalOrderRecoveryInput = z.infer<
 export type CanonicalOrderRecoveryAction = z.infer<typeof actionSchema>;
 export type CanonicalReturnDisposition = z.infer<typeof dispositionSchema>;
 
+type RecoveryStates = {
+  status: string;
+  fulfillmentState: string;
+  deliveryState: string;
+  inventoryState: string;
+  codState: string;
+  returnState: ReturnLifecycleState;
+  refundState: string;
+};
+
 interface ReservationRow {
   id: string;
   orderItemId: string | null;
@@ -104,6 +114,21 @@ interface ReservationRow {
   productVariantId: string | null;
   quantity: number | bigint;
   state: string;
+}
+
+interface RecoveryOrderProjection {
+  id: string;
+  orderNumber: string;
+  source: string;
+  sourceMetadata: string | null;
+  status: string;
+  version: number | bigint;
+  fulfillmentState: string | null;
+  deliveryState: string | null;
+  inventoryState: string | null;
+  codState: string | null;
+  returnState: string | null;
+  refundState: string | null;
 }
 
 interface RecoveryOrderItem {
@@ -116,19 +141,9 @@ interface RecoveryOrderItem {
   product: { cost: number | null } | null;
 }
 
-interface RecoveryOrder {
-  id: string;
-  orderNumber: string;
-  source: string;
-  sourceMetadata: string | null;
-  status: string;
+interface RecoveryOrder
+  extends Omit<RecoveryOrderProjection, "version"> {
   version: number;
-  fulfillmentState: string | null;
-  deliveryState: string | null;
-  inventoryState: string | null;
-  codState: string | null;
-  returnState: string | null;
-  refundState: string | null;
   items: RecoveryOrderItem[];
   delivery: {
     id: string;
@@ -148,6 +163,7 @@ interface ReturnCaseRow {
 }
 
 export interface CanonicalOrderRecoveryResult {
+  readonly [key: string]: unknown;
   orderId: string;
   orderNumber: string;
   version: number;
@@ -205,6 +221,14 @@ export interface CanonicalOrderRecoveryPosition {
   availableActions: CanonicalOrderRecoveryAction[];
 }
 
+function integer(value: number | bigint, field: string): number {
+  const result = Number(value);
+  if (!Number.isSafeInteger(result)) {
+    throw new ConflictError(`${field} is outside the supported integer range`);
+  }
+  return result;
+}
+
 function projectionKeys(orderId: string): string[] {
   return [
     "orders:list",
@@ -213,6 +237,7 @@ function projectionKeys(orderId: string): string[] {
     "deliveries:list",
     "returns:list",
     "inventory:list",
+    "products:list",
     "accounting:profitability",
   ];
 }
@@ -303,51 +328,43 @@ async function loadOrder(
   tx: BusinessTransaction,
   orderId: string,
 ): Promise<RecoveryOrder> {
-  const order = await tx.order.findFirst({
-    where: { id: orderId, deletedAt: null },
-    select: {
-      id: true,
-      orderNumber: true,
-      source: true,
-      sourceMetadata: true,
-      status: true,
-      version: true,
-      fulfillmentState: true,
-      deliveryState: true,
-      inventoryState: true,
-      codState: true,
-      returnState: true,
-      refundState: true,
-      items: {
-        select: {
-          id: true,
-          productId: true,
-          productVariantId: true,
-          productName: true,
-          productVariantName: true,
-          quantity: true,
-          product: { select: { cost: true } },
-        },
-        orderBy: { id: "asc" },
-      },
-      delivery: {
-        select: {
-          id: true,
-          provider: true,
-          status: true,
-          deletedAt: true,
-        },
-      },
-    },
-  });
-  if (!order) throw new NotFoundError("Order", orderId);
-  if (!isTrustedManualOrderAuthority(order.source, order.sourceMetadata)) {
+  const rows = await tx.$queryRaw<RecoveryOrderProjection[]>`
+    SELECT
+      "id", "orderNumber", "source", "sourceMetadata", "status", "version",
+      "fulfillmentState", "deliveryState", "inventoryState", "codState",
+      "returnState", "refundState"
+    FROM "Order"
+    WHERE "id" = ${orderId}
+      AND "deletedAt" IS NULL
+    LIMIT 1
+  `;
+  const projection = rows[0];
+  if (!projection) throw new NotFoundError("Order", orderId);
+  if (!isTrustedManualOrderAuthority(projection.source, projection.sourceMetadata)) {
     throw new ValidationError(
       "Canonical recovery commands currently govern trusted manual orders only",
       "order.authority",
     );
   }
-  return order;
+
+  const [items, delivery] = await Promise.all([
+    tx.orderItem.findMany({
+      where: { orderId },
+      include: { product: { select: { cost: true } } },
+      orderBy: { id: "asc" },
+    }),
+    tx.delivery.findUnique({
+      where: { orderId },
+      select: { id: true, provider: true, status: true, deletedAt: true },
+    }),
+  ]);
+
+  return {
+    ...projection,
+    version: integer(projection.version, "order version"),
+    items,
+    delivery,
+  };
 }
 
 function stateDescription(order: RecoveryOrder): string {
@@ -370,42 +387,32 @@ function stateConflict(action: string, order: RecoveryOrder): ConflictError {
 async function updateOrderProjection(
   tx: BusinessTransaction,
   order: RecoveryOrder,
-  input: {
-    expectedVersion: number;
-    status: string;
-    fulfillmentState: string;
-    deliveryState: string;
-    inventoryState: string;
-    codState: string;
-    returnState: ReturnLifecycleState;
-    refundState: string;
-  },
+  input: RecoveryStates & { expectedVersion: number },
 ): Promise<number> {
   const nextVersion = input.expectedVersion + 1;
-  const updated = await tx.order.updateMany({
-    where: {
-      id: order.id,
-      version: input.expectedVersion,
-      status: order.status,
-      deletedAt: null,
-    },
-    data: {
-      version: nextVersion,
-      status: input.status,
-      fulfillmentState: input.fulfillmentState,
-      deliveryState: input.deliveryState,
-      inventoryState: input.inventoryState,
-      codState: input.codState,
-      returnState: input.returnState,
-      refundState: input.refundState,
-      codCollected: false,
-      codCollectedAt: null,
-      codRemitted: false,
-      codRemittedAt: null,
-      codRemittanceRef: null,
-    },
-  });
-  if (updated.count !== 1) {
+  const updated = await tx.$executeRaw`
+    UPDATE "Order"
+    SET
+      "version" = ${nextVersion},
+      "status" = ${input.status},
+      "fulfillmentState" = ${input.fulfillmentState},
+      "deliveryState" = ${input.deliveryState},
+      "inventoryState" = ${input.inventoryState},
+      "codState" = ${input.codState},
+      "returnState" = ${input.returnState},
+      "refundState" = ${input.refundState},
+      "codCollected" = 0,
+      "codCollectedAt" = NULL,
+      "codRemitted" = 0,
+      "codRemittedAt" = NULL,
+      "codRemittanceRef" = NULL,
+      "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${order.id}
+      AND "version" = ${input.expectedVersion}
+      AND "status" = ${order.status}
+      AND "deletedAt" IS NULL
+  `;
+  if (updated !== 1) {
     throw new ConflictError(
       `Order ${order.id} changed while the recovery command was committed`,
     );
@@ -431,7 +438,9 @@ async function updateDelivery(
     data: { status: nextStatus },
   });
   if (updated.count !== 1) {
-    throw new ConflictError("Delivery changed while the recovery command was committed");
+    throw new ConflictError(
+      "Delivery changed while the recovery command was committed",
+    );
   }
 }
 
@@ -522,23 +531,88 @@ async function setReturnCaseState(
     data: { currentState: nextState },
   });
   if (updated.count !== 1) {
-    throw new ConflictError("Return case changed while the command was committed");
+    throw new ConflictError(
+      "Return case changed while the command was committed",
+    );
   }
+}
+
+async function restoreAvailableStock(
+  tx: BusinessTransaction,
+  reservations: readonly ReservationRow[],
+): Promise<void> {
+  for (const reservation of reservations) {
+    const quantity = integer(reservation.quantity, "reservation quantity");
+    if (reservation.productVariantId) {
+      const variant = await tx.productVariant.updateMany({
+        where: {
+          id: reservation.productVariantId,
+          productId: reservation.productId,
+        },
+        data: { stock: { increment: quantity } },
+      });
+      if (variant.count !== 1) {
+        throw new ConflictError(
+          `Variant '${reservation.productVariantId}' is missing during cancellation`,
+        );
+      }
+      const available = await tx.productVariant.aggregate({
+        where: { productId: reservation.productId, isActive: true },
+        _sum: { stock: true },
+      });
+      const product = await tx.product.updateMany({
+        where: { id: reservation.productId, deletedAt: null },
+        data: { stock: available._sum.stock ?? 0 },
+      });
+      if (product.count !== 1) {
+        throw new ConflictError(
+          `Product '${reservation.productId}' is missing during cancellation`,
+        );
+      }
+    } else {
+      const product = await tx.product.updateMany({
+        where: { id: reservation.productId, deletedAt: null },
+        data: { stock: { increment: quantity } },
+      });
+      if (product.count !== 1) {
+        throw new ConflictError(
+          `Product '${reservation.productId}' is missing during cancellation`,
+        );
+      }
+    }
+  }
+}
+
+function movementForReservation(
+  commandId: string,
+  reservation: ReservationRow,
+  movementType: string,
+  fromPosition: string,
+  toPosition: string,
+  reason: string,
+  occurredAt: Date,
+): InventoryMovementFact {
+  return {
+    movementKey: `${commandId}:${movementType}:${reservation.id}`,
+    movementType,
+    orderId: undefined,
+    orderItemId: reservation.orderItemId ?? undefined,
+    reservationId: reservation.id,
+    productId: reservation.productId,
+    productVariantId: reservation.productVariantId ?? undefined,
+    quantity: integer(reservation.quantity, "reservation quantity"),
+    fromPosition,
+    toPosition,
+    reason,
+    occurredAt,
+  };
 }
 
 function resultFrom(
   order: RecoveryOrder,
   action: CanonicalOrderRecoveryAction,
   version: number,
-  states: {
-    status: string;
-    fulfillmentState: string;
-    deliveryState: string;
-    inventoryState: string;
-    codState: string;
-    returnState: ReturnLifecycleState;
-    refundState: string;
-  },
+  states: RecoveryStates,
   returnCaseId: string | null,
   disposition?: {
     availableQuantity: number;
@@ -591,6 +665,7 @@ export async function executeCanonicalOrderRecovery(
           `Order ${order.id} version conflict: expected ${data.expectedVersion}, current ${order.version}`,
         );
       }
+
       const before = {
         status: order.status,
         version: order.version,
@@ -606,16 +681,8 @@ export async function executeCanonicalOrderRecovery(
       const inventoryMovements: InventoryMovementFact[] = [];
       let reservations: CloseReservationFact[] = [];
       let returnCaseId: string | null = null;
-      let states: {
-        status: string;
-        fulfillmentState: string;
-        deliveryState: string;
-        inventoryState: string;
-        codState: string;
-        returnState: ReturnLifecycleState;
-        refundState: string;
-      };
-      let dispositionSummary = {
+      let states: RecoveryStates;
+      const dispositionSummary = {
         availableQuantity: 0,
         damagedQuantity: 0,
         quarantineQuantity: 0,
@@ -634,14 +701,31 @@ export async function executeCanonicalOrderRecovery(
           throw stateConflict(data.action, order);
         }
         if (await returnCaseForOrder(tx, order.id)) {
-          throw new ConflictError("A cancellation cannot bypass an existing return case");
+          throw new ConflictError(
+            "A cancellation cannot bypass an existing return case",
+          );
         }
         const active = await reservationRows(tx, order.id, "active");
         assertReservationsMatchItems(active, order.items, "active");
+        await restoreAvailableStock(tx, active);
         reservations = active.map((reservation) => ({
           operation: "release",
           id: reservation.id,
         }));
+        inventoryMovements.push(
+          ...active.map((reservation) => ({
+            ...movementForReservation(
+              commandId,
+              reservation,
+              "reservation_released_on_cancellation",
+              "reserved",
+              "available",
+              `Pre-shipment cancellation restored reserved stock for order ${order.id}`,
+              data.occurredAt,
+            ),
+            orderId: order.id,
+          })),
+        );
         states = {
           status: "cancelled",
           fulfillmentState: "closed",
@@ -657,6 +741,10 @@ export async function executeCanonicalOrderRecovery(
           payload: {
             orderId: order.id,
             releasedReservationIds: active.map((entry) => entry.id),
+            restoredQuantity: active.reduce(
+              (sum, entry) => sum + integer(entry.quantity, "reservation quantity"),
+              0,
+            ),
             reasonCode: data.reasonCode,
           },
         });
@@ -674,8 +762,12 @@ export async function executeCanonicalOrderRecovery(
           throw stateConflict(data.action, order);
         }
         if (await returnCaseForOrder(tx, order.id)) {
-          throw new ConflictError("This order already has a canonical return case");
+          throw new ConflictError(
+            "This order already has a canonical return case",
+          );
         }
+        const consumed = await reservationRows(tx, order.id, "consumed");
+        assertReservationsMatchItems(consumed, order.items, "consumed");
         await updateDelivery(
           tx,
           order,
@@ -720,6 +812,20 @@ export async function executeCanonicalOrderRecovery(
           reasonCode: data.reasonCode,
           occurredAt: data.occurredAt,
         });
+        inventoryMovements.push(
+          ...consumed.map((reservation) => ({
+            ...movementForReservation(
+              commandId,
+              reservation,
+              "delivery_exception_awaiting_return",
+              "outbound",
+              "return_pending_receipt",
+              `Delivery exception kept stock unavailable pending physical return for order ${order.id}`,
+              data.occurredAt,
+            ),
+            orderId: order.id,
+          })),
+        );
         states = {
           status: "shipped",
           fulfillmentState: "closed",
@@ -751,9 +857,18 @@ export async function executeCanonicalOrderRecovery(
           throw stateConflict(data.action, order);
         }
         const returnCase = await returnCaseForOrder(tx, order.id);
-        if (!returnCase) throw new ConflictError("Canonical return case is missing");
+        if (!returnCase) {
+          throw new ConflictError("Canonical return case is missing");
+        }
+        const consumed = await reservationRows(tx, order.id, "consumed");
+        assertReservationsMatchItems(consumed, order.items, "consumed");
         returnCaseId = returnCase.id;
-        await updateDelivery(tx, order, ["failed", "refused"], "return_in_transit");
+        await updateDelivery(
+          tx,
+          order,
+          ["failed", "refused"],
+          "return_in_transit",
+        );
         await appendDeliveryEvent(tx, {
           commandId,
           order,
@@ -762,7 +877,12 @@ export async function executeCanonicalOrderRecovery(
           occurredAt: data.occurredAt,
           providerEventId: data.providerEventId,
         });
-        await setReturnCaseState(tx, returnCase, ["awaiting_return"], "in_transit");
+        await setReturnCaseState(
+          tx,
+          returnCase,
+          ["awaiting_return"],
+          "in_transit",
+        );
         await appendReturnEvent(tx, {
           commandId,
           returnId: returnCase.id,
@@ -773,6 +893,20 @@ export async function executeCanonicalOrderRecovery(
           reasonCode: data.reasonCode,
           occurredAt: data.occurredAt,
         });
+        inventoryMovements.push(
+          ...consumed.map((reservation) => ({
+            ...movementForReservation(
+              commandId,
+              reservation,
+              "physical_return_in_transit",
+              "return_pending_receipt",
+              "return_in_transit",
+              `Carrier return entered transit for order ${order.id}`,
+              data.occurredAt,
+            ),
+            orderId: order.id,
+          })),
+        );
         states = {
           status: "shipped",
           fulfillmentState: "closed",
@@ -794,7 +928,9 @@ export async function executeCanonicalOrderRecovery(
           throw stateConflict(data.action, order);
         }
         const returnCase = await returnCaseForOrder(tx, order.id);
-        if (!returnCase) throw new ConflictError("Canonical return case is missing");
+        if (!returnCase) {
+          throw new ConflictError("Canonical return case is missing");
+        }
         returnCaseId = returnCase.id;
         const consumed = await reservationRows(tx, order.id, "consumed");
         assertReservationsMatchItems(consumed, order.items, "consumed");
@@ -848,7 +984,10 @@ export async function executeCanonicalOrderRecovery(
               productId: item.productId,
               productVariantId: item.productVariantId ?? undefined,
               quantity: item.quantity,
-              fromPosition: "outbound",
+              fromPosition:
+                order.deliveryState === "return_in_transit"
+                  ? "return_in_transit"
+                  : "return_pending_receipt",
               toPosition: "return_pending_inspection",
               reason: `Physical carrier return received for canonical order ${order.id}`,
               occurredAt: data.occurredAt,
@@ -885,7 +1024,9 @@ export async function executeCanonicalOrderRecovery(
         }
         const returnCase = await returnCaseForOrder(tx, order.id);
         if (!returnCase || returnCase.currentState !== "received") {
-          throw new ConflictError("Received canonical return case is missing");
+          throw new ConflictError(
+            "Received canonical return case is missing",
+          );
         }
         returnCaseId = returnCase.id;
         if (
@@ -893,7 +1034,9 @@ export async function executeCanonicalOrderRecovery(
             where: { returnId: returnCase.id },
           })
         ) {
-          throw new ConflictError("This physical return was already inspected");
+          throw new ConflictError(
+            "This physical return was already inspected",
+          );
         }
         const submitted = assertInspectionItems(data.items ?? [], order.items);
 
@@ -933,37 +1076,37 @@ export async function executeCanonicalOrderRecovery(
 
           if (inspection.disposition === "available") {
             if (item.productVariantId) {
-              const updatedVariant = await tx.productVariant.updateMany({
+              const variant = await tx.productVariant.updateMany({
                 where: {
                   id: item.productVariantId,
                   productId: item.productId,
                 },
                 data: { stock: { increment: item.quantity } },
               });
-              if (updatedVariant.count !== 1) {
+              if (variant.count !== 1) {
                 throw new ConflictError(
                   `Product variant '${item.productVariantId}' is missing during return inspection`,
                 );
               }
               const aggregate = await tx.productVariant.aggregate({
-                where: { productId: item.productId },
+                where: { productId: item.productId, isActive: true },
                 _sum: { stock: true },
               });
-              const updatedProduct = await tx.product.updateMany({
+              const product = await tx.product.updateMany({
                 where: { id: item.productId, deletedAt: null },
                 data: { stock: aggregate._sum.stock ?? 0 },
               });
-              if (updatedProduct.count !== 1) {
+              if (product.count !== 1) {
                 throw new ConflictError(
                   `Product '${item.productId}' is missing during return inspection`,
                 );
               }
             } else {
-              const updatedProduct = await tx.product.updateMany({
+              const product = await tx.product.updateMany({
                 where: { id: item.productId, deletedAt: null },
                 data: { stock: { increment: item.quantity } },
               });
-              if (updatedProduct.count !== 1) {
+              if (product.count !== 1) {
                 throw new ConflictError(
                   `Product '${item.productId}' is missing during return inspection`,
                 );
@@ -1007,7 +1150,7 @@ export async function executeCanonicalOrderRecovery(
               reasonCode: data.reasonCode,
             },
           });
-          if (lossAmount && lossAmount > 0) {
+          if (lossAmount !== null && lossAmount > 0) {
             dispositionSummary.recordedLossAmount += lossAmount;
             financialMovements.push({
               movementKey: `${commandId}:loss:${item.id}`,
@@ -1024,7 +1167,12 @@ export async function executeCanonicalOrderRecovery(
           }
         }
 
-        await setReturnCaseState(tx, returnCase, ["received"], "completed");
+        await setReturnCaseState(
+          tx,
+          returnCase,
+          ["received"],
+          "completed",
+        );
         await appendReturnEvent(tx, {
           commandId,
           returnId: returnCase.id,
@@ -1177,7 +1325,10 @@ export async function getCanonicalOrderRecoveryPosition(
   context: BusinessPrincipalContext,
   orderId: string,
 ): Promise<CanonicalOrderRecoveryPosition> {
-  const order = await loadOrder(context.prisma as BusinessTransaction, orderId);
+  const order = await loadOrder(
+    context.prisma as BusinessTransaction,
+    orderId,
+  );
   const returnCase = await context.prisma.canonicalReturnCase.findUnique({
     where: { orderId },
     select: {
