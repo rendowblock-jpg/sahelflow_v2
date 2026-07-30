@@ -26,12 +26,16 @@ interface CatalogProduct {
   productVariants: CatalogVariant[];
 }
 
-export interface PreparedCanonicalCommerceOrder {
+export interface CanonicalCommerceSnapshot {
   source: EcommercePlatform;
   sourceOrderId: string;
   sourceRevision: string;
   sourceDetails: Record<string, unknown>;
   deliveryCost: number;
+}
+
+export interface PreparedCanonicalCommerceOrder
+  extends CanonicalCommerceSnapshot {
   items: Array<{
     productId: string;
     productVariantId: string | null;
@@ -60,6 +64,38 @@ function integerMoney(value: number | undefined, field: string): number {
     throw new ValidationError(`${field} must be a non-negative DZD integer`, field);
   }
   return rounded;
+}
+
+export function commerceSourceSnapshot(
+  order: NormalizedOrder,
+): CanonicalCommerceSnapshot {
+  const sourceDetails = {
+    ...order.sourceMetadata,
+    providerOrderNumber: order.orderNumber,
+    providerTotalPrice: order.totalPrice,
+    providerItems: order.items.map((item) => ({
+      productName: item.productName,
+      catalogSku: item.catalogSku ?? null,
+      variantName: item.variantName ?? null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
+  };
+  return {
+    source: order.source,
+    sourceOrderId: order.sourceOrderId,
+    sourceRevision:
+      order.sourceRevision?.trim() ||
+      createHash("sha256").update(stableJson(sourceDetails)).digest("hex"),
+    sourceDetails,
+    deliveryCost: integerMoney(
+      order.deliveryCost ??
+        (typeof order.sourceMetadata.shippingPrice === "number"
+          ? order.sourceMetadata.shippingPrice
+          : 0),
+      "deliveryCost",
+    ),
+  };
 }
 
 function exactProductByName(
@@ -192,34 +228,8 @@ export async function prepareCanonicalCommerceOrder(
     });
   }
 
-  const sourceDetails = {
-    ...order.sourceMetadata,
-    providerOrderNumber: order.orderNumber,
-    providerTotalPrice: order.totalPrice,
-    providerItems: order.items.map((item) => ({
-      productName: item.productName,
-      catalogSku: item.catalogSku ?? null,
-      variantName: item.variantName ?? null,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-    })),
-  };
-  const sourceRevision =
-    order.sourceRevision?.trim() ||
-    createHash("sha256").update(stableJson(sourceDetails)).digest("hex");
-
   return {
-    source: order.source,
-    sourceOrderId: order.sourceOrderId,
-    sourceRevision,
-    sourceDetails,
-    deliveryCost: integerMoney(
-      order.deliveryCost ??
-        (typeof order.sourceMetadata.shippingPrice === "number"
-          ? order.sourceMetadata.shippingPrice
-          : 0),
-      "deliveryCost",
-    ),
+    ...commerceSourceSnapshot(order),
     items: [...grouped.values()],
   };
 }
