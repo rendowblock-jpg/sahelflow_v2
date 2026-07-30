@@ -62,10 +62,10 @@ describe("GET /api/notifications — derived notification feed", () => {
     cookieStore.clear();
     delete process.env.AUTH_SECRET;
     await establishAuthenticatedTestSession();
-    cookieStore.clear();
   });
 
   afterAll(async () => {
+    cookieStore.clear();
     delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
