@@ -167,19 +167,39 @@ export async function loadCanonicalReturnOrder(
   };
 }
 
+const RETURN_INVENTORY_STATE: Readonly<Record<string, string>> = {
+  none: "settled",
+  requested: "settled",
+  approved: "settled",
+  rejected: "settled",
+  cancelled: "settled",
+  in_transit: "return_pending_receipt",
+  received: "return_pending_inspection",
+  inspected: "settled",
+  completed: "settled",
+};
+
 export function assertDeliveredReturnAuthority(
   order: CanonicalReturnOrder,
 ): void {
+  const returnState = order.returnState ?? "none";
+  const expectedInventoryState = RETURN_INVENTORY_STATE[returnState];
+  const statusIsValid =
+    returnState === "completed"
+      ? ["delivered", "returned"].includes(order.status)
+      : order.status === "delivered";
+
   if (
-    order.status !== "delivered" ||
+    expectedInventoryState === undefined ||
+    !statusIsValid ||
     order.fulfillmentState !== "closed" ||
     order.deliveryState !== "delivered" ||
-    order.inventoryState !== "settled" ||
+    order.inventoryState !== expectedInventoryState ||
     !order.codState ||
     order.codState === "not_expected"
   ) {
     throw new ConflictError(
-      "Customer returns and refunds require a canonically delivered order",
+      "Customer return authority has an inconsistent delivery, inventory or return projection",
     );
   }
 }
