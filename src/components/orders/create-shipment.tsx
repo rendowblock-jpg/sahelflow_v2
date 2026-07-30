@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,6 +24,7 @@ import {
   AlertCircle,
   RefreshCw,
   Printer,
+
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { mutatePrefix } from "@/lib/swr/mutate";
@@ -43,10 +44,6 @@ interface CreateShipmentProps {
   } | null;
 }
 
-interface EditAuthorityResponse {
-  activeReservation?: boolean;
-}
-
 export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmentProps) {
   const router = useRouter();
   const { t } = useI18n();
@@ -55,33 +52,8 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
-  const [canonicalFollowupLocked, setCanonicalFollowupLocked] = useState(false);
 
-  useEffect(() => {
-    if (orderStatus !== "confirmed" || delivery?.trackingNumber) return;
-    let active = true;
-    void fetch(`/api/orders/${orderId}/edit-authority`, { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as EditAuthorityResponse;
-      })
-      .then((authority) => {
-        if (active && authority?.activeReservation) {
-          setCanonicalFollowupLocked(true);
-        }
-      })
-      .catch(() => {
-        // The server route performs the same fail-before-provider check.
-      });
-    return () => {
-      active = false;
-    };
-  }, [delivery?.trackingNumber, orderId, orderStatus]);
-
-  const canCreate =
-    orderStatus === "confirmed" &&
-    !delivery?.trackingNumber &&
-    !canonicalFollowupLocked;
+  const canCreate = orderStatus === "confirmed" && !delivery?.trackingNumber;
 
   async function handleCreate() {
     setCreating(true);

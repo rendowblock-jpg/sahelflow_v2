@@ -1,83 +1,55 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+/**
+ * OrderFormDialog — Phase 3 refactor.
+ *
+ * Migrated from raw useState to react-hook-form + zod resolver.
+ * Key upgrades:
+ *   - Inline validation (per-field, on blur + on change after first submit)
+ *   - Phone input mask (Algerian 0X XX XX XX XX format)
+ *   - Dirty-guard (warns on tab close / refresh with unsaved changes)
+ *   - localStorage draft (restores form on crash/refresh)
+ *   - FormField/FormInput primitives with accessible error display
+ *
+ * The submit logic (create customer → create order → navigate) is preserved.
+ */
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FormProvider, useFieldArray, useForm } from "react-hook-form";
+import { useForm, useFieldArray, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-  AlertTriangle,
-  Loader2,
-  Plus,
-  ShoppingCart,
-  Trash2,
-} from "lucide-react";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+} from "@/components/ui/dialog";
 import {
-  ProductVariantPicker,
-  type VariantOption,
-} from "@/components/products/product-variant-picker";
-import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
-import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
-import { clearFormDraft, useFormDraft } from "@/hooks/form/use-form-draft";
-import { usePhoneMask } from "@/hooks/form/use-phone-mask";
-import { useI18n } from "@/hooks/use-i18n";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
-  clearManualOrderCommand,
-  resolveManualOrderCommand,
-} from "@/lib/orders/manual-order-command-key";
-import type { RiskAssessment } from "@/lib/risk-engine/types";
-import { mutatePrefix } from "@/lib/swr/mutate";
-import { toast } from "@/lib/toast";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, ShoppingCart, Loader2, AlertTriangle } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
-import {
-  orderFormSchema,
-  type OrderFormValues,
-} from "@/lib/validation/order-schema";
+import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
+import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
+import { useI18n } from "@/hooks/use-i18n";
+import { usePhoneMask } from "@/hooks/form/use-phone-mask";
+import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
+import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
+import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
+import { mutatePrefix } from "@/lib/swr/mutate";
+import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
+import type { RiskAssessment } from "@/lib/risk-engine/types";
 
 interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  wilaya: string | null;
-  commune: string | null;
-  address: string | null;
+  id: string; name: string; phone: string;
+  wilaya: string | null; commune: string | null; address: string | null;
 }
-
 interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  isActive: boolean;
+  id: string; name: string; price: number; stock: number; isActive: boolean;
   productVariants?: VariantOption[];
 }
 
@@ -87,7 +59,6 @@ interface OrderFormDialogProps {
 }
 
 const DRAFT_KEY = "sf-order-create-draft";
-const COMMAND_KEY = "sf-order-create-command";
 
 export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const router = useRouter();
@@ -95,10 +66,14 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const { format: formatPhone } = usePhoneMask();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  // W3-4 (task 2-g): HIGH-risk confirmation state. When non-null, an
+  // AlertDialog renders with the assessment breakdown + Proceed/Cancel.
   const [riskWarning, setRiskWarning] = useState<{
     assessment: RiskAssessment;
     data: OrderFormValues;
   } | null>(null);
+  // W3-4: skip the risk check on re-submission after the seller confirms.
+  // Reset to false after the order is successfully created.
   const skipRiskCheckRef = useRef(false);
 
   const form = useForm<OrderFormValues>({
@@ -117,48 +92,37 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     mode: "onBlur",
   });
 
-  const { fields, append, remove, update } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
+  const { fields, append, remove, update } = useFieldArray({ control: form.control, name: "items" });
 
+  // Dirty guard + draft persistence (only when dialog is open)
   useDirtyGuard(form);
   useFormDraft(form, DRAFT_KEY, open);
 
   const watchValues = form.watch();
-  const activeProducts = useMemo(
-    () => products.filter((product) => product.isActive),
-    [products],
-  );
+  const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
+
   const total = useMemo(() => {
-    const itemTotal = (watchValues.items ?? []).reduce(
-      (sum, item) => sum + (item.unitPrice ?? 0) * (item.quantity ?? 0),
-      0,
-    );
-    return itemTotal + (watchValues.deliveryCost ?? 0);
+    const itemsTotal = (watchValues.items ?? []).reduce((sum, i) => sum + (i.unitPrice ?? 0) * (i.quantity ?? 0), 0);
+    const delivery = watchValues.deliveryCost ?? 0;
+    return itemsTotal + delivery;
   }, [watchValues.items, watchValues.deliveryCost]);
 
   function addProduct(productId: string) {
-    const product = activeProducts.find(
-      (candidate) => candidate.id === productId,
-    );
-    if (!product || fields.some((field) => field.productId === productId)) {
-      return;
-    }
-
-    const variants = (product.productVariants ?? []).filter(
-      (variant) => variant.isActive,
-    );
-    const soleVariant = variants.length === 1 ? variants[0] : null;
+    const product = activeProducts.find((p) => p.id === productId);
+    if (!product) return;
+    if (fields.some((f) => f.productId === productId)) return;
     append({
       productId: product.id,
       productName: product.name,
-      productVariantId: soleVariant?.id ?? null,
-      productVariantName: soleVariant?.name ?? null,
-      requiresVariant: variants.length > 1,
+      productVariantId: null,
+      productVariantName: null,
       quantity: 1,
-      unitPrice: soleVariant?.price ?? product.price,
+      unitPrice: product.price,
     });
+  }
+
+  function removeItem(index: number) {
+    remove(index);
   }
 
   function updateQuantity(index: number, quantity: number) {
@@ -168,38 +132,35 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
   function updateVariant(index: number, variantId: string | null) {
     const item = fields[index]!;
-    const product = activeProducts.find(
-      (candidate) => candidate.id === item.productId,
-    );
-    const variant =
-      product?.productVariants?.find(
-        (candidate) => candidate.id === variantId && candidate.isActive,
-      ) ?? null;
+    const product = activeProducts.find((p) => p.id === item.productId);
+    const variant = product?.productVariants?.find((v) => v.id === variantId) ?? null;
+    const variantPrice = variant?.price ?? product?.price ?? item.unitPrice;
     update(index, {
       ...item,
-      productVariantId: variant?.id ?? null,
+      productVariantId: variantId,
       productVariantName: variant?.name ?? null,
-      unitPrice: variant?.price ?? product?.price ?? item.unitPrice,
+      unitPrice: variantPrice,
     });
   }
 
-  function selectCustomer(customerId: string) {
-    form.setValue("customerId", customerId, { shouldDirty: true });
-    form.setValue("isNewCustomer", false, { shouldDirty: true });
-    const customer = customers.find((candidate) => candidate.id === customerId);
-    if (!customer) return;
-    form.setValue("wilaya", customer.wilaya ?? "", { shouldDirty: true });
-    form.setValue("commune", customer.commune ?? "", { shouldDirty: true });
-    form.setValue("address", customer.address ?? "", { shouldDirty: true });
-    form.setValue("phone", formatPhone(customer.phone), { shouldDirty: true });
+  function selectCustomer(id: string) {
+    form.setValue("customerId", id, { shouldDirty: true });
+    form.setValue("isNewCustomer", false);
+    const customer = customers.find((c) => c.id === id);
+    if (customer) {
+      form.setValue("wilaya", customer.wilaya ?? "", { shouldDirty: true });
+      form.setValue("commune", customer.commune ?? "", { shouldDirty: true });
+      form.setValue("address", customer.address ?? "", { shouldDirty: true });
+      form.setValue("phone", formatPhone(customer.phone), { shouldDirty: true });
+    }
   }
 
   function toggleNewCustomerMode() {
-    const next = !form.getValues("isNewCustomer");
-    form.setValue("isNewCustomer", next, { shouldDirty: true });
+    const current = form.getValues("isNewCustomer");
+    form.setValue("isNewCustomer", !current, { shouldDirty: true });
     form.setValue("customerId", "", { shouldDirty: true });
     form.setValue("newCustomerName", "", { shouldDirty: true });
-    if (next) {
+    if (!current) {
       form.setValue("wilaya", "", { shouldDirty: true });
       form.setValue("commune", "", { shouldDirty: true });
       form.setValue("address", "", { shouldDirty: true });
@@ -207,11 +168,49 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     }
   }
 
-  async function checkPreCreateRisk(
-    data: OrderFormValues,
-  ): Promise<RiskAssessment | null> {
+  async function onSubmit(data: OrderFormValues) {
+    setLoading(true);
     try {
-      const response = await fetch("/api/risk/assess-pre-create", {
+      // ── W3-4 (task 2-g): pre-create risk check ──────────────────────────
+      // Before creating the order, call /api/risk/assess-pre-create with the
+      // form data. If the risk score is HIGH (>70), show a confirmation
+      // dialog with the risk breakdown. The seller can proceed anyway (it's
+      // a warning, not a block) or cancel to edit the form.
+      //
+      // skipRiskCheckRef is set to true when the seller clicks "Proceed
+      // anyway" in the risk dialog — we then re-call onSubmit and skip the
+      // check to avoid an infinite loop. The ref is reset after the order
+      // is created (so the next order gets a fresh risk check).
+      if (!skipRiskCheckRef.current) {
+        const assessment = await checkPreCreateRisk(data);
+        if (assessment && assessment.score > 70) {
+          setRiskWarning({ assessment, data });
+          setLoading(false);
+          return;
+        }
+      }
+
+      await createOrder(data);
+      // Reset the skip flag after successful creation — next order gets a
+      // fresh risk check.
+      skipRiskCheckRef.current = false;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("orders.form.createFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /**
+   * W3-4 (task 2-g): call the pre-create risk endpoint. Returns the
+   * assessment, or null if the check failed (network error, 500, etc.).
+   *
+   * On failure, we proceed with order creation — risk is a WARNING, not a
+   * gate. A risk-check API outage should NOT block all order creation.
+   */
+  async function checkPreCreateRisk(data: OrderFormValues): Promise<RiskAssessment | null> {
+    try {
+      const res = await fetch("/api/risk/assess-pre-create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -221,138 +220,122 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
           address: data.address,
           totalPrice: total,
           source: "manual",
-          items: data.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
+          items: data.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
           })),
         }),
       });
-      if (!response.ok) return null;
-      const body = (await response.json()) as {
-        assessment: RiskAssessment;
-      };
-      return body.assessment;
+      if (!res.ok) return null;
+      const { assessment } = (await res.json()) as { assessment: RiskAssessment };
+      return assessment;
     } catch {
       return null;
     }
   }
 
-  function buildTrustedRequest(data: OrderFormValues) {
-    return {
-      customerId: data.isNewCustomer ? undefined : data.customerId,
-      newCustomer: data.isNewCustomer
-        ? {
-            name: data.newCustomerName,
-            phone: data.phone,
-            wilaya: data.wilaya,
-            commune: data.commune,
-            address: data.address,
-          }
-        : undefined,
-      items: data.items.map((item) => ({
-        productId: item.productId,
-        productVariantId: item.productVariantId ?? null,
-        quantity: item.quantity,
-      })),
-      wilaya: data.wilaya,
-      commune: data.commune,
-      address: data.address,
-      phone: data.phone,
-      source: "manual" as const,
-      deliveryCost: data.deliveryCost ?? 600,
-    };
-  }
-
-  function commandFor(request: ReturnType<typeof buildTrustedRequest>) {
-    return resolveManualOrderCommand(
-      window.localStorage,
-      COMMAND_KEY,
-      JSON.stringify(request),
-      () => crypto.randomUUID(),
-    );
-  }
-
-  async function createOrder(data: OrderFormValues) {
-    const request = buildTrustedRequest(data);
-    const command = commandFor(request);
-    const response = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...request,
-        idempotencyKey: command.idempotencyKey,
-        correlationId: `manual-order-ui:${command.idempotencyKey}`,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new Error(
-        translateServerError(
-          errorBody.error?.message ?? errorBody.error,
-          t,
-          t("orders.form.createFailed"),
-        ),
-      );
-    }
-
-    const body = await response.json();
-    clearManualOrderCommand(window.localStorage, COMMAND_KEY);
-    setOpen(false);
-    form.reset();
-    clearFormDraft(DRAFT_KEY);
-    await mutatePrefix("/api/orders");
-    toast.success(t("orders.orderCreated"));
-    router.push(`/orders/${body.order.id}`);
-  }
-
-  async function onSubmit(data: OrderFormValues) {
-    setLoading(true);
-    try {
-      if (!skipRiskCheckRef.current) {
-        const assessment = await checkPreCreateRisk(data);
-        if (assessment && assessment.score > 70) {
-          setRiskWarning({ assessment, data });
-          return;
-        }
-      }
-      await createOrder(data);
-      skipRiskCheckRef.current = false;
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("orders.form.createFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  /**
+   * W3-4 (task 2-g): proceed with order creation after the seller confirms
+   * the HIGH-risk warning. Sets skipRiskCheckRef so the re-submission
+   * doesn't re-trigger the risk check.
+   */
   async function proceedWithCreate() {
     if (!riskWarning) return;
-    const data = riskWarning.data;
+    const { data } = riskWarning;
     setRiskWarning(null);
     skipRiskCheckRef.current = true;
     await onSubmit(data);
   }
 
+  /** W3-4: cancel the risk warning — return to the form for editing. */
   function cancelRiskWarning() {
     setRiskWarning(null);
+    // skipRiskCheckRef is NOT set — the next submit will re-check.
+  }
+
+  /**
+   * Create the customer (if new) + the order. Extracted from onSubmit so
+   * the risk-check flow can call it directly after confirmation.
+   */
+  async function createOrder(data: OrderFormValues) {
+    let finalCustomerId = data.customerId;
+    if (data.isNewCustomer) {
+      const custRes = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.newCustomerName,
+          phone: data.phone,
+          wilaya: data.wilaya,
+          commune: data.commune,
+          address: data.address,
+        }),
+      });
+      if (!custRes.ok) {
+        const err = await custRes.json().catch(() => ({}));
+        toast.error(translateServerError(err.error?.message ?? err.error, t, t("orders.form.errorCreatingCustomer")));
+        return;
+      }
+      const custData = await custRes.json();
+      finalCustomerId = custData.customer.id;
+    }
+
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerId: finalCustomerId,
+        items: data.items.map((i) => ({
+          productId: i.productId,
+          productName: i.productName,
+          productVariantId: i.productVariantId,
+          productVariantName: i.productVariantName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        wilaya: data.wilaya,
+        commune: data.commune,
+        address: data.address,
+        phone: data.phone,
+        source: "manual",
+        deliveryCost: data.deliveryCost ?? 600,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error?.message ?? errData.error ?? t("orders.form.createFailed"));
+    }
+
+    const { order } = await res.json();
+    setOpen(false);
+    form.reset();
+    clearFormDraft(DRAFT_KEY);
+    await mutatePrefix("/api/orders");
+    toast.success(t("orders.orderCreated"));
+    router.push(`/orders/${order.id}`);
   }
 
   const handleSubmit = form.handleSubmit(onSubmit as never);
   const isNewCustomerMode = watchValues.isNewCustomer;
-  const rootError = form.formState.errors.root?.message;
+  const error = form.formState.errors.root?.message;
+
+  // Format phone on change
+  const onPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    form.setValue("phone", formatted, { shouldDirty: true, shouldValidate: true });
+  };
 
   return (
     <FormProvider {...form}>
-      <Dialog
-        open={open}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && loading) return;
-          setOpen(nextOpen);
-        }}
-      >
+      <Dialog open={open} onOpenChange={(v) => {
+        if (!v && loading) return; // don't allow closing mid-submit
+        setOpen(v);
+        if (!v) {
+          // Keep draft — user might re-open. Only clear on successful submit.
+        }
+      }}>
         <DialogTrigger asChild>
           <Button size="sm">
             <Plus className="h-4 w-4 me-1.5" />
@@ -368,19 +351,12 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6 py-4">
+            {/* Customer selection */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>{t("orders.customer")}</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleNewCustomerMode}
-                  className="text-xs h-7"
-                >
-                  {isNewCustomerMode
-                    ? t("orders.form.chooseExistingCustomer")
-                    : t("orders.form.createNewCustomer")}
+                <Button type="button" variant="ghost" size="sm" onClick={toggleNewCustomerMode} className="text-xs h-7">
+                  {isNewCustomerMode ? t("orders.form.chooseExistingCustomer") : t("orders.form.createNewCustomer")}
                 </Button>
               </div>
               {isNewCustomerMode ? (
@@ -391,49 +367,39 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
               ) : (
                 <Select value={watchValues.customerId} onValueChange={selectCustomer}>
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder={t("orders.form.selectCustomerPlaceholder")}
-                    />
+                    <SelectValue placeholder={t("orders.form.selectCustomerPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name} — {customer.phone}
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — {c.phone}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
               {form.formState.errors.customerId && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.customerId.message}
-                </p>
+                <p className="text-xs text-destructive">{form.formState.errors.customerId.message}</p>
               )}
-              {form.formState.errors.newCustomerName && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.newCustomerName.message}
-                </p>
+              {(watchValues.customerId || isNewCustomerMode) && (
+                <p className="text-xs text-muted-foreground">{t("orders.form.customerDeliveryHint")}</p>
               )}
             </div>
 
+            {/* Products */}
             <div className="space-y-3">
               <Label>{t("orders.items")}</Label>
               {activeProducts.length > 0 && (
                 <Select onValueChange={addProduct}>
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder={t("orders.form.addProductPlaceholder")}
-                    />
+                    <SelectValue placeholder={t("orders.form.addProductPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {activeProducts
-                      .filter(
-                        (product) =>
-                          !fields.some((field) => field.productId === product.id),
-                      )
-                      .map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} — {formatDZD(product.price)} ({product.stock})
+                      .filter((p) => !fields.some((f) => f.productId === p.id))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} — {formatDZD(p.price)} (stock: {p.stock})
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -442,69 +408,38 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
               {fields.length > 0 ? (
                 <div className="space-y-2 rounded-lg border p-3">
-                  {fields.map((item, index) => {
-                    const product = activeProducts.find(
-                      (candidate) => candidate.id === item.productId,
-                    );
-                    const variants = (product?.productVariants ?? []).filter(
-                      (variant) => variant.isActive,
-                    );
-                    const variantError =
-                      form.formState.errors.items?.[index]?.productVariantId?.message;
+                  {fields.map((item, i) => {
+                    const product = activeProducts.find((p) => p.id === item.productId);
+                    const variants = product?.productVariants ?? [];
                     return (
                       <div key={item.id} className="space-y-2">
                         <div className="flex items-center gap-3">
                           <div className="flex-1 space-y-0.5">
-                            <p className="text-sm font-medium">
-                              {item.productName}
-                            </p>
+                            <p className="text-sm font-medium">{item.productName}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatDZD(item.unitPrice)} × {item.quantity} ={" "}
-                              {formatDZD(item.unitPrice * item.quantity)}
+                              {formatDZD(item.unitPrice)} × {item.quantity} = {formatDZD(item.unitPrice * item.quantity)}
                             </p>
                           </div>
                           <Input
                             type="number"
                             min="1"
                             value={item.quantity}
-                            onChange={(event) =>
-                              updateQuantity(
-                                index,
-                                parseInt(event.target.value, 10) || 1,
-                              )
-                            }
+                            onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
                             className="w-16 text-center"
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => remove(index)}
-                            className="text-destructive"
-                            aria-label={t("orders.removeItem")}
-                          >
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} className="text-destructive" aria-label={t("orders.removeItem")}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                        {variants.length > 0 && (
-                          <>
-                            <ProductVariantPicker
-                              variants={variants}
-                              defaultPrice={product?.price ?? item.unitPrice}
-                              value={item.productVariantId}
-                              onChange={(variantId) =>
-                                updateVariant(index, variantId)
-                              }
-                              showLabel
-                              required={variants.length > 1}
-                              size="sm"
-                            />
-                            {variantError && (
-                              <p className="text-xs text-destructive" role="alert">
-                                {variantError}
-                              </p>
-                            )}
-                          </>
+                        {variants.length > 1 && (
+                          <ProductVariantPicker
+                            variants={variants}
+                            defaultPrice={product?.price ?? item.unitPrice}
+                            value={item.productVariantId}
+                            onChange={(vId) => updateVariant(i, vId)}
+                            showLabel={true}
+                            size="sm"
+                          />
                         )}
                       </div>
                     );
@@ -515,71 +450,56 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                   {t("orders.form.noItems")}
                 </p>
               )}
+              {form.formState.errors.items && (
+                <p className="text-xs text-destructive">{form.formState.errors.items.message}</p>
+              )}
             </div>
 
             <Separator />
 
+            {/* Delivery info */}
             <div className="space-y-4">
               <Label className="text-base">{t("orders.form.delivery")}</Label>
               <WilayaCommuneSelect
                 wilaya={watchValues.wilaya}
                 commune={watchValues.commune}
-                onWilayaChange={(value) =>
-                  form.setValue("wilaya", value, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-                onCommuneChange={(value) =>
-                  form.setValue("commune", value, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
+                onWilayaChange={(v) => form.setValue("wilaya", v, { shouldDirty: true, shouldValidate: true })}
+                onCommuneChange={(v) => form.setValue("commune", v, { shouldDirty: true, shouldValidate: true })}
                 required
               />
+              {form.formState.errors.wilaya && (
+                <p className="text-xs text-destructive">{form.formState.errors.wilaya.message}</p>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs">{t("orders.form.address")}</Label>
                 <Input
                   value={watchValues.address}
-                  onChange={(event) =>
-                    form.setValue("address", event.target.value, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }
+                  onChange={(e) => form.setValue("address", e.target.value, { shouldDirty: true, shouldValidate: true })}
                   placeholder={t("orders.form.addressPlaceholder")}
                 />
+                {form.formState.errors.address && (
+                  <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t("orders.phone")}</Label>
                   <Input
                     value={watchValues.phone}
-                    onChange={(event) =>
-                      form.setValue("phone", formatPhone(event.target.value), {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                    }
+                    onChange={onPhoneChange}
                     placeholder="0X XX XX XX XX"
                   />
+                  {form.formState.errors.phone && (
+                    <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">
-                    {t("orders.form.deliveryCostLabel")}
-                  </Label>
+                  <Label className="text-xs">{t("orders.form.deliveryCostLabel")}</Label>
                   <Input
                     type="number"
-                    min="0"
                     value={watchValues.deliveryCost}
-                    onChange={(event) =>
-                      form.setValue(
-                        "deliveryCost",
-                        parseInt(event.target.value, 10) || 0,
-                        { shouldDirty: true },
-                      )
-                    }
+                    onChange={(e) => form.setValue("deliveryCost", parseInt(e.target.value) || 0, { shouldDirty: true })}
+                    placeholder="600"
                   />
                 </div>
               </div>
@@ -587,24 +507,19 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
             <Separator />
 
+            {/* Total */}
             <div className="flex items-center justify-between rounded-lg bg-muted p-4">
               <span className="text-sm font-medium">{t("orders.total")}</span>
               <span className="text-xl font-bold">{formatDZD(total)}</span>
             </div>
 
-            {rootError && (
-              <p className="text-sm text-destructive" role="alert">
-                {rootError}
-              </p>
+            {error && (
+              <p className="text-sm text-destructive" role="alert">{error}</p>
             )}
           </form>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)}>
               {t("common.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
@@ -621,22 +536,26 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
         </DialogContent>
       </Dialog>
 
+      {/* W3-4 (task 2-g): HIGH-risk pre-create confirmation dialog.
+          Renders when `riskWarning` is set (i.e. the pre-create risk check
+          returned score > 70). The seller can proceed anyway (warning, not
+          a block) or cancel to edit the form. */}
       <AlertDialog
         open={riskWarning !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) cancelRiskWarning();
+        onOpenChange={(open) => {
+          if (!open) cancelRiskWarning();
         }}
       >
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle
-                className="h-5 w-5 text-amber-500"
-                aria-hidden="true"
-              />
+              <AlertTriangle className="h-5 w-5 text-amber-500" aria-hidden="true" />
               {t("orders.form.riskWarningTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
+              {/* asChild so we can render block-level content (the factor
+                  list) inside the description — Radix's default is a <p>
+                  which would nest <div>/<ul> illegally. */}
               <div className="space-y-3 text-sm">
                 <p>
                   {t("orders.form.riskWarningBody", {
@@ -647,21 +566,15 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 {riskWarning && riskWarning.assessment.factors.length > 0 && (
                   <ul className="space-y-1 rounded-md bg-muted p-3 text-xs">
                     {riskWarning.assessment.factors
-                      .filter(
-                        (factor) =>
-                          factor.direction === "risk" && factor.points > 0,
-                      )
-                      .sort((left, right) => right.points - left.points)
+                      .filter((f) => f.direction === "risk" && f.points > 0)
+                      .sort((a, b) => b.points - a.points)
                       .slice(0, 5)
-                      .map((factor) => (
-                        <li
-                          key={factor.id}
-                          className="flex items-start gap-2"
-                        >
+                      .map((f) => (
+                        <li key={f.id} className="flex items-start gap-2">
                           <span className="font-mono text-amber-600 dark:text-amber-400">
-                            +{factor.points}
+                            +{f.points}
                           </span>
-                          <span>{factor.explanation}</span>
+                          <span>{f.explanation}</span>
                         </li>
                       ))}
                   </ul>
@@ -673,15 +586,12 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={cancelRiskWarning}
-              disabled={loading}
-            >
+            <AlertDialogCancel onClick={cancelRiskWarning} disabled={loading}>
               {t("orders.form.riskWarningCancel")}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault();
+              onClick={(e) => {
+                e.preventDefault(); // don't auto-close — let proceedWithCreate drive state
                 void proceedWithCreate();
               }}
               disabled={loading}

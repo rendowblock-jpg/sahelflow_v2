@@ -1,28 +1,20 @@
 /**
  * API route integration test helpers.
  *
- * Calls route handlers directly and uses the same SQLite database as the
- * application Prisma proxy.
+ * Calls route handler functions directly with mock Request objects.
+ * Uses the real `db` Proxy (with PII encryption) so the test exercises
+ * the full route → middleware-equivalent → service → DB path.
  */
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 import { PrismaClient } from "@prisma/client";
 import { NextRequest } from "next/server";
 
+/** Raw PrismaClient for test setup/cleanup (same DB as the db Proxy). */
 export const rawDb = new PrismaClient();
 
-/** Clean all tables for a fresh test, including raw canonical authority tables. */
+/** Clean all tables for a fresh test. */
 export async function cleanDb(): Promise<void> {
-  await rawDb.$executeRawUnsafe('DELETE FROM "CompensationFact"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "ProjectionInvalidation"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "FinancialMovement"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "InventoryMovement"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "InventoryReservation"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "OutboxIntent"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "DomainEvent"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "BusinessCommand"');
-  await rawDb.$executeRawUnsafe('DELETE FROM "BusinessAggregateVersion"');
-
   await rawDb.$transaction([
     rawDb.auditLog.deleteMany(),
     rawDb.session.deleteMany(),
@@ -30,8 +22,6 @@ export async function cleanDb(): Promise<void> {
     rawDb.delivery.deleteMany(),
     rawDb.returnNote.deleteMany(),
     rawDb.return.deleteMany(),
-    rawDb.refund.deleteMany(),
-    rawDb.orderChange.deleteMany(),
     rawDb.order.deleteMany(),
     rawDb.productVariant.deleteMany(),
     rawDb.product.deleteMany(),
@@ -44,7 +34,6 @@ export async function cleanDb(): Promise<void> {
     rawDb.storefrontConfig.deleteMany(),
     rawDb.whatsAppTemplate.deleteMany(),
     rawDb.integration.deleteMany(),
-    rawDb.automationLog.deleteMany(),
     rawDb.automation.deleteMany(),
     rawDb.aiChatMessage.deleteMany(),
     rawDb.aiChatSession.deleteMany(),
@@ -53,75 +42,52 @@ export async function cleanDb(): Promise<void> {
   ]);
 }
 
-let ipCounter = 0;
+let _ipCounter = 0;
+/** Get a unique IP for each test (avoids rate limiter accumulation). */
 export function uniqueIp(): string {
-  ipCounter += 1;
-  return `192.168.1.${ipCounter}`;
+  _ipCounter++;
+  return `192.168.1.${_ipCounter}`;
 }
 
-export function mockPost(
-  url: string,
-  body: unknown,
-  headers?: Record<string, string>,
-): NextRequest {
+/** Build a mock Request for a POST with JSON body. */
+export function mockPost(url: string, body: unknown, headers?: Record<string, string>): NextRequest {
   return new NextRequest(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-forwarded-for": uniqueIp(),
-      ...headers,
-    },
+    headers: { "Content-Type": "application/json", "x-forwarded-for": uniqueIp(), ...headers },
     body: JSON.stringify(body),
   });
 }
 
-export function mockGet(
-  url: string,
-  headers?: Record<string, string>,
-): NextRequest {
+/** Build a mock Request for a GET. */
+export function mockGet(url: string, headers?: Record<string, string>): NextRequest {
   return new NextRequest(url, { method: "GET", headers });
 }
 
+/** Extract JSON from a Response. */
 export async function getJson(res: Response): Promise<Record<string, unknown>> {
   return JSON.parse(await res.text()) as Record<string, unknown>;
 }
 
-export async function seedStorefront(opts?: {
-  slug?: string;
-  active?: boolean;
-  productIds?: string[];
-}) {
+/** Seed a storefront config for testing. */
+export async function seedStorefront(opts?: { slug?: string; active?: boolean; productIds?: string[] }) {
   return rawDb.storefrontConfig.create({
     data: {
       slug: opts?.slug ?? "test-store",
       name: "Test Store",
       description: "Test store for integration tests",
-      theme: JSON.stringify({
-        template: "minimal",
-        primaryColor: "#0ea5e9",
-        showPrices: true,
-        showStock: true,
-      }),
+      theme: JSON.stringify({ template: "minimal", primaryColor: "#0ea5e9", showPrices: true, showStock: true }),
       productIds: JSON.stringify(opts?.productIds ?? []),
-      contact: JSON.stringify({
-        phone: "0555123456",
-        whatsapp: "0555123456",
-      }),
+      contact: JSON.stringify({ phone: "0555123456", whatsapp: "0555123456" }),
       isActive: opts?.active ?? true,
     },
   });
 }
 
-let productCounter = 0;
-export async function seedProduct(opts?: {
-  name?: string;
-  price?: number;
-  stock?: number;
-}) {
-  productCounter += 1;
-  const category = await rawDb.category.create({
-    data: { name: `TestCat${productCounter}` },
-  });
+/** Seed a product for testing. */
+let _productCounter = 0;
+export async function seedProduct(opts?: { name?: string; price?: number; stock?: number }) {
+  _productCounter++;
+  const category = await rawDb.category.create({ data: { name: `TestCat${_productCounter}` } });
   return rawDb.product.create({
     data: {
       name: opts?.name ?? "Test Product",

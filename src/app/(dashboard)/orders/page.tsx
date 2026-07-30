@@ -1,40 +1,29 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  CheckCircle2,
-  Clock,
-  Package,
-  ShieldAlert,
-  ShoppingBag,
-  TrendingUp,
-} from "lucide-react";
-
-import { ImportExportButtons } from "@/components/shared/import-export-buttons";
-import { EmptyState } from "@/components/shared/empty-state";
-import { OrderFormDialog } from "@/components/orders/order-form-dialog";
-import { OrdersDataTable } from "@/components/orders/orders-data-table";
-import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
+import { getI18n } from "@/lib/i18n-server";
+import { db, shopContext } from "@/lib/db";
+import { formatDZD } from "@/lib/utils";
+import { batchAssessOrders } from "@/lib/risk-engine";
+import type { OrderStatus } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { db, shopContext } from "@/lib/db";
-import { getI18n } from "@/lib/i18n-server";
-import { batchAssessOrders } from "@/lib/risk-engine";
-import { formatDZD } from "@/lib/utils";
+import Link from "next/link";
+import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, ShieldAlert } from "lucide-react";
+import { OrderFormDialog } from "@/components/orders/order-form-dialog";
+import { OrdersDataTable } from "@/components/orders/orders-data-table";
+import { PageHeader } from "@/components/shared/page-header";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
+import { EmptyState } from "@/components/shared/empty-state";
+import { StatCard } from "@/components/shared/stat-card";
 import { orderStatusSchema } from "@/lib/validation";
-import type { OrderStatus } from "@/types/domain";
 import { computeActiveOrderCount } from "./active-orders";
+import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
   return { title: t("metadata.title.orders") };
 }
 
-const STATUS_FILTERS: Array<{
-  value: "all" | OrderStatus;
-  labelKey: string;
-}> = [
+const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = [
   { value: "all", labelKey: "common.all" },
   { value: "pending", labelKey: "orders.status.pending" },
   { value: "confirmed", labelKey: "orders.status.confirmed" },
@@ -52,15 +41,22 @@ export default async function OrdersPage({
   const { t, locale } = await getI18n();
   const { status: statusFilterRaw, risk: riskFilter } = await searchParams;
 
+  // P-M11: validate statusFilter against the OrderStatus enum (safeParse).
+  // Invalid / unknown values are dropped to undefined (no filter) instead of
+  // being passed to Prisma as an arbitrary string (silent no-match or error).
   const statusFilter =
     statusFilterRaw && statusFilterRaw !== "all"
-      ? orderStatusSchema.safeParse(statusFilterRaw).success
+      ? (orderStatusSchema.safeParse(statusFilterRaw).success
         ? (statusFilterRaw as OrderStatus)
-        : undefined
+        : undefined)
       : undefined;
-  const isHighRiskFilter = riskFilter === "high";
-  const where = statusFilter ? { status: statusFilter } : undefined;
 
+  const isHighRiskFilter = riskFilter === "high";
+
+  const where = statusFilter ? { status: statusFilter } : undefined;
+  // PERF-007: use select (not include) to avoid fetching + decrypting PII
+  // fields (phone, address, notes) that the table doesn't display. Was: 200
+  // AES-256-GCM decryptions per page load. Now: zero (only name is fetched).
   const orderSelect = {
     id: true,
     orderNumber: true,
@@ -72,158 +68,73 @@ export default async function OrdersPage({
     source: true,
     createdAt: true,
     deliveredAt: true,
-    items: {
-      select: {
-        id: true,
-        productName: true,
-        quantity: true,
-        unitPrice: true,
-        total: true,
-      },
-    },
-    customer: {
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        phoneEnc: true,
-      },
-    },
+    items: { select: { id: true, productName: true, quantity: true, unitPrice: true, total: true } },
+    customer: { select: { id: true, name: true, phone: true, phoneEnc: true } },
     phone: true,
   } as const;
 
-  const hasFilter = Boolean(statusFilter);
-  const [
-    allOrders,
-    filteredOrders,
-    customers,
-    products,
-    statusGroups,
-    totalCount,
-  ] = await Promise.all([
-    db.order.findMany({
-      where: { deletedAt: null },
-      select: orderSelect,
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    }),
+  // PERF-008: when no status filter is active, filteredOrders === allOrders.
+  // Skip the second query (was: two identical queries on the default landing).
+  const hasFilter = !!statusFilter;
+  // Status-tab counts come from a separate groupBy (uncapped) so they are
+  // NOT capped by the display list's take:200 (S2-6). Full pagination of the
+  // display list itself is a follow-up.
+  const [allOrders, filteredOrders, customers, products, statusGroups, totalCount] = await Promise.all([
+    db.order.findMany({ where: { deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 }),
     hasFilter
-      ? db.order.findMany({
-          where: { ...where, deletedAt: null },
-          select: orderSelect,
-          orderBy: { createdAt: "desc" },
-          take: 200,
-        })
+      ? db.order.findMany({ where: { ...where, deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
       : Promise.resolve([]),
-    db.customer.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        phoneEnc: true,
-        wilaya: true,
-        commune: true,
-        address: true,
-      },
-    }),
-    db.product.findMany({
-      where: { isActive: true, deletedAt: null },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        stock: true,
-        isActive: true,
-        productVariants: {
-          orderBy: { sortOrder: "asc" },
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            price: true,
-            stock: true,
-            isActive: true,
-          },
-        },
-      },
-    }),
-    db.order.groupBy({
-      by: ["status"],
-      where: { deletedAt: null },
-      _count: { _all: true },
-    }),
+    db.customer.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
+    db.product.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
+    db.order.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
     db.order.count({ where: { deletedAt: null } }),
   ]);
 
+  // Batch-assess risk for ALL orders (used for the risk column + high-risk filter).
+  // This loads config+rules once, then builds inputs for each order in parallel.
   const riskMap = await batchAssessOrders(
     { prisma: db, shop: shopContext },
-    allOrders.map((order) => order.id),
+    allOrders.map((o) => o.id),
   );
   const highRiskCount = Array.from(riskMap.values()).filter(
-    (assessment) =>
-      assessment.level === "high" || assessment.level === "critical",
+    (a) => a.level === "high" || a.level === "critical",
   ).length;
 
+  // P-M12: status + risk filters combine with AND. ?status=pending&risk=high
+  // now shows only high+critical-risk orders whose status is pending (not ALL
+  // high-risk orders regardless of status). Start from the status-filtered
+  // list (filteredOrders when a status is set, else allOrders), then apply
+  // the risk filter on top.
   const baseOrders = hasFilter ? filteredOrders : allOrders;
   const displayOrders = isHighRiskFilter
-    ? baseOrders.filter((order) => {
-        const assessment = riskMap.get(order.id);
-        return (
-          assessment &&
-          (assessment.level === "high" || assessment.level === "critical")
-        );
+    ? baseOrders.filter((o) => {
+        const a = riskMap.get(o.id);
+        return a && (a.level === "high" || a.level === "critical");
       })
     : baseOrders;
 
-  const trustedManualRows =
-    displayOrders.length > 0
-      ? await db.orderChange.findMany({
-          where: {
-            orderId: { in: displayOrders.map((order) => order.id) },
-            actionType: "created",
-            payload: { contains: "trusted-manual-v1" },
-          },
-          select: { orderId: true },
-        })
-      : [];
-  const canonicalOrderIds = new Set(
-    trustedManualRows.map((entry) => entry.orderId),
-  );
-  const tableOrders = displayOrders.map((order) => ({
-    ...order,
-    mutationAuthority: canonicalOrderIds.has(order.id)
-      ? ("canonical_v1" as const)
-      : ("legacy_compatibility" as const),
-  }));
-
+  // Serialize risk map for the client (orderId → {level, score})
   const riskData: Record<string, { level: string; score: number }> = {};
   for (const [orderId, assessment] of riskMap) {
-    riskData[orderId] = {
-      level: assessment.level,
-      score: assessment.score,
-    };
+    riskData[orderId] = { level: assessment.level, score: assessment.score };
   }
 
+  // Counts come from the groupBy (uncapped) — not the capped display list.
   const counts: Record<string, number> = { all: totalCount };
-  for (const group of statusGroups) {
-    counts[group.status] = group._count._all;
+  for (const g of statusGroups) {
+    counts[g.status] = g._count._all;
   }
 
+  // Active orders = pending + confirmed + shipped. Computed from the uncapped
+  // `counts` groupBy (S2-6) so shops with >200 orders aren't undercounted —
+  // `allOrders` is fetched with `take: 200` and would silently cap this stat.
   const activeOrders = computeActiveOrderCount(statusGroups);
   const deliveredToday = allOrders.filter(
-    (order) =>
-      order.status === "delivered" &&
-      order.deliveredAt &&
-      new Date(order.deliveredAt).toDateString() === new Date().toDateString(),
+    (o) => o.status === "delivered" && o.deliveredAt &&
+    new Date(o.deliveredAt).toDateString() === new Date().toDateString(),
   );
-  const todayRevenue = deliveredToday.reduce(
-    (sum, order) => sum + order.totalPrice,
-    0,
-  );
-  const pendingCount = counts.pending ?? 0;
+  const todayRevenue = deliveredToday.reduce((sum, o) => sum + o.totalPrice, 0);
+  const pendingCount = counts["pending"] ?? 0;
 
   return (
     <div className="app-content page-sections">
@@ -232,15 +143,13 @@ export default async function OrdersPage({
         description={t("orders.subtitle")}
         actions={
           <div className="flex items-center gap-2">
-            <ImportExportButtons
-              exportRoute="/api/export/orders"
-              importRoute="/api/import/orders"
-            />
+            <ImportExportButtons exportRoute="/api/export/orders" importRoute="/api/import/orders" />
             <OrderFormDialog customers={customers} products={products} />
           </div>
         }
       />
 
+      {/* KPI stat cards */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("orders.activeOrders")}
@@ -276,43 +185,34 @@ export default async function OrdersPage({
         />
       </div>
 
-      <Tabs
-        defaultValue={
-          isHighRiskFilter ? "high-risk" : (statusFilter ?? "all")
-        }
-      >
+      {/* Status filter tabs */}
+      <Tabs defaultValue={isHighRiskFilter ? "high-risk" : (statusFilter ?? "all")}>
         <TabsList className="flex-wrap h-auto">
           {STATUS_FILTERS.map((filter) => (
             <TabsTrigger key={filter.value} value={filter.value} asChild>
               <Link
-                href={
-                  filter.value === "all"
-                    ? "/orders"
-                    : `/orders?status=${filter.value}`
-                }
+                href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
                 className="flex items-center gap-1.5"
               >
                 {t(filter.labelKey)}
                 {counts[filter.value] !== undefined && (
-                  <Badge
-                    variant="secondary"
-                    className="me-1 text-xs px-1.5 py-0"
-                  >
+                  <Badge variant="secondary" className="me-1 text-xs px-1.5 py-0">
                     {counts[filter.value]}
                   </Badge>
                 )}
               </Link>
             </TabsTrigger>
           ))}
+          {/* High-risk review queue tab */}
           <TabsTrigger value="high-risk" asChild>
-            <Link href="/orders?risk=high" className="flex items-center gap-1.5">
+            <Link
+              href="/orders?risk=high"
+              className="flex items-center gap-1.5"
+            >
               <ShieldAlert className="h-3.5 w-3.5" />
               {t("risk.level.high")}/{t("risk.level.critical")}
               {highRiskCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="me-1 text-xs px-1.5 py-0"
-                >
+                <Badge variant="destructive" className="me-1 text-xs px-1.5 py-0">
                   {highRiskCount}
                 </Badge>
               )}
@@ -321,21 +221,14 @@ export default async function OrdersPage({
         </TabsList>
       </Tabs>
 
+      {/* Orders table with bulk selection + pagination (Phase 1: SWR + DataTable v2) */}
       <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CardContent className="p-0">
           {displayOrders.length === 0 ? (
             <EmptyState
               icon={isHighRiskFilter ? ShieldAlert : Package}
-              title={
-                isHighRiskFilter
-                  ? t("orders.empty.highRiskTitle")
-                  : t("orders.empty.title")
-              }
-              description={
-                isHighRiskFilter
-                  ? t("orders.empty.highRiskDesc")
-                  : t("orders.empty.description")
-              }
+              title={isHighRiskFilter ? t("orders.empty.highRiskTitle") : t("orders.empty.title")}
+              description={isHighRiskFilter ? t("orders.empty.highRiskDesc") : t("orders.empty.description")}
               actionLabel={t("orders.createOrder")}
               actionHref="/orders"
             />
@@ -343,21 +236,22 @@ export default async function OrdersPage({
             <div className="space-y-3 p-4">
               <OrdersDataTable
                 fallback={{
-                  orders: isHighRiskFilter
-                    ? tableOrders
-                    : tableOrders.slice(0, 25),
+                  orders: (isHighRiskFilter
+                    ? displayOrders
+                    : displayOrders.slice(0, 25)
+                  ) as unknown as Array<{
+                    id: string; orderNumber: string; status: string; totalPrice: number;
+                    wilaya: string; phone: string; createdAt: Date;
+                    items: Array<{ id: string }>;
+                    customer: { name: string | null; phone: string | null } | null;
+                  }>,
                   total: displayOrders.length,
-                  hasNextPage:
-                    isHighRiskFilter ? false : displayOrders.length > 25,
+                  hasNextPage: isHighRiskFilter ? false : displayOrders.length > 25,
                   page: 1,
                   pageSize: isHighRiskFilter ? displayOrders.length : 25,
                 }}
                 locale={locale}
-                statusFilter={
-                  isHighRiskFilter
-                    ? "all"
-                    : ((statusFilter as OrderStatus | "all") ?? "all")
-                }
+                statusFilter={isHighRiskFilter ? "all" : (statusFilter as OrderStatus | "all") ?? "all"}
                 riskData={riskData}
               />
             </div>

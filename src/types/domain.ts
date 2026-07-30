@@ -20,16 +20,7 @@ export type OrderStatus =
   | "refused"
   | "cancelled";
 
-export type OrderSource =
-  | "whatsapp"
-  | "tiktok"
-  | "manual"
-  | "import"
-  | "storefront"
-  | "ai_chat"
-  | "shopify"
-  | "woocommerce"
-  | "youcan";
+export type OrderSource = "whatsapp" | "tiktok" | "manual" | "storefront" | "ai_chat" | "shopify" | "woocommerce" | "youcan";
 
 export interface OrderItem {
   id: string;
@@ -47,7 +38,6 @@ export interface Order {
   id: string;
   orderNumber: string;
   status: OrderStatus;
-  version: number;
   customerId: string;
   items: OrderItem[];
   totalPrice: number;
