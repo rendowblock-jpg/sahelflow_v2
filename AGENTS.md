@@ -69,6 +69,33 @@ Arabic/RTL, accessibility, recovery and performance.
 No agent may replace this program with another permanent plan, wave or session
 map without a new Founder decision.
 
+## Founder execution-granularity decision
+
+The Founder set the following standing operating mode on 2026-07-30. It applies
+across Web and Desktop sessions and must be reconstructed from GitHub rather than
+chat memory:
+
+- use one long-lived integration branch for a coherent multi-phase completion
+  program instead of opening a new PR for every small correction;
+- complete substantial phase or seller-journey outcomes across schema, migration,
+  domain, API, UI, recovery and evidence boundaries before final validation;
+- use targeted type, lint, unit, integration and migration checks during
+  implementation so obvious breakage does not accumulate;
+- do not repeatedly run the full Windows, Rust, installer and installed-MSI suite
+  after each small edit;
+- when the declared program scope is complete, freeze one exact head, run the full
+  risk-selected clean-checkout and installed validation, perform one independent
+  frozen-head P0/P1 review, apply one consolidated blocker repair batch, rerun the
+  affected gates and required aggregator, then merge;
+- P2/P3 findings become owned follow-ups and do not restart an unbounded review or
+  validation loop unless they invalidate the named outcome;
+- isolate work early only for a real P0, an incompatible shared-contract dependency
+  or a protected-main conflict that cannot safely remain inside the integration
+  program.
+
+The current Phase 1–4 completion program is owned by
+`agent/phases1-4-completion-program` under this mode.
+
 ## Research-first gate
 
 Before every major phase, durable contract or material implementation:
@@ -153,7 +180,8 @@ and the Founder acceptance decision remain open.
 - Freeze shared contracts before dependent parallel work.
 - Core authority WIP 1; seller vertical WIP 2 total; experience/Arabic WIP 1;
   platform/performance WIP 1.
-- Normal branches are short and coherent.
+- Normal branches are short and coherent unless a newer Founder decision explicitly
+  binds a larger integration program, as above.
 - Merge ordinary source-complete packages without app-version bumps.
 - Group coherent outcomes into one Internal milestone candidate.
 - At most one frozen signed candidate is in flight.
