@@ -7,6 +7,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { db, shopContext } from "@/lib/db";
 import { env } from "@/lib/env";
+import { deterministicWhatsAppMessageId } from "../../../../../sidecars/whatsapp/send-receipts";
 
 export const dynamic = "force-dynamic";
 
@@ -27,24 +28,19 @@ const statusSchema = z.object({
   error: z.string().max(2000).optional(),
 });
 
-const DELIVERY_RANK: Record<Exclude<DeliveryStatus, "failed">, number> = {
-  sending: 0,
-  sent: 1,
-  delivered: 2,
-  read: 3,
-};
-
-function shouldAdvanceDeliveryStatus(
-  current: string | null,
-  next: DeliveryStatus,
-): boolean {
-  if (next === "failed") return current !== "failed";
-  if (current === "failed") return false;
-  const currentRank =
-    current && current in DELIVERY_RANK
-      ? DELIVERY_RANK[current as keyof typeof DELIVERY_RANK]
-      : -1;
-  return DELIVERY_RANK[next] > currentRank;
+function allowedPriorStates(next: DeliveryStatus): Array<string | null> {
+  switch (next) {
+    case "sending":
+      return [null];
+    case "sent":
+      return [null, "sending"];
+    case "delivered":
+      return [null, "sending", "sent"];
+    case "read":
+      return [null, "sending", "sent", "delivered"];
+    case "failed":
+      return [null, "sending", "sent"];
+  }
 }
 
 function resolveExpectedRestToken(): string | undefined {
@@ -73,18 +69,64 @@ async function updateMessageStatus(
   messageId: string,
   deliveryStatus: DeliveryStatus,
 ): Promise<boolean> {
-  const message = await db.message.findUnique({
-    where: { id: messageId },
-    select: { deliveryStatus: true },
-  });
-  if (!message || !shouldAdvanceDeliveryStatus(message.deliveryStatus, deliveryStatus)) {
-    return false;
-  }
-  await db.message.update({
-    where: { id: messageId },
+  const prior = allowedPriorStates(deliveryStatus);
+  const updated = await db.message.updateMany({
+    where: {
+      id: messageId,
+      OR: [
+        ...(prior.includes(null) ? [{ deliveryStatus: null }] : []),
+        {
+          deliveryStatus: {
+            in: prior.filter((value): value is string => value !== null),
+          },
+        },
+      ],
+    },
     data: { deliveryStatus },
   });
-  return true;
+  return updated.count === 1;
+}
+
+async function findOrBindDurableEffect(providerMessageId: string): Promise<{
+  effectKey: string;
+  messageId: string;
+} | null> {
+  const exact = await db.whatsAppOutboundEffect.findUnique({
+    where: { providerMessageId },
+    select: { effectKey: true, messageId: true },
+  });
+  if (exact) return exact;
+
+  // Durable sends use a deterministic provider ID. A fast callback can arrive
+  // before markSucceeded binds that ID locally, so recompute the exact mapping
+  // instead of discarding or approximately correlating the callback.
+  if (!/^[0-9A-F]{20}$/.test(providerMessageId)) return null;
+  const unbound = await db.whatsAppOutboundEffect.findMany({
+    where: { providerMessageId: null },
+    orderBy: { createdAt: "desc" },
+    take: 1_000,
+    select: { effectKey: true, messageId: true },
+  });
+  const match = unbound.find(
+    (effect) =>
+      deterministicWhatsAppMessageId(effect.effectKey) === providerMessageId,
+  );
+  if (!match) return null;
+
+  const bound = await db.whatsAppOutboundEffect.updateMany({
+    where: {
+      effectKey: match.effectKey,
+      messageId: match.messageId,
+      providerMessageId: null,
+    },
+    data: { providerMessageId },
+  });
+  if (bound.count === 1) return match;
+
+  return db.whatsAppOutboundEffect.findUnique({
+    where: { providerMessageId },
+    select: { effectKey: true, messageId: true },
+  });
 }
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -97,13 +139,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const isFailure = input.deliveryStatus === "failed" || Boolean(input.error);
 
   let updatedMessageId: string | null = null;
-  const exact = await db.whatsAppOutboundEffect.findUnique({
-    where: { providerMessageId: input.waMessageId },
-    select: { messageId: true },
-  });
-  if (exact) {
-    if (await updateMessageStatus(exact.messageId, input.deliveryStatus)) {
-      updatedMessageId = exact.messageId;
+  const durable = await findOrBindDurableEffect(input.waMessageId);
+  if (durable) {
+    if (await updateMessageStatus(durable.messageId, input.deliveryStatus)) {
+      updatedMessageId = durable.messageId;
     }
   } else {
     // Compatibility-only fallback for legacy sends without a durable effect row.
@@ -123,13 +162,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         take: 10,
         select: { id: true },
       });
-      const durable = candidates.length
+      const mapped = candidates.length
         ? await db.whatsAppOutboundEffect.findMany({
             where: { messageId: { in: candidates.map((message) => message.id) } },
             select: { messageId: true },
           })
         : [];
-      const durableIds = new Set(durable.map((effect) => effect.messageId));
+      const durableIds = new Set(mapped.map((effect) => effect.messageId));
       const legacy = candidates.find((message) => !durableIds.has(message.id));
       if (
         legacy &&
