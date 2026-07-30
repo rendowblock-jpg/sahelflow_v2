@@ -94,6 +94,8 @@ begins.
 ## Current baseline
 
 - Phase 0 closeout base: `18c45e474f58744b6f837372509154ca500044b0`.
+- Current protected application baseline:
+  `731fb11528345354388b2716f3bd94f0fc73eafb`.
 - Published executable source:
   `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Published release: `1.0.0-internal.13`, run `30366866703`.
@@ -102,22 +104,42 @@ begins.
 - Internal.13 is Founder-installed and locally version-confirmed on the T470; it
   is not yet Founder-accepted.
 - Internal.5 remains the Founder-accepted baseline.
-- The new canonical command/event/outbox/reservation/movement foundation is
-  merged, but production business routes still mainly use legacy paths.
-- Phase 0 completed through PR #179. Phase 1 research for the first canonical
-  manual order-confirmation vertical is complete and implementation is ready.
-- Next implementation branch: `agent/phase1-manual-confirmation`, created from
-  the then-current protected `main`.
+- Phase 0 completed through PR #179.
+- PR #190 merged trusted manual intake plus canonical confirmation/rejection,
+  exact idempotency/versioning, stock reservation/movement and AR/FR/EN states.
+- PR #192 merged canonical `pack -> ship -> deliver`, reservation consumption,
+  outbound inventory, delivered customer facts and a DZD COD receivable. Phase 1
+  remains incomplete: COD collection/remittance, exceptions, cancellation,
+  returns/refunds/compensation and remaining intake sources are open.
+- PR #191 merged a deliberately narrow Phase 2 boundary: the compatibility PIN
+  owner can read only the exact process shop and cannot create, switch or delete
+  shops. Durable person/workspace/member/device/session authority, licensing and
+  native multi-shop remain open.
+- PR #184 merged the Phase 4 Windows-protected installation root and resumable
+  native rotation path. Exact-head CI passed staged runtime plus MSI install,
+  rotation, authenticated launch, close and reopen. Full Phase 4 backup/restore,
+  recovery, security/privacy/legal and migration certification remain open.
+- A corrected Phase 3 WhatsApp durable-effect package exists only as local commit
+  `01a595b789d31c600da6af7025b9dff7cb7cd813`; it is not merged, published or
+  independently approved and is behind current protected `main`.
 
 ## Exact next outcome
 
-Begin Phase 1 implementation from current protected `main` for:
+Resume from current protected `main` without reopening completed packages:
 
-> A manual order is created under trusted authority, confirmed or rejected using
-> optimistic version and exact idempotency, reserves available product/variant
-> stock atomically, writes inventory movement, audit, event, outbox and projection
-> invalidation, exposes complete AR/FR/EN UI states, survives duplicate and
-> concurrent submissions, and removes the migrated direct-stock legacy path.
+> Rebase the corrected local Phase 3 WhatsApp durable-effect commit onto current
+> protected `main`, independently review the exact rebased diff for every P0/P1
+> receipt, scope, lease, trusted-actor, encryption, retry and recovery invariant,
+> and publish it only after a SHIP verdict and clean exact-head CI.
+
+The next implementation frontier after that integration review is the complete
+Phase 1D COD collection/remittance/fee/discrepancy vertical. The existing
+`C:\tmp\sahelflow-phase1-cod-settlement` worktree is an incomplete uncommitted
+proposal based on an obsolete pre-merge commit; inspect and reconcile it rather
+than trusting or publishing it. The Phase 2 durable-identity worktree is also an
+incomplete local proposal and remains paused while core-authority WIP is occupied.
+PR #186 is a separate open, conflicting session-freshness proposal based on an
+obsolete main; resolve and reconcile it before Phase 2 resumes.
 
 Internal.13 T470 observation remains independent in the platform lane. Installed
 version and preservation evidence are captured; Arabic chart visual acceptance
