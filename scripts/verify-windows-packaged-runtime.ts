@@ -41,6 +41,7 @@ type BunRuntime = Readonly<{
 }>;
 
 const bunRuntime = (globalThis as unknown as { Bun: BunRuntime }).Bun;
+const ROTATION_BOOTSTRAP_READY = "SF_ROTATION_BOOTSTRAP_READY";
 const NODE_ENTRYPOINT_BOOTSTRAP =
   "(entry=>{const fs=require('fs'),crypto=require('crypto'),frame=Buffer.alloc(40);let offset=0;while(offset<frame.length){const read=fs.readSync(0,frame,offset,frame.length-offset,null);if(read===0){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_missing')}offset+=read}const extra=Buffer.alloc(1),extraRead=fs.readSync(0,extra,0,1,null);extra.fill(0);const expected=Buffer.from('SFRK0001','ascii');if(extraRead!==0||!crypto.timingSafeEqual(frame.subarray(0,8),expected)){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_invalid')}const key=Buffer.alloc(32);frame.copy(key,0,8);frame.fill(0);let used=false;const symbol=Symbol.for('sahelflow.installation-root.v1');Object.defineProperty(globalThis,symbol,{configurable:true,enumerable:false,value:()=>{if(used)throw Error('SF_INSTALLATION_ROOT_FRAME_consumed');used=true;delete globalThis[symbol];return key}});if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)";
 
@@ -51,6 +52,71 @@ function nodeEntrypointPath(value: string): string {
     throw new Error("staged Node entrypoint is not an absolute local drive path");
   }
   return normalized;
+}
+
+function rotationBootstrapFailureCategory(stderr: string): string {
+  const uppercase = stderr.toUpperCase();
+  if (
+    uppercase.includes("CANNOT USE IMPORT STATEMENT OUTSIDE A MODULE") ||
+    uppercase.includes("ERR_REQUIRE_ESM") ||
+    (uppercase.includes("SYNTAXERROR") && uppercase.includes("EXPORT"))
+  ) {
+    return "module-format-invalid";
+  }
+  if (uppercase.includes("MODULE_NOT_FOUND")) return "module-not-found";
+  if (uppercase.includes("ERR_DLOPEN_FAILED")) return "native-module-load-failed";
+  if (uppercase.includes("PRISMACLIENTINITIALIZATIONERROR")) {
+    return "prisma-initialization-failed";
+  }
+  return stderr.trim() ? "unclassified-import-failure" : "no-stderr";
+}
+
+async function verifyRotationWorkerBootstrap(
+  stagedNode: string,
+  stagedWorker: string,
+  stagedStandalone: string,
+  environment: Record<string, string>,
+): Promise<void> {
+  const bootstrap = bunRuntime.spawn(
+    [
+      stagedNode,
+      "--conditions=react-server",
+      stagedWorker,
+      "--bootstrap-check",
+    ],
+    {
+      cwd: stagedStandalone,
+      env: {
+        ...environment,
+        SF_INSTALLATION_ROOT_ROTATION_SOURCE: "native-stdin-v1",
+      },
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
+  bootstrap.stdin.end();
+  const stdoutPromise = new Response(bootstrap.stdout).text();
+  const stderrPromise = new Response(bootstrap.stderr).text();
+  const deadline = Date.now() + 10_000;
+  while (bootstrap.exitCode === null && Date.now() < deadline) {
+    await bunRuntime.sleep(50);
+  }
+  const timedOut = bootstrap.exitCode === null;
+  if (timedOut) bootstrap.kill();
+  const exitCode = await bootstrap.exited;
+  const [stdout, stderr] = await Promise.all([stdoutPromise, stderrPromise]);
+  if (timedOut) {
+    throw new Error("staged protected rotation worker bootstrap timed out");
+  }
+  if (
+    exitCode !== 0 ||
+    !stdout.split(/\r?\n/).includes(ROTATION_BOOTSTRAP_READY)
+  ) {
+    throw new Error(
+      `staged protected rotation worker bootstrap failed (${rotationBootstrapFailureCategory(stderr)}); raw stderr suppressed`,
+    );
+  }
 }
 
 const root = process.cwd();
@@ -178,6 +244,10 @@ try {
   });
   mkdirSync(stagedWork);
   const stagedServer = resolve(stagedStandalone, "server.js");
+  const stagedRotationWorker = resolve(
+    stagedStandalone,
+    "sahelflow-rotate-master-key.cjs",
+  );
   const stagedNode = resolve(stagedRuntime, "node.exe");
   const stagedQueryEngine = resolve(
     stagedRuntime,
@@ -185,6 +255,9 @@ try {
   );
   if (!existsSync(stagedServer)) {
     throw new Error("staged server.js is missing");
+  }
+  if (!existsSync(stagedRotationWorker)) {
+    throw new Error("staged protected rotation worker is missing");
   }
   const stagedNodeEntrypoint = nodeEntrypointPath(stagedServer);
 
@@ -263,6 +336,14 @@ try {
     SF_NODE_ENTRYPOINT: stagedNodeEntrypoint,
     NEXT_TELEMETRY_DISABLED: "1",
   };
+
+  await verifyRotationWorkerBootstrap(
+    stagedNode,
+    stagedRotationWorker,
+    stagedStandalone,
+    environment,
+  );
+  console.log("Staged protected rotation worker bootstrap verified.");
 
   const installationRootFrame = Buffer.concat([
     Buffer.from("SFRK0001", "ascii"),

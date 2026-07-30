@@ -60,6 +60,8 @@ import {
 const DRY_RUN = process.argv.includes("--dry-run");
 const FORCE = process.argv.includes("--force");
 const RECOVER_STALE_LOCK = process.argv.includes("--recover-stale-lock");
+const BOOTSTRAP_CHECK = process.argv.includes("--bootstrap-check");
+const BOOTSTRAP_READY_MARKER = "SF_ROTATION_BOOTSTRAP_READY";
 const KEY_BYTES = 32;
 const ROTATION_TRANSACTION_MAX_WAIT_MS = 30_000;
 const ROTATION_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
@@ -1045,6 +1047,15 @@ function printStats(allStats: readonly ModelStats[]): void {
 }
 
 async function main(): Promise<void> {
+  // The Windows staged-runtime lane executes the exact packaged worker with
+  // the pinned Node binary before MSI construction. This proves that the
+  // bundle format and every static runtime import load successfully without
+  // acquiring a lease, reading key material, or touching a database.
+  if (BOOTSTRAP_CHECK) {
+    console.log(BOOTSTRAP_READY_MARKER);
+    return;
+  }
+
   if (!NATIVE_ROTATION && PROTECTED_INSTALLATION_ROOT_PATHS.some((path) => existsSync(path))) {
     delegateProtectedRotation();
     return;

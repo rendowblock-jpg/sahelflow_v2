@@ -20,6 +20,10 @@ const desktopBuildSource = readFileSync(
   resolve(process.cwd(), "src-tauri", "build-frontend.ts"),
   "utf8",
 );
+const stagedRuntimeSource = readFileSync(
+  resolve(process.cwd(), "scripts", "verify-windows-packaged-runtime.ts"),
+  "utf8",
+);
 
 describe("installation-wide master-key rotation authority", () => {
   it("discovers registered shops and includes the provisioning template", () => {
@@ -163,6 +167,7 @@ describe("installation-wide master-key rotation authority", () => {
     expect(desktopBuildSource).toContain('"sahelflow-rotate-master-key.cjs"');
     expect(desktopBuildSource).toContain('"--external=@prisma/client"');
     expect(desktopBuildSource).not.toContain('"--packages=external"');
+    expect(desktopBuildSource).toContain('"--format=cjs"');
     expect(desktopBuildSource).toContain('"--conditions=react-server"');
     expect(nativeRotationSource).toContain(
       "spawn_in_capturing_stderr_with_stdin_frame",
@@ -183,6 +188,18 @@ describe("installation-wide master-key rotation authority", () => {
     );
     expect(nativeRotationSource).toContain("installation_root_key::clear_secret_bytes");
     expect(nativeRotationSource).not.toContain("SF_MASTER_KEY");
+  });
+
+  it("boots the exact staged CommonJS worker before MSI construction", () => {
+    const bootstrapGuard = source.indexOf("if (BOOTSTRAP_CHECK)");
+    const lease = source.indexOf("lease = acquireRotationLease()");
+
+    expect(bootstrapGuard).toBeGreaterThan(-1);
+    expect(lease).toBeGreaterThan(bootstrapGuard);
+    expect(stagedRuntimeSource).toContain('"sahelflow-rotate-master-key.cjs"');
+    expect(stagedRuntimeSource).toContain('"--bootstrap-check"');
+    expect(stagedRuntimeSource).toContain("SF_ROTATION_BOOTSTRAP_READY");
+    expect(stagedRuntimeSource).toContain("raw stderr suppressed");
   });
 
   it("journals database completion before protected candidate promotion", () => {

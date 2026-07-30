@@ -147,6 +147,10 @@ execFileSync(
     "build",
     "scripts/rotate-master-key.ts",
     "--target=node",
+    // Bun's Node target defaults to ESM. The installed worker has a .cjs
+    // authority name, so make the emitted module format explicit instead of
+    // asking Node to parse an ESM bundle as CommonJS.
+    "--format=cjs",
     // This is a separate installed entrypoint, so Next's standalone tracer has
     // not proven that its package imports are present. Bundle the worker's
     // ordinary JavaScript dependencies and leave only Prisma external: Prisma
