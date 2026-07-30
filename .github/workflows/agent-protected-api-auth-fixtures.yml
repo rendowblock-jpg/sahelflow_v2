@@ -1,0 +1,154 @@
+name: One-shot protected API auth fixtures
+
+on:
+  push:
+    branches:
+      - agent/phase2-session-freshness
+    paths:
+      - .github/workflows/agent-protected-api-auth-fixtures.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/phase2-session-freshness
+          fetch-depth: 0
+
+      - name: Migrate protected API suites to real sessions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          targets = [
+              Path('src/app/api/__tests__/ai-consent-gate.test.ts'),
+              Path('src/app/api/__tests__/cod-reconciliation.test.ts'),
+              Path('src/app/api/__tests__/delivery-patch.test.ts'),
+              Path('src/app/api/__tests__/delivery.test.ts'),
+              Path('src/app/api/__tests__/notifications.test.ts'),
+              Path('src/app/api/__tests__/orders.test.ts'),
+              Path('src/app/api/__tests__/returns.test.ts'),
+              Path('src/app/api/__tests__/risk.test.ts'),
+          ]
+
+          empty_mock = re.compile(
+              r'vi\.mock\("next/headers", \(\) => \(\{\n'
+              r'\s*cookies: vi\.fn\(async \(\) => \(\{\n'
+              r'\s*get: \(\) => undefined,\n'
+              r'\s*set: \(\) => undefined,\n'
+              r'\s*delete: \(\) => undefined,\n'
+              r'\s*\}\)\),\n'
+              r'\s*\}\)\);'
+          )
+
+          auth_row = re.compile(
+              r'\s*await rawDb\.authSecret\.create\(\{\n'
+              r'\s*data: \{[^\n]+\},\n'
+              r'\s*\}\);\n'
+          )
+
+          for path in targets:
+              text = path.read_text(encoding='utf-8')
+              original = text
+              store = 'cookieStore' if path.name == 'notifications.test.ts' else 'authCookieStore'
+
+              if path.name == 'notifications.test.ts':
+                  old = 'const cookieStore = new Map<string, string>();'
+                  if text.count(old) != 1:
+                      raise SystemExit(f'{path}: expected one notification cookie store')
+                  text = text.replace(
+                      old,
+                      'const cookieStore = vi.hoisted(() => new Map<string, string>());',
+                      1,
+                  )
+              else:
+                  replacement = f'''const {store} = vi.hoisted(() => new Map<string, string>());
+          vi.mock("next/headers", () => ({{
+            cookies: vi.fn(async () => ({{
+              get: (name: string) => {{
+                const value = {store}.get(name);
+                return value === undefined ? undefined : {{ value }};
+              }},
+              set: (name: string, value: string) => {{
+                {store}.set(name, value);
+              }},
+              delete: (name: string) => {{
+                {store}.delete(name);
+              }},
+            }})),
+          }}));'''.replace('          ', '')
+                  text, count = empty_mock.subn(replacement, text, count=1)
+                  if count != 1:
+                      raise SystemExit(f'{path}: expected one empty next/headers mock, found {count}')
+
+              helper_import = re.compile(
+                  r'import \{([^\n]+)\} from "@/app/api/__tests__/helpers";'
+              )
+              match = helper_import.search(text)
+              if not match:
+                  raise SystemExit(f'{path}: helpers import not found')
+              names = match.group(1)
+              if 'establishAuthenticatedTestSession' not in names:
+                  names = names.rstrip() + ', establishAuthenticatedTestSession '
+                  text = text[:match.start(1)] + names + text[match.end(1):]
+
+              text = text.replace(
+                  'await cleanDb();',
+                  f'''await cleanDb();
+              {store}.clear();
+              delete process.env.AUTH_SECRET;
+              await establishAuthenticatedTestSession();'''.replace('              ', ''),
+              )
+
+              text, removed = auth_row.subn(
+                  f'\n    {store}.delete("sf_session");\n',
+                  text,
+              )
+
+              text = text.replace(
+                  'await rawDb.$disconnect();',
+                  'delete process.env.AUTH_SECRET;\n    await rawDb.$disconnect();',
+              )
+
+              text = text.replace(
+                  'With a clean DB (no\n// AuthSecret row), isAuthenticated() returns true (setup mode) — an empty\n// cookie jar passes requireAuth.',
+                  'Protected route scenarios create a real revocable session in beforeEach.',
+              )
+              text = text.replace(
+                  'With a clean DB (no AuthSecret\n// row), isAuthenticated() returns true (setup mode) — an empty\n// cookie jar passes requireAuth. To test 401 auth rejection we seed an\n// AuthSecret row (setup=true) and leave the cookie jar empty.',
+                  'Protected route scenarios create a real revocable session in beforeEach.\n// Auth rejection tests remove only the sf_session cookie.',
+              )
+              text = text.replace(
+                  'With an empty cookie jar + clean DB → setup mode →\n *     requireAuth() passes.\n *   - To test 401 we seed an AuthSecret row + clear the cookie jar.',
+                  'A real revocable sf_session is created per test.\n *   - To test 401 we remove only the session cookie.',
+              )
+              text = text.replace(
+                  'With a clean DB (no\n// AuthSecret row), isAuthenticated() returns true (setup mode) — an empty\n// cookie jar passes requireAuth. We never test 401 here (covered elsewhere).',
+                  'Protected consent-gate scenarios create a real revocable session in beforeEach.',
+              )
+
+              if text == original:
+                  raise SystemExit(f'{path}: no changes produced')
+              if 'establishAuthenticatedTestSession' not in text:
+                  raise SystemExit(f'{path}: auth helper missing after patch')
+              if path.name != 'notifications.test.ts' and 'get: () => undefined' in text:
+                  raise SystemExit(f'{path}: legacy cookie mock remains')
+              path.write_text(text, encoding='utf-8')
+
+          PY
+
+          git diff --check
+          git diff --stat
+          git rm .github/workflows/agent-protected-api-auth-fixtures.yml
+          git config user.name "sahelflow-agent"
+          git config user.email "agent@sahelflow.local"
+          git add src/app/api/__tests__
+          git commit -m "test(auth): authenticate protected API fixtures"
+          git push origin HEAD:agent/phase2-session-freshness
