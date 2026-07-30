@@ -175,7 +175,7 @@ export async function commitCanonicalSourceCheckpoint(
         ],
         outbox: [
           {
-            effectKey: `${commandId}:checkpoint",
+            effectKey: `${commandId}:checkpoint`,
             effectType: "order.source.checkpoint.v1",
             payload: result,
           },
