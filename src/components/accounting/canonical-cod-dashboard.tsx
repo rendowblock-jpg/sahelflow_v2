@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -112,6 +112,16 @@ interface SettlementDraft {
   gross: string;
   fee: string;
   adjustment: string;
+  isFinal: boolean;
+}
+
+interface BatchLinePayload {
+  providerLineReference?: string;
+  orderId?: string;
+  expectedVersion?: number;
+  grossRemittedAmount: number;
+  feeAmount: number;
+  adjustmentAmount: number;
   isFinal: boolean;
 }
 
@@ -341,7 +351,7 @@ function SummaryCard({
 }: {
   label: string;
   value: number;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   count?: boolean;
 }) {
   return (
@@ -404,12 +414,22 @@ export function CanonicalCodDashboard({
     discrepancyDelta: string;
   }>>({});
 
+  function settlementDraft(item: CodPosition): SettlementDraft {
+    return settlementLines[item.orderId] ?? {
+      selected: false,
+      gross: String(item.outstandingRemittance),
+      fee: "0",
+      adjustment: "0",
+      isFinal: true,
+    };
+  }
+
   const selected = useMemo(
     () => summary.awaitingRemittance.filter((item) => settlementDraft(item).selected),
     [settlementLines, summary.awaitingRemittance],
   );
   const selectedProvider = selected[0]?.provider ?? null;
-  const activeProvider = selectedProvider ?? batch.provider.trim() || null;
+  const activeProvider = selectedProvider ?? (batch.provider.trim() || null);
   const selectedGross = selected.reduce(
     (total, item) => total + integer(settlementDraft(item).gross),
     0,
@@ -437,16 +457,6 @@ export function CanonicalCodDashboard({
       delta: String(-item.discrepancy),
       reason: "provider-statement-corrected",
       at: localDateTime(),
-    };
-  }
-
-  function settlementDraft(item: CodPosition): SettlementDraft {
-    return settlementLines[item.orderId] ?? {
-      selected: false,
-      gross: String(item.outstandingRemittance),
-      fee: "0",
-      adjustment: "0",
-      isFinal: true,
     };
   }
 
@@ -525,7 +535,7 @@ export function CanonicalCodDashboard({
 
   async function postBatch(): Promise<void> {
     const unmatchedGross = integer(batch.unmatchedGross);
-    const lines = selected.map((item) => {
+    const lines: BatchLinePayload[] = selected.map((item) => {
       const draft = settlementDraft(item);
       return {
         orderId: item.orderId,
@@ -539,8 +549,6 @@ export function CanonicalCodDashboard({
     });
     if (batch.includeUnmatched && unmatchedGross > 0) {
       lines.push({
-        orderId: undefined as never,
-        expectedVersion: undefined as never,
         providerLineReference: batch.unmatchedReference.trim() || undefined,
         grossRemittedAmount: unmatchedGross,
         feeAmount: integer(batch.unmatchedFee),
