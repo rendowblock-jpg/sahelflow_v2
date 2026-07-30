@@ -124,17 +124,21 @@ describe("field-crypto: timingSafeEqualString", () => {
 describe("master-key: getMasterKey", () => {
   let tmpDir: string;
   const oldEnv = { ...process.env };
+  const nativeRootSymbol = Symbol.for("sahelflow.installation-root.v1");
 
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "sf-key-"));
     _resetMasterKeyCacheForTests();
     delete process.env.SF_MASTER_KEY;
+    delete process.env.SF_INSTALLATION_ROOT_SOURCE;
+    delete (globalThis as { [key: symbol]: unknown })[nativeRootSymbol];
     process.env.SF_DATA_DIR = tmpDir;
   });
 
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
     process.env = { ...oldEnv };
+    delete (globalThis as { [key: symbol]: unknown })[nativeRootSymbol];
     _resetMasterKeyCacheForTests();
   });
 
@@ -173,6 +177,36 @@ describe("master-key: getMasterKey", () => {
     process.env.SF_MASTER_KEY = "not-hex";
     _resetMasterKeyCacheForTests();
     expect(() => getMasterKey()).toThrow(/64 hex/);
+  });
+
+  it("consumes the packaged native root exactly once without file or env fallback", () => {
+    const transported = randomBytes(32);
+    process.env.SF_INSTALLATION_ROOT_SOURCE = "native-stdin-v1";
+    process.env.SF_MASTER_KEY = randomBytes(32).toString("hex");
+    Object.defineProperty(globalThis, nativeRootSymbol, {
+      configurable: true,
+      value: () => transported,
+    });
+
+    expect(getMasterKey()).toBe(transported);
+    expect((globalThis as { [key: symbol]: unknown })[nativeRootSymbol]).toBeUndefined();
+    expect(existsSync(join(tmpDir, "master.key"))).toBe(false);
+  });
+
+  it("fails closed when packaged native transfer is missing", () => {
+    process.env.SF_INSTALLATION_ROOT_SOURCE = "native-stdin-v1";
+    process.env.SF_MASTER_KEY = randomBytes(32).toString("hex");
+
+    expect(() => getMasterKey()).toThrow(/was not transferred/);
+    expect(existsSync(join(tmpDir, "master.key"))).toBe(false);
+  });
+
+  it("refuses legacy rotation before mutation in a packaged runtime", () => {
+    const original = getMasterKey();
+    process.env.SF_INSTALLATION_ROOT_SOURCE = "native-stdin-v1";
+
+    expect(() => rotateMasterKey()).toThrow(/native protected rotation path/);
+    expect(getMasterKey()).toBe(original);
   });
 
   it("rotateMasterKey produces a different key", () => {

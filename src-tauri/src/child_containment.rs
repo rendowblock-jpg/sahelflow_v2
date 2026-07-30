@@ -1,4 +1,4 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::fmt;
 use std::io::{Error as IoError, Read};
 use std::path::Path;
@@ -6,6 +6,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 const MAX_CAPTURED_STDERR_BYTES: usize = 16 * 1024;
+const MAX_BOOTSTRAP_STDIN_BYTES: usize = 4 * 1024;
 
 #[derive(Default)]
 struct StderrCapture {
@@ -110,19 +111,22 @@ impl std::error::Error for SpawnError {
 #[cfg(windows)]
 mod platform {
     use super::{
-        completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError, OsStr,
+        completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError,
         OsString, Path, ProcessExit, SharedStderr, SpawnError,
     };
     use std::collections::BTreeMap;
+    use std::ffi::OsStr;
     use std::fs::File;
+    use std::io::Write;
     use std::mem::{size_of, zeroed};
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
     use std::os::windows::io::FromRawHandle;
     use std::sync::Arc;
     use std::time::Instant;
     use windows_sys::Win32::Foundation::{
-        CloseHandle, GetLastError, ERROR_ACCESS_DENIED, GENERIC_READ, GENERIC_WRITE, HANDLE,
-        INVALID_HANDLE_VALUE, WAIT_OBJECT_0, WAIT_TIMEOUT,
+        CloseHandle, GetLastError, SetHandleInformation, ERROR_ACCESS_DENIED, GENERIC_READ,
+        GENERIC_WRITE, HANDLE, HANDLE_FLAG_INHERIT, INVALID_HANDLE_VALUE, WAIT_OBJECT_0,
+        WAIT_TIMEOUT,
     };
     use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
     use windows_sys::Win32::Storage::FileSystem::{
@@ -178,13 +182,20 @@ mod platform {
 
     struct ChildStdio {
         stdin: OwnedHandle,
+        stdin_writer: Option<OwnedHandle>,
         stdout: OwnedHandle,
         stderr: OwnedHandle,
         stderr_reader: Option<OwnedHandle>,
     }
 
     impl ChildStdio {
-        fn open(capture_stderr: bool) -> Result<Self, IoError> {
+        fn open(capture_stderr: bool, pipe_stdin: bool) -> Result<Self, IoError> {
+            let (stdin, stdin_writer) = if pipe_stdin {
+                let (reader, writer) = open_stdin_pipe()?;
+                (reader, Some(writer))
+            } else {
+                (OwnedHandle(open_nul(GENERIC_READ)?), None)
+            };
             let (stderr, stderr_reader) = if capture_stderr {
                 let (writer, reader) = open_stderr_pipe()?;
                 (writer, Some(reader))
@@ -192,7 +203,8 @@ mod platform {
                 (OwnedHandle(open_nul(GENERIC_WRITE)?), None)
             };
             Ok(Self {
-                stdin: OwnedHandle(open_nul(GENERIC_READ)?),
+                stdin,
+                stdin_writer,
                 stdout: OwnedHandle(open_nul(GENERIC_WRITE)?),
                 stderr,
                 stderr_reader,
@@ -290,7 +302,7 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
         ) -> Result<Self, SpawnError> {
-            Self::spawn_in_internal(program, args, environment, current_directory, false)
+            Self::spawn_in_internal(program, args, environment, current_directory, false, None)
         }
 
         pub fn spawn_in_capturing_stderr(
@@ -299,7 +311,29 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
         ) -> Result<Self, SpawnError> {
-            Self::spawn_in_internal(program, args, environment, current_directory, true)
+            Self::spawn_in_internal(program, args, environment, current_directory, true, None)
+        }
+
+        /// Starts a contained process with a bounded, one-use binary frame on stdin.
+        ///
+        /// The frame is transferred before the suspended Windows child is resumed. The
+        /// parent-side pipe handle is never inherited and is closed after the transfer,
+        /// so the child observes EOF after consuming this single frame.
+        pub fn spawn_in_capturing_stderr_with_stdin_frame(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+            stdin_frame: &[u8],
+        ) -> Result<Self, SpawnError> {
+            Self::spawn_in_internal(
+                program,
+                args,
+                environment,
+                current_directory,
+                true,
+                Some(stdin_frame),
+            )
         }
 
         fn spawn_in_internal(
@@ -308,7 +342,14 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
             capture_stderr: bool,
+            stdin_frame: Option<&[u8]>,
         ) -> Result<Self, SpawnError> {
+            if stdin_frame.is_some_and(|frame| frame.len() > super::MAX_BOOTSTRAP_STDIN_BYTES) {
+                return Err(SpawnError::before_process(IoError::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "contained bootstrap stdin frame exceeds the transfer limit",
+                )));
+            }
             let application = wide_null(program.as_os_str()).map_err(SpawnError::before_process)?;
             let mut command_line =
                 command_line(program.as_os_str(), args).map_err(SpawnError::before_process)?;
@@ -318,7 +359,8 @@ mod platform {
                 .map(|path| wide_null(path.as_os_str()))
                 .transpose()
                 .map_err(SpawnError::before_process)?;
-            let stdio = ChildStdio::open(capture_stderr).map_err(SpawnError::before_process)?;
+            let mut stdio = ChildStdio::open(capture_stderr, stdin_frame.is_some())
+                .map_err(SpawnError::before_process)?;
             let job = create_kill_on_close_job().map_err(SpawnError::before_process)?;
             let handles = stdio.handles();
             let attributes = match ProcessAttributeList::with_handles(&handles) {
@@ -371,6 +413,22 @@ mod platform {
                 return Err(failed_before_job_assignment(job, &process, error));
             }
 
+            if let Some(frame) = stdin_frame {
+                let writer = stdio.stdin_writer.take().ok_or_else(|| {
+                    failed_after_process_creation(
+                        job,
+                        &process,
+                        IoError::other("contained bootstrap stdin pipe is unavailable"),
+                    )
+                })?;
+                let mut writer = unsafe { File::from_raw_handle(writer.into_raw()) };
+                let transferred = writer.write_all(frame).and_then(|()| writer.flush());
+                drop(writer);
+                if let Err(error) = transferred {
+                    return Err(failed_after_process_creation(job, &process, error));
+                }
+            }
+
             let resumed = unsafe { ResumeThread(process.hThread) };
             if resumed == u32::MAX {
                 let error = IoError::last_os_error();
@@ -382,11 +440,12 @@ mod platform {
 
             let ChildStdio {
                 stdin,
+                stdin_writer,
                 stdout,
                 stderr,
                 stderr_reader,
             } = stdio;
-            drop((stdin, stdout, stderr));
+            drop((stdin, stdin_writer, stdout, stderr));
             let stderr = match stderr_reader {
                 Some(reader) => {
                     let reader = unsafe { File::from_raw_handle(reader.into_raw()) };
@@ -534,6 +593,33 @@ mod platform {
             return Err(IoError::last_os_error());
         }
         Ok((OwnedHandle(writer), OwnedHandle(reader)))
+    }
+
+    fn open_stdin_pipe() -> Result<(OwnedHandle, OwnedHandle), IoError> {
+        let security = SECURITY_ATTRIBUTES {
+            nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: std::ptr::null_mut(),
+            bInheritHandle: 1,
+        };
+        let mut reader = std::ptr::null_mut();
+        let mut writer = std::ptr::null_mut();
+        if unsafe {
+            CreatePipe(
+                &mut reader,
+                &mut writer,
+                &security,
+                super::MAX_BOOTSTRAP_STDIN_BYTES as u32,
+            )
+        } == 0
+        {
+            return Err(IoError::last_os_error());
+        }
+        let reader = OwnedHandle(reader);
+        let writer = OwnedHandle(writer);
+        if unsafe { SetHandleInformation(writer.0, HANDLE_FLAG_INHERIT, 0) } == 0 {
+            return Err(IoError::last_os_error());
+        }
+        Ok((reader, writer))
     }
 
     fn failed_before_job_assignment(
@@ -775,6 +861,15 @@ mod platform {
                     let _ = grandchild.wait();
                 }
                 "grandchild" => std::thread::sleep(Duration::from_secs(60)),
+                "stdin-frame" => {
+                    use std::io::Read;
+
+                    let mut frame = Vec::new();
+                    std::io::stdin()
+                        .read_to_end(&mut frame)
+                        .expect("read one-use containment stdin frame");
+                    assert_eq!(frame, b"sahelflow-contained-frame");
+                }
                 "exit" => {}
                 other => panic!("unexpected containment helper mode: {other}"),
             }
@@ -806,6 +901,39 @@ mod platform {
             child
                 .terminate_tree_and_wait(Duration::from_secs(5))
                 .expect("prove exiting child tree is empty");
+        }
+
+        #[test]
+        fn contained_spawn_transfers_one_stdin_frame_and_closes_the_pipe() {
+            let executable = std::env::current_exe().expect("resolve current Rust test executable");
+            let child = ContainedChild::spawn_in_capturing_stderr_with_stdin_frame(
+                &executable,
+                &[
+                    OsString::from("--exact"),
+                    OsString::from(DESCENDANT_HELPER_TEST),
+                    OsString::from("--nocapture"),
+                ],
+                &helper_environment("stdin-frame"),
+                None,
+                b"sahelflow-contained-frame",
+            )
+            .expect("spawn child with a bounded stdin frame");
+
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let exit = loop {
+                if let Some(exit) = child.try_wait().expect("observe stdin-frame helper status") {
+                    break exit;
+                }
+                assert!(
+                    Instant::now() < deadline,
+                    "stdin-frame helper did not observe frame EOF"
+                );
+                std::thread::sleep(Duration::from_millis(10));
+            };
+            assert_eq!(exit.code, 0);
+            child
+                .terminate_tree_and_wait(Duration::from_secs(5))
+                .expect("prove stdin-frame helper tree is empty");
         }
 
         #[test]
@@ -900,7 +1028,10 @@ http.createServer((_request, response) => {
                 OsString::from(node_entrypoint),
             ));
 
-            let child = ContainedChild::spawn_in_capturing_stderr(
+            let mut installation_root_frame = [0_u8; 40];
+            installation_root_frame[..8].copy_from_slice(b"SFRK0001");
+            installation_root_frame[8..].fill(0x5a);
+            let child = ContainedChild::spawn_in_capturing_stderr_with_stdin_frame(
                 &node_path,
                 &[
                     OsString::from("--eval"),
@@ -908,8 +1039,10 @@ http.createServer((_request, response) => {
                 ],
                 &environment,
                 Some(&test_root),
+                &installation_root_frame,
             )
             .expect("spawn bundled Node.js through the real contained launcher");
+            installation_root_frame.fill(0);
 
             let deadline = Instant::now() + Duration::from_secs(15);
             let mut response = String::new();
@@ -976,6 +1109,7 @@ mod platform {
         completed_stderr_capture, start_stderr_reader, stderr_snapshot, Duration, IoError,
         OsString, Path, ProcessExit, SharedStderr, SpawnError,
     };
+    use std::io::Write;
     use std::process::{Child, Command, Stdio};
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
@@ -1006,7 +1140,7 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
         ) -> Result<Self, SpawnError> {
-            Self::spawn_in_internal(program, args, environment, current_directory, false)
+            Self::spawn_in_internal(program, args, environment, current_directory, false, None)
         }
 
         pub fn spawn_in_capturing_stderr(
@@ -1015,7 +1149,25 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
         ) -> Result<Self, SpawnError> {
-            Self::spawn_in_internal(program, args, environment, current_directory, true)
+            Self::spawn_in_internal(program, args, environment, current_directory, true, None)
+        }
+
+        /// Starts a contained process with a bounded, one-use binary frame on stdin.
+        pub fn spawn_in_capturing_stderr_with_stdin_frame(
+            program: &Path,
+            args: &[OsString],
+            environment: &[(OsString, OsString)],
+            current_directory: Option<&Path>,
+            stdin_frame: &[u8],
+        ) -> Result<Self, SpawnError> {
+            Self::spawn_in_internal(
+                program,
+                args,
+                environment,
+                current_directory,
+                true,
+                Some(stdin_frame),
+            )
         }
 
         fn spawn_in_internal(
@@ -1024,7 +1176,14 @@ mod platform {
             environment: &[(OsString, OsString)],
             current_directory: Option<&Path>,
             capture_stderr: bool,
+            stdin_frame: Option<&[u8]>,
         ) -> Result<Self, SpawnError> {
+            if stdin_frame.is_some_and(|frame| frame.len() > super::MAX_BOOTSTRAP_STDIN_BYTES) {
+                return Err(SpawnError::before_process(IoError::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "contained bootstrap stdin frame exceeds the transfer limit",
+                )));
+            }
             let mut command = Command::new(program);
             command
                 .args(args)
@@ -1036,6 +1195,9 @@ mod platform {
             if capture_stderr {
                 command.stderr(Stdio::piped());
             }
+            if stdin_frame.is_some() {
+                command.stdin(Stdio::piped());
+            }
             let mut child = command.spawn().map_err(SpawnError::before_process)?;
             let pid = child.id();
             let stderr = child
@@ -1043,6 +1205,19 @@ mod platform {
                 .take()
                 .map(start_stderr_reader)
                 .unwrap_or_else(completed_stderr_capture);
+            if let Some(frame) = stdin_frame {
+                let transferred = child
+                    .stdin
+                    .take()
+                    .ok_or_else(|| IoError::other("contained bootstrap stdin pipe is unavailable"))
+                    .and_then(|mut writer| {
+                        writer.write_all(frame)?;
+                        writer.flush()
+                    });
+                if let Err(error) = transferred {
+                    return Err(clean_up_after_stdin_transfer_failure(child, error));
+                }
+            }
             Ok(Self {
                 inner: Arc::new(ProcessState {
                     child: Mutex::new(child),
@@ -1080,7 +1255,7 @@ mod platform {
                 .map_err(|_| IoError::other("contained process state is poisoned"))?;
             match child.kill() {
                 Ok(()) => {}
-                Err(error) if child.try_wait()?.is_some() => return Ok(()),
+                Err(_error) if child.try_wait()?.is_some() => return Ok(()),
                 Err(error) => return Err(error),
             }
             drop(child);
@@ -1092,6 +1267,25 @@ mod platform {
             _tree_timeout: Duration,
         ) -> Result<ProcessExit, IoError> {
             wait_for_exit(&self.inner, Duration::MAX)
+        }
+    }
+
+    fn clean_up_after_stdin_transfer_failure(mut child: Child, source: IoError) -> SpawnError {
+        let cleanup = match child.kill() {
+            Ok(()) => child.wait().map(|_| ()),
+            Err(_) => match child.try_wait() {
+                Ok(Some(_)) => Ok(()),
+                Ok(None) => Err(IoError::other(
+                    "contained process could not be terminated after stdin transfer failure",
+                )),
+                Err(error) => Err(error),
+            },
+        };
+        match cleanup {
+            Ok(()) => SpawnError::before_process(source),
+            Err(cleanup) => SpawnError::after_unproven_cleanup(IoError::other(format!(
+                "contained bootstrap stdin transfer failed ({source}) and process cleanup could not be proven ({cleanup})"
+            ))),
         }
     }
 

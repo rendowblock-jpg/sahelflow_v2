@@ -2,12 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   queryRaw: vi.fn(),
+  getMasterKey: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   dbRaw: {
     $queryRaw: mocks.queryRaw,
   },
+}));
+
+vi.mock("@/lib/crypto/master-key", () => ({
+  getMasterKey: mocks.getMasterKey,
 }));
 
 import { GET } from "../route";
@@ -46,8 +51,11 @@ describe("GET /api/internal/runtime-ready", () => {
     process.env.SF_REGISTRY_REVISION = "7";
     process.env.SF_MIGRATION_SET_SHA256 = "f".repeat(64);
     process.env.SF_AUTH_MODE = "configured";
+    process.env.SF_INSTALLATION_ROOT_SOURCE = "native-stdin-v1";
     process.env.AUTH_SECRET = AUTH_SECRET;
     mocks.queryRaw.mockReset();
+    mocks.getMasterKey.mockReset();
+    mocks.getMasterKey.mockReturnValue(Buffer.alloc(32, 0x5a));
     mockConfiguredDatabase();
   });
 
@@ -64,6 +72,7 @@ describe("GET /api/internal/runtime-ready", () => {
     delete process.env.SF_REGISTRY_REVISION;
     delete process.env.SF_MIGRATION_SET_SHA256;
     delete process.env.SF_AUTH_MODE;
+    delete process.env.SF_INSTALLATION_ROOT_SOURCE;
     delete process.env.AUTH_SECRET;
   });
 
@@ -107,6 +116,22 @@ describe("GET /api/internal/runtime-ready", () => {
       code: "RUNTIME_DATABASE_NOT_READY",
       checks: { database: "blocked", auth: "ready" },
     });
+  });
+
+  it("fails closed before database access when native root transfer is unavailable", async () => {
+    mocks.getMasterKey.mockImplementationOnce(() => {
+      throw new Error("missing native root");
+    });
+
+    const response = await GET(request(TOKEN));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: "blocked",
+      code: "RUNTIME_INSTALLATION_ROOT_NOT_READY",
+      checks: { app: "blocked", database: "blocked", auth: "blocked" },
+    });
+    expect(mocks.queryRaw).not.toHaveBeenCalled();
   });
 
   it("reports genuine setup only when the database and desktop mode agree", async () => {
@@ -161,6 +186,7 @@ describe("GET /api/internal/runtime-ready", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("x-sahelflow-runtime-instance")).toBe(INSTANCE_ID);
+    expect(mocks.getMasterKey).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toMatchObject({
       status: "ready",
       protocolVersion: 1,
