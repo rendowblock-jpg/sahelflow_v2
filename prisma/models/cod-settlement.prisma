@@ -2,8 +2,8 @@
 //
 // These rows are append-only business facts. Order.cod* fields remain compatibility
 // projections while settlement totals are derived from these immutable facts plus
-// explicit correction rows. Order and BusinessCommand foreign keys are enforced by
-// the SQL migration; scalar IDs are used here to avoid coupling legacy models to the
+// explicit correction and matching rows. Order and BusinessCommand foreign keys are
+// enforced by the SQL migration; scalar IDs avoid coupling legacy models to the
 // additive authority during the migration program.
 
 model CodCollection {
@@ -80,6 +80,7 @@ model CodSettlementLine {
   createdAt             DateTime                  @default(now())
   settlement            CodSettlement             @relation(fields: [settlementId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   corrections           CodSettlementCorrection[]
+  match                 CodSettlementLineMatch?
 
   @@unique([settlementId, providerLineReference])
   @@unique([settlementId, orderId])
@@ -102,5 +103,22 @@ model CodSettlementCorrection {
   settlementLine     CodSettlementLine @relation(fields: [settlementLineId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([settlementLineId, occurredAt])
+  @@index([createdByCommandId])
+}
+
+model CodSettlementLineMatch {
+  id                 String            @id
+  matchKey           String            @unique
+  settlementLineId   String            @unique
+  orderId            String
+  status             String
+  discrepancyAmount  Int
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String            @unique
+  createdAt          DateTime          @default(now())
+  settlementLine     CodSettlementLine @relation(fields: [settlementLineId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([orderId, occurredAt])
   @@index([createdByCommandId])
 }
