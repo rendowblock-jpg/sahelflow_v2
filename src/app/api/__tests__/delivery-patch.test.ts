@@ -17,9 +17,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { rawDb, cleanDb, mockPost, getJson, seedProduct, establishAuthenticatedTestSession } from "@/app/api/__tests__/helpers";
 
-// ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
-//    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
-//    cookie jar passes requireAuth.
+// Protected route scenarios create a real revocable session in beforeEach.
 const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
