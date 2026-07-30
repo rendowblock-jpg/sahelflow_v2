@@ -40,6 +40,7 @@ import { getRefundsForOrder, getTotalRefunded } from "@/lib/data/refund-service"
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { RefundDialog } from "@/components/orders/refund-dialog";
 import { CodControls } from "@/components/orders/cod-controls";
+import { CanonicalFulfillmentActions } from "@/components/orders/canonical-fulfillment-actions";
 import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
@@ -112,6 +113,7 @@ export default async function OrderDetailPage({
   const timeline: Array<{ label: string; date: Date | null; done: boolean }> = [
     { label: t("orders.created"), date: order.createdAt, done: true },
     { label: t("orders.status.confirmed"), date: order.confirmedAt, done: !!order.confirmedAt },
+    { label: t("orders.statusActions.packed"), date: order.packedAt, done: !!order.packedAt },
     { label: t("orders.status.shipped"), date: order.shippedAt, done: !!order.shippedAt },
     { label: t("orders.status.delivered"), date: order.deliveredAt, done: !!order.deliveredAt },
   ];
@@ -169,6 +171,21 @@ export default async function OrderDetailPage({
             />
           </CardContent>
         </Card>
+        {canonicalManual && order.status !== "pending" && order.status !== "cancelled" && (
+          <Card>
+            <CardContent className="pt-6">
+              <CanonicalFulfillmentActions
+                orderId={order.id}
+                currentStatus={order.status}
+                currentVersion={order.version}
+                fulfillmentState={order.fulfillmentState}
+                deliveryState={order.deliveryState}
+                inventoryState={order.inventoryState}
+                codState={order.codState}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

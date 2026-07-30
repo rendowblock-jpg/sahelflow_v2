@@ -1608,6 +1608,7 @@
   "orders.statusActions.markDelivered": "وضع علامة تم التسليم",
   "orders.statusActions.markPending": "وضع علامة قيد الانتظار",
   "orders.statusActions.noActions": "لا توجد إجراءات متاحة لهذا الطلب.",
+  "orders.statusActions.packed": "مجهّزة",
   "orders.statusActions.returnButton": "إرجاع",
   "orders.statusActions.selectStatus": "اختر الحالة",
   "orders.statusActions.updateFailed": "فشل التحديث",

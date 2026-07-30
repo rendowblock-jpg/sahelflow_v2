@@ -4,6 +4,8 @@ process.env.SF_MASTER_KEY =
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+const requireTrustedActorMock = vi.hoisted(() => vi.fn());
+
 import {
   cleanDb,
   getJson,
@@ -30,11 +32,17 @@ vi.mock("@/lib/automations/engine", () => ({
   detectLowStock: vi.fn(async () => null),
 }));
 
+vi.mock("@/lib/identity/trusted-actor", () => ({
+  requireTrustedActor: requireTrustedActorMock,
+}));
+
 import { PATCH as PATCHOrder } from "@/app/api/orders/[id]/route";
 import { POST as POSTDecision } from "@/app/api/orders/[id]/decision/route";
+import { POST as POSTFulfillment } from "@/app/api/orders/[id]/fulfillment/route";
 import { PATCH as PATCHStatus } from "@/app/api/orders/[id]/status/route";
 import { POST as POSTOrder } from "@/app/api/orders/route";
 import { importPendingOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
+import { SahelFlowError } from "@/types/errors";
 
 let sequence = 0;
 
@@ -78,6 +86,8 @@ function manualBody(customerId: string, productId: string) {
 }
 
 beforeEach(async () => {
+  requireTrustedActorMock.mockReset();
+  requireTrustedActorMock.mockResolvedValue(undefined);
   await cleanCanonical();
   await cleanDb();
 });
@@ -88,6 +98,29 @@ afterAll(async () => {
 });
 
 describe("canonical manual order API boundary", () => {
+  it("rejects fulfillment before parsing when no trusted actor is available", async () => {
+    requireTrustedActorMock.mockRejectedValueOnce(
+      new SahelFlowError(
+        "A trusted actor is unavailable before authentication setup completes",
+        "TRUSTED_ACTOR_REQUIRED",
+        401,
+      ),
+    );
+    const request = mockPost(
+      "http://localhost/api/orders/order-without-authority/fulfillment",
+      { action: "pack" },
+    );
+    const jsonSpy = vi.spyOn(request, "json");
+
+    const response = await POSTFulfillment(request, {
+      params: Promise.resolve({ id: "order-without-authority" }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(await rawDb.businessCommand.count()).toBe(0);
+  });
+
   it("routes an omitted source through trusted intake and server pricing", async () => {
     const product = await seedProduct({ name: "Catalog truth", price: 4200 });
     const customer = await seedCustomer();
@@ -220,6 +253,52 @@ describe("canonical manual order API boundary", () => {
     expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
       status: "pending",
       version: 1,
+    });
+  });
+
+  it("exposes only the governed pack, ship and deliver sequence", async () => {
+    const product = await seedProduct({ stock: 5, price: 3000 });
+    const customer = await seedCustomer();
+    const createdResponse = await POSTOrder(
+      mockPost(
+        "http://localhost/api/orders",
+        manualBody(customer.id, product.id),
+      ),
+    );
+    const created = await getJson(createdResponse);
+    const order = created.order as { id: string; version: number };
+    await POSTDecision(
+      mockPost(`http://localhost/api/orders/${order.id}/decision`, {
+        decision: "confirm",
+        expectedVersion: order.version,
+        idempotencyKey: `manual-fulfillment-confirm-${sequence}`,
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+
+    for (const [action, expectedVersion] of [
+      ["pack", 2],
+      ["ship", 3],
+      ["deliver", 4],
+    ] as const) {
+      const response = await POSTFulfillment(
+        mockPost(`http://localhost/api/orders/${order.id}/fulfillment`, {
+          action,
+          expectedVersion,
+          idempotencyKey: `manual-fulfillment-${action}-${sequence}`,
+        }),
+        { params: Promise.resolve({ id: order.id }) },
+      );
+      expect(response.status).toBe(200);
+    }
+
+    expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
+      status: "delivered",
+      version: 5,
+      fulfillmentState: "closed",
+      deliveryState: "delivered",
+      inventoryState: "settled",
+      codState: "receivable",
     });
   });
 });

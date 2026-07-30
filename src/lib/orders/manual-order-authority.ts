@@ -1,3 +1,5 @@
+import { SahelFlowError } from "@/types/errors";
+
 export const TRUSTED_MANUAL_ORDER_AUTHORITY = "trusted-manual-v1" as const;
 export const IMPORT_PENDING_ORDER_AUTHORITY = "import-pending-v1" as const;
 
@@ -59,4 +61,3 @@ export function assertLegacyOrderFollowupAllowed(
     409,
   );
 }
-import { SahelFlowError } from "@/types/errors";

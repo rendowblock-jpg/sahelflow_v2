@@ -56,6 +56,10 @@ type FormValues = z.infer<typeof formSchema>;
 interface DeliveredOrder {
   id: string;
   orderNumber: string;
+  mutationAuthority?:
+    | "canonical_v1"
+    | "confirmation_blocked"
+    | "legacy_compatibility";
 }
 
 interface ReturnFormDialogProps {
@@ -104,7 +108,13 @@ export function ReturnFormDialog({
     fetch("/api/orders?status=delivered&pageSize=100")
       .then((r) => r.json())
       .then((data: { orders?: DeliveredOrder[] }) => {
-        if (!cancelled) setOrders(data.orders ?? []);
+        if (!cancelled) {
+          setOrders(
+            (data.orders ?? []).filter(
+              (order) => order.mutationAuthority !== "canonical_v1",
+            ),
+          );
+        }
       })
       .catch(() => {
         if (!cancelled) setOrders([]);

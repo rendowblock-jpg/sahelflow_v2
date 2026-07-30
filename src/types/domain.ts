@@ -51,8 +51,13 @@ export interface Order {
   sourceMetadata: OrderSourceMetadata | null;
   notes: string | null;
   confirmedAt: Date | null;
+  packedAt: Date | null;
   shippedAt: Date | null;
   deliveredAt: Date | null;
+  fulfillmentState: import("@/lib/business-truth/contracts").FulfillmentState | null;
+  deliveryState: import("@/lib/business-truth/contracts").CanonicalDeliveryState | null;
+  inventoryState: import("@/lib/business-truth/contracts").OrderInventoryState | null;
+  codState: import("@/lib/business-truth/contracts").CodFinancialState | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -137,7 +142,7 @@ export type DeliveryStatus =
   | "refused"
   | "failed";
 
-export type DeliveryProvider = "yalidine" | "maystro" | "zrexpress" | "dhd";
+export type DeliveryProvider = "manual" | "yalidine" | "maystro" | "zrexpress" | "dhd";
 
 export interface Delivery {
   id: string;
