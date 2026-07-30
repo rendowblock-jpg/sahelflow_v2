@@ -24,6 +24,7 @@ export const WHATSAPP_TEXT_EFFECT_TYPE = "whatsapp.text.send.v1";
 const MAX_ATTEMPTS = 6;
 const LEASE_MS = 90_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
+const RECONCILIATION_DEFERRED = "RECEIPT_RECONCILIATION_DEFERRED";
 
 const queuedPayloadSchema = z.object({
   messageId: z.string().uuid(),
@@ -80,7 +81,7 @@ export interface WhatsAppEffectStatus {
   requiresDuplicateConfirmation: boolean;
 }
 
-interface SendReceipt {
+export interface SendReceipt {
   ok: boolean;
   id: string;
   status: string;
@@ -92,6 +93,11 @@ export type WhatsAppEffectSender = (
   effectKey: string,
   requestBinding: string,
 ) => Promise<SendReceipt>;
+
+export type WhatsAppEffectReceiptLookup = (
+  effectKey: string,
+  requestBinding: string,
+) => Promise<SendReceipt | null>;
 
 function safeReceipt(receiptJson: string | null): { id?: string } {
   if (!receiptJson) return {};
@@ -162,6 +168,25 @@ async function setMessageDeliveryByEffect(
       data: { deliveryStatus },
     });
   }
+}
+
+async function openClaimedPayload(
+  context: ServiceContext,
+  claimed: OutboxRow,
+): Promise<z.infer<typeof queuedPayloadSchema>> {
+  const envelopeKey = await getBusinessEnvelopeKey(context);
+  return queuedPayloadSchema.parse(
+    openBusinessPayloadWithKey(
+      claimed.payloadJson,
+      {
+        kind: "outbox-intent",
+        recordKey: claimed.effectKey,
+        recordType: claimed.effectType,
+        commandId: claimed.commandId,
+      },
+      envelopeKey,
+    ),
+  );
 }
 
 export async function queueWhatsAppText(
@@ -263,57 +288,177 @@ export async function queueWhatsAppText(
   return { ...execution.result, replayed: execution.replayed };
 }
 
-async function recoverExpiredLeases(context: ServiceContext, now = new Date()): Promise<void> {
-  const expired = await context.prisma.outboxIntent.findMany({
+async function recoverPreEffectLease(
+  context: ServiceContext,
+  row: OutboxRow,
+  now: Date,
+): Promise<void> {
+  await context.prisma.$transaction(async (tx) => {
+    const recovered = await tx.outboxIntent.updateMany({
+      where: {
+        id: row.id,
+        status: "processing",
+        leaseToken: row.leaseToken,
+        effectStartedAt: null,
+      },
+      data: {
+        status: "retrying",
+        attemptCount: { decrement: 1 },
+        nextAttemptAt: now,
+        lockedAt: null,
+        leaseToken: null,
+        lastErrorCode: "WORKER_LEASE_RECOVERED_BEFORE_EFFECT",
+        outcomeState: "none",
+        deadLetteredAt: null,
+      },
+    });
+    if (recovered.count !== 1) return;
+    await tx.auditLog.create({
+      data: {
+        action: "whatsapp.message.lease_recovered_before_effect",
+        entity: "outbox-intent",
+        entityId: row.id,
+        actor: "system:whatsapp-outbox",
+        metadata: JSON.stringify({
+          effectKey: row.effectKey,
+          providerCallStarted: false,
+        }),
+      },
+    });
+  });
+}
+
+async function markExpiredLeaseAmbiguous(
+  context: ServiceContext,
+  row: OutboxRow,
+  errorCode: string,
+): Promise<void> {
+  await context.prisma.$transaction(async (tx) => {
+    const marked = await tx.outboxIntent.updateMany({
+      where: {
+        id: row.id,
+        status: "processing",
+        leaseToken: row.leaseToken,
+      },
+      data: {
+        status: "failed",
+        outcomeState: "ambiguous",
+        lastErrorCode: errorCode,
+        nextAttemptAt: null,
+        lockedAt: null,
+        leaseToken: null,
+      },
+    });
+    if (marked.count !== 1) return;
+    await setMessageDeliveryByEffect(tx, row.effectKey, "failed");
+    await tx.auditLog.create({
+      data: {
+        action: "whatsapp.message.outcome_ambiguous",
+        entity: "outbox-intent",
+        entityId: row.id,
+        actor: "system:whatsapp-outbox",
+        metadata: JSON.stringify({ effectKey: row.effectKey, errorCode }),
+      },
+    });
+  });
+}
+
+async function deferReceiptReconciliation(
+  context: ServiceContext,
+  row: OutboxRow,
+  now: Date,
+): Promise<void> {
+  await context.prisma.$transaction(async (tx) => {
+    const deferred = await tx.outboxIntent.updateMany({
+      where: {
+        id: row.id,
+        status: "processing",
+        leaseToken: row.leaseToken,
+      },
+      data: {
+        lockedAt: now,
+        lastErrorCode: RECONCILIATION_DEFERRED,
+      },
+    });
+    if (deferred.count !== 1 || row.lastErrorCode === RECONCILIATION_DEFERRED) return;
+    await tx.auditLog.create({
+      data: {
+        action: "whatsapp.message.receipt_reconciliation_deferred",
+        entity: "outbox-intent",
+        entityId: row.id,
+        actor: "system:whatsapp-outbox",
+        metadata: JSON.stringify({ effectKey: row.effectKey }),
+      },
+    });
+  });
+}
+
+async function recoverExpiredLeases(
+  context: ServiceContext,
+  now = new Date(),
+  receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
+): Promise<void> {
+  const expired = (await context.prisma.outboxIntent.findMany({
     where: {
       effectType: WHATSAPP_TEXT_EFFECT_TYPE,
       status: "processing",
       lockedAt: { lt: new Date(now.getTime() - LEASE_MS) },
     },
-    select: { id: true, effectKey: true, effectStartedAt: true },
-  });
-  for (const intent of expired) {
-    const ambiguous = intent.effectStartedAt !== null;
-    const errorCode = ambiguous
-      ? "WORKER_LEASE_EXPIRED_AFTER_EFFECT_START"
-      : "WORKER_LEASE_EXPIRED_BEFORE_EFFECT";
-    await context.prisma.$transaction(async (tx) => {
-      const marked = await tx.outboxIntent.updateMany({
-        where: { id: intent.id, status: "processing" },
-        data: {
-          status: ambiguous ? "failed" : "dead_letter",
-          outcomeState: ambiguous ? "ambiguous" : "none",
-          lastErrorCode: errorCode,
-          lockedAt: null,
-          leaseToken: null,
-          nextAttemptAt: null,
-          deadLetteredAt: ambiguous ? null : now,
-        },
-      });
-      if (marked.count === 1) {
-        await setMessageDeliveryByEffect(tx, intent.effectKey, "failed");
-        await tx.auditLog.create({
-          data: {
-            action: ambiguous
-              ? "whatsapp.message.outcome_ambiguous"
-              : "whatsapp.message.dead_lettered",
-            entity: "outbox-intent",
-            entityId: intent.id,
-            actor: "system:whatsapp-outbox",
-            metadata: JSON.stringify({ effectKey: intent.effectKey, errorCode }),
-          },
-        });
+  })) as OutboxRow[];
+
+  for (const row of expired) {
+    if (!row.effectStartedAt) {
+      await recoverPreEffectLease(context, row, now);
+      continue;
+    }
+
+    let payload: z.infer<typeof queuedPayloadSchema>;
+    try {
+      payload = await openClaimedPayload(context, row);
+    } catch {
+      await markExpiredLeaseAmbiguous(
+        context,
+        row,
+        "OUTBOX_PAYLOAD_INVALID_AFTER_EFFECT_START",
+      );
+      continue;
+    }
+
+    try {
+      const receipt = await receiptLookup(row.effectKey, payload.requestBinding);
+      if (receipt) {
+        await markSucceeded(context, row, payload, receipt);
+      } else {
+        await markExpiredLeaseAmbiguous(
+          context,
+          row,
+          "WORKER_LEASE_EXPIRED_WITHOUT_RECEIPT",
+        );
       }
-    });
+    } catch (error) {
+      if (
+        error instanceof SidecarRequestError &&
+        error.code === "EFFECT_KEY_CONFLICT"
+      ) {
+        await markExpiredLeaseAmbiguous(
+          context,
+          row,
+          "RECEIPT_BINDING_CONFLICT",
+        );
+      } else {
+        await deferReceiptReconciliation(context, row, now);
+      }
+    }
   }
 }
 
 async function claimIntent(
   context: ServiceContext,
   effectKey?: string,
+  receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
 ): Promise<OutboxRow | null> {
   const now = new Date();
-  await recoverExpiredLeases(context, now);
+  await recoverExpiredLeases(context, now, receiptLookup);
   const candidate = await context.prisma.outboxIntent.findFirst({
     where: {
       effectType: WHATSAPP_TEXT_EFFECT_TYPE,
@@ -331,7 +476,9 @@ async function claimIntent(
     where: {
       id: candidate.id,
       status: candidate.status,
-      ...(candidate.status === "retrying" ? { nextAttemptAt: candidate.nextAttemptAt } : {}),
+      ...(candidate.status === "retrying"
+        ? { nextAttemptAt: candidate.nextAttemptAt }
+        : {}),
     },
     data: {
       status: "processing",
@@ -384,7 +531,9 @@ async function markFailure(
   const nextAttemptAt = retrying
     ? new Date(
         Date.now() +
-          RETRY_DELAYS_MS[Math.min(row.attemptCount - 1, RETRY_DELAYS_MS.length - 1)]!,
+          RETRY_DELAYS_MS[
+            Math.min(row.attemptCount - 1, RETRY_DELAYS_MS.length - 1)
+          ]!,
       )
     : null;
   const status = ambiguous ? "failed" : retrying ? "retrying" : "dead_letter";
@@ -404,7 +553,9 @@ async function markFailure(
       },
     });
     if (marked.count !== 1) {
-      throw new ConflictError("WhatsApp send intent lease changed during failure recording");
+      throw new ConflictError(
+        "WhatsApp send intent lease changed during failure recording",
+      );
     }
     if (!retrying) await setMessageDeliveryByEffect(tx, row.effectKey, "failed");
     await tx.auditLog.create({
@@ -470,7 +621,10 @@ async function markPreEffectFailure(
   return getWhatsAppEffectStatus(context, row.effectKey);
 }
 
-async function markEffectStarted(context: ServiceContext, row: OutboxRow): Promise<OutboxRow> {
+async function markEffectStarted(
+  context: ServiceContext,
+  row: OutboxRow,
+): Promise<OutboxRow> {
   const effectStartedAt = new Date();
   const marked = await context.prisma.outboxIntent.updateMany({
     where: { id: row.id, status: "processing", leaseToken: row.leaseToken },
@@ -518,21 +672,27 @@ async function markSucceeded(
         },
       });
       if (marked.count !== 1) {
-        throw new ConflictError("WhatsApp send intent lease changed before receipt commit");
+        throw new ConflictError(
+          "WhatsApp send intent lease changed before receipt commit",
+        );
       }
       const effect = await tx.whatsAppOutboundEffect.updateMany({
         where: { effectKey: row.effectKey, messageId: payload.messageId },
         data: { providerMessageId },
       });
       if (effect.count !== 1) {
-        throw new ConflictError("WhatsApp receipt has no matching durable effect row");
+        throw new ConflictError(
+          "WhatsApp receipt has no matching durable effect row",
+        );
       }
       const message = await tx.message.updateMany({
         where: { id: payload.messageId },
         data: { deliveryStatus: "sent" },
       });
       if (message.count !== 1) {
-        throw new ConflictError("WhatsApp provider receipt has no matching local message");
+        throw new ConflictError(
+          "WhatsApp provider receipt has no matching local message",
+        );
       }
       await tx.auditLog.create({
         data: {
@@ -562,25 +722,6 @@ async function markSucceeded(
     );
   }
   return getWhatsAppEffectStatus(context, row.effectKey);
-}
-
-async function openClaimedPayload(
-  context: ServiceContext,
-  claimed: OutboxRow,
-): Promise<z.infer<typeof queuedPayloadSchema>> {
-  const envelopeKey = await getBusinessEnvelopeKey(context);
-  return queuedPayloadSchema.parse(
-    openBusinessPayloadWithKey(
-      claimed.payloadJson,
-      {
-        kind: "outbox-intent",
-        recordKey: claimed.effectKey,
-        recordType: claimed.effectType,
-        commandId: claimed.commandId,
-      },
-      envelopeKey,
-    ),
-  );
 }
 
 async function executeClaimed(
@@ -616,8 +757,9 @@ export async function processWhatsAppEffect(
   context: ServiceContext,
   effectKey: string,
   sender: WhatsAppEffectSender = sidecar.send,
+  receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
 ): Promise<WhatsAppEffectStatus> {
-  const claimed = await claimIntent(context, effectKey);
+  const claimed = await claimIntent(context, effectKey, receiptLookup);
   if (!claimed) return getWhatsAppEffectStatus(context, effectKey);
   return executeClaimed(context, claimed, sender);
 }
@@ -626,11 +768,12 @@ export async function drainDueWhatsAppEffects(
   context: ServiceContext,
   limit = 10,
   sender: WhatsAppEffectSender = sidecar.send,
+  receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
 ): Promise<WhatsAppEffectStatus[]> {
   const bounded = Math.max(1, Math.min(limit, 25));
   const results: WhatsAppEffectStatus[] = [];
   for (let index = 0; index < bounded; index += 1) {
-    const claimed = await claimIntent(context);
+    const claimed = await claimIntent(context, undefined, receiptLookup);
     if (!claimed) break;
     results.push(await executeClaimed(context, claimed, sender));
   }
@@ -666,11 +809,14 @@ export async function retryWhatsAppEffect(
   effectKey: string,
   confirmMayDuplicate: boolean,
   sender: WhatsAppEffectSender = sidecar.send,
+  receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
 ): Promise<WhatsAppEffectStatus> {
   const row = await readRow(context, effectKey);
   const ambiguous = row.status === "failed" && row.outcomeState === "ambiguous";
   if (row.status !== "dead_letter" && !ambiguous) {
-    throw new ConflictError("Only dead-lettered or ambiguous WhatsApp sends can be retried");
+    throw new ConflictError(
+      "Only dead-lettered or ambiguous WhatsApp sends can be retried",
+    );
   }
   if (ambiguous && !confirmMayDuplicate) {
     throw new ConflictError(
@@ -686,6 +832,7 @@ export async function retryWhatsAppEffect(
       },
       data: {
         status: "queued",
+        attemptCount: 0,
         outcomeState: "none",
         lastErrorCode: null,
         nextAttemptAt: null,
@@ -696,7 +843,9 @@ export async function retryWhatsAppEffect(
       },
     });
     if (reset.count !== 1) {
-      throw new ConflictError("WhatsApp send recovery state changed; refresh and retry");
+      throw new ConflictError(
+        "WhatsApp send recovery state changed; refresh and retry",
+      );
     }
     await setMessageDeliveryByEffect(tx, effectKey, "sending");
     await tx.auditLog.create({
@@ -713,5 +862,5 @@ export async function retryWhatsAppEffect(
       },
     });
   });
-  return processWhatsAppEffect(context, effectKey, sender);
+  return processWhatsAppEffect(context, effectKey, sender, receiptLookup);
 }
