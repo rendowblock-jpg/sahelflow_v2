@@ -2522,6 +2522,7 @@
   "topbar.helpSupport": "Aide & Support",
   "topbar.loading": "Chargement…",
   "topbar.logout": "Déconnexion",
+  "topbar.logoutFailed": "La déconnexion n’a pas pu être terminée. Réessayez.",
   "topbar.newNotifications": "{{n}} nouvelles",
   "topbar.noNotifications": "Aucune nouvelle notification",
   "topbar.profile": "Profil",

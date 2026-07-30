@@ -2522,6 +2522,7 @@
   "topbar.helpSupport": "المساعدة والدعم",
   "topbar.loading": "جاري التحميل…",
   "topbar.logout": "تسجيل الخروج",
+  "topbar.logoutFailed": "تعذر إكمال تسجيل الخروج. يرجى المحاولة مرة أخرى.",
   "topbar.newNotifications": "{{n}} جديدة",
   "topbar.noNotifications": "لا توجد إشعارات جديدة",
   "topbar.profile": "الملف الشخصي",
