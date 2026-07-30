@@ -17,16 +17,29 @@
  *   4. Poll `automationLog` for a row with `trigger = "order.shipped"`.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import {
+  rawDb,
+  cleanDb,
+  mockPost,
+  getJson,
+  seedProduct,
+  establishAuthenticatedTestSession,
+} from "@/app/api/__tests__/helpers";
 
-// ── Mock next/headers cookies() — requireAuth() reads the auth cookie. With a
-//    clean DB (no AuthSecret row), isAuthenticated() returns true (auth not
-//    set up = setup mode = allowed), so an empty cookie jar passes requireAuth.
+// Protected delivery-route scenarios use one real revocable session.
+const authCookieStore = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
+    get: (name: string) => {
+      const value = authCookieStore.get(name);
+      return value === undefined ? undefined : { value };
+    },
+    set: (name: string, value: string) => {
+      authCookieStore.set(name, value);
+    },
+    delete: (name: string) => {
+      authCookieStore.delete(name);
+    },
   })),
 }));
 
@@ -119,6 +132,9 @@ async function waitForShippedLog(timeoutMs = 2000) {
 describe("POST /api/delivery/create — order.shipped trigger (Phase 1 bug 1.4)", () => {
   beforeEach(async () => {
     await cleanDb();
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
+    await establishAuthenticatedTestSession();
     mockAdapter.createShipment.mockReset();
     mockAdapter.createShipment.mockResolvedValue({
       success: true,
@@ -130,6 +146,8 @@ describe("POST /api/delivery/create — order.shipped trigger (Phase 1 bug 1.4)"
   });
 
   afterAll(async () => {
+    authCookieStore.clear();
+    delete process.env.AUTH_SECRET;
     await rawDb.$disconnect();
   });
 
