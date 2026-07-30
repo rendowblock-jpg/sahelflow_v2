@@ -38,6 +38,7 @@ import {
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
+import { logoutAndRedirect } from "@/lib/auth/logout-client";
 
 const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "fr", label: "Français", flag: "🇫🇷" },
@@ -94,6 +95,7 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
   const loadShops = useShopStore((s) => s.loadShops);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     void loadShops();
@@ -134,6 +136,18 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
       );
     }
   }, [setActiveShop, t]);
+
+  const handleLogout = useCallback(async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logoutAndRedirect({
+        onFailure: () => toast.error(t("topbar.logoutFailed")),
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, [isLoggingOut, t]);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 lg:h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-3">
@@ -392,10 +406,8 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
             <DropdownMenuItem
               variant="destructive"
               className="cursor-pointer"
-              onClick={async () => {
-                await fetch("/api/auth/logout", { method: "POST" });
-                window.location.assign("/login");
-              }}
+              disabled={isLoggingOut}
+              onClick={() => void handleLogout()}
             >
               <LogOut className="me-2 size-4" />
               {t("topbar.logout")}

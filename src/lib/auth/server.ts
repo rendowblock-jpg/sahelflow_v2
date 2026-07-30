@@ -176,19 +176,31 @@ async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult>
 export const getCurrentSessionAuthority = cache(resolveCurrentSessionAuthority);
 
 export async function destroySession(): Promise<void> {
-  try {
-    const authority = await resolveCurrentSessionAuthority();
-    if (authority.status === "authenticated") {
-      try {
-        await authContext.prisma.session.update({
-          where: { id: authority.sessionId },
-          data: { revokedAt: new Date() },
-        });
-      } catch { /* non-fatal */ }
+  const authority = await resolveCurrentSessionAuthority();
+  if (authority.status === "authenticated") {
+    try {
+      await authContext.prisma.session.update({
+        where: { id: authority.sessionId },
+        data: { revokedAt: new Date() },
+      });
+    } catch {
+      // Keep the signed cookie so the user can retry. Deleting the only local
+      // copy while durable revocation failed would report logout success even
+      // though another copy of the same token could remain valid.
+      throw new SahelFlowError(
+        "Logout could not be committed. Retry to revoke this session.",
+        "SESSION_REVOCATION_FAILED",
+        503,
+      );
     }
-  } catch {
-    // Clearing the local cookie must remain possible when shop or session
-    // authority is unavailable. No unverified Session ID is ever revoked.
+  } else if (
+    authority.status === "rejected" &&
+    (authority.code === "AUTH_SECRET_UNAVAILABLE" ||
+      authority.code === "SESSION_AUTHORITY_UNAVAILABLE")
+  ) {
+    // The token may still be valid. Preserve it until authority recovers and
+    // revocation can be confirmed instead of creating a false logout result.
+    throw sessionAuthorityError(authority);
   }
 
   const store = await cookies();
