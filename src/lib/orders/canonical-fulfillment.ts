@@ -162,7 +162,7 @@ export async function executeCanonicalFulfillment(
         expectedVersion: data.expectedVersion,
       },
     },
-    async ({ tx, commandId, aggregateVersion, principal }) => {
+    async ({ tx, commandId, principal }) => {
       const order = await tx.order.findFirst({
         where: { id: data.orderId, deletedAt: null },
         include: { items: true, delivery: true },

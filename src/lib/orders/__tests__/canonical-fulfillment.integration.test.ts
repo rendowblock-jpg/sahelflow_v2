@@ -340,7 +340,7 @@ describe("canonical manual fulfillment and delivery", () => {
     await transition(order.id, "pack", 2, key);
 
     await expect(transition(order.id, "ship", 3, key)).rejects.toThrow(
-      /different request/i,
+      /different command content/i,
     );
     expect(await db.order.findUnique({ where: { id: order.id } })).toMatchObject({
       status: "confirmed",
