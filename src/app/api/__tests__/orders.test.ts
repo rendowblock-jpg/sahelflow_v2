@@ -70,6 +70,7 @@ async function seedCustomer() {
 /** Build a valid POST /api/orders body for the given customer + product. */
 function orderBody(customerId: string, productId: string, opts?: { deliveryCost?: number; source?: string }) {
   return {
+    idempotencyKey: `orders-test-${customerId}-${productId}`,
     customerId,
     items: [{ productId, productName: "Test Product", quantity: 2, unitPrice: 2500 }],
     wilaya: "Alger",
