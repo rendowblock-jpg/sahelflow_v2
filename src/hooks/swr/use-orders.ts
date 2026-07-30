@@ -32,6 +32,10 @@ export interface OrderListItem {
   createdAt: Date | string;
   items: Array<{ id: string }>;
   customer: { name: string | null; phone: string | null } | null;
+  mutationAuthority?:
+    | "canonical_v1"
+    | "confirmation_blocked"
+    | "legacy_compatibility";
 }
 
 export interface OrdersResponse {

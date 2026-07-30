@@ -39,10 +39,13 @@ import { usePhoneMask } from "@/hooks/form/use-phone-mask";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
 import { toast } from "@/lib/toast";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
 import type { RiskAssessment } from "@/lib/risk-engine/types";
+import {
+  clearManualOrderCommand,
+  resolveManualOrderCommand,
+} from "@/lib/orders/manual-order-command-key";
 
 interface Customer {
   id: string; name: string; phone: string;
@@ -59,6 +62,7 @@ interface OrderFormDialogProps {
 }
 
 const DRAFT_KEY = "sf-order-create-draft";
+const COMMAND_KEY = "sf-order-create-command";
 
 export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const router = useRouter();
@@ -110,14 +114,32 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   function addProduct(productId: string) {
     const product = activeProducts.find((p) => p.id === productId);
     if (!product) return;
-    if (fields.some((f) => f.productId === productId)) return;
+    const variants = (product.productVariants ?? []).filter(
+      (variant) => variant.isActive,
+    );
+    const selectedVariantIds = new Set(
+      fields
+        .filter((field) => field.productId === productId)
+        .map((field) => field.productVariantId)
+        .filter((variantId): variantId is string => Boolean(variantId)),
+    );
+    if (
+      variants.length === 0 &&
+      fields.some((field) => field.productId === productId)
+    ) {
+      return;
+    }
+    const nextVariant =
+      variants.find((variant) => !selectedVariantIds.has(variant.id)) ?? null;
+    if (variants.length > 0 && !nextVariant) return;
     append({
       productId: product.id,
       productName: product.name,
-      productVariantId: null,
-      productVariantName: null,
+      productVariantId: nextVariant?.id ?? null,
+      productVariantName: nextVariant?.name ?? null,
+      requiresVariant: variants.length > 0,
       quantity: 1,
-      unitPrice: product.price,
+      unitPrice: nextVariant?.price ?? product.price,
     });
   }
 
@@ -254,52 +276,54 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     // skipRiskCheckRef is NOT set — the next submit will re-check.
   }
 
-  /**
-   * Create the customer (if new) + the order. Extracted from onSubmit so
-   * the risk-check flow can call it directly after confirmation.
-   */
-  async function createOrder(data: OrderFormValues) {
-    let finalCustomerId = data.customerId;
-    if (data.isNewCustomer) {
-      const custRes = await fetch("/api/customers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.newCustomerName,
-          phone: data.phone,
-          wilaya: data.wilaya,
-          commune: data.commune,
-          address: data.address,
-        }),
-      });
-      if (!custRes.ok) {
-        const err = await custRes.json().catch(() => ({}));
-        toast.error(translateServerError(err.error?.message ?? err.error, t, t("orders.form.errorCreatingCustomer")));
-        return;
-      }
-      const custData = await custRes.json();
-      finalCustomerId = custData.customer.id;
-    }
+  function buildTrustedRequest(data: OrderFormValues) {
+    return {
+      customerId: data.isNewCustomer ? undefined : data.customerId,
+      newCustomer: data.isNewCustomer
+        ? {
+            name: data.newCustomerName,
+            phone: data.phone,
+            wilaya: data.wilaya,
+            commune: data.commune,
+            address: data.address,
+          }
+        : undefined,
+      items: data.items.map((item) => ({
+        productId: item.productId,
+        productVariantId: item.productVariantId ?? null,
+        quantity: item.quantity,
+      })),
+      wilaya: data.wilaya,
+      commune: data.commune,
+      address: data.address,
+      phone: data.phone,
+      source: "manual" as const,
+      deliveryCost: data.deliveryCost ?? 600,
+    };
+  }
 
+  function commandFor(request: ReturnType<typeof buildTrustedRequest>) {
+    return resolveManualOrderCommand(
+      window.localStorage,
+      COMMAND_KEY,
+      JSON.stringify(request),
+      () => crypto.randomUUID(),
+    );
+  }
+
+  async function createOrder(data: OrderFormValues) {
+    const request = buildTrustedRequest(data);
+    const command = commandFor(request);
+    const commandRequest = JSON.parse(
+      command.requestJson,
+    ) as ReturnType<typeof buildTrustedRequest>;
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerId: finalCustomerId,
-        items: data.items.map((i) => ({
-          productId: i.productId,
-          productName: i.productName,
-          productVariantId: i.productVariantId,
-          productVariantName: i.productVariantName,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-        })),
-        wilaya: data.wilaya,
-        commune: data.commune,
-        address: data.address,
-        phone: data.phone,
-        source: "manual",
-        deliveryCost: data.deliveryCost ?? 600,
+        ...commandRequest,
+        idempotencyKey: command.idempotencyKey,
+        correlationId: `manual-order-ui:${command.idempotencyKey}`,
       }),
     });
 
@@ -309,6 +333,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     }
 
     const { order } = await res.json();
+    clearManualOrderCommand(window.localStorage, COMMAND_KEY);
     setOpen(false);
     form.reset();
     clearFormDraft(DRAFT_KEY);
@@ -396,7 +421,30 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {activeProducts
-                      .filter((p) => !fields.some((f) => f.productId === p.id))
+                      .filter((product) => {
+                        const variants = (product.productVariants ?? []).filter(
+                          (variant) => variant.isActive,
+                        );
+                        if (variants.length === 0) {
+                          return !fields.some(
+                            (field) => field.productId === product.id,
+                          );
+                        }
+                        const selectedVariantIds = new Set(
+                          fields
+                            .filter(
+                              (field) => field.productId === product.id,
+                            )
+                            .map((field) => field.productVariantId)
+                            .filter(
+                              (variantId): variantId is string =>
+                                Boolean(variantId),
+                            ),
+                        );
+                        return variants.some(
+                          (variant) => !selectedVariantIds.has(variant.id),
+                        );
+                      })
                       .map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name} — {formatDZD(p.price)} (stock: {p.stock})
@@ -410,7 +458,26 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 <div className="space-y-2 rounded-lg border p-3">
                   {fields.map((item, i) => {
                     const product = activeProducts.find((p) => p.id === item.productId);
-                    const variants = product?.productVariants ?? [];
+                    const variants = (product?.productVariants ?? []).filter(
+                      (variant) => variant.isActive,
+                    );
+                    const variantsSelectedByOtherRows = new Set(
+                      fields
+                        .filter(
+                          (field, index) =>
+                            index !== i && field.productId === item.productId,
+                        )
+                        .map((field) => field.productVariantId)
+                        .filter(
+                          (variantId): variantId is string =>
+                            Boolean(variantId),
+                        ),
+                    );
+                    const selectableVariants = variants.filter(
+                      (variant) =>
+                        variant.id === item.productVariantId ||
+                        !variantsSelectedByOtherRows.has(variant.id),
+                    );
                     return (
                       <div key={item.id} className="space-y-2">
                         <div className="flex items-center gap-3">
@@ -431,13 +498,14 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                        {variants.length > 1 && (
+                        {variants.length > 0 && (
                           <ProductVariantPicker
-                            variants={variants}
+                            variants={selectableVariants}
                             defaultPrice={product?.price ?? item.unitPrice}
                             value={item.productVariantId}
                             onChange={(vId) => updateVariant(i, vId)}
                             showLabel={true}
+                            required
                             size="sm"
                           />
                         )}

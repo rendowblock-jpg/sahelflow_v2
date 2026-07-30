@@ -9,7 +9,12 @@
  * updates happen on transitions.
  */
 import type { Order, OrderStatus } from "@/types/domain";
-import { NotFoundError } from "@/types/errors";
+import {
+  ConflictError,
+  NotFoundError,
+  SahelFlowError,
+  ValidationError,
+} from "@/types/errors";
 import { createOrderSchema, updateOrderSchema } from "@/lib/validation";
 import {
   assertCanTransition,
@@ -32,6 +37,10 @@ import {
   type TriggerEvent,
   type TriggerPayload,
 } from "@/lib/automations/engine";
+import {
+  isImportPendingOrderAuthority,
+  isTrustedManualOrderAuthority,
+} from "@/lib/orders/manual-order-authority";
 
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
@@ -63,6 +72,35 @@ async function updateStatusInTransaction(
   });
   if (!order) throw new NotFoundError("Order", id);
 
+  if (
+    to === "confirmed" &&
+    isImportPendingOrderAuthority(order.source, order.sourceMetadata)
+  ) {
+    throw new SahelFlowError(
+      "Imported orders require governed product and variant mapping before confirmation",
+      "IMPORT_PRODUCT_MAPPING_REQUIRED",
+      409,
+    );
+  }
+
+  if (isTrustedManualOrderAuthority(order.source, order.sourceMetadata)) {
+    if (
+      order.status === "pending" &&
+      ["confirmed", "cancelled", "refused"].includes(to)
+    ) {
+      throw new SahelFlowError(
+        "Confirm or reject this order through the governed manual decision command",
+        "CANONICAL_CONFIRMATION_REQUIRED",
+        409,
+      );
+    }
+    throw new SahelFlowError(
+      "This canonical order requires a governed fulfillment command",
+      "CANONICAL_FOLLOWUP_REQUIRED",
+      409,
+    );
+  }
+
   const from = order.status as OrderStatus;
   assertCanTransition(from, to);
 
@@ -79,10 +117,45 @@ async function updateStatusInTransaction(
   if (triggersStockDeduction(from, to)) {
     for (const item of order.items) {
       if (item.productId) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
+        if (item.productVariantId) {
+          const updated = await tx.productVariant.updateMany({
+            where: {
+              id: item.productVariantId,
+              productId: item.productId,
+              isActive: true,
+              stock: { gte: item.quantity },
+            },
+            data: { stock: { decrement: item.quantity } },
+          });
+          if (updated.count !== 1) {
+            throw new ConflictError(
+              `Insufficient available stock for variant '${item.productVariantId}'`,
+            );
+          }
+          const available = await tx.productVariant.aggregate({
+            where: { productId: item.productId, isActive: true },
+            _sum: { stock: true },
+          });
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: available._sum.stock ?? 0 },
+          });
+        } else {
+          const updated = await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              isActive: true,
+              deletedAt: null,
+              stock: { gte: item.quantity },
+            },
+            data: { stock: { decrement: item.quantity } },
+          });
+          if (updated.count !== 1) {
+            throw new ConflictError(
+              `Insufficient available stock for product '${item.productId}'`,
+            );
+          }
+        }
         const lowStockInfo = await detectLowStock(tx, item.productId);
         if (lowStockInfo) lowStockProducts.push(lowStockInfo);
       }
@@ -92,10 +165,33 @@ async function updateStatusInTransaction(
   if (triggersStockRestoration(from, to)) {
     for (const item of order.items) {
       if (item.productId) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        });
+        if (item.productVariantId) {
+          const restored = await tx.productVariant.updateMany({
+            where: {
+              id: item.productVariantId,
+              productId: item.productId,
+            },
+            data: { stock: { increment: item.quantity } },
+          });
+          if (restored.count !== 1) {
+            throw new ConflictError(
+              `Variant '${item.productVariantId}' is missing or belongs to another product`,
+            );
+          }
+          const available = await tx.productVariant.aggregate({
+            where: { productId: item.productId, isActive: true },
+            _sum: { stock: true },
+          });
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: available._sum.stock ?? 0 },
+          });
+        } else {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
         const lowStockInfo = await detectLowStock(tx, item.productId);
         if (lowStockInfo) lowStockProducts.push(lowStockInfo);
       }
@@ -233,6 +329,13 @@ export const orderService = {
   ): Promise<Order> {
     return withServiceError(async () => {
       const data = createOrderSchema.parse(input);
+
+      if (data.status === "confirmed") {
+        throw new ValidationError(
+          "Orders cannot be created directly as confirmed; use the governed confirmation command",
+          "status",
+        );
+      }
 
       if (opts?.tx && !opts.afterCommit) {
         throw new Error("Caller-owned order transactions require an afterCommit collector");
@@ -381,6 +484,24 @@ export const orderService = {
       // SEC-016/CODE-003: wrap item sync + order update in a single $transaction
       // so a failure on any item operation rolls back all changes.
       const updated = await ctx.prisma.$transaction(async (tx) => {
+        const authority = await tx.order.findFirst({
+          where: { id, deletedAt: null },
+          select: { source: true, sourceMetadata: true },
+        });
+        if (!authority) throw new NotFoundError("Order", id);
+        if (
+          isTrustedManualOrderAuthority(
+            authority.source,
+            authority.sourceMetadata,
+          )
+        ) {
+          throw new SahelFlowError(
+            "Canonical manual orders require a governed edit command",
+            "CANONICAL_ORDER_EDIT_REQUIRED",
+            409,
+          );
+        }
+
         if (data.items) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
           const incomingIds = data.items.filter(i => i.id).map(i => i.id);

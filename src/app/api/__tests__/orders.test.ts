@@ -2,7 +2,7 @@
  * Integration tests for the order routes — Phase 7 priority group 1.
  *
  * Covers:
- *   - POST /api/orders              — create an order (draft by default)
+ *   - POST /api/orders              — create a trusted pending manual order
  *   - PATCH /api/orders/[id]/status — transition an order through the state machine
  *   - POST /api/orders/bulk         — bulk transition multiple orders
  *
@@ -70,6 +70,7 @@ async function seedCustomer() {
 /** Build a valid POST /api/orders body for the given customer + product. */
 function orderBody(customerId: string, productId: string, opts?: { deliveryCost?: number; source?: string }) {
   return {
+    idempotencyKey: `orders-test-${customerId}-${productId}`,
     customerId,
     items: [{ productId, productName: "Test Product", quantity: 2, unitPrice: 2500 }],
     wilaya: "Alger",
@@ -86,7 +87,7 @@ describe("POST /api/orders — create order", () => {
 
   afterAll(async () => { await rawDb.$disconnect(); });
 
-  it("creates a draft order on valid input (201) + writes OrderChange 'created' ledger", async () => {
+  it("creates a trusted pending order on valid input (201) + writes OrderChange 'created' ledger", async () => {
     const product = await seedProduct({ price: 2500, stock: 100 });
     const customer = await seedCustomer();
 
@@ -97,7 +98,8 @@ describe("POST /api/orders — create order", () => {
     expect(body.order).toBeTruthy();
     const order = body.order as Record<string, unknown>;
     expect(order.orderNumber).toBeTruthy();
-    expect(order.status).toBe("draft");
+    expect(order.status).toBe("pending");
+    expect(body.authority).toBe("trusted-manual-v1");
     expect(order.totalPrice).toBe(2 * 2500 + 600); // items + deliveryCost
 
     // DB: order exists + OrderChange "created" ledger entry

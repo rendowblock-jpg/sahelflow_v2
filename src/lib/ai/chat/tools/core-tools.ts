@@ -370,6 +370,13 @@ registerTool({
   async execute(params, ctx): Promise<ToolResult> {
     try {
       const input = updateOrderStatusSchema.parse(params);
+      if (input.status === "confirmed") {
+        return {
+          success: false,
+          error:
+            "La confirmation exige la commande manuelle gouvernée; l’IA ne peut pas utiliser le chemin historique.",
+        };
+      }
       const db = getDb(ctx);
       // Route through orderService.updateStatus — NOT a direct db.order.update.
       // The service enforces the order state machine (assertCanTransition),

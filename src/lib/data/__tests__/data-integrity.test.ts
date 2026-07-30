@@ -1219,6 +1219,7 @@ describe("Scenario 12 — Notifications bell i18n (ar / fr / en)", () => {
     const newOrder = await seedOrderRaw({
       customerId: customer.id,
       productId: product.id,
+      quantity: 1,
       totalPrice: 2000,
       status: "pending",
     });

@@ -99,6 +99,22 @@ export function OrdersDataTable({
   const handleBulk = useCallback(
     (status: OrderStatus, selectedIds: string[]) => {
       if (selectedIds.length === 0) return;
+      const governedSelected = data?.orders.some(
+        (order) =>
+          selectedIds.includes(order.id) &&
+          (order.mutationAuthority === "canonical_v1" ||
+            order.mutationAuthority === "confirmation_blocked"),
+      );
+      if (governedSelected) {
+        toast.error(
+          locale === "ar"
+            ? "تتطلب هذه الطلبيات معالجة فردية محكومة قبل تغيير حالتها."
+            : locale === "fr"
+              ? "Ces commandes exigent un traitement individuel gouverné avant tout changement d’état."
+              : "These orders require an individual governed flow before status changes.",
+        );
+        return;
+      }
 
       // Optimistic update: immediately flip status in the SWR cache
       const optimisticData: OrdersResponse | undefined = data
@@ -123,7 +139,7 @@ export function OrdersDataTable({
         mutate();
       });
     },
-    [data, mutate, bulkMutation],
+    [data, mutate, bulkMutation, locale],
   );
 
   const bulkActions: BulkAction[] = [

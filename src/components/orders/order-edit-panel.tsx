@@ -38,6 +38,7 @@ interface OrderItem {
 
 interface OrderEditPanelProps {
   orderId: string;
+  readOnly?: boolean;
   initialItems: OrderItem[];
   initialDeliveryCost: number;
   initialWilaya: string;
@@ -51,6 +52,7 @@ interface OrderEditPanelProps {
 
 export function OrderEditPanel({
   orderId,
+  readOnly = false,
   initialItems,
   initialDeliveryCost,
   initialWilaya,
@@ -145,6 +147,10 @@ export function OrderEditPanel({
   }
 
   // Read-only mode: render children (the original detail page content)
+  if (readOnly) {
+    return <>{children}</>;
+  }
+
   if (!isEditing) {
     return (
       <>

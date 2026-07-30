@@ -17,6 +17,10 @@ import { StatCard } from "@/components/shared/stat-card";
 import { orderStatusSchema } from "@/lib/validation";
 import { computeActiveOrderCount } from "./active-orders";
 import type { Metadata } from "next";
+import {
+  isImportPendingOrderAuthority,
+  isTrustedManualOrderAuthority,
+} from "@/lib/orders/manual-order-authority";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -66,6 +70,7 @@ export default async function OrdersPage({
     wilaya: true,
     commune: true,
     source: true,
+    sourceMetadata: true,
     createdAt: true,
     deliveredAt: true,
     items: { select: { id: true, productName: true, quantity: true, unitPrice: true, total: true } },
@@ -112,6 +117,17 @@ export default async function OrdersPage({
         return a && (a.level === "high" || a.level === "critical");
       })
     : baseOrders;
+  const displayOrdersWithAuthority = displayOrders.map((order) => ({
+    ...order,
+    mutationAuthority: isTrustedManualOrderAuthority(
+      order.source,
+      order.sourceMetadata,
+    )
+      ? ("canonical_v1" as const)
+      : isImportPendingOrderAuthority(order.source, order.sourceMetadata)
+        ? ("confirmation_blocked" as const)
+        : ("legacy_compatibility" as const),
+  }));
 
   // Serialize risk map for the client (orderId → {level, score})
   const riskData: Record<string, { level: string; score: number }> = {};
@@ -237,13 +253,14 @@ export default async function OrdersPage({
               <OrdersDataTable
                 fallback={{
                   orders: (isHighRiskFilter
-                    ? displayOrders
-                    : displayOrders.slice(0, 25)
+                    ? displayOrdersWithAuthority
+                    : displayOrdersWithAuthority.slice(0, 25)
                   ) as unknown as Array<{
                     id: string; orderNumber: string; status: string; totalPrice: number;
                     wilaya: string; phone: string; createdAt: Date;
                     items: Array<{ id: string }>;
                     customer: { name: string | null; phone: string | null } | null;
+                    mutationAuthority: "canonical_v1" | "confirmation_blocked" | "legacy_compatibility";
                   }>,
                   total: displayOrders.length,
                   hasNextPage: isHighRiskFilter ? false : displayOrders.length > 25,

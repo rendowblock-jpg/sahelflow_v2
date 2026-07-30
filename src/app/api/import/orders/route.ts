@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { orderStatusSchema } from "@/lib/validation";
+import { importPendingOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
 import { db, shopContext } from "@/lib/db";
 import {
   parseFile,
@@ -26,7 +27,13 @@ const orderImportSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: z.number().int().nonnegative(),
   deliveryCost: z.number().int().nonnegative().optional(),
-  status: z.string().optional(),
+  status: z
+    .string()
+    .optional()
+    .refine((value) => value !== "confirmed", {
+      message:
+        "Imported orders cannot be created directly as confirmed; import them as pending",
+    }),
   orderNumber: z.string().optional(),
 });
 
@@ -150,6 +157,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
             address: data.address ?? "",
             phone,
             source: "manual",
+            sourceMetadata: importPendingOrderSourceMetadata(),
             deliveryCost: deliveryCost > 0 ? deliveryCost : null,
             status,
           },

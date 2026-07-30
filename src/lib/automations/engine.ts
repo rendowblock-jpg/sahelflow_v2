@@ -740,6 +740,13 @@ async function executeUpdateStatus(
   if (!VALID_STATUSES.includes(targetStatus as typeof VALID_STATUSES[number])) {
     return { status: "skipped", message: `Invalid target status: ${targetStatus}` };
   }
+  if (targetStatus === "confirmed") {
+    return {
+      status: "skipped",
+      message:
+        "Automatic confirmation is disabled until it is migrated to the governed confirmation command",
+    };
+  }
 
   // Route through orderService.updateStatus to enforce the state machine,
   // adjust stock, update customer stats, set timestamps, and fire triggers.
