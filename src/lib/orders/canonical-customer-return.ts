@@ -472,12 +472,16 @@ export async function requestCanonicalCustomerReturn(
           refundState: currentRefundState(order),
         },
       );
-      const fullOrderReturn = requested.length === order.items.length &&
-        requested.every((entry) => entry.quantity === entry.orderItem.quantity);
+      const fullOrderReturn =
+        requested.length === order.items.length &&
+        requested.every(
+          (entry) => entry.quantity === entry.orderItem.quantity,
+        );
 
       await recordOrderChangeInTx(tx, {
         orderId: order.id,
-        actionType: data.caseType === "exchange" ? "exchange_requested" : "return_requested",
+        actionType:
+          data.caseType === "exchange" ? "exchange_requested" : "return_requested",
         actor: principal.auditActor,
         payload: {
           returnId,
@@ -1157,10 +1161,10 @@ export async function transitionCanonicalCustomerReturn(
         financialMovements,
         compensationFacts,
         projectionInvalidations: [
-          ...returnProjectionKeys(order.id),
-          ...(replacementOrderId
-            ? ["orders:list", `orders:${replacementOrderId}`]
-            : []),
+          ...new Set([
+            ...returnProjectionKeys(order.id),
+            ...(replacementOrderId ? [`orders:${replacementOrderId}`] : []),
+          ]),
         ],
       };
     },
