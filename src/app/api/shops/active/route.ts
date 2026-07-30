@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { setActiveShopId } from "@/lib/shops";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { assertTrustedAction } from "@/lib/identity/authorization";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,10 @@ const setActiveSchema = z.object({
  * Body: { shopId: string }
  */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedActor();
   const body = await req.json();
   const input = setActiveSchema.parse(body);
+  assertTrustedAction(actorContext, "shops.switch", { shopId: input.shopId });
   setActiveShopId(input.shopId);
   return NextResponse.json({
     status: "pending",
