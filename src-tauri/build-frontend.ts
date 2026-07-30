@@ -9,7 +9,7 @@
  * Cross-platform: works on Windows, macOS, and Linux (uses Bun, not bash).
  */
 
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import {
   cpSync,
   existsSync,
@@ -139,6 +139,33 @@ if (!existsSync(standaloneServer)) {
 const serverSource = readFileSync(standaloneServer, "utf8");
 writeFileSync(standaloneServer, hardenStandaloneServer(serverSource), "utf8");
 ok("Hardened standalone runtime bootstrap");
+
+const rotationWorker = resolve(standaloneDir, "sahelflow-rotate-master-key.cjs");
+execFileSync(
+  process.execPath,
+  [
+    "build",
+    "scripts/rotate-master-key.ts",
+    "--target=node",
+    // Bun's Node target defaults to ESM. The installed worker has a .cjs
+    // authority name, so make the emitted module format explicit instead of
+    // asking Node to parse an ESM bundle as CommonJS.
+    "--format=cjs",
+    // This is a separate installed entrypoint, so Next's standalone tracer has
+    // not proven that its package imports are present. Bundle the worker's
+    // ordinary JavaScript dependencies and leave only Prisma external: Prisma
+    // must resolve its generated client beside the exact packaged native
+    // engine selected by PRISMA_QUERY_ENGINE_LIBRARY at runtime.
+    "--external=@prisma/client",
+    "--conditions=react-server",
+    `--outfile=${rotationWorker}`,
+  ],
+  { stdio: "inherit", cwd: ROOT },
+);
+if (!existsSync(rotationWorker)) {
+  throw new Error(`Protected rotation worker is missing: ${rotationWorker}`);
+}
+ok("Bundled protected installation-root rotation worker");
 
 const standaloneManifest = writeStandaloneManifest(standaloneDir, APP_VERSION);
 ok(

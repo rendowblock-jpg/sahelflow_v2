@@ -10,9 +10,12 @@
 //     the degradable WhatsApp sidecar.
 
 mod child_containment;
+mod installation_root_key;
+mod installation_root_rotation;
 mod migration_coordinator;
 mod packaged_auth;
 mod packaged_runtime;
+mod process_authority;
 mod runtime_protocol;
 mod runtime_supervisor;
 mod startup_recovery;
@@ -241,6 +244,40 @@ const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
+    ("SF_ROTATION_STAGE_LEASE", "rotation-lease-stage"),
+    (
+        "SF_ROTATION_STAGE_RUNTIME_STOP",
+        "rotation-runtime-stop-stage",
+    ),
+    (
+        "SF_ROTATION_STAGE_TARGET_DISCOVERY",
+        "rotation-target-discovery-stage",
+    ),
+    (
+        "SF_ROTATION_STAGE_ROOT_LOADING",
+        "rotation-root-loading-stage",
+    ),
+    ("SF_ROTATION_STAGE_DATABASE_CLIENT", "rotation-client-stage"),
+    (
+        "SF_ROTATION_STAGE_DATABASE_CONNECT",
+        "rotation-connect-stage",
+    ),
+    ("SF_ROTATION_STAGE_CUSTOMERS", "rotation-customers-stage"),
+    ("SF_ROTATION_STAGE_ORDERS", "rotation-orders-stage"),
+    (
+        "SF_ROTATION_STAGE_CONVERSATIONS",
+        "rotation-conversations-stage",
+    ),
+    ("SF_ROTATION_STAGE_MESSAGES", "rotation-messages-stage"),
+    ("SF_ROTATION_STAGE_SECRETS", "rotation-secrets-stage"),
+    (
+        "SF_ROTATION_STAGE_DATABASE_DISCONNECT",
+        "rotation-disconnect-stage",
+    ),
+    (
+        "SF_ROTATION_STAGE_ROOT_COMMIT",
+        "rotation-root-commit-stage",
+    ),
     ("SF_NODE_ENTRYPOINT_MISSING", "node-entrypoint-missing"),
     ("SF_NODE_ENTRYPOINT_INVALID", "node-entrypoint-invalid"),
     (
@@ -255,7 +292,7 @@ const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
     ("EISDIR", "path-is-directory"),
 ];
 const NODE_ENTRYPOINT_ENV: &str = "SF_NODE_ENTRYPOINT";
-const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
+const NODE_ENTRYPOINT_BOOTSTRAP: &str = r#"(entry=>{const fs=require('fs'),crypto=require('crypto'),frame=Buffer.alloc(40);let offset=0;while(offset<frame.length){const read=fs.readSync(0,frame,offset,frame.length-offset,null);if(read===0){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_missing')}offset+=read}const extra=Buffer.alloc(1),extraRead=fs.readSync(0,extra,0,1,null);extra.fill(0);const expected=Buffer.from('SFRK0001','ascii');if(extraRead!==0||!crypto.timingSafeEqual(frame.subarray(0,8),expected)){frame.fill(0);throw Error('SF_INSTALLATION_ROOT_FRAME_invalid')}const key=Buffer.alloc(32);frame.copy(key,0,8);frame.fill(0);let used=false;const symbol=Symbol.for('sahelflow.installation-root.v1');Object.defineProperty(globalThis,symbol,{configurable:true,enumerable:false,value:()=>{if(used)throw Error('SF_INSTALLATION_ROOT_FRAME_consumed');used=true;delete globalThis[symbol];return key}});if(!entry)throw(Error('SF_NODE_ENTRYPOINT_missing'));if(entry.length<3||entry[1]!==':'||entry[2]!=='/')throw(Error('SF_NODE_ENTRYPOINT_invalid'));process.argv[1]=entry;require(entry)})(process.env.SF_NODE_ENTRYPOINT)"#;
 
 fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
     let raw = path.to_str().ok_or_else(|| {
@@ -302,8 +339,16 @@ fn node_entrypoint_environment_value(path: &Path) -> Result<String, IoError> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let rotate_installation_root =
+        std::env::args_os().any(|argument| argument == "--rotate-installation-root");
+    let builder = tauri::Builder::default();
+    // A rotation invocation must reach its explicit live-runtime proof. The
+    // Windows single-instance plugin otherwise forwards the arguments to the
+    // existing UI process and terminates this command with a false exit 0.
+    let builder = if rotate_installation_root {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             use tauri::Manager;
             if let Some(window) = app.get_webview_window("main") {
                 if window.is_visible().unwrap_or(false) {
@@ -312,6 +357,8 @@ pub fn run() {
                 }
             }
         }))
+    };
+    builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_os::init())
@@ -344,11 +391,16 @@ pub fn run() {
                 }
             }
         })
-        .setup(|app| {
+        .setup(move |app| {
             #[cfg(not(debug_assertions))]
             {
                 use tauri::Manager;
                 let app_data_dir = app.path().app_data_dir()?;
+                // This process-lifetime authority is independent of Tauri's UI
+                // single-instance forwarding. Both ordinary startup and root
+                // rotation must own it before migration or key work begins.
+                let process_authority = process_authority::acquire()?;
+                app.manage(process_authority);
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
@@ -374,9 +426,51 @@ pub fn run() {
                                 "SF-RUNTIME-STARTUP-BLOCKED",
                                 &detail,
                             );
+                            if rotate_installation_root {
+                                app_handle.exit(1);
+                            }
                             return;
                         }
                     };
+
+                    if rotate_installation_root {
+                        // Preserve runtime-endpoint.json until both the native
+                        // preflight and the leased worker prove its PID and
+                        // port are stopped. Removing it here would erase the
+                        // evidence needed to reject rotation against a live or
+                        // orphaned packaged server.
+                        startup_recovery::record_startup_stage(
+                            &app_data_dir,
+                            "installation-root-rotation-started",
+                            None,
+                        );
+                        match installation_root_rotation::rotate_packaged_installation_root(
+                            &app_data_dir,
+                            &resource_dir,
+                        ) {
+                            Ok(_) => {
+                                startup_recovery::record_startup_stage(
+                                    &app_data_dir,
+                                    "installation-root-rotation-complete",
+                                    None,
+                                );
+                                std::process::exit(0);
+                            }
+                            Err(error) => {
+                                let detail = error.to_string();
+                                eprintln!(
+                                    "[sahelflow] FATAL: protected installation-root rotation blocked: {detail}"
+                                );
+                                let _ = startup_recovery::show_blocked(
+                                    &app_handle,
+                                    "SF-INSTALLATION-ROOT-ROTATION-BLOCKED",
+                                    &detail,
+                                );
+                                std::process::exit(1);
+                            }
+                        }
+                        return;
+                    }
 
                     // Validate the registry and migrate every registered shop
                     // before any business server can observe a database.
@@ -386,11 +480,11 @@ pub fn run() {
                         "migration-started",
                         None,
                     );
-                    let authority = match migration_coordinator::prepare_installation(
+                    let prepared_installation = match migration_coordinator::prepare_packaged_installation(
                         &app_data_dir,
                         &resource_dir,
                     ) {
-                        Ok(authority) => authority,
+                        Ok(prepared) => prepared,
                         Err(error) => {
                             let detail = error.to_string();
                             eprintln!("[sahelflow] FATAL: all-shop migration blocked: {detail}");
@@ -402,11 +496,24 @@ pub fn run() {
                             return;
                         }
                     };
+                    let migration_coordinator::PreparedInstallation {
+                        authority,
+                        installation_root,
+                    } = prepared_installation;
                     startup_recovery::record_startup_stage(
                         &app_data_dir,
                         "migration-complete",
                         None,
                     );
+                    if !app_handle.manage(installation_root) {
+                        let detail = "the desktop could not register installation-root authority";
+                        let _ = startup_recovery::show_blocked(
+                            &app_handle,
+                            "SF-RUNTIME-STARTUP-BLOCKED",
+                            detail,
+                        );
+                        return;
+                    }
                     if !app_handle.manage(std::sync::Mutex::new(authority)) {
                         let detail = "the desktop could not register active shop authority";
                         let _ = startup_recovery::show_blocked(
@@ -631,6 +738,10 @@ fn server_env(
         ),
         ("NODE_ENV".to_string(), "production".to_string()),
         (
+            "SF_INSTALLATION_ROOT_SOURCE".to_string(),
+            "native-stdin-v1".to_string(),
+        ),
+        (
             "NODE_COMPILE_CACHE".to_string(),
             compile_cache_dir.to_string_lossy().into_owned(),
         ),
@@ -774,16 +885,25 @@ fn spawn_runtime_generation(
     ));
     let sidecar_environment = sidecar_env(app, &runtime_protocol)?;
     let process_environment = process_environment(&env);
-    let server_child = child_containment::ContainedChild::spawn_in_capturing_stderr(
-        Path::new(&prepared.runtime_path),
-        &[
-            OsString::from("--eval"),
-            OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
-        ],
-        &process_environment,
-        Some(&server_working_dir),
-    )
-    .map_err(|error| {
+    let installation_root = app
+        .try_state::<installation_root_key::InstallationRootKey>()
+        .ok_or_else(|| IoError::other("installation-root authority state is missing"))?;
+    let mut installation_root_frame = [0_u8; 40];
+    installation_root_frame[..8].copy_from_slice(b"SFRK0001");
+    installation_root_frame[8..].copy_from_slice(installation_root.as_bytes());
+    let server_spawn =
+        child_containment::ContainedChild::spawn_in_capturing_stderr_with_stdin_frame(
+            Path::new(&prepared.runtime_path),
+            &[
+                OsString::from("--eval"),
+                OsString::from(NODE_ENTRYPOINT_BOOTSTRAP),
+            ],
+            &process_environment,
+            Some(&server_working_dir),
+            &installation_root_frame,
+        );
+    installation_root_key::clear_secret_bytes(&mut installation_root_frame);
+    let server_child = server_spawn.map_err(|error| {
         if error.containment_uncertain() {
             enter_runtime_safe_mode(app, generation);
         }
