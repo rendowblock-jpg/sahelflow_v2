@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CanonicalCodActions } from "@/components/orders/canonical-cod-actions";
+import { CanonicalOrderRecoveryActions } from "@/components/orders/canonical-order-recovery-actions";
 import { useI18n } from "@/hooks/use-i18n";
 import type {
   CanonicalDeliveryState,
@@ -42,17 +43,21 @@ const COPY = {
     ship: "Dispatch shipment",
     deliver: "Mark delivered",
     packTitle: "Mark this order as packed?",
-    packBody: "The reserved items remain held and the order becomes ready for dispatch.",
+    packBody:
+      "The reserved items remain held and the order becomes ready for dispatch.",
     shipTitle: "Dispatch this order?",
-    shipBody: "This consumes the exact reservations into outbound inventory. It does not call a courier provider.",
+    shipBody:
+      "This consumes the exact reservations into outbound inventory. It does not call a courier provider.",
     deliverTitle: "Mark this order as delivered?",
-    deliverBody: "This closes fulfillment and creates the carrier COD receivable. Collection and remittance remain separate.",
+    deliverBody:
+      "This closes fulfillment and creates the carrier COD receivable. Collection and remittance remain separate.",
     commit: "Commit transition",
     committed: "Transition committed.",
     replayed: "The previously committed transition was recovered safely.",
     noAction: "No governed fulfillment action is available from the current state.",
     failed: "The transition was not committed. Refresh and retry safely.",
-    conflict: "This order changed or its inventory authority is incomplete. Refresh before retrying.",
+    conflict:
+      "This order changed or its inventory authority is incomplete. Refresh before retrying.",
     invalid: "This transition is not valid from the current order state.",
     notFound: "This order is no longer available.",
   },
@@ -68,17 +73,22 @@ const COPY = {
     ship: "Expédier la commande",
     deliver: "Marquer comme livrée",
     packTitle: "Marquer cette commande comme emballée ?",
-    packBody: "Les articles réservés restent bloqués et la commande devient prête à expédier.",
+    packBody:
+      "Les articles réservés restent bloqués et la commande devient prête à expédier.",
     shipTitle: "Expédier cette commande ?",
-    shipBody: "Les réservations exactes passent en stock sortant. Aucun transporteur n'est appelé.",
+    shipBody:
+      "Les réservations exactes passent en stock sortant. Aucun transporteur n'est appelé.",
     deliverTitle: "Marquer cette commande comme livrée ?",
-    deliverBody: "La préparation est clôturée et la créance COD transporteur est créée. Encaissement et versement restent séparés.",
+    deliverBody:
+      "La préparation est clôturée et la créance COD transporteur est créée. Encaissement et versement restent séparés.",
     commit: "Valider la transition",
     committed: "Transition validée.",
     replayed: "La transition déjà validée a été récupérée en toute sécurité.",
     noAction: "Aucune action gouvernée n'est disponible depuis l'état actuel.",
-    failed: "La transition n'a pas été validée. Actualisez puis réessayez sans risque.",
-    conflict: "La commande a changé ou son autorité de stock est incomplète. Actualisez avant de réessayer.",
+    failed:
+      "La transition n'a pas été validée. Actualisez puis réessayez sans risque.",
+    conflict:
+      "La commande a changé ou son autorité de stock est incomplète. Actualisez avant de réessayer.",
     invalid: "Cette transition n'est pas valide depuis l'état actuel.",
     notFound: "Cette commande n'est plus disponible.",
   },
@@ -96,15 +106,18 @@ const COPY = {
     packTitle: "هل تم تجهيز هذه الطلبية؟",
     packBody: "يبقى المخزون الدقيق محجوزًا وتصبح الطلبية جاهزة للإرسال.",
     shipTitle: "هل تريد إرسال هذه الطلبية؟",
-    shipBody: "تُنقل الحجوزات الدقيقة إلى مخزون قيد الشحن دون الاتصال بمزوّد توصيل.",
+    shipBody:
+      "تُنقل الحجوزات الدقيقة إلى مخزون قيد الشحن دون الاتصال بمزوّد توصيل.",
     deliverTitle: "هل تم تسليم هذه الطلبية؟",
-    deliverBody: "يُغلق التجهيز وتُنشأ مستحقات الدفع عند الاستلام. يبقى التحصيل والتحويل منفصلين.",
+    deliverBody:
+      "يُغلق التجهيز وتُنشأ مستحقات الدفع عند الاستلام. يبقى التحصيل والتحويل منفصلين.",
     commit: "اعتماد الانتقال",
     committed: "تم اعتماد الانتقال.",
     replayed: "تمت استعادة الانتقال المعتمد سابقًا بأمان.",
     noAction: "لا يوجد إجراء تنفيذ موثوق متاح من الحالة الحالية.",
     failed: "لم يتم اعتماد الانتقال. حدّث الصفحة ثم أعد المحاولة بأمان.",
-    conflict: "تغيّرت الطلبية أو أن صلاحية مخزونها غير مكتملة. حدّث الصفحة قبل إعادة المحاولة.",
+    conflict:
+      "تغيّرت الطلبية أو أن صلاحية مخزونها غير مكتملة. حدّث الصفحة قبل إعادة المحاولة.",
     invalid: "هذا الانتقال غير صالح من حالة الطلبية الحالية.",
     notFound: "لم تعد هذه الطلبية متاحة.",
   },
@@ -119,9 +132,15 @@ const STATE_LABELS = {
     not_created: "Not created",
     in_transit: "In transit",
     delivered: "Delivered",
+    failed: "Failed",
+    refused: "Refused",
+    return_in_transit: "Return in transit",
+    returned: "Returned",
     unreserved: "Not reserved",
     reserved: "Reserved",
     outbound: "Outbound",
+    return_pending_receipt: "Awaiting physical return",
+    return_pending_inspection: "Awaiting inspection",
     settled: "Settled",
     not_expected: "Not expected",
     receivable: "Awaiting collection",
@@ -139,9 +158,15 @@ const STATE_LABELS = {
     not_created: "Non créée",
     in_transit: "En transit",
     delivered: "Livrée",
+    failed: "Échec",
+    refused: "Refusée",
+    return_in_transit: "Retour en transit",
+    returned: "Retournée",
     unreserved: "Non réservé",
     reserved: "Réservé",
     outbound: "Sortant",
+    return_pending_receipt: "Retour physique attendu",
+    return_pending_inspection: "Inspection attendue",
     settled: "Soldé",
     not_expected: "Non attendu",
     receivable: "En attente d'encaissement",
@@ -159,9 +184,15 @@ const STATE_LABELS = {
     not_created: "غير منشأة",
     in_transit: "قيد النقل",
     delivered: "مسلّمة",
+    failed: "فشل التوصيل",
+    refused: "مرفوضة",
+    return_in_transit: "الإرجاع قيد النقل",
+    returned: "مرتجعة",
     unreserved: "غير محجوز",
     reserved: "محجوز",
     outbound: "قيد الشحن",
+    return_pending_receipt: "بانتظار الإرجاع الفعلي",
+    return_pending_inspection: "بانتظار الفحص",
     settled: "مسوّى",
     not_expected: "غير مستحق",
     receivable: "بانتظار التحصيل",
@@ -188,11 +219,18 @@ function availableAction(
   fulfillment: FulfillmentState | null,
   delivery: CanonicalDeliveryState | null,
 ): FulfillmentAction | null {
-  if (status === "confirmed" && (fulfillment === null || fulfillment === "unfulfilled")) {
+  if (
+    status === "confirmed" &&
+    (fulfillment === null || fulfillment === "unfulfilled")
+  ) {
     return "pack";
   }
   if (status === "confirmed" && fulfillment === "ready") return "ship";
-  if (status === "shipped" && fulfillment === "shipped" && delivery === "in_transit") {
+  if (
+    status === "shipped" &&
+    fulfillment === "shipped" &&
+    delivery === "in_transit"
+  ) {
     return "deliver";
   }
   return null;
@@ -210,7 +248,11 @@ export function CanonicalFulfillmentActions({
   const router = useRouter();
   const { t, locale } = useI18n();
   const copy = COPY[locale];
-  const action = availableAction(currentStatus, fulfillmentState, deliveryState);
+  const action = availableAction(
+    currentStatus,
+    fulfillmentState,
+    deliveryState,
+  );
   const stateLabels = STATE_LABELS[locale] as Readonly<Record<string, string>>;
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -260,7 +302,9 @@ export function CanonicalFulfillmentActions({
         throw new Error(message);
       }
       window.localStorage.removeItem(storageKey(action));
-      setNotice(responseBody.command?.replayed ? copy.replayed : copy.committed);
+      setNotice(
+        responseBody.command?.replayed ? copy.replayed : copy.committed,
+      );
       setConfirming(false);
       await mutatePrefix("/api/orders");
       router.refresh();
@@ -271,7 +315,12 @@ export function CanonicalFulfillmentActions({
     }
   }
 
-  const Icon = action === "ship" ? Truck : action === "deliver" ? CheckCircle2 : PackageCheck;
+  const Icon =
+    action === "ship"
+      ? Truck
+      : action === "deliver"
+        ? CheckCircle2
+        : PackageCheck;
   const title = action ? copy[`${action}Title`] : "";
   const description = action ? copy[`${action}Body`] : "";
   const showCodAuthority =
@@ -286,10 +335,16 @@ export function CanonicalFulfillmentActions({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium">{copy.heading}</p>
-            <Badge variant="outline" className="mt-1">{copy.authority}</Badge>
+            <Badge variant="outline" className="mt-1">
+              {copy.authority}
+            </Badge>
           </div>
           {action ? (
-            <Button size="sm" onClick={() => setConfirming(true)} disabled={loading}>
+            <Button
+              size="sm"
+              onClick={() => setConfirming(true)}
+              disabled={loading}
+            >
               <Icon className="me-1.5 h-4 w-4" />
               {copy[action]}
             </Button>
@@ -312,9 +367,19 @@ export function CanonicalFulfillmentActions({
           ))}
         </dl>
 
-        {!action && !showCodAuthority ? <p className="text-sm text-muted-foreground">{copy.noAction}</p> : null}
-        {notice ? <p className="text-sm text-success" role="status">{notice}</p> : null}
-        {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+        {!action && !showCodAuthority ? (
+          <p className="text-sm text-muted-foreground">{copy.noAction}</p>
+        ) : null}
+        {notice ? (
+          <p className="text-sm text-success" role="status">
+            {notice}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
 
       {showCodAuthority ? (
@@ -323,14 +388,21 @@ export function CanonicalFulfillmentActions({
         </div>
       ) : null}
 
-      <AlertDialog open={confirming} onOpenChange={(open) => !loading && setConfirming(open)}>
+      <CanonicalOrderRecoveryActions orderId={orderId} />
+
+      <AlertDialog
+        open={confirming}
+        onOpenChange={(open) => !loading && setConfirming(open)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
             <AlertDialogDescription>{description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={loading}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={loading}
               onClick={(event) => {
@@ -338,7 +410,9 @@ export function CanonicalFulfillmentActions({
                 void commit();
               }}
             >
-              {loading ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
+              {loading ? (
+                <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+              ) : null}
               {copy.commit}
             </AlertDialogAction>
           </AlertDialogFooter>
