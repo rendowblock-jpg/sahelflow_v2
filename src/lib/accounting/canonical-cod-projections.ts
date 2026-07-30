@@ -2,7 +2,7 @@ import "server-only";
 
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
-import { NotFoundError } from "@/types/errors";
+import { ConflictError, NotFoundError } from "@/types/errors";
 
 export interface CanonicalCodOrderPosition {
   orderId: string;
@@ -273,13 +273,16 @@ async function buildOrderPositions(
     }),
   ]);
 
-  const receivableByOrder = new Map<string, number>();
+  const receivableByOrder = new Map<string, { count: number; amount: number }>();
   for (const movement of receivableMovements) {
     if (!movement.orderId) continue;
-    receivableByOrder.set(
-      movement.orderId,
-      (receivableByOrder.get(movement.orderId) ?? 0) + movement.amount,
-    );
+    const current = receivableByOrder.get(movement.orderId) ?? {
+      count: 0,
+      amount: 0,
+    };
+    current.count += 1;
+    current.amount += movement.amount;
+    receivableByOrder.set(movement.orderId, current);
   }
   const collectionByOrder = new Map(
     collections.map((entry) => [entry.orderId, entry]),
@@ -294,8 +297,14 @@ async function buildOrderPositions(
   }
 
   return canonical.map((order) => {
+    const receivable = receivableByOrder.get(order.id);
+    if (!receivable || receivable.count !== 1 || receivable.amount <= 0) {
+      throw new ConflictError(
+        `Canonical COD position for order ${order.id} requires exactly one positive delivered receivable movement`,
+      );
+    }
     const collection = collectionByOrder.get(order.id) ?? null;
-    const expectedReceivable = receivableByOrder.get(order.id) ?? 0;
+    const expectedReceivable = receivable.amount;
     const collected = collectionAmount(collection);
     const lineSummary = lineAmounts(linesByOrder.get(order.id) ?? []);
     const codState = deriveCodState({
@@ -454,7 +463,7 @@ export async function getCanonicalCodWorkspaceSummary(
     buildSettlementSummaries(context),
   ]);
   const awaitingCollection = positions.filter(
-    (entry) => entry.outstandingCollection > 0,
+    (entry) => entry.collectionId === null && entry.outstandingCollection > 0,
   );
   const awaitingRemittance = positions.filter(
     (entry) =>
