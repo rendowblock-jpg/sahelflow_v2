@@ -9,15 +9,15 @@
 model CodCollection {
   id                 String   @id
   collectionKey      String   @unique
-  orderId             String   @unique
-  provider            String
-  amount              Int
-  currency            String   @default("DZD")
-  reference           String?
-  collectedAt         DateTime
-  createdByCommandId  String   @unique
-  createdAt           DateTime @default(now())
-  corrections         CodCollectionCorrection[]
+  orderId            String   @unique
+  provider           String
+  amount             Int
+  currency           String   @default("DZD")
+  reference          String?
+  collectedAt        DateTime
+  createdByCommandId String   @unique
+  createdAt          DateTime @default(now())
+  corrections        CodCollectionCorrection[]
 
   @@index([provider, collectedAt])
   @@index([createdByCommandId])
@@ -70,6 +70,7 @@ model CodSettlementLine {
   settlementId          String
   providerLineReference String?
   orderId               String?
+  isFinal               Boolean                   @default(true)
   grossRemittedAmount   Int
   feeAmount             Int
   adjustmentAmount      Int
@@ -81,6 +82,7 @@ model CodSettlementLine {
   corrections           CodSettlementCorrection[]
 
   @@unique([settlementId, providerLineReference])
+  @@unique([settlementId, orderId])
   @@index([orderId, createdAt])
   @@index([settlementId, status])
 }
