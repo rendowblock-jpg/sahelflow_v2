@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -12,6 +12,7 @@ import {
   SearchCheck,
   Truck,
 } from "lucide-react";
+import useSWR from "swr";
 
 import {
   AlertDialog,
@@ -102,6 +103,7 @@ const COPY = {
     delivery: "Delivery",
     inventory: "Inventory",
     returns: "Return",
+    cancelDialog: "Cancel",
   },
   fr: {
     heading: "Annulation et retours physiques",
@@ -128,7 +130,7 @@ const COPY = {
     inspect_returnTitle: "Terminer l'inspection du retour ?",
     inspect_returnBody: "Chaque article doit être classé disponible, endommagé, en quarantaine ou perdu.",
     reason: "Code motif",
-    reasonPlaceholder: "refus-client",
+    reasonPlaceholder: "customer-refused",
     providerEvent: "ID événement transporteur (facultatif)",
     providerEventPlaceholder: "ID événement ou suivi transporteur",
     disposition: "Disposition",
@@ -147,6 +149,7 @@ const COPY = {
     delivery: "Livraison",
     inventory: "Stock",
     returns: "Retour",
+    cancelDialog: "Annuler",
   },
   ar: {
     heading: "الإلغاء والإرجاع الفعلي",
@@ -173,7 +176,7 @@ const COPY = {
     inspect_returnTitle: "إتمام فحص السلع المرتجعة؟",
     inspect_returnBody: "يجب تصنيف كل عنصر كمتاح أو تالف أو محجور أو مفقود.",
     reason: "رمز السبب",
-    reasonPlaceholder: "رفض-الزبون",
+    reasonPlaceholder: "customer-refused",
     providerEvent: "معرّف حدث شركة التوصيل (اختياري)",
     providerEventPlaceholder: "معرّف الحدث أو تحديث التتبع",
     disposition: "التصنيف",
@@ -192,6 +195,7 @@ const COPY = {
     delivery: "التوصيل",
     inventory: "المخزون",
     returns: "الإرجاع",
+    cancelDialog: "إلغاء",
   },
 } as const;
 
@@ -211,13 +215,26 @@ const PROVIDER_ACTIONS = new Set<CanonicalOrderRecoveryAction>([
   "receive_return",
 ]);
 
+async function fetchPosition(url: string): Promise<RecoveryPosition> {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error("recovery-position-failed");
+  const body = (await response.json()) as { position: RecoveryPosition };
+  return body.position;
+}
+
 export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) {
   const { locale } = useI18n();
   const copy = COPY[locale];
   const router = useRouter();
-  const [position, setPosition] = useState<RecoveryPosition | null>(null);
-  const [loadingPosition, setLoadingPosition] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const {
+    data: position,
+    error: positionError,
+    isLoading,
+    mutate,
+  } = useSWR(`/api/orders/${orderId}/recovery`, fetchPosition, {
+    revalidateOnFocus: true,
+    keepPreviousData: true,
+  });
   const [selectedAction, setSelectedAction] =
     useState<CanonicalOrderRecoveryAction | null>(null);
   const [reasonCode, setReasonCode] = useState("");
@@ -229,43 +246,10 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function refresh(signal?: AbortSignal): Promise<void> {
-    setLoadingPosition(true);
-    setLoadError(false);
-    try {
-      const response = await fetch(`/api/orders/${orderId}/recovery`, {
-        cache: "no-store",
-        signal,
-      });
-      if (!response.ok) throw new Error("recovery-position-failed");
-      const body = (await response.json()) as { position: RecoveryPosition };
-      setPosition(body.position);
-      setDispositions((current) =>
-        Object.fromEntries(
-          body.position.items.map((item) => [
-            item.orderItemId,
-            current[item.orderItemId] ?? "",
-          ]),
-        ),
-      );
-    } catch (caught) {
-      if (caught instanceof DOMException && caught.name === "AbortError") return;
-      setLoadError(true);
-    } finally {
-      if (!signal?.aborted) setLoadingPosition(false);
-    }
-  }
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void refresh(controller.signal);
-    return () => controller.abort();
-  }, [orderId]);
-
   const inspectionComplete = useMemo(
     () =>
       position?.items.every(
-        (item) => dispositions[item.orderItemId] !== "",
+        (item) => dispositions[item.orderItemId] !== undefined && dispositions[item.orderItemId] !== "",
       ) ?? false,
     [dispositions, position],
   );
@@ -289,6 +273,11 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
     setProviderEventId("");
     setNotice(null);
     setError(null);
+    if (action === "inspect_return" && position) {
+      setDispositions(
+        Object.fromEntries(position.items.map((item) => [item.orderItemId, ""])),
+      );
+    }
   }
 
   async function commit(): Promise<void> {
@@ -343,7 +332,7 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
       window.localStorage.removeItem(storageKey(selectedAction));
       setSelectedAction(null);
       setNotice(body.command?.replayed ? copy.replayed : copy.committed);
-      await refresh();
+      await mutate();
       await mutatePrefix("/api/orders");
       router.refresh();
     } catch (caught) {
@@ -353,20 +342,16 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
     }
   }
 
-  if (loadingPosition && !position) {
+  if (isLoading && !position) {
     return <p className="text-sm text-muted-foreground">{copy.loading}</p>;
   }
-  if (loadError || !position) {
+  if (positionError || !position) {
     return <p className="text-sm text-destructive" role="alert">{copy.loadFailed}</p>;
   }
   if (position.availableActions.length === 0 && !position.returnCase) return null;
 
-  const dialogTitle = selectedAction
-    ? copy[`${selectedAction}Title`]
-    : "";
-  const dialogBody = selectedAction
-    ? copy[`${selectedAction}Body`]
-    : "";
+  const dialogTitle = selectedAction ? copy[`${selectedAction}Title`] : "";
+  const dialogBody = selectedAction ? copy[`${selectedAction}Body`] : "";
 
   return (
     <div className="space-y-4 border-t pt-5">
@@ -472,9 +457,7 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
                         {item.productName}
                         {item.variantName ? ` · ${item.variantName}` : ""}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        × {item.quantity}
-                      </p>
+                      <p className="text-xs text-muted-foreground">× {item.quantity}</p>
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor={`disposition-${item.orderItemId}`} className="text-xs">
@@ -486,9 +469,7 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
                         onChange={(event) =>
                           setDispositions((current) => ({
                             ...current,
-                            [item.orderItemId]: event.target.value as
-                              | CanonicalReturnDisposition
-                              | "",
+                            [item.orderItemId]: event.target.value as CanonicalReturnDisposition | "",
                           }))
                         }
                         disabled={committing}
@@ -508,7 +489,7 @@ export function CanonicalOrderRecoveryActions({ orderId }: { orderId: string }) 
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={committing}>×</AlertDialogCancel>
+            <AlertDialogCancel disabled={committing}>{copy.cancelDialog}</AlertDialogCancel>
             <AlertDialogAction
               disabled={
                 committing ||
