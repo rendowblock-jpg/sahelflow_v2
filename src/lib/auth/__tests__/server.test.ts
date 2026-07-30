@@ -41,7 +41,7 @@ vi.mock("next/headers", () => ({
 // Clear AUTH_SECRET env so getAuthSecret() exercises the DB path
 delete process.env.AUTH_SECRET;
 
-import { db, dbRaw } from "@/lib/db";
+import { dbRaw } from "@/lib/db";
 import {
   setupAuth,
   verifyAuthPin,
@@ -290,9 +290,16 @@ describe("destroySession", () => {
     await setupAuth("12345678");
     await createSession();
     const token = cookieJar.map.get(AUTH_COOKIE);
-    const update = vi
-      .spyOn(db.session, "update")
-      .mockRejectedValueOnce(new Error("database unavailable"));
+    await dbRaw.$executeRawUnsafe(
+      "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
+    );
+    await dbRaw.$executeRawUnsafe(`
+      CREATE TRIGGER auth_test_block_session_revoke
+      BEFORE UPDATE OF revokedAt ON Session
+      BEGIN
+        SELECT RAISE(ABORT, 'database unavailable');
+      END
+    `);
 
     try {
       await expect(destroySession()).rejects.toMatchObject({
@@ -300,7 +307,9 @@ describe("destroySession", () => {
         statusCode: 503,
       });
     } finally {
-      update.mockRestore();
+      await dbRaw.$executeRawUnsafe(
+        "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
+      );
     }
 
     expect(cookieJar.delete).not.toHaveBeenCalled();

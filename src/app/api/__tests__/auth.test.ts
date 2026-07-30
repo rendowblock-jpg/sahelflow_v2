@@ -273,5 +273,41 @@ describe("auth routes", () => {
       // Cookie was deleted from the store
       expect(cookieStore.has("sf_session")).toBe(false);
     });
+
+    it("returns a retryable 503 and preserves the cookie when revocation cannot commit", async () => {
+      await POSTSetup(mockPost("http://localhost/api/auth/setup", { pin: "12345678" }));
+      const token = cookieStore.get("sf_session");
+      const session = await rawDb.session.findFirst({ orderBy: { createdAt: "desc" } });
+      expect(session?.revokedAt).toBeNull();
+
+      await rawDb.$executeRawUnsafe(
+        "DROP TRIGGER IF EXISTS auth_route_test_block_session_revoke",
+      );
+      await rawDb.$executeRawUnsafe(`
+        CREATE TRIGGER auth_route_test_block_session_revoke
+        BEFORE UPDATE OF revokedAt ON Session
+        BEGIN
+          SELECT RAISE(ABORT, 'database unavailable');
+        END
+      `);
+
+      let res: Awaited<ReturnType<typeof POSTLogout>> | undefined;
+      try {
+        res = await POSTLogout(mockPost("http://localhost/api/auth/logout", {}));
+      } finally {
+        await rawDb.$executeRawUnsafe(
+          "DROP TRIGGER IF EXISTS auth_route_test_block_session_revoke",
+        );
+      }
+
+      expect(res).toBeDefined();
+      expect(res!.status).toBe(503);
+      expect(await getJson(res!)).toMatchObject({
+        code: "SESSION_REVOCATION_FAILED",
+      });
+      expect(cookieStore.get("sf_session")).toBe(token);
+      const unchanged = await rawDb.session.findUnique({ where: { id: session!.id } });
+      expect(unchanged?.revokedAt).toBeNull();
+    });
   });
 });

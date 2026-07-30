@@ -2522,6 +2522,7 @@
   "topbar.helpSupport": "Help & Support",
   "topbar.loading": "Loading…",
   "topbar.logout": "Log out",
+  "topbar.logoutFailed": "Logout could not be completed. Please retry.",
   "topbar.newNotifications": "{{n}} new",
   "topbar.noNotifications": "No new notifications",
   "topbar.profile": "Profile",
