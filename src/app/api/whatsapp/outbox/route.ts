@@ -46,15 +46,18 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     input.effectKey,
     input.confirmMayDuplicate,
   );
+
+  // An operator retry can itself produce an ambiguous provider outcome. Return
+  // 202 so the inbox enters its durable-status monitor and refreshes the bubble
+  // to `ambiguous`, rather than leaving the stale pre-retry dead-letter state.
+  const monitorDurableState =
+    effect.state === "retrying" ||
+    effect.state === "queued" ||
+    effect.state === "ambiguous";
   return NextResponse.json(
     { ok: effect.state === "succeeded", effect },
     {
-      status:
-        effect.state === "succeeded"
-          ? 200
-          : effect.state === "retrying" || effect.state === "queued"
-            ? 202
-            : 409,
+      status: effect.state === "succeeded" ? 200 : monitorDurableState ? 202 : 409,
     },
   );
 }, "POST /api/whatsapp/outbox");
