@@ -436,7 +436,7 @@ describe("order creation path regression coverage", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("AI create_order writes an AI order and created timeline entry", async () => {
+  it("AI create_order writes a canonical AI draft and created timeline entry", async () => {
     const product = await seedProduct({ price: 2500 });
     const customer = await rawDb.customer.create({
       data: {
@@ -450,7 +450,12 @@ describe("order creation path regression coverage", () => {
     });
     const tool = getTool("create_order");
     if (!tool) throw new Error("AI create_order tool is not registered");
-    const context: ToolContext = { db: rawDb, shop: TEST_SHOP_CONTEXT };
+    const context: ToolContext = {
+      db: rawDb,
+      shop: TEST_SHOP_CONTEXT,
+      sourceIdentity: "creation-path-ai-session",
+      sourceOrderId: "creation-path-ai-proposal",
+    };
     const result = await tool.execute(
       {
         customerId: customer.id,
@@ -465,10 +470,17 @@ describe("order creation path regression coverage", () => {
     );
 
     expect(result.success).toBe(true);
-    const data = result.data as { id: string };
-    expect((await rawDb.order.findUnique({ where: { id: data.id } }))?.source).toBe(
-      "ai_chat",
-    );
+    const data = result.data as { id: string; status: string };
+    const order = await rawDb.order.findUnique({ where: { id: data.id } });
+    expect(data.status).toBe("draft");
+    expect(order).toMatchObject({
+      source: "ai_chat",
+      sourceOrderId: "creation-path-ai-proposal",
+      status: "draft",
+    });
+    expect(
+      isCanonicalOrderAuthority(order?.source, order?.sourceMetadata),
+    ).toBe(true);
     expect(
       await rawDb.orderChange.count({
         where: { orderId: data.id, actionType: "created" },
