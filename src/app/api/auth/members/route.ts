@@ -11,7 +11,18 @@ export const GET = withErrorHandler(async () => {
   const context = await requireTrustedAction("members.read");
   const authority = await getTeamAdministrationView(context.shop);
   return NextResponse.json(
-    { authority },
+    {
+      authority,
+      currentActor: {
+        personId:
+          context.actor.kind === "person" ? context.actor.personId : null,
+        memberId:
+          context.actor.kind === "person"
+            ? context.actor.workspaceMemberId
+            : null,
+        role: context.actor.role,
+      },
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }, "GET /api/auth/members");
