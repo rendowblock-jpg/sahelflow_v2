@@ -7,15 +7,19 @@ import { join, resolve } from "node:path";
 // strict auth suite from leaking its environment into later business-route tests.
 process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY = "vitest-business-routes";
 
-// Installation identity authority is durable in production but isolated per test
-// file. Tests that need restart persistence exercise it within one file.
+// Installation identity and member authority is durable in production but
+// isolated per test file. Tests that need restart persistence exercise it within
+// one file.
 const dataDirectory = resolve(
   process.env.SF_DATA_DIR ?? join(process.cwd(), "data"),
 );
 const systemDirectory = join(dataDirectory, "system");
 if (existsSync(systemDirectory)) {
   for (const name of readdirSync(systemDirectory)) {
-    if (name.startsWith("identity-authority")) {
+    if (
+      name.startsWith("identity-authority") ||
+      name.startsWith("member-authority")
+    ) {
       try {
         unlinkSync(join(systemDirectory, name));
       } catch {
