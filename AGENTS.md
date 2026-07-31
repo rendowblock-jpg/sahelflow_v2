@@ -199,24 +199,30 @@ choice is sufficiently supported.
 ## Exact next outcome
 
 Resume draft PR #195 from the exact head recorded by GitHub and Working Memory.
-Do not reopen completed Phase 1 packages.
+A 2026-07-31 independent source audit found new Phase 1 P1 closure evidence. Keep
+the repair bounded; do not reopen completed Golden COD packages that are not
+implicated by the findings.
 
 The immediate order is:
 
-1. obtain a clean exact-head draft source checkpoint for the governed courier
-   booking/tracking package after the strict TypeScript repair;
-2. audit and close one governed realized-revenue, COGS and profitability authority
-   across dashboard, analytics and accounting;
-3. prove canonical process-restart and in-place update preservation;
-4. prove disposable snapshot/restore compatibility for every new Phase 1 fact;
-5. run one representative Phase 1 UI/API/domain/database journey in AR/FR/EN and
-   close any remaining legacy mutation bypass;
-6. update Roadmap, Current State, Working Memory and PR #195 only after that Phase 1
-   exit evidence is complete.
+1. reconcile `AGENTS.md`, the documentation entry point, Roadmap, Working Memory,
+   PR #195 and issue #164 around one active statement: Phase 1 closure repair;
+2. make `sf-audit` verify active-phase agreement instead of preserving obsolete
+   literal Phase 1 or Phase 2 wording;
+3. repair courier booking generations so ambiguous or known-failed attempts can be
+   governed, reconciled and safely rebooked;
+4. dead-letter corrupt or undecryptable courier outbox payloads before any provider
+   effect, audit the failure and continue the queue;
+5. add real integration coverage for second booking, duplicate replay, concurrent
+   recovery and poisoned-payload isolation;
+6. run one exact-head source checkpoint, freeze the repaired Phase 1 head and
+   perform one independent P0/P1 review;
+7. activate only the bounded Phase 2A durable identity kernel after the repaired
+   Phase 1 head has no known P0/P1.
 
-Phase 2 durable identity remains paused until Phase 1 shared business authority is
-stable. PR #186 is an obsolete conflicting proposal and must be reconciled rather
-than merged directly.
+Phase 2 durable identity is the next dependency frontier, but it is not active
+while this bounded Phase 1 closure repair remains open. PR #186 is an obsolete
+conflicting proposal and must be mined deliberately rather than merged directly.
 
 ## Work rules
 
