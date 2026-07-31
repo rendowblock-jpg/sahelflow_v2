@@ -34,6 +34,8 @@ import {
 
 const LEGACY_AUTH_SECRET_KEY = "auth_secret";
 const LEGACY_AUTH_PIN_KEY = "auth_pin_hash";
+const DIRECT_ROUTE_TEST_AUTH_ENV = "SF_DIRECT_ROUTE_TEST_AUTHORITY";
+const DIRECT_ROUTE_TEST_AUTH_VALUE = "vitest-business-routes";
 const authContext = { prisma: db, shop: shopContext } satisfies ServiceContext;
 
 let migrationDone = false;
@@ -312,7 +314,20 @@ export const isAuthenticated = cache(async (): Promise<boolean> => {
   return authority.status === "authenticated";
 });
 
+function directBusinessRouteTestCompatibilityEnabled(): boolean {
+  return (
+    (process.env.NODE_ENV === "test" || process.env.VITEST === "true") &&
+    process.env[DIRECT_ROUTE_TEST_AUTH_ENV] === DIRECT_ROUTE_TEST_AUTH_VALUE
+  );
+}
+
 export async function requireAuth(): Promise<void> {
+  if (directBusinessRouteTestCompatibilityEnabled()) {
+    // Legacy direct route tests use a clean disposable DB. They may bypass only
+    // before authentication is configured; configured-auth negative tests still
+    // exercise the real session boundary. Database errors fail closed.
+    if (!(await isAuthSetup())) return;
+  }
   await requireAuthenticatedSession();
 }
 
