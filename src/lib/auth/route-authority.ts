@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requireAuth } from "./server";
+import { isAuthSetup, requireAuth } from "./server";
 
 const DIRECT_ROUTE_TEST_AUTH_HEADER =
   "x-sahelflow-direct-route-test-authority";
@@ -15,7 +15,7 @@ function isTesting(): boolean {
   return process.env.NODE_ENV === "test" || process.env.VITEST === "true";
 }
 
-function hasDirectRouteTestAuthority(
+function hasDirectRouteTestMarker(
   request: Request | undefined,
   options: RouteAuthOptions,
 ): boolean {
@@ -28,14 +28,23 @@ function hasDirectRouteTestAuthority(
 }
 
 /**
- * Authenticate a route request. The only bypass is an explicit request-scoped
- * marker—or an explicitly opted-in missing Request—used by direct business-route
- * integration tests under Vitest. Production always uses real session authority.
+ * Authenticate a route request.
+ *
+ * Direct business-route tests may bypass authentication only while the
+ * disposable database is genuinely unconfigured. Once an AuthSecret exists,
+ * even a marked Vitest request must exercise the real session authority. Any
+ * failure to determine setup state also falls through to fail-closed auth.
  */
 export async function requireRouteAuth(
   request?: Request,
   options: RouteAuthOptions = {},
 ): Promise<void> {
-  if (hasDirectRouteTestAuthority(request, options)) return;
+  if (hasDirectRouteTestMarker(request, options)) {
+    try {
+      if (!(await isAuthSetup())) return;
+    } catch {
+      // Fall through to the real authority boundary.
+    }
+  }
   await requireAuth();
 }
