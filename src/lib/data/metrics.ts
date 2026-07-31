@@ -6,9 +6,9 @@
  * - Realized revenue is earned at delivery from the governed profitability
  *   authority. Later returns do not erase delivery; refunds and reversals are
  *   explicit downstream financial facts.
- * - The legacy `netRevenue()` entry point remains net of refunds and courier
- *   fees for backward compatibility. New accounting readers must use the full
- *   profitability projection, whose `netRevenue` field excludes courier fees.
+ * - The legacy `netRevenue()` entry point remains net of refunds and live
+ *   Delivery-row costs for backward compatibility. New accounting readers must
+ *   use the full profitability projection.
  *
  * All periods are half-open `[from, to)` and all money is integer DZD.
  */
@@ -80,15 +80,22 @@ export async function realizedRevenue(db: DbClient, period: Period): Promise<num
 /**
  * Legacy net revenue compatibility metric.
  *
- * Historically this helper meant realized revenue after refunds and courier
- * fees. Preserve that public behavior while dashboard, analytics, accounting,
- * reports and AI use `getProfitabilityProjection()` directly. In the governed
- * projection, courier fees remain below `projection.netRevenue` and contribute
- * to contribution/net profit instead.
+ * Historically this helper meant realized revenue after refunds and active
+ * Delivery-row costs. Preserve that behavior while dashboard, analytics,
+ * accounting, reports and AI use `getProfitabilityProjection()` directly.
  */
 export async function netRevenue(db: DbClient, period: Period): Promise<number> {
-  const projection = await getProfitabilityProjection(db, period);
-  return projection.netRevenue - projection.courierFees;
+  const [projection, deliveryCosts] = await Promise.all([
+    getProfitabilityProjection(db, period),
+    db.delivery.aggregate({
+      where: {
+        createdAt: { gte: period.from, lt: period.to },
+        deletedAt: null,
+      },
+      _sum: { cost: true },
+    }),
+  ]);
+  return projection.netRevenue - (deliveryCosts._sum.cost ?? 0);
 }
 
 /**
