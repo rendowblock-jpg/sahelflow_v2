@@ -98,6 +98,10 @@ function normalizeSemanticText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function read(relativePath: string): string {
+  return readFileSync(resolve(repoRoot, relativePath), "utf8");
+}
+
 const markdownFiles = walk(repoRoot);
 const activeDocumentationFiles = walk(resolve(repoRoot, "documentation"));
 const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
@@ -228,10 +232,10 @@ for (const [relativePath, markers] of entrypointChecks) {
 }
 
 /**
- * These stable semantic markers prove that the active authorities still describe
- * FD-028, the current release boundary, the long-lived program and a resumable
- * execution frontier. They intentionally avoid exact branch heads and package
- * wording that changes during normal implementation.
+ * Stable semantic markers prove that active authorities still describe FD-028,
+ * the release boundary, the long-lived program and a resumable execution
+ * frontier. Active-phase agreement is checked separately so normal wording
+ * changes cannot preserve a contradictory phase by accident.
  */
 const semanticRequirements: Array<[string, string[]]> = [
   [
@@ -254,6 +258,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Do not run source builds, full automated tests",
       "1.0.0-internal.13",
       "agent/phases1-4-completion-program",
+      "Phase 1 closure repair",
       "Exact next outcome",
     ],
   ],
@@ -264,7 +269,8 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
-      "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues",
+      "**Active phase:** Phase 1 closure repair",
+      "Phase 2A remains the immediate dependency",
     ],
   ],
   [
@@ -283,7 +289,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete",
+      "**Active phase:** Phase 1 closure repair",
       "# Phase 1 — Canonical Golden COD business core",
       "## Research gate",
       "# Phase 9 — Certification, representative beta and Stable",
@@ -313,14 +319,13 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 1 — canonical Golden COD business core",
+      "**Active phase:** Phase 1 closure repair",
       "**Active PR:** draft PR #195",
       "Phase 0 remains complete",
-      "PR #190",
       "Founder-approved execution method",
-      "Active package at session close — governed courier lifecycle",
-      "Finite Phase 1 closure ledger",
+      "Active package at session close — Phase 1 closure repair",
       "Exact next-session order",
+      "Previous Phase 1 source-exit candidate",
       "**Execution epic:** issue #164",
     ],
   ],
@@ -342,8 +347,7 @@ const semanticRequirements: Array<[string, string[]]> = [
 for (const [relativePath, markers] of semanticRequirements) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
-  const normalizedContent = normalizeSemanticText(content);
+  const normalizedContent = normalizeSemanticText(read(relativePath));
 
   for (const marker of markers) {
     if (!normalizedContent.includes(normalizeSemanticText(marker))) {
@@ -356,13 +360,48 @@ for (const [relativePath, markers] of semanticRequirements) {
   }
 }
 
+const activePhaseAuthorities = [
+  "documentation/README.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+];
+const activePhasePattern = /^\s*>\s*\*\*Active phase:\*\*\s*(.+?)\s*$/im;
+const activePhases = new Map<string, string>();
+
+for (const relativePath of activePhaseAuthorities) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) continue;
+  const match = read(relativePath).match(activePhasePattern);
+  if (!match?.[1]) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: "active phase metadata is missing",
+    });
+    continue;
+  }
+
+  const canonicalPhase = normalizeSemanticText(match[1].split(";", 1)[0] ?? "");
+  activePhases.set(relativePath, canonicalPhase);
+}
+
+const uniqueActivePhases = new Set(activePhases.values());
+if (uniqueActivePhases.size > 1) {
+  const detail = [...activePhases.entries()]
+    .map(([file, phase]) => `${file}=${phase}`)
+    .join("; ");
+  for (const relativePath of activePhases.keys()) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `active phase disagrees across authorities: ${detail}`,
+    });
+  }
+}
+
 const exactStaleMarkers: Array<[string, string]> = [
   ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
   ["documentation/operations/WORKING_MEMORY.md", "Publication is the only remaining step"],
-  [
-    "AGENTS.md",
-    "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
-  ],
   ["AGENTS.md", "The compressed program uses four planned sessions"],
   ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
   ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
@@ -372,10 +411,18 @@ const exactStaleMarkers: Array<[string, string]> = [
     "documentation/README.md",
     "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
   ],
+  [
+    "documentation/README.md",
+    "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues",
+  ],
   ["documentation/system/ROADMAP.md", "**Active phase:** Phase 0"],
   [
     "documentation/system/ROADMAP.md",
     "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+  ],
+  [
+    "documentation/system/ROADMAP.md",
+    "**Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete",
   ],
   ["documentation/system/CURRENT_STATE.md", "Internal.13 is not yet Founder-installed"],
   [
@@ -402,6 +449,10 @@ const exactStaleMarkers: Array<[string, string]> = [
   ],
   [
     "documentation/operations/WORKING_MEMORY.md",
+    "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
     "### Corrected Phase 3 durable WhatsApp proposal",
   ],
 ];
@@ -409,7 +460,7 @@ const exactStaleMarkers: Array<[string, string]> = [
 for (const [relativePath, marker] of exactStaleMarkers) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  if (readFileSync(absolutePath, "utf8").includes(marker)) {
+  if (read(relativePath).includes(marker)) {
     findings.push({
       kind: "drift",
       file: relativePath,
@@ -452,9 +503,7 @@ const postMergeFrontierPatterns: Array<{
 for (const relativePath of currentOwnedDocuments) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  const normalizedContent = normalizeSemanticText(
-    readFileSync(absolutePath, "utf8"),
-  );
+  const normalizedContent = normalizeSemanticText(read(relativePath));
 
   for (const { name, pattern } of postMergeFrontierPatterns) {
     if (pattern.test(normalizedContent)) {
@@ -504,7 +553,7 @@ const obsoleteSessionExecutionPatterns: Array<{
 for (const relativePath of currentOwnedDocuments) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
+  const content = read(relativePath);
 
   for (const { name, pattern } of obsoleteSessionExecutionPatterns) {
     pattern.lastIndex = 0;
@@ -525,7 +574,7 @@ console.log(
 
 if (findings.length === 0) {
   console.log(
-    "PASS: FD-028 authorities, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, active phase, shared scripts and relative links are coherent.",
   );
   process.exit(0);
 }
