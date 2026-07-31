@@ -38,6 +38,10 @@ export interface ToolContext {
   // Using `unknown` here to avoid a circular import with db.ts
   db: unknown;
   shop: ShopContext;
+  /** Stable identity of the persisted AI session that owns a source proposal. */
+  sourceIdentity?: string;
+  /** Stable identity of the persisted pending-confirmation proposal. */
+  sourceOrderId?: string;
 }
 
 export interface ToolResult {
