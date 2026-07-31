@@ -199,7 +199,7 @@ choice is sufficiently supported.
 ## Exact next outcome
 
 Resume draft PR #195 from the exact head recorded by GitHub and Working Memory.
-The bounded Phase 1 closure implementation is assembled and its named
+The Phase 1 closure repair implementation is assembled and its named
 implementation head `063f65f2d5613c03fbeb96b37739bfb506ba99f5` passed normal CI
 `30648590071` and Integration source checkpoint `30648587454`.
 
