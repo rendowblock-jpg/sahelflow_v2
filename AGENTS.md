@@ -152,8 +152,12 @@ existence are not authority.
 - Internal.13 is Founder-installed but not Founder-accepted.
 - Internal.5 remains the Founder-accepted baseline.
 - Phase 0 is complete.
-- PR #190 and PR #192 contain protected partial Phase 1 results.
-- PR #191 contains the narrow exact-process-shop compatibility boundary.
+- Phase 1 is source-closed on PR #195 at
+  `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`.
+- Phase 2A.1 session/setup authority is closed at
+  `ad3987e934c1e42706cf7f29010cd96dc534f290`.
+- Phase 2A.2 durable owner identity is closed at
+  `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`.
 - PR #184 contains the protected installation root and rotation package.
 - Draft PR #195 contains the unmerged Phase 1–4 integration program.
 
@@ -167,27 +171,49 @@ A separated sole-agent adversarial review found and closed repeated reconciliati
 unreadable post-effect recovery and pre-query authority-ordering P1s. It was not
 an independent review. Do not reopen Phase 1 without new concrete P0/P1 evidence.
 
-## Exact next outcome — Phase 2A
+## Phase 2A closed packages
 
-Phase 2A — durable local identity and session authority is active.
+### 2A.1 — setup and session authority
 
-The current bounded package must complete:
+Closed at `ad3987e934c1e42706cf7f29010cd96dc534f290` with CI `30656307152` and
+checkpoint `30656308867` successful. Setup is onboarding only; sessions enforce
+24-hour overall and one-hour inactivity limits; reauthentication rotates identity;
+PIN change revokes all sessions; recent proof and fail-closed logout are preserved.
 
-1. setup is onboarding only and never authentication;
-2. public auth routes are exact, with administration protected by default;
-3. sessions enforce 24-hour overall and one-hour inactivity limits;
-4. activity persistence is fail-closed and throttled;
-5. successful PIN reauthentication rotates the session ID;
-6. PIN change revokes all active sessions and creates one replacement;
-7. high-risk actions can require recent PIN proof;
-8. current durable logout semantics remain fail-closed;
-9. route, proxy and database authority tests pass;
-10. one exact-head source checkpoint records the coherent package.
+### 2A.2 — durable owner identity kernel
 
-After this package, implement durable Person, Workspace, Installation,
-WorkspaceMember and Device authority. PIN remains local unlock, never durable
-person identity. PR #186 is obsolete proposed source and may only be mined
-selectively.
+Closed at `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e` with CI `30660637916` and
+checkpoint `30660637617` successful.
+
+The exact installation now owns an HMAC-authenticated Workspace, Installation,
+Person, owner WorkspaceMember, Device and session binding authority. Trusted
+business commands use durable person identity, exact shop grants and policy/
+revocation snapshots. Tamper, restart, concurrency, cross-shop, root rotation,
+missing-authority and anti-reinitialization boundaries are proven. Consequential
+commands resolve authority read-only and cannot bootstrap identity.
+
+PIN remains local unlock and reauthentication, never durable person identity.
+
+## Exact next outcome — Phase 2A.3
+
+Phase 2A remains active. The sole current package is revocation, policy freshness
+and identity administration.
+
+The package must complete:
+
+1. validate durable identity bindings for every configured authenticated request,
+   not only consequential commands;
+2. reject revoked or stale session/member/device/workspace authority before route
+   parsing and effects;
+3. expose an owner-only, exact-installation view of sessions and devices;
+4. revoke another session immediately without permitting accidental removal of
+   the only current owner/device outside a recovery ceremony;
+5. advance policy/revocation snapshots and require successful PIN
+   reauthentication before stale bindings regain authority;
+6. make cross-store ordering fail safe and diagnosable;
+7. prove duplicate/concurrent revoke, restart, database failure, same-shop and
+   cross-shop behavior;
+8. run one exact-head source checkpoint before invitations/team or licensing work.
 
 ## Work rules
 
