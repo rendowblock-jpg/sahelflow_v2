@@ -1258,7 +1258,7 @@ export async function ingestCanonicalCourierTrackingEvent(
       let deliveredAt = order.deliveredAt;
       let orderChanged = false;
 
-      if (!outOfOrder && incomingRank >= DELIVERY_RANK.picked_up) {
+      if (!outOfOrder && incomingRank >= 1) {
         if (
           order.status === "confirmed" &&
           order.fulfillmentState === "ready" &&
