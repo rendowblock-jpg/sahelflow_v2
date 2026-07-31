@@ -8,9 +8,9 @@
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues
+> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency; Phase 2A next
 > **Execution epic:** issue #164
-> **Last updated:** 2026-07-30
+> **Last updated:** 2026-07-31
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, the required experience and engineering invariants, what merged source
@@ -90,6 +90,12 @@ receivable creation (PR #192). A narrow exact-process-shop authorization boundar
 (PR #191) and the Windows-protected installation root with native rotation and
 installed-MSI proof (PR #184) are merged supporting packages. These are partial
 phase results, not completion of Phases 1, 2 or 4.
+
+Draft PR #195 previously recorded a green Phase 1 source-exit candidate. A
+2026-07-31 independent source audit found a blocking courier-rebooking lifecycle
+defect and an authority-audit contradiction. Phase 1 is therefore reopened only
+for that bounded closure repair. Phase 2A remains the immediate dependency after
+the repaired head passes its exact-head checkpoint and independent P0/P1 review.
 
 ## Final completion model
 
