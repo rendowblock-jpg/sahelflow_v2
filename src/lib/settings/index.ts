@@ -28,6 +28,7 @@ const RESERVED_SETTING_KEY_PREFIXES = [
   "auth_",
   "active_license",
   "active_machine_id",
+  "identity_authority_",
 ] as const;
 
 /**
