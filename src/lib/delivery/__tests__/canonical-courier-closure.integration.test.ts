@@ -115,13 +115,15 @@ async function makeDue(effectKey: string): Promise<void> {
   });
 }
 
+async function makeAmbiguous(): Promise<never> {
+  throw new Error("Provider connection ended after request write");
+}
+
 describe("canonical courier Phase 1 closure", () => {
   it("rebooks one reconciled order generation, rejects a concurrent duplicate, and preserves original-key replay", async () => {
     const { orderId, input, booking } = await firstBooking("rebook");
 
-    await drainDueCourierBookings(context, 1, async () => {
-      throw new Error("Provider connection ended after request write");
-    });
+    await drainDueCourierBookings(context, 1, makeAmbiguous);
     const ambiguous = await getCanonicalCourierPosition(context, orderId);
     expect(ambiguous.effect).toMatchObject({
       state: "ambiguous",
@@ -156,8 +158,12 @@ describe("canonical courier Phase 1 closure", () => {
         idempotencyKey: `courier-closure-rebook-b:${orderId}`,
       }),
     ]);
-    expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
-    expect(attempts.filter((attempt) => attempt.status === "rejected")).toHaveLength(1);
+    expect(
+      attempts.filter((attempt) => attempt.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      attempts.filter((attempt) => attempt.status === "rejected"),
+    ).toHaveLength(1);
 
     const winner = attempts.find(
       (attempt): attempt is PromiseFulfilledResult<
@@ -196,6 +202,59 @@ describe("canonical courier Phase 1 closure", () => {
         status: "created",
       },
       effect: { state: "succeeded" },
+    });
+  });
+
+  it("supports the same reconciliation action on a later booking generation", async () => {
+    const { orderId, booking } = await firstBooking("repeat-reconcile");
+
+    await drainDueCourierBookings(context, 1, makeAmbiguous);
+    let position = await getCanonicalCourierPosition(context, orderId);
+    const first = await reconcileCanonicalCourierBooking(context, {
+      deliveryId: booking.result.deliveryId,
+      action: "confirm_not_created",
+      expectedVersion: position.orderVersion,
+      reasonCode: "provider-dashboard-checked-first",
+      idempotencyKey: `courier-closure-reconcile-first:${orderId}`,
+    });
+    expect(first.replayed).toBe(false);
+
+    position = await getCanonicalCourierPosition(context, orderId);
+    const secondBooking = await queueCanonicalCourierBooking(context, {
+      orderId,
+      provider: "yalidine",
+      expectedVersion: position.orderVersion,
+      idempotencyKey: `courier-closure-repeat-book:${orderId}`,
+    });
+    expect(secondBooking.result.deliveryId).toBe(booking.result.deliveryId);
+
+    await drainDueCourierBookings(context, 1, makeAmbiguous);
+    position = await getCanonicalCourierPosition(context, orderId);
+    const second = await reconcileCanonicalCourierBooking(context, {
+      deliveryId: booking.result.deliveryId,
+      action: "confirm_not_created",
+      expectedVersion: position.orderVersion,
+      reasonCode: "provider-dashboard-checked-second",
+      idempotencyKey: `courier-closure-reconcile-second:${orderId}`,
+    });
+
+    expect(second.replayed).toBe(false);
+    expect(second.result).toMatchObject({
+      action: "confirm_not_created",
+      orderVersion: position.orderVersion + 1,
+      deliveryId: booking.result.deliveryId,
+    });
+    expect(
+      await db.businessCommand.count({
+        where: {
+          commandType: "courier.booking.reconcile.confirm_not_created.v1",
+        },
+      }),
+    ).toBe(2);
+    expect(await getCanonicalCourierPosition(context, orderId)).toMatchObject({
+      deliveryState: "not_created",
+      delivery: { status: "booking_failed" },
+      availableActions: expect.arrayContaining(["book"]),
     });
   });
 
@@ -348,13 +407,79 @@ describe("canonical courier Phase 1 closure", () => {
       }),
     ).toBe(1);
   });
+
+  it("makes an unreadable expired post-effect lease manually reconcilable", async () => {
+    const { orderId, booking } = await firstBooking("post-effect-corrupt");
+    const effect = await db.outboxIntent.findUniqueOrThrow({
+      where: { effectKey: booking.result.effectKey },
+    });
+    await db.outboxIntent.update({
+      where: { id: effect.id },
+      data: {
+        payloadJson: "not-a-valid-sealed-business-payload",
+        status: "processing",
+        attemptCount: 1,
+        lockedAt: new Date(Date.now() - 300_000),
+        leaseToken: "expired-post-effect-lease",
+        effectStartedAt: new Date(Date.now() - 240_000),
+      },
+    });
+
+    let sends = 0;
+    expect(
+      await drainDueCourierBookings(context, 1, async () => {
+        sends += 1;
+        throw new Error("must not repeat an expired post-effect request");
+      }),
+    ).toBe(0);
+    expect(sends).toBe(0);
+
+    const position = await getCanonicalCourierPosition(context, orderId);
+    expect(position).toMatchObject({
+      delivery: { status: "reconciliation_required" },
+      effect: {
+        state: "ambiguous",
+        errorCode:
+          "COURIER_EFFECT_LEASE_EXPIRED_AFTER_START_PAYLOAD_UNREADABLE",
+        requiresReconciliation: true,
+      },
+      availableActions: expect.arrayContaining([
+        "reconcile_created",
+        "reconcile_not_created",
+      ]),
+    });
+
+    const reconciled = await reconcileCanonicalCourierBooking(context, {
+      deliveryId: booking.result.deliveryId,
+      action: "confirm_not_created",
+      expectedVersion: position.orderVersion,
+      reasonCode: "provider-dashboard-checked-after-corruption",
+      idempotencyKey: `courier-closure-post-effect-reconcile:${orderId}`,
+    });
+    expect(reconciled.result).toMatchObject({
+      action: "confirm_not_created",
+      orderVersion: position.orderVersion + 1,
+    });
+    expect(await getCanonicalCourierPosition(context, orderId)).toMatchObject({
+      deliveryState: "not_created",
+      delivery: { status: "booking_failed" },
+      availableActions: expect.arrayContaining(["book"]),
+    });
+  });
 });
 
 describe("canonical courier public boundary", () => {
   it("keeps the preserved implementation private behind the governed facade", () => {
-    const roots = [resolve(process.cwd(), "src"), resolve(process.cwd(), "scripts")];
+    const roots = [
+      resolve(process.cwd(), "src"),
+      resolve(process.cwd(), "scripts"),
+    ];
     const allowed = new Set([
       resolve(process.cwd(), "src/lib/delivery/canonical-courier.ts"),
+      resolve(
+        process.cwd(),
+        "src/lib/delivery/canonical-courier-reviewed-base.ts",
+      ),
       resolve(process.cwd(), "src/lib/delivery/canonical-courier-legacy.ts"),
       resolve(
         process.cwd(),
@@ -375,7 +500,11 @@ describe("canonical courier public boundary", () => {
         if (!/\.(?:ts|tsx|js|mjs|cjs)$/.test(name) || allowed.has(path)) {
           continue;
         }
-        if (readFileSync(path, "utf8").includes("canonical-courier-legacy")) {
+        const content = readFileSync(path, "utf8");
+        if (
+          content.includes("canonical-courier-legacy") ||
+          content.includes("canonical-courier-reviewed-base")
+        ) {
           offenders.push(path.replace(`${process.cwd()}\\`, ""));
         }
       }
