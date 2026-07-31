@@ -1,25 +1,26 @@
 /**
- * Auth server tests — T-AUTH-INFRA.
+ * Auth server integration tests.
  *
- * Covers setupAuth, verifyAuthPin, changeAuthPin, isAuthSetup, getAuthSecret,
- * createSession, destroySession, isAuthenticated, requireAuth, auditLog,
- * getSessionToken.
- *
- * Uses the real `db`/`dbRaw` from @/lib/db (which resolves to the test SQLite
- * DB via DATABASE_URL) + a controllable in-memory cookie store mock for
- * next/headers.
- *
- * AUTH_SECRET env is cleared at the top so getAuthSecret() reads from the DB
- * (the row written by setupAuth) instead of the env var.
+ * Uses the real test SQLite database plus an in-memory cookie store. These tests
+ * exercise configured database-backed session authority; the direct business-
+ * route compatibility environment is explicitly disabled here.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
-// ── Mock cookie store (shared across all `cookies()` calls in a test) ─────────
 const cookieJar = vi.hoisted(() => {
   const map = new Map<string, string>();
   return {
     map,
-    get: vi.fn((key: string) => (map.has(key) ? { value: map.get(key) } : undefined)),
+    get: vi.fn((key: string) =>
+      map.has(key) ? { value: map.get(key) } : undefined,
+    ),
     set: vi.fn((key: string, value: string) => {
       map.set(key, value);
     }),
@@ -38,261 +39,307 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
-// Clear AUTH_SECRET env so getAuthSecret() exercises the DB path
 delete process.env.AUTH_SECRET;
+delete process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY;
 
 import { dbRaw } from "@/lib/db";
+import { SahelFlowError } from "@/types/errors";
+import { AUTH_COOKIE, SENSITIVE_REAUTH_WINDOW_MS } from "../config";
 import {
-  setupAuth,
-  verifyAuthPin,
+  auditLog,
   changeAuthPin,
-  isAuthSetup,
-  getAuthSecret,
   createSession,
   destroySession,
-  isAuthenticated,
-  requireAuth,
-  auditLog,
+  getAuthSecret,
   getSessionToken,
+  isAuthenticated,
+  isAuthSetup,
+  reauthenticateCurrentSession,
+  requireAuth,
+  requireRecentReauthentication,
+  setupAuth,
+  verifyAuthPin,
 } from "../server";
-import { SahelFlowError } from "@/types/errors";
-import { AUTH_COOKIE } from "../config";
 
-// ── Test DB cleanup ──────────────────────────────────────────────────────────
+async function cleanAuthDb(): Promise<void> {
+  await dbRaw.$transaction([
+    dbRaw.auditLog.deleteMany(),
+    dbRaw.session.deleteMany(),
+    dbRaw.authSecret.deleteMany(),
+    dbRaw.setting.deleteMany(),
+  ]);
+}
+
 beforeEach(async () => {
+  delete process.env.AUTH_SECRET;
+  delete process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY;
   cookieJar.reset();
   cookieJar.get.mockClear();
   cookieJar.set.mockClear();
   cookieJar.delete.mockClear();
-  await dbRaw.$transaction([
-    dbRaw.auditLog.deleteMany(),
-    dbRaw.session.deleteMany(),
-    dbRaw.authSecret.deleteMany(),
-    dbRaw.setting.deleteMany(),
-  ]);
+  await cleanAuthDb();
 });
 
 afterEach(async () => {
-  await dbRaw.$transaction([
-    dbRaw.auditLog.deleteMany(),
-    dbRaw.session.deleteMany(),
-    dbRaw.authSecret.deleteMany(),
-    dbRaw.setting.deleteMany(),
-  ]);
+  delete process.env.AUTH_SECRET;
+  delete process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY;
+  await dbRaw.$executeRawUnsafe(
+    "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
+  );
+  await cleanAuthDb();
 });
 
-// ── setupAuth ────────────────────────────────────────────────────────────────
 describe("setupAuth", () => {
-  it("creates an AuthSecret row + returns the secret", async () => {
+  it("creates one AuthSecret row and returns its secret", async () => {
     const result = await setupAuth("12345678");
-    expect(result.secret).toBeTruthy();
-    expect(typeof result.secret).toBe("string");
     expect(result.secret.length).toBeGreaterThan(10);
 
     const row = await dbRaw.authSecret.findUnique({ where: { id: "default" } });
-    expect(row).not.toBeNull();
-    expect(row!.secret).toBe(result.secret);
-    expect(row!.pinHash).toBeTruthy();
-    // PIN hash should never store the plaintext PIN
-    expect(row!.pinHash).not.toContain("12345678");
+    expect(row).toMatchObject({ id: "default", secret: result.secret });
+    expect(row?.pinHash).toBeTruthy();
+    expect(row?.pinHash).not.toContain("12345678");
   });
 
-  it("upserts — calling twice updates the existing row", async () => {
+  it("upserts the single local auth authority", async () => {
     const first = await setupAuth("11111111");
     const second = await setupAuth("22222222");
     expect(second.secret).not.toBe(first.secret);
-
-    const rows = await dbRaw.authSecret.findMany();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.secret).toBe(second.secret);
+    expect(await dbRaw.authSecret.count()).toBe(1);
   });
 });
 
-// ── verifyAuthPin ────────────────────────────────────────────────────────────
 describe("verifyAuthPin", () => {
-  it("returns true for the correct PIN", async () => {
+  it("accepts the correct PIN and rejects an incorrect PIN", async () => {
     await setupAuth("12345678");
-    const ok = await verifyAuthPin("12345678");
-    expect(ok).toBe(true);
+    await expect(verifyAuthPin("12345678")).resolves.toBe(true);
+    await expect(verifyAuthPin("00000000")).resolves.toBe(false);
   });
 
-  it("returns false for an incorrect PIN", async () => {
-    await setupAuth("12345678");
-    const ok = await verifyAuthPin("00000000");
-    expect(ok).toBe(false);
-  });
-
-  it("returns false when no AuthSecret row exists", async () => {
-    const ok = await verifyAuthPin("12345678");
-    expect(ok).toBe(false);
+  it("rejects PIN proof before setup", async () => {
+    await expect(verifyAuthPin("12345678")).resolves.toBe(false);
   });
 });
 
-// ── changeAuthPin ────────────────────────────────────────────────────────────
 describe("changeAuthPin", () => {
-  it("changes the PIN when the current PIN is correct", async () => {
+  it("requires a live session, changes the PIN, revokes every session, and rotates identity", async () => {
     await setupAuth("12345678");
-    const result = await changeAuthPin("12345678", "87654321");
-    expect(result.changed).toBe(true);
-    expect(result.reason).toBeUndefined();
+    await createSession("10.0.0.1");
+    const firstSession = await dbRaw.session.findFirstOrThrow({
+      orderBy: { issuedAt: "asc" },
+    });
 
-    // New PIN works, old PIN doesn't
+    // A second login proves PIN rotation revokes sessions beyond the caller.
+    await createSession("10.0.0.2");
+    const tokenBefore = cookieJar.map.get(AUTH_COOKIE);
+    const sessionsBefore = await dbRaw.session.findMany({
+      orderBy: { issuedAt: "asc" },
+    });
+    expect(sessionsBefore).toHaveLength(2);
+
+    const result = await changeAuthPin(
+      "12345678",
+      "87654321",
+      "10.0.0.3",
+    );
+    expect(result).toEqual({ changed: true });
     expect(await verifyAuthPin("87654321")).toBe(true);
     expect(await verifyAuthPin("12345678")).toBe(false);
+
+    const sessionsAfter = await dbRaw.session.findMany({
+      orderBy: { issuedAt: "asc" },
+    });
+    expect(sessionsAfter).toHaveLength(3);
+    expect(sessionsAfter.filter((session) => session.revokedAt === null)).toHaveLength(
+      1,
+    );
+    expect(
+      sessionsAfter.find((session) => session.id === firstSession.id)?.revokedAt,
+    ).not.toBeNull();
+    expect(cookieJar.map.get(AUTH_COOKIE)).not.toBe(tokenBefore);
+    await expect(isAuthenticated()).resolves.toBe(true);
   });
 
-  it("refuses to change when the current PIN is wrong", async () => {
+  it("refuses an incorrect current PIN without rotating or revoking", async () => {
     await setupAuth("12345678");
+    await createSession();
+    const tokenBefore = cookieJar.map.get(AUTH_COOKIE);
+
     const result = await changeAuthPin("wrong-pin", "87654321");
-    expect(result.changed).toBe(false);
-    expect(result.reason).toBe("current_pin_invalid");
-
-    // Original PIN still works
+    expect(result).toEqual({
+      changed: false,
+      reason: "current_pin_invalid",
+    });
     expect(await verifyAuthPin("12345678")).toBe(true);
-  });
-});
-
-// ── isAuthSetup ──────────────────────────────────────────────────────────────
-describe("isAuthSetup", () => {
-  it("returns false before setupAuth is called", async () => {
-    expect(await isAuthSetup()).toBe(false);
+    expect(cookieJar.map.get(AUTH_COOKIE)).toBe(tokenBefore);
+    expect(await dbRaw.session.count({ where: { revokedAt: null } })).toBe(1);
   });
 
-  it("returns true after setupAuth is called", async () => {
+  it("rejects PIN administration without an authenticated session", async () => {
     await setupAuth("12345678");
-    expect(await isAuthSetup()).toBe(true);
+    await expect(
+      changeAuthPin("12345678", "87654321"),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED", statusCode: 401 });
   });
 });
 
-// ── getAuthSecret ────────────────────────────────────────────────────────────
-describe("getAuthSecret", () => {
-  it("returns the secret stored by setupAuth", async () => {
+describe("reauthenticateCurrentSession", () => {
+  it("rotates the current session and resets recent-proof time", async () => {
+    await setupAuth("12345678");
+    await createSession("10.0.0.1");
+    const previous = await dbRaw.session.findFirstOrThrow();
+    const tokenBefore = cookieJar.map.get(AUTH_COOKIE);
+
+    const result = await reauthenticateCurrentSession("12345678", "10.0.0.2");
+    expect(result).toEqual({ reauthenticated: true });
+
+    const oldSession = await dbRaw.session.findUniqueOrThrow({
+      where: { id: previous.id },
+    });
+    expect(oldSession.revokedAt).not.toBeNull();
+    expect(await dbRaw.session.count({ where: { revokedAt: null } })).toBe(1);
+    expect(cookieJar.map.get(AUTH_COOKIE)).not.toBe(tokenBefore);
+    await expect(requireRecentReauthentication()).resolves.toBeUndefined();
+  });
+
+  it("does not rotate for an invalid PIN", async () => {
+    await setupAuth("12345678");
+    await createSession();
+    const tokenBefore = cookieJar.map.get(AUTH_COOKIE);
+
+    await expect(
+      reauthenticateCurrentSession("wrong-pin"),
+    ).resolves.toEqual({
+      reauthenticated: false,
+      reason: "pin_invalid",
+    });
+    expect(cookieJar.map.get(AUTH_COOKIE)).toBe(tokenBefore);
+    expect(await dbRaw.session.count({ where: { revokedAt: null } })).toBe(1);
+  });
+});
+
+describe("requireRecentReauthentication", () => {
+  it("rejects a session older than the sensitive proof window", async () => {
+    await setupAuth("12345678");
+    await createSession();
+    const session = await dbRaw.session.findFirstOrThrow();
+    const oldTime = new Date(
+      Date.now() - SENSITIVE_REAUTH_WINDOW_MS - 60_000,
+    );
+    await dbRaw.session.update({
+      where: { id: session.id },
+      data: { issuedAt: oldTime, lastSeenAt: oldTime },
+    });
+
+    await expect(requireRecentReauthentication()).rejects.toMatchObject({
+      code: "REAUTHENTICATION_REQUIRED",
+      statusCode: 403,
+    });
+  });
+});
+
+describe("isAuthSetup and getAuthSecret", () => {
+  it("distinguishes unconfigured and configured auth", async () => {
+    await expect(isAuthSetup()).resolves.toBe(false);
     const { secret } = await setupAuth("12345678");
-    const fetched = await getAuthSecret();
-    expect(fetched).toBe(secret);
+    await expect(isAuthSetup()).resolves.toBe(true);
+    await expect(getAuthSecret()).resolves.toBe(secret);
   });
 
-  it("returns null when no secret is configured", async () => {
-    const fetched = await getAuthSecret();
-    expect(fetched).toBeNull();
-  });
-
-  it("prefers the AUTH_SECRET env var when set", async () => {
+  it("prefers the explicit AUTH_SECRET environment authority", async () => {
     process.env.AUTH_SECRET = "env-secret-override";
-    try {
-      await setupAuth("12345678");
-      const fetched = await getAuthSecret();
-      expect(fetched).toBe("env-secret-override");
-    } finally {
-      delete process.env.AUTH_SECRET;
-    }
+    await setupAuth("12345678");
+    await expect(getAuthSecret()).resolves.toBe("env-secret-override");
   });
 });
 
-// ── createSession + isAuthenticated + destroySession ─────────────────────────
-describe("isAuthenticated — setup mode + no cookie", () => {
-  it("returns true in setup mode (no secret)", async () => {
-    // No AuthSecret row, no AUTH_SECRET env → setup mode → allow
-    expect(await isAuthenticated()).toBe(true);
+describe("setup and authentication state", () => {
+  it("does not treat setup mode as authenticated", async () => {
+    await expect(isAuthenticated()).resolves.toBe(false);
+    await expect(requireAuth()).rejects.toMatchObject({
+      code: "AUTH_SETUP_REQUIRED",
+      statusCode: 409,
+    });
   });
 
-  it("returns false after setup but before login (no cookie)", async () => {
+  it("remains unauthenticated after setup until login", async () => {
     await setupAuth("12345678");
-    expect(await isAuthenticated()).toBe(false);
+    await expect(isAuthenticated()).resolves.toBe(false);
+    await expect(requireAuth()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      statusCode: 401,
+    });
   });
 });
 
 describe("createSession", () => {
-  it("sets a cookie + creates a Session row", async () => {
+  it("sets the cookie and persists issued/last-seen authority", async () => {
     await setupAuth("12345678");
     await createSession("127.0.0.1");
 
-    // Cookie was set
     expect(cookieJar.set).toHaveBeenCalledWith(
       AUTH_COOKIE,
       expect.any(String),
       expect.objectContaining({ httpOnly: true, path: "/" }),
     );
-    expect(cookieJar.map.has(AUTH_COOKIE)).toBe(true);
-
-    // Session row was created in the DB
-    const sessions = await dbRaw.session.findMany();
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0]!.ip).toBe("127.0.0.1");
+    const session = await dbRaw.session.findFirstOrThrow();
+    expect(session.ip).toBe("127.0.0.1");
+    expect(session.issuedAt).toBeInstanceOf(Date);
+    expect(session.lastSeenAt.getTime()).toBeGreaterThanOrEqual(
+      session.issuedAt.getTime(),
+    );
+    await expect(isAuthenticated()).resolves.toBe(true);
   });
 
-  it("throws when auth is not set up", async () => {
+  it("rejects login before auth setup", async () => {
     await expect(createSession()).rejects.toThrow(/not set up/i);
-  });
-
-  it("isAuthenticated returns true after createSession", async () => {
-    await setupAuth("12345678");
-    await createSession();
-    expect(await isAuthenticated()).toBe(true);
   });
 });
 
-describe("isAuthenticated — token verification", () => {
-  it("returns false for a tampered/invalid token", async () => {
+describe("session token authority", () => {
+  it("rejects tampered tokens, changed signing secrets, and missing rows", async () => {
     await setupAuth("12345678");
     cookieJar.map.set(AUTH_COOKIE, "invalid.token");
-    expect(await isAuthenticated()).toBe(false);
-  });
+    await expect(isAuthenticated()).resolves.toBe(false);
 
-  it("returns false for a token signed with a different secret", async () => {
-    await setupAuth("12345678");
+    cookieJar.reset();
     await createSession();
-    // setupAuth generates a NEW secret each call → old token's HMAC fails
     await setupAuth("12345678");
-    expect(await isAuthenticated()).toBe(false);
-  });
+    await expect(isAuthenticated()).resolves.toBe(false);
 
-  it("returns false when the session row was deleted", async () => {
-    await setupAuth("12345678");
+    cookieJar.reset();
     await createSession();
     await dbRaw.session.deleteMany();
-    // HMAC valid but session row missing → false
-    expect(await isAuthenticated()).toBe(false);
+    await expect(isAuthenticated()).resolves.toBe(false);
   });
 });
 
 describe("destroySession", () => {
-  it("revokes the session + deletes the cookie", async () => {
+  it("revokes the current session and deletes its cookie", async () => {
     await setupAuth("12345678");
     await createSession();
-    const sessionId = (await dbRaw.session.findFirst())!.id;
+    const sessionId = (await dbRaw.session.findFirstOrThrow()).id;
 
     await destroySession();
-
-    // Cookie deleted
     expect(cookieJar.delete).toHaveBeenCalledWith(AUTH_COOKIE);
     expect(cookieJar.map.has(AUTH_COOKIE)).toBe(false);
-
-    // Session row marked revoked
-    const session = await dbRaw.session.findUnique({ where: { id: sessionId } });
-    expect(session).not.toBeNull();
-    expect(session!.revokedAt).not.toBeNull();
-
-    // isAuthenticated now returns false (revoked)
-    expect(await isAuthenticated()).toBe(false);
+    expect(
+      (await dbRaw.session.findUniqueOrThrow({ where: { id: sessionId } }))
+        .revokedAt,
+    ).not.toBeNull();
+    await expect(isAuthenticated()).resolves.toBe(false);
   });
 
-  it("is a no-op when no cookie is set", async () => {
+  it("clears a missing-session cookie without inventing a revocation", async () => {
     await setupAuth("12345678");
     await expect(destroySession()).resolves.toBeUndefined();
     expect(cookieJar.delete).toHaveBeenCalledWith(AUTH_COOKIE);
-    // No sessions to revoke
-    const sessions = await dbRaw.session.findMany();
-    expect(sessions).toHaveLength(0);
+    expect(await dbRaw.session.count()).toBe(0);
   });
 
   it("preserves the retryable cookie when durable revocation fails", async () => {
     await setupAuth("12345678");
     await createSession();
     const token = cookieJar.map.get(AUTH_COOKIE);
-    await dbRaw.$executeRawUnsafe(
-      "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
-    );
     await dbRaw.$executeRawUnsafe(`
       CREATE TRIGGER auth_test_block_session_revoke
       BEFORE UPDATE OF revokedAt ON Session
@@ -301,80 +348,61 @@ describe("destroySession", () => {
       END
     `);
 
-    try {
-      await expect(destroySession()).rejects.toMatchObject({
-        code: "SESSION_REVOCATION_FAILED",
-        statusCode: 503,
-      });
-    } finally {
-      await dbRaw.$executeRawUnsafe(
-        "DROP TRIGGER IF EXISTS auth_test_block_session_revoke",
-      );
-    }
-
+    await expect(destroySession()).rejects.toMatchObject({
+      code: "SESSION_REVOCATION_FAILED",
+      statusCode: 503,
+    });
     expect(cookieJar.delete).not.toHaveBeenCalled();
     expect(cookieJar.map.get(AUTH_COOKIE)).toBe(token);
-    const session = await dbRaw.session.findFirst();
-    expect(session?.revokedAt).toBeNull();
+    expect((await dbRaw.session.findFirst())?.revokedAt).toBeNull();
   });
 });
 
 describe("getSessionToken", () => {
-  it("returns undefined when no cookie is set", async () => {
-    const token = await getSessionToken();
-    expect(token).toBeUndefined();
-  });
-
-  it("returns the cookie value when set", async () => {
+  it("returns undefined without a cookie and the signed value after login", async () => {
+    await expect(getSessionToken()).resolves.toBeUndefined();
     await setupAuth("12345678");
     await createSession();
     const token = await getSessionToken();
-    expect(typeof token).toBe("string");
-    expect(token!.split(".")).toHaveLength(2);
+    expect(token?.split(".")).toHaveLength(2);
   });
 });
 
-// ── requireAuth ──────────────────────────────────────────────────────────────
 describe("requireAuth", () => {
-  it("throws SahelFlowError(401) when unauthenticated", async () => {
+  it("requires a configured live session", async () => {
     await setupAuth("12345678");
-    // No session → isAuthenticated false → requireAuth throws
+    await expect(requireAuth()).rejects.toBeInstanceOf(SahelFlowError);
     await expect(requireAuth()).rejects.toMatchObject({
       code: "UNAUTHORIZED",
       statusCode: 401,
     });
-    await expect(requireAuth()).rejects.toBeInstanceOf(SahelFlowError);
-  });
 
-  it("does not throw when authenticated", async () => {
-    await setupAuth("12345678");
     await createSession();
-    await expect(requireAuth()).resolves.toBeUndefined();
-  });
-
-  it("does not throw in setup mode (no secret yet)", async () => {
     await expect(requireAuth()).resolves.toBeUndefined();
   });
 });
 
-// ── auditLog ─────────────────────────────────────────────────────────────────
 describe("auditLog", () => {
-  it("creates an AuditLog row with action + ip + JSON metadata", async () => {
-    await auditLog("auth.login.success", { userId: "u1", method: "pin" }, "10.0.0.1");
-
-    const rows = await dbRaw.auditLog.findMany();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.action).toBe("auth.login.success");
-    expect(rows[0]!.ip).toBe("10.0.0.1");
-    expect(JSON.parse(rows[0]!.metadata!)).toEqual({ userId: "u1", method: "pin" });
+  it("persists action, IP and JSON metadata", async () => {
+    await auditLog(
+      "auth.login.success",
+      { userId: "u1", method: "pin" },
+      "10.0.0.1",
+    );
+    const row = await dbRaw.auditLog.findFirstOrThrow();
+    expect(row.action).toBe("auth.login.success");
+    expect(row.ip).toBe("10.0.0.1");
+    expect(JSON.parse(row.metadata ?? "{}")).toEqual({
+      userId: "u1",
+      method: "pin",
+    });
   });
 
-  it("creates a row with null metadata when none is provided", async () => {
+  it("supports an audit fact without metadata", async () => {
     await auditLog("auth.logout");
-    const rows = await dbRaw.auditLog.findMany();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.action).toBe("auth.logout");
-    expect(rows[0]!.ip).toBeNull();
-    expect(rows[0]!.metadata).toBeNull();
+    const row = await dbRaw.auditLog.findFirstOrThrow();
+    expect(row.action).toBe("auth.logout");
+    expect(row.ip).toBeNull();
+    expect(row.metadata).toBeNull();
   });
 });
