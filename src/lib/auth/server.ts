@@ -11,6 +11,7 @@ import {
   bindOwnerIdentitySession,
   identityAuthorityMarkerPath,
   identityAuthorityPath,
+  resolveDurableIdentityActor,
 } from "@/lib/identity/control-authority";
 import {
   resolveSessionAuthority,
@@ -370,13 +371,42 @@ function sessionAuthorityError(
   return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
 }
 
+async function validateDurableIdentitySession(
+  authority: Extract<SessionAuthorityResult, { status: "authenticated" }>,
+): Promise<void> {
+  try {
+    await assertIdentityAuthorityContinuity();
+    const actor = await resolveDurableIdentityActor(
+      authority.sessionId,
+      shopContext,
+    );
+    if (!actor) {
+      throw new SahelFlowError(
+        "The authenticated session has no durable identity authority",
+        "IDENTITY_SESSION_BINDING_REQUIRED",
+        401,
+      );
+    }
+  } catch (error) {
+    if (error instanceof SahelFlowError) throw error;
+    throw new SahelFlowError(
+      "Durable identity authority is temporarily unavailable",
+      "IDENTITY_AUTHORITY_UNAVAILABLE",
+      503,
+    );
+  }
+}
+
 async function requireAuthenticatedSession(
   fresh = false,
 ): Promise<Extract<SessionAuthorityResult, { status: "authenticated" }>> {
   const authority = fresh
     ? await resolveCurrentSessionAuthority()
     : await getCurrentSessionAuthority();
-  if (authority.status === "authenticated") return authority;
+  if (authority.status === "authenticated") {
+    await validateDurableIdentitySession(authority);
+    return authority;
+  }
   if (authority.status === "setup") {
     throw new SahelFlowError(
       "Authentication setup is required",
@@ -420,8 +450,12 @@ export async function getSessionToken(): Promise<string | undefined> {
 }
 
 export const isAuthenticated = cache(async (): Promise<boolean> => {
-  const authority = await getCurrentSessionAuthority();
-  return authority.status === "authenticated";
+  try {
+    await requireAuthenticatedSession();
+    return true;
+  } catch {
+    return false;
+  }
 });
 
 function directBusinessRouteTestCompatibilityEnabled(): boolean {
