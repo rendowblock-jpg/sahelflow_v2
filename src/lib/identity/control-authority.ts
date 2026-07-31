@@ -35,6 +35,7 @@ const LOCK_STALE_MS = 30_000;
 const LOCK_TIMEOUT_MS = 5_000;
 const LOCK_RETRY_MS = 10;
 const MAX_SESSION_BINDINGS = 1_000;
+const ROOT_KEY_BYTES = 32;
 
 const exactIdSchema = z.string().regex(/^[0-9a-f]{32}$/i);
 const exactSessionIdSchema = z
@@ -160,7 +161,10 @@ const markerEnvelopeSchema = z
 
 type IdentityPayload = z.infer<typeof payloadSchema>;
 type IdentityEnvelope = z.infer<typeof envelopeSchema>;
+type MarkerPayload = z.infer<typeof markerPayloadSchema>;
 type MarkerEnvelope = z.infer<typeof markerEnvelopeSchema>;
+
+type AuthenticationKeyState = "old" | "new";
 
 export type DurableIdentityActor = Readonly<{
   personId: string;
@@ -174,6 +178,12 @@ export type DurableIdentityActor = Readonly<{
 export type BindOwnerIdentityOptions = Readonly<{
   revokeSessionIds?: readonly string[];
   revokeAllOtherSessions?: boolean;
+}>;
+
+export type IdentityAuthorityRotationResult = Readonly<{
+  state: "absent" | "verified" | "reauthenticated" | "already-new";
+  authorityKeyState: AuthenticationKeyState | null;
+  markerKeyState: AuthenticationKeyState | "missing" | null;
 }>;
 
 let processQueue: Promise<void> = Promise.resolve();
@@ -206,6 +216,12 @@ function randomExactId(): string {
   return randomBytes(16).toString("hex");
 }
 
+function assertRootKey(key: Buffer, label: string): void {
+  if (!Buffer.isBuffer(key) || key.length !== ROOT_KEY_BYTES) {
+    throw identityError(`${label} must be a 256-bit installation root`);
+  }
+}
+
 function canonicalize(value: unknown): unknown {
   if (
     value === null ||
@@ -230,9 +246,13 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(canonicalize(value));
 }
 
-function macFor(label: string, payload: unknown): string {
-  const root = getMasterKey();
-  const derived = createHmac("sha256", root)
+function macFor(
+  label: string,
+  payload: unknown,
+  rootKey: Buffer = getMasterKey(),
+): string {
+  assertRootKey(rootKey, "Identity authority root key");
+  const derived = createHmac("sha256", rootKey)
     .update("sahelflow.identity-authority.key.v1", "utf8")
     .digest();
   try {
@@ -246,35 +266,61 @@ function macFor(label: string, payload: unknown): string {
   }
 }
 
-function macMatches(label: string, payload: unknown, supplied: string): boolean {
+function macMatches(
+  label: string,
+  payload: unknown,
+  supplied: string,
+  rootKey: Buffer = getMasterKey(),
+): boolean {
   if (!/^[0-9a-f]{64}$/i.test(supplied)) return false;
-  const expected = Buffer.from(macFor(label, payload), "hex");
+  const expected = Buffer.from(macFor(label, payload, rootKey), "hex");
   const actual = Buffer.from(supplied, "hex");
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
-function createEnvelope(payload: IdentityPayload): IdentityEnvelope {
+function createEnvelope(
+  payload: IdentityPayload,
+  rootKey: Buffer = getMasterKey(),
+): IdentityEnvelope {
   return {
     formatVersion: AUTHORITY_FORMAT_VERSION,
     keyId: AUTHORITY_KEY_ID,
     payload,
-    mac: macFor("authority", payload),
+    mac: macFor("authority", payload, rootKey),
   };
 }
 
-function createMarker(shop: ShopContext): MarkerEnvelope {
-  const payload = {
+function markerPayload(
+  workspaceId: string,
+  installationId: string,
+): MarkerPayload {
+  return {
     formatVersion: AUTHORITY_FORMAT_VERSION,
-    workspaceId: shop.workspaceId,
-    installationId: shop.installationId,
+    workspaceId,
+    installationId,
     authorityFile: AUTHORITY_FILE_NAME,
-  } as const;
+  };
+}
+
+function createMarkerFromIds(
+  workspaceId: string,
+  installationId: string,
+  rootKey: Buffer = getMasterKey(),
+): MarkerEnvelope {
+  const payload = markerPayload(workspaceId, installationId);
   return {
     formatVersion: AUTHORITY_FORMAT_VERSION,
     keyId: AUTHORITY_KEY_ID,
     payload,
-    mac: macFor("marker", payload),
+    mac: macFor("marker", payload, rootKey),
   };
+}
+
+function createMarker(
+  shop: ShopContext,
+  rootKey: Buffer = getMasterKey(),
+): MarkerEnvelope {
+  return createMarkerFromIds(shop.workspaceId, shop.installationId, rootKey);
 }
 
 function readJson(path: string): unknown {
@@ -339,25 +385,50 @@ function validatePayloadRelations(payload: IdentityPayload): void {
   }
 }
 
-function readAuthority(): IdentityEnvelope | null {
+function parseAuthorityEnvelope(): IdentityEnvelope | null {
   const path = identityAuthorityPath();
   if (!existsSync(path)) return null;
   const envelope = envelopeSchema.parse(readJson(path));
-  if (!macMatches("authority", envelope.payload, envelope.mac)) {
-    throw identityError("Identity authority authentication failed");
-  }
   validatePayloadRelations(envelope.payload);
   return envelope;
 }
 
-function readMarker(): MarkerEnvelope | null {
+function parseMarkerEnvelope(): MarkerEnvelope | null {
   const path = identityAuthorityMarkerPath();
   if (!existsSync(path)) return null;
-  const marker = markerEnvelopeSchema.parse(readJson(path));
-  if (!macMatches("marker", marker.payload, marker.mac)) {
+  return markerEnvelopeSchema.parse(readJson(path));
+}
+
+function readAuthority(rootKey: Buffer = getMasterKey()): IdentityEnvelope | null {
+  const envelope = parseAuthorityEnvelope();
+  if (!envelope) return null;
+  if (!macMatches("authority", envelope.payload, envelope.mac, rootKey)) {
+    throw identityError("Identity authority authentication failed");
+  }
+  return envelope;
+}
+
+function readMarker(rootKey: Buffer = getMasterKey()): MarkerEnvelope | null {
+  const marker = parseMarkerEnvelope();
+  if (!marker) return null;
+  if (!macMatches("marker", marker.payload, marker.mac, rootKey)) {
     throw identityError("Identity authority initialization marker is invalid");
   }
   return marker;
+}
+
+function keyStateForMac(
+  label: string,
+  payload: unknown,
+  supplied: string,
+  oldKey: Buffer,
+  newKey: Buffer,
+): AuthenticationKeyState {
+  if (macMatches(label, payload, supplied, newKey)) return "new";
+  if (macMatches(label, payload, supplied, oldKey)) return "old";
+  throw identityError(
+    `Identity ${label} authentication failed under both rotation roots`,
+  );
 }
 
 function assertContext(payload: IdentityPayload, shop: ShopContext): void {
@@ -766,4 +837,104 @@ export async function ensureDurableIdentityActor(
 ): Promise<DurableIdentityActor> {
   return (await resolveDurableIdentityActor(sessionId, shop)) ??
     bindOwnerIdentitySession(sessionId, shop);
+}
+
+/**
+ * Re-authenticate installation identity files during master-key rotation.
+ *
+ * The global maintenance lease already proves the app is stopped. Each file is
+ * accepted under either the current or candidate key so an interrupted rotation
+ * can resume safely after one file was already rewritten. A marker without the
+ * authority remains a hard failure; an authority without a marker is repaired
+ * from its authenticated workspace/installation payload.
+ */
+export function rotateIdentityAuthorityAuthentication(
+  oldKey: Buffer,
+  newKey: Buffer,
+  dryRun = false,
+): IdentityAuthorityRotationResult {
+  assertRootKey(oldKey, "Current identity authority root key");
+  assertRootKey(newKey, "Candidate identity authority root key");
+  if (timingSafeEqual(oldKey, newKey)) {
+    throw identityError("Identity authority rotation roots must be different");
+  }
+
+  const authority = parseAuthorityEnvelope();
+  const marker = parseMarkerEnvelope();
+  if (!authority && !marker) {
+    return {
+      state: "absent",
+      authorityKeyState: null,
+      markerKeyState: null,
+    };
+  }
+  if (!authority && marker) {
+    throw identityError(
+      "Identity authority marker exists without its authority file",
+      "IDENTITY_AUTHORITY_MISSING",
+      503,
+    );
+  }
+
+  const requiredAuthority = authority!;
+  const authorityKeyState = keyStateForMac(
+    "authority",
+    requiredAuthority.payload,
+    requiredAuthority.mac,
+    oldKey,
+    newKey,
+  );
+
+  let markerKeyState: AuthenticationKeyState | "missing" = "missing";
+  if (marker) {
+    if (
+      marker.payload.workspaceId !== requiredAuthority.payload.workspace.id ||
+      marker.payload.installationId !== requiredAuthority.payload.installation.id
+    ) {
+      throw identityError(
+        "Identity authority marker does not match its authority payload",
+      );
+    }
+    markerKeyState = keyStateForMac(
+      "marker",
+      marker.payload,
+      marker.mac,
+      oldKey,
+      newKey,
+    );
+  }
+
+  if (dryRun) {
+    return {
+      state: "verified",
+      authorityKeyState,
+      markerKeyState,
+    };
+  }
+
+  let rewritten = false;
+  if (authorityKeyState === "old") {
+    atomicWrite(
+      identityAuthorityPath(),
+      createEnvelope(requiredAuthority.payload, newKey),
+    );
+    rewritten = true;
+  }
+  if (markerKeyState !== "new") {
+    atomicWrite(
+      identityAuthorityMarkerPath(),
+      createMarkerFromIds(
+        requiredAuthority.payload.workspace.id,
+        requiredAuthority.payload.installation.id,
+        newKey,
+      ),
+    );
+    rewritten = true;
+  }
+
+  return {
+    state: rewritten ? "reauthenticated" : "already-new",
+    authorityKeyState,
+    markerKeyState,
+  };
 }
