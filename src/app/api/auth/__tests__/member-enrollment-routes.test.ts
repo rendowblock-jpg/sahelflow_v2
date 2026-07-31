@@ -8,6 +8,7 @@ const harness = vi.hoisted(() => ({
   recordFailure: vi.fn(),
   recordSuccess: vi.fn(),
   accept: vi.fn(),
+  register: vi.fn(),
   establish: vi.fn(),
   memberLogin: vi.fn(),
   ownerPin: vi.fn(),
@@ -32,6 +33,10 @@ vi.mock("@/lib/auth/rate-limit", () => ({
 vi.mock("@/lib/identity/team-directory", () => ({
   acceptTeamInvitation: harness.accept,
   createTeamLoginSession: harness.memberLogin,
+}));
+
+vi.mock("@/lib/identity/team-revocation-authority", () => ({
+  registerTeamSessionAuthority: harness.register,
 }));
 
 vi.mock("@/lib/identity/team-session", () => ({
@@ -98,6 +103,14 @@ beforeEach(() => {
     invitationId: "8".repeat(32),
     replayed: false,
   });
+  harness.register.mockReset().mockResolvedValue({
+    sessionId: "member-session",
+    memberId: actor.workspaceMemberId,
+    personId: actor.personId,
+    deviceId: actor.deviceId,
+    registeredAt: new Date().toISOString(),
+    revokedAt: null,
+  });
   harness.establish.mockReset().mockResolvedValue({
     sessionId: "member-session",
     issuedAt: new Date(),
@@ -127,9 +140,10 @@ describe("member enrollment and login routes", () => {
     expect(response.status).toBe(409);
     expect(json).not.toHaveBeenCalled();
     expect(harness.accept).not.toHaveBeenCalled();
+    expect(harness.register).not.toHaveBeenCalled();
   });
 
-  it("accepts one invitation and establishes its exact stable session", async () => {
+  it("registers authority before establishing an accepted session", async () => {
     const input = {
       token: `sf-invite-v1.${"8".repeat(32)}.${"a".repeat(43)}`,
       requestId: "11111111-1111-4111-8111-111111111111",
@@ -150,6 +164,14 @@ describe("member enrollment and login routes", () => {
       input,
       expect.objectContaining({ shopId: "default" }),
     );
+    expect(harness.register).toHaveBeenCalledWith({
+      sessionId: "member-session",
+      actor,
+      shop: expect.objectContaining({ shopId: "default" }),
+    });
+    expect(harness.register.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.establish.mock.invocationCallOrder[0]!,
+    );
     expect(harness.establish).toHaveBeenCalledWith(
       "member-session",
       "127.0.0.1",
@@ -160,7 +182,7 @@ describe("member enrollment and login routes", () => {
     });
   });
 
-  it("uses individual credentials when loginId is supplied", async () => {
+  it("registers individual login authority before the database session", async () => {
     const response = await login(
       new Request("http://localhost/api/auth/login", {
         method: "POST",
@@ -174,6 +196,14 @@ describe("member enrollment and login routes", () => {
       "amina.ops",
       "12345678",
       expect.objectContaining({ shopId: "default" }),
+    );
+    expect(harness.register).toHaveBeenCalledWith({
+      sessionId: "member-login-session",
+      actor,
+      shop: expect.objectContaining({ shopId: "default" }),
+    });
+    expect(harness.register.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.establish.mock.invocationCallOrder[0]!,
     );
     expect(harness.establish).toHaveBeenCalledWith(
       "member-login-session",
@@ -196,5 +226,6 @@ describe("member enrollment and login routes", () => {
     expect(harness.ownerPin).toHaveBeenCalledWith("12345678");
     expect(harness.ownerSession).toHaveBeenCalledWith("127.0.0.1");
     expect(harness.memberLogin).not.toHaveBeenCalled();
+    expect(harness.register).not.toHaveBeenCalled();
   });
 });
