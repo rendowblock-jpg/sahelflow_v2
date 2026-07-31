@@ -45,6 +45,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@/lib/identity/control-authority": path.resolve(
+        __dirname,
+        "./src/lib/identity/identity-authority.ts",
+      ),
       "@": path.resolve(__dirname, "./src"),
       // `server-only` is a Next.js package that throws when imported on the
       // client. In vitest (node environment) it should be a no-op — tests
