@@ -546,7 +546,7 @@ describe("Phase 1 representative Golden COD journey", () => {
     }
     expect(fulfillmentSource).toContain("/fulfillment");
     expect(codSource).toContain("/cod/collection");
-    expect(codSource).toContain("/api/accounting/cod-settlements");
+    expect(codSource).toContain("/accounting/cod-reconciliation");
     expect(returnSource).toContain("/customer-return");
     expect(returnSource).toContain("/refunds");
   });
