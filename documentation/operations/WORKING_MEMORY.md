@@ -1,179 +1,241 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-07-30
-> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
+> **Last updated:** 2026-07-31
+> **Protected main:** `522ab1642545803c7a9b6c320fe72cceb320e558`
+> **Latest protected application merge:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
-> **Protected signed run:** `30366866703`
-> **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`
+> **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete
-> **Active code PR:** None at this checkpoint
+> **Active phase:** Phase 1 — canonical Golden COD business core
+> **Active branch:** `agent/phases1-4-completion-program`
+> **Active PR:** draft PR #195 — `program: complete phases 1–4`
+> **Merge state:** open, draft, mergeable, unmerged
 
-## Current merged truth
+GitHub PR #195 and its exact current head/checks are the live branch authority.
+Never trust a copied head or run number in this file without re-reading GitHub at
+session start.
 
-Phase 0 remains complete through PR #179. Protected application source is
-`731fb11528345354388b2716f3bd94f0fc73eafb`.
+## Current protected truth
 
-The following ordinary, no-version-bump packages are merged:
+Phase 0 remains complete. Protected `main` contains:
 
-| Package | Merge | Exact-head evidence | Proven boundary |
-|---|---|---|---|
-| PR #190 — trusted manual confirmation | `f0821fb7885be4eeec7efcc2e5ef5a27254f6ac1` | CI `30516059898` | manual intake, confirmation/rejection, exact version/idempotency, exact product-or-variant reservation and inventory movement, AR/FR/EN states |
-| PR #191 — current-shop authorization | `bcdc4fe5643c407dddcc96d47c421d0417a83563` | CI `30520060972` | compatibility PIN actor can read only the exact process shop; create/switch/delete/cross-shop and forged contexts fail closed |
-| PR #184 — protected Windows installation root | `deb148de737b7906d899cbb41764faa929823a24` | CI `30520999819` | DPAPI-protected current/candidate/backup authority, exact legacy-root import, native resumable rotation/recovery, MSI install, rotation, authenticated launch, close/reopen |
-| PR #192 — canonical fulfillment | `731fb11528345354388b2716f3bd94f0fc73eafb` | CI `30522348699` | pack, manual ship, reservation consumption, outbound inventory, deliver, customer facts and DZD COD receivable |
+| Package | Protected merge | Proven boundary |
+|---|---|---|
+| PR #190 | `f0821fb7885be4eeec7efcc2e5ef5a27254f6ac1` | trusted manual intake, confirmation/rejection, exact version/idempotency, product-or-variant reservation and inventory movement |
+| PR #191 | `bcdc4fe5643c407dddcc96d47c421d0417a83563` | compatibility PIN actor restricted to the exact process shop |
+| PR #184 | `deb148de737b7906d899cbb41764faa929823a24` | DPAPI-protected installation root and native resumable rotation/recovery |
+| PR #192 | `731fb11528345354388b2716f3bd94f0fc73eafb` | canonical pack, manual ship, reservation consumption, outbound inventory, delivery, customer facts and DZD COD receivable |
+| PR #193 | `522ab1642545803c7a9b6c320fe72cceb320e558` | documentation reconciliation only |
 
-PR #192 recorded one owned P2 in issue #164: a preserved legacy shipped/delivered
-order has unknown packing history, so its timeline must hide the canonical packed
-step or render it as unknown rather than incomplete. It does not affect mutation,
-stock, money or authority correctness.
+Phase 1, Phase 2, Phase 3 and Phase 4 are not complete on protected `main`.
+PR #195 remains proposed source only and must not be described as merged,
+published, installed or Founder-accepted.
 
-These merges are partial phase results. Phase 1, Phase 2 and Phase 4 are not
-complete. No new Internal candidate or application-version bump has been made.
+## Founder-approved execution method
 
-## Installed-release truth
+The repository now records the exact cross-session method in root `AGENTS.md`:
 
-Internal.13 remains the published and Founder-installed release. Its exact
-version and preserved workspace, installation, shop, registry and database
-identity snapshot are recorded in `../system/CURRENT_STATE.md`. Authenticated
-Arabic UI readiness was observed. Stopped-process and immediate-reopen trace
-timings were 68.863 and 31.834 seconds, both beyond the eight-second T470 target.
-Arabic chart visual acceptance and explicit Founder acceptance remain open.
+- continue one long-lived integration branch and draft PR;
+- reconstruct exact GitHub truth before every write;
+- never infer another active agent without evidence;
+- build coherent end-to-end packages, not file-sized microtasks;
+- use one targeted source checkpoint after a package is assembled;
+- repair only concrete exact-head diagnostics;
+- communicate at package start, meaningful milestone, blocker and session close;
+- do not narrate every edit and do not leave long unexplained silence;
+- keep CI read-only and remove every temporary repair workflow before session close;
+- update this file and the PR body instead of creating another handoff document.
 
-The installed-MSI gates for PR #184 and PR #192 prove disposable clean-runner
-behavior for those exact heads. They do not change the installed Founder version
-or prove Founder/T470 acceptance of the new merged source.
+This method applies to Web and Desktop sessions and to later phases unless the
+Founder explicitly changes it.
 
-## Phase status
+## Integrated Phase 1 source in draft PR #195
 
-### Phase 1 — in progress
+### Canonical order and inventory core
 
-Merged production authority reaches delivered manual orders and creation of a COD
-receivable. Still open:
+- trusted manual confirmation/rejection;
+- exact product and active variant selection;
+- optimistic order version and exact idempotency;
+- append-only reservations and inventory movements;
+- packing, shipment, delivery and COD receivable authority;
+- product/variant mutation fences while pending canonical orders depend on catalog
+  authority.
 
-- courier booking, tracking receipts and external provider IDs;
-- cancellation and reservation release;
-- delivery failure, refusal, physical return and inspection;
-- COD collection, partial/full remittance, fees, disputes and discrepancies;
-- returns, exchanges, refunds and append-only compensation;
-- canonical import, storefront, WhatsApp, commerce and AI intake;
-- restart/update and disposable backup-compatibility proof for the complete facts.
+### Canonical COD and accounting facts
 
-### Phase 2 — in progress
+- immutable delivered receivable authority from `FinancialMovement`;
+- collection, partial/full remittance, fees, adjustments and discrepancies;
+- remittance batches, unmatched lines and governed later matching;
+- append-only collection/settlement corrections;
+- AR/FR/EN accounting workspace and order controls;
+- replay, concurrency, duplicate and API-boundary coverage.
 
-Only the narrow compatibility current-shop authorization boundary is merged.
-Durable Person, WorkspaceMember, Device and Session authority, persisted policy
-and revocation, licensing/entitlements, invitations/recovery and native multi-shop
-lifecycle remain open.
+### Cancellation, delivery exceptions and physical return
 
-### Phase 3 — not yet adopted
+- pre-shipment cancellation restores exact reserved stock atomically;
+- failure/refusal does not unsafely restock outbound inventory;
+- return transit, physical receipt and item-level inspection disposition;
+- available, damaged, quarantine and loss positions;
+- provider-event ordering and duplicate protection.
 
-No durable WhatsApp/outbox package is merged. The corrected local package below
-is proposed source only and still needs rebase, independent review and CI.
+### Customer returns, exchanges and refunds
 
-### Phase 4 — in progress
+- request, approval, rejection, cancellation, transit, receipt, inspection and
+  completion;
+- exact partial/full returned quantities;
+- pending server-priced replacement order for exchange;
+- append-only partial/full refund and exact reversal;
+- inventory, DZD financial and compensation facts;
+- AR/FR/EN seller controls and invariant/API tests.
 
-The protected installation root and native rotation are merged. Full encrypted
-all-shop backup/restore, replacement-install recovery, recovery ceremonies,
-complete migration matrix, security/privacy/Law 18-07 work and independent
-certification remain open.
+### Canonical intake adoption
 
-## Paused local-only work
+- storefront: exact source principal, server pricing, variants and response-loss
+  replay; source checkpoint `30563250291` passed on
+  `8353e6bea505d544412b84e882b2aa10d65ab2c7`;
+- CSV/XLSX: SHA-256 file identity, grouped orders, exact catalog resolution,
+  server pricing and replay; source checkpoint `30564927795` passed on
+  `59b8893932c0cc8b1781bbf8578235f1adb5b29f`;
+- Shopify/WooCommerce/YouCan: canonical creation, provider revisions, safe
+  cancellation and fail-closed watermark advancement; source checkpoint
+  `30605601147` passed on `a43203c91eae7e224534961bc038f14d21f8f99f`;
+- WhatsApp extraction and AI proposal-bound creation: persisted provider/proposal
+  identity, exact catalog authority, server pricing and replay; source checkpoint
+  `30607584514` passed on `375b137d8aa3b5201e05fc2835224b5041a0d50e`.
 
-These worktrees are not protected-main or GitHub authority. Preserve them, but do
-not describe them as complete or publish them without reconstructing current
-source and review.
+### Preserved Phase 3 WhatsApp durability
 
-### Corrected Phase 3 durable WhatsApp proposal
+PR #195 also preserves the corrected durable WhatsApp send/outbox/receipt package
+from closed PR #194. That source is not a Phase 3 completion claim and has not
+received the final multi-phase frozen-head review or installed validation.
 
-- Worktree: `C:\tmp\sahelflow-phase3-durable-provider`
-- Branch: `codex/phase3-durable-provider`
-- Clean local commit: `01a595b789d31c600da6af7025b9dff7cb7cd813`
-- Tree: `aeff8c6e667adadbbedd28badb0d7759604a8b5c`
-- Base: `deb148de737b7906d899cbb41764faa929823a24`
-- Status: corrected after four prior P1 findings; no post-correction independent
-  SHIP verdict, no publication and no CI.
-- Required resume action: rebase onto current protected `main`, inspect schema and
-  identity integration, then independently review stable receipt authority,
-  workspace/shop/incarnation scoping, effect-start leases, deterministic versus
-  ambiguous recovery, trusted actor enforcement, encryption and sidecar request
-  binding before any PR.
+## Active package at session close — governed courier lifecycle
 
-### Incomplete Phase 1D COD-settlement proposal
+The courier package is assembled across:
 
-- Worktree: `C:\tmp\sahelflow-phase1-cod-settlement`
-- Branch: `codex/phase1-cod-settlement`
-- Base: local pre-merge fulfillment commit `a2abfd2e986d122ae314117112040ec274264dfe`
-- Status: uncommitted; seven tracked files plus five untracked paths; no completed
-  review or CI. The current diff includes research, schema/migration, command,
-  route, controls and tests, but remains an incomplete proposal.
-- Required resume action: preserve the diff, compare it with current protected
-  `main`, reconstruct or rebase carefully, and review money/idempotency/version/
-  compensation and legacy refund/accounting fences before committing.
+- trusted booking command with exact order version and provider selection;
+- durable external effect outside the canonical transaction;
+- tracking ID, label, cost and estimated-delivery receipt;
+- restart-safe lease, known failure, ambiguous outcome and operator
+  reconciliation;
+- append-only provider event identity and monotonic tracking checkpoints;
+- pickup/transit reservation consumption;
+- delivered COD receivable creation;
+- failed/refused recovery integration;
+- trusted API routes;
+- AR/FR/EN seller workspace;
+- replay, concurrency, response-loss, out-of-order, provider-failure and restart
+  invariant coverage.
 
-### Incomplete Phase 2 durable-identity proposal
+The last substantive source checkpoint passed ESLint and the full Vitest suite and
+reported one strict TypeScript indexed-constant error. Commit
+`ff646e819cb55004909aec0a98f07dc31dc356d2` changes only that comparison. It was
+created by a temporary Actions repair step, so GitHub marked checks on that
+bot-authored head `action_required` rather than executing them.
 
-- GitHub PR #186 (`agent/phase2-session-freshness`) is still open against an
-  obsolete `d9c9b51...` base and GitHub currently reports it as conflicting.
-  It is proposed, unmerged authority; inspect and reconcile or close it before
-  resuming Phase 2 so its session-freshness work is not duplicated or overwritten.
-- Worktree: `C:\tmp\sahelflow-phase2-durable-identity`
-- Branch: `codex/phase2-durable-identity`
-- Base: `bcdc4fe5643c407dddcc96d47c421d0417a83563`
-- Status: uncommitted; four tracked and four untracked identity/auth files; no
-  completed migration, review or CI.
-- Required resume action: keep paused while another core-authority package owns
-  WIP. Reconstruct against current `main` and the protected installation control-
-  cache/recovery contract before treating any local code as adopted design.
+Session-close cleanup then:
 
-The original checkout at `C:\Users\DMR\Desktop\sahelflow_v2` still contains
-unrelated local evidence/noise: `scripts/Founder-install-result.json` and a
-modified `src/lib/identity/__tests__/session-authority.test.ts`. Do not stage,
-delete or reset either as part of future feature or documentation work. Prefer a
-fresh worktree from protected `main`.
+- removed the branch-writing repair step;
+- restored `.github/workflows/integration-source.yml` to `contents: read`;
+- restored exact-head checkout with `persist-credentials: false`;
+- prohibited self-modifying CI in root `AGENTS.md`.
 
-## Exact next session order
+The current documentation commits trigger a normal connector-authored exact-head
+source checkpoint. The next session must inspect that latest run first. Do not
+call the courier package source-complete until it is green.
 
-1. Fetch and verify protected `main`; do not assume the application baseline in
-   this file is still the latest documentation merge.
-2. Read `documentation/README.md`, FD-028, the active Roadmap gate, Workflow,
-   this file, issue #164 and exact production source/tests.
-3. Resume the clean Phase 3 proposal first as an integration/review package:
-   rebase `01a595b...` onto current protected `main`, obtain an independent P0/P1
-   verdict, and publish one PR only after SHIP. GitHub Actions must prove the exact
-   head. Do not combine it with Phase 1D or Phase 2 identity.
-4. After that package is merged or explicitly rejected, occupy core-authority WIP
-   with one package only. The dependency-correct implementation frontier is
-   Phase 1D COD collection/remittance/fees/discrepancy. Treat the existing local
-   COD worktree as a proposal to inspect, not as trusted finished work.
-5. Keep the Phase 2 durable-identity proposal paused until core-authority WIP is
-   available. Before resuming, resolve the open conflicting PR #186 and reconcile
-   its session-freshness changes. Use the protected installation control cache
-   rather than per-shop business databases for durable identity authority.
-6. Group coherent source-complete packages into one later Internal candidate;
-   do not bump the application version for ordinary packages. A signed candidate,
-   Founder install and preservation/Arabic/timing acceptance are separate gates.
+## Finite Phase 1 closure ledger
 
-## Active blockers and discontinuities
+After the courier checkpoint is green, only these Phase 1 gates remain:
 
-- Phase 1 has no governed COD settlement or return/refund compensation path.
-- Remaining intake sources and legacy services can still bypass full canonical
-  order/stock/money authority.
-- Commerce checkpoint advancement and automation direct effects remain unsafe.
-- Phase 3 provider durability is local proposed source only.
-- Durable identity, licensing and native multi-shop are incomplete.
-- Full backup/restore, replacement installation and recovery drills are open.
-- Whole-product AAA, Arabic/RTL/accessibility parity and low-end performance are
-  unproven.
-- Internal.13 remains over the T470 launch budget and not Founder-accepted.
+1. **Governed profitability authority**
+   - audit the existing `metrics.ts` foundation against the new COD, courier fee,
+     return, refund, reversal, loss and compensation facts;
+   - establish one realized-revenue, COGS and profitability definition;
+   - make dashboard, analytics, accounting, reports and AI reads agree;
+   - add period-boundary and cross-surface invariant tests.
+
+2. **Process restart and in-place update preservation**
+   - seed a representative canonical order through all major Phase 1 facts;
+   - close and reopen the process/database clients;
+   - apply the current migration set as an in-place update fixture;
+   - prove command replay, projections, encrypted payloads, reservations,
+     movements, provider receipts, settlement and return/refund facts survive.
+
+3. **Disposable snapshot/restore compatibility**
+   - use the existing local backup primitive on a disposable shop fixture;
+   - verify SQLite integrity and exact canonical fact counts/hashes before backup;
+   - wipe/replace only the disposable fixture;
+   - restore and prove every Phase 1 relation, encrypted payload and replay key;
+   - do not claim production all-shop restore or replacement-install recovery;
+     Phase 4 owns those mechanisms.
+
+4. **Representative Phase 1 exit journey**
+   - one UI/API/domain/database Golden COD journey using the governed commands;
+   - happy, validation, permission, duplicate, concurrency, interruption, stale,
+     conflict, provider failure, cancellation, return and recovery cases;
+   - AR/FR/EN controls and persisted seller-visible states;
+   - final audit that adopted sources cannot bypass the command kernel.
+
+5. **Phase 1 authority reconciliation**
+   - update Roadmap `Current result`, Current State discontinuities, Working Memory,
+     PR #195 and issue #164 only after the exit evidence is complete;
+   - do not mark PR #195 ready or run the full Windows/Rust/MSI program merely
+     because Phase 1 source closes; the Founder authorized one Phase 1–4 program.
+
+## Exact next-session order
+
+1. Read root `AGENTS.md`, this file, PR #195 and the active Phase 1 Roadmap gate.
+2. Verify protected `main` and the exact PR head; confirm no unexpected divergence.
+3. Inspect the latest `Integration source checkpoint` for the current head.
+4. If green, record governed courier lifecycle as source-complete in PR #195.
+5. If failed, repair only the concrete P0/P1/source blocker; do not reopen earlier
+   Phase 1 packages.
+6. Implement the governed profitability package as one coherent outcome.
+7. Implement restart/update and disposable backup compatibility as one preservation
+   package.
+8. Run the representative multilingual Phase 1 exit journey and legacy-bypass
+   audit.
+9. Reconcile Phase 1 documentation only after all applicable source gates pass.
+10. Keep PR #195 draft and unmerged; continue into Phase 2 in the same program only
+    after Phase 1 shared contracts are stable.
+
+## Protected local boundaries
+
+- Do not modify, reset or delete the original checkout solely to make branch work
+  easier.
+- Preserve `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
+- Preserve the unrelated modified
+  `src/lib/identity/__tests__/session-authority.test.ts` in the original checkout.
+- PR #186 (`agent/phase2-session-freshness`) is obsolete/conflicting proposed
+  source. Reconcile it deliberately before Phase 2; never merge it directly.
+- The old local COD and durable-identity worktrees are historical proposals only.
+  PR #195 is the active source authority for the integrated program.
+
+## Validation model
+
+Draft PR #195 runs only the targeted source checkpoint:
+
+- frozen dependency install;
+- Prisma client generation;
+- disposable test sandbox;
+- version/updater and documentation authority;
+- TypeScript;
+- ESLint;
+- full unit/integration suite;
+- Prisma/migration verification.
+
+Windows standalone, Rust parity and installed-MSI lanes remain deferred until the
+complete Phase 1–4 source is frozen. A source-green draft head is not installed,
+provider-certified, independently security-reviewed, legally certified or
+Founder-accepted.
 
 ## Completion truth
 
-A branch, local commit, PR, model, route, page, mock or passing unit test does not
-complete a phase. Only protected merged source plus every applicable automated,
-installed, external and Founder evidence layer can close the named outcome.
+A branch, commit, PR, model, route, page, mock or passing test does not complete a
+phase. Phase 1 closes only when its full named exit evidence is implemented and
+verified. Protected merge, full multi-phase validation and Founder acceptance are
+later and separate gates.
