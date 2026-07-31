@@ -17,6 +17,7 @@ import {
 } from "@/lib/auth/rate-limit";
 import { shopContext } from "@/lib/db";
 import { prepareTeamReauthentication } from "@/lib/identity/team-reauthentication";
+import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
 import { rotateTeamDatabaseSession } from "@/lib/identity/team-session";
 import { SahelFlowError } from "@/types/errors";
 
@@ -58,6 +59,11 @@ export const POST = withErrorHandler(async (req: Request) => {
   let subject: "owner" | "team" = teamAttempt.subject;
   if (teamAttempt.subject === "team") {
     if (teamAttempt.grant) {
+      await registerTeamSessionAuthority({
+        sessionId: teamAttempt.grant.sessionId,
+        actor: teamAttempt.grant.actor,
+        shop: shopContext,
+      });
       await rotateTeamDatabaseSession(
         authority.sessionId,
         teamAttempt.grant.sessionId,
@@ -73,7 +79,11 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   if (!reauthenticated) {
     const failure = recordLoginFailure(ip);
-    void auditLog("auth.reauthenticate.failed", { reason: "pin_invalid", subject }, ip);
+    void auditLog(
+      "auth.reauthenticate.failed",
+      { reason: "pin_invalid", subject },
+      ip,
+    );
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
         { error: "Too many failed attempts. Account temporarily locked." },
