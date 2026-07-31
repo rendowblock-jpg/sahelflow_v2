@@ -2,8 +2,8 @@ import "server-only";
 
 import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
 import type { ShopContext } from "@/lib/shops/context";
+import { createActiveTeamLoginSession } from "./team-credentials";
 import {
-  createTeamLoginSession,
   listTeamMembers,
   type TeamSessionGrant,
 } from "./team-directory";
@@ -15,9 +15,9 @@ export type TeamReauthenticationAttempt =
 /**
  * Identify the current durable subject before validating a PIN.
  *
- * A known team session is always handled as that exact member. Invalid member
- * PIN proof returns a team failure and must never fall through to owner PIN
- * verification. Core-owner sessions return the owner branch unchanged.
+ * A known team session is always handled as that exact active member. Invalid
+ * member PIN proof returns a team failure and must never fall through to owner
+ * PIN verification. Core-owner sessions return the owner branch unchanged.
  */
 export async function prepareTeamReauthentication(
   currentSessionId: string,
@@ -33,6 +33,6 @@ export async function prepareTeamReauthentication(
   );
   if (!member) return Object.freeze({ subject: "owner" });
 
-  const grant = await createTeamLoginSession(member.loginId, pin, shop);
+  const grant = await createActiveTeamLoginSession(member.loginId, pin, shop);
   return Object.freeze({ subject: "team", grant });
 }
