@@ -169,24 +169,46 @@ export function SecurityAuthorityPanel() {
     [dateFormatter],
   );
 
+  const requestAuthority = useCallback(async () => {
+    const response = await fetch("/api/auth/authority", { cache: "no-store" });
+    const body = (await response.json()) as AuthorityResponse & ApiError;
+    if (!response.ok) throw new Error(body.error ?? copy.loadError);
+    return body.authority;
+  }, [copy.loadError]);
+
   const loadAuthority = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/auth/authority", { cache: "no-store" });
-      const body = (await response.json()) as AuthorityResponse & ApiError;
-      if (!response.ok) throw new Error(body.error ?? copy.loadError);
-      setAuthority(body.authority);
+      setAuthority(await requestAuthority());
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : copy.loadError);
     } finally {
       setLoading(false);
     }
-  }, [copy.loadError]);
+  }, [copy.loadError, requestAuthority]);
 
   useEffect(() => {
-    void loadAuthority();
-  }, [loadAuthority]);
+    let cancelled = false;
+
+    async function loadInitialAuthority(): Promise<void> {
+      try {
+        const nextAuthority = await requestAuthority();
+        if (!cancelled) setAuthority(nextAuthority);
+      } catch (caught) {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : copy.loadError);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadInitialAuthority();
+    return () => {
+      cancelled = true;
+    };
+  }, [copy.loadError, requestAuthority]);
 
   const revokeSession = useCallback(
     async (sessionId: string, proofAlreadyRefreshed = false) => {
