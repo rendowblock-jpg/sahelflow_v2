@@ -8,9 +8,9 @@
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
-> **Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete
+> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency; Phase 2A next
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-07-30
+> **Last consolidated:** 2026-07-31
 
 This is the final dependency-correct program for completing SahelFlow 1.0 across
 product, business authority, data, security, recovery, Windows runtime,
@@ -350,13 +350,13 @@ compatible. Production native all-shop restore remains a Phase 4 exit gate, and
 the complete product Golden COD Journey is not declared Proven until that gate
 also passes.
 
-## Current result — source-complete in draft PR #195
+## Current result — source-exit candidate under bounded closure repair
 
 Protected `main` remains partial Phase 1 truth through PR #190 and PR #192. Draft
-PR #195 assembles the complete Phase 1 source boundary without changing that
+PR #195 assembles the broad Phase 1 source boundary without changing that
 protected, published or installed truth.
 
-The draft branch now integrates the canonical Golden COD slice across:
+The draft branch integrates the canonical Golden COD slice across:
 
 - trusted product/customer/order intake and storefront, CSV/XLSX,
   Shopify/WooCommerce/YouCan, WhatsApp and proposal-bound AI adoption;
@@ -378,9 +378,21 @@ The draft branch now integrates the canonical Golden COD slice across:
   facts and disposable local backup/restore compatibility with exact hashes,
   counts, integrity and replay evidence.
 
-The exact Phase 1 source-exit head and green CI/checkpoint are recorded in draft PR
-#195 and Working Memory. No known Phase 1 P0/P1 remains at that named source
-boundary.
+The previous source-exit candidate and green checkpoint are recorded in draft PR
+#195 and Working Memory. A 2026-07-31 independent source audit then found a P1:
+the courier-booking command cannot advance to a second governed generation after
+manual not-created reconciliation or terminal known failure. The same audit found
+that corrupt pre-effect payloads lack a durable dead-letter transition and that
+the authority audit preserves contradictory next-action prose.
+
+Phase 1 is reopened only for this bounded repair. The repaired head must prove:
+
+- active authority agreement across entry point, Roadmap and Working Memory;
+- safe later booking generations with original-key replay and concurrency proof;
+- terminal known-failure recovery without duplicate provider effects;
+- ambiguous treatment of a success receipt that lacks tracking identity;
+- audited pre-effect dead letter and queue isolation for invalid payloads;
+- one exact-head checkpoint and one independent frozen-head P0/P1 review.
 
 This is not a protected merge, release, installed-MSI result or Founder
 acceptance. PR #195 stays draft for the Founder-authorized Phase 1–4 program.
@@ -482,7 +494,7 @@ installation and shop context. Revocation is immediate. Licensing cannot be
 forged through browser or mutable database state. Production shop lifecycle works
 through native authority and preserves data.
 
-## Current result — in progress
+## Current result — next after Phase 1 closure
 
 PR #191 merged the first narrow authorization boundary. The current
 PIN-unlocked compatibility actor is confined to the exact process shop, can read
@@ -492,6 +504,9 @@ contexts fail closed. Exact-head CI run `30520060972` passed.
 This is not durable identity or Phase 2 completion. Person, workspace membership,
 device/session authority, persisted policy and revocation, licensing,
 entitlements, invitations, recovery and native multi-shop lifecycle remain open.
+Phase 2A is the immediate dependency frontier, but implementation stays paused
+until the bounded Phase 1 closure repair passes its checkpoint and independent
+P0/P1 review.
 
 ---
 
