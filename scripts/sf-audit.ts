@@ -46,8 +46,8 @@ for (const relativePath of requiredFiles) {
 }
 
 function walk(directory: string): string[] {
+  if (!existsSync(directory)) return [];
   const output: string[] = [];
-  if (!existsSync(directory)) return output;
 
   for (const name of readdirSync(directory)) {
     if ([".git", "node_modules", ".next", "target"].includes(name)) continue;
@@ -241,10 +241,10 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Founder execution-granularity decision",
       "Sole-agent review rule",
       "CI read-only",
-      "1.0.0-internal.13",
       "agent/phases1-4-completion-program",
-      "Phase 2A — durable local identity and session authority",
-      "Exact next outcome",
+      "Phase 2A.1 session/setup authority is closed",
+      "Phase 2A.2 durable owner identity is closed",
+      "Exact next outcome — Phase 2A.3",
     ],
   ],
   [
@@ -273,10 +273,13 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Phase 0 status:** Complete",
       "**Active phase:** Phase 2A — durable local identity and session authority",
+      "**Active package:** Phase 2A.3 — revocation, policy freshness and identity administration",
       "# Phase 1 — Canonical Golden COD business core",
       "## Result — source-closed on draft PR #195",
       "# Phase 2 — Identity, authorization, licensing and multi-shop",
-      "### Package 2A.1 — setup and session authority — active",
+      "### Package 2A.1 — setup and session authority — closed",
+      "### Package 2A.2 — durable owner identity kernel — closed",
+      "### Package 2A.3 — revocation and policy freshness — active",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -302,10 +305,13 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/operations/WORKING_MEMORY.md",
     [
       "**Active phase:** Phase 2A — durable local identity and session authority",
+      "**Active package:** 2A.3 — revocation, policy freshness and identity administration",
       "**Active PR:** draft PR #195",
       "Phase 0 remains complete",
-      "Phase 1 result — source-closed",
-      "Active package — Phase 2A session and setup authority",
+      "Phase 1 — source-closed",
+      "Phase 2A.1 result — setup and session authority closed",
+      "Phase 2A.2 result — durable owner identity kernel closed",
+      "Active package — Phase 2A.3 revocation and policy freshness",
       "Exact next-session order",
       "**Execution epic:** issue #164",
     ],
@@ -343,30 +349,25 @@ const ACTIVE_PHASE_FILES = [
   "documentation/system/ROADMAP.md",
   "documentation/operations/WORKING_MEMORY.md",
 ] as const;
+const expectedPhase = "Phase 2A — durable local identity and session authority";
 
-function activePhase(relativePath: string): string | null {
+for (const relativePath of ACTIVE_PHASE_FILES) {
+  if (!existsSync(resolve(repoRoot, relativePath))) continue;
   const content = readFileSync(resolve(repoRoot, relativePath), "utf8");
-  return /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim() ?? null;
-}
-
-const phaseValues = ACTIVE_PHASE_FILES.map((file) => ({
-  file,
-  value: existsSync(resolve(repoRoot, file)) ? activePhase(file) : null,
-}));
-const expectedPhase =
-  "Phase 2A — durable local identity and session authority";
-
-for (const phase of phaseValues) {
-  if (phase.value !== expectedPhase) {
+  const value = /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  if (value !== expectedPhase) {
     findings.push({
       kind: "drift",
-      file: phase.file,
-      detail: `active phase must be '${expectedPhase}', found '${phase.value ?? "missing"}'`,
+      file: relativePath,
+      detail: `active phase must be '${expectedPhase}', found '${value ?? "missing"}'`,
     });
   }
 }
 
-const exactStaleMarkers: Array<[string, string]> = [
+const staleMarkers: Array<[string, string]> = [
+  ["documentation/system/ROADMAP.md", "Package 2A.1 — setup and session authority — active"],
+  ["documentation/system/ROADMAP.md", "Package 2A.2 — durable identity kernel — next"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A session and setup authority"],
   ["documentation/README.md", "**Active phase:** Phase 1 closure repair"],
   ["documentation/system/ROADMAP.md", "**Active phase:** Phase 1 closure repair"],
   ["documentation/operations/WORKING_MEMORY.md", "**Active phase:** Phase 1 closure repair"],
@@ -380,7 +381,7 @@ const exactStaleMarkers: Array<[string, string]> = [
   ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
 ];
 
-for (const [relativePath, marker] of exactStaleMarkers) {
+for (const [relativePath, marker] of staleMarkers) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
   if (readFileSync(absolutePath, "utf8").includes(marker)) {
@@ -403,32 +404,26 @@ const currentOwnedDocuments = [
   "documentation/research/RESEARCH.md",
 ];
 
-const obsoleteSessionExecutionPatterns: Array<{
-  name: string;
-  pattern: RegExp;
-}> = [
-  { name: "Session 1–4 heading", pattern: /^#{2,4}\s+session\s+[1-4]\b.*$/gim },
-  { name: "session map heading", pattern: /^#{2,4}\s+session\s+map\b.*$/gim },
-  {
-    name: "four-session execution heading",
-    pattern:
-      /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
-  },
+const obsoleteSessionPatterns = [
+  /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
+  /^#{2,4}\s+session\s+map\b.*$/gim,
+  /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
 ];
 
 for (const relativePath of currentOwnedDocuments) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
   const content = readFileSync(absolutePath, "utf8");
-  for (const { name, pattern } of obsoleteSessionExecutionPatterns) {
+  for (const pattern of obsoleteSessionPatterns) {
     pattern.lastIndex = 0;
     const match = pattern.exec(content);
-    if (!match) continue;
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: `obsolete ${name} remains active: ${match[0].trim()}`,
-    });
+    if (match) {
+      findings.push({
+        kind: "drift",
+        file: relativePath,
+        detail: `obsolete session execution heading remains active: ${match[0].trim()}`,
+      });
+    }
   }
 }
 
@@ -438,7 +433,7 @@ console.log(
 
 if (findings.length === 0) {
   console.log(
-    "PASS: FD-028 authorities, active Phase 2A, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, active Phase 2A.3, shared scripts and relative links are coherent.",
   );
   process.exit(0);
 }
