@@ -163,7 +163,6 @@ type IdentityPayload = z.infer<typeof payloadSchema>;
 type IdentityEnvelope = z.infer<typeof envelopeSchema>;
 type MarkerPayload = z.infer<typeof markerPayloadSchema>;
 type MarkerEnvelope = z.infer<typeof markerEnvelopeSchema>;
-
 type AuthenticationKeyState = "old" | "new";
 
 export type DurableIdentityActor = Readonly<{
@@ -184,6 +183,55 @@ export type IdentityAuthorityRotationResult = Readonly<{
   state: "absent" | "verified" | "reauthenticated" | "already-new";
   authorityKeyState: AuthenticationKeyState | null;
   markerKeyState: AuthenticationKeyState | "missing" | null;
+}>;
+
+export type IdentityAdministrationSnapshot = Readonly<{
+  revision: number;
+  workspace: Readonly<{
+    id: string;
+    policyVersion: number;
+    revocationEpoch: number;
+  }>;
+  installation: Readonly<{
+    id: string;
+    revocationEpoch: number;
+    enrolledAt: string;
+  }>;
+  currentActor: DurableIdentityActor;
+  member: Readonly<{
+    id: string;
+    personId: string;
+    role: z.infer<typeof roleSchema>;
+    policyVersion: number;
+    revocationEpoch: number;
+    shopIds: readonly string[];
+  }>;
+  devices: readonly Readonly<{
+    id: string;
+    revocationEpoch: number;
+    enrolledAt: string;
+    lastSeenAt: string;
+    current: boolean;
+  }>[];
+  sessions: readonly Readonly<{
+    sessionId: string;
+    personId: string;
+    workspaceMemberId: string;
+    deviceId: string;
+    policyVersion: number;
+    boundAt: string;
+    revokedAt: string | null;
+    current: boolean;
+  }>[];
+}>;
+
+export type IdentitySessionRevocationResult = Readonly<{
+  state: "revoked" | "already-revoked";
+  sessionId: string;
+  deviceId: string;
+  workspaceMemberId: string;
+  revokedAt: string;
+  revision: number;
 }>;
 
 let processQueue: Promise<void> = Promise.resolve();
@@ -444,6 +492,46 @@ function assertContext(payload: IdentityPayload, shop: ShopContext): void {
   }
 }
 
+function assertMarkerContext(
+  marker: MarkerEnvelope | null,
+  payload: IdentityPayload,
+  shop: ShopContext,
+): void {
+  if (
+    marker &&
+    (marker.payload.workspaceId !== shop.workspaceId ||
+      marker.payload.installationId !== shop.installationId ||
+      marker.payload.workspaceId !== payload.workspace.id ||
+      marker.payload.installationId !== payload.installation.id)
+  ) {
+    throw identityError("Identity authority marker belongs to another installation");
+  }
+}
+
+function readRequiredAuthority(
+  shop: ShopContext,
+): Readonly<{ envelope: IdentityEnvelope; marker: MarkerEnvelope | null }> {
+  const marker = readMarker();
+  const envelope = readAuthority();
+  if (!envelope) {
+    if (marker) {
+      throw identityError(
+        "Identity authority is missing after initialization",
+        "IDENTITY_AUTHORITY_MISSING",
+        503,
+      );
+    }
+    throw identityError(
+      "The authenticated session has no durable identity authority",
+      "IDENTITY_SESSION_BINDING_REQUIRED",
+      401,
+    );
+  }
+  assertContext(envelope.payload, shop);
+  assertMarkerContext(marker, envelope.payload, shop);
+  return { envelope, marker };
+}
+
 function atomicWrite(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
@@ -678,6 +766,16 @@ function actorFromPayload(
   });
 }
 
+function assertOwner(actor: DurableIdentityActor): void {
+  if (actor.role !== "owner") {
+    throw identityError(
+      "Only the workspace owner may administer sessions",
+      "ACTION_FORBIDDEN",
+      403,
+    );
+  }
+}
+
 export async function bindOwnerIdentitySession(
   sessionId: string,
   shop: ShopContext,
@@ -708,13 +806,7 @@ export async function bindOwnerIdentitySession(
     }
 
     assertContext(envelope.payload, shop);
-    if (
-      marker &&
-      (marker.payload.workspaceId !== shop.workspaceId ||
-        marker.payload.installationId !== shop.installationId)
-    ) {
-      throw identityError("Identity authority marker belongs to another installation");
-    }
+    assertMarkerContext(marker, envelope.payload, shop);
 
     const payload = structuredClone(envelope.payload) as IdentityPayload;
     const owner = payload.members.find(
@@ -821,13 +913,8 @@ export async function resolveDurableIdentityActor(
     }
     return null;
   }
-  if (
-    marker &&
-    (marker.payload.workspaceId !== shop.workspaceId ||
-      marker.payload.installationId !== shop.installationId)
-  ) {
-    throw identityError("Identity authority marker belongs to another installation");
-  }
+  assertContext(envelope.payload, shop);
+  assertMarkerContext(marker, envelope.payload, shop);
   return actorFromPayload(envelope.payload, sessionId, shop);
 }
 
@@ -837,6 +924,128 @@ export async function ensureDurableIdentityActor(
 ): Promise<DurableIdentityActor> {
   return (await resolveDurableIdentityActor(sessionId, shop)) ??
     bindOwnerIdentitySession(sessionId, shop);
+}
+
+export async function getIdentityAdministrationSnapshot(
+  currentSessionId: string,
+  shop: ShopContext,
+): Promise<IdentityAdministrationSnapshot> {
+  exactSessionIdSchema.parse(currentSessionId);
+  const { envelope } = readRequiredAuthority(shop);
+  const payload = envelope.payload;
+  const currentActor = actorFromPayload(payload, currentSessionId, shop);
+  const member = payload.members.find(
+    (candidate) => candidate.id === currentActor.workspaceMemberId,
+  );
+  if (!member) throw identityError("Current durable member authority is missing");
+
+  return Object.freeze({
+    revision: payload.revision,
+    workspace: Object.freeze({
+      id: payload.workspace.id,
+      policyVersion: payload.workspace.policyVersion,
+      revocationEpoch: payload.workspace.revocationEpoch,
+    }),
+    installation: Object.freeze({
+      id: payload.installation.id,
+      revocationEpoch: payload.installation.revocationEpoch,
+      enrolledAt: payload.installation.enrolledAt,
+    }),
+    currentActor,
+    member: Object.freeze({
+      id: member.id,
+      personId: member.personId,
+      role: member.role,
+      policyVersion: member.policyVersion,
+      revocationEpoch: member.revocationEpoch,
+      shopIds: Object.freeze([...member.shopIds]),
+    }),
+    devices: Object.freeze(
+      payload.devices.map((device) =>
+        Object.freeze({
+          id: device.id,
+          revocationEpoch: device.revocationEpoch,
+          enrolledAt: device.enrolledAt,
+          lastSeenAt: device.lastSeenAt,
+          current: device.id === currentActor.deviceId,
+        }),
+      ),
+    ),
+    sessions: Object.freeze(
+      payload.sessionBindings.map((binding) =>
+        Object.freeze({
+          sessionId: binding.sessionId,
+          personId: binding.personId,
+          workspaceMemberId: binding.workspaceMemberId,
+          deviceId: binding.deviceId,
+          policyVersion: binding.policyVersion,
+          boundAt: binding.boundAt,
+          revokedAt: binding.revokedAt,
+          current: binding.sessionId === currentSessionId,
+        }),
+      ),
+    ),
+  });
+}
+
+export async function revokeIdentitySessionBinding(
+  currentSessionId: string,
+  targetSessionId: string,
+  shop: ShopContext,
+): Promise<IdentitySessionRevocationResult> {
+  exactSessionIdSchema.parse(currentSessionId);
+  exactSessionIdSchema.parse(targetSessionId);
+  if (currentSessionId === targetSessionId) {
+    throw identityError(
+      "Use logout to revoke the current session",
+      "CURRENT_SESSION_REVOCATION_REQUIRES_LOGOUT",
+      409,
+    );
+  }
+
+  return withAuthorityLock(async () => {
+    const { envelope, marker } = readRequiredAuthority(shop);
+    const payload = structuredClone(envelope.payload) as IdentityPayload;
+    const actor = actorFromPayload(payload, currentSessionId, shop);
+    assertOwner(actor);
+
+    const target = payload.sessionBindings.find(
+      (binding) => binding.sessionId === targetSessionId,
+    );
+    if (!target) {
+      throw identityError(
+        "The requested session is not part of this installation authority",
+        "IDENTITY_SESSION_NOT_FOUND",
+        404,
+      );
+    }
+
+    if (target.revokedAt) {
+      return Object.freeze({
+        state: "already-revoked" as const,
+        sessionId: target.sessionId,
+        deviceId: target.deviceId,
+        workspaceMemberId: target.workspaceMemberId,
+        revokedAt: target.revokedAt,
+        revision: payload.revision,
+      });
+    }
+
+    const revokedAt = new Date().toISOString();
+    target.revokedAt = revokedAt;
+    payload.revision += 1;
+    atomicWrite(identityAuthorityPath(), createEnvelope(payload));
+    if (!marker) atomicWrite(identityAuthorityMarkerPath(), createMarker(shop));
+
+    return Object.freeze({
+      state: "revoked" as const,
+      sessionId: target.sessionId,
+      deviceId: target.deviceId,
+      workspaceMemberId: target.workspaceMemberId,
+      revokedAt,
+      revision: payload.revision,
+    });
+  });
 }
 
 /**
