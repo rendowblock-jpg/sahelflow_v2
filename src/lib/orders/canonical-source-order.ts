@@ -42,6 +42,7 @@ export const canonicalSourceOrderSchema = z
     sourceOrderId: z.string().trim().min(1).max(200),
     sourceRevision: z.string().trim().min(1).max(240).optional(),
     sourceDetails: z.record(z.string(), z.unknown()).optional(),
+    initialStatus: z.enum(["pending", "draft"]).default("pending"),
     customerId: z.string().min(1).optional(),
     newCustomer: newCustomerSchema.optional(),
     items: z.array(sourceOrderItemSchema).min(1).max(200),
@@ -58,6 +59,13 @@ export const canonicalSourceOrderSchema = z
         code: z.ZodIssueCode.custom,
         path: ["customerId"],
         message: "Provide exactly one of customerId or newCustomer",
+      });
+    }
+    if (value.initialStatus === "draft" && value.source !== "ai_chat") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["initialStatus"],
+        message: "Only AI-created canonical source orders may enter as draft",
       });
     }
   });
@@ -127,6 +135,7 @@ export async function createCanonicalSourceOrder(
         sourceOrderId: data.sourceOrderId,
         sourceRevision: data.sourceRevision ?? null,
         sourceDetails: data.sourceDetails ?? null,
+        initialStatus: data.initialStatus,
         customerId: data.customerId ?? null,
         newCustomer: normalizedNewCustomer ?? null,
         items: data.items,
@@ -256,7 +265,7 @@ export async function createCanonicalSourceOrder(
       const order = await tx.order.create({
         data: {
           orderNumber,
-          status: "pending",
+          status: data.initialStatus,
           version: 1,
           fulfillmentState: "unfulfilled",
           deliveryState: "not_created",
@@ -288,7 +297,7 @@ export async function createCanonicalSourceOrder(
         actionType: "created",
         payload: {
           orderNumber,
-          status: "pending",
+          status: data.initialStatus,
           itemCount: canonicalItems.length,
           totalPrice,
           commandId,
