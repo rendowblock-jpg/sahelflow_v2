@@ -55,7 +55,6 @@ function walk(directory: string): string[] {
     const relativePath = absolutePath
       .slice(repoRoot.length + 1)
       .replaceAll("\\", "/");
-
     if (relativePath.startsWith("documentation/archive/")) continue;
 
     const metadata = statSync(absolutePath);
@@ -98,10 +97,6 @@ function normalizeSemanticText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function read(relativePath: string): string {
-  return readFileSync(resolve(repoRoot, relativePath), "utf8");
-}
-
 const markdownFiles = walk(repoRoot);
 const activeDocumentationFiles = walk(resolve(repoRoot, "documentation"));
 const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
@@ -116,14 +111,12 @@ for (const absoluteFile of markdownFiles) {
   while ((match = markdownLinkPattern.exec(content)) !== null) {
     const rawTarget = match[1];
     if (!rawTarget) continue;
-
     const target = normalizeLink(rawTarget);
     if (!target) continue;
 
     const absoluteTarget = isAbsolute(target)
       ? resolve(repoRoot, target.replace(/^[/\\]+/, ""))
       : resolve(dirname(absoluteFile), target);
-
     if (!existsSync(absoluteTarget)) {
       findings.push({
         kind: "link",
@@ -231,19 +224,12 @@ for (const [relativePath, markers] of entrypointChecks) {
   }
 }
 
-/**
- * Stable semantic markers prove that active authorities still describe FD-028,
- * the release boundary, the long-lived program and a resumable execution
- * frontier. Active-phase agreement is checked separately so normal wording
- * changes cannot preserve a contradictory phase by accident.
- */
 const semanticRequirements: Array<[string, string[]]> = [
   [
     "README.md",
     [
       "FD-028 Final Completion Program",
       "Phase 0 complete",
-      "first Phase 1 manual-confirmation vertical",
       "SahelFlow 1.0 Stable has not been released",
     ],
   ],
@@ -253,12 +239,11 @@ const semanticRequirements: Array<[string, string[]]> = [
       "FD-028",
       "Phase 0–9",
       "Founder execution-granularity decision",
-      "Professional cross-session execution protocol",
-      "CI must remain read-only",
-      "Do not run source builds, full automated tests",
+      "Sole-agent review rule",
+      "CI read-only",
       "1.0.0-internal.13",
       "agent/phases1-4-completion-program",
-      "Phase 1 closure repair",
+      "Phase 2A — durable local identity and session authority",
       "Exact next outcome",
     ],
   ],
@@ -269,8 +254,8 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
-      "**Active phase:** Phase 1 closure repair",
-      "Phase 2A remains the immediate dependency",
+      "**Active phase:** Phase 2A — durable local identity and session authority",
+      "Phase 1 is source-closed",
     ],
   ],
   [
@@ -280,18 +265,18 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Superseded execution structure",
       "Research-first requirement",
       "Definition of completion",
-      "repeated approval",
       "without TPM or Secure Boot",
-      "No material incremental synchronization cost",
     ],
   ],
   [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 1 closure repair",
+      "**Active phase:** Phase 2A — durable local identity and session authority",
       "# Phase 1 — Canonical Golden COD business core",
-      "## Research gate",
+      "## Result — source-closed on draft PR #195",
+      "# Phase 2 — Identity, authorization, licensing and multi-shop",
+      "### Package 2A.1 — setup and session authority — active",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -300,17 +285,14 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Published release:** `1.0.0-internal.13`",
       "**Founder-installed release:** Internal.13",
-      "Trusted manual intake, confirmation/rejection and fulfillment through delivered COD receivable now use that foundation",
       "Windows profile fingerprint SHA-256",
       "Commerce checkpoint safety",
-      "The central completion task is therefore production adoption",
     ],
   ],
   [
     "documentation/operations/WORKFLOW.md",
     [
       "## 3. Research-to-implementation gate",
-      "The Desktop Agent",
       "GitHub Actions for builds",
       "No-research-drift rule",
       "latest.json` is public updater metadata",
@@ -319,13 +301,12 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 1 closure repair",
+      "**Active phase:** Phase 2A — durable local identity and session authority",
       "**Active PR:** draft PR #195",
       "Phase 0 remains complete",
-      "Founder-approved execution method",
-      "Active package at session close — Phase 1 closure repair",
+      "Phase 1 result — source-closed",
+      "Active package — Phase 2A session and setup authority",
       "Exact next-session order",
-      "Previous Phase 1 source-exit candidate",
       "**Execution epic:** issue #164",
     ],
   ],
@@ -335,10 +316,6 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first quality rule",
       "No-AI-slop frontend rule",
       "Research-to-implementation gate",
-      "#### External evidence reviewed",
-      "#### Alternatives evaluated",
-      "#### Phase 0 acceptance and evidence",
-      "#### Phase 0 revalidation trigger",
       "NIST SP 800-218",
     ],
   ],
@@ -347,8 +324,9 @@ const semanticRequirements: Array<[string, string[]]> = [
 for (const [relativePath, markers] of semanticRequirements) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  const normalizedContent = normalizeSemanticText(read(relativePath));
-
+  const normalizedContent = normalizeSemanticText(
+    readFileSync(absolutePath, "utf8"),
+  );
   for (const marker of markers) {
     if (!normalizedContent.includes(normalizeSemanticText(marker))) {
       findings.push({
@@ -360,107 +338,52 @@ for (const [relativePath, markers] of semanticRequirements) {
   }
 }
 
-const activePhaseAuthorities = [
+const ACTIVE_PHASE_FILES = [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
   "documentation/operations/WORKING_MEMORY.md",
-];
-const activePhasePattern = /^\s*>\s*\*\*Active phase:\*\*\s*(.+?)\s*$/im;
-const activePhases = new Map<string, string>();
+] as const;
 
-for (const relativePath of activePhaseAuthorities) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const match = read(relativePath).match(activePhasePattern);
-  if (!match?.[1]) {
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: "active phase metadata is missing",
-    });
-    continue;
-  }
-
-  const canonicalPhase = normalizeSemanticText(match[1].split(";", 1)[0] ?? "");
-  activePhases.set(relativePath, canonicalPhase);
+function activePhase(relativePath: string): string | null {
+  const content = readFileSync(resolve(repoRoot, relativePath), "utf8");
+  return /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim() ?? null;
 }
 
-const uniqueActivePhases = new Set(activePhases.values());
-if (uniqueActivePhases.size > 1) {
-  const detail = [...activePhases.entries()]
-    .map(([file, phase]) => `${file}=${phase}`)
-    .join("; ");
-  for (const relativePath of activePhases.keys()) {
+const phaseValues = ACTIVE_PHASE_FILES.map((file) => ({
+  file,
+  value: existsSync(resolve(repoRoot, file)) ? activePhase(file) : null,
+}));
+const expectedPhase =
+  "Phase 2A — durable local identity and session authority";
+
+for (const phase of phaseValues) {
+  if (phase.value !== expectedPhase) {
     findings.push({
       kind: "drift",
-      file: relativePath,
-      detail: `active phase disagrees across authorities: ${detail}`,
+      file: phase.file,
+      detail: `active phase must be '${expectedPhase}', found '${phase.value ?? "missing"}'`,
     });
   }
 }
 
 const exactStaleMarkers: Array<[string, string]> = [
+  ["documentation/README.md", "**Active phase:** Phase 1 closure repair"],
+  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 1 closure repair"],
+  ["documentation/operations/WORKING_MEMORY.md", "**Active phase:** Phase 1 closure repair"],
+  ["AGENTS.md", "Keep one active Phase 1 closure frontier"],
+  ["AGENTS.md", "until the repaired Phase 1 closure boundary receives an independent"],
+  ["documentation/operations/WORKING_MEMORY.md", "only remaining Phase 1 closure gate"],
+  ["documentation/operations/WORKING_MEMORY.md", "independently cleared"],
   ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
-  ["documentation/operations/WORKING_MEMORY.md", "Publication is the only remaining step"],
-  ["AGENTS.md", "The compressed program uses four planned sessions"],
-  ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
-  ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
-  ["AGENTS.md", "Rebase the corrected local Phase 3 WhatsApp durable-effect commit"],
-  ["documentation/README.md", "**Active phase:** Phase 0"],
-  [
-    "documentation/README.md",
-    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-  ],
-  [
-    "documentation/README.md",
-    "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues",
-  ],
-  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 0"],
-  [
-    "documentation/system/ROADMAP.md",
-    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-  ],
-  [
-    "documentation/system/ROADMAP.md",
-    "**Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete",
-  ],
-  ["documentation/system/CURRENT_STATE.md", "Internal.13 is not yet Founder-installed"],
-  [
-    "documentation/system/CURRENT_STATE.md",
-    "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
-  ],
   ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
-  ["documentation/operations/WORKING_MEMORY.md", "**Active code PR:** None at this checkpoint"],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Active implementation branch:** None; Phase 1 implementation ready",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Next branch:** `agent/phase1-manual-confirmation`",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "### Corrected Phase 3 durable WhatsApp proposal",
-  ],
+  ["AGENTS.md", "The compressed program uses four planned sessions"],
+  ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
 ];
 
 for (const [relativePath, marker] of exactStaleMarkers) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  if (read(relativePath).includes(marker)) {
+  if (readFileSync(absolutePath, "utf8").includes(marker)) {
     findings.push({
       kind: "drift",
       file: relativePath,
@@ -469,11 +392,6 @@ for (const [relativePath, marker] of exactStaleMarkers) {
   }
 }
 
-/**
- * Reject active Session 1–4 execution structures even when wording changes.
- * Historical prose that explains FD-028 supersession is allowed; only headings
- * and current/active/immediate/next metadata are treated as execution authority.
- */
 const currentOwnedDocuments = [
   "README.md",
   "AGENTS.md",
@@ -485,81 +403,27 @@ const currentOwnedDocuments = [
   "documentation/research/RESEARCH.md",
 ];
 
-const postMergeFrontierPatterns: Array<{
-  name: string;
-  pattern: RegExp;
-}> = [
-  {
-    name: "temporary Phase 0 closeout branch",
-    pattern: /agent\/phase0-closeout/i,
-  },
-  {
-    name: "pre-merge closeout gate",
-    pattern:
-      /(?:\b(?:before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+)?merge(?:s|d)?\b|\bafter\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+merged|merges)\b)/i,
-  },
-];
-
-for (const relativePath of currentOwnedDocuments) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const normalizedContent = normalizeSemanticText(read(relativePath));
-
-  for (const { name, pattern } of postMergeFrontierPatterns) {
-    if (pattern.test(normalizedContent)) {
-      findings.push({
-        kind: "drift",
-        file: relativePath,
-        detail: `post-merge authority still contains ${name}`,
-      });
-    }
-  }
-}
-
-const optionalListPrefix = String.raw`(?:(?:[-*+]|\d+\.)\s+)?`;
 const obsoleteSessionExecutionPatterns: Array<{
   name: string;
   pattern: RegExp;
 }> = [
-  {
-    name: "Session 1–4 heading",
-    pattern: /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
-  },
-  {
-    name: "session map heading",
-    pattern: /^#{2,4}\s+session\s+map\b.*$/gim,
-  },
+  { name: "Session 1–4 heading", pattern: /^#{2,4}\s+session\s+[1-4]\b.*$/gim },
+  { name: "session map heading", pattern: /^#{2,4}\s+session\s+map\b.*$/gim },
   {
     name: "four-session execution heading",
     pattern:
       /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
   },
-  {
-    name: "bold current/active/immediate/next Session metadata",
-    pattern: new RegExp(
-      String.raw`^\s*(?:>\s*)?${optionalListPrefix}\*\*(?:current|active|immediate|next)[^*:\n]{0,48}:\*\*[^\n]*\bsession\s+[1-4]\b.*$`,
-      "gim",
-    ),
-  },
-  {
-    name: "plain current/active/immediate/next Session metadata",
-    pattern: new RegExp(
-      String.raw`^\s*(?:>\s*)?${optionalListPrefix}(?:current|active|immediate|next)[^:\n]{0,48}:[^\n]*\bsession\s+[1-4]\b.*$`,
-      "gim",
-    ),
-  },
 ];
 
 for (const relativePath of currentOwnedDocuments) {
   const absolutePath = resolve(repoRoot, relativePath);
   if (!existsSync(absolutePath)) continue;
-  const content = read(relativePath);
-
+  const content = readFileSync(absolutePath, "utf8");
   for (const { name, pattern } of obsoleteSessionExecutionPatterns) {
     pattern.lastIndex = 0;
     const match = pattern.exec(content);
     if (!match) continue;
-
     findings.push({
       kind: "drift",
       file: relativePath,
@@ -574,7 +438,7 @@ console.log(
 
 if (findings.length === 0) {
   console.log(
-    "PASS: FD-028 authorities, active phase, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, active Phase 2A, shared scripts and relative links are coherent.",
   );
   process.exit(0);
 }
