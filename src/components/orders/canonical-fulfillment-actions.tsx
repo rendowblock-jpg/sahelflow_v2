@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CanonicalCodActions } from "@/components/orders/canonical-cod-actions";
+import { CanonicalCourierActions } from "@/components/orders/canonical-courier-actions";
 import { CanonicalCustomerReturnActions } from "@/components/orders/canonical-customer-return-actions";
 import { CanonicalOrderRecoveryActions } from "@/components/orders/canonical-order-recovery-actions";
 import { useI18n } from "@/hooks/use-i18n";
@@ -46,9 +47,9 @@ const COPY = {
     packTitle: "Mark this order as packed?",
     packBody:
       "The reserved items remain held and the order becomes ready for dispatch.",
-    shipTitle: "Dispatch this order?",
+    shipTitle: "Dispatch this order manually?",
     shipBody:
-      "This consumes the exact reservations into outbound inventory. It does not call a courier provider.",
+      "This consumes the exact reservations into outbound inventory without calling a courier provider. Use the governed courier workspace for provider booking.",
     deliverTitle: "Mark this order as delivered?",
     deliverBody:
       "This closes fulfillment and creates the carrier COD receivable. Collection and remittance remain separate.",
@@ -71,14 +72,14 @@ const COPY = {
     cod: "COD",
     legacy: "En attente d'adoption gouvernée",
     pack: "Marquer comme emballée",
-    ship: "Expédier la commande",
+    ship: "Expédier manuellement",
     deliver: "Marquer comme livrée",
     packTitle: "Marquer cette commande comme emballée ?",
     packBody:
       "Les articles réservés restent bloqués et la commande devient prête à expédier.",
-    shipTitle: "Expédier cette commande ?",
+    shipTitle: "Expédier cette commande manuellement ?",
     shipBody:
-      "Les réservations exactes passent en stock sortant. Aucun transporteur n'est appelé.",
+      "Les réservations exactes passent en stock sortant sans appeler un transporteur. Utilisez l'espace transporteur gouverné pour une réservation fournisseur.",
     deliverTitle: "Marquer cette commande comme livrée ?",
     deliverBody:
       "La préparation est clôturée et la créance COD transporteur est créée. Encaissement et versement restent séparés.",
@@ -102,13 +103,13 @@ const COPY = {
     cod: "الدفع عند الاستلام",
     legacy: "بانتظار الاعتماد الموثوق",
     pack: "تعليمها كمجهّزة",
-    ship: "إرسال الشحنة",
+    ship: "إرسالها يدويًا",
     deliver: "تعليمها كمسلّمة",
     packTitle: "هل تم تجهيز هذه الطلبية؟",
     packBody: "يبقى المخزون الدقيق محجوزًا وتصبح الطلبية جاهزة للإرسال.",
-    shipTitle: "هل تريد إرسال هذه الطلبية؟",
+    shipTitle: "هل تريد إرسال هذه الطلبية يدويًا؟",
     shipBody:
-      "تُنقل الحجوزات الدقيقة إلى مخزون قيد الشحن دون الاتصال بمزوّد توصيل.",
+      "تُنقل الحجوزات الدقيقة إلى مخزون قيد الشحن دون الاتصال بشركة توصيل. استخدم مساحة شركة التوصيل الموثوقة لإنشاء شحنة لدى المزوّد.",
     deliverTitle: "هل تم تسليم هذه الطلبية؟",
     deliverBody:
       "يُغلق التجهيز وتُنشأ مستحقات الدفع عند الاستلام. يبقى التحصيل والتحويل منفصلين.",
@@ -131,7 +132,10 @@ const STATE_LABELS = {
     shipped: "Shipped",
     closed: "Closed",
     not_created: "Not created",
+    pending: "Provider booking pending",
+    picked_up: "Picked up",
     in_transit: "In transit",
+    out_for_delivery: "Out for delivery",
     delivered: "Delivered",
     failed: "Failed",
     refused: "Refused",
@@ -157,7 +161,10 @@ const STATE_LABELS = {
     shipped: "Expédiée",
     closed: "Clôturée",
     not_created: "Non créée",
+    pending: "Réservation transporteur en attente",
+    picked_up: "Collectée",
     in_transit: "En transit",
+    out_for_delivery: "En cours de livraison",
     delivered: "Livrée",
     failed: "Échec",
     refused: "Refusée",
@@ -183,7 +190,10 @@ const STATE_LABELS = {
     shipped: "مشحونة",
     closed: "مغلقة",
     not_created: "غير منشأة",
+    pending: "حجز شركة التوصيل قيد الانتظار",
+    picked_up: "تم الاستلام من البائع",
     in_transit: "قيد النقل",
+    out_for_delivery: "خرجت للتسليم",
     delivered: "مسلّمة",
     failed: "فشل التوصيل",
     refused: "مرفوضة",
@@ -226,7 +236,13 @@ function availableAction(
   ) {
     return "pack";
   }
-  if (status === "confirmed" && fulfillment === "ready") return "ship";
+  if (
+    status === "confirmed" &&
+    fulfillment === "ready" &&
+    delivery === "not_created"
+  ) {
+    return "ship";
+  }
   if (
     status === "shipped" &&
     fulfillment === "shipped" &&
@@ -382,6 +398,8 @@ export function CanonicalFulfillmentActions({
           </p>
         ) : null}
       </div>
+
+      <CanonicalCourierActions orderId={orderId} />
 
       {showCodAuthority ? (
         <div className="border-t pt-5">
