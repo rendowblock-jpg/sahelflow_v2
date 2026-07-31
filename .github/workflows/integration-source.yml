@@ -33,6 +33,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Report exact Git tree
+        run: echo "SF_EXACT_TREE=$(git rev-parse 'HEAD^{tree}')"
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
