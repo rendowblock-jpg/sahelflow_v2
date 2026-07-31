@@ -7,20 +7,18 @@
  */
 import "server-only";
 
-
 import { z } from "zod";
 import type { ToolContext, ToolResult } from "./registry";
 import { registerTool } from "./registry";
-import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
+import {
+  getDeliveryAdapter,
+  loadDeliveryCredentials,
+} from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
-// Phase 4: canonical gross-revenue formula. Replaces the local
-// `status: { in: ["confirmed", "shipped", "delivered"] }` aggregate,
-// which (a) excluded pending orders (so an unconfirmed-but-placed order
-// didn't count as gross) and (b) excluded returned/refused orders (which
-// the canonical def INCLUDES -- the order was placed; the return is
-// downstream). Now matches dashboard + analytics + reports exactly.
 import { grossRevenue } from "@/lib/data/metrics";
+import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
+import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -37,13 +35,20 @@ const searchProductsSchema = z.object({
 registerTool({
   definition: {
     name: "search_products",
-    description: "Search products by name, SKU, or category. Returns matching products with stock + price.",
+    description:
+      "Search products by name, SKU, or category. Returns matching products with stock + price.",
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search term for product name or SKU" },
+        query: {
+          type: "string",
+          description: "Search term for product name or SKU",
+        },
         category: { type: "string", description: "Filter by category name" },
-        limit: { type: "number", description: "Max results (default 10, max 50)" },
+        limit: {
+          type: "number",
+          description: "Max results (default 10, max 50)",
+        },
       },
     },
   },
@@ -55,9 +60,16 @@ registerTool({
         where: {
           AND: [
             input.query
-              ? { OR: [{ name: { contains: input.query } }, { sku: { contains: input.query } }] }
+              ? {
+                  OR: [
+                    { name: { contains: input.query } },
+                    { sku: { contains: input.query } },
+                  ],
+                }
               : {},
-            input.category ? { category: { name: { contains: input.category } } } : {},
+            input.category
+              ? { category: { name: { contains: input.category } } }
+              : {},
             { isActive: true },
             { deletedAt: null },
           ],
@@ -68,17 +80,20 @@ registerTool({
       });
       return {
         success: true,
-        data: products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          sku: p.sku,
-          price: p.price,
-          stock: p.stock,
-          category: p.category?.name,
+        data: products.map((product) => ({
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          price: product.price,
+          stock: product.stock,
+          category: product.category?.name,
         })),
       };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur",
+      };
     }
   },
 });
@@ -97,13 +112,15 @@ registerTool({
       "Search customers by name or phone. " +
       "Phone search uses exact match (the phone is stored as a blind index, " +
       "so substring search is not supported). " +
-      "Name search fetches all customers and filters in memory after decryption " +
-      "(names are encrypted at rest, so DB-level contains is not possible). " +
+      "Name search fetches all customers and filters in memory after decryption. " +
       "Returns matching customers with order count + total spent.",
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search by name (substring) or phone (exact match)" },
+        query: {
+          type: "string",
+          description: "Search by name (substring) or phone (exact match)",
+        },
         limit: { type: "number", description: "Max results (default 10)" },
       },
       required: ["query"],
@@ -113,80 +130,70 @@ registerTool({
     try {
       const input = searchCustomersSchema.parse(params);
       const db = getDb(ctx);
-
-      // D-004 fix: Customer.name is AES-GCM ciphertext and Customer.phone is
-      // an HMAC blind index. Neither supports DB-level `contains` — the
-      // old query silently returned 0 results for every search.
-      //
-      // Strategy:
-      //   1. Try exact phone match first (the PII extension rewrites
-      //      where.phone to the blind index — this works correctly).
-      //   2. If no phone match, fetch all customers (the extension decrypts
-      //      on read), then filter by name in memory. Acceptable for small
-      //      tables (<10k customers); for larger tables, a blind index for
-      //      name would be needed (future improvement).
       const query = input.query.trim();
-
-      // Try exact phone match first (findFirst so we can require
-      // deletedAt: null — findUnique cannot take extra where fields).
       const byPhone = await db.customer.findFirst({
         where: { phone: query, deletedAt: null },
       });
-
       if (byPhone) {
         return {
           success: true,
-          data: [{
-            id: byPhone.id,
-            name: byPhone.name,
-            phone: byPhone.phone,
-            wilaya: byPhone.wilaya,
-            orderCount: byPhone.orderCount,
-            totalSpent: byPhone.totalSpent,
-          }],
+          data: [
+            {
+              id: byPhone.id,
+              name: byPhone.name,
+              phone: byPhone.phone,
+              wilaya: byPhone.wilaya,
+              orderCount: byPhone.orderCount,
+              totalSpent: byPhone.totalSpent,
+            },
+          ],
         };
       }
 
-      // No phone match — fetch all customers and filter by name in memory.
-      // The extension decrypts name/phone on read, so we see plaintext here.
       const all = await db.customer.findMany({
         where: { deletedAt: null },
-        take: 500, // cap to prevent memory issues on very large shops
+        take: 500,
         orderBy: { createdAt: "desc" },
       });
-
       const lowerQuery = query.toLowerCase();
       const filtered = all
-        .filter((c) => c.name.toLowerCase().includes(lowerQuery))
+        .filter((customer) =>
+          customer.name.toLowerCase().includes(lowerQuery),
+        )
         .slice(0, input.limit);
-
       return {
         success: true,
-        data: filtered.map((c) => ({
-          id: c.id,
-          name: c.name,
-          phone: c.phone,
-          wilaya: c.wilaya,
-          orderCount: c.orderCount,
-          totalSpent: c.totalSpent,
+        data: filtered.map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          wilaya: customer.wilaya,
+          orderCount: customer.orderCount,
+          totalSpent: customer.totalSpent,
         })),
       };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur",
+      };
     }
   },
 });
 
 // ── Tool 3: create_order ────────────────────────────────────────────────────
 
-// W3-21: exported for the schema-drift test (verifies the zod schema matches
-// the hand-written JSON schema sent to Gemini).
 export const createOrderSchema = z.object({
   customerId: z.string().describe("Existing customer ID"),
-  items: z.array(z.object({
-    productId: z.string(),
-    quantity: z.number().int().min(1),
-  })).min(1),
+  items: z
+    .array(
+      z.object({
+        productId: z.string(),
+        productVariantId: z.string().optional(),
+        quantity: z.number().int().min(1),
+      }),
+    )
+    .min(1),
   wilaya: z.string(),
   commune: z.string(),
   address: z.string(),
@@ -197,9 +204,8 @@ export const createOrderSchema = z.object({
 registerTool({
   definition: {
     name: "create_order",
-    description: "Create a new order for an existing customer. Items reference product IDs. Returns the created order.",
-    // W2-3: structural confirmation gate — see agent.ts. A prompt-injected
-    // WhatsApp message cannot bypass this by impersonating the system prompt.
+    description:
+      "Create a canonical AI draft for an existing customer. Items reference exact product IDs and, when required, exact variant IDs. The seller submits the draft before confirmation.",
     requiresConfirmation: true,
     parameters: {
       type: "object",
@@ -212,6 +218,10 @@ registerTool({
             type: "object",
             properties: {
               productId: { type: "string" },
+              productVariantId: {
+                type: "string",
+                description: "Required when the product has active variants",
+              },
               quantity: { type: "number" },
             },
           },
@@ -222,56 +232,71 @@ registerTool({
         phone: { type: "string" },
         notes: { type: "string" },
       },
-      required: ["customerId", "items", "wilaya", "commune", "address", "phone"],
+      required: [
+        "customerId",
+        "items",
+        "wilaya",
+        "commune",
+        "address",
+        "phone",
+      ],
     },
   },
   async execute(params, ctx): Promise<ToolResult> {
     try {
       const input = createOrderSchema.parse(params);
       const db = getDb(ctx);
+      if (!ctx.sourceIdentity || !ctx.sourceOrderId) {
+        return {
+          success: false,
+          error:
+            "La proposition IA n'a pas d'identité persistée; rechargez la conversation avant de réessayer.",
+        };
+      }
 
-      // Guard: the customer must exist and not be soft-deleted (B-softdelete).
       const customer = await db.customer.findFirst({
         where: { id: input.customerId, deletedAt: null },
         select: { id: true },
       });
       if (!customer) {
-        return { success: false, error: `Client introuvable ou supprimé: ${input.customerId}` };
+        return {
+          success: false,
+          error: `Client introuvable ou supprimé: ${input.customerId}`,
+        };
       }
 
-      // Fetch products to get current prices (exclude soft-deleted products —
-      // a deleted product cannot be ordered).
-      const products = await db.product.findMany({
-        where: { id: { in: input.items.map((i) => i.productId) }, deletedAt: null },
-      });
-      const productMap = new Map(products.map((p) => [p.id, p]));
-
-      const items = input.items.map((i) => {
-        const product = productMap.get(i.productId);
-        if (!product) throw new Error(`Produit introuvable: ${i.productId}`);
-        return {
-          productId: i.productId,
-          productName: product.name,
-          quantity: i.quantity,
-          unitPrice: product.price,
-        };
-      });
-
-      // Phase 1 bug 1.3: route through orderService.create so AI-created
-      // orders get the OrderChange "created" ledger entry + the
-      // `order.created` automation trigger (same as manual UI orders). The
-      // service handles orderNumber generation, status (default "draft"),
-      // totalPrice calculation, items, ledger, and trigger dispatch.
-      const order = await orderService.create(
-        { prisma: db, shop: ctx.shop },
+      const command = await createCanonicalSourceOrder(
         {
+          prisma: db,
+          shop: ctx.shop,
+          businessPrincipal: sourceBusinessPrincipal(
+            "ai_chat",
+            ctx.sourceIdentity,
+          ),
+        },
+        {
+          idempotencyKey: `ai-order:${ctx.sourceOrderId}`,
+          correlationId: `ai:${ctx.sourceIdentity}:${ctx.sourceOrderId}`,
+          source: "ai_chat",
+          sourceIdentity: ctx.sourceIdentity,
+          sourceOrderId: ctx.sourceOrderId,
+          sourceRevision: ctx.sourceOrderId,
+          sourceDetails: {
+            proposalId: ctx.sourceOrderId,
+            tool: "create_order",
+          },
+          initialStatus: "draft",
           customerId: input.customerId,
-          items,
+          items: input.items.map((item) => ({
+            productId: item.productId,
+            productVariantId: item.productVariantId ?? null,
+            quantity: item.quantity,
+          })),
           wilaya: input.wilaya,
           commune: input.commune,
           address: input.address,
           phone: input.phone,
-          source: "ai_chat",
+          deliveryCost: 0,
           notes: input.notes,
         },
       );
@@ -279,14 +304,18 @@ registerTool({
       return {
         success: true,
         data: {
-          id: order.id,
-          orderNumber: order.orderNumber,
-          total: order.totalPrice,
-          status: order.status,
+          id: command.result.order.id,
+          orderNumber: command.result.order.orderNumber,
+          total: command.result.order.totalPrice,
+          status: command.result.order.status,
+          replayed: command.replayed,
         },
       };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur",
+      };
     }
   },
 });
@@ -296,50 +325,44 @@ registerTool({
 registerTool({
   definition: {
     name: "get_stats",
-    description: "Get dashboard statistics: total orders, gross revenue (all-time, excludes cancelled + draft orders), customers, low stock count. No parameters.",
+    description:
+      "Get dashboard statistics: total orders, gross revenue (all-time, excludes cancelled + draft orders), customers, low stock count. No parameters.",
     parameters: { type: "object", properties: {} },
   },
   async execute(_params, ctx): Promise<ToolResult> {
     try {
       const db = getDb(ctx);
-      // Phase 4: gross revenue (all-time) = sum of totalPrice where
-      // status NOT IN [cancelled, draft]. Labeled "gross" so the agent
-      // + the user understand this is "what was ordered", not "what was
-      // collected" (realized) or "what was kept" (net). Previously this
-      // used a narrower status filter (confirmed/shipped/delivered)
-      // that excluded pending orders -- undercounting gross.
-      // All-time = [epoch, tomorrow midnight) -- half-open, covers all
-      // orders that exist now (no future orders possible).
       const allTime = {
         from: new Date(0),
         to: new Date(Date.now() + 86_400_000),
       };
-      const [totalOrders, grossRevenueAllTime, totalCustomers, lowStockCount] = await Promise.all([
-        db.order.count({ where: { deletedAt: null } }),
-        grossRevenue(db, allTime),
-        db.customer.count({ where: { deletedAt: null } }),
-        db.product.count({
-          where: {
-            stock: { lte: db.product.fields.lowStockThreshold },
-            isActive: true,
-            deletedAt: null,
-          },
-        }),
-      ]);
+      const [totalOrders, grossRevenueAllTime, totalCustomers, lowStockCount] =
+        await Promise.all([
+          db.order.count({ where: { deletedAt: null } }),
+          grossRevenue(db, allTime),
+          db.customer.count({ where: { deletedAt: null } }),
+          db.product.count({
+            where: {
+              stock: { lte: db.product.fields.lowStockThreshold },
+              isActive: true,
+              deletedAt: null,
+            },
+          }),
+        ]);
       return {
         success: true,
         data: {
           totalOrders,
-          // Labeled "grossRevenue" (not "totalRevenue") so downstream
-          // consumers (the LLM agent + any UI surfacing this) know which
-          // variant they're getting.
           grossRevenue: grossRevenueAllTime,
           totalCustomers,
           lowStockCount,
         },
       };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur",
+      };
     }
   },
 });
@@ -348,21 +371,31 @@ registerTool({
 
 const updateOrderStatusSchema = z.object({
   orderId: z.string(),
-  status: z.enum(["draft", "pending", "confirmed", "shipped", "delivered", "cancelled", "returned"]),
+  status: z.enum([
+    "draft",
+    "pending",
+    "confirmed",
+    "shipped",
+    "delivered",
+    "cancelled",
+    "returned",
+  ]),
 });
 
 registerTool({
   definition: {
     name: "update_order_status",
     description:
-      "Update the status of an order. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned. " +
-      "Transitions are validated by the order state machine — invalid transitions are rejected. " +
-      "Side effects (stock deduction on confirm, stock restoration on cancel/return, customer stats update on deliver) are applied automatically.",
+      "Update the status of a legacy-compatible order. Canonical orders require their governed seller actions. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned.",
     parameters: {
       type: "object",
       properties: {
         orderId: { type: "string" },
-        status: { type: "string", description: "draft|pending|confirmed|shipped|delivered|cancelled|returned" },
+        status: {
+          type: "string",
+          description:
+            "draft|pending|confirmed|shipped|delivered|cancelled|returned",
+        },
       },
       required: ["orderId", "status"],
     },
@@ -374,19 +407,10 @@ registerTool({
         return {
           success: false,
           error:
-            "La confirmation exige la commande manuelle gouvernée; l’IA ne peut pas utiliser le chemin historique.",
+            "La confirmation exige la commande gouvernée; l’IA ne peut pas utiliser le chemin historique.",
         };
       }
       const db = getDb(ctx);
-      // Route through orderService.updateStatus — NOT a direct db.order.update.
-      // The service enforces the order state machine (assertCanTransition),
-      // applies stock side-effects (triggersStockDeduction /
-      // triggersStockRestoration), updates customer stats
-      // (triggersCustomerStatsUpdate), and sets timestamp fields
-      // (confirmedAt / shippedAt / deliveredAt) — all in a transaction.
-      // A direct db.order.update would bypass all of this (D-002).
-      // AI-M4: attribute AI-initiated status transitions to actor "ai"
-      // in the OrderChange ledger.
       const order = await orderService.updateStatus(
         { prisma: db, shop: ctx.shop },
         input.orderId,
@@ -401,8 +425,11 @@ registerTool({
           status: order.status,
         },
       };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur",
+      };
     }
   },
 });
@@ -419,14 +446,21 @@ const estimateDeliverySchema = z.object({
 registerTool({
   definition: {
     name: "estimate_delivery_cost",
-    description: "Estimate the delivery cost for a shipment to a wilaya. Default provider is Yalidine.",
+    description:
+      "Estimate the delivery cost for a shipment to a wilaya. Default provider is Yalidine.",
     parameters: {
       type: "object",
       properties: {
-        provider: { type: "string", description: "yalidine|maystro|zrexpress (default: yalidine)" },
+        provider: {
+          type: "string",
+          description: "yalidine|maystro|zrexpress (default: yalidine)",
+        },
         wilaya: { type: "string", description: "Wilaya name" },
         weight: { type: "number", description: "Weight in kg (default 1)" },
-        codAmount: { type: "number", description: "COD amount in DA (default 0)" },
+        codAmount: {
+          type: "number",
+          description: "COD amount in DA (default 0)",
+        },
       },
       required: ["wilaya"],
     },
@@ -436,19 +470,31 @@ registerTool({
       const input = estimateDeliverySchema.parse(params);
       const db = getDb(ctx);
       const adapter = getDeliveryAdapter(input.provider);
-      const creds = await loadDeliveryCredentials({ prisma: db, shop: ctx.shop }, input.provider);
-      const estimate = await adapter.estimateCost(
-        { wilaya: input.wilaya, weight: input.weight, codAmount: input.codAmount },
-        creds,
+      const credentials = await loadDeliveryCredentials(
+        { prisma: db, shop: ctx.shop },
+        input.provider,
       );
-      return { success: estimate.available, data: estimate, error: estimate.error };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+      const estimate = await adapter.estimateCost(
+        {
+          wilaya: input.wilaya,
+          weight: input.weight,
+          codAmount: input.codAmount,
+        },
+        credentials,
+      );
+      return {
+        success: estimate.available,
+        data: estimate,
+        error: estimate.error,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur",
+      };
     }
   },
 });
-
-// ── Export all tools (for the agent to import) ──────────────────────────────
 
 export const coreTools = [
   "search_products",
