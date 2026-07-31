@@ -67,6 +67,9 @@ async function seedOrderWithItems(opts: {
       phone: uniquePhone(),
       source: "manual",
       createdAt: opts.createdAt ?? yesterdayNoon(),
+      ...(["delivered", "returned"].includes(opts.status ?? "confirmed")
+        ? { deliveredAt: opts.createdAt ?? yesterdayNoon() }
+        : {}),
       items: {
         create: items.map((i) => ({
           productName: i.name,
@@ -102,7 +105,7 @@ describe("generateDailyReport — no orders yesterday", () => {
 
 describe("generateDailyReport — with orders", () => {
   it("returns a DailyReport with the expected shape", async () => {
-    await seedOrderWithItems({ totalPrice: 5000 });
+    await seedOrderWithItems({ totalPrice: 5000, status: "delivered" });
     const report: DailyReport | null = await generateDailyReport("fr");
     expect(report).not.toBeNull();
     expect(report!.date).toBeInstanceOf(Date);
@@ -116,20 +119,19 @@ describe("generateDailyReport — with orders", () => {
   });
 
   it("reports order count + revenue in the message", async () => {
-    await seedOrderWithItems({ totalPrice: 5000 });
+    await seedOrderWithItems({ totalPrice: 5000, status: "delivered" });
     const report = await generateDailyReport("fr");
     expect(report!.message).toContain("1");
-    // formatDZDBare uses fr-DZ Intl formatting → "5\u202F000" (narrow no-break space)
     expect(report!.message).toContain("5\u202F000");
     expect(report!.message).toContain("DZD");
   });
 
   it("excludes cancelled orders from revenue but counts them in ordersCount", async () => {
-    await seedOrderWithItems({ totalPrice: 5000, status: "confirmed" });
+    await seedOrderWithItems({ totalPrice: 5000, status: "delivered" });
     await seedOrderWithItems({ totalPrice: 3000, status: "cancelled" });
     const report = await generateDailyReport("fr");
     expect(report!.ordersCount).toBe(2);
-    expect(report!.revenue).toBe(5000); // cancelled excluded
+    expect(report!.revenue).toBe(5000);
   });
 
   it("includes top 3 products by quantity in the message", async () => {
@@ -183,8 +185,6 @@ describe("generateDailyReport — with orders", () => {
   });
 
   it("includes the new-customers line when customers were created yesterday", async () => {
-    // seedTestCustomer creates a customer with createdAt=now (today, not yesterday).
-    // Force a customer with createdAt=yesterday.
     const y = yesterdayNoon();
     await db.customer.create({
       data: {
@@ -199,7 +199,7 @@ describe("generateDailyReport — with orders", () => {
     await seedOrderWithItems({ createdAt: y });
     const report = await generateDailyReport("fr");
     expect(report!.newCustomers).toBeGreaterThanOrEqual(1);
-    expect(report!.message).toContain("1"); // new customers count appears
+    expect(report!.message).toContain("1");
   });
 
   it("reports delivery status counts in the message", async () => {
@@ -214,20 +214,19 @@ describe("generateDailyReport — with orders", () => {
   });
 
   it("respects the locale argument (en)", async () => {
-    await seedOrderWithItems({ totalPrice: 5000 });
+    await seedOrderWithItems({ totalPrice: 5000, status: "delivered" });
     const report = await generateDailyReport("en");
     expect(report!.locale).toBe("en");
-    // The English locale file may or may not have the keys; the function falls
-    // back to the key itself. Either way, the structure is preserved.
     expect(report!.message).toContain("1");
-    // formatDZDBare is called without a locale arg → defaults to "fr" → "5\u202F000"
     expect(report!.message).toContain("5\u202F000");
   });
 
   it("ignores orders from today (only reports yesterday's)", async () => {
-    // Order from yesterday → counted
-    await seedOrderWithItems({ createdAt: yesterdayNoon(), totalPrice: 5000 });
-    // Order from today → not counted
+    await seedOrderWithItems({
+      createdAt: yesterdayNoon(),
+      totalPrice: 5000,
+      status: "delivered",
+    });
     await seedOrderWithItems({ createdAt: new Date(), totalPrice: 9999 });
     const report = await generateDailyReport("fr");
     expect(report!.ordersCount).toBe(1);
@@ -238,19 +237,30 @@ describe("generateDailyReport — with orders", () => {
 // ── Soft-delete exclusion (AUDIT Pattern 5, Session 31) ─────────────────────
 describe("generateDailyReport — excludes soft-deleted records (AUDIT Pattern 5)", () => {
   it("excludes soft-deleted orders from count + revenue", async () => {
-    await seedOrderWithItems({ totalPrice: 5000 }); // active yesterday
-    const deleted = await seedOrderWithItems({ totalPrice: 3000 }); // also yesterday
-    await db.order.update({ where: { id: deleted.id }, data: { deletedAt: new Date() } });
+    await seedOrderWithItems({ totalPrice: 5000, status: "delivered" });
+    const deleted = await seedOrderWithItems({
+      totalPrice: 3000,
+      status: "delivered",
+    });
+    await db.order.update({
+      where: { id: deleted.id },
+      data: { deletedAt: new Date() },
+    });
     const report = await generateDailyReport("fr");
     expect(report).not.toBeNull();
-    expect(report!.ordersCount).toBe(1); // soft-deleted order excluded
-    expect(report!.revenue).toBe(5000); // 5000, not 8000
+    expect(report!.ordersCount).toBe(1);
+    expect(report!.revenue).toBe(5000);
   });
 
   it("excludes soft-deleted deliveries from the delivery summary", async () => {
-    await seedOrderWithItems({ totalPrice: 1000, deliveryStatus: "delivered" });
-    const deletedOrder = await seedOrderWithItems({ totalPrice: 1000, deliveryStatus: "returned" });
-    // Soft-delete the delivery (not the order) — a soft-deleted delivery should not be counted.
+    await seedOrderWithItems({
+      totalPrice: 1000,
+      deliveryStatus: "delivered",
+    });
+    const deletedOrder = await seedOrderWithItems({
+      totalPrice: 1000,
+      deliveryStatus: "returned",
+    });
     await db.delivery.updateMany({
       where: { orderId: deletedOrder.id },
       data: { deletedAt: new Date() },
@@ -258,6 +268,6 @@ describe("generateDailyReport — excludes soft-deleted records (AUDIT Pattern 5
     const report = await generateDailyReport("fr");
     expect(report).not.toBeNull();
     expect(report!.deliveredCount).toBe(1);
-    expect(report!.returnedCount).toBe(0); // soft-deleted delivery excluded
+    expect(report!.returnedCount).toBe(0);
   });
 });
