@@ -40,8 +40,9 @@ export const POST = withErrorHandler(
     );
 
     // The durable outbox remains authority. This bounded kick improves local UX;
-    // instrumentation owns restart and eventual processing.
-    void drainDueCourierBookings(serviceContext, 1);
+    // instrumentation owns restart and eventual processing. A failed kick is
+    // contained here so it cannot become an unhandled request-process rejection.
+    void drainDueCourierBookings(serviceContext, 1).catch(() => undefined);
 
     return NextResponse.json(
       {
