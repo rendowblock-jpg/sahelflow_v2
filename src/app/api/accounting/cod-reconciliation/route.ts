@@ -1,14 +1,38 @@
-/** GET /api/accounting/cod-reconciliation — COD reconciliation summary (Phase 4). */
-import { NextRequest, NextResponse } from "next/server";
+/**
+ * Deprecated compatibility alias for the canonical COD workspace.
+ *
+ * This route is read-only and delegates to the same append-only accounting
+ * projection as `/api/accounting/cod-settlements`. Legacy scalar COD fields are
+ * no longer a reconciliation authority.
+ */
+import { NextResponse } from "next/server";
+
+import { getCanonicalCodWorkspaceSummary } from "@/lib/accounting/canonical-cod-projections";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
-import { getCodReconciliationSummary } from "@/lib/data/cod-service";
-import { db, shopContext } from "@/lib/db";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
+import { db } from "@/lib/db";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
-export const GET = withErrorHandler(async (_req: NextRequest) => {
-  await requireAuth();
-  const summary = await getCodReconciliationSummary({ prisma: db, shop: shopContext });
-  return NextResponse.json(summary);
+const compatibilityHeaders = {
+  Deprecation: "true",
+  Link: '</api/accounting/cod-settlements>; rel="successor-version"',
+};
+
+export const GET = withErrorHandler(async () => {
+  const actorContext = await requireTrustedActor();
+  const summary = await getCanonicalCodWorkspaceSummary({
+    prisma: db,
+    shop: actorContext.shop,
+    businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
+  });
+  return NextResponse.json(
+    {
+      summary,
+      deprecated: true,
+      canonicalEndpoint: "/api/accounting/cod-settlements",
+    },
+    { headers: compatibilityHeaders },
+  );
 }, "GET /api/accounting/cod-reconciliation");

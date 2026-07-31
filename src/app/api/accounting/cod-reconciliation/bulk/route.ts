@@ -1,34 +1,31 @@
-/** POST /api/accounting/cod-reconciliation/bulk — bulk mark COD as remitted (Phase 4). */
-import { NextRequest, NextResponse } from "next/server";
+/**
+ * Removed legacy bulk COD remittance mutation.
+ *
+ * A scalar "mark remitted" update cannot represent canonical settlement lines,
+ * fees, adjustments, discrepancies, matching, optimistic versions or replay.
+ * Callers must post a governed settlement instead.
+ */
+import { NextResponse } from "next/server";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
-import { bulkMarkCodRemitted } from "@/lib/data/cod-service";
-import { z } from "zod";
-import { db, shopContext } from "@/lib/db";
-import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
-const bulkSchema = z.object({
-  orderIds: z.array(z.string()).min(1),
-  remittanceRef: z.string().min(1),
-});
-
-export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
-  const body = await req.json();
-  const parsed = bulkSchema.parse(body);
-  const authorities = await db.order.findMany({
-    where: { id: { in: parsed.orderIds }, deletedAt: null },
-    select: { source: true, sourceMetadata: true },
-  });
-  for (const authority of authorities) {
-    assertLegacyOrderFollowupAllowed(authority.source, authority.sourceMetadata);
-  }
-  const result = await bulkMarkCodRemitted(
-    { prisma: db, shop: shopContext },
-    parsed.orderIds,
-    parsed.remittanceRef,
+export const POST = withErrorHandler(async () => {
+  await requireTrustedActor();
+  return NextResponse.json(
+    {
+      error: "Legacy bulk COD remittance is no longer supported",
+      code: "LEGACY_COD_MUTATION_REMOVED",
+      canonicalEndpoint: "/api/accounting/cod-settlements",
+    },
+    {
+      status: 410,
+      headers: {
+        Deprecation: "true",
+        Link: '</api/accounting/cod-settlements>; rel="successor-version"',
+      },
+    },
   );
-  return NextResponse.json(result);
 }, "POST /api/accounting/cod-reconciliation/bulk");
