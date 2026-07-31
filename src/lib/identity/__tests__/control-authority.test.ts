@@ -9,9 +9,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ShopContext } from "@/lib/shops/context";
 import {
   bindOwnerIdentitySession,
+  getIdentityAdministrationSnapshot,
   identityAuthorityMarkerPath,
   identityAuthorityPath,
   resolveDurableIdentityActor,
+  revokeIdentitySessionBinding,
   rotateIdentityAuthorityAuthentication,
 } from "../control-authority";
 
@@ -98,6 +100,33 @@ describe("installation identity authority", () => {
     );
   });
 
+  it("returns a sanitized exact-installation administration snapshot", async () => {
+    const actor = await bindOwnerIdentitySession("session-1", SHOP_A);
+    await bindOwnerIdentitySession("session-2", SHOP_A);
+
+    const snapshot = await getIdentityAdministrationSnapshot(
+      "session-2",
+      SHOP_A,
+    );
+    expect(snapshot.currentActor).toEqual(actor);
+    expect(snapshot.member).toMatchObject({
+      id: actor.workspaceMemberId,
+      personId: actor.personId,
+      role: "owner",
+      shopIds: ["shop-a"],
+    });
+    expect(snapshot.devices).toEqual([
+      expect.objectContaining({ id: actor.deviceId, current: true }),
+    ]);
+    expect(snapshot.sessions).toHaveLength(2);
+    expect(snapshot.sessions.find((session) => session.current)).toMatchObject({
+      sessionId: "session-2",
+      deviceId: actor.deviceId,
+      revokedAt: null,
+    });
+    expect(JSON.stringify(snapshot)).not.toMatch(/secret|token|pin|mac/i);
+  });
+
   it("revokes selected durable session bindings during rotation", async () => {
     await bindOwnerIdentitySession("session-old", SHOP_A);
     const current = await bindOwnerIdentitySession("session-current", SHOP_A, {
@@ -113,6 +142,92 @@ describe("installation identity authority", () => {
     await expect(
       resolveDurableIdentityActor("session-current", SHOP_A),
     ).resolves.toEqual(current);
+  });
+
+  it("protects the current session from administrative self-revocation", async () => {
+    await bindOwnerIdentitySession("session-current", SHOP_A);
+
+    await expect(
+      revokeIdentitySessionBinding(
+        "session-current",
+        "session-current",
+        SHOP_A,
+      ),
+    ).rejects.toMatchObject({
+      code: "CURRENT_SESSION_REVOCATION_REQUIRES_LOGOUT",
+      statusCode: 409,
+    });
+  });
+
+  it("revokes another session immediately and replays idempotently", async () => {
+    await bindOwnerIdentitySession("session-current", SHOP_A);
+    await bindOwnerIdentitySession("session-target", SHOP_A);
+
+    const first = await revokeIdentitySessionBinding(
+      "session-current",
+      "session-target",
+      SHOP_A,
+    );
+    const replay = await revokeIdentitySessionBinding(
+      "session-current",
+      "session-target",
+      SHOP_A,
+    );
+
+    expect(first).toMatchObject({
+      state: "revoked",
+      sessionId: "session-target",
+    });
+    expect(replay).toMatchObject({
+      state: "already-revoked",
+      sessionId: "session-target",
+      revokedAt: first.revokedAt,
+      revision: first.revision,
+    });
+    await expect(
+      resolveDurableIdentityActor("session-target", SHOP_A),
+    ).rejects.toMatchObject({
+      code: "IDENTITY_SESSION_BINDING_REQUIRED",
+      statusCode: 401,
+    });
+    await expect(
+      resolveDurableIdentityActor("session-current", SHOP_A),
+    ).resolves.toMatchObject({ role: "owner" });
+  });
+
+  it("serializes concurrent duplicate revocation into one revision", async () => {
+    await bindOwnerIdentitySession("session-current", SHOP_A);
+    await bindOwnerIdentitySession("session-target", SHOP_A);
+    const before = await getIdentityAdministrationSnapshot(
+      "session-current",
+      SHOP_A,
+    );
+
+    const results = await Promise.all([
+      revokeIdentitySessionBinding(
+        "session-current",
+        "session-target",
+        SHOP_A,
+      ),
+      revokeIdentitySessionBinding(
+        "session-current",
+        "session-target",
+        SHOP_A,
+      ),
+    ]);
+    const after = await getIdentityAdministrationSnapshot(
+      "session-current",
+      SHOP_A,
+    );
+
+    expect(results.map((result) => result.state).sort()).toEqual([
+      "already-revoked",
+      "revoked",
+    ]);
+    expect(new Set(results.map((result) => result.revision))).toEqual(
+      new Set([before.revision + 1]),
+    );
+    expect(after.revision).toBe(before.revision + 1);
   });
 
   it("denies a session in a shop that is not in the member grant", async () => {
