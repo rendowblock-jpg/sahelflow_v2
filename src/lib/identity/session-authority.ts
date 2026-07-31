@@ -1,5 +1,7 @@
 export type SessionAuthorityRecord = Readonly<{
   id: string;
+  issuedAt: Date;
+  lastSeenAt: Date;
   revokedAt: Date | null;
 }>;
 
@@ -10,11 +12,18 @@ export type SessionAuthorityRejectionCode =
   | "LEGACY_SESSION_UNSUPPORTED"
   | "SESSION_NOT_FOUND"
   | "SESSION_REVOKED"
+  | "SESSION_OVERALL_EXPIRED"
+  | "SESSION_INACTIVE"
   | "SESSION_AUTHORITY_UNAVAILABLE";
 
 export type SessionAuthorityResult =
   | Readonly<{ status: "setup" }>
-  | Readonly<{ status: "authenticated"; sessionId: string }>
+  | Readonly<{
+      status: "authenticated";
+      sessionId: string;
+      issuedAt: Date;
+      lastSeenAt: Date;
+    }>
   | Readonly<{
       status: "rejected";
       code: SessionAuthorityRejectionCode;
@@ -24,6 +33,9 @@ export type ResolveSessionAuthorityInput = Readonly<{
   token: string | undefined;
   secret: string | null;
   authSetup: boolean;
+  now: Date;
+  overallTimeoutMs: number;
+  inactivityTimeoutMs: number;
   verifyToken: (token: string, secret: string) => Promise<boolean>;
   getSessionId: (token: string) => string | null;
   findSession: (sessionId: string) => Promise<SessionAuthorityRecord | null>;
@@ -40,12 +52,13 @@ function isExactSessionId(value: unknown): value is string {
   );
 }
 
+function isValidDate(value: unknown): value is Date {
+  return value instanceof Date && Number.isFinite(value.getTime());
+}
+
 /**
  * Resolve the current local session through one fail-closed authority boundary.
- *
- * `setup` is deliberately distinct from authentication: onboarding may continue
- * before a PIN exists, but callers that need a trusted actor must reject setup
- * mode because no authenticated principal exists yet.
+ * Setup remains a separate onboarding state, never authenticated authority.
  */
 export async function resolveSessionAuthority(
   input: ResolveSessionAuthorityInput,
@@ -97,5 +110,35 @@ export async function resolveSessionAuthority(
     return { status: "rejected", code: "SESSION_REVOKED" };
   }
 
-  return { status: "authenticated", sessionId };
+  if (
+    !isValidDate(input.now) ||
+    !isValidDate(session.issuedAt) ||
+    !isValidDate(session.lastSeenAt) ||
+    !Number.isSafeInteger(input.overallTimeoutMs) ||
+    input.overallTimeoutMs <= 0 ||
+    !Number.isSafeInteger(input.inactivityTimeoutMs) ||
+    input.inactivityTimeoutMs <= 0
+  ) {
+    return { status: "rejected", code: "SESSION_INVALID" };
+  }
+
+  const nowMs = input.now.getTime();
+  const issuedAtMs = session.issuedAt.getTime();
+  const lastSeenAtMs = session.lastSeenAt.getTime();
+  if (issuedAtMs > nowMs || lastSeenAtMs < issuedAtMs || lastSeenAtMs > nowMs) {
+    return { status: "rejected", code: "SESSION_INVALID" };
+  }
+  if (nowMs - issuedAtMs >= input.overallTimeoutMs) {
+    return { status: "rejected", code: "SESSION_OVERALL_EXPIRED" };
+  }
+  if (nowMs - lastSeenAtMs >= input.inactivityTimeoutMs) {
+    return { status: "rejected", code: "SESSION_INACTIVE" };
+  }
+
+  return {
+    status: "authenticated",
+    sessionId,
+    issuedAt: session.issuedAt,
+    lastSeenAt: session.lastSeenAt,
+  };
 }
