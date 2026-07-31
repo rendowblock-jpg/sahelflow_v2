@@ -107,7 +107,7 @@ Founder explicitly changes it.
   identity, exact catalog authority, server pricing and replay; source checkpoint
   `30607584514` passed on `375b137d8aa3b5201e05fc2835224b5041a0d50e`.
 
-### Governed courier lifecycle — source-complete
+### Active package at session close — governed courier lifecycle (source-complete)
 
 - trusted booking command with exact order version and provider selection;
 - durable external effect outside the canonical transaction;
