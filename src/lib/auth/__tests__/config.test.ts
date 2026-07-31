@@ -46,6 +46,7 @@ describe("isPublicApiRoute", () => {
     "/api/auth/logout",
     "/api/auth/setup",
     "/api/auth/status",
+    "/api/auth/invitations/accept",
     "/api/health",
     "/api/storefront/submit",
     "/api/reports/daily",
@@ -57,6 +58,9 @@ describe("isPublicApiRoute", () => {
     "/api/auth",
     "/api/auth/change-pin",
     "/api/auth/reauthenticate",
+    "/api/auth/invitations",
+    "/api/auth/invitations/accept/private",
+    "/api/auth/invitations/123/revoke",
     "/api/auth/status/private",
     "/api/health/private",
     "/api/storefront/submit/private",
@@ -70,16 +74,20 @@ describe("isPublicApiRoute", () => {
 });
 
 describe("isPublicPage", () => {
-  it.each(["/login", "/setup", "/storefront", "/storefront/example"])(
-    "allows public page %s",
-    (pathname) => {
-      expect(isPublicPage(pathname)).toBe(true);
-    },
-  );
+  it.each([
+    "/login",
+    "/setup",
+    "/join",
+    "/storefront",
+    "/storefront/example",
+  ])("allows public page %s", (pathname) => {
+    expect(isPublicPage(pathname)).toBe(true);
+  });
 
   it.each([
     "/login/recovery",
     "/setup/profile",
+    "/join/private",
     "/dashboard",
     "/orders",
     "/customers",
@@ -92,13 +100,14 @@ describe("isPublicPage", () => {
 describe("public authority arrays", () => {
   it("does not expose an API namespace prefix", () => {
     expect(PUBLIC_API_ROUTES).not.toContain("/api/auth");
+    expect(PUBLIC_API_ROUTES).not.toContain("/api/auth/invitations");
     expect(PUBLIC_API_ROUTES).not.toContain("/api/storefront/config/");
     expect(PUBLIC_API_ROUTES).not.toContain("/api/whatsapp/qr-image");
   });
 
-  it("retains the intended public page roots", () => {
+  it("retains only the intended public page roots", () => {
     expect(PUBLIC_PAGES).toEqual(
-      expect.arrayContaining(["/login", "/setup", "/storefront"]),
+      expect.arrayContaining(["/login", "/setup", "/join", "/storefront"]),
     );
   });
 });
