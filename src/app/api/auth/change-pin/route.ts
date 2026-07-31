@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { auditLog, changeAuthPin, requireAuth } from "@/lib/auth/server";
+import { auditLog, changeAuthPin } from "@/lib/auth/server";
 import {
   checkLoginRateLimit,
   getClientIp,
@@ -10,6 +10,8 @@ import {
   recordLoginFailure,
   recordLoginSuccess,
 } from "@/lib/auth/rate-limit";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { SahelFlowError } from "@/types/errors";
 
 const ChangePinSchema = z.object({
   currentPin: z.string().min(1, "Current PIN is required"),
@@ -20,7 +22,15 @@ const ChangePinSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  const context = await requireTrustedAction("members.manage");
+  if (context.actor.kind !== "person" || context.actor.role !== "owner") {
+    throw new SahelFlowError(
+      "Owner authority is required to change the owner PIN",
+      "ACTION_FORBIDDEN",
+      403,
+    );
+  }
+
   const ip = getClientIp(req.headers);
   const limit = checkLoginRateLimit(ip);
   if (!limit.allowed) {
