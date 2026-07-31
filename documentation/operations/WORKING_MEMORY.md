@@ -8,13 +8,13 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
 > **Merge state:** open, draft, mergeable, unmerged
-> **Phase 1 source-exit head:** `bd87dea55e19397349b704b180e9ba03220836a6`
-> **Phase 1 CI:** `30637403344` — success
-> **Phase 1 source checkpoint:** `30637403133` — success
+> **Previous Phase 1 source-exit candidate:** `bd87dea55e19397349b704b180e9ba03220836a6`
+> **Previous Phase 1 CI:** `30637403344` — success
+> **Previous Phase 1 source checkpoint:** `30637403133` — success
 
 GitHub PR #195 and its exact current head/checks are the live branch authority.
 Never trust a copied head or run number in this file without re-reading GitHub at
@@ -27,10 +27,10 @@ Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
 proposed source only: it is not merged, published, installed, provider-certified,
 independently reviewed or Founder-accepted.
 
-## Phase 1 result — source-complete on the draft branch
+## Phase 1 result — green source-exit candidate reopened for bounded repair
 
-The named Phase 1 source-exit head proves the complete canonical Golden COD source
-boundary and no known Phase 1 P0/P1 remains there:
+The previous source-exit candidate proved the broad canonical Golden COD source
+boundary across:
 
 - canonical manual, storefront, CSV/XLSX, Shopify/WooCommerce/YouCan, WhatsApp and
   proposal-bound AI intake with exact source identity, server pricing and replay;
@@ -50,9 +50,21 @@ boundary and no known Phase 1 P0/P1 remains there:
 - removed/read-only scalar COD mutation routes and a durable adopted-source bypass
   audit, including removal of the legacy order-detail COD controls.
 
-Production native all-shop restore remains Phase 4. Full Windows/Rust/MSI and
-installed evidence remain deferred until the Founder-authorized Phase 1–4 source
-program is frozen.
+A 2026-07-31 independent source audit found new closure evidence that invalidates
+the earlier “no known Phase 1 P0/P1” statement:
+
+1. the courier booking command permanently claims aggregate version `0`, making a
+   governed second booking unreachable after ambiguous reconciliation or terminal
+   known failure;
+2. corrupt or undecryptable courier outbox payloads can escape the effect boundary
+   without a durable dead-letter transition and can repeatedly poison recovery;
+3. active authority documents and `sf-audit` preserve contradictory phase/next-
+   action statements.
+
+The repair remains bounded to these findings and their required invariant tests.
+Unrelated completed Phase 1 packages stay closed. Production native all-shop
+restore remains Phase 4. Full Windows/Rust/MSI and installed evidence remain
+deferred until the Founder-authorized Phase 1–4 source program is frozen.
 
 ## Founder-approved execution method
 
@@ -61,37 +73,32 @@ before writing, deliver coherent packages, run one exact-head checkpoint, repair
 only concrete diagnostics, keep CI read-only, remove temporary scaffolding and
 update existing authorities instead of creating another handoff document.
 
-## Phase 1 semantic continuity
+## Active package at session close — Phase 1 closure repair
 
-The previous frontier marker **Active phase:** Phase 1 — canonical Golden COD
-business core is retained here only for audited continuity; the active phase is
-Phase 2 as stated above. Phase 1 began from protected PR #190 and the later
-protected fulfillment extension, then closed its remaining source scope in draft
-PR #195.
+The package owns one coherent outcome:
 
-### Active package at session close — governed courier lifecycle
-
-This former active package is closed at the Phase 1 source-exit boundary. Its
-booking, durable effect, receipt, tracking, exception and recovery contracts remain
-part of the green Golden COD evidence and are not reopened absent new P0/P1 proof.
-
-### Finite Phase 1 closure ledger
-
-Profitability authority, restart/update preservation, disposable backup/restore,
-the representative multilingual journey, legacy-bypass containment and authority
-reconciliation are closed at the named unmerged source boundary.
+- all active authority entry points state the same phase and next package;
+- authority CI checks agreement rather than obsolete literal prose;
+- a reconciled or known-failed courier booking can create a later booking
+  generation without replaying or duplicating the original provider effect;
+- corrupt pre-effect payloads become audited dead letters and do not block later
+  due work;
+- real integration tests exercise second booking, concurrent recovery, original-
+  key replay and poisoned-payload isolation.
 
 ### Exact next-session order
 
-1. Re-read GitHub PR #195, this file, the Phase 2 Roadmap gate and protected main.
-2. Confirm the current head descends from the Phase 1 source-exit head and has no
-   later failing checkpoint.
-3. Begin only the bounded Phase 2A durable identity kernel below.
-4. Keep PR #195 draft, unmerged and version-neutral.
+1. Re-read GitHub PR #195, this file, the Phase 1 exit gate and protected main.
+2. Confirm the current head descends from the previous source-exit candidate.
+3. Finish authority consistency and `sf-audit` enforcement.
+4. Repair courier booking generation/recovery and poisoned-payload containment.
+5. Run the targeted tests, then one exact-head source checkpoint.
+6. Freeze the repaired head for one independent P0/P1 review.
+7. Activate Phase 2A only after the repaired Phase 1 head has no known P0/P1.
 
-## Active next package — Phase 2A durable identity kernel
+## Next package after closure — Phase 2A durable identity kernel
 
-Build the first bounded Phase 2 vertical without reopening Phase 1:
+After Phase 1 is refrozen, build the first bounded Phase 2 vertical:
 
 1. research current primary-source practice for local-first person, workspace,
    member, installation, device and session identity plus immediate revocation;
