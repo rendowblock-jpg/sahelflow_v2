@@ -21,7 +21,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 
 interface MessageExtractionProps {
-  conversationId: string;
+  conversationId?: string;
   messageId: string;
   messageBody: string;
   knownPhone?: string;
@@ -33,6 +33,16 @@ interface ExtractionResult {
   confidence: number;
   isComplete: boolean;
   missingFields?: string[];
+}
+
+function algerianPhoneToWhatsAppJid(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const international = digits.startsWith("0")
+    ? `213${digits.slice(1)}`
+    : digits.startsWith("213")
+      ? digits
+      : `213${digits}`;
+  return `${international}@s.whatsapp.net`;
 }
 
 export function MessageExtraction({
@@ -105,6 +115,8 @@ export function MessageExtraction({
       setError(t("inbox.invalidPhoneFormat"));
       return;
     }
+    const sourceConversationId =
+      conversationId ?? algerianPhoneToWhatsAppJid(phoneCheck.data);
 
     setCreating(true);
     setError(null);
@@ -113,7 +125,7 @@ export function MessageExtraction({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          conversationId,
+          conversationId: sourceConversationId,
           messageId,
           extractionMethod: result.method,
           extractionConfidence: result.confidence,
