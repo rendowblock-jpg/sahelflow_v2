@@ -33,6 +33,17 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Package exact source snapshot
+        run: git archive --format=tar.gz --output=/tmp/sahelflow-source-${{ github.event.pull_request.head.sha }}.tar.gz HEAD
+
+      - name: Upload exact source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-source-snapshot-${{ github.event.pull_request.head.sha }}
+          path: /tmp/sahelflow-source-${{ github.event.pull_request.head.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 2
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
