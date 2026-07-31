@@ -228,9 +228,10 @@ for (const [relativePath, markers] of entrypointChecks) {
 }
 
 /**
- * These markers prove that the current authority describes the active FD-028
- * program and current release boundary. Semantic matching collapses whitespace so
- * Markdown line wrapping cannot create a false authority failure.
+ * These stable semantic markers prove that the active authorities still describe
+ * FD-028, the current release boundary, the long-lived program and a resumable
+ * execution frontier. They intentionally avoid exact branch heads and package
+ * wording that changes during normal implementation.
  */
 const semanticRequirements: Array<[string, string[]]> = [
   [
@@ -247,10 +248,13 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "FD-028",
       "Phase 0–9",
-      "Research-first gate",
+      "Founder execution-granularity decision",
+      "Professional cross-session execution protocol",
+      "CI must remain read-only",
       "Do not run source builds, full automated tests",
       "1.0.0-internal.13",
-      "Rebase the corrected local Phase 3 WhatsApp durable-effect commit",
+      "agent/phases1-4-completion-program",
+      "Exact next outcome",
     ],
   ],
   [
@@ -309,12 +313,14 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active code PR:** None at this checkpoint",
-      "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete",
-      "Phase 0 remains complete through PR #179",
-      "PR #190 — trusted manual confirmation",
-      "### Corrected Phase 3 durable WhatsApp proposal",
-      "## Exact next session order",
+      "**Active phase:** Phase 1 — canonical Golden COD business core",
+      "**Active PR:** draft PR #195",
+      "Phase 0 remains complete",
+      "PR #190",
+      "Founder-approved execution method",
+      "Active package at session close — governed courier lifecycle",
+      "Finite Phase 1 closure ledger",
+      "Exact next-session order",
       "**Execution epic:** issue #164",
     ],
   ],
@@ -360,6 +366,7 @@ const exactStaleMarkers: Array<[string, string]> = [
   ["AGENTS.md", "The compressed program uses four planned sessions"],
   ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
   ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
+  ["AGENTS.md", "Rebase the corrected local Phase 3 WhatsApp durable-effect commit"],
   ["documentation/README.md", "**Active phase:** Phase 0"],
   [
     "documentation/README.md",
@@ -376,6 +383,7 @@ const exactStaleMarkers: Array<[string, string]> = [
     "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
   ],
   ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
+  ["documentation/operations/WORKING_MEMORY.md", "**Active code PR:** None at this checkpoint"],
   [
     "documentation/operations/WORKING_MEMORY.md",
     "**Active implementation branch:** None; Phase 1 implementation ready",
@@ -387,6 +395,14 @@ const exactStaleMarkers: Array<[string, string]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "### Corrected Phase 3 durable WhatsApp proposal",
   ],
 ];
 
