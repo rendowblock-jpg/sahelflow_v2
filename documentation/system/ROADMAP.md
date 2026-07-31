@@ -8,19 +8,14 @@
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
-> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency; Phase 2A next
+> **Active phase:** Phase 2A — durable local identity and session authority
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-07-31
 
-This is the final dependency-correct program for completing SahelFlow 1.0 across
-product, business authority, data, security, recovery, Windows runtime,
-providers, connected planes, frontend, Arabic/RTL, accessibility, performance,
-operations, certification and public evidence.
-
-It replaces the obsolete four-session overlay. It preserves the valid operating
-rules from FD-027—bounded WIP, independent review, coherent outcome packages,
-milestone releases, continuous Arabic/RTL and performance, P0/P1 blocking and
-evidence honesty—but no session count may now be mistaken for completion.
+This is the dependency-correct Phase 0–9 program for completing SahelFlow 1.0.
+Product detail remains owned by `../product/PRODUCT.md` and
+`../product/EXPERIENCE.md`; technical invariants remain owned by
+`ARCHITECTURE.md`. This document owns phase order, phase outcomes and exit gates.
 
 ## 1. Binding outcome
 
@@ -30,74 +25,57 @@ Windows-first operations system for Algerian COD sellers.
 Completion requires:
 
 - every Required seller journey works end to end;
-- every canonical mutation uses trusted workspace, member/device/session and shop
-  authority as applicable;
+- every canonical mutation uses trusted workspace, member, device, session,
+  installation and exact shop authority as applicable;
 - money, inventory, delivery and compensation remain correct under concurrency,
   duplicate input, restart, update, interruption and recovery;
-- every page meets one AAA experience contract with real data and complete states;
+- every page meets the AAA experience contract with real data and complete states;
 - Arabic, French and English have equivalent capability depth;
 - RTL, accessibility, keyboard operation, zoom and responsive behavior are proven;
 - providers are exposed only after capability-specific certification;
-- T470 and declared low-end targets pass with representative data;
-- signed installed behavior matches the exact source and preserves Founder data;
-- documentation and public claims match exact current evidence;
+- T470 and declared floor-device targets pass with representative data;
+- signed installed behavior matches exact source and preserves Founder data;
+- documentation and public claims match exact evidence;
 - no unresolved P0 or P1 defect remains.
 
-A model, page, API route, adapter, screenshot, mock, test count, release artifact or
-attractive shell does not by itself complete a capability.
+A model, page, route, adapter, screenshot, mock, test count or release artifact does
+not by itself complete a capability.
 
 ## 2. Completion boundaries
 
 ### Founder AAA Candidate
 
-The Founder AAA Candidate requires all Required code, pages, journeys and
-installed behavior to be integrated and internally proven, including:
-
-- complete Golden COD Journey;
-- complete local product;
-- identity, team, licensing and multi-shop behavior;
-- whole-product AAA UI and Arabic/RTL/accessibility parity;
-- connected surfaces implemented to their internal certification boundary;
-- provider candidates ready for live certification;
-- installed Windows lifecycle and performance evidence;
-- zero known P0/P1 defects.
+Requires all Required local code, pages, journeys and installed behavior,
+including Golden COD, identity/team/licensing/multi-shop, whole-product AAA UI,
+Arabic/RTL/accessibility parity, provider candidates, Windows lifecycle,
+performance evidence and zero known P0/P1.
 
 ### Public Stable
 
-Public Stable additionally requires evidence that implementation sessions cannot
-fabricate:
-
-- representative Algerian seller beta;
-- live provider certification;
-- independent security/privacy and Law 18-07 review;
-- backup restore, migration and incident drills;
-- compatibility matrix;
-- support, rollout and service-exit readiness;
-- explicit Founder promotion.
+Additionally requires representative Algerian seller beta, live provider
+certification, independent security/privacy/Law 18-07 review, recovery and
+incident drills, compatibility evidence, support/rollout readiness and explicit
+Founder promotion.
 
 ## 3. Program rules
 
-1. Complete vertical seller outcomes rather than accumulating disconnected
-   foundations, pages or helpers.
-2. Freeze shared contracts briefly, then adopt them immediately in production.
-3. After a vertical migrates, remove or disable the competing legacy mutation
-   path after parity and recovery proof.
+1. Complete vertical seller outcomes, not disconnected foundations.
+2. Freeze shared contracts briefly and adopt them immediately in production.
+3. Remove or disable competing legacy mutation paths after parity and recovery
+   proof.
 4. Research, UX, Arabic/RTL, accessibility, performance, security, migration,
    recovery, diagnostics and evidence travel with each phase.
-5. Every phase begins with the research-to-implementation gate in
-   `../operations/WORKFLOW.md`.
-6. Current primary sources and official platform/provider documentation are
-   required for time-sensitive decisions.
-7. Generic AI recommendations, trends and screenshots are not authority.
-8. P0/P1 block the affected outcome; P2/P3 receive owned follow-up without
-   unbounded review loops.
-9. Ordinary feature PRs merge without version bumps; coherent milestones receive
-   one immutable exact-source Internal candidate.
-10. At most one frozen signed candidate is in flight, while independent work may
-    continue.
-11. Beta and Stable require explicit Founder promotion.
-12. No lower document, issue, branch or agent may silently weaken a Founder,
+5. Every phase begins with the research gate in `../operations/WORKFLOW.md`.
+6. Current primary standards and official platform/provider documentation govern
+   time-sensitive choices.
+7. P0/P1 block the affected outcome; P2/P3 receive owned follow-up.
+8. Routine packages do not bump the application version.
+9. At most one frozen signed candidate is in flight.
+10. Beta and Stable require explicit Founder promotion.
+11. No lower document, issue, branch or agent may silently weaken a Founder,
     product, experience or architecture requirement.
+12. With one active coding agent, a separated frozen-head adversarial pass replaces
+    the internal second-agent gate but is never called independent review.
 
 ## 4. Critical path
 
@@ -123,9 +101,8 @@ fabricate:
 9. Certification, representative beta and Stable
 ```
 
-Phases 5–7 run continuously beside functional work where contracts permit, but no
-page or quality track may be declared complete before its real business behavior
-exists.
+Phases 5–7 run continuously where contracts permit, but cannot be declared
+complete before real business behavior exists.
 
 ---
 
@@ -133,47 +110,19 @@ exists.
 
 ## Objective
 
-Remove planning drift and establish one durable execution authority.
-
-## Required outcomes
-
-- Add FD-028 and state exactly which FD-027 clauses it supersedes.
-- Preserve the product promise, experience contract and architecture invariants.
-- Replace the four-session overlay with this Phase 0–9 program.
-- Make `WORKFLOW.md` enforce research-first implementation, anti-drift rules,
-  review severity and evidence.
-- Make `WORKING_MEMORY.md` contain only current truth and the exact next outcome.
-- Keep ten active documentation authorities; create no new permanent masterplan.
-- Convert issue #164 into the live Phase 0–9 execution dashboard.
-- Reconcile Internal.13 publication truth across current state and entry points.
-- Map every Required capability, route and evidence boundary to an owner phase.
-
-## Research gate
-
-Validate current best practice for durable engineering authority, traceable
-Founder decisions, evidence-based completion and risk-aware CI without importing
-process designed for much larger teams.
+Establish one authority chain, roadmap, execution epic and resumable frontier.
 
 ## Exit gate
 
-- one authority chain;
-- one final roadmap;
-- one execution epic;
+- one authority chain and one final roadmap;
 - no contradictory active next action;
 - no unowned Required capability;
 - documentation audit passes;
-- a fresh agent can start the exact next implementation package without chat.
+- a fresh session can start the exact next package without chat.
 
 ## Result — complete
 
-PR #179 adopted FD-028 and this Phase 0–9 program, merging to protected `main` as
-`18c45e474f58744b6f837372509154ca500044b0`. Exact-head CI run `30430538958`
-passed. Issue #164 is the non-authoritative execution dashboard, the ten active
-documents retain their existing ownership boundaries, and the exact first Phase 1
-vertical is reconstructable without chat. The closeout reconciliation changes
-only authority state and installed evidence; it does not reopen Phase 0 or change
-application behavior. Issue #164 records the current protected-main head after
-each merge.
+PR #179 adopted FD-028 and the Phase 0–9 program. Phase 0 remains protected truth.
 
 ---
 
@@ -181,223 +130,66 @@ each merge.
 
 ## Objective
 
-Make the new canonical business foundation the real operating path of the app.
+Make the canonical business foundation the real operating path of the app.
 
-## Golden COD business slice
+## Golden COD slice
 
 ```text
-Product or variant
-→ customer and risk
+product / variant
+→ customer / risk
 → order intake
 → confirmation or rejection
 → stock reservation
-→ fulfillment
-→ shipment
+→ fulfillment / shipment
 → delivery, failure or refusal
-→ COD receivable
-→ courier collection and remittance
+→ COD receivable / collection / remittance
 → discrepancy reconciliation
-→ return, exchange or refund
+→ return / exchange / refund
 → inventory and financial compensation
-→ analytics and audit
-→ restart and in-place update preservation
+→ analytics / audit
+→ restart / in-place update
 → backup-compatible canonical facts
 ```
 
-Phase 1 completes the canonical business path and proves that its facts survive
-process restart and in-place application update. It must also prove, with a
-disposable snapshot/restore fixture, that the new records are compatible with the
-current local backup primitive. It does **not** claim production native all-shop
-restore, replacement-install recovery or zero-knowledge retention. Phase 4 owns
-those recovery mechanisms and closes the backup/restore clause of the complete
-product Golden COD Journey.
+## Required authority
 
-## Research gate
-
-Research and adopt current best practices for:
-
-- independent commerce lifecycle states;
-- SQLite optimistic concurrency and transaction behavior;
-- stock availability, reservation and append-only movement ledgers;
-- exact idempotent commands and replay;
-- transactional outbox and durable effect receipts;
-- financial ledger and compensation design;
-- Algerian COD collection, remittance, fees and discrepancy reconciliation;
-- return, exchange and refund accounting;
-- provider-event ingestion and safe checkpoint advancement.
-
-## Phase 1A — Product, customer and canonical order intake
-
-Implement one command path for:
-
-- product and variant creation;
-- initial stock facts;
-- customer creation, normalization and duplicate handling;
-- order creation and authoritative price calculation;
-- risk assessment and explainable outcome;
-- exact source identity and idempotency;
-- trusted actor and shop context;
-- audit, event and projection invalidation;
-- duplicate, replay and conflict behavior.
-
-Adopt the command in this order:
-
-1. manual UI;
-2. WhatsApp extraction;
-3. storefront receipt import;
-4. CSV/XLSX import;
-5. Shopify, WooCommerce and YouCan;
-6. AI-created draft.
-
-No adopted source may directly create canonical order rows afterward.
-
-## Phase 1B — Confirmation and inventory
-
-Replace direct scalar-stock mutation with:
-
-- available-stock calculation;
-- atomic reservation opening;
-- insufficient-stock refusal;
-- reservation release and consumption;
-- product and variant authority;
-- same-item concurrency protection;
-- append-only inventory movement;
-- low-stock event after commit;
-- optimistic conflict and retry behavior.
-
-Negative inventory, double reservation and double compensation must be
-structurally impossible.
-
-## Phase 1C — Fulfillment and delivery
-
-Implement separate:
-
-- fulfillment state;
-- shipment state;
-- delivery state;
-- provider state and external IDs;
-- label and tracking receipt;
-- cancellation/edit policy;
-- pickup, transit and exception timeline;
-- failed delivery and refusal;
-- return in transit and physical receipt;
-- manual correction with reason and audit.
-
-One legacy order status may remain only as a compatibility projection.
-
-## Phase 1D — COD and accounting
-
-Implement:
-
-- expected COD;
-- carrier receivable;
-- collected and pending-remittance states;
-- partial and full remittance;
-- courier fees and adjustments;
-- disputes and discrepancies;
-- remittance batches and evidence;
-- unmatched or partially matched lines;
-- immutable DZD financial movements;
-- governed correction and compensation;
-- shared realized-revenue, COGS and profitability definitions.
-
-Every dashboard, analytics and accounting metric must use the same governed
-semantics.
-
-## Phase 1E — Returns, exchanges and refunds
-
-Implement:
-
-- return request, approval, rejection and cancellation;
-- physical receipt and inspection;
-- restock, damage or loss disposition;
-- replacement/exchange order;
-- full and partial refund;
-- refund reversal through compensation;
-- COD and customer-balance impact;
-- inventory and financial compensation;
-- complete timeline, audit and recovery.
-
-## Blocking corrections
-
-- A commerce checkpoint cannot advance past a failed, uncommitted or untracked
-  event.
-- External cancellation cannot be swallowed while the checkpoint advances.
-- External effects never execute inside the canonical transaction.
-- Automations and provider callbacks cannot bypass the command kernel.
-- Mutable counters and Boolean flags cannot remain financial authority.
-- Legacy paths are removed or made read-only after vertical adoption.
+- trusted principal and exact shop context;
+- optimistic aggregate version and exact idempotency;
+- atomic audit, events, outbox, reservations and movements;
+- durable provider effects, receipts and reconciliation;
+- append-only or compensating stock and financial facts;
+- one governed revenue, COGS and profitability definition;
+- canonical source intake without legacy mutation bypass.
 
 ## Exit gate
 
-One representative order passes the Phase 1 canonical business slice through UI,
-API, domain and database using:
+The representative Golden COD order passes happy, validation, permission,
+duplicate, concurrency, interruption, stale, conflict, provider-failure,
+cancellation, return, restart, update and interrupted-command recovery in
+AR/FR/EN. Disposable backup/restore compatibility preserves exact canonical facts.
+Production native all-shop restore remains Phase 4.
 
-- trusted principal and exact shop authority;
-- optimistic aggregate version;
-- exact idempotency;
-- reservations and inventory movements;
-- financial movements;
-- atomic audit, domain event and outbox;
-- effect receipt and reconciliation;
-- compensation and governed projections.
+## Result — source-closed on draft PR #195
 
-The slice passes happy, validation, permission, duplicate, concurrency,
-interruption, stale, conflict, provider-failure, cancellation, return, process
-restart, in-place update and interrupted-command recovery cases in AR/FR/EN. A
-disposable snapshot/restore fixture proves that canonical facts remain backup
-compatible. Production native all-shop restore remains a Phase 4 exit gate, and
-the complete product Golden COD Journey is not declared Proven until that gate
-also passes.
+Draft PR #195 integrates canonical manual, storefront, import, commerce,
+WhatsApp and proposal-bound AI intake; confirmation/reservation; fulfillment and
+courier lifecycle; COD settlement; returns/refunds/compensation; governed
+profitability; restart/update preservation; backup compatibility; seller controls;
+and adopted-source bypass protection.
 
-## Current result — source-exit candidate under bounded closure repair
+A separated sole-agent adversarial review was used because only one coding agent
+is active. It was not called independent review. It found and closed later booking
+and reconciliation generations, unreadable post-effect recovery and pre-query
+authority ordering defects.
 
-Protected `main` remains partial Phase 1 truth through PR #190 and PR #192. Draft
-PR #195 assembles the broad Phase 1 source boundary without changing that
-protected, published or installed truth.
+Exact closure evidence:
 
-The draft branch integrates the canonical Golden COD slice across:
+- source head: `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`;
+- normal CI: `30652282305` — success;
+- Integration source checkpoint: `30652282191` — success.
 
-- trusted product/customer/order intake and storefront, CSV/XLSX,
-  Shopify/WooCommerce/YouCan, WhatsApp and proposal-bound AI adoption;
-- confirmation/rejection, reservation, inventory, packing, shipment, delivery,
-  cancellation, failure/refusal and physical-return recovery;
-- durable courier booking, effect receipt, tracking reconciliation and restart
-  behavior;
-- COD receivable, collection, remittance, fees, adjustments, discrepancies,
-  corrections, unmatched-line matching and immutable DZD movements;
-- customer return/exchange lifecycle, item inspection, stock/loss disposition,
-  partial/full refund, exact reversal and compensation;
-- one governed realized-revenue, COGS and profitability projection adopted by
-  accounting, dashboard, analytics, reports and AI;
-- removed/read-only competing COD scalar routes and an adopted-source bypass
-  audit;
-- a representative UI/API/domain/database journey with trusted authority,
-  idempotent replay, optimistic stale conflict and AR/FR/EN seller controls;
-- separate-process restart proof, in-place migration over populated canonical
-  facts and disposable local backup/restore compatibility with exact hashes,
-  counts, integrity and replay evidence.
-
-The previous source-exit candidate and green checkpoint are recorded in draft PR
-#195 and Working Memory. A 2026-07-31 independent source audit then found a P1:
-the courier-booking command cannot advance to a second governed generation after
-manual not-created reconciliation or terminal known failure. The same audit found
-that corrupt pre-effect payloads lack a durable dead-letter transition and that
-the authority audit preserves contradictory next-action prose.
-
-Phase 1 is reopened only for this bounded repair. The repaired head must prove:
-
-- active authority agreement across entry point, Roadmap and Working Memory;
-- safe later booking generations with original-key replay and concurrency proof;
-- terminal known-failure recovery without duplicate provider effects;
-- ambiguous treatment of a success receipt that lacks tracking identity;
-- audited pre-effect dead letter and queue isolation for invalid payloads;
-- one exact-head checkpoint and one independent frozen-head P0/P1 review.
-
-This is not a protected merge, release, installed-MSI result or Founder
-acceptance. PR #195 stays draft for the Founder-authorized Phase 1–4 program.
-Production native all-shop restore remains Phase 4, and full Windows/Rust/MSI
-validation remains deferred until the declared program source is frozen.
+Phase 1 is not a protected merge, release, installed-MSI result or Founder
+acceptance. It must not be reopened absent new concrete P0/P1 evidence.
 
 ---
 
@@ -405,108 +197,117 @@ validation remains deferred until the declared program source is frozen.
 
 ## Objective
 
-Replace the local single-owner baseline with the real commercial authority model.
+Replace the process-local compatibility owner with the real commercial authority
+model.
 
 ## Research gate
 
-Research and adopt current practice for:
+Use current primary sources for:
 
 - local-first identity and device trust;
 - action- and field-level authorization;
-- secure local unlock and reauthentication;
-- device enrollment, session revocation and recovery;
-- machine-bound signed licensing;
-- online trial issuance and offline permanent entitlements;
-- transfer and ownership recovery;
-- Windows-protected secret storage and key derivation;
+- session management, reauthentication and local unlock;
+- device/member/session revocation and recovery;
+- machine-bound signed licensing and entitlements;
+- Windows-protected secret storage;
 - high-risk and two-person approval;
-- safe native multi-shop lifecycle.
+- native multi-shop lifecycle.
 
-## Identity and teams
+## Phase 2A — durable local identity and session authority
 
-Implement:
+### Package 2A.1 — setup and session authority — active
 
-- person, workspace, installation, member, device and session identities;
-- owner, manager, operator and viewer presets;
-- custom action and field permissions;
-- per-shop memberships;
-- invitations and acceptance;
-- assignments, queues, workgroups, comments, mentions and handovers;
-- local and remote profiles;
-- device/session/member revocation;
-- current-state approval revalidation;
-- trusted actor attribution on every mutation.
+Implement and prove:
+
+- setup mode is onboarding only and never authenticated authority;
+- public auth routes are exact; administration is protected by default;
+- database-authoritative session existence and immediate revocation;
+- 24-hour overall freshness and one-hour inactivity timeout;
+- five-minute throttled activity persistence;
+- malformed, future-dated, inconsistent, expired, inactive, revoked, missing and
+  unreadable authority fails closed;
+- successful PIN reauthentication rotates the session identity;
+- high-risk callers can require recent PIN proof;
+- PIN change revokes all active sessions and creates one replacement;
+- logout does not claim success when durable revocation cannot be committed;
+- exact proxy, API, service and database tests.
+
+This package is migration-free because the existing Session model already stores
+`issuedAt`, `lastSeenAt` and `revokedAt`.
+
+### Package 2A.2 — durable identity kernel — next
+
+Implement in the protected installation/control authority:
+
+- Person;
+- Workspace;
+- canonical Installation;
+- WorkspaceMember;
+- enrolled Device;
+- durable Session binding;
+- per-shop grants;
+- policy version and revocation epoch;
+- local unlock/recovery state.
+
+Setup creates the real owner, workspace, installation, member and device.
+PIN remains only local unlock and reauthentication, never person identity.
+
+Bind one representative read and one consequential mutation to:
+
+```text
+person
++ member
++ workspace
++ device
++ session
++ installation
++ exact ShopContext
++ policy version
++ revocation epoch
+```
+
+Prove same-shop/cross-shop isolation, immediate session/device/member revocation,
+stale-policy rejection, current-state high-risk approval, restart, duplicate and
+concurrency behavior.
+
+## Teams and permissions
+
+After the kernel is stable, implement owner/manager/operator/viewer presets,
+custom action and field permissions, per-shop memberships, invitations,
+assignments, queues, workgroups, comments, mentions and handovers.
 
 UI visibility is never authorization.
 
-## Local authentication
-
-Retain PIN as local unlock, not durable person identity.
-
-Correct:
-
-- database-error session fail-open behavior;
-- legacy session tokens;
-- high-risk reauthentication;
-- lockout, recovery and session cleanup;
-- auth-secret migration and corruption behavior.
-
 ## Licensing and entitlements
 
-Replace self-issued production trial behavior with:
+Replace self-issued production trial behavior with online trial-only signed
+issuance, exactly seven machine-bound days, one trial per recognized machine,
+reinstall recovery, full expiry lockout with data preserved, offline permanent
+signing, explicit entitlements, transfer/recovery, revocation epoch and key
+rotation. Remove production localStorage fallback and client-authoritative license
+status.
 
-- online trial-only signed issuance;
-- exactly seven machine-bound days;
-- one trial per recognized machine;
-- reinstall recovery of the original trial;
-- complete expiry lockout with data preserved;
-- offline permanent signing;
-- explicit shop, member, device, storage and support entitlements;
-- machine replacement, transfer and recovery;
-- revocation epoch and key rotation;
-- prolonged service-outage behavior.
+## Native multi-shop
 
-Remove:
+Move create, switch, archive, recover and delete operations to the native
+supervisor with process relaunch, per-shop membership/provider/health authority,
+slot accounting, safe archive/recovery and owner reauthentication for deletion.
 
-- production localStorage fallback;
-- weak password derivation;
-- legacy trusted status-only license rows;
-- client-authoritative license decisions.
-
-## Multi-shop
-
-Move production create, switch, archive, recover and delete operations into the
-native supervisor.
-
-Implement:
-
-- process relaunch on authority change;
-- per-shop memberships, providers and health;
-- slot accounting and expansion entitlements;
-- safe archive and recovery;
-- owner reauthentication for deletion;
-- no silent database fallback or background cross-shop mutation.
-
-## Exit gate
+## Phase 2 exit gate
 
 Every request and command derives verified workspace, member, device, session,
-installation and shop context. Revocation is immediate. Licensing cannot be
-forged through browser or mutable database state. Production shop lifecycle works
-through native authority and preserves data.
+installation and shop context. Revocation is immediate. Licensing cannot be forged
+through browser or mutable database state. Production shop lifecycle works through
+native authority and preserves data.
 
-## Current result — next after Phase 1 closure
+## Current result — active
 
-PR #191 merged the first narrow authorization boundary. The current
-PIN-unlocked compatibility actor is confined to the exact process shop, can read
-that shop only, cannot create/switch/delete shops, and caller-minted actor
-contexts fail closed. Exact-head CI run `30520060972` passed.
+PR #191 provides only the narrow exact-process-shop compatibility boundary.
+Package 2A.1 is now being implemented on PR #195. Person/member/device/policy,
+licensing, entitlements, invitations and native multi-shop remain open.
 
-This is not durable identity or Phase 2 completion. Person, workspace membership,
-device/session authority, persisted policy and revocation, licensing,
-entitlements, invitations, recovery and native multi-shop lifecycle remain open.
-Phase 2A is the immediate dependency frontier, but implementation stays paused
-until the bounded Phase 1 closure repair passes its checkpoint and independent
-P0/P1 review.
+PR #186 is obsolete/diverged source. Its useful session ideas may be mined
+selectively; it must never be merged wholesale.
 
 ---
 
@@ -516,26 +317,12 @@ P0/P1 review.
 
 Make every external input and effect durable, replayable, observable and safe.
 
-## Research gate
-
-Use official provider documentation and current production evidence for:
-
-- webhook and polling reconciliation;
-- provider authentication, pagination, rate limits and failure semantics;
-- durable inbox, outbox, effect receipts and dead letter;
-- WhatsApp/Baileys lifecycle and policy risk;
-- AI data minimization and prompt-injection resistance;
-- exact human approval binding;
-- automation execution and partial-failure semantics.
-
-## Provider protocol
-
-Every provider uses:
+## Required protocol
 
 ```text
-Authenticated ingress
+authenticated ingress
 → durable inbox
-→ validation and deduplication
+→ validation / deduplication
 → canonical command
 → committed result
 → durable outbox
@@ -544,64 +331,25 @@ Authenticated ingress
 → reconciliation
 ```
 
-Implement provider event IDs, stable effect keys, attempts, ambiguous-result
-states, rate-limit handling, operator recovery, health, degraded states,
-manual reconciliation and kill switches.
+Implement provider IDs, stable effect keys, attempts, rate-limit handling,
+ambiguous results, health, degraded states, manual reconciliation, dead letter and
+kill switches.
 
-## Commerce
+WhatsApp requires encrypted durable history, send intents/receipts,
+restart/replay/deduplication and visible reconnect degradation.
 
-- Hold checkpoints when an event is neither committed nor durably governed for
-  retry/dead-letter.
-- Repair partial pages and intentionally dropped events through overlap scans.
-- Keep capability declarations specific to each platform and action.
-- Do not expose edit/cancel/fulfillment behavior before live proof.
+Automations require versioned definitions, durable executions, per-step receipts,
+approval-bound high-risk actions and no false overall success.
 
-## WhatsApp
-
-Implement:
-
-- durable encrypted message identity and history;
-- durable send intents and receipts;
-- restart/replay/deduplication;
-- bounded reconnect and visible degradation;
-- media retention and support diagnostics;
-- human-reviewed extraction before canonical order creation;
-- explicit unofficial-provider risk and recertification.
-
-## Automations
-
-Implement:
-
-- versioned definitions;
-- durable executions and per-step receipts;
-- exact idempotency/effect keys;
-- pending, running, retrying, committed, partially failed and failed states;
-- approval-bound high-risk actions;
-- dry run and sample test;
-- retry/dead-letter operator recovery;
-- no fake overall success after a failed step.
-
-## AI
-
-Implement:
-
-- centralized allowlisted data policy;
-- payload preview, local redaction and deterministic fallback;
-- typed tools with exact permissions;
-- proposal identity bound to tool, arguments, shop, actor, aggregate version and
-  expiry;
-- explicit approval receipt and current-state recheck;
-- no generic “yes” authorization of a newly chosen action;
-- audited results and affected-record preview;
-- Darija/Arabic/French/English corpus, latency, accuracy and fallback evidence;
-- no raw customer PII in the safe default mode.
+AI requires allowlisted data, payload preview, redaction, typed tools, exact
+permissions, proposal identity, explicit approval, current-state recheck and no
+raw customer PII in safe default mode.
 
 ## Exit gate
 
-Provider outage, retry, duplicate input, rate limit, restart, timeout and partial
-failure cannot silently lose or duplicate a canonical effect. Every action has a
-durable receipt, visible state and recovery path. Only the Founder-selected live-
-certified provider capabilities are public.
+Outage, retry, duplicate, rate limit, restart, timeout and partial failure cannot
+silently lose or duplicate a canonical effect. Every action has a durable receipt,
+visible state and recovery path. Public provider capabilities are live-certified.
 
 ---
 
@@ -611,221 +359,55 @@ certified provider capabilities are public.
 
 Make seller data survivable and the product commercially defensible.
 
-## Research gate
+## Required outcomes
 
-Research current cryptographic, Windows storage, SQLite backup, crash-safety,
-threat-modeling and Law 18-07 requirements from primary sources and independent
-security evidence.
-
-## Key and secret architecture
-
-Implement and prove:
-
-- Windows-protected installation root;
-- per-shop data keys;
-- separate secret-store and backup-root purposes;
-- unique key per backup;
-- explicit algorithm, version, key ID and authenticated context;
-- resumable key rotation;
-- compromise, lost-device, transfer and replacement behavior;
-- verified deletion of superseded key material;
-- no browser-storage fallback for production secrets.
-
-## Backup and restore
-
-Complete:
-
-- verified all-shop snapshot sets;
-- authenticated manifests and hashes;
-- client encryption before upload;
-- retention and pinned points;
-- independent recovery kit;
-- optional assisted recovery shares;
-- production native all-shop restore;
-- replacement-install restore;
-- atomic restore preserving current data after failure;
-- corruption, low-disk, missing-object and interrupted-restore behavior;
-- scheduled restore rehearsal and monitoring.
-
-## Migrations
-
-Prove:
-
-- clean install;
-- every supported prior version;
-- mixed multi-shop state;
-- interruption and rerun;
-- low disk and snapshot failure;
-- corruption and missing database;
-- compatibility refusal;
-- all-shop restore after failure;
-- forward repair without blind down-migration.
-
-## Security, privacy and legal
-
-Complete:
-
-- threat models and residual risk;
-- data classification and minimization;
-- tenant/shop/member/device/provider boundaries;
-- secure loopback and local-process assumptions;
-- consented redacted diagnostics;
-- retention, export, correction and deletion behavior;
-- SBOM and dependency review;
-- Law 18-07 mapping;
-- independent security/privacy review.
+- Windows-protected installation root and per-shop keys;
+- purpose-separated secret and backup keys;
+- resumable key rotation and lost-device/transfer behavior;
+- verified encrypted all-shop backups and authenticated manifests;
+- independent recovery kit and replacement-install restore;
+- atomic restore that preserves current data on failure;
+- clean/mixed/interrupted/low-disk/corrupt migration matrix;
+- threat models, data classification, minimization, diagnostics and retention;
+- Law 18-07 mapping, SBOM and independent security/privacy review.
 
 ## Exit gate
 
 A full installation can be backed up, corrupted, replaced and restored without
-silent loss, authority confusion or key compromise. Production native all-shop
-restore and replacement-install recovery close the backup/restore clause of the
-complete Golden COD Journey. Migration and restore drills pass. Independent
-review has no unresolved P0/P1 finding.
+silent loss, authority confusion or key compromise. Migration and restore drills
+pass and independent review has no unresolved P0/P1.
 
-## Current result — in progress
+## Current result — partial
 
-PR #184 merged the Windows-protected installation root, exact legacy-root import,
-native current/candidate/backup authority, resumable installation-wide rotation,
-maintenance serialization and recovery journaling. Exact-head CI run
-`30520999819` passed quality, Windows database/contained runtime, Linux and
-Windows Rust release parity, MSI build/install, protected rotation,
-authenticated launch, close and reopen.
-
-This proves the protected root and rotation package only. Full encrypted all-shop
-backup/restore, replacement-install recovery, recovery ceremonies, migration
-matrix, security/privacy/Law 18-07 work and independent certification remain open.
+PR #184 proves the Windows-protected installation root and resumable rotation.
+Full all-shop backup/restore, recovery, migration certification and independent
+security/privacy/legal work remain open.
 
 ---
 
-# Phase 5 — Whole-product AAA UI/UX and frontend redesign
+# Phase 5 — Whole-product AAA UI/UX
 
 ## Objective
 
-Transform the broad internal dashboard into one coherent top-tier operational
-product without cosmetic AI slop.
+Transform the product into one coherent top-tier operational system without
+cosmetic AI slop.
 
-## Research gate
+## Required outcomes
 
-Before redesign, conduct a dedicated current teardown of:
-
-- best-in-class operational information architecture;
-- high-density back-office products;
-- command centers and confirmation queues;
-- inventory, delivery and financial data UX;
-- search, filters, saved views, bulk work and timelines;
-- keyboard-first forms and destructive ceremonies;
-- perceived performance and honest progress;
-- page-specific offline, stale, conflict, failure and recovery behavior;
-- responsive operational redesign;
-- Arabic typography, RTL tables/charts/navigation and mixed script;
-- WCAG 2.2 AA, zoom and reduced motion;
-- low-end WebView rendering.
-
-Benchmark products for workflow quality and failure behavior, not for surface
-style.
-
-## Information architecture
-
-Organize primary seller work around:
-
-1. Today / Command Center;
-2. Confirmation;
-3. Orders;
-4. Inbox;
-5. Fulfillment and Delivery;
-6. Products and Inventory;
-7. Customers and Risk;
-8. Returns and Refunds;
-9. COD and Accounting;
-10. Analytics;
-11. Automations;
-12. Storefronts;
-13. Team;
-14. Settings and Health.
-
-Remove duplicate destinations, unclear names, decorative modules and scattered
-settings.
-
-## Shared frontend system
-
-Freeze and implement shared contracts for:
-
-- spacing, density and responsive containers;
-- Arabic and Latin typography;
-- semantic color and status;
-- motion, reduced motion and low-resource mode;
-- focus, selection, pending, commit and failure;
-- page headers and action hierarchy;
-- forms, dirty state and validation;
-- tables, list/detail, drawers and dialogs;
-- timelines and trust cues;
-- charts and locale geometry;
-- skeletons, progress and operational states;
-- notifications, retry and recovery.
-
-## Every page
-
-Every page must implement, as applicable:
-
-- happy state;
-- first-use empty;
-- no-data and filtered-empty;
-- successful caught-up state;
-- loading and honest long progress;
-- validation and permission denial;
-- offline and provider unavailable;
-- stale, pending and conflict;
-- error, retry, recovery and support;
-- archive and history;
-- normal, bulk, keyboard and destructive behavior.
-
-## Data UX
-
-Operational surfaces require, where useful:
-
-- indexed search;
-- filters and multi-sort;
-- saved views and grouping;
-- pagination or virtualization;
-- selection and bulk actions;
-- preview, detail and history;
-- export;
-- stable keyboard operation;
-- persisted user preferences.
-
-## Visual and interaction standard
-
-Use quiet, dense operational hierarchy, strong typography, semantic color,
-controlled motion, immediate acknowledgement and explicit commit truth.
-
-Reject generic gradients, decorative card grids, arbitrary glass effects, fake
-charts, excessive empty space, machine-sounding copy, icon-only critical actions,
-page-local component drift, motion that delays work, compressed desktop mobile
-layouts and superficial `dir="rtl"` fixes.
-
-## Page audit
-
-Every route receives a completion record for:
-
-1. information architecture;
-2. capability and authority correctness;
-3. real data and permissions;
-4. complete states;
-5. forms and actions;
-6. RTL/LTR and mixed content;
-7. accessibility and keyboard;
-8. responsive layout and zoom;
-9. representative-data performance;
-10. audit, history and trust cues;
-11. AR/FR/EN copy;
-12. automated and installed evidence.
+- command-center information architecture around real seller work;
+- shared typography, spacing, status, motion, forms, tables, dialogs, timelines,
+  charts, loading and recovery contracts;
+- complete happy, empty, loading, validation, permission, offline, stale,
+  conflict, error, recovery, history, bulk and keyboard states;
+- indexed search, filters, saved views, grouping, pagination/virtualization,
+  selection, bulk actions, detail/history and export;
+- route-by-route authority, data, AR/FR/EN, accessibility, responsive, performance
+  and installed evidence.
 
 ## Exit gate
 
-All current and newly required routes pass the page-completion contract with
-representative data. No route remains visually inconsistent, foundation-only or
-dependent on a mocked happy path.
+Every Required route passes the page-completion contract with representative real
+data and no mocked happy-path dependency.
 
 ---
 
@@ -833,50 +415,21 @@ dependent on a mocked happy path.
 
 ## Objective
 
-Make Arabic and accessibility equivalent product behavior, not final polish.
+Make Arabic and accessibility equivalent behavior, not final polish.
 
-## Research gate
+## Required outcomes
 
-Use current WCAG, WAI-ARIA, Unicode bidi, Arabic typography and assistive-
-technology guidance, plus native Arabic review.
-
-## Arabic and RTL
-
-Complete:
-
-- native Arabic copy review;
-- Arabic typography and joining;
-- mixed Arabic/Latin isolation;
-- phone, SKU, identifier, date and DZD formatting;
-- logical spacing, borders and alignment;
-- RTL navigation and directional icons;
-- tables, charts, dialogs, drawers and forms;
-- focus order and shortcuts;
-- print/export behavior;
-- recovery and support copy.
-
-Eliminate or explicitly justify every physical left/right geometry signal from
-the route inventory.
-
-## Accessibility
-
-Prove:
-
+- native Arabic copy and typography;
+- mixed Arabic/Latin isolation and correct phone/SKU/date/DZD formatting;
+- logical RTL navigation, forms, tables, charts, dialogs and focus order;
 - WCAG 2.2 AA on critical journeys;
-- keyboard-only completion;
-- visible focus and correct restoration;
-- semantic headings, landmarks and tables;
-- field-linked errors and descriptions;
-- screen-reader dialog and async-state announcements;
-- no color-only meaning;
-- contrast and reduced motion;
-- 200% zoom and touch targets;
-- skip navigation and predictable focus order.
+- keyboard-only completion, visible focus, semantics, announcements, contrast,
+  reduced motion, 200% zoom and predictable focus restoration.
 
 ## Exit gate
 
 Every Required journey works in Arabic RTL, French LTR and English LTR with
-equivalent capability, accessibility and installed behavior.
+equivalent capability and accessibility.
 
 ---
 
@@ -884,55 +437,31 @@ equivalent capability, accessibility and installed behavior.
 
 ## Objective
 
-Meet the declared low-end performance contract without hiding inefficiency behind
-stronger hardware.
-
-## Research gate
-
-Research current Tauri/WebView startup, Next.js standalone, Node compile cache,
-SQLite query planning, table virtualization, memory profiling, Windows low-memory
-behavior and soak-test methodology.
+Meet declared low-end targets with representative data.
 
 ## T470 targets
 
 - cold launch no slower than 8 seconds p95;
-- authenticated workspace is the first visible normal-launch surface;
-- ordinary navigation no slower than 700 ms p95;
+- authenticated workspace first visible on normal launch;
+- navigation no slower than 700 ms p95;
 - indexed search no slower than 350 ms p95;
 - ordinary local mutation no slower than 500 ms p95.
 
-## Floor-device targets
+## Floor targets
 
-- usable shell no slower than 15 seconds p95 on entry SSD and 25 seconds on HDD;
+- usable shell within 15 seconds p95 on entry SSD and 25 seconds on HDD;
 - input acknowledgement within 100 ms;
-- ordinary navigation usable within 1.5 seconds p95;
+- navigation within 1.5 seconds p95;
 - indexed search within 750 ms p95;
-- ordinary local mutation within 1 second p95;
-- no ordinary freeze longer than 200 ms;
-- steady working set no greater than 750 MB with WhatsApp connected and no heavy
-  job;
+- local mutation within 1 second p95;
+- no ordinary freeze over 200 ms;
+- steady working set no greater than 750 MB with WhatsApp connected;
 - no sustained memory growth across eight hours.
-
-## Work
-
-- stage-level cold and warm startup profiling;
-- route/server hydration and query tracing;
-- query-plan and index review;
-- eliminate duplicate aggregates;
-- bounded prefetch and code splitting;
-- virtualized large tables;
-- low-resource charts and workers;
-- sidecar/cache quotas;
-- memory, handle and process leak analysis;
-- representative certified data fixtures;
-- SSD, HDD, 4 GB and eight-hour tests;
-- crash-loop and provider-failure reliability testing.
 
 ## Exit gate
 
-Targets pass with representative data on the Founder T470 and declared floor
-profile. Architecture changes when necessary; the hardware floor is not raised to
-preserve convenience.
+Targets pass on the Founder T470 and declared floor profile. Architecture changes
+when necessary; hardware requirements are not raised for convenience.
 
 ---
 
@@ -943,79 +472,24 @@ preserve convenience.
 Complete remote work, hosted storefront, licensing/control and zero-knowledge
 recovery without weakening desktop authority.
 
-## Research gate
+## Required outcomes
 
-Research current Cloudflare contracts and economics, multi-tenant isolation,
-durable checkout, encrypted command relay, offline-first PWA, revocation,
-custom-hostname/TLS lifecycle, zero-knowledge backup and abuse/incident controls.
-
-## Hosted storefront
-
-Implement:
-
-- shared isolated multi-tenant runtime;
-- three distinct templates;
-- immutable releases, preview, validation, publish, history and rollback;
-- content-addressed media and domain/TLS state;
-- server-authoritative price and delegated stock allocation;
-- durable COD receipt before success;
-- abuse protection;
-- receipt-to-desktop import and reconciliation;
-- storefront funnel to profitable delivered outcome.
-
-## Remote PWA/browser
-
-Implement:
-
-- secure enrollment and member/device identity;
-- permission-filtered encrypted projections;
-- signed commands and durable status;
-- pending, committed, rejected and conflict states;
-- offline, stale and read-only behavior;
-- encrypted partitioned cache and revocation purge;
-- Android interaction patterns;
-- no high-risk administration.
-
-## Cloud control and relay
-
-Implement:
-
-- identity, licensing, entitlement, device/session and routing metadata;
-- encrypted commands, results and projections;
-- sequence, expiry, replay and revocation;
-- quotas, metering, cost alarms and incidents;
-- environment separation and migrations;
-- cloud-outage survival for permanent local operation.
-
-Measure p50, p95 and maximum cost at 10, 100, 1,000 and 10,000 workspaces before
-public quotas and continuity claims.
-
-## Founder Console
-
-Implement strongly authenticated, immutably audited operations for:
-
-- trial, payment and permanent-license authorization;
-- entitlement amendments;
-- devices, transfer and recovery;
-- support, incidents and releases;
-- provider certification and kill switches;
-- usage, quota and cost monitoring.
-
-The console never receives operational seller plaintext or the permanent signing
-private key.
-
-## Zero-knowledge backup plane
-
-Implement client encryption, authenticated manifests, chunking, retention,
-integrity verification, independent recovery and optional assisted shares.
+- isolated multi-tenant hosted storefront with durable COD receipt, releases,
+  preview, validation, publish, history and rollback;
+- remote PWA with enrollment, permission-filtered encrypted projections, signed
+  commands, pending/committed/rejected/conflict states and revocation purge;
+- cloud control for identity/licensing/entitlements/routing metadata and encrypted
+  relay without seller operational plaintext;
+- strongly authenticated and immutably audited Founder Console;
+- client-encrypted zero-knowledge backup with independent recovery;
+- measured economics and outage survival for permanent local operation.
 
 ## Exit gate
 
 Cloud outage cannot corrupt or block permanent local work. Remote success appears
-only after desktop commit. Storefront success always has a durable receipt.
-Cross-tenant leakage and duplicate canonical effects are zero in certification.
-Neither SahelFlow nor Cloudflare alone can decrypt backups. Economics fit the
-approved continuity reserve.
+only after desktop commit. Storefront success has a durable receipt. Cross-tenant
+leakage and duplicate effects are zero in certification. Cloudflare or SahelFlow
+alone cannot decrypt backups.
 
 ---
 
@@ -1025,21 +499,13 @@ approved continuity reserve.
 
 Convert the complete Founder candidate into an evidence-defensible public product.
 
-## Research gate
-
-Research current beta design, security/privacy review preparation, accessibility
-audit methodology, provider certification, restore/incident drills, rollout,
-hold, forward-fix, support and evidence-backed claims.
-
 ## Required certification
-
-Prove:
 
 - clean install, upgrade, reopen and in-app update;
 - migration, backup, restore and replacement installation;
-- shop lifecycle, identity, permissions and revocation;
+- identity, permissions, revocation and shop lifecycle;
 - trial expiry and permanent activation;
-- Golden COD Journey and provider reconciliation;
+- Golden COD and provider reconciliation;
 - storefront checkout and remote command;
 - Arabic/RTL and accessibility;
 - T470/floor performance and eight-hour stability;
@@ -1047,60 +513,31 @@ Prove:
 
 ## Controlled beta
 
-Use representative Algerian COD sellers across:
-
-- order volumes and hardware classes;
-- Arabic and French usage;
-- WhatsApp-heavy operation;
-- multiple couriers;
-- commerce and storefront use where applicable;
-- real support, restore and incident cases.
-
-Record journey success, data-integrity findings, user confusion, performance,
-provider failures, support burden, missing workflows and P0–P3 findings.
+Use representative Algerian COD sellers across volume, hardware, Arabic/French,
+WhatsApp, couriers, commerce/storefront and real support/recovery cases.
 
 ## Stable gate
 
-- every Required capability is Proven at the required layer;
-- zero unresolved P0/P1 defect;
+- every Required capability Proven at its required layer;
+- zero unresolved P0/P1;
 - no known stock, money, identity or recovery discontinuity;
-- provider launch set is live-certified;
-- backup/restore and incident drills pass;
-- independent security/privacy and Law 18-07 review passes;
+- provider launch set live-certified;
+- recovery and incident drills pass;
+- independent security/privacy/Law 18-07 review passes;
 - performance, Arabic/RTL and accessibility targets pass;
-- representative beta exit is accepted;
+- representative beta exit accepted;
 - public claims link current exact evidence;
 - signed Windows Stable artifact and immutable manifest pass;
 - Founder explicitly promotes Stable.
 
 ---
 
-# Dependency-correct first package order
-
-After Phase 0 merges:
-
-1. Research and freeze the manual order-confirmation contract.
-2. Implement canonical manual intake with trusted authority and idempotency.
-3. Implement stock availability, reservation and movement.
-4. Implement confirmation/rejection UI with complete states.
-5. Prove duplicate, concurrency, conflict, interruption and recovery.
-6. Remove the migrated direct-stock legacy path.
-7. Add fulfillment and delivery facts.
-8. Add COD receivable, remittance and fee facts.
-9. Add return/refund compensation.
-10. Move storefront, import, WhatsApp, AI and commerce intake onto the same command
-    boundary.
-
-Internal.13 T470 installation and observation proceed in the platform lane and do
-not block independent Phase 1 source work.
-
 # Definition of done
 
-A phase is complete only when its objective exit gate has objective evidence and
-all known P0/P1 findings are closed.
+A phase is complete only when its exit gate has objective evidence and every known
+P0/P1 finding is closed.
 
-“100% sure” is not a claim of mathematical perfection. The professional standard
-is that every defined acceptance gate passes, known critical findings are closed,
-representative real-world evidence exists at the required layer and no
-contradiction remains between product promise, source, installed behavior and
-public claim.
+“100% sure” is not mathematical perfection. The professional standard is that
+all defined gates pass, known critical findings are closed, representative evidence
+exists at the required layer and no contradiction remains between product promise,
+source, installed behavior and public claim.
