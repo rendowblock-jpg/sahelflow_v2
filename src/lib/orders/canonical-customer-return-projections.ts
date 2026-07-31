@@ -31,6 +31,15 @@ export interface CanonicalCustomerReturnPosition {
   effectiveRefundAmount: number;
   remainingOrderRefundableAmount: number;
   availableActions: CustomerReturnAction[];
+  orderItems: Array<{
+    orderItemId: string;
+    productId: string | null;
+    productVariantId: string | null;
+    productName: string;
+    variantName: string | null;
+    quantity: number;
+    unitPrice: number;
+  }>;
   returnCase: {
     id: string;
     caseType: "return" | "exchange";
@@ -271,6 +280,15 @@ export async function getCanonicalCustomerReturnPosition(
       receivable - refundBalance.effective,
     ),
     availableActions: availableActions(order.status, returnCase),
+    orderItems: order.items.map((item) => ({
+      orderItemId: item.id,
+      productId: item.productId,
+      productVariantId: item.productVariantId,
+      productName: item.productName,
+      variantName: item.productVariantName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
     returnCase: caseProjection,
     refunds: refunds.map((refund) => {
       const reversedAmount = refund.reversals.reduce(
