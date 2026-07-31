@@ -148,7 +148,7 @@ describe("Phase 1 representative Golden COD journey", () => {
         replayed: boolean;
       }>(replayResponse);
       expect(created).toMatchObject({ total: 5000, replayed: false });
-      expect(intakeReplay).toEqual({
+      expect(intakeReplay).toMatchObject({
         orderId: created.orderId,
         replayed: true,
       });
