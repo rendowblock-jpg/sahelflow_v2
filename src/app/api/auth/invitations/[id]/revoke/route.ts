@@ -4,6 +4,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireRecentReauthentication } from "@/lib/auth/server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { revokeMemberInvitation } from "@/lib/identity/member-authority";
+import { acceptedInvitationIds } from "@/lib/identity/team-directory";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,13 @@ export const POST = withErrorHandler(
     }
     await requireRecentReauthentication();
     const { id } = await params;
+    if ((await acceptedInvitationIds(context.shop)).has(id)) {
+      throw new SahelFlowError(
+        "This invitation has already created a member. Revoke the member instead.",
+        "INVITATION_ALREADY_ACCEPTED",
+        409,
+      );
+    }
     const result = await revokeMemberInvitation(
       context.actor.sessionId,
       id,
