@@ -6,6 +6,15 @@ const harness = vi.hoisted(() => ({
     status: "authenticated",
     sessionId: "session-owner",
   } as unknown,
+  identity: {
+    personId: "6".repeat(32),
+    workspaceMemberId: "7".repeat(32),
+    deviceId: "8".repeat(32),
+    role: "owner" as const,
+    policyVersion: 1,
+    revocationEpoch: 0,
+  },
+  resolveDurableIdentityActor: vi.fn(),
   shopContext: {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -41,6 +50,10 @@ const harness = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth/server", () => ({
   getCurrentSessionAuthority: vi.fn(async () => harness.authority),
+}));
+
+vi.mock("@/lib/identity/control-authority", () => ({
+  resolveDurableIdentityActor: harness.resolveDurableIdentityActor,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -98,6 +111,7 @@ function request(
 
 beforeEach(() => {
   harness.authority = { status: "authenticated", sessionId: "session-owner" };
+  harness.resolveDurableIdentityActor.mockReset().mockResolvedValue(harness.identity);
   harness.createShop.mockReset();
   harness.setActiveShopId.mockReset();
   harness.deleteShop.mockReset();
