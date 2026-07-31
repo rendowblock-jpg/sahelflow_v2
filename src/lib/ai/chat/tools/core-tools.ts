@@ -17,6 +17,7 @@ import {
 import type { DbClient } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { grossRevenue } from "@/lib/data/metrics";
+import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { currentAiSourceProposal } from "@/lib/ai/chat/source-proposal";
@@ -332,7 +333,7 @@ registerTool({
   definition: {
     name: "get_stats",
     description:
-      "Get dashboard statistics: total orders, gross revenue (all-time, excludes cancelled + draft orders), customers, low stock count. No parameters.",
+      "Get dashboard statistics with gross order value, realized delivery revenue, net revenue, net profit, customers, and low-stock count. No parameters.",
     parameters: { type: "object", properties: {} },
   },
   async execute(_params, ctx): Promise<ToolResult> {
@@ -342,10 +343,11 @@ registerTool({
         from: new Date(0),
         to: new Date(Date.now() + 86_400_000),
       };
-      const [totalOrders, grossRevenueAllTime, totalCustomers, lowStockCount] =
+      const [totalOrders, grossOrderValue, profitability, totalCustomers, lowStockCount] =
         await Promise.all([
           db.order.count({ where: { deletedAt: null } }),
           grossRevenue(db, allTime),
+          getProfitabilityProjection(db, allTime),
           db.customer.count({ where: { deletedAt: null } }),
           db.product.count({
             where: {
@@ -359,7 +361,12 @@ registerTool({
         success: true,
         data: {
           totalOrders,
-          grossRevenue: grossRevenueAllTime,
+          grossRevenue: grossOrderValue,
+          grossOrderValue,
+          realizedRevenue: profitability.grossRevenue,
+          netRevenue: profitability.netRevenue,
+          netProfit: profitability.netProfit,
+          profitabilityComplete: profitability.profitabilityComplete,
           totalCustomers,
           lowStockCount,
         },

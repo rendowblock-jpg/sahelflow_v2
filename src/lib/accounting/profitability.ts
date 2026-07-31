@@ -11,6 +11,7 @@ export interface ProfitabilityPeriod {
 export interface ProfitabilityProjection {
   period: ProfitabilityPeriod;
   grossRevenue: number;
+  recognizedOrderCount: number;
   refunds: number;
   netRevenue: number;
   cogs: number;
@@ -389,6 +390,8 @@ function summarizePeriod(
     .reduce((sum, expense) => sum + expense.amount, 0);
 
   const grossRevenue = canonicalGrossRevenue + legacyGrossRevenue;
+  const recognizedOrderCount =
+    canonicalRevenueOrderIds.size + legacyOrders.length;
   const refunds = legacyRefunds - refundDelta;
   const netRevenue = grossRevenue + refundDelta - legacyRefunds;
   const cogs = deliveryCogs - returnCogsReversal;
@@ -401,6 +404,7 @@ function summarizePeriod(
   return {
     period,
     grossRevenue,
+    recognizedOrderCount,
     refunds,
     netRevenue,
     cogs,

@@ -21,6 +21,10 @@ import type { OrderStatus } from "@/types/domain";
 // that could drift -- the period filter (createdAt in period) already
 // matches the canonical half-open [from, to) semantics.
 import { REVENUE_EXCLUDED_STATUSES } from "./metrics";
+import {
+  getProfitabilitySeries,
+  type ProfitabilityProjection,
+} from "@/lib/accounting/profitability";
 
 export interface TimeSeriesPoint {
   date: string; // ISO yyyy-mm-dd
@@ -137,10 +141,24 @@ export const analyticsService = {
     const periodStart = startOfDay(addDays(now, -(days - 1)));
     const prevPeriodStart = startOfDay(addDays(periodStart, -days));
 
-    // Single fetch of the period's orders with the fields we need.
-    // (PII fields like phone/address are encrypted in-place; we don't
-    //  select them, so no decryption overhead on the analytics path.)
-    const [periodOrders, prevOrders, customers] = await Promise.all([
+    const dailyPeriods = Array.from({ length: days }, (_, index) => {
+      const from = startOfDay(addDays(periodStart, index));
+      const nextDay = startOfDay(addDays(from, 1));
+      const to = nextDay <= now ? nextDay : now > from ? now : nextDay;
+      return {
+        key: `day:${localDateString(from)}`,
+        period: { from, to },
+      };
+    });
+    const profitabilityPeriods = [
+      { key: "current", period: { from: periodStart, to: now } },
+      { key: "previous", period: { from: prevPeriodStart, to: periodStart } },
+      ...dailyPeriods,
+    ];
+
+    // One order fetch supports operational breakdowns; the governed
+    // profitability projection supplies every financial headline and trend.
+    const [periodOrders, prevOrders, customers, profitabilityEntries] = await Promise.all([
       ctx.prisma.order.findMany({
         where: { createdAt: { gte: periodStart }, deletedAt: null },
         select: {
@@ -165,12 +183,28 @@ export const analyticsService = {
         select: { createdAt: true },
         orderBy: { createdAt: "asc" },
       }),
+      getProfitabilitySeries(ctx.prisma, profitabilityPeriods),
     ]);
+    const profitabilityByKey = new Map(
+      profitabilityEntries.map((entry) => [entry.key, entry.projection]),
+    );
+    const currentProfitability = profitabilityByKey.get("current");
+    const previousProfitability = profitabilityByKey.get("previous");
+    if (!currentProfitability || !previousProfitability) {
+      throw new Error("Profitability projection did not return the requested analytics periods");
+    }
+    const governedSeries = this.buildProfitabilityTimeSeries(
+      dailyPeriods,
+      profitabilityByKey,
+    );
 
     return {
-      summary: this.buildSummary(periodOrders, prevOrders),
-      revenueTimeSeries: this.buildTimeSeries(periodOrders, periodStart, now),
-      aovTimeSeries: this.buildTimeSeries(periodOrders, periodStart, now),
+      summary: this.buildSummary(periodOrders, prevOrders, {
+        current: currentProfitability,
+        previous: previousProfitability,
+      }),
+      revenueTimeSeries: governedSeries,
+      aovTimeSeries: governedSeries,
       statusDistribution: this.buildStatusDistribution(periodOrders),
       topProducts: this.buildTopProducts(periodOrders),
       topWilayas: this.buildTopWilayas(periodOrders),
@@ -183,18 +217,26 @@ export const analyticsService = {
   buildSummary(
     period: Array<{ totalPrice: number; status: string; deliveredAt: Date | null }>,
     prev: Array<{ totalPrice: number; status: string }>,
+    financial?: {
+      current: ProfitabilityProjection;
+      previous: ProfitabilityProjection;
+    },
   ): AnalyticsSummary {
     const rev = (rows: Array<{ totalPrice: number; status: string }>) =>
       rows
         .filter((o) => !EXCLUDED_FROM_REVENUE.includes(o.status as OrderStatus))
         .reduce((s, o) => s + o.totalPrice, 0);
 
-    const totalRevenue = rev(period);
-    const prevRevenue = rev(prev);
+    const totalRevenue = financial?.current.grossRevenue ?? rev(period);
+    const prevRevenue = financial?.previous.grossRevenue ?? rev(prev);
     const totalOrders = period.length;
     const prevOrders = prev.length;
-    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-    const prevAov = prevOrders > 0 ? Math.round(prevRevenue / prevOrders) : 0;
+    const currentRevenueOrders = financial?.current.recognizedOrderCount ?? totalOrders;
+    const previousRevenueOrders = financial?.previous.recognizedOrderCount ?? prevOrders;
+    const avgOrderValue =
+      currentRevenueOrders > 0 ? Math.round(totalRevenue / currentRevenueOrders) : 0;
+    const prevAov =
+      previousRevenueOrders > 0 ? Math.round(prevRevenue / previousRevenueOrders) : 0;
     const delivered = period.filter((o) => o.status === "delivered").length;
     const deliveryRate = totalOrders > 0 ? Math.round((delivered / totalOrders) * 100) : 0;
 
@@ -207,6 +249,31 @@ export const analyticsService = {
       ordersDelta: pct(totalOrders, prevOrders),
       aovDelta: pct(avgOrderValue, prevAov),
     };
+  },
+
+  buildProfitabilityTimeSeries(
+    periods: readonly Array<{ key: string; period: { from: Date; to: Date } }>,
+    projections: ReadonlyMap<string, ProfitabilityProjection>,
+  ): TimeSeriesPoint[] {
+    return periods.map((entry) => {
+      const projection = projections.get(entry.key);
+      if (!projection) {
+        throw new Error(`Missing profitability projection for '${entry.key}'`);
+      }
+      const date = localDateString(entry.period.from);
+      return {
+        date,
+        label: date,
+        revenue: projection.grossRevenue,
+        orders: projection.recognizedOrderCount,
+        aov:
+          projection.recognizedOrderCount > 0
+            ? Math.round(
+                projection.grossRevenue / projection.recognizedOrderCount,
+              )
+            : 0,
+      };
+    });
   },
 
   buildTimeSeries(

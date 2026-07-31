@@ -2,14 +2,14 @@
  * Daily report generator — summarizes the previous day's activity and formats
  * it as a WhatsApp message.
  *
- * The report covers yesterday (00:00 → 23:59 local time) and includes:
- *   - Orders: count + revenue (excluding cancelled)
+ * The report covers yesterday using the half-open local interval [00:00, next 00:00) and includes:
+ *   - Orders created yesterday + realized delivery revenue earned yesterday
  *   - Delivery status summary (delivered / in-transit / returned)
  *   - Top 3 products by quantity sold
  *   - Low stock alerts (≤ threshold)
  *   - New customers
  *
- * If no orders were placed yesterday, the report is skipped (returns null).
+ * If there was no order or governed financial activity yesterday, the report is skipped (returns null).
  * The cron route uses this to decide whether to send.
  *
  * Localization: the report content is fully i18n-aware — pass the recipient's
@@ -19,11 +19,7 @@
 import "server-only";
 
 import { db } from "@/lib/db";
-// Phase 4: canonical gross-revenue formula. Replaces the local
-// `status: { not: "cancelled" }` aggregate, which excluded cancelled
-// but NOT draft -- diverging from the dashboard (canonical excludes
-// both cancelled + draft). Half-open period [startOfYesterday, endOfYesterday+1ms).
-import { grossRevenue } from "@/lib/data/metrics";
+import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { formatDZDBare as formatDZD } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import { loadTranslationsSync } from "@/lib/i18n-server";
@@ -114,7 +110,7 @@ function getAlgiersYesterdayRange(d: Date = new Date()): { start: Date; end: Dat
 
 /**
  * Generate the daily report for yesterday.
- * Returns null if there were no orders yesterday (nothing to report).
+ * Returns null when yesterday has no operational or governed financial activity.
  */
 export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyReport | null> {
   const t = makeT(locale);
@@ -129,7 +125,7 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
   // Fetch all the data in parallel
   const [
     orders,
-    revenue,
+    profitability,
     newCustomers,
     topProductItems,
     lowStockProducts,
@@ -140,11 +136,10 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
       where: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null },
       select: { id: true, status: true, totalPrice: true },
     }),
-    // Phase 4: canonical gross revenue for yesterday -- excludes
-    // cancelled + draft (matches dashboard + analytics). Half-open
-    // period [startOfYesterday, endOfYesterday) now matches the orders
-    // query above (W2-9 TZ fix).
-    grossRevenue(db, { from: startOfYesterday, to: endOfYesterday }),
+    getProfitabilityProjection(db, {
+      from: startOfYesterday,
+      to: endOfYesterday,
+    }),
     db.customer.count({
       where: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null },
     }),
@@ -160,9 +155,16 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     }),
   ]);
 
-  if (orders.length === 0) {
-    return null; // nothing to report
+  if (
+    orders.length === 0 &&
+    profitability.grossRevenue === 0 &&
+    profitability.refunds === 0 &&
+    profitability.netProfit === 0
+  ) {
+    return null;
   }
+
+  const revenue = profitability.grossRevenue;
 
   // Delivery status (fetch deliveries for yesterday's orders)
   const orderIds = orders.map((o) => o.id);
@@ -193,8 +195,6 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     .map(([name, stats]) => ({ name, ...stats }))
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 3);
-
-  // revenue is already a number from grossRevenue (Phase 4 refactor).
 
   // Build the WhatsApp message (locale-aware, emoji-formatted, WhatsApp-friendly)
   const lines: string[] = [];
