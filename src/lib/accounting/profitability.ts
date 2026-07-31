@@ -216,6 +216,10 @@ function recordCostQuality(
   }
 }
 
+function normalizeSignedZero(value: number): number {
+  return Object.is(value, -0) ? 0 : value;
+}
+
 function safeCostAmount(unitCost: number | null, quantity: number): number {
   if (unitCost === null) return 0;
   const amount = unitCost * quantity;
@@ -361,9 +365,8 @@ function summarizePeriod(
   const lossRows = movements.filter((movement) =>
     INVENTORY_LOSS_MOVEMENTS.has(movement.movementType),
   );
-  const recordedInventoryLosses = -lossRows.reduce(
-    (sum, movement) => sum + movement.amount,
-    0,
+  const recordedInventoryLosses = normalizeSignedZero(
+    -lossRows.reduce((sum, movement) => sum + movement.amount, 0),
   );
   const recognizedCogsOrderIds = new Set([
     ...facts.snapshots.map((snapshot) => snapshot.orderId),
@@ -372,12 +375,14 @@ function summarizePeriod(
       .map((order) => order.id),
     ...legacyOrders.map((order) => order.id),
   ]);
-  const inventoryLosses = -lossRows.reduce(
-    (sum, movement) =>
-      movement.orderId && recognizedCogsOrderIds.has(movement.orderId)
-        ? sum
-        : sum + movement.amount,
-    0,
+  const inventoryLosses = normalizeSignedZero(
+    -lossRows.reduce(
+      (sum, movement) =>
+        movement.orderId && recognizedCogsOrderIds.has(movement.orderId)
+          ? sum
+          : sum + movement.amount,
+      0,
+    ),
   );
   const operatingExpenses = facts.expenses
     .filter((expense) => inPeriod(expense.date, period))
