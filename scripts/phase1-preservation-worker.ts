@@ -173,17 +173,17 @@ async function coreSnapshot(db: PrismaClient): Promise<{
 }
 
 async function assertEncryptedBusinessPayloads(db: PrismaClient): Promise<void> {
-  const commandRows = await db.$queryRawUnsafe<Array<{ resultJson: string }>>(
+  const commandRows = await db.$queryRawUnsafe<Array<{ resultJson: string | null }>>(
     'SELECT "resultJson" FROM "BusinessCommand" ORDER BY rowid',
   );
   const eventRows = await db.$queryRawUnsafe<Array<{ payload: string }>>(
-    'SELECT "payload" FROM "DomainEvent" ORDER BY rowid',
+    'SELECT "payloadJson" AS "payload" FROM "DomainEvent" ORDER BY rowid',
   );
   const outboxRows = await db.$queryRawUnsafe<Array<{ payload: string }>>(
-    'SELECT "payload" FROM "OutboxIntent" ORDER BY rowid',
+    'SELECT "payloadJson" AS "payload" FROM "OutboxIntent" ORDER BY rowid',
   );
   const payloads = [
-    ...commandRows.map((row) => row.resultJson),
+    ...commandRows.flatMap((row) => (row.resultJson ? [row.resultJson] : [])),
     ...eventRows.map((row) => row.payload),
     ...outboxRows.map((row) => row.payload),
   ];
