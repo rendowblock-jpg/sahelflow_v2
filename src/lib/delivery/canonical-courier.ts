@@ -7,9 +7,7 @@ import {
   executeBusinessCommand,
   type BusinessTransaction,
 } from "@/lib/business-truth/command-kernel";
-import type {
-  BusinessCommandResult,
-} from "@/lib/business-truth/contracts";
+import type { BusinessCommandResult } from "@/lib/business-truth/contracts";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import {
@@ -36,6 +34,7 @@ import {
 } from "@/types/errors";
 import {
   COURIER_BOOKING_EFFECT_TYPE,
+  drainDueCourierBookings as drainLegacyCourierBookings,
   getCanonicalCourierPosition,
   ingestCanonicalCourierTrackingEvent,
   reconcileCanonicalCourierBooking,
@@ -60,9 +59,7 @@ export type {
   CourierTrackingFetcher,
 };
 
-const MAX_BOOKING_ATTEMPTS = 5;
 const LEASE_MS = 120_000;
-const RETRY_DELAYS_MS = [15_000, 60_000, 300_000, 1_800_000] as const;
 
 const providerSchema = z.enum(DELIVERY_PROVIDERS);
 const bookingSchema = z.object({
@@ -101,8 +98,6 @@ const bookingPayloadSchema = z.object({
   }),
 });
 
-type BookingPayload = z.infer<typeof bookingPayloadSchema>;
-
 interface ReservationRow {
   id: string;
   orderItemId: string | null;
@@ -126,7 +121,6 @@ interface BookingOutboxRow {
   effectStartedAt: Date | null;
   lastErrorCode: string | null;
   outcomeState: string;
-  receiptJson: string | null;
 }
 
 interface StoredBookingCommandRow {
@@ -136,28 +130,12 @@ interface StoredBookingCommandRow {
   expectedVersion: number | bigint;
 }
 
-interface BookingRequestAuthority {
-  orderId: string;
-  deliveryId: string | null;
-  provider: string | null;
-}
-
-type BookingOutcomeKind = "ambiguous" | "terminal_failure";
-
 function safeInteger(value: number | bigint, field: string): number {
   const output = Number(value);
   if (!Number.isSafeInteger(output)) {
     throw new ConflictError(`${field} is outside the supported integer range`);
   }
   return output;
-}
-
-function retryAt(attemptCount: number, now = new Date()): Date {
-  const delay =
-    RETRY_DELAYS_MS[
-      Math.min(attemptCount - 1, RETRY_DELAYS_MS.length - 1)
-    ] ?? 1_800_000;
-  return new Date(now.getTime() + delay);
 }
 
 async function reservationRows(
@@ -252,7 +230,6 @@ export async function queueCanonicalCourierBooking(
   input: unknown,
 ): Promise<BusinessCommandResult<CourierBookingResult>> {
   const data = bookingSchema.parse(input);
-  const correlationId = data.correlationId ?? randomUUID();
   const aggregate = await bookingAggregate(context, data);
 
   return executeBusinessCommand(
@@ -266,7 +243,7 @@ export async function queueCanonicalCourierBooking(
         expectedVersion: aggregate.expectedVersion,
       },
       actor: "authenticated-owner",
-      correlationId,
+      correlationId: data.correlationId ?? randomUUID(),
       payload: data,
     },
     async ({ tx, commandId, principal }) => {
@@ -297,8 +274,7 @@ export async function queueCanonicalCourierBooking(
         );
       }
 
-      const active = await reservationRows(tx, order.id);
-      assertReservations(active, order.items);
+      assertReservations(await reservationRows(tx, order.id), order.items);
 
       let deliveryId: string;
       if (order.delivery) {
@@ -453,7 +429,7 @@ export async function queueCanonicalCourierBooking(
 async function openBookingPayload(
   context: ServiceContext,
   row: BookingOutboxRow,
-): Promise<BookingPayload> {
+): Promise<z.infer<typeof bookingPayloadSchema>> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
   return bookingPayloadSchema.parse(
     openBusinessPayloadWithKey(
@@ -469,123 +445,102 @@ async function openBookingPayload(
   );
 }
 
-async function requestAuthority(
+async function bookingRequest(
   tx: BusinessTransaction,
-  row: BookingOutboxRow,
-): Promise<BookingRequestAuthority | null> {
+  commandId: string,
+): Promise<{ orderId: string; deliveryId: string | null } | null> {
   return tx.canonicalDeliveryEvent.findFirst({
     where: {
-      createdByCommandId: row.commandId,
+      createdByCommandId: commandId,
       eventType: "courier_booking_requested",
     },
     orderBy: { createdAt: "desc" },
-    select: {
-      orderId: true,
-      deliveryId: true,
-      provider: true,
-    },
+    select: { orderId: true, deliveryId: true },
   });
 }
 
-async function commitBookingOutcome(
+async function deadLetterInvalidPayload(
   context: ServiceContext,
   row: BookingOutboxRow,
-  kind: BookingOutcomeKind,
-  errorCode: string,
-): Promise<void> {
-  const principalContext: BusinessPrincipalContext = {
+): Promise<boolean> {
+  const commandContext: BusinessPrincipalContext = {
     ...context,
     businessPrincipal: systemBusinessPrincipal("reconciliation"),
   };
 
-  await executeBusinessCommand(
-    principalContext,
-    {
-      idempotencyKey: `courier-booking-outcome:${kind}:${row.effectKey}`,
-      commandType: `courier.booking.outcome.${kind}.v1`,
-      aggregate: {
-        type: "courier-booking-outcome",
-        id: `${row.effectKey}:${kind}`,
-        expectedVersion: 0,
-      },
-      actor: "system",
-      correlationId: row.effectKey,
-      payload: {
-        outboxId: row.id,
-        effectKey: row.effectKey,
-        kind,
-        errorCode,
-      },
-    },
-    async ({ tx, commandId, principal }) => {
-      const current = await tx.outboxIntent.findFirst({
-        where: {
-          id: row.id,
+  try {
+    await executeBusinessCommand(
+      commandContext,
+      {
+        idempotencyKey: `courier-booking-outcome:terminal_failure:${row.effectKey}`,
+        commandType: "courier.booking.outcome.terminal_failure.v1",
+        aggregate: {
+          type: "courier-booking-outcome",
+          id: `${row.effectKey}:terminal_failure`,
+          expectedVersion: 0,
+        },
+        actor: "system",
+        correlationId: row.effectKey,
+        payload: {
+          outboxId: row.id,
           effectKey: row.effectKey,
-          effectType: COURIER_BOOKING_EFFECT_TYPE,
+          errorCode: "COURIER_INVALID_OUTBOX_PAYLOAD",
         },
-      });
-      if (!current) {
-        throw new NotFoundError("Courier booking outbox", row.id);
-      }
-
-      const authority = await requestAuthority(tx, row);
-      const outboxUpdated = await tx.outboxIntent.updateMany({
-        where: {
-          id: row.id,
-          status: "processing",
-          leaseToken: row.leaseToken,
-        },
-        data:
-          kind === "ambiguous"
-            ? {
-                status: "failed",
-                outcomeState: "ambiguous",
-                lastErrorCode: errorCode,
-                nextAttemptAt: null,
-                lockedAt: null,
-                leaseToken: null,
-              }
-            : {
-                status: "dead_letter",
-                outcomeState: "known_failure",
-                lastErrorCode: errorCode,
-                nextAttemptAt: null,
-                lockedAt: null,
-                leaseToken: null,
-                deadLetteredAt: new Date(),
-              },
-      });
-      if (outboxUpdated.count !== 1) {
-        throw new ConflictError(
-          "Courier booking outbox lease changed before outcome commit",
-        );
-      }
-
-      if (authority?.deliveryId) {
-        await tx.delivery.updateMany({
+      },
+      async ({ tx, commandId, principal }) => {
+        const current = await tx.outboxIntent.findFirst({
           where: {
-            id: authority.deliveryId,
-            trackingNumber: null,
-            deletedAt: null,
+            id: row.id,
+            effectKey: row.effectKey,
+            effectType: COURIER_BOOKING_EFFECT_TYPE,
+          },
+        });
+        if (!current) {
+          throw new NotFoundError("Courier booking outbox", row.id);
+        }
+
+        const updated = await tx.outboxIntent.updateMany({
+          where: {
+            id: current.id,
+            status: current.status,
+            attemptCount: current.attemptCount,
+            leaseToken: current.leaseToken,
+            effectStartedAt: null,
           },
           data: {
-            status:
-              kind === "ambiguous"
-                ? "reconciliation_required"
-                : "booking_failed",
+            status: "dead_letter",
+            outcomeState: "known_failure",
+            lastErrorCode: "COURIER_INVALID_OUTBOX_PAYLOAD",
+            nextAttemptAt: null,
+            lockedAt: null,
+            leaseToken: null,
+            deadLetteredAt: new Date(),
           },
         });
-      }
+        if (updated.count !== 1) {
+          throw new ConflictError(
+            "Courier booking outbox changed before invalid-payload dead letter",
+          );
+        }
 
-      let orderVersion: number | null = null;
-      if (authority && kind === "terminal_failure") {
-        const order = await tx.order.findFirst({
-          where: { id: authority.orderId, deletedAt: null },
-        });
-        if (order) {
-          orderVersion = order.version;
+        const request = await bookingRequest(tx, row.commandId);
+        let orderVersion: number | null = null;
+        if (request?.deliveryId) {
+          await tx.delivery.updateMany({
+            where: {
+              id: request.deliveryId,
+              trackingNumber: null,
+              deletedAt: null,
+            },
+            data: { status: "booking_failed" },
+          });
+        }
+        if (request) {
+          const order = await tx.order.findFirst({
+            where: { id: request.orderId, deletedAt: null },
+          });
           if (
+            order &&
             order.status === "confirmed" &&
             order.fulfillmentState === "ready" &&
             order.inventoryState === "reserved" &&
@@ -609,391 +564,214 @@ async function commitBookingOutcome(
             });
             if (orderUpdated.count !== 1) {
               throw new ConflictError(
-                "Order changed before courier terminal-failure recovery",
+                "Order changed before invalid courier payload recovery",
               );
             }
             orderVersion = nextVersion;
           }
         }
-      }
 
-      if (authority?.deliveryId) {
-        await tx.canonicalDeliveryEvent.create({
-          data: {
-            id: randomUUID(),
-            eventKey: `${commandId}:booking-outcome`,
-            orderId: authority.orderId,
-            deliveryId: authority.deliveryId,
-            eventType:
-              kind === "ambiguous"
-                ? "courier_booking_outcome_ambiguous"
-                : "courier_booking_terminal_failure",
-            provider: authority.provider,
-            reasonCode: errorCode.toLowerCase(),
-            occurredAt: new Date(),
-            createdByCommandId: commandId,
+        const result: Record<string, unknown> = {
+          effectKey: row.effectKey,
+          outboxId: row.id,
+          outcome: "terminal_failure",
+          errorCode: "COURIER_INVALID_OUTBOX_PAYLOAD",
+          orderId: request?.orderId ?? null,
+          orderVersion,
+          deliveryId: request?.deliveryId ?? null,
+        };
+        return {
+          result,
+          audit: {
+            action: "courier.booking.outcome.terminal_failure.v1",
+            entity: "outbox-intent",
+            entityId: row.id,
+            before: {
+              status: current.status,
+              outcomeState: current.outcomeState,
+              attemptCount: current.attemptCount,
+            },
+            after: result,
+            metadata: { principal: principal.auditActor },
           },
-        });
-      }
-
-      const result: Record<string, unknown> = {
-        effectKey: row.effectKey,
-        outboxId: row.id,
-        outcome: kind,
-        errorCode,
-        orderId: authority?.orderId ?? null,
-        orderVersion,
-        deliveryId: authority?.deliveryId ?? null,
-      };
-
-      return {
-        result,
-        audit: {
-          action: `courier.booking.outcome.${kind}.v1`,
-          entity: "outbox-intent",
-          entityId: row.id,
-          before: {
-            status: current.status,
-            outcomeState: current.outcomeState,
-            attemptCount: current.attemptCount,
-          },
-          after: result,
-          metadata: { principal: principal.auditActor },
-        },
-        events: [
-          {
-            key: `${commandId}:event`,
-            type: `courier.booking.outcome.${kind}.v1`,
-            payload: result,
-          },
-        ],
-        projectionInvalidations: [
-          "orders:list",
-          ...(authority ? [`orders:${authority.orderId}`] : []),
-          "deliveries:list",
-          ...(authority?.deliveryId
-            ? [`deliveries:${authority.deliveryId}`]
-            : []),
-        ],
-      };
-    },
-  );
+          events: [
+            {
+              key: `${commandId}:event`,
+              type: "courier.booking.outcome.terminal_failure.v1",
+              payload: result,
+            },
+          ],
+          projectionInvalidations: [
+            "orders:list",
+            ...(request ? [`orders:${request.orderId}`] : []),
+            "deliveries:list",
+            ...(request?.deliveryId
+              ? [`deliveries:${request.deliveryId}`]
+              : []),
+          ],
+        };
+      },
+    );
+    return true;
+  } catch (error) {
+    if (error instanceof ConflictError) return false;
+    throw error;
+  }
 }
 
-async function recoverExpiredBookingLeases(
+async function preflightInvalidPayloads(
   context: ServiceContext,
-): Promise<void> {
-  const cutoff = new Date(Date.now() - LEASE_MS);
-  const expired = (await context.prisma.outboxIntent.findMany({
+  limit: number,
+): Promise<number> {
+  if (limit <= 0) return 0;
+  const now = new Date();
+  const expiredBeforeEffect = new Date(now.getTime() - LEASE_MS);
+  const rows = (await context.prisma.outboxIntent.findMany({
     where: {
       effectType: COURIER_BOOKING_EFFECT_TYPE,
-      status: "processing",
-      lockedAt: { lte: cutoff },
+      OR: [
+        {
+          status: { in: ["queued", "retrying"] },
+          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+        },
+        {
+          status: "processing",
+          effectStartedAt: null,
+          lockedAt: { lte: expiredBeforeEffect },
+        },
+      ],
     },
+    orderBy: [{ nextAttemptAt: "asc" }, { createdAt: "asc" }],
+    take: limit,
+  })) as BookingOutboxRow[];
+
+  let processed = 0;
+  for (const row of rows) {
+    try {
+      await openBookingPayload(context, row);
+    } catch {
+      if (await deadLetterInvalidPayload(context, row)) processed += 1;
+    }
+  }
+  return processed;
+}
+
+async function restoreTerminalKnownFailures(
+  context: ServiceContext,
+): Promise<void> {
+  const rows = (await context.prisma.outboxIntent.findMany({
+    where: {
+      effectType: COURIER_BOOKING_EFFECT_TYPE,
+      status: "dead_letter",
+      outcomeState: "known_failure",
+      lastErrorCode: "COURIER_PROVIDER_REJECTED_BOOKING",
+    },
+    orderBy: { createdAt: "asc" },
     take: 20,
   })) as BookingOutboxRow[];
 
-  for (const row of expired) {
-    if (!row.effectStartedAt) {
-      await context.prisma.$transaction(async (tx) => {
-        const recovered = await tx.outboxIntent.updateMany({
-          where: {
-            id: row.id,
-            status: "processing",
-            leaseToken: row.leaseToken,
-            effectStartedAt: null,
-          },
-          data: {
-            status: "retrying",
-            attemptCount: { decrement: 1 },
-            nextAttemptAt: new Date(),
-            lockedAt: null,
-            leaseToken: null,
-            lastErrorCode: "COURIER_LEASE_RECOVERED_BEFORE_EFFECT",
-            outcomeState: "none",
-          },
-        });
-        if (recovered.count !== 1) return;
-        await tx.auditLog.create({
-          data: {
-            action: "courier.booking.lease_recovered_before_effect",
-            entity: "outbox-intent",
-            entityId: row.id,
-            actor: "system:courier-booking",
-            metadata: JSON.stringify({ effectKey: row.effectKey }),
-          },
-        });
-      });
+  for (const row of rows) {
+    const request = await bookingRequest(context.prisma as never, row.commandId);
+    if (!request) continue;
+    const order = await context.prisma.order.findFirst({
+      where: { id: request.orderId, deletedAt: null },
+    });
+    if (
+      !order ||
+      order.status !== "confirmed" ||
+      order.fulfillmentState !== "ready" ||
+      order.inventoryState !== "reserved" ||
+      order.deliveryState !== "pending"
+    ) {
       continue;
     }
 
-    await commitBookingOutcome(
-      context,
-      row,
-      "ambiguous",
-      "COURIER_EFFECT_LEASE_EXPIRED_AFTER_START",
-    );
-  }
-}
-
-async function claimBookingEffect(
-  context: ServiceContext,
-): Promise<BookingOutboxRow | null> {
-  await recoverExpiredBookingLeases(context);
-  const now = new Date();
-  const candidate = (await context.prisma.outboxIntent.findFirst({
-    where: {
-      effectType: COURIER_BOOKING_EFFECT_TYPE,
-      status: { in: ["queued", "retrying"] },
-      OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-    },
-    orderBy: [{ nextAttemptAt: "asc" }, { createdAt: "asc" }],
-  })) as BookingOutboxRow | null;
-  if (!candidate) return null;
-
-  const leaseToken = randomUUID();
-  const claimed = await context.prisma.outboxIntent.updateMany({
-    where: {
-      id: candidate.id,
-      status: { in: ["queued", "retrying"] },
-      attemptCount: candidate.attemptCount,
-    },
-    data: {
-      status: "processing",
-      attemptCount: { increment: 1 },
-      lockedAt: now,
-      leaseToken,
-      effectStartedAt: null,
-      lastErrorCode: null,
-      outcomeState: "none",
-    },
-  });
-  if (claimed.count !== 1) return null;
-
-  return (await context.prisma.outboxIntent.findUnique({
-    where: { id: candidate.id },
-  })) as BookingOutboxRow | null;
-}
-
-async function knownBookingFailure(
-  context: ServiceContext,
-  row: BookingOutboxRow,
-  payload: BookingPayload,
-  errorCode: string,
-): Promise<void> {
-  if (row.attemptCount >= MAX_BOOKING_ATTEMPTS) {
-    await commitBookingOutcome(
-      context,
-      row,
-      "terminal_failure",
-      errorCode,
-    );
-    return;
-  }
-
-  await context.prisma.$transaction(async (tx) => {
-    const updated = await tx.outboxIntent.updateMany({
-      where: {
-        id: row.id,
-        status: "processing",
-        leaseToken: row.leaseToken,
-      },
-      data: {
-        status: "retrying",
-        outcomeState: "known_failure",
-        lastErrorCode: errorCode,
-        nextAttemptAt: retryAt(row.attemptCount),
-        lockedAt: null,
-        leaseToken: null,
-        effectStartedAt: null,
-      },
-    });
-    if (updated.count !== 1) return;
-
-    await tx.delivery.updateMany({
-      where: {
-        id: payload.deliveryId,
-        trackingNumber: null,
-        deletedAt: null,
-      },
-      data: { status: "booking_retrying" },
-    });
-    await tx.auditLog.create({
-      data: {
-        action: "courier.booking.retry_scheduled",
-        entity: "outbox-intent",
-        entityId: row.id,
-        actor: "system:courier-booking",
-        metadata: JSON.stringify({
-          effectKey: row.effectKey,
-          errorCode,
-          attemptCount: row.attemptCount,
-        }),
-      },
-    });
-  });
-}
-
-async function commitBookingReceipt(
-  context: ServiceContext,
-  row: BookingOutboxRow,
-  payload: BookingPayload,
-  receipt: ShipmentResult,
-): Promise<void> {
-  const trackingNumber = receipt.trackingId.trim();
-  if (!trackingNumber) {
-    await commitBookingOutcome(
-      context,
-      row,
-      "ambiguous",
-      "COURIER_MISSING_TRACKING_RECEIPT",
-    );
-    return;
-  }
-
-  const principalContext: BusinessPrincipalContext = {
-    ...context,
-    businessPrincipal: systemBusinessPrincipal("reconciliation"),
-  };
-
-  await executeBusinessCommand(
-    principalContext,
-    {
-      idempotencyKey: `courier-receipt:${row.effectKey}`,
-      commandType: "courier.booking.receipt.v1",
-      aggregate: {
-        type: "courier-booking-receipt",
-        id: row.effectKey,
-        expectedVersion: 0,
-      },
-      actor: "system",
-      correlationId: row.effectKey,
-      payload: {
-        effectKey: row.effectKey,
-        deliveryId: payload.deliveryId,
-        provider: payload.provider,
-        trackingNumber,
-      },
-    },
-    async ({ tx, commandId, principal }) => {
-      const delivery = await tx.delivery.findFirst({
-        where: {
-          id: payload.deliveryId,
-          orderId: payload.orderId,
-          deletedAt: null,
+    const commandContext: BusinessPrincipalContext = {
+      ...context,
+      businessPrincipal: systemBusinessPrincipal("reconciliation"),
+    };
+    await executeBusinessCommand(
+      commandContext,
+      {
+        idempotencyKey: `courier-booking-terminal-recovery:${row.effectKey}`,
+        commandType: "courier.booking.terminal_recovery.v1",
+        aggregate: {
+          type: "courier-booking-terminal-recovery",
+          id: row.effectKey,
+          expectedVersion: 0,
         },
-      });
-      if (!delivery) throw new NotFoundError("Delivery", payload.deliveryId);
-      if (
-        delivery.trackingNumber &&
-        delivery.trackingNumber !== trackingNumber
-      ) {
-        throw new ConflictError(
-          "Provider receipt conflicts with the stored tracking identity",
-        );
-      }
-
-      const deliveryUpdated = await tx.delivery.updateMany({
-        where: {
-          id: delivery.id,
-          provider: payload.provider,
-          trackingNumber: delivery.trackingNumber,
-          deletedAt: null,
-        },
-        data: {
-          trackingNumber,
-          labelUrl: receipt.labelUrl ?? null,
-          cost: receipt.cost,
-          estimatedDelivery: receipt.estimatedDelivery
-            ? new Date(receipt.estimatedDelivery)
-            : null,
-          status: "created",
-        },
-      });
-      if (deliveryUpdated.count !== 1) {
-        throw new ConflictError("Delivery changed before receipt commit");
-      }
-
-      const outboxUpdated = await tx.outboxIntent.updateMany({
-        where: {
-          id: row.id,
-          effectKey: row.effectKey,
-          status: "processing",
-          leaseToken: row.leaseToken,
-        },
-        data: {
-          status: "succeeded",
-          outcomeState: "known_success",
-          receiptJson: JSON.stringify({
-            trackingNumber,
-            provider: payload.provider,
-            labelRecorded: Boolean(receipt.labelUrl),
-            cost: receipt.cost,
-          }),
-          succeededAt: new Date(),
-          nextAttemptAt: null,
-          lockedAt: null,
-          leaseToken: null,
-          lastErrorCode: null,
-        },
-      });
-      if (outboxUpdated.count !== 1) {
-        throw new ConflictError(
-          "Courier outbox lease changed before receipt commit",
-        );
-      }
-
-      await tx.canonicalDeliveryEvent.create({
-        data: {
-          id: randomUUID(),
-          eventKey: `${commandId}:booking-receipt`,
-          orderId: payload.orderId,
-          deliveryId: payload.deliveryId,
-          eventType: "courier_booking_created",
-          provider: payload.provider,
-          providerEventId: `booking:${trackingNumber}`,
-          reasonCode: "provider_booking_receipt",
-          occurredAt: new Date(),
-          createdByCommandId: commandId,
-        },
-      });
-
-      const result = {
-        deliveryId: payload.deliveryId,
-        orderId: payload.orderId,
-        provider: payload.provider,
-        trackingNumber,
-        bookingState: "created",
-      };
-
-      return {
-        result,
-        audit: {
-          action: "courier.booking.receipt.v1",
-          entity: "delivery",
-          entityId: payload.deliveryId,
-          before: {
-            status: delivery.status,
-            trackingNumber: delivery.trackingNumber,
+        actor: "system",
+        correlationId: row.effectKey,
+        payload: { effectKey: row.effectKey, orderId: request.orderId },
+      },
+      async ({ tx, commandId, principal }) => {
+        const current = await tx.order.findFirst({
+          where: { id: request.orderId, deletedAt: null },
+        });
+        if (!current) throw new NotFoundError("Order", request.orderId);
+        if (
+          current.status !== "confirmed" ||
+          current.fulfillmentState !== "ready" ||
+          current.inventoryState !== "reserved" ||
+          current.deliveryState !== "pending"
+        ) {
+          throw new ConflictError(
+            "Courier terminal recovery requires confirmed/ready/reserved/pending",
+          );
+        }
+        const nextVersion = current.version + 1;
+        const updated = await tx.order.updateMany({
+          where: {
+            id: current.id,
+            version: current.version,
+            status: "confirmed",
+            fulfillmentState: "ready",
+            inventoryState: "reserved",
+            deliveryState: "pending",
+            deletedAt: null,
           },
-          after: result,
-          metadata: { principal: principal.auditActor },
-        },
-        events: [
-          {
-            key: `${commandId}:event`,
-            type: "courier.booking.receipt.v1",
-            payload: result,
+          data: { version: nextVersion, deliveryState: "not_created" },
+        });
+        if (updated.count !== 1) {
+          throw new ConflictError(
+            "Order changed during courier terminal recovery",
+          );
+        }
+
+        const result = {
+          effectKey: row.effectKey,
+          orderId: current.id,
+          orderVersion: nextVersion,
+          deliveryState: "not_created",
+        };
+        return {
+          result,
+          audit: {
+            action: "courier.booking.terminal_recovery.v1",
+            entity: "order",
+            entityId: current.id,
+            before: {
+              version: current.version,
+              deliveryState: current.deliveryState,
+            },
+            after: result,
+            metadata: { principal: principal.auditActor },
           },
-        ],
-        projectionInvalidations: [
-          "deliveries:list",
-          `deliveries:${payload.deliveryId}`,
-          `orders:${payload.orderId}`,
-        ],
-      };
-    },
-  );
+          events: [
+            {
+              key: `${commandId}:event`,
+              type: "courier.booking.terminal_recovery.v1",
+              payload: result,
+            },
+          ],
+          projectionInvalidations: [
+            "orders:list",
+            `orders:${current.id}`,
+          ],
+        };
+      },
+    );
+  }
 }
 
 async function defaultBookingSender(
@@ -1011,69 +789,27 @@ export async function drainDueCourierBookings(
   limit = 10,
   sender?: CourierBookingSender,
 ): Promise<number> {
-  let processed = 0;
+  const preflightProcessed = await preflightInvalidPayloads(context, limit);
+  const remaining = Math.max(0, limit - preflightProcessed);
 
-  while (processed < limit) {
-    const row = await claimBookingEffect(context);
-    if (!row) break;
-
-    let payload: BookingPayload;
-    try {
-      payload = await openBookingPayload(context, row);
-    } catch {
-      await commitBookingOutcome(
-        context,
-        row,
-        "terminal_failure",
-        "COURIER_INVALID_OUTBOX_PAYLOAD",
-      );
-      processed += 1;
-      continue;
-    }
-
-    const started = await context.prisma.outboxIntent.updateMany({
-      where: {
-        id: row.id,
-        status: "processing",
-        leaseToken: row.leaseToken,
-        effectStartedAt: null,
-      },
-      data: { effectStartedAt: new Date() },
-    });
-    if (started.count !== 1) continue;
-
-    try {
-      const receipt = sender
-        ? await sender(payload.provider, payload.request)
-        : await defaultBookingSender(
-            context,
-            payload.provider,
-            payload.request,
-          );
-
-      if (!receipt.success) {
-        await knownBookingFailure(
-          context,
-          row,
-          payload,
-          "COURIER_PROVIDER_REJECTED_BOOKING",
-        );
-      } else {
-        await commitBookingReceipt(context, row, payload, receipt);
-      }
-    } catch (error) {
-      await commitBookingOutcome(
-        context,
-        row,
-        "ambiguous",
-        error instanceof SahelFlowError
-          ? error.code
-          : "COURIER_PROVIDER_OUTCOME_AMBIGUOUS",
+  const guardedSender: CourierBookingSender = async (provider, request) => {
+    const receipt = sender
+      ? await sender(provider, request)
+      : await defaultBookingSender(context, provider, request);
+    if (receipt.success && !receipt.trackingId.trim()) {
+      throw new SahelFlowError(
+        "Courier provider reported success without tracking identity",
+        "COURIER_MISSING_TRACKING_RECEIPT",
+        502,
       );
     }
+    return receipt;
+  };
 
-    processed += 1;
-  }
-
-  return processed;
+  const drained =
+    remaining > 0
+      ? await drainLegacyCourierBookings(context, remaining, guardedSender)
+      : 0;
+  await restoreTerminalKnownFailures(context);
+  return preflightProcessed + drained;
 }
