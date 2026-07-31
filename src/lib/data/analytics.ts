@@ -74,6 +74,10 @@ export interface AnalyticsSummary {
   totalOrders: number;
   avgOrderValue: number;
   deliveryRate: number;
+  realizedRevenue: number;
+  netRevenue: number;
+  netProfit: number;
+  profitabilityComplete: boolean;
   revenueDelta: number;
   ordersDelta: number;
   aovDelta: number;
@@ -122,20 +126,9 @@ export const analyticsService = {
     const now = new Date();
     const periodStart = startOfDay(addDays(now, -(days - 1)));
     const prevPeriodStart = startOfDay(addDays(periodStart, -days));
-
-    const dailyPeriods = Array.from({ length: days }, (_, index) => {
-      const from = startOfDay(addDays(periodStart, index));
-      const nextDay = startOfDay(addDays(from, 1));
-      const to = nextDay <= now ? nextDay : now > from ? now : nextDay;
-      return {
-        key: `day:${localDateString(from)}`,
-        period: { from, to },
-      };
-    });
     const profitabilityPeriods = [
       { key: "current", period: { from: periodStart, to: now } },
       { key: "previous", period: { from: prevPeriodStart, to: periodStart } },
-      ...dailyPeriods,
     ];
 
     const [periodOrders, prevOrders, customers, profitabilityEntries] =
@@ -181,6 +174,7 @@ export const analyticsService = {
         }),
         getProfitabilitySeries(ctx.prisma, profitabilityPeriods),
       ]);
+
     const profitabilityByKey = new Map(
       profitabilityEntries.map((entry) => [entry.key, entry.projection]),
     );
@@ -191,18 +185,14 @@ export const analyticsService = {
         "Profitability projection did not return the requested analytics periods",
       );
     }
-    const governedSeries = this.buildProfitabilityTimeSeries(
-      dailyPeriods,
-      profitabilityByKey,
-    );
 
     return {
       summary: this.buildSummary(periodOrders, prevOrders, {
         current: currentProfitability,
         previous: previousProfitability,
       }),
-      revenueTimeSeries: governedSeries,
-      aovTimeSeries: governedSeries,
+      revenueTimeSeries: this.buildTimeSeries(periodOrders, periodStart, now),
+      aovTimeSeries: this.buildTimeSeries(periodOrders, periodStart, now),
       statusDistribution: this.buildStatusDistribution(periodOrders),
       topProducts: this.buildTopProducts(periodOrders),
       topWilayas: this.buildTopWilayas(periodOrders),
@@ -232,22 +222,14 @@ export const analyticsService = {
         )
         .reduce((sum, order) => sum + order.totalPrice, 0);
 
-    const totalRevenue = financial?.current.grossRevenue ?? rev(period);
-    const prevRevenue = financial?.previous.grossRevenue ?? rev(prev);
+    const totalRevenue = rev(period);
+    const prevRevenue = rev(prev);
     const totalOrders = period.length;
     const prevOrders = prev.length;
-    const currentRevenueOrders =
-      financial?.current.recognizedOrderCount ?? totalOrders;
-    const previousRevenueOrders =
-      financial?.previous.recognizedOrderCount ?? prevOrders;
     const avgOrderValue =
-      currentRevenueOrders > 0
-        ? Math.round(totalRevenue / currentRevenueOrders)
-        : 0;
+      totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
     const prevAov =
-      previousRevenueOrders > 0
-        ? Math.round(prevRevenue / previousRevenueOrders)
-        : 0;
+      prevOrders > 0 ? Math.round(prevRevenue / prevOrders) : 0;
     const delivered = period.filter(
       (order) => order.status === "delivered",
     ).length;
@@ -259,6 +241,11 @@ export const analyticsService = {
       totalOrders,
       avgOrderValue,
       deliveryRate,
+      realizedRevenue: financial?.current.grossRevenue ?? 0,
+      netRevenue: financial?.current.netRevenue ?? 0,
+      netProfit: financial?.current.netProfit ?? 0,
+      profitabilityComplete:
+        financial?.current.profitabilityComplete ?? false,
       revenueDelta: pct(totalRevenue, prevRevenue),
       ordersDelta: pct(totalOrders, prevOrders),
       aovDelta: pct(avgOrderValue, prevAov),
