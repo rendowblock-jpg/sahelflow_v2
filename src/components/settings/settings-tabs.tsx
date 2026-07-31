@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import {
   Shield,
+  ShieldCheck,
   Bot,
   Truck,
   Bell,
@@ -27,9 +28,11 @@ import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
+import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
 
 type Tab =
   | "profile"
+  | "security"
   | "appearance"
   | "license"
   | "demo"
@@ -43,6 +46,7 @@ type Tab =
 
 const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
   { id: "profile", icon: UserCircle, labelKey: "settings.tabs.profile" },
+  { id: "security", icon: ShieldCheck, labelKey: "settings.tabs.security" },
   { id: "appearance", icon: Palette, labelKey: "settings.tabs.appearance" },
   { id: "license", icon: Shield, labelKey: "settings.tabs.license" },
   { id: "demo", icon: Database, labelKey: "settings.tabs.demo" },
@@ -59,6 +63,12 @@ const DEMO_LABELS = {
   ar: "بيانات تجريبية",
   fr: "Données de démo",
   en: "Demo data",
+} as const;
+
+const SECURITY_LABELS = {
+  ar: "الأمان والجلسات",
+  fr: "Sécurité et sessions",
+  en: "Security & sessions",
 } as const;
 
 export function SettingsTabs({
@@ -78,7 +88,12 @@ export function SettingsTabs({
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = active === tab.id;
-          const label = tab.id === "demo" ? DEMO_LABELS[locale] : t(tab.labelKey);
+          const label =
+            tab.id === "demo"
+              ? DEMO_LABELS[locale]
+              : tab.id === "security"
+                ? SECURITY_LABELS[locale]
+                : t(tab.labelKey);
           return (
             <button
               key={tab.id}
@@ -118,6 +133,7 @@ export function SettingsTabs({
       </nav>
 
       <div className="min-w-0 flex-1">
+        {active === "security" && <SecurityAuthorityPanel />}
         {active === "license" && <LicensePanel />}
         {active === "demo" && <DemoDataPanel />}
         {active === "ai" && <AiKeyPanel />}
