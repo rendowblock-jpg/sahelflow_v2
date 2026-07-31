@@ -13,7 +13,7 @@ const statePath = join(testRoot, "state.json");
 const preUpdatePrisma = join(testRoot, "prisma-pre-update");
 const worker = join(repoRoot, "scripts", "phase1-preservation-worker.ts");
 
-function environment() {
+function environment(): NodeJS.ProcessEnv {
   return {
     ...process.env,
     NODE_ENV: "test",
@@ -26,7 +26,7 @@ function environment() {
 }
 
 function run(label: string, args: string[]): void {
-  const result = spawnSync(process.execPath, args, {
+  const result = spawnSync("bun", args, {
     cwd: repoRoot,
     env: environment(),
     encoding: "utf8",
