@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - agent/phases1-4-completion-program
-    paths:
-      - .github/workflows/patch-commerce-regression.yml
 
 permissions:
   contents: write
