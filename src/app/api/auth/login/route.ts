@@ -15,7 +15,7 @@ import {
   recordLoginSuccess,
 } from "@/lib/auth/rate-limit";
 import { shopContext } from "@/lib/db";
-import { createTeamLoginSession } from "@/lib/identity/team-directory";
+import { createActiveTeamLoginSession } from "@/lib/identity/team-credentials";
 import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
 import { establishTeamSession } from "@/lib/identity/team-session";
 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   recordLoginAttempt(ip);
 
   if (parsed.data.loginId) {
-    const grant = await createTeamLoginSession(
+    const grant = await createActiveTeamLoginSession(
       parsed.data.loginId,
       parsed.data.pin,
       shopContext,
