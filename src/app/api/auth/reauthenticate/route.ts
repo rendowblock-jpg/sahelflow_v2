@@ -5,7 +5,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import {
   auditLog,
   reauthenticateCurrentSession,
-  requireAuth,
+  requireReauthenticationEligibility,
 } from "@/lib/auth/server";
 import {
   checkLoginRateLimit,
@@ -18,7 +18,7 @@ import {
 const Schema = z.object({ pin: z.string().min(1, "PIN is required") });
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  await requireReauthenticationEligibility();
   const ip = getClientIp(req.headers);
   const limit = checkLoginRateLimit(ip);
   if (!limit.allowed) {
