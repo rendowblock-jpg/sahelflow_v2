@@ -447,7 +447,7 @@ describe("Phase 1 representative Golden COD journey", () => {
       expect(finalReturn.position).toMatchObject({
         orderVersion: 15,
         returnState: "completed",
-        refundState: "partial",
+        refundState: "partially_reversed",
         effectiveRefundAmount: 600,
       });
       expect(finalReturn.position.returnCase?.currentState).toBe("completed");
@@ -480,7 +480,7 @@ describe("Phase 1 representative Golden COD journey", () => {
         inventoryState: "settled",
         codState: "remitted",
         returnState: "completed",
-        refundState: "partial",
+        refundState: "partially_reversed",
       });
       expect(await rawDb.businessCommand.count()).toBe(15);
       expect(await rawDb.profitabilityCostSnapshot.count()).toBe(1);
