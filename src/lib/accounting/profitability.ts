@@ -469,7 +469,7 @@ async function loadProfitabilityFacts(
       db.order.findMany({
         where: {
           deliveredAt: { gte: period.from, lt: period.to },
-          status: { in: ["delivered", "returned"] },
+          status: "delivered",
           deletedAt: null,
         },
         select: {
