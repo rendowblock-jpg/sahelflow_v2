@@ -2,7 +2,7 @@ import "server-only";
 
 import { getCurrentSessionAuthority } from "@/lib/auth/server";
 import { shopContext } from "@/lib/db";
-import { resolveDurableIdentityActor } from "./control-authority";
+import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 import type { SessionAuthorityResult } from "./session-authority";
