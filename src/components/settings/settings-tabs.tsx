@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import {
   Shield,
   ShieldCheck,
+  Users,
   Bot,
   Truck,
   Bell,
@@ -29,10 +30,12 @@ import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
+import { TeamAccessPanel } from "@/components/settings/team-access-panel";
 
 type Tab =
   | "profile"
   | "security"
+  | "team"
   | "appearance"
   | "license"
   | "demo"
@@ -47,6 +50,7 @@ type Tab =
 const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
   { id: "profile", icon: UserCircle, labelKey: "settings.tabs.profile" },
   { id: "security", icon: ShieldCheck, labelKey: "settings.tabs.security" },
+  { id: "team", icon: Users, labelKey: "settings.tabs.team" },
   { id: "appearance", icon: Palette, labelKey: "settings.tabs.appearance" },
   { id: "license", icon: Shield, labelKey: "settings.tabs.license" },
   { id: "demo", icon: Database, labelKey: "settings.tabs.demo" },
@@ -71,6 +75,12 @@ const SECURITY_LABELS = {
   en: "Security & sessions",
 } as const;
 
+const TEAM_LABELS = {
+  ar: "وصول الفريق",
+  fr: "Accès de l’équipe",
+  en: "Team access",
+} as const;
+
 export function SettingsTabs({
   integrations,
 }: {
@@ -93,7 +103,9 @@ export function SettingsTabs({
               ? DEMO_LABELS[locale]
               : tab.id === "security"
                 ? SECURITY_LABELS[locale]
-                : t(tab.labelKey);
+                : tab.id === "team"
+                  ? TEAM_LABELS[locale]
+                  : t(tab.labelKey);
           return (
             <button
               key={tab.id}
@@ -134,6 +146,7 @@ export function SettingsTabs({
 
       <div className="min-w-0 flex-1">
         {active === "security" && <SecurityAuthorityPanel />}
+        {active === "team" && <TeamAccessPanel />}
         {active === "license" && <LicensePanel />}
         {active === "demo" && <DemoDataPanel />}
         {active === "ai" && <AiKeyPanel />}
