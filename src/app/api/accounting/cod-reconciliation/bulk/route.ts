@@ -12,7 +12,7 @@ import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
-export const POST = withErrorHandler(async () => {
+export const POST = withErrorHandler(async (_request: Request) => {
   await requireTrustedActor();
   return NextResponse.json(
     {
