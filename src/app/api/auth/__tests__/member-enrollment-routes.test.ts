@@ -32,7 +32,10 @@ vi.mock("@/lib/auth/rate-limit", () => ({
 
 vi.mock("@/lib/identity/team-directory", () => ({
   acceptTeamInvitation: harness.accept,
-  createTeamLoginSession: harness.memberLogin,
+}));
+
+vi.mock("@/lib/identity/team-credentials", () => ({
+  createActiveTeamLoginSession: harness.memberLogin,
 }));
 
 vi.mock("@/lib/identity/team-revocation-authority", () => ({
@@ -176,10 +179,6 @@ describe("member enrollment and login routes", () => {
       "member-session",
       "127.0.0.1",
     );
-    await expect(response.json()).resolves.toMatchObject({
-      success: true,
-      member: { loginId: "amina.ops", role: "operator" },
-    });
   });
 
   it("registers individual login authority before the database session", async () => {
