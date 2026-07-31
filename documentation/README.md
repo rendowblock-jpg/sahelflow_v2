@@ -8,7 +8,7 @@
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency; Phase 2A next
+> **Active phase:** Phase 2A — durable local identity and session authority
 > **Execution epic:** issue #164
 > **Last updated:** 2026-07-31
 
@@ -83,19 +83,27 @@ and explicit Founder acceptance remain open. Neither publication nor installatio
 proves the full Golden COD Journey, whole-route AAA quality, provider
 certification or Stable readiness.
 
-Protected `main` now also contains the first production canonical Golden COD
-path: trusted manual intake and confirmation/rejection through reservation and
-inventory movement (PR #190), followed by packing, shipment, delivery and COD
-receivable creation (PR #192). A narrow exact-process-shop authorization boundary
-(PR #191) and the Windows-protected installation root with native rotation and
-installed-MSI proof (PR #184) are merged supporting packages. These are partial
-phase results, not completion of Phases 1, 2 or 4.
+Protected `main` contains the first production canonical Golden COD path: trusted
+manual intake and confirmation/rejection through reservation and inventory
+movement (PR #190), followed by packing, shipment, delivery and COD receivable
+creation (PR #192). A narrow exact-process-shop authorization boundary (PR #191)
+and the Windows-protected installation root with native rotation and installed-MSI
+proof (PR #184) are merged supporting packages. These are partial protected phase
+results.
 
-Draft PR #195 previously recorded a green Phase 1 source-exit candidate. A
-2026-07-31 independent source audit found a blocking courier-rebooking lifecycle
-defect and an authority-audit contradiction. Phase 1 is therefore reopened only
-for that bounded closure repair. Phase 2A remains the immediate dependency after
-the repaired head passes its exact-head checkpoint and independent P0/P1 review.
+Draft PR #195 now contains the complete Phase 1 source boundary and its bounded
+courier closure repairs. Because the Founder is working with one coding agent, a
+fresh separated adversarial review pass was performed without claiming
+independence. It found and closed additional reconciliation-generation,
+unreadable post-effect recovery and pre-query authority-ordering defects. Exact
+closure head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` passed normal CI
+`30652282305` and Integration source checkpoint `30652282191`.
+
+Phase 1 is source-closed on the integration branch and must not be reopened absent
+new concrete P0/P1 evidence. Phase 2A is active. Its first package contains setup
+mode, exact public auth routes, overall/inactivity freshness, throttled activity,
+reauthentication rotation and PIN-change revocation. It does not yet claim durable
+Person, WorkspaceMember, Device, licensing or native multi-shop completion.
 
 ## Final completion model
 
