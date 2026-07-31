@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { logAudit } from "@/lib/audit";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { db, shopContext } from "@/lib/db";
+import { bindOwnerIdentitySession } from "@/lib/identity/control-authority";
 import {
   resolveSessionAuthority,
   type SessionAuthorityResult,
@@ -169,6 +170,30 @@ async function setSessionCookie(secret: string, sessionId: string): Promise<void
   });
 }
 
+async function revokeUnboundSession(sessionId: string): Promise<void> {
+  try {
+    await authContext.prisma.session.updateMany({
+      where: { id: sessionId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  } catch {
+    // Preserve the identity-control error. A missing cookie means the failed
+    // session cannot authenticate even if this cleanup also fails.
+  }
+}
+
+async function bindNewSessionIdentity(
+  sessionId: string,
+  options: Parameters<typeof bindOwnerIdentitySession>[2] = {},
+): Promise<void> {
+  try {
+    await bindOwnerIdentitySession(sessionId, shopContext, options);
+  } catch (error) {
+    await revokeUnboundSession(sessionId);
+    throw error;
+  }
+}
+
 export async function createSession(ip?: string): Promise<void> {
   const secret = await getAuthSecret();
   if (!secret) throw new Error("Auth not set up — run setup first");
@@ -180,6 +205,7 @@ export async function createSession(ip?: string): Promise<void> {
       lastSeenAt: now,
     },
   });
+  await bindNewSessionIdentity(session.id);
   await setSessionCookie(secret, session.id);
 }
 
@@ -367,6 +393,9 @@ export async function reauthenticateCurrentSession(
     });
   });
 
+  await bindNewSessionIdentity(newSession.id, {
+    revokeSessionIds: [authority.sessionId],
+  });
   await setSessionCookie(secret, newSession.id);
   return { reauthenticated: true };
 }
@@ -435,6 +464,9 @@ export async function changeAuthPin(
     });
   });
 
+  await bindNewSessionIdentity(newSession.id, {
+    revokeAllOtherSessions: true,
+  });
   await setSessionCookie(secret, newSession.id);
   return { changed: true };
 }
