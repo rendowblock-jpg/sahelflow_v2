@@ -3,7 +3,9 @@
  *
  * Calls route handler functions directly with mock Request objects.
  * Uses the real `db` Proxy (with PII encryption) so the test exercises
- * the full route → middleware-equivalent → service → DB path.
+ * the route → service → DB path. Direct business-route tests carry one
+ * request-scoped test authority header; authentication-specific tests must
+ * construct their own request without that header.
  */
 process.env.SF_MASTER_KEY =
   process.env.SF_MASTER_KEY ??
@@ -11,6 +13,10 @@ process.env.SF_MASTER_KEY =
 
 import { PrismaClient } from "@prisma/client";
 import { NextRequest } from "next/server";
+
+export const DIRECT_ROUTE_TEST_AUTH_HEADER =
+  "x-sahelflow-direct-route-test-authority";
+export const DIRECT_ROUTE_TEST_AUTH_VALUE = "vitest-business-route";
 
 /** Raw PrismaClient for test setup/cleanup (same DB as the db Proxy). */
 export const rawDb = new PrismaClient();
@@ -78,6 +84,15 @@ export function uniqueIp(): string {
   return `192.168.1.${_ipCounter}`;
 }
 
+function directRouteHeaders(
+  headers?: Record<string, string>,
+): Record<string, string> {
+  return {
+    [DIRECT_ROUTE_TEST_AUTH_HEADER]: DIRECT_ROUTE_TEST_AUTH_VALUE,
+    ...headers,
+  };
+}
+
 /** Build a mock Request for a POST with JSON body. */
 export function mockPost(
   url: string,
@@ -89,7 +104,7 @@ export function mockPost(
     headers: {
       "Content-Type": "application/json",
       "x-forwarded-for": uniqueIp(),
-      ...headers,
+      ...directRouteHeaders(headers),
     },
     body: JSON.stringify(body),
   });
@@ -100,7 +115,10 @@ export function mockGet(
   url: string,
   headers?: Record<string, string>,
 ): NextRequest {
-  return new NextRequest(url, { method: "GET", headers });
+  return new NextRequest(url, {
+    method: "GET",
+    headers: directRouteHeaders(headers),
+  });
 }
 
 /** Extract JSON from a Response. */
