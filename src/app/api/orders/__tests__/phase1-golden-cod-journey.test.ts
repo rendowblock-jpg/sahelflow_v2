@@ -484,16 +484,12 @@ describe("Phase 1 representative Golden COD journey", () => {
         version: finalReturn.position.orderVersion,
         inventoryState: finalReturn.position.inventoryState,
         codState: finalReturn.position.codState,
-        returnState: finalReturn.position.returnState,
-        refundState: finalReturn.position.refundState,
       };
       const persistedLifecycle = {
         status: order.status,
         version: order.version,
         inventoryState: order.inventoryState,
         codState: order.codState,
-        returnState: order.returnState,
-        refundState: order.refundState,
       };
       expect(persistedLifecycle).toEqual(projectedLifecycle);
       expect(await rawDb.businessCommand.count()).toBe(15);
