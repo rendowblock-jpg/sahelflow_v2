@@ -107,6 +107,7 @@ import { getTool, type ToolContext } from "@/lib/ai/chat/tools/registry";
 import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import { orderService } from "@/lib/data/order-service";
 import { syncPlatform } from "@/lib/integrations/ecommerce/sync-engine";
+import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 const credentials = {
@@ -323,7 +324,12 @@ describe("order creation path regression coverage", () => {
     ).toBe(1);
   });
 
-  it("commerce sync creates its legacy order and timeline entry", async () => {
+  it("commerce sync writes one canonical server-priced order and timeline entry", async () => {
+    const product = await seedProduct({
+      name: "Widget A",
+      price: 2750,
+      stock: 10,
+    });
     listOrdersMock.mockResolvedValue({
       orders: [normalizedOrder()],
       nextWatermark: "1002",
@@ -335,8 +341,17 @@ describe("order creation path regression coverage", () => {
       "shopify",
     );
     expect(result).toMatchObject({ created: 1, errors: [] });
-    const order = await rawDb.order.findFirst();
-    expect(order?.orderNumber).toMatch(/^SYNC-SHOPIFY-\d{4}$/);
+    const order = await rawDb.order.findFirst({ include: { items: true } });
+    expect(order).toMatchObject({ source: "shopify", status: "pending" });
+    expect(order?.orderNumber).toMatch(/^ORD-\d{4}$/);
+    expect(
+      isCanonicalOrderAuthority(order?.source, order?.sourceMetadata),
+    ).toBe(true);
+    expect(order?.items[0]).toMatchObject({
+      productId: product.id,
+      quantity: 2,
+      unitPrice: 2750,
+    });
     expect(
       await rawDb.orderChange.count({
         where: { orderId: order?.id, actionType: "created" },
@@ -344,54 +359,45 @@ describe("order creation path regression coverage", () => {
     ).toBe(1);
   });
 
-  it("commerce cancellation uses the status service and restores scalar stock", async () => {
+  it("commerce cancellation restores canonical reserved stock", async () => {
+    const product = await seedProduct({
+      name: "Widget A",
+      price: 2000,
+      stock: 5,
+    });
     listOrdersMock.mockResolvedValueOnce({
       orders: [normalizedOrder({ sourceOrderId: "shop-cancel-001" })],
       nextWatermark: "1002",
       hasMore: false,
     } satisfies SyncFetchResult);
-    await syncPlatform(
+    const first = await syncPlatform(
       { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT },
       "shopify",
     );
+    expect(first).toMatchObject({ created: 1, errors: [] });
+
     const order = await rawDb.order.findFirst({
       where: { sourceOrderId: "shop-cancel-001" },
+      include: { items: true },
     });
-    expect(order).toBeTruthy();
+    expect(order).toMatchObject({ status: "pending", version: 1 });
+    expect(order?.items[0]).toMatchObject({
+      productId: product.id,
+      quantity: 2,
+      unitPrice: 2000,
+    });
+    if (!order) throw new Error("Canonical synced order was not created");
 
-    const category = await rawDb.category.create({
-      data: { name: "Sync cancellation category" },
-    });
-    const product = await rawDb.product.create({
-      data: {
-        name: "Sync Product",
-        price: 2000,
-        stock: 5,
-        categoryId: category.id,
-        isActive: true,
-      },
-    });
-    await rawDb.orderItem.create({
-      data: {
-        orderId: order?.id ?? "missing",
-        productId: product.id,
-        productName: product.name,
-        quantity: 2,
-        unitPrice: 2000,
-        total: 4000,
-      },
-    });
-    if (!order) throw new Error("Synced order was not created");
-    await orderService.updateStatus(
+    const confirmation = await executeManualOrderDecision(
       { prisma: rawDb as never },
-      order.id,
-      "pending",
+      {
+        orderId: order.id,
+        decision: "confirm",
+        expectedVersion: order.version,
+        idempotencyKey: "commerce-cancel-confirmation",
+      },
     );
-    await orderService.updateStatus(
-      { prisma: rawDb as never },
-      order.id,
-      "confirmed",
-    );
+    expect(confirmation.result).toMatchObject({ status: "confirmed", version: 2 });
     expect(
       (await rawDb.product.findUnique({ where: { id: product.id } }))?.stock,
     ).toBe(3);
