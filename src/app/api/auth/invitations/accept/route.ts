@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth/rate-limit";
 import { shopContext } from "@/lib/db";
 import { acceptTeamInvitation } from "@/lib/identity/team-directory";
+import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
 import { establishTeamSession } from "@/lib/identity/team-session";
 
 const schema = z
@@ -54,6 +55,11 @@ export const POST = withErrorHandler(async (request: Request) => {
 
   try {
     const grant = await acceptTeamInvitation(input, shopContext);
+    await registerTeamSessionAuthority({
+      sessionId: grant.sessionId,
+      actor: grant.actor,
+      shop: shopContext,
+    });
     const session = await establishTeamSession(grant.sessionId, ip);
     recordLoginSuccess(ip);
     void auditLog(
@@ -82,12 +88,16 @@ export const POST = withErrorHandler(async (request: Request) => {
     });
   } catch (error) {
     const failure = recordLoginFailure(ip);
-    void auditLog("team.invitation.acceptance_failed", {
-      reason:
-        error && typeof error === "object" && "code" in error
-          ? String(error.code)
-          : "unknown",
-    }, ip);
+    void auditLog(
+      "team.invitation.acceptance_failed",
+      {
+        reason:
+          error && typeof error === "object" && "code" in error
+            ? String(error.code)
+            : "unknown",
+      },
+      ip,
+    );
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
         { error: "Too many failed attempts. Account temporarily locked." },
