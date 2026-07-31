@@ -69,6 +69,16 @@ vi.mock("@/lib/api/with-error-handler", () => ({
 import { GET as getAuthority } from "@/app/api/auth/authority/route";
 import { POST as revokeSession } from "@/app/api/auth/sessions/[id]/revoke/route";
 
+function guardedParams(onConsume: () => void): Promise<{ id: string }> {
+  const value = Promise.resolve({ id: "session-target" });
+  return {
+    get then() {
+      onConsume();
+      return value.then.bind(value);
+    },
+  } as unknown as Promise<{ id: string }>;
+}
+
 beforeEach(() => {
   harness.context.actor.role = "owner";
   harness.requireTrustedAction.mockReset().mockResolvedValue(harness.context);
@@ -120,19 +130,13 @@ describe("identity administration routes", () => {
       }),
     );
     let paramsConsumed = false;
-    const params = new Promise<{ id: string }>((resolve) => {
-      queueMicrotask(() => {
-        paramsConsumed = true;
-        resolve({ id: "session-target" });
-      });
-    });
 
     const response = await revokeSession(
       new NextRequest(
         "http://localhost/api/auth/sessions/session-target/revoke",
         { method: "POST" },
       ),
-      { params },
+      { params: guardedParams(() => { paramsConsumed = true; }) },
     );
 
     expect(response.status).toBe(401);
@@ -149,19 +153,13 @@ describe("identity administration routes", () => {
       }),
     );
     let paramsConsumed = false;
-    const params = new Promise<{ id: string }>((resolve) => {
-      queueMicrotask(() => {
-        paramsConsumed = true;
-        resolve({ id: "session-target" });
-      });
-    });
 
     const response = await revokeSession(
       new NextRequest(
         "http://localhost/api/auth/sessions/session-target/revoke",
         { method: "POST" },
       ),
-      { params },
+      { params: guardedParams(() => { paramsConsumed = true; }) },
     );
 
     expect(response.status).toBe(403);
