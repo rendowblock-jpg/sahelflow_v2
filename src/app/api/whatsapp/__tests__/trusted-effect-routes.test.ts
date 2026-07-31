@@ -6,6 +6,15 @@ const harness = vi.hoisted(() => ({
     status: "authenticated",
     sessionId: "phase3-owner-session",
   } as unknown,
+  identity: {
+    personId: "6".repeat(32),
+    workspaceMemberId: "7".repeat(32),
+    deviceId: "8".repeat(32),
+    role: "owner" as const,
+    policyVersion: 1,
+    revocationEpoch: 0,
+  },
+  resolveDurableIdentityActor: vi.fn(),
   shopContext: {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -23,6 +32,10 @@ const harness = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth/server", () => ({
   getCurrentSessionAuthority: vi.fn(async () => harness.authority),
+}));
+
+vi.mock("@/lib/identity/control-authority", () => ({
+  resolveDurableIdentityActor: harness.resolveDurableIdentityActor,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -69,6 +82,7 @@ function request(path: string, method: "POST" | "GET", body?: string): NextReque
 
 beforeEach(() => {
   harness.authority = { status: "authenticated", sessionId: "phase3-owner-session" };
+  harness.resolveDurableIdentityActor.mockReset().mockResolvedValue(harness.identity);
   harness.queue.mockReset().mockResolvedValue({
     effectKey: "wa:scope:text:11111111-1111-4111-8111-111111111111",
     messageId: "11111111-1111-4111-8111-111111111111",
@@ -98,7 +112,7 @@ describe("WhatsApp trusted effect routes", () => {
     expect(harness.process).not.toHaveBeenCalled();
   });
 
-  it("binds a send to the server-minted session actor and exact process shop", async () => {
+  it("binds a send to the server-minted person actor and exact process shop", async () => {
     const response = await sendMessage(request(
       "/api/whatsapp/send",
       "POST",
@@ -115,10 +129,13 @@ describe("WhatsApp trusted effect routes", () => {
     };
     expect(context.shop.shopId).toBe("shop-a");
     expect(context.businessPrincipal).toMatchObject({
-      auditActor: "authenticated-owner:compatibility_local_owner:phase3-owner-session",
-      subjectId: "compatibility_local_owner:phase3-owner-session",
+      auditActor: `authenticated-owner:person:${harness.identity.personId}:session:phase3-owner-session`,
+      subjectId: `person:${harness.identity.personId}:session:phase3-owner-session`,
     });
     expect(context.businessPrincipal.auditActor).not.toContain("default");
+    expect(context.businessPrincipal.auditActor).not.toContain(
+      "compatibility_local_owner",
+    );
   });
 
   it("rejects setup compatibility for status and retry recovery", async () => {
@@ -138,7 +155,7 @@ describe("WhatsApp trusted effect routes", () => {
     expect(harness.retry).not.toHaveBeenCalled();
   });
 
-  it("carries the exact trusted actor into operator retry audit authority", async () => {
+  it("carries the exact durable person into operator retry audit authority", async () => {
     const response = await retryEffect(request(
       "/api/whatsapp/outbox",
       "POST",
@@ -151,7 +168,7 @@ describe("WhatsApp trusted effect routes", () => {
     };
     expect(context.shop.shopId).toBe("shop-a");
     expect(context.businessPrincipal.auditActor).toBe(
-      "authenticated-owner:compatibility_local_owner:phase3-owner-session",
+      `authenticated-owner:person:${harness.identity.personId}:session:phase3-owner-session`,
     );
   });
 });
