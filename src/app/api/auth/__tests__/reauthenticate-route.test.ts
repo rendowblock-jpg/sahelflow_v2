@@ -5,6 +5,7 @@ const harness = vi.hoisted(() => ({
   currentAuthority: vi.fn(),
   reauthenticateOwner: vi.fn(),
   prepareTeam: vi.fn(),
+  registerTeam: vi.fn(),
   rotateTeam: vi.fn(),
   audit: vi.fn(),
   checkLimit: vi.fn(),
@@ -31,6 +32,10 @@ vi.mock("@/lib/auth/rate-limit", () => ({
 
 vi.mock("@/lib/identity/team-reauthentication", () => ({
   prepareTeamReauthentication: harness.prepareTeam,
+}));
+
+vi.mock("@/lib/identity/team-revocation-authority", () => ({
+  registerTeamSessionAuthority: harness.registerTeam,
 }));
 
 vi.mock("@/lib/identity/team-session", () => ({
@@ -91,6 +96,14 @@ beforeEach(() => {
   harness.reauthenticateOwner
     .mockReset()
     .mockResolvedValue({ reauthenticated: true });
+  harness.registerTeam.mockReset().mockResolvedValue({
+    sessionId: "new-team-session",
+    memberId: "6".repeat(32),
+    personId: "5".repeat(32),
+    deviceId: "7".repeat(32),
+    registeredAt: new Date().toISOString(),
+    revokedAt: null,
+  });
   harness.rotateTeam.mockReset().mockResolvedValue({
     sessionId: "new-team-session",
     issuedAt: new Date(),
@@ -130,6 +143,7 @@ describe("POST /api/auth/reauthenticate", () => {
     expect(harness.checkLimit).not.toHaveBeenCalled();
     expect(harness.prepareTeam).not.toHaveBeenCalled();
     expect(harness.reauthenticateOwner).not.toHaveBeenCalled();
+    expect(harness.registerTeam).not.toHaveBeenCalled();
   });
 
   it("rotates an eligible owner session after owner PIN proof", async () => {
@@ -145,23 +159,25 @@ describe("POST /api/auth/reauthenticate", () => {
       "12345678",
       "127.0.0.1",
     );
+    expect(harness.registerTeam).not.toHaveBeenCalled();
     expect(harness.rotateTeam).not.toHaveBeenCalled();
   });
 
-  it("rotates a known team session with that member's PIN", async () => {
+  it("registers and rotates a known team session with that member's PIN", async () => {
+    const actor = {
+      personId: "5".repeat(32),
+      workspaceMemberId: "6".repeat(32),
+      deviceId: "7".repeat(32),
+      role: "operator" as const,
+      permissions: null,
+      policyVersion: 1,
+      revocationEpoch: 0,
+    };
     harness.prepareTeam.mockResolvedValue({
       subject: "team",
       grant: {
         sessionId: "new-team-session",
-        actor: {
-          personId: "5".repeat(32),
-          workspaceMemberId: "6".repeat(32),
-          deviceId: "7".repeat(32),
-          role: "operator",
-          permissions: null,
-          policyVersion: 1,
-          revocationEpoch: 0,
-        },
+        actor,
         displayName: "Amina",
         loginId: "amina.ops",
         invitationId: "8".repeat(32),
@@ -172,6 +188,14 @@ describe("POST /api/auth/reauthenticate", () => {
     const response = await POST(request(JSON.stringify({ pin: "12345678" })));
 
     expect(response.status).toBe(200);
+    expect(harness.registerTeam).toHaveBeenCalledWith({
+      sessionId: "new-team-session",
+      actor,
+      shop: expect.objectContaining({ shopId: "default" }),
+    });
+    expect(harness.registerTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.rotateTeam.mock.invocationCallOrder[0]!,
+    );
     expect(harness.rotateTeam).toHaveBeenCalledWith(
       "current-session",
       "new-team-session",
@@ -186,6 +210,7 @@ describe("POST /api/auth/reauthenticate", () => {
     const response = await POST(request(JSON.stringify({ pin: "owner-pin" })));
 
     expect(response.status).toBe(401);
+    expect(harness.registerTeam).not.toHaveBeenCalled();
     expect(harness.rotateTeam).not.toHaveBeenCalled();
     expect(harness.reauthenticateOwner).not.toHaveBeenCalled();
     expect(harness.recordFailure).toHaveBeenCalledWith("127.0.0.1");
@@ -205,5 +230,6 @@ describe("POST /api/auth/reauthenticate", () => {
     expect(harness.requireEligibility).toHaveBeenCalledTimes(1);
     expect(harness.recordAttempt).not.toHaveBeenCalled();
     expect(harness.prepareTeam).not.toHaveBeenCalled();
+    expect(harness.registerTeam).not.toHaveBeenCalled();
   });
 });
