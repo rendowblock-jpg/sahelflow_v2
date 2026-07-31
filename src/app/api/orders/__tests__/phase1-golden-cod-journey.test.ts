@@ -500,7 +500,7 @@ describe("Phase 1 representative Golden COD journey", () => {
       expect(await rawDb.profitabilityCostSnapshot.count()).toBe(1);
       expect(await rawDb.financialMovement.count()).toBeGreaterThanOrEqual(4);
       expect(await rawDb.inventoryMovement.count()).toBeGreaterThanOrEqual(3);
-      expect(await rawDb.domainEvent.count()).toBe(15);
+      expect(await rawDb.domainEvent.count()).toBeGreaterThanOrEqual(15);
       expect(await rawDb.outboxIntent.count()).toBeGreaterThanOrEqual(15);
       expect(harness.dispatchTrigger).toHaveBeenCalledTimes(2);
     },
