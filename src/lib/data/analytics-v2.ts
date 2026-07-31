@@ -7,15 +7,7 @@
  */
 import "server-only";
 import { db } from "@/lib/db";
-// Phase 4: canonical revenue-exclusion set -- shared with
-// `metrics.grossRevenue`. Previously this module excluded
-// returned/refused from the revenue sum (4-status exclusion), but the
-// canonical definition (DATA_INTEGRITY_PLAN.md Phase 4) excludes only
-// cancelled + draft -- returned/refused ARE gross (the order was
-// placed; the return is a separate downstream event tracked by the
-// return-rate metric). Using the shared constant keeps the period-
-// comparison revenue aligned with the dashboard + analytics + reports.
-import { REVENUE_EXCLUDED_STATUSES } from "@/lib/data/metrics";
+import { getProfitabilitySeries } from "@/lib/accounting/profitability";
 
 export interface DateRange {
   from: Date;
@@ -42,11 +34,6 @@ export function getPreviousPeriod(range: DateRange): DateRange {
 export async function getReturnRateByWilaya(range: DateRange) {
   const orders = await db.order.findMany({
     where: {
-      // W3-1: half-open interval [from, to) — `to` is exclusive.
-      // `range.to` from getLastNDays is a moment boundary (now), and
-      // getPreviousPeriod returns `to = current.from` (the boundary).
-      // Using `lt` (not `lte`) avoids double-counting an order at the
-      // exact boundary moment into BOTH the current and previous periods.
       createdAt: { gte: range.from, lt: range.to },
       deletedAt: null,
       status: { in: ["delivered", "returned", "refused"] },
@@ -55,11 +42,13 @@ export async function getReturnRateByWilaya(range: DateRange) {
   });
 
   const byWilaya: Record<string, { total: number; returned: number }> = {};
-  for (const o of orders) {
-    if (!byWilaya[o.wilaya]) byWilaya[o.wilaya] = { total: 0, returned: 0 };
-    byWilaya[o.wilaya]!.total++;
-    if (o.status === "returned" || o.status === "refused") {
-      byWilaya[o.wilaya]!.returned++;
+  for (const order of orders) {
+    if (!byWilaya[order.wilaya]) {
+      byWilaya[order.wilaya] = { total: 0, returned: 0 };
+    }
+    byWilaya[order.wilaya]!.total++;
+    if (order.status === "returned" || order.status === "refused") {
+      byWilaya[order.wilaya]!.returned++;
     }
   }
 
@@ -78,7 +67,6 @@ export async function getReturnRateByProduct(range: DateRange) {
   const items = await db.orderItem.findMany({
     where: {
       order: {
-        // W3-1: half-open interval [from, to) — see getReturnRateByWilaya.
         createdAt: { gte: range.from, lt: range.to },
         deletedAt: null,
         status: { in: ["delivered", "returned", "refused"] },
@@ -89,7 +77,9 @@ export async function getReturnRateByProduct(range: DateRange) {
 
   const byProduct: Record<string, { total: number; returned: number }> = {};
   for (const item of items) {
-    if (!byProduct[item.productName]) byProduct[item.productName] = { total: 0, returned: 0 };
+    if (!byProduct[item.productName]) {
+      byProduct[item.productName] = { total: 0, returned: 0 };
+    }
     byProduct[item.productName]!.total++;
     if (item.order.status === "returned" || item.order.status === "refused") {
       byProduct[item.productName]!.returned++;
@@ -107,116 +97,437 @@ export async function getReturnRateByProduct(range: DateRange) {
     .slice(0, 20);
 }
 
-/** SKU P&L — per-product revenue, cost, margin. */
-export async function getSkuPnl(range: DateRange) {
-  const items = await db.orderItem.findMany({
-    where: {
-      order: {
-        // W3-1: half-open interval [from, to) — see getReturnRateByWilaya.
-        createdAt: { gte: range.from, lt: range.to },
-        deletedAt: null,
-        status: { notIn: ["cancelled", "draft"] },
-      },
-    },
-    select: {
-      productName: true,
-      quantity: true,
-      unitPrice: true,
-      total: true,
-      product: { select: { cost: true } },
-    },
-  });
+interface SkuPnlAccumulator {
+  revenue: number;
+  cost: number;
+  quantity: number;
+  missingCostItemCount: number;
+  estimatedCostItemCount: number;
+}
 
-  const bySku: Record<string, { revenue: number; cost: number; quantity: number }> = {};
-  for (const item of items) {
-    if (!bySku[item.productName]) bySku[item.productName] = { revenue: 0, cost: 0, quantity: 0 };
-    bySku[item.productName]!.revenue += item.total;
-    bySku[item.productName]!.cost += (item.product?.cost ?? 0) * item.quantity;
-    bySku[item.productName]!.quantity += item.quantity;
+interface SkuAllocationItem {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  product: { cost: number | null } | null;
+}
+
+function allocateDzd(
+  amount: number,
+  items: readonly Array<{ id: string; quantity: number; unitPrice: number }>,
+): Array<{ itemId: string; amount: number }> {
+  if (amount <= 0 || items.length === 0) return [];
+  const ordered = [...items].sort((a, b) => a.id.localeCompare(b.id));
+  const weights = ordered.map((item) => ({
+    item,
+    weight: Math.max(0, item.unitPrice * item.quantity),
+  }));
+  const totalWeight = weights.reduce((sum, entry) => sum + entry.weight, 0);
+  let allocated = 0;
+  return weights.map((entry, index) => {
+    const isLast = index === weights.length - 1;
+    const share = isLast
+      ? amount - allocated
+      : totalWeight > 0
+        ? Math.floor((amount * entry.weight) / totalWeight)
+        : Math.floor(amount / weights.length);
+    allocated += share;
+    return { itemId: entry.item.id, amount: share };
+  });
+}
+
+/**
+ * SKU P&L — realized item revenue, immutable delivery-time COGS and exact
+ * refund/reversal allocation. Shipping income/cost and operating expenses are
+ * intentionally excluded because they are order/shop-level facts rather than
+ * SKU facts.
+ */
+export async function getSkuPnl(range: DateRange) {
+  const [
+    recognizedSnapshots,
+    returnMovements,
+    canonicalRefunds,
+    refundReversals,
+    legacyRefunds,
+    legacyOrders,
+  ] = await Promise.all([
+    db.profitabilityCostSnapshot.findMany({
+      where: { recognizedAt: { gte: range.from, lt: range.to } },
+      select: {
+        orderId: true,
+        orderItemId: true,
+        quantity: true,
+        unitCost: true,
+        isExact: true,
+      },
+    }),
+    db.inventoryMovement.findMany({
+      where: {
+        occurredAt: { gte: range.from, lt: range.to },
+        movementType: {
+          in: [
+            "customer_return_inspected_available",
+            "customer_return_inspected_quarantine",
+            "return_inspected_available",
+            "return_inspected_quarantine",
+          ],
+        },
+        orderItemId: { not: null },
+      },
+      select: { orderItemId: true, quantity: true },
+    }),
+    db.canonicalRefund.findMany({
+      where: { occurredAt: { gte: range.from, lt: range.to } },
+      select: { orderId: true, returnId: true, amount: true },
+    }),
+    db.canonicalRefundReversal.findMany({
+      where: { occurredAt: { gte: range.from, lt: range.to } },
+      select: {
+        amount: true,
+        refund: { select: { orderId: true, returnId: true } },
+      },
+    }),
+    db.refund.findMany({
+      where: {
+        createdAt: { gte: range.from, lt: range.to },
+        status: "completed",
+        reversed: false,
+      },
+      select: { orderId: true, amount: true },
+    }),
+    db.order.findMany({
+      where: {
+        deliveredAt: { gte: range.from, lt: range.to },
+        status: "delivered",
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        items: {
+          select: {
+            id: true,
+            productName: true,
+            quantity: true,
+            unitPrice: true,
+            total: true,
+            product: { select: { cost: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const returnIds = new Set<string>();
+  const refundOrderIds = new Set<string>();
+  for (const refund of canonicalRefunds) {
+    refundOrderIds.add(refund.orderId);
+    if (refund.returnId) returnIds.add(refund.returnId);
+  }
+  for (const reversal of refundReversals) {
+    refundOrderIds.add(reversal.refund.orderId);
+    if (reversal.refund.returnId) returnIds.add(reversal.refund.returnId);
+  }
+  for (const refund of legacyRefunds) refundOrderIds.add(refund.orderId);
+
+  const returnItems = returnIds.size
+    ? await db.canonicalReturnItem.findMany({
+        where: { returnId: { in: [...returnIds] } },
+        select: { returnId: true, orderItemId: true, quantity: true },
+      })
+    : [];
+
+  const relevantItemIds = new Set<string>(
+    recognizedSnapshots.map((snapshot) => snapshot.orderItemId),
+  );
+  for (const movement of returnMovements) {
+    if (movement.orderItemId) relevantItemIds.add(movement.orderItemId);
+  }
+  for (const item of returnItems) relevantItemIds.add(item.orderItemId);
+
+  const refundItems = refundOrderIds.size
+    ? await db.orderItem.findMany({
+        where: {
+          OR: [
+            { id: { in: [...relevantItemIds] } },
+            { orderId: { in: [...refundOrderIds] } },
+          ],
+        },
+        select: {
+          id: true,
+          orderId: true,
+          productName: true,
+          quantity: true,
+          unitPrice: true,
+          total: true,
+          product: { select: { cost: true } },
+        },
+      })
+    : relevantItemIds.size
+      ? await db.orderItem.findMany({
+          where: { id: { in: [...relevantItemIds] } },
+          select: {
+            id: true,
+            orderId: true,
+            productName: true,
+            quantity: true,
+            unitPrice: true,
+            total: true,
+            product: { select: { cost: true } },
+          },
+        })
+      : [];
+
+  const itemsById = new Map(refundItems.map((item) => [item.id, item]));
+  const itemsByOrder = new Map<string, typeof refundItems>();
+  for (const item of refundItems) {
+    const items = itemsByOrder.get(item.orderId) ?? [];
+    items.push(item);
+    itemsByOrder.set(item.orderId, items);
+  }
+  const returnItemsByReturn = new Map<string, typeof returnItems>();
+  for (const item of returnItems) {
+    const items = returnItemsByReturn.get(item.returnId) ?? [];
+    items.push(item);
+    returnItemsByReturn.set(item.returnId, items);
+  }
+  const snapshotsByItem = new Map(
+    recognizedSnapshots.map((snapshot) => [snapshot.orderItemId, snapshot]),
+  );
+  const returnItemIds = returnMovements
+    .map((movement) => movement.orderItemId)
+    .filter((value): value is string => Boolean(value));
+  if (returnItemIds.length > 0) {
+    const returnSnapshots = await db.profitabilityCostSnapshot.findMany({
+      where: { orderItemId: { in: returnItemIds } },
+      select: {
+        orderId: true,
+        orderItemId: true,
+        quantity: true,
+        unitCost: true,
+        isExact: true,
+      },
+    });
+    for (const snapshot of returnSnapshots) {
+      snapshotsByItem.set(snapshot.orderItemId, snapshot);
+    }
   }
 
-  return Object.entries(bySku)
+  const bySku = new Map<string, SkuPnlAccumulator>();
+  const accumulatorFor = (item: SkuAllocationItem): SkuPnlAccumulator => {
+    const existing = bySku.get(item.productName);
+    if (existing) return existing;
+    const created: SkuPnlAccumulator = {
+      revenue: 0,
+      cost: 0,
+      quantity: 0,
+      missingCostItemCount: 0,
+      estimatedCostItemCount: 0,
+    };
+    bySku.set(item.productName, created);
+    return created;
+  };
+  const applyCost = (
+    item: SkuAllocationItem,
+    quantity: number,
+    direction: 1 | -1,
+  ) => {
+    const accumulator = accumulatorFor(item);
+    const snapshot = snapshotsByItem.get(item.id);
+    const unitCost = snapshot?.unitCost ?? item.product?.cost ?? null;
+    if (unitCost === null) accumulator.missingCostItemCount += quantity;
+    else accumulator.cost += direction * unitCost * quantity;
+    if (!snapshot?.isExact && unitCost !== null) {
+      accumulator.estimatedCostItemCount += quantity;
+    }
+  };
+
+  const canonicalOrderIds = new Set(
+    recognizedSnapshots.map((snapshot) => snapshot.orderId),
+  );
+  for (const snapshot of recognizedSnapshots) {
+    const item = itemsById.get(snapshot.orderItemId);
+    if (!item) continue;
+    const accumulator = accumulatorFor(item);
+    accumulator.revenue += item.total;
+    accumulator.quantity += snapshot.quantity;
+    applyCost(item, snapshot.quantity, 1);
+  }
+  for (const order of legacyOrders) {
+    if (canonicalOrderIds.has(order.id)) continue;
+    for (const item of order.items) {
+      const accumulator = accumulatorFor(item);
+      accumulator.revenue += item.total;
+      accumulator.quantity += item.quantity;
+      applyCost(item, item.quantity, 1);
+    }
+  }
+  for (const movement of returnMovements) {
+    if (!movement.orderItemId) continue;
+    const item = itemsById.get(movement.orderItemId);
+    if (!item) continue;
+    const accumulator = accumulatorFor(item);
+    accumulator.quantity -= movement.quantity;
+    applyCost(item, movement.quantity, -1);
+  }
+
+  const allocateRefund = (
+    orderId: string,
+    returnId: string | null,
+    amount: number,
+    direction: 1 | -1,
+  ) => {
+    const returned = returnId ? returnItemsByReturn.get(returnId) ?? [] : [];
+    const candidates = returned.length
+      ? returned
+          .map((returnedItem) => {
+            const item = itemsById.get(returnedItem.orderItemId);
+            return item
+              ? {
+                  id: item.id,
+                  quantity: returnedItem.quantity,
+                  unitPrice: item.unitPrice,
+                }
+              : null;
+          })
+          .filter(
+            (
+              item,
+            ): item is { id: string; quantity: number; unitPrice: number } =>
+              Boolean(item),
+          )
+      : (itemsByOrder.get(orderId) ?? []).map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        }));
+    for (const allocation of allocateDzd(amount, candidates)) {
+      const item = itemsById.get(allocation.itemId);
+      if (!item) continue;
+      accumulatorFor(item).revenue += direction * allocation.amount;
+    }
+  };
+
+  for (const refund of canonicalRefunds) {
+    allocateRefund(refund.orderId, refund.returnId, refund.amount, -1);
+  }
+  for (const reversal of refundReversals) {
+    allocateRefund(
+      reversal.refund.orderId,
+      reversal.refund.returnId,
+      reversal.amount,
+      1,
+    );
+  }
+  const canonicalRefundOrderIds = new Set(
+    canonicalRefunds.map((refund) => refund.orderId),
+  );
+  for (const refund of legacyRefunds) {
+    if (!canonicalRefundOrderIds.has(refund.orderId)) {
+      allocateRefund(refund.orderId, null, refund.amount, -1);
+    }
+  }
+
+  return [...bySku.entries()]
     .map(([sku, data]) => ({
       sku,
       revenue: data.revenue,
       cost: data.cost,
       margin: data.revenue - data.cost,
-      marginPct: data.revenue > 0 ? ((data.revenue - data.cost) / data.revenue) * 100 : 0,
+      marginPct:
+        data.revenue > 0
+          ? ((data.revenue - data.cost) / data.revenue) * 100
+          : 0,
       quantity: data.quantity,
+      missingCostItemCount: data.missingCostItemCount,
+      estimatedCostItemCount: data.estimatedCostItemCount,
+      profitabilityComplete:
+        data.missingCostItemCount === 0 && data.estimatedCostItemCount === 0,
     }))
     .sort((a, b) => b.revenue - a.revenue);
 }
 
-/**
- * Period-over-period comparison (current vs previous).
- *
- * Phase 4 (replaces SV-M9): revenue now uses the CANONICAL gross definition
- * from `metrics.grossRevenue` -- sum of totalPrice where status NOT IN
- * [cancelled, draft]. Returned/refused orders ARE included in gross (the
- * order was placed; the return is a separate downstream event tracked by
- * the return-rate metric, not by shrinking gross). The order count +
- * return-rate calcs still use the full status set (they need
- * returned/refused to compute the return rate).
- */
-export async function getPeriodComparison(current: DateRange, previous: DateRange) {
-  // Phase 4: canonical exclusion set -- cancelled + draft only.
-  // Returned/refused orders ARE gross (the order was placed; the return
-  // is a separate downstream event). Shared with `metrics.grossRevenue`.
-  const EXCLUDED_FROM_REVENUE = [...REVENUE_EXCLUDED_STATUSES] as const;
-  const isRevenueStatus = (s: string) =>
-    !EXCLUDED_FROM_REVENUE.includes(s as typeof EXCLUDED_FROM_REVENUE[number]);
-
-  const [currentOrders, previousOrders] = await Promise.all([
+/** Period-over-period comparison using realized delivery revenue. */
+export async function getPeriodComparison(
+  current: DateRange,
+  previous: DateRange,
+) {
+  const [currentOrders, previousOrders, profitability] = await Promise.all([
     db.order.findMany({
-      // W3-1: half-open [from, to) — current.to is exclusive. An order at
-      // exactly current.from is in the current period (NOT in the previous
-      // period whose previous.to === current.from is exclusive).
-      where: { createdAt: { gte: current.from, lt: current.to }, deletedAt: null },
-      select: { totalPrice: true, status: true, deliveryCost: true },
+      where: {
+        createdAt: { gte: current.from, lt: current.to },
+        deletedAt: null,
+      },
+      select: { status: true },
     }),
     db.order.findMany({
-      // W3-1: half-open [from, to) — previous.to === current.from (exclusive).
-      where: { createdAt: { gte: previous.from, lt: previous.to }, deletedAt: null },
-      select: { totalPrice: true, status: true, deliveryCost: true },
+      where: {
+        createdAt: { gte: previous.from, lt: previous.to },
+        deletedAt: null,
+      },
+      select: { status: true },
     }),
+    getProfitabilitySeries(db, [
+      { key: "current", period: current },
+      { key: "previous", period: previous },
+    ]),
   ]);
+  const projections = new Map(
+    profitability.map((entry) => [entry.key, entry.projection]),
+  );
+  const currentProfitability = projections.get("current");
+  const previousProfitability = projections.get("previous");
+  if (!currentProfitability || !previousProfitability) {
+    throw new Error("Profitability comparison periods were not projected");
+  }
 
-  // Phase 4: canonical gross -- exclude cancelled + draft only.
-  const sum = (orders: typeof currentOrders) =>
-    orders.reduce((s, o) => (isRevenueStatus(o.status) ? s + o.totalPrice : s), 0);
-  const currentRevenue = sum(currentOrders);
-  const previousRevenue = sum(previousOrders);
-  const currentDelivered = currentOrders.filter((o) => o.status === "delivered").length;
-  const previousDelivered = previousOrders.filter((o) => o.status === "delivered").length;
-  const currentReturned = currentOrders.filter((o) => o.status === "returned" || o.status === "refused").length;
-  const previousReturned = previousOrders.filter((o) => o.status === "returned" || o.status === "refused").length;
-
-  const pctChange = (curr: number, prev: number) =>
-    prev === 0 ? (curr > 0 ? 100 : 0) : ((curr - prev) / prev) * 100;
+  const currentDelivered = currentOrders.filter(
+    (order) => order.status === "delivered",
+  ).length;
+  const previousDelivered = previousOrders.filter(
+    (order) => order.status === "delivered",
+  ).length;
+  const currentReturned = currentOrders.filter(
+    (order) => order.status === "returned" || order.status === "refused",
+  ).length;
+  const previousReturned = previousOrders.filter(
+    (order) => order.status === "returned" || order.status === "refused",
+  ).length;
+  const currentReturnRate =
+    currentDelivered + currentReturned > 0
+      ? (currentReturned / (currentDelivered + currentReturned)) * 100
+      : 0;
+  const previousReturnRate =
+    previousDelivered + previousReturned > 0
+      ? (previousReturned / (previousDelivered + previousReturned)) * 100
+      : 0;
+  const pctChange = (value: number, baseline: number) =>
+    baseline === 0 ? (value > 0 ? 100 : 0) : ((value - baseline) / baseline) * 100;
 
   return {
     current: {
       orders: currentOrders.length,
-      revenue: currentRevenue,
+      revenue: currentProfitability.grossRevenue,
       delivered: currentDelivered,
       returned: currentReturned,
-      returnRate: (currentDelivered + currentReturned) > 0 ? (currentReturned / (currentDelivered + currentReturned)) * 100 : 0,
+      returnRate: currentReturnRate,
     },
     previous: {
       orders: previousOrders.length,
-      revenue: previousRevenue,
+      revenue: previousProfitability.grossRevenue,
       delivered: previousDelivered,
       returned: previousReturned,
-      returnRate: (previousDelivered + previousReturned) > 0 ? (previousReturned / (previousDelivered + previousReturned)) * 100 : 0,
+      returnRate: previousReturnRate,
     },
     changes: {
       orders: pctChange(currentOrders.length, previousOrders.length),
-      revenue: pctChange(currentRevenue, previousRevenue),
-      delivered: pctChange(currentDelivered, previousDelivered),
-      returnRate: pctChange(
-        (currentDelivered + currentReturned) > 0 ? (currentReturned / (currentDelivered + currentReturned)) * 100 : 0,
-        (previousDelivered + previousReturned) > 0 ? (previousReturned / (previousDelivered + previousReturned)) * 100 : 0,
+      revenue: pctChange(
+        currentProfitability.grossRevenue,
+        previousProfitability.grossRevenue,
       ),
+      delivered: pctChange(currentDelivered, previousDelivered),
+      returnRate: pctChange(currentReturnRate, previousReturnRate),
     },
   };
 }
