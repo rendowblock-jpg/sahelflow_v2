@@ -13,6 +13,7 @@
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
 > **Merge state:** open, draft, mergeable, unmerged
+> **Latest source-green milestone:** governed courier lifecycle, checkpoint `30609652132` on `85958be78a28b7f5ba64268cba7b0499f906719c`
 
 GitHub PR #195 and its exact current head/checks are the live branch authority.
 Never trust a copied head or run number in this file without re-reading GitHub at
@@ -36,7 +37,7 @@ published, installed or Founder-accepted.
 
 ## Founder-approved execution method
 
-The repository now records the exact cross-session method in root `AGENTS.md`:
+The repository records the exact cross-session method in root `AGENTS.md`:
 
 - continue one long-lived integration branch and draft PR;
 - reconstruct exact GitHub truth before every write;
@@ -106,15 +107,7 @@ Founder explicitly changes it.
   identity, exact catalog authority, server pricing and replay; source checkpoint
   `30607584514` passed on `375b137d8aa3b5201e05fc2835224b5041a0d50e`.
 
-### Preserved Phase 3 WhatsApp durability
-
-PR #195 also preserves the corrected durable WhatsApp send/outbox/receipt package
-from closed PR #194. That source is not a Phase 3 completion claim and has not
-received the final multi-phase frozen-head review or installed validation.
-
-## Active package at session close — governed courier lifecycle
-
-The courier package is assembled across:
+### Governed courier lifecycle — source-complete
 
 - trusted booking command with exact order version and provider selection;
 - durable external effect outside the canonical transaction;
@@ -130,26 +123,33 @@ The courier package is assembled across:
 - replay, concurrency, response-loss, out-of-order, provider-failure and restart
   invariant coverage.
 
-The last substantive source checkpoint passed ESLint and the full Vitest suite and
-reported one strict TypeScript indexed-constant error. Commit
-`ff646e819cb55004909aec0a98f07dc31dc356d2` changes only that comparison. It was
-created by a temporary Actions repair step, so GitHub marked checks on that
-bot-authored head `action_required` rather than executing them.
+The strict indexed-status TypeScript repair is commit
+`ff646e819cb55004909aec0a98f07dc31dc356d2`. The complete exact-head source
+checkpoint `30609652132` passed on
+`85958be78a28b7f5ba64268cba7b0499f906719c`, including:
 
-Session-close cleanup then:
+- frozen dependency install;
+- Prisma generation;
+- disposable test sandbox;
+- version/updater and documentation authority;
+- TypeScript;
+- ESLint;
+- full unit/integration suite;
+- migration status.
 
-- removed the branch-writing repair step;
-- restored `.github/workflows/integration-source.yml` to `contents: read`;
-- restored exact-head checkout with `persist-credentials: false`;
-- prohibited self-modifying CI in root `AGENTS.md`.
+The temporary branch-writing repair step was removed before this green checkpoint.
+`.github/workflows/integration-source.yml` is read-only, checks out the exact PR
+head and persists no credentials.
 
-The current documentation commits trigger a normal connector-authored exact-head
-source checkpoint. The next session must inspect that latest run first. Do not
-call the courier package source-complete until it is green.
+### Preserved Phase 3 WhatsApp durability
+
+PR #195 also preserves the corrected durable WhatsApp send/outbox/receipt package
+from closed PR #194. That source is not a Phase 3 completion claim and has not
+received the final multi-phase frozen-head review or installed validation.
 
 ## Finite Phase 1 closure ledger
 
-After the courier checkpoint is green, only these Phase 1 gates remain:
+Only these Phase 1 gates remain:
 
 1. **Governed profitability authority**
    - audit the existing `metrics.ts` foundation against the new COD, courier fee,
@@ -190,18 +190,18 @@ After the courier checkpoint is green, only these Phase 1 gates remain:
 
 1. Read root `AGENTS.md`, this file, PR #195 and the active Phase 1 Roadmap gate.
 2. Verify protected `main` and the exact PR head; confirm no unexpected divergence.
-3. Inspect the latest `Integration source checkpoint` for the current head.
-4. If green, record governed courier lifecycle as source-complete in PR #195.
-5. If failed, repair only the concrete P0/P1/source blocker; do not reopen earlier
-   Phase 1 packages.
-6. Implement the governed profitability package as one coherent outcome.
-7. Implement restart/update and disposable backup compatibility as one preservation
+3. Confirm that the current head descends from source-green courier checkpoint
+   `85958be78a28b7f5ba64268cba7b0499f906719c` and that no later source failure
+   exists.
+4. Start the governed profitability package. Do not reopen courier or earlier
+   Phase 1 packages unless new evidence proves a P0/P1 regression.
+5. Implement restart/update and disposable backup compatibility as one preservation
    package.
-8. Run the representative multilingual Phase 1 exit journey and legacy-bypass
+6. Run the representative multilingual Phase 1 exit journey and legacy-bypass
    audit.
-9. Reconcile Phase 1 documentation only after all applicable source gates pass.
-10. Keep PR #195 draft and unmerged; continue into Phase 2 in the same program only
-    after Phase 1 shared contracts are stable.
+7. Reconcile Phase 1 documentation only after all applicable source gates pass.
+8. Keep PR #195 draft and unmerged; continue into Phase 2 in the same program only
+   after Phase 1 shared contracts are stable.
 
 ## Protected local boundaries
 
@@ -217,21 +217,10 @@ After the courier checkpoint is green, only these Phase 1 gates remain:
 
 ## Validation model
 
-Draft PR #195 runs only the targeted source checkpoint:
-
-- frozen dependency install;
-- Prisma client generation;
-- disposable test sandbox;
-- version/updater and documentation authority;
-- TypeScript;
-- ESLint;
-- full unit/integration suite;
-- Prisma/migration verification.
-
-Windows standalone, Rust parity and installed-MSI lanes remain deferred until the
-complete Phase 1–4 source is frozen. A source-green draft head is not installed,
-provider-certified, independently security-reviewed, legally certified or
-Founder-accepted.
+Draft PR #195 runs only the targeted source checkpoint. Windows standalone, Rust
+parity and installed-MSI lanes remain deferred until the complete Phase 1–4 source
+is frozen. A source-green draft head is not installed, provider-certified,
+independently security-reviewed, legally certified or Founder-accepted.
 
 ## Completion truth
 
