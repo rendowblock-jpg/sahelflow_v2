@@ -30,7 +30,8 @@ export type PersonActor = Readonly<{
   deviceId: string;
   sessionId: string;
   role: BuiltInRole;
-  permissions: readonly Phase2Action[] | null;
+  /** Present only when a durable custom allowlist replaces the role preset. */
+  permissions?: readonly Phase2Action[];
   policyVersion: number;
   revocationEpoch: number;
 }>;
@@ -95,7 +96,9 @@ function createPersonContext(
       deviceId: identity.deviceId,
       sessionId,
       role: identity.role,
-      permissions: identity.permissions,
+      ...(identity.permissions !== null
+        ? { permissions: identity.permissions }
+        : {}),
       policyVersion: identity.policyVersion,
       revocationEpoch: identity.revocationEpoch,
     }),
