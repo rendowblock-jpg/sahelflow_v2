@@ -1,13 +1,17 @@
-/** GET /api/orders/confirmation-queue — 2-hour confirmation call queue (Phase 8). */
+/** GET /api/orders/confirmation-queue — 2-hour confirmation call queue. */
 import { NextRequest, NextResponse } from "next/server";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
-import { getConfirmationQueue, getStaleOrderCount } from "@/lib/data/confirmation-queue";
+import { requireRouteAuth } from "@/lib/auth/route-authority";
+import {
+  getConfirmationQueue,
+  getStaleOrderCount,
+} from "@/lib/data/confirmation-queue";
 
 export const dynamic = "force-dynamic";
 
-export const GET = withErrorHandler(async (_req: NextRequest) => {
-  await requireAuth();
+export const GET = withErrorHandler(async (req: NextRequest) => {
+  await requireRouteAuth(req);
   const [queue, staleCount] = await Promise.all([
     getConfirmationQueue(),
     getStaleOrderCount(),
