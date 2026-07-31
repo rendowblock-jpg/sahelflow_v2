@@ -25,7 +25,7 @@ const trustedActorHarness = vi.hoisted(() => ({
     role: "owner" as const,
     policyVersion: 3,
     revocationEpoch: 2,
-  },
+  } as unknown,
   shop: {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -46,7 +46,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("../control-authority", () => ({
-  ensureDurableIdentityActor: vi.fn(async () => trustedActorHarness.identity),
+  resolveDurableIdentityActor: vi.fn(async () => trustedActorHarness.identity),
 }));
 
 import * as trustedActorModule from "../trusted-actor";
@@ -75,14 +75,14 @@ const resetTrustedActorHarness = () => {
     issuedAt: ISSUED_AT,
     lastSeenAt: LAST_SEEN_AT,
   };
-  Object.assign(trustedActorHarness.identity, {
+  trustedActorHarness.identity = {
     personId: "5".repeat(32),
     workspaceMemberId: "6".repeat(32),
     deviceId: "7".repeat(32),
     role: "owner",
     policyVersion: 3,
     revocationEpoch: 2,
-  });
+  };
   Object.assign(trustedActorHarness.shop, {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -283,6 +283,14 @@ describe("requireTrustedActor", () => {
     });
     expect(trustedActorModule.isTrustedActorContext(context)).toBe(true);
     expect(Object.getOwnPropertySymbols(context)).toHaveLength(0);
+  });
+
+  it("never bootstraps missing durable identity from a command path", async () => {
+    trustedActorHarness.identity = null;
+    await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
+      code: "IDENTITY_SESSION_BINDING_REQUIRED",
+      statusCode: 401,
+    });
   });
 
   it("cannot mint authority during setup mode", async () => {
