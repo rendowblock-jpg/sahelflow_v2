@@ -492,7 +492,7 @@ describe("Phase 1 representative Golden COD journey", () => {
         codState: order.codState,
       };
       expect(persistedLifecycle).toEqual(projectedLifecycle);
-      expect(await rawDb.businessCommand.count()).toBe(15);
+      expect(await rawDb.businessCommand.count()).toBe(16);
       expect(await rawDb.profitabilityCostSnapshot.count()).toBe(1);
       expect(await rawDb.financialMovement.count()).toBeGreaterThanOrEqual(4);
       expect(await rawDb.inventoryMovement.count()).toBeGreaterThanOrEqual(3);
