@@ -4,12 +4,13 @@
  * Calls route handler functions directly with mock Request objects.
  * Uses the real `db` Proxy (with PII encryption) so the test exercises
  * the route → service → DB path. Direct business-route tests carry one
- * request-scoped test authority header; authentication-specific tests must
- * construct their own request without that header.
+ * request-scoped test authority header; authentication-specific tests still
+ * exercise real session authority as soon as AuthSecret is configured.
  */
 process.env.SF_MASTER_KEY =
   process.env.SF_MASTER_KEY ??
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY = "vitest-business-routes";
 
 import { PrismaClient } from "@prisma/client";
 import { NextRequest } from "next/server";
