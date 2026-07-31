@@ -45,7 +45,10 @@ export const GET = withErrorHandler(async () => {
     context.shop,
   );
   return NextResponse.json(
-    { authority },
+    {
+      authority,
+      availableShopIds: [context.shop.shopId],
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }, "GET /api/auth/invitations");
