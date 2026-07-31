@@ -2,7 +2,7 @@ import "server-only";
 
 import { getCurrentSessionAuthority } from "@/lib/auth/server";
 import { shopContext } from "@/lib/db";
-import { ensureDurableIdentityActor } from "./control-authority";
+import { resolveDurableIdentityActor } from "./control-authority";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 import type { SessionAuthorityResult } from "./session-authority";
@@ -77,7 +77,7 @@ function sessionAuthorityError(
 function createPersonContext(
   sessionId: string,
   shop: ShopContext,
-  identity: Awaited<ReturnType<typeof ensureDurableIdentityActor>>,
+  identity: NonNullable<Awaited<ReturnType<typeof resolveDurableIdentityActor>>>,
 ): TrustedActorContext {
   if (!sessionId || sessionId !== sessionId.trim()) {
     throw new TypeError("A trusted person actor requires an exact session ID");
@@ -106,18 +106,25 @@ function createPersonContext(
 /**
  * Resolve and mint the exact durable trusted actor for a consequential command.
  *
- * Session authority is checked first. The installation-level authenticated
- * identity authority then binds that session to one Person, WorkspaceMember and
- * enrolled Device with exact shop grants and freshness snapshots. Callers cannot
- * mint or substitute any part of the context.
+ * Session authority is checked first. Consequential command paths may only read
+ * an existing installation-level Person, WorkspaceMember, Device, shop grant,
+ * and freshness binding. Identity bootstrap is confined to the authenticated
+ * login/setup ceremony; a command can never invent replacement authority.
  */
 export async function requireTrustedActor(): Promise<TrustedActorContext> {
   const authority = await getCurrentSessionAuthority();
   if (authority.status === "authenticated") {
-    const identity = await ensureDurableIdentityActor(
+    const identity = await resolveDurableIdentityActor(
       authority.sessionId,
       shopContext,
     );
+    if (!identity) {
+      throw new SahelFlowError(
+        "The authenticated session has no durable identity authority",
+        "IDENTITY_SESSION_BINDING_REQUIRED",
+        401,
+      );
+    }
     return createPersonContext(authority.sessionId, shopContext, identity);
   }
   if (authority.status === "setup") {
