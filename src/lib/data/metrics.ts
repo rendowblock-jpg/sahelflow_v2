@@ -6,8 +6,9 @@
  * - Realized revenue is earned at delivery from the governed profitability
  *   authority. Later returns do not erase delivery; refunds and reversals are
  *   explicit downstream financial facts.
- * - Net revenue is realized revenue after refunds and exact reversals. Courier
- *   fees, COGS, losses and operating expenses remain below net revenue.
+ * - The legacy `netRevenue()` entry point remains net of refunds and courier
+ *   fees for backward compatibility. New accounting readers must use the full
+ *   profitability projection, whose `netRevenue` field excludes courier fees.
  *
  * All periods are half-open `[from, to)` and all money is integer DZD.
  */
@@ -77,14 +78,17 @@ export async function realizedRevenue(db: DbClient, period: Period): Promise<num
 }
 
 /**
- * Net revenue (period) — earned revenue after refunds and exact reversals.
+ * Legacy net revenue compatibility metric.
  *
- * Courier fees, inventory losses, COGS and operating expenses are costs below
- * net revenue and are reported by the full profitability projection.
+ * Historically this helper meant realized revenue after refunds and courier
+ * fees. Preserve that public behavior while dashboard, analytics, accounting,
+ * reports and AI use `getProfitabilityProjection()` directly. In the governed
+ * projection, courier fees remain below `projection.netRevenue` and contribute
+ * to contribution/net profit instead.
  */
 export async function netRevenue(db: DbClient, period: Period): Promise<number> {
   const projection = await getProfitabilityProjection(db, period);
-  return projection.netRevenue;
+  return projection.netRevenue - projection.courierFees;
 }
 
 /**
