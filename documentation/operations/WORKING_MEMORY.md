@@ -9,15 +9,10 @@
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
 > **Active phase:** Phase 2A — durable local identity and session authority
-> **Active package:** 2A.3 — revocation, policy freshness and identity administration
+> **Active package:** 2A.4 — multi-member roles, invitations and per-shop permissions
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
 > **Merge state:** open, draft, mergeable, unmerged
-> **Phase 1 closure head:** `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`
-> **Phase 2A.1 closure head:** `ad3987e934c1e42706cf7f29010cd96dc534f290`
-> **Phase 2A.2 closure head:** `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`
-> **Phase 2A.2 CI:** `30660637916` — success
-> **Phase 2A.2 source checkpoint:** `30660637617` — success
 
 GitHub PR #195 and its exact current head/checks are live branch authority. Never
 trust copied head or run numbers without re-reading GitHub at session start.
@@ -29,110 +24,111 @@ Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
 proposed source only: it is not merged, published, installed, provider-certified,
 externally reviewed or Founder-accepted.
 
-Production native all-shop restore remains Phase 4. Full Windows/Rust/MSI,
-installed, live-provider, legal, Beta and Founder-acceptance evidence remain later
-separate gates.
+Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
+remain later separate gates.
 
 ## Phase 1 — source-closed
 
-Phase 1 is source-closed on the integration branch at
-`3783028396f3b0c4afa43f33fdd3c1c6cc51789f`, with normal CI `30652282305` and
-Integration source checkpoint `30652282191` successful. Do not reopen it absent
-new concrete P0/P1 evidence.
+- head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`;
+- normal CI `30652282305` — success;
+- checkpoint `30652282191` — success.
+
+Do not reopen absent new concrete P0/P1 evidence.
 
 ## Phase 2A.1 result — setup and session authority closed
 
-Exact closure evidence:
-
 - head `ad3987e934c1e42706cf7f29010cd96dc534f290`;
 - normal CI `30656307152` — success;
-- Integration source checkpoint `30656308867` — success.
+- checkpoint `30656308867` — success.
 
-The package established setup containment, 24-hour overall and one-hour inactivity
-limits, throttled activity persistence, database-backed revocation, session-ID
-rotation after reauthentication, recent-PIN proof, all-session PIN-change
-revocation and the existing stronger fail-closed logout rule.
+Setup is onboarding only. Database sessions enforce 24-hour overall and one-hour
+inactivity limits, throttled activity persistence, revocation, reauthentication
+rotation, recent proof, PIN-change revocation and fail-closed logout.
 
 ## Phase 2A.2 result — durable owner identity kernel closed
 
-Exact closure evidence:
-
 - head `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`;
 - normal CI `30660637916` — success;
-- Integration source checkpoint `30660637617` — success.
+- checkpoint `30660637617` — success.
 
-The package established:
+The installation owns HMAC-authenticated Workspace, Installation, Person, owner
+WorkspaceMember, Device and session bindings with exact shop, policy and
+revocation snapshots. Real person actors, cross-shop denial, tamper, restart,
+concurrency, root rotation and anti-reinitialization are proven.
 
-- one HMAC-authenticated installation-level identity authority outside shop DBs;
-- durable Workspace, Installation, Person, owner WorkspaceMember and enrolled
-  Device identities;
-- exact session-to-person/member/device bindings with policy and revocation
-  snapshots;
-- real `person` trusted actors and durable business audit identities;
-- exact shop grants with cross-shop denial;
-- serialized concurrent binding and stable identity across restarts;
-- tamper detection, missing-authority recovery barriers and database-backed
-  anti-reinitialization evidence;
-- installation-root rotation continuity, including interrupted resume under old
-  or candidate key authority;
-- generic Settings isolation for identity authority footprints;
-- read-only consequential-command resolution: command paths cannot bootstrap or
-  replace durable identity.
+## Phase 2A.3 result — revocation and policy freshness closed
+
+- head `56df880bbe2233bf081119fa535e30713d9c6051`;
+- normal CI `30665009016` — success;
+- checkpoint `30665009255` — success.
+
+Closed boundaries:
+
+- every configured authenticated request validates durable identity;
+- owner-only exact-installation session/device inventory;
+- immediate control-first revocation of another session after recent PIN proof;
+- database/audit catch-up is transactional, idempotent and retryable;
+- current-session protection;
+- duplicate/concurrent revoke and database-failure recovery;
+- AR/FR/EN Settings security administration;
+- stale-policy bindings fail everywhere but can enter only the rate-limited PIN
+  reauthentication ceremony, which rotates into a fresh binding;
+- missing, revoked, cross-shop and unavailable identity remain blocked.
+
+The frozen adversarial pass found no remaining P0/P1. It was not an independent
+review.
 
 PIN remains local unlock and reauthentication, never durable person identity.
 
-## Active package — Phase 2A.3 revocation and policy freshness
-
-This package must make durable identity changes take effect immediately and safely
-across generic authenticated routes and consequential commands.
+## Active package — Phase 2A.4 member authority
 
 ### Required contract
 
-1. Every configured authenticated request must validate both the database session
-   and its durable identity binding.
-2. Revoked or stale session/member/device/workspace authority must fail closed
-   before route parsing or business effects.
-3. An owner may list exact installation sessions and devices without exposing
-   secrets or cross-shop data.
-4. An owner may revoke another session immediately; ordinary administration must
-   not silently revoke the only current owner/device without an explicit recovery
-   ceremony.
-5. Member/device/policy changes must advance durable revision and revocation or
-   policy snapshots; old bindings remain invalid until successful PIN
-   reauthentication creates a fresh session binding.
-6. Cross-store ordering must fail safe: control authority denies first, and a
-   database revocation failure must remain diagnosable and retryable rather than
-   reporting false success.
-7. Prove same-shop/cross-shop isolation, stale-policy rejection, immediate
-   revocation, restart, duplicate and concurrency behavior.
+1. Durable Person and WorkspaceMember authority supports owner, manager, operator
+   and viewer without duplicating identity in each shop database.
+2. Invitations are authenticated, expiring, single-use and replay-safe.
+3. Acceptance establishes exactly one person/member/device/session only after
+   valid invitation proof and a local PIN ceremony.
+4. Role presets and custom action permissions are deny-by-default and cannot
+   exceed the role ceiling.
+5. Exact shop grants are enforced before parsing or effects.
+6. Member revocation is immediate and invalidates every associated session.
+7. The final active owner cannot be removed or demoted outside an explicit
+   recovery ceremony.
+8. Owner administration and member self-view have complete AR/FR/EN loading,
+   empty, validation, conflict, expired, revoked and recovery states.
+9. Duplicate/concurrent invitation, acceptance and revocation; restart, expiry,
+   stale-policy and cross-shop behavior are proven.
 
 ### Exact next-session order
 
 1. Re-read PR #195, this file and the Phase 2 exit gate.
-2. Inspect existing identity authorization, shop routes and any session/device
-   administration source before writing.
-3. Freeze the revocation ordering and recovery contract.
-4. Implement one coherent owner administration vertical: list sessions/devices,
-   revoke another session, and force stale-binding rejection everywhere.
-5. Add integration tests for authority-first parsing, duplicate/concurrent revoke,
-   database failure, restart and cross-shop denial.
-6. Run one exact-head source checkpoint.
-7. Continue to invitations/team membership or licensing only after 2A.3 is green.
+2. Inspect the current identity control schema, permission presets and Settings
+   security UI.
+3. Freeze invitation identity, expiry, acceptance and recovery contracts.
+4. Extend the authenticated installation authority with invitation and member
+   lifecycle state.
+5. Implement one owner invitation/acceptance/revocation vertical with exact shop
+   grants and role permissions.
+6. Add member self-view and owner administration in AR/FR/EN.
+7. Prove concurrency, duplicate, expiry, replay, revocation, last-owner and
+   cross-shop boundaries.
+8. Run one exact-head source checkpoint and separated adversarial pass.
+9. Continue to licensing only after 2A.4 is green.
 
 ## Protected local boundaries
 
-- Do not modify, reset or delete the original checkout solely to make branch work
+- Do not modify, reset or delete the original checkout merely to make branch work
   easier.
 - Preserve `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
 - Preserve the unrelated modified
   `src/lib/identity/__tests__/session-authority.test.ts` in the original checkout.
-- PR #186 (`agent/phase2-session-freshness`) is obsolete/conflicting proposed
-  source. Mine it deliberately against current contracts; never merge it directly.
+- PR #186 is obsolete/conflicting proposed source; never merge it wholesale.
 - Keep PR #195 draft and unmerged. Do not bump the application version.
 
 ## Validation model
 
-Draft PR #195 runs the targeted exact-head source checkpoint. Keep CI read-only.
-Linux/source checks cannot prove Windows standalone, Rust parity, signed MSI,
-installed lifecycle, live-provider, independent security/privacy/Law 18-07 or
-Founder acceptance.
+Draft PR #195 runs the exact-head source checkpoint. Keep CI read-only. Linux
+source checks cannot prove Windows standalone, Rust parity, signed MSI, installed
+lifecycle, live-provider, independent security/privacy/Law 18-07 or Founder
+acceptance.
