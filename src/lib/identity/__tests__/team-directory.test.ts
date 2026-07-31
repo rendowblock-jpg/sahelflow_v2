@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, unlinkSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -59,7 +60,7 @@ async function issueInvitation(options?: {
 }) {
   await bindOwnerIdentitySession("owner-session", SHOP);
   return createMemberInvitation("owner-session", SHOP, {
-    requestId: "11111111-1111-4111-8111-111111111111",
+    requestId: randomUUID(),
     role: options?.role ?? "operator",
     permissions: options?.permissions ?? null,
     shopIds: [SHOP.shopId],
@@ -146,7 +147,9 @@ describe("accepted team member directory", () => {
       SHOP,
     );
 
-    await expect(createTeamLoginSession("amina.ops", "bad-pin-1", SHOP)).resolves.toBeNull();
+    await expect(
+      createTeamLoginSession("amina.ops", "bad-pin-1", SHOP),
+    ).resolves.toBeNull();
     const login = await createTeamLoginSession("AMINA.OPS", "12345678", SHOP);
     expect(login).toMatchObject({
       displayName: "Amina",
