@@ -165,6 +165,25 @@ model FinancialMovement {
   @@index([commandId])
 }
 
+model ProfitabilityCostSnapshot {
+  id               String   @id
+  snapshotKey      String   @unique
+  commandId        String
+  orderId          String
+  orderItemId      String   @unique
+  productId        String?
+  productVariantId String?
+  quantity         Int
+  unitCost         Int?
+  costBasis        String
+  isExact          Boolean  @default(true)
+  recognizedAt     DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([orderId, recognizedAt])
+  @@index([commandId])
+}
+
 model ProjectionInvalidation {
   id            String   @id
   commandId     String
