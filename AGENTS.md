@@ -199,30 +199,30 @@ choice is sufficiently supported.
 ## Exact next outcome
 
 Resume draft PR #195 from the exact head recorded by GitHub and Working Memory.
-A 2026-07-31 independent source audit found new Phase 1 P1 closure evidence. Keep
-the repair bounded; do not reopen completed Golden COD packages that are not
-implicated by the findings.
+The bounded Phase 1 closure implementation is assembled and its named
+implementation head `063f65f2d5613c03fbeb96b37739bfb506ba99f5` passed normal CI
+`30648590071` and Integration source checkpoint `30648587454`.
 
 The immediate order is:
 
-1. reconcile `AGENTS.md`, the documentation entry point, Roadmap, Working Memory,
-   PR #195 and issue #164 around one active statement: Phase 1 closure repair;
-2. make `sf-audit` verify active-phase agreement instead of preserving obsolete
-   literal Phase 1 or Phase 2 wording;
-3. repair courier booking generations so ambiguous or known-failed attempts can be
-   governed, reconciled and safely rebooked;
-4. dead-letter corrupt or undecryptable courier outbox payloads before any provider
-   effect, audit the failure and continue the queue;
-5. add real integration coverage for second booking, duplicate replay, concurrent
-   recovery and poisoned-payload isolation;
-6. run one exact-head source checkpoint, freeze the repaired Phase 1 head and
-   perform one independent P0/P1 review;
-7. activate only the bounded Phase 2A durable identity kernel after the repaired
-   Phase 1 head has no known P0/P1.
+1. keep the repaired implementation boundary frozen; do not add Phase 2 source to
+   the review diff;
+2. independently review the authority reconciliation, courier booking generations,
+   original-key replay, same-generation concurrency, terminal known-failure
+   recovery, ambiguous missing-tracking behavior, poisoned-payload isolation,
+   request-local kick and invariant tests for every P0/P1;
+3. inspect any later documentation-only commits separately and confirm their
+   authority checks remain green;
+4. if a concrete P0/P1 exists, apply one bounded consolidated repair and rerun the
+   affected exact-head gates;
+5. if no P0/P1 remains, record the frozen-head verdict and activate only the
+   bounded Phase 2A durable identity kernel;
+6. keep PR #195 draft, unmerged and version-neutral.
 
 Phase 2 durable identity is the next dependency frontier, but it is not active
-while this bounded Phase 1 closure repair remains open. PR #186 is an obsolete
-conflicting proposal and must be mined deliberately rather than merged directly.
+until the repaired Phase 1 closure boundary receives an independent P0/P1-clear
+verdict. PR #186 is an obsolete conflicting proposal and must be mined
+deliberately rather than merged directly.
 
 ## Work rules
 
