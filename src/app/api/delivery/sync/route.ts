@@ -1,36 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
-import { db, shopContext } from "@/lib/db";
-import { orderService } from "@/lib/data/order-service";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireRouteAuth } from "@/lib/auth/route-authority";
+import { db, shopContext } from "@/lib/db";
 import { recordOrderChangeInTx } from "@/lib/data/order-change-service";
-import { ConflictError, InvalidTransitionError } from "@/types/errors";
+import { orderService } from "@/lib/data/order-service";
+import {
+  getDeliveryAdapter,
+  loadDeliveryCredentials,
+} from "@/lib/integrations/delivery";
 import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
+import { ConflictError, InvalidTransitionError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
-const syncSchema = z.object({
-  deliveryId: z.string().min(1).optional(),
-  orderId: z.string().min(1).optional(),
-}).refine((d) => d.deliveryId || d.orderId, {
-  message: "Either deliveryId or orderId is required",
-});
+const syncSchema = z
+  .object({
+    deliveryId: z.string().min(1).optional(),
+    orderId: z.string().min(1).optional(),
+  })
+  .refine((data) => data.deliveryId || data.orderId, {
+    message: "Either deliveryId or orderId is required",
+  });
 
-/**
- * POST /api/delivery/sync — sync tracking for a shipment.
- *
- * Fetches the latest tracking info from the provider and updates the Delivery
- * record. If the shipment is delivered, updates the order status too.
- */
+/** POST /api/delivery/sync — sync tracking for a shipment. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireRouteAuth(req);
   const body = await req.json();
   const input = syncSchema.parse(body);
   const context = { prisma: db, shop: shopContext };
 
-  // Find the delivery record
   const delivery = input.deliveryId
     ? await context.prisma.delivery.findFirst({
         where: { id: input.deliveryId, deletedAt: null },
@@ -50,20 +50,20 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       { status: 400 },
     );
   }
+
   const authority = await db.order.findFirst({
     where: { id: delivery.orderId, deletedAt: null },
     select: { source: true, sourceMetadata: true },
   });
   if (authority) {
-    assertLegacyOrderFollowupAllowed(authority.source, authority.sourceMetadata);
+    assertLegacyOrderFollowupAllowed(
+      authority.source,
+      authority.sourceMetadata,
+    );
   }
 
   const adapter = getDeliveryAdapter(delivery.provider);
-  const creds = await loadDeliveryCredentials(
-    context,
-    delivery.provider,
-  );
-
+  const creds = await loadDeliveryCredentials(context, delivery.provider);
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
   const estimatedDelivery = tracking.estimatedDelivery
     ? new Date(tracking.estimatedDelivery)
@@ -81,7 +81,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         data: { status: tracking.status, estimatedDelivery },
       });
       if (claimed.count !== 1) {
-        throw new ConflictError("Delivery changed while provider tracking was being fetched");
+        throw new ConflictError(
+          "Delivery changed while provider tracking was being fetched",
+        );
       }
 
       if (tracking.status !== "delivered") {
@@ -113,7 +115,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         });
         return {
           effects: null,
-          conflict: { orderStatus: error.from, providerStatus: tracking.status },
+          conflict: {
+            orderStatus: error.from,
+            providerStatus: tracking.status,
+          },
         };
       }
     });
@@ -130,9 +135,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           data: { status: tracking.status, estimatedDelivery },
         });
         if (preserved.count !== 1) {
-          const current = await tx.delivery.findUnique({ where: { id: delivery.id } });
+          const current = await tx.delivery.findUnique({
+            where: { id: delivery.id },
+          });
           if (!current || current.status !== tracking.status) {
-            throw new ConflictError("Provider tracking conflicts with newer local delivery state");
+            throw new ConflictError(
+              "Provider tracking conflicts with newer local delivery state",
+            );
           }
         }
 
@@ -149,8 +158,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
             provider: delivery.provider,
             providerStatus: tracking.status,
             orderStatus: currentOrder?.status ?? "missing",
-            attemptedOrderStatus: tracking.status === "delivered" ? "delivered" : null,
-            persistenceError: error instanceof Error ? error.name : "UnknownError",
+            attemptedOrderStatus:
+              tracking.status === "delivered" ? "delivered" : null,
+            persistenceError:
+              error instanceof Error ? error.name : "UnknownError",
           },
         });
       });
@@ -170,7 +181,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
             where: { id: delivery.id },
           });
           if (!current || current.status !== tracking.status) {
-            throw new ConflictError("Provider tracking could not be preserved safely");
+            throw new ConflictError(
+              "Provider tracking could not be preserved safely",
+            );
           }
         }
       } catch (preservationError) {
@@ -205,13 +218,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   });
 }, "POST /api/delivery/sync");
 
-/**
- * GET /api/delivery/sync?deliveryId=... — fetch tracking without updating.
- * Returns the current tracking info from the provider (read-only).
- */
+/** GET /api/delivery/sync?deliveryId=... — read-only provider tracking. */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  // W2-4: defense-in-depth — GET was unprotected, exposed tracking info + delivery provider credentials usage.
-  await requireAuth();
+  await requireRouteAuth(req);
   const deliveryId = req.nextUrl.searchParams.get("deliveryId");
   if (!deliveryId) {
     return NextResponse.json({ error: "deliveryId required" }, { status: 400 });
