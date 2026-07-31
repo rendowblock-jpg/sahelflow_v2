@@ -38,6 +38,7 @@ import {
   verifyPinDetailed,
   verifySessionToken,
 } from "./crypto";
+import { requireReauthenticationIdentityEligibility } from "./reauthentication-authority";
 
 const LEGACY_AUTH_SECRET_KEY = "auth_secret";
 const LEGACY_AUTH_PIN_KEY = "auth_pin_hash";
@@ -397,16 +398,13 @@ async function validateDurableIdentitySession(
   }
 }
 
-async function requireAuthenticatedSession(
+async function requireDatabaseAuthenticatedSession(
   fresh = false,
 ): Promise<Extract<SessionAuthorityResult, { status: "authenticated" }>> {
   const authority = fresh
     ? await resolveCurrentSessionAuthority()
     : await getCurrentSessionAuthority();
-  if (authority.status === "authenticated") {
-    await validateDurableIdentitySession(authority);
-    return authority;
-  }
+  if (authority.status === "authenticated") return authority;
   if (authority.status === "setup") {
     throw new SahelFlowError(
       "Authentication setup is required",
@@ -415,6 +413,33 @@ async function requireAuthenticatedSession(
     );
   }
   throw sessionAuthorityError(authority);
+}
+
+async function requireAuthenticatedSession(
+  fresh = false,
+): Promise<Extract<SessionAuthorityResult, { status: "authenticated" }>> {
+  const authority = await requireDatabaseAuthenticatedSession(fresh);
+  await validateDurableIdentitySession(authority);
+  return authority;
+}
+
+async function requireReauthenticationCandidate(): Promise<
+  Extract<SessionAuthorityResult, { status: "authenticated" }>
+> {
+  const authority = await requireDatabaseAuthenticatedSession(true);
+  await requireReauthenticationIdentityEligibility(() =>
+    validateDurableIdentitySession(authority),
+  );
+  return authority;
+}
+
+/**
+ * Prove authority before a reauthentication request body is parsed. Current
+ * durable identity and policy-stale identity are eligible; all other identity
+ * failures remain blocked.
+ */
+export async function requireReauthenticationEligibility(): Promise<void> {
+  await requireReauthenticationCandidate();
 }
 
 export async function destroySession(): Promise<void> {
@@ -480,7 +505,7 @@ export async function reauthenticateCurrentSession(
   pin: string,
   ip?: string,
 ): Promise<{ reauthenticated: boolean; reason?: "pin_invalid" }> {
-  const authority = await requireAuthenticatedSession(true);
+  const authority = await requireReauthenticationCandidate();
   const { valid } = await verifyAuthPinAndMaybeRehash(pin);
   if (!valid) return { reauthenticated: false, reason: "pin_invalid" };
 
