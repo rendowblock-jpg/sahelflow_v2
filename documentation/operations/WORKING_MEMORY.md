@@ -54,6 +54,41 @@ Production native all-shop restore remains Phase 4. Full Windows/Rust/MSI and
 installed evidence remain deferred until the Founder-authorized Phase 1–4 source
 program is frozen.
 
+## Founder-approved execution method
+
+The audited cross-session method remains unchanged: reconstruct exact GitHub truth
+before writing, deliver coherent packages, run one exact-head checkpoint, repair
+only concrete diagnostics, keep CI read-only, remove temporary scaffolding and
+update existing authorities instead of creating another handoff document.
+
+## Phase 1 semantic continuity
+
+The previous frontier marker **Active phase:** Phase 1 — canonical Golden COD
+business core is retained here only for audited continuity; the active phase is
+Phase 2 as stated above. Phase 1 began from protected PR #190 and the later
+protected fulfillment extension, then closed its remaining source scope in draft
+PR #195.
+
+### Active package at session close — governed courier lifecycle
+
+This former active package is closed at the Phase 1 source-exit boundary. Its
+booking, durable effect, receipt, tracking, exception and recovery contracts remain
+part of the green Golden COD evidence and are not reopened absent new P0/P1 proof.
+
+### Finite Phase 1 closure ledger
+
+Profitability authority, restart/update preservation, disposable backup/restore,
+the representative multilingual journey, legacy-bypass containment and authority
+reconciliation are closed at the named unmerged source boundary.
+
+### Exact next-session order
+
+1. Re-read GitHub PR #195, this file, the Phase 2 Roadmap gate and protected main.
+2. Confirm the current head descends from the Phase 1 source-exit head and has no
+   later failing checkpoint.
+3. Begin only the bounded Phase 2A durable identity kernel below.
+4. Keep PR #195 draft, unmerged and version-neutral.
+
 ## Active next package — Phase 2A durable identity kernel
 
 Build the first bounded Phase 2 vertical without reopening Phase 1:
