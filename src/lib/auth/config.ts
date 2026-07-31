@@ -28,6 +28,7 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/auth/logout",
   "/api/auth/setup",
   "/api/auth/status",
+  "/api/auth/invitations/accept",
   "/api/health",
   "/api/storefront/submit",
   "/api/reports/daily", // self-protects via x-cron-secret
@@ -37,10 +38,11 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
 export const PUBLIC_PAGES: readonly string[] = [
   "/login",
   "/setup",
+  "/join",
   "/storefront",
 ];
 
-const EXACT_PUBLIC_PAGES = new Set(["/login", "/setup"]);
+const EXACT_PUBLIC_PAGES = new Set(["/login", "/setup", "/join"]);
 const PUBLIC_PAGE_PREFIXES: readonly string[] = ["/storefront"];
 
 /** Check if a pathname is one explicitly public API route. */
@@ -49,8 +51,9 @@ export function isPublicApiRoute(pathname: string): boolean {
 }
 
 /**
- * Login and setup are exact public pages. Only storefront intentionally exposes
- * descendants, so future login/setup child routes are protected by default.
+ * Login, setup and invitation enrollment are exact public pages. Only storefront
+ * intentionally exposes descendants, so future auth child routes are protected
+ * by default.
  */
 export function isPublicPage(pathname: string): boolean {
   return (
