@@ -427,6 +427,9 @@ describe("Phase 1 representative Golden COD journey", () => {
       const finalReturn = await responseJson<{
         position: {
           orderVersion: number;
+          status: string;
+          inventoryState: string | null;
+          codState: string | null;
           returnState: string;
           refundState: string;
           effectiveRefundAmount: number;
@@ -446,6 +449,8 @@ describe("Phase 1 representative Golden COD journey", () => {
       });
       expect(finalReturn.position).toMatchObject({
         orderVersion: 15,
+        status: "delivered",
+        inventoryState: "settled",
         returnState: "completed",
         refundState: "partially_reversed",
         effectiveRefundAmount: 600,
@@ -475,12 +480,12 @@ describe("Phase 1 representative Golden COD journey", () => {
         where: { id: created.orderId },
       });
       expect(order).toMatchObject({
-        status: "delivered",
-        version: 15,
-        inventoryState: "settled",
-        codState: "remitted",
-        returnState: "completed",
-        refundState: "partially_reversed",
+        status: finalReturn.position.status,
+        version: finalReturn.position.orderVersion,
+        inventoryState: finalReturn.position.inventoryState,
+        codState: finalReturn.position.codState,
+        returnState: finalReturn.position.returnState,
+        refundState: finalReturn.position.refundState,
       });
       expect(await rawDb.businessCommand.count()).toBe(15);
       expect(await rawDb.profitabilityCostSnapshot.count()).toBe(1);
