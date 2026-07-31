@@ -17,6 +17,13 @@ export const GET = withErrorHandler(async () => {
       401,
     );
   }
+  if (context.actor.role !== "owner") {
+    throw new SahelFlowError(
+      "Only the workspace owner may inspect installation sessions and devices",
+      "ACTION_FORBIDDEN",
+      403,
+    );
+  }
 
   const authority = await getIdentityAdministrationView(
     context.actor.sessionId,
