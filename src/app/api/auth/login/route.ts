@@ -16,6 +16,7 @@ import {
 } from "@/lib/auth/rate-limit";
 import { shopContext } from "@/lib/db";
 import { createTeamLoginSession } from "@/lib/identity/team-directory";
+import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
 import { establishTeamSession } from "@/lib/identity/team-session";
 
 const LoginSchema = z
@@ -84,6 +85,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Incorrect login or PIN" }, { status: 401 });
     }
 
+    await registerTeamSessionAuthority({
+      sessionId: grant.sessionId,
+      actor: grant.actor,
+      shop: shopContext,
+    });
     await establishTeamSession(grant.sessionId, ip);
     recordLoginSuccess(ip);
     void auditLog(
