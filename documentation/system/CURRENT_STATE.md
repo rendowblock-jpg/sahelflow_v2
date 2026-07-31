@@ -9,7 +9,7 @@
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-30
+> **Last assessed:** 2026-07-31
 
 This document states what merged source and named evidence prove now. It does not
 convert target architecture, research, adapter presence, mocks, test counts or
@@ -38,6 +38,22 @@ still mainly use legacy services and fields.
 
 The central completion task is therefore production adoption and removal of
 competing legacy authority, not another architecture reset.
+
+## Unmerged execution frontier — not protected current-state authority
+
+Draft PR #195 on `agent/phases1-4-completion-program` has assembled the complete
+Phase 1 source and its named source-exit evidence: canonical adopted intake,
+fulfillment/courier/COD/return/refund/profitability authority, separate-process
+restart and in-place migration preservation, disposable local backup/restore
+compatibility, a representative UI/API/domain/database Golden COD journey with
+AR/FR/EN controls, and a final adopted-source bypass audit.
+
+The exact branch head and green checks belong to PR #195 and
+[`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md). This
+unmerged frontier does not alter the protected baseline stated by this document.
+It is not published, installed, Windows/Rust/MSI validated, Founder-accepted or
+Stable. Protected `main` continues to expose the discontinuities described below
+until an authorized protected merge changes that truth.
 
 ## Release and installed truth
 
@@ -387,12 +403,12 @@ packages:
   `30522348699` passed all selected source, Windows runtime and installed-MSI
   gates.
 
-These packages do not complete Phases 1, 2 or 4. Phase 1 still requires COD
-settlement, exceptions, cancellation, return/refund/compensation, remaining
-intake sources and preservation/recovery evidence. Phase 2 still requires durable
-identity, licensing and native multi-shop. Phase 4 still requires full
-backup/restore, replacement-install recovery, migration/security/privacy/legal
-and certification gates.
+These protected-main packages do not complete Phases 1, 2 or 4. Protected
+Phase 1 still lacks the unmerged COD settlement, exception, cancellation,
+return/refund/compensation, adopted-intake and preservation evidence assembled in
+draft PR #195. Phase 2 still requires durable identity, licensing and native
+multi-shop. Phase 4 still requires full backup/restore, replacement-install
+recovery, migration/security/privacy/legal and certification gates.
 
 The remaining Internal.13 Arabic-chart and Founder-acceptance observations stay
 independent in the platform lane.

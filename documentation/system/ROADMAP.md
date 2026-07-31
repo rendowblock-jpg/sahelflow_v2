@@ -350,20 +350,42 @@ compatible. Production native all-shop restore remains a Phase 4 exit gate, and
 the complete product Golden COD Journey is not declared Proven until that gate
 also passes.
 
-## Current result — in progress
+## Current result — source-complete in draft PR #195
 
-PR #190 merged the first canonical production vertical: trusted manual intake,
-confirmation/rejection, exact request binding and optimistic versioning, exact
-product-or-variant reservation authority, inventory movement, atomic audit/event/
-outbox/projection facts and complete AR/FR/EN decision states. PR #192 extended
-that same authority through packing, manual shipment, reservation consumption,
-outbound inventory, delivery, customer delivery facts and creation of a DZD COD
-receivable. Exact-head CI runs `30516059898` and `30522348699` passed.
+Protected `main` remains partial Phase 1 truth through PR #190 and PR #192. Draft
+PR #195 assembles the complete Phase 1 source boundary without changing that
+protected, published or installed truth.
 
-Phase 1 is not complete. Courier booking/tracking, failure/refusal/physical
-return, cancellation/release, COD collection/remittance/fees/discrepancy,
-returns/exchanges/refunds/compensation, remaining intake sources, restart/update
-preservation and disposable backup-compatibility evidence remain open.
+The draft branch now integrates the canonical Golden COD slice across:
+
+- trusted product/customer/order intake and storefront, CSV/XLSX,
+  Shopify/WooCommerce/YouCan, WhatsApp and proposal-bound AI adoption;
+- confirmation/rejection, reservation, inventory, packing, shipment, delivery,
+  cancellation, failure/refusal and physical-return recovery;
+- durable courier booking, effect receipt, tracking reconciliation and restart
+  behavior;
+- COD receivable, collection, remittance, fees, adjustments, discrepancies,
+  corrections, unmatched-line matching and immutable DZD movements;
+- customer return/exchange lifecycle, item inspection, stock/loss disposition,
+  partial/full refund, exact reversal and compensation;
+- one governed realized-revenue, COGS and profitability projection adopted by
+  accounting, dashboard, analytics, reports and AI;
+- removed/read-only competing COD scalar routes and an adopted-source bypass
+  audit;
+- a representative UI/API/domain/database journey with trusted authority,
+  idempotent replay, optimistic stale conflict and AR/FR/EN seller controls;
+- separate-process restart proof, in-place migration over populated canonical
+  facts and disposable local backup/restore compatibility with exact hashes,
+  counts, integrity and replay evidence.
+
+The exact Phase 1 source-exit head and green CI/checkpoint are recorded in draft PR
+#195 and Working Memory. No known Phase 1 P0/P1 remains at that named source
+boundary.
+
+This is not a protected merge, release, installed-MSI result or Founder
+acceptance. PR #195 stays draft for the Founder-authorized Phase 1–4 program.
+Production native all-shop restore remains Phase 4, and full Windows/Rust/MSI
+validation remains deferred until the declared program source is frozen.
 
 ---
 

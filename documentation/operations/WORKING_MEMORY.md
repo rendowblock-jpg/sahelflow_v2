@@ -3,205 +3,75 @@
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-07-31
 > **Protected main:** `522ab1642545803c7a9b6c320fe72cceb320e558`
-> **Latest protected application merge:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 1 — canonical Golden COD business core
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
 > **Merge state:** open, draft, mergeable, unmerged
-> **Latest source-green milestone:** governed courier lifecycle, checkpoint `30609652132` on `85958be78a28b7f5ba64268cba7b0499f906719c`
+> **Phase 1 source-exit head:** `bd87dea55e19397349b704b180e9ba03220836a6`
+> **Phase 1 CI:** `30637403344` — success
+> **Phase 1 source checkpoint:** `30637403133` — success
 
 GitHub PR #195 and its exact current head/checks are the live branch authority.
 Never trust a copied head or run number in this file without re-reading GitHub at
 session start.
 
-## Current protected truth
+## Protected truth
 
-Phase 0 remains complete. Protected `main` contains:
+Phase 0 remains complete. Protected `main`, the published release, installed
+Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
+proposed source only: it is not merged, published, installed, provider-certified,
+independently reviewed or Founder-accepted.
 
-| Package | Protected merge | Proven boundary |
-|---|---|---|
-| PR #190 | `f0821fb7885be4eeec7efcc2e5ef5a27254f6ac1` | trusted manual intake, confirmation/rejection, exact version/idempotency, product-or-variant reservation and inventory movement |
-| PR #191 | `bcdc4fe5643c407dddcc96d47c421d0417a83563` | compatibility PIN actor restricted to the exact process shop |
-| PR #184 | `deb148de737b7906d899cbb41764faa929823a24` | DPAPI-protected installation root and native resumable rotation/recovery |
-| PR #192 | `731fb11528345354388b2716f3bd94f0fc73eafb` | canonical pack, manual ship, reservation consumption, outbound inventory, delivery, customer facts and DZD COD receivable |
-| PR #193 | `522ab1642545803c7a9b6c320fe72cceb320e558` | documentation reconciliation only |
+## Phase 1 result — source-complete on the draft branch
 
-Phase 1, Phase 2, Phase 3 and Phase 4 are not complete on protected `main`.
-PR #195 remains proposed source only and must not be described as merged,
-published, installed or Founder-accepted.
+The named Phase 1 source-exit head proves the complete canonical Golden COD source
+boundary and no known Phase 1 P0/P1 remains there:
 
-## Founder-approved execution method
+- canonical manual, storefront, CSV/XLSX, Shopify/WooCommerce/YouCan, WhatsApp and
+  proposal-bound AI intake with exact source identity, server pricing and replay;
+- optimistic confirmation/rejection, reservations, inventory movements,
+  fulfillment, cancellation, courier effects/receipts/tracking, delivery,
+  failure/refusal and physical-return recovery;
+- immutable DZD COD receivable, collection, remittance, fees, adjustments,
+  discrepancies, unmatched matching and governed corrections;
+- customer returns/exchanges, inspection disposition, stock/loss compensation,
+  refunds and exact reversals;
+- one governed realized-revenue, COGS and profitability definition across
+  accounting, dashboard, analytics, reports and AI;
+- separate-process restart, in-place migration over populated facts and disposable
+  local backup/restore with SQLite integrity, exact hashes/counts and replay;
+- one representative UI/API/domain/database Golden COD journey with duplicate,
+  stale conflict and AR/FR/EN seller controls;
+- removed/read-only scalar COD mutation routes and a durable adopted-source bypass
+  audit, including removal of the legacy order-detail COD controls.
 
-The repository records the exact cross-session method in root `AGENTS.md`:
+Production native all-shop restore remains Phase 4. Full Windows/Rust/MSI and
+installed evidence remain deferred until the Founder-authorized Phase 1–4 source
+program is frozen.
 
-- continue one long-lived integration branch and draft PR;
-- reconstruct exact GitHub truth before every write;
-- never infer another active agent without evidence;
-- build coherent end-to-end packages, not file-sized microtasks;
-- use one targeted source checkpoint after a package is assembled;
-- repair only concrete exact-head diagnostics;
-- communicate at package start, meaningful milestone, blocker and session close;
-- do not narrate every edit and do not leave long unexplained silence;
-- keep CI read-only and remove every temporary repair workflow before session close;
-- update this file and the PR body instead of creating another handoff document.
+## Active next package — Phase 2A durable identity kernel
 
-This method applies to Web and Desktop sessions and to later phases unless the
-Founder explicitly changes it.
+Build the first bounded Phase 2 vertical without reopening Phase 1:
 
-## Integrated Phase 1 source in draft PR #195
+1. research current primary-source practice for local-first person, workspace,
+   member, installation, device and session identity plus immediate revocation;
+2. define persisted identity and policy authority while retaining PIN only as a
+   local unlock factor;
+3. make session resolution fail closed on database/corruption/error paths and
+   remove legacy token ambiguity;
+4. bind one representative read and mutation to exact workspace, member, device,
+   session, installation and shop authority with trusted audit attribution;
+5. prove session/device/member revocation, stale approval rejection, duplicate,
+   concurrency and restart behavior;
+6. reconcile or deliberately mine obsolete PR #186; never merge it wholesale.
 
-### Canonical order and inventory core
-
-- trusted manual confirmation/rejection;
-- exact product and active variant selection;
-- optimistic order version and exact idempotency;
-- append-only reservations and inventory movements;
-- packing, shipment, delivery and COD receivable authority;
-- product/variant mutation fences while pending canonical orders depend on catalog
-  authority.
-
-### Canonical COD and accounting facts
-
-- immutable delivered receivable authority from `FinancialMovement`;
-- collection, partial/full remittance, fees, adjustments and discrepancies;
-- remittance batches, unmatched lines and governed later matching;
-- append-only collection/settlement corrections;
-- AR/FR/EN accounting workspace and order controls;
-- replay, concurrency, duplicate and API-boundary coverage.
-
-### Cancellation, delivery exceptions and physical return
-
-- pre-shipment cancellation restores exact reserved stock atomically;
-- failure/refusal does not unsafely restock outbound inventory;
-- return transit, physical receipt and item-level inspection disposition;
-- available, damaged, quarantine and loss positions;
-- provider-event ordering and duplicate protection.
-
-### Customer returns, exchanges and refunds
-
-- request, approval, rejection, cancellation, transit, receipt, inspection and
-  completion;
-- exact partial/full returned quantities;
-- pending server-priced replacement order for exchange;
-- append-only partial/full refund and exact reversal;
-- inventory, DZD financial and compensation facts;
-- AR/FR/EN seller controls and invariant/API tests.
-
-### Canonical intake adoption
-
-- storefront: exact source principal, server pricing, variants and response-loss
-  replay; source checkpoint `30563250291` passed on
-  `8353e6bea505d544412b84e882b2aa10d65ab2c7`;
-- CSV/XLSX: SHA-256 file identity, grouped orders, exact catalog resolution,
-  server pricing and replay; source checkpoint `30564927795` passed on
-  `59b8893932c0cc8b1781bbf8578235f1adb5b29f`;
-- Shopify/WooCommerce/YouCan: canonical creation, provider revisions, safe
-  cancellation and fail-closed watermark advancement; source checkpoint
-  `30605601147` passed on `a43203c91eae7e224534961bc038f14d21f8f99f`;
-- WhatsApp extraction and AI proposal-bound creation: persisted provider/proposal
-  identity, exact catalog authority, server pricing and replay; source checkpoint
-  `30607584514` passed on `375b137d8aa3b5201e05fc2835224b5041a0d50e`.
-
-### Active package at session close — governed courier lifecycle (source-complete)
-
-- trusted booking command with exact order version and provider selection;
-- durable external effect outside the canonical transaction;
-- tracking ID, label, cost and estimated-delivery receipt;
-- restart-safe lease, known failure, ambiguous outcome and operator
-  reconciliation;
-- append-only provider event identity and monotonic tracking checkpoints;
-- pickup/transit reservation consumption;
-- delivered COD receivable creation;
-- failed/refused recovery integration;
-- trusted API routes;
-- AR/FR/EN seller workspace;
-- replay, concurrency, response-loss, out-of-order, provider-failure and restart
-  invariant coverage.
-
-The strict indexed-status TypeScript repair is commit
-`ff646e819cb55004909aec0a98f07dc31dc356d2`. The complete exact-head source
-checkpoint `30609652132` passed on
-`85958be78a28b7f5ba64268cba7b0499f906719c`, including:
-
-- frozen dependency install;
-- Prisma generation;
-- disposable test sandbox;
-- version/updater and documentation authority;
-- TypeScript;
-- ESLint;
-- full unit/integration suite;
-- migration status.
-
-The temporary branch-writing repair step was removed before this green checkpoint.
-`.github/workflows/integration-source.yml` is read-only, checks out the exact PR
-head and persists no credentials.
-
-### Preserved Phase 3 WhatsApp durability
-
-PR #195 also preserves the corrected durable WhatsApp send/outbox/receipt package
-from closed PR #194. That source is not a Phase 3 completion claim and has not
-received the final multi-phase frozen-head review or installed validation.
-
-## Finite Phase 1 closure ledger
-
-Only these Phase 1 gates remain:
-
-1. **Governed profitability authority**
-   - audit the existing `metrics.ts` foundation against the new COD, courier fee,
-     return, refund, reversal, loss and compensation facts;
-   - establish one realized-revenue, COGS and profitability definition;
-   - make dashboard, analytics, accounting, reports and AI reads agree;
-   - add period-boundary and cross-surface invariant tests.
-
-2. **Process restart and in-place update preservation**
-   - seed a representative canonical order through all major Phase 1 facts;
-   - close and reopen the process/database clients;
-   - apply the current migration set as an in-place update fixture;
-   - prove command replay, projections, encrypted payloads, reservations,
-     movements, provider receipts, settlement and return/refund facts survive.
-
-3. **Disposable snapshot/restore compatibility**
-   - use the existing local backup primitive on a disposable shop fixture;
-   - verify SQLite integrity and exact canonical fact counts/hashes before backup;
-   - wipe/replace only the disposable fixture;
-   - restore and prove every Phase 1 relation, encrypted payload and replay key;
-   - do not claim production all-shop restore or replacement-install recovery;
-     Phase 4 owns those mechanisms.
-
-4. **Representative Phase 1 exit journey**
-   - one UI/API/domain/database Golden COD journey using the governed commands;
-   - happy, validation, permission, duplicate, concurrency, interruption, stale,
-     conflict, provider failure, cancellation, return and recovery cases;
-   - AR/FR/EN controls and persisted seller-visible states;
-   - final audit that adopted sources cannot bypass the command kernel.
-
-5. **Phase 1 authority reconciliation**
-   - update Roadmap `Current result`, Current State discontinuities, Working Memory,
-     PR #195 and issue #164 only after the exit evidence is complete;
-   - do not mark PR #195 ready or run the full Windows/Rust/MSI program merely
-     because Phase 1 source closes; the Founder authorized one Phase 1–4 program.
-
-## Exact next-session order
-
-1. Read root `AGENTS.md`, this file, PR #195 and the active Phase 1 Roadmap gate.
-2. Verify protected `main` and the exact PR head; confirm no unexpected divergence.
-3. Confirm that the current head descends from source-green courier checkpoint
-   `85958be78a28b7f5ba64268cba7b0499f906719c` and that no later source failure
-   exists.
-4. Start the governed profitability package. Do not reopen courier or earlier
-   Phase 1 packages unless new evidence proves a P0/P1 regression.
-5. Implement restart/update and disposable backup compatibility as one preservation
-   package.
-6. Run the representative multilingual Phase 1 exit journey and legacy-bypass
-   audit.
-7. Reconcile Phase 1 documentation only after all applicable source gates pass.
-8. Keep PR #195 draft and unmerged; continue into Phase 2 in the same program only
-   after Phase 1 shared contracts are stable.
+Licensing, invitations/teams and native multi-shop lifecycle remain later coherent
+Phase 2 packages after this identity contract is stable.
 
 ## Protected local boundaries
 
@@ -211,20 +81,13 @@ Only these Phase 1 gates remain:
 - Preserve the unrelated modified
   `src/lib/identity/__tests__/session-authority.test.ts` in the original checkout.
 - PR #186 (`agent/phase2-session-freshness`) is obsolete/conflicting proposed
-  source. Reconcile it deliberately before Phase 2; never merge it directly.
-- The old local COD and durable-identity worktrees are historical proposals only.
-  PR #195 is the active source authority for the integrated program.
+  source. Mine it deliberately against current contracts; never merge it directly.
+- Keep PR #195 draft and unmerged. Do not bump the application version.
 
 ## Validation model
 
-Draft PR #195 runs only the targeted source checkpoint. Windows standalone, Rust
-parity and installed-MSI lanes remain deferred until the complete Phase 1–4 source
-is frozen. A source-green draft head is not installed, provider-certified,
-independently security-reviewed, legally certified or Founder-accepted.
-
-## Completion truth
-
-A branch, commit, PR, model, route, page, mock or passing test does not complete a
-phase. Phase 1 closes only when its full named exit evidence is implemented and
-verified. Protected merge, full multi-phase validation and Founder acceptance are
-later and separate gates.
+Draft PR #195 runs the targeted exact-head source checkpoint. Keep CI read-only
+and remove temporary repair scaffolding before closing a package. Windows
+standalone, Rust parity, signed MSI, installed lifecycle, live-provider,
+independent security/privacy/Law 18-07 and Founder acceptance are later separate
+gates.
