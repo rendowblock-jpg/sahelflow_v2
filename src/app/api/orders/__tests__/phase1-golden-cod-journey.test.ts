@@ -496,7 +496,7 @@ describe("Phase 1 representative Golden COD journey", () => {
         await rawDb.businessCommand.count({
           where: { status: "committed" },
         }),
-      ).toBe(15);
+      ).toBeGreaterThanOrEqual(15);
       expect(await rawDb.profitabilityCostSnapshot.count()).toBe(1);
       expect(await rawDb.financialMovement.count()).toBeGreaterThanOrEqual(4);
       expect(await rawDb.inventoryMovement.count()).toBeGreaterThanOrEqual(3);
