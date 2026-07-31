@@ -9,6 +9,7 @@ import {
   listMemberInvitations,
 } from "@/lib/identity/member-authority";
 import { PHASE2_ACTIONS } from "@/lib/identity/permissions";
+import { acceptedInvitationIds } from "@/lib/identity/team-directory";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -40,14 +41,19 @@ function requireOwnerPerson(
 export const GET = withErrorHandler(async () => {
   const context = await requireTrustedAction("members.manage");
   const actor = requireOwnerPerson(context);
-  const authority = await listMemberInvitations(
-    actor.sessionId,
-    context.shop,
+  const [authority, acceptedIds] = await Promise.all([
+    listMemberInvitations(actor.sessionId, context.shop),
+    acceptedInvitationIds(context.shop),
+  ]);
+  const invitations = authority.invitations.map((invitation) =>
+    acceptedIds.has(invitation.id)
+      ? { ...invitation, state: "accepted" as const }
+      : invitation,
   );
   return NextResponse.json(
     {
-      authority,
-      availableShopIds: [context.shop.shopId],
+      authority: { ...authority, invitations },
+      shopOptions: [{ id: context.shop.shopId, current: true }],
     },
     { headers: { "Cache-Control": "no-store" } },
   );
