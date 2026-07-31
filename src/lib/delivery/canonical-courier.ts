@@ -16,11 +16,7 @@ import {
 } from "@/lib/business-truth/principal";
 import { assertBusinessCommandShopAuthority } from "@/lib/business-truth/shop-authority";
 import type { ServiceContext } from "@/lib/data/service-base";
-import {
-  DELIVERY_PROVIDERS,
-  type DeliveryProvider,
-  type ShipmentRequest,
-} from "@/lib/integrations/delivery/types";
+import { DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 import {
   ConflictError,
@@ -169,19 +165,22 @@ function safeInteger(value: number | bigint, field: string): number {
   return output;
 }
 
-async function assertCourierCommandAuthority(
+async function trustedCourierCommandContext(
   context: BusinessPrincipalContext,
-): Promise<void> {
+): Promise<BusinessPrincipalContext> {
   assertBusinessCommandShopAuthority(context);
-  await resolveTrustedBusinessPrincipal(context);
+  return {
+    ...context,
+    businessPrincipal: await resolveTrustedBusinessPrincipal(context),
+  };
 }
 
 export async function queueCanonicalCourierBooking(
   context: BusinessPrincipalContext,
   input: unknown,
 ): Promise<BusinessCommandResult<CourierBookingResult>> {
-  await assertCourierCommandAuthority(context);
-  return queueReviewedCanonicalCourierBooking(context, input);
+  const trustedContext = await trustedCourierCommandContext(context);
+  return queueReviewedCanonicalCourierBooking(trustedContext, input);
 }
 
 async function ambiguousBookingAuthority(
@@ -256,11 +255,11 @@ export async function reconcileCanonicalCourierBooking(
   input: unknown,
 ): Promise<BusinessCommandResult<Record<string, unknown>>> {
   const data = reconciliationSchema.parse(input);
-  await assertCourierCommandAuthority(context);
-  const aggregate = await reconciliationAggregate(context, data);
+  const trustedContext = await trustedCourierCommandContext(context);
+  const aggregate = await reconciliationAggregate(trustedContext, data);
 
   return executeBusinessCommand(
-    context,
+    trustedContext,
     {
       idempotencyKey: data.idempotencyKey,
       commandType: `courier.booking.reconcile.${data.action}.v1`,
@@ -529,9 +528,9 @@ async function bookingRequestByCommand(
 
 async function recoverUnreadablePostEffectLeases(
   context: ServiceContext,
-  limit: number,
+  enabled: boolean,
 ): Promise<void> {
-  if (limit <= 0) return;
+  if (!enabled) return;
   const cutoff = new Date(Date.now() - LEASE_MS);
   const rows = (await context.prisma.outboxIntent.findMany({
     where: {
@@ -541,7 +540,6 @@ async function recoverUnreadablePostEffectLeases(
       lockedAt: { lte: cutoff },
     },
     orderBy: [{ lockedAt: "asc" }, { createdAt: "asc" }],
-    take: Math.min(20, limit),
   })) as BookingOutboxRow[];
 
   for (const row of rows) {
@@ -605,6 +603,6 @@ export async function drainDueCourierBookings(
   limit = 10,
   sender?: CourierBookingSender,
 ): Promise<number> {
-  await recoverUnreadablePostEffectLeases(context, limit);
+  await recoverUnreadablePostEffectLeases(context, limit > 0);
   return drainReviewedCourierBookings(context, limit, sender);
 }
