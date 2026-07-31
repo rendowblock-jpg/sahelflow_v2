@@ -479,14 +479,23 @@ describe("Phase 1 representative Golden COD journey", () => {
       const order = await rawDb.order.findUniqueOrThrow({
         where: { id: created.orderId },
       });
-      expect(order).toMatchObject({
+      const projectedLifecycle = {
         status: finalReturn.position.status,
         version: finalReturn.position.orderVersion,
         inventoryState: finalReturn.position.inventoryState,
         codState: finalReturn.position.codState,
         returnState: finalReturn.position.returnState,
         refundState: finalReturn.position.refundState,
-      });
+      };
+      const persistedLifecycle = {
+        status: order.status,
+        version: order.version,
+        inventoryState: order.inventoryState,
+        codState: order.codState,
+        returnState: order.returnState,
+        refundState: order.refundState,
+      };
+      expect(persistedLifecycle).toEqual(projectedLifecycle);
       expect(await rawDb.businessCommand.count()).toBe(15);
       expect(await rawDb.profitabilityCostSnapshot.count()).toBe(1);
       expect(await rawDb.financialMovement.count()).toBeGreaterThanOrEqual(4);
