@@ -70,10 +70,8 @@ function normalizeLink(rawTarget: string): string | null {
   if (target.startsWith("<") && target.endsWith(">")) {
     target = target.slice(1, -1);
   }
-
   const titleMatch = target.match(/^(\S+)(?:\s+["'].*["'])$/);
   if (titleMatch?.[1]) target = titleMatch[1];
-
   if (
     !target ||
     target.startsWith("#") ||
@@ -81,11 +79,9 @@ function normalizeLink(rawTarget: string): string | null {
   ) {
     return null;
   }
-
   target = target.split("#", 1)[0] ?? "";
   target = target.split("?", 1)[0] ?? "";
   if (!target) return null;
-
   try {
     return decodeURIComponent(target);
   } catch {
@@ -107,13 +103,11 @@ for (const absoluteFile of markdownFiles) {
     .replaceAll("\\", "/");
   const content = readFileSync(absoluteFile, "utf8");
   let match: RegExpExecArray | null;
-
   while ((match = markdownLinkPattern.exec(content)) !== null) {
     const rawTarget = match[1];
     if (!rawTarget) continue;
     const target = normalizeLink(rawTarget);
     if (!target) continue;
-
     const absoluteTarget = isAbsolute(target)
       ? resolve(repoRoot, target.replace(/^[/\\]+/, ""))
       : resolve(dirname(absoluteFile), target);
@@ -242,9 +236,10 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Sole-agent review rule",
       "CI read-only",
       "agent/phases1-4-completion-program",
-      "Phase 2A.1 session/setup authority is closed",
-      "Phase 2A.2 durable owner identity is closed",
-      "Exact next outcome — Phase 2A.3",
+      "Phase 2A.1 — setup and session authority",
+      "Phase 2A.2 — durable owner identity kernel",
+      "Phase 2A.3 — revocation and policy freshness",
+      "Exact next outcome — Phase 2A.4",
     ],
   ],
   [
@@ -273,13 +268,14 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Phase 0 status:** Complete",
       "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** Phase 2A.3 — revocation, policy freshness and identity administration",
+      "**Active package:** Phase 2A.4 — multi-member roles, invitations and per-shop permissions",
       "# Phase 1 — Canonical Golden COD business core",
       "## Result — source-closed on draft PR #195",
       "# Phase 2 — Identity, authorization, licensing and multi-shop",
       "### Package 2A.1 — setup and session authority — closed",
       "### Package 2A.2 — durable owner identity kernel — closed",
-      "### Package 2A.3 — revocation and policy freshness — active",
+      "### Package 2A.3 — revocation and policy freshness — closed",
+      "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — active",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -305,13 +301,14 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/operations/WORKING_MEMORY.md",
     [
       "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** 2A.3 — revocation, policy freshness and identity administration",
+      "**Active package:** 2A.4 — multi-member roles, invitations and per-shop permissions",
       "**Active PR:** draft PR #195",
       "Phase 0 remains complete",
       "Phase 1 — source-closed",
       "Phase 2A.1 result — setup and session authority closed",
       "Phase 2A.2 result — durable owner identity kernel closed",
-      "Active package — Phase 2A.3 revocation and policy freshness",
+      "Phase 2A.3 result — revocation and policy freshness closed",
+      "Active package — Phase 2A.4 member authority",
       "Exact next-session order",
       "**Execution epic:** issue #164",
     ],
@@ -365,18 +362,15 @@ for (const relativePath of ACTIVE_PHASE_FILES) {
 }
 
 const staleMarkers: Array<[string, string]> = [
+  ["documentation/system/ROADMAP.md", "Package 2A.3 — revocation and policy freshness — active"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.3 revocation and policy freshness"],
+  ["AGENTS.md", "Exact next outcome — Phase 2A.3"],
   ["documentation/system/ROADMAP.md", "Package 2A.1 — setup and session authority — active"],
   ["documentation/system/ROADMAP.md", "Package 2A.2 — durable identity kernel — next"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A session and setup authority"],
   ["documentation/README.md", "**Active phase:** Phase 1 closure repair"],
   ["documentation/system/ROADMAP.md", "**Active phase:** Phase 1 closure repair"],
   ["documentation/operations/WORKING_MEMORY.md", "**Active phase:** Phase 1 closure repair"],
   ["AGENTS.md", "Keep one active Phase 1 closure frontier"],
-  ["AGENTS.md", "until the repaired Phase 1 closure boundary receives an independent"],
-  ["documentation/operations/WORKING_MEMORY.md", "only remaining Phase 1 closure gate"],
-  ["documentation/operations/WORKING_MEMORY.md", "independently cleared"],
-  ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
-  ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
   ["AGENTS.md", "The compressed program uses four planned sessions"],
   ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
 ];
@@ -403,7 +397,6 @@ const currentOwnedDocuments = [
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/research/RESEARCH.md",
 ];
-
 const obsoleteSessionPatterns = [
   /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
   /^#{2,4}\s+session\s+map\b.*$/gim,
@@ -433,7 +426,7 @@ console.log(
 
 if (findings.length === 0) {
   console.log(
-    "PASS: FD-028 authorities, active Phase 2A.3, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, active Phase 2A.4, shared scripts and relative links are coherent.",
   );
   process.exit(0);
 }
