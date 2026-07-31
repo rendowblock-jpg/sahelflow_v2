@@ -18,6 +18,14 @@ const trustedActorHarness = vi.hoisted(() => ({
     issuedAt: new Date("2026-07-29T22:00:00.000Z"),
     lastSeenAt: new Date("2026-07-29T23:55:00.000Z"),
   } as unknown,
+  identity: {
+    personId: "5".repeat(32),
+    workspaceMemberId: "6".repeat(32),
+    deviceId: "7".repeat(32),
+    role: "owner" as const,
+    policyVersion: 3,
+    revocationEpoch: 2,
+  },
   shop: {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -35,6 +43,10 @@ vi.mock("@/lib/auth/server", () => ({
 
 vi.mock("@/lib/db", () => ({
   shopContext: trustedActorHarness.shop,
+}));
+
+vi.mock("../control-authority", () => ({
+  ensureDurableIdentityActor: vi.fn(async () => trustedActorHarness.identity),
 }));
 
 import * as trustedActorModule from "../trusted-actor";
@@ -63,6 +75,14 @@ const resetTrustedActorHarness = () => {
     issuedAt: ISSUED_AT,
     lastSeenAt: LAST_SEEN_AT,
   };
+  Object.assign(trustedActorHarness.identity, {
+    personId: "5".repeat(32),
+    workspaceMemberId: "6".repeat(32),
+    deviceId: "7".repeat(32),
+    role: "owner",
+    policyVersion: 3,
+    revocationEpoch: 2,
+  });
   Object.assign(trustedActorHarness.shop, {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -241,23 +261,26 @@ describe("resolveSessionAuthority", () => {
 
 describe("requireTrustedActor", () => {
   it("is the only exported minting path", () => {
-    expect("createCompatibilityLocalOwnerContext" in trustedActorModule).toBe(false);
+    expect("createPersonContext" in trustedActorModule).toBe(false);
     expect(typeof trustedActorModule.requireTrustedActor).toBe("function");
   });
 
-  it("binds the exact authenticated session without inventing person identity", async () => {
+  it("binds the exact authenticated session to durable person authority", async () => {
     const context = await trustedActorModule.requireTrustedActor();
     expect(context).toEqual({
       version: 1,
       actor: {
-        kind: "compatibility_local_owner",
+        kind: "person",
+        personId: "5".repeat(32),
+        workspaceMemberId: "6".repeat(32),
+        deviceId: "7".repeat(32),
         role: "owner",
         sessionId: "session-1",
-        compatibilityOnly: true,
+        policyVersion: 3,
+        revocationEpoch: 2,
       },
       shop: trustedActorHarness.shop,
     });
-    expect("personId" in context.actor).toBe(false);
     expect(trustedActorModule.isTrustedActorContext(context)).toBe(true);
     expect(Object.getOwnPropertySymbols(context)).toHaveLength(0);
   });
@@ -317,10 +340,14 @@ describe("requireTrustedActor", () => {
     const lookalike = {
       version: 1,
       actor: {
-        kind: "compatibility_local_owner",
+        kind: "person",
+        personId: "5".repeat(32),
+        workspaceMemberId: "6".repeat(32),
+        deviceId: "7".repeat(32),
         role: "owner",
         sessionId: "session-1",
-        compatibilityOnly: true,
+        policyVersion: 3,
+        revocationEpoch: 2,
       },
       shop: trustedActorHarness.shop,
     };
@@ -344,10 +371,14 @@ describe("requireTrustedActor", () => {
     const inherited = Object.create(context) as Record<string, unknown>;
     Object.defineProperty(inherited, "actor", {
       value: {
-        kind: "compatibility_local_owner",
+        kind: "person",
+        personId: "5".repeat(32),
+        workspaceMemberId: "6".repeat(32),
+        deviceId: "7".repeat(32),
         role: "owner",
         sessionId: "forged-session",
-        compatibilityOnly: true,
+        policyVersion: 3,
+        revocationEpoch: 2,
       },
       enumerable: true,
     });
