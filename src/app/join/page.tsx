@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ArrowRight, KeyRound, Loader2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -78,6 +78,7 @@ const COPY = {
 } as const;
 
 type ApiError = { error?: string };
+type AcceptanceAttempt = Readonly<{ fingerprint: string; requestId: string }>;
 
 export default function JoinPage() {
   const router = useRouter();
@@ -91,6 +92,7 @@ export default function JoinPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const acceptanceAttempt = useRef<AcceptanceAttempt | null>(null);
 
   const submit = useCallback(
     async (event: React.FormEvent) => {
@@ -101,16 +103,33 @@ export default function JoinPage() {
         return;
       }
 
+      const normalizedToken = token.trim();
+      const normalizedName = displayName.trim();
+      const normalizedLogin = loginId.trim().toLowerCase();
+      const fingerprint = JSON.stringify([
+        normalizedToken,
+        normalizedName,
+        normalizedLogin,
+        pin,
+      ]);
+      if (acceptanceAttempt.current?.fingerprint !== fingerprint) {
+        acceptanceAttempt.current = {
+          fingerprint,
+          requestId: globalThis.crypto.randomUUID(),
+        };
+      }
+      const requestId = acceptanceAttempt.current.requestId;
+
       setLoading(true);
       try {
         const response = await fetch("/api/auth/invitations/accept", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            token: token.trim(),
-            requestId: globalThis.crypto.randomUUID(),
-            displayName: displayName.trim(),
-            loginId: loginId.trim().toLowerCase(),
+            token: normalizedToken,
+            requestId,
+            displayName: normalizedName,
+            loginId: normalizedLogin,
             pin,
           }),
         });
@@ -131,7 +150,10 @@ export default function JoinPage() {
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-muted/30 p-4">
       <RuntimeUiReadyBeacon />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5"
+        aria-hidden="true"
+      />
       <Card className="relative w-full max-w-lg border shadow-popover">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
@@ -221,8 +243,16 @@ export default function JoinPage() {
               </div>
             </div>
 
-            {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-            {success ? <p role="status" className="text-sm text-primary">{copy.success}</p> : null}
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            {success ? (
+              <p role="status" className="text-sm text-primary">
+                {copy.success}
+              </p>
+            ) : null}
 
             <Button
               type="submit"
@@ -243,12 +273,20 @@ export default function JoinPage() {
                 <>
                   <KeyRound className="me-2 h-4 w-4" aria-hidden="true" />
                   {copy.submit}
-                  <ArrowRight className="ms-2 h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+                  <ArrowRight
+                    className="ms-2 h-4 w-4 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
                 </>
               )}
             </Button>
 
-            <Button type="button" variant="ghost" className="w-full" onClick={() => router.push("/login")}>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => router.push("/login")}
+            >
               {copy.loginLink}
             </Button>
           </form>
