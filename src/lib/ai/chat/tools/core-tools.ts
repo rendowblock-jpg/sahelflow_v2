@@ -19,6 +19,7 @@ import { orderService } from "@/lib/data/order-service";
 import { grossRevenue } from "@/lib/data/metrics";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { currentAiSourceProposal } from "@/lib/ai/chat/source-proposal";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -246,7 +247,12 @@ registerTool({
     try {
       const input = createOrderSchema.parse(params);
       const db = getDb(ctx);
-      if (!ctx.sourceIdentity || !ctx.sourceOrderId) {
+      const persistedProposal = currentAiSourceProposal();
+      const sourceIdentity =
+        ctx.sourceIdentity ?? persistedProposal?.sourceIdentity;
+      const sourceOrderId =
+        ctx.sourceOrderId ?? persistedProposal?.sourceOrderId;
+      if (!sourceIdentity || !sourceOrderId) {
         return {
           success: false,
           error:
@@ -271,18 +277,18 @@ registerTool({
           shop: ctx.shop,
           businessPrincipal: sourceBusinessPrincipal(
             "ai_chat",
-            ctx.sourceIdentity,
+            sourceIdentity,
           ),
         },
         {
-          idempotencyKey: `ai-order:${ctx.sourceOrderId}`,
-          correlationId: `ai:${ctx.sourceIdentity}:${ctx.sourceOrderId}`,
+          idempotencyKey: `ai-order:${sourceOrderId}`,
+          correlationId: `ai:${sourceIdentity}:${sourceOrderId}`,
           source: "ai_chat",
-          sourceIdentity: ctx.sourceIdentity,
-          sourceOrderId: ctx.sourceOrderId,
-          sourceRevision: ctx.sourceOrderId,
+          sourceIdentity,
+          sourceOrderId,
+          sourceRevision: sourceOrderId,
           sourceDetails: {
-            proposalId: ctx.sourceOrderId,
+            proposalId: sourceOrderId,
             tool: "create_order",
           },
           initialStatus: "draft",
