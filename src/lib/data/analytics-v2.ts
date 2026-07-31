@@ -116,7 +116,7 @@ interface SkuAllocationItem {
 
 function allocateDzd(
   amount: number,
-  items: readonly Array<{ id: string; quantity: number; unitPrice: number }>,
+  items: ReadonlyArray<{ id: string; quantity: number; unitPrice: number }>,
 ): Array<{ itemId: string; amount: number }> {
   if (amount <= 0 || items.length === 0) return [];
   const ordered = [...items].sort((a, b) => a.id.localeCompare(b.id));
@@ -503,7 +503,11 @@ export async function getPeriodComparison(
       ? (previousReturned / (previousDelivered + previousReturned)) * 100
       : 0;
   const pctChange = (value: number, baseline: number) =>
-    baseline === 0 ? (value > 0 ? 100 : 0) : ((value - baseline) / baseline) * 100;
+    baseline === 0
+      ? value > 0
+        ? 100
+        : 0
+      : ((value - baseline) / baseline) * 100;
 
   return {
     current: {
