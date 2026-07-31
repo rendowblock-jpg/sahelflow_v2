@@ -3,6 +3,7 @@ import "server-only";
 import { getCurrentSessionAuthority } from "@/lib/auth/server";
 import { shopContext } from "@/lib/db";
 import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
+import type { Phase2Action } from "@/lib/identity/permissions";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 import type { SessionAuthorityResult } from "./session-authority";
@@ -29,6 +30,7 @@ export type PersonActor = Readonly<{
   deviceId: string;
   sessionId: string;
   role: BuiltInRole;
+  permissions: readonly Phase2Action[] | null;
   policyVersion: number;
   revocationEpoch: number;
 }>;
@@ -93,6 +95,7 @@ function createPersonContext(
       deviceId: identity.deviceId,
       sessionId,
       role: identity.role,
+      permissions: identity.permissions,
       policyVersion: identity.policyVersion,
       revocationEpoch: identity.revocationEpoch,
     }),
