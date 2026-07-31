@@ -24,14 +24,21 @@ trust copied head or run numbers without re-reading GitHub at session start.
 
 ## Protected truth
 
-Phase 0 remains complete. Phase 1 is source-closed on the integration branch.
-Protected `main`, the published release, installed Internal.13 evidence and Founder
-acceptance are unchanged. Draft PR #195 is proposed source only: it is not merged,
-published, installed, provider-certified, externally reviewed or Founder-accepted.
+Phase 0 remains complete. Protected `main`, the published release, installed
+Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
+proposed source only: it is not merged, published, installed, provider-certified,
+externally reviewed or Founder-accepted.
 
 Production native all-shop restore remains Phase 4. Full Windows/Rust/MSI,
 installed, live-provider, legal, Beta and Founder-acceptance evidence remain later
 separate gates.
+
+## Phase 1 — source-closed
+
+Phase 1 is source-closed on the integration branch at
+`3783028396f3b0c4afa43f33fdd3c1c6cc51789f`, with normal CI `30652282305` and
+Integration source checkpoint `30652282191` successful. Do not reopen it absent
+new concrete P0/P1 evidence.
 
 ## Phase 2A.1 result — setup and session authority closed
 
