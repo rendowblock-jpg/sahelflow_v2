@@ -11,45 +11,39 @@ import type { BusinessCommandResult } from "@/lib/business-truth/contracts";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import {
-  systemBusinessPrincipal,
+  resolveTrustedBusinessPrincipal,
   type BusinessPrincipalContext,
 } from "@/lib/business-truth/principal";
+import { assertBusinessCommandShopAuthority } from "@/lib/business-truth/shop-authority";
 import type { ServiceContext } from "@/lib/data/service-base";
-import {
-  getDeliveryAdapter,
-  loadDeliveryCredentials,
-} from "@/lib/integrations/delivery";
 import {
   DELIVERY_PROVIDERS,
   type DeliveryProvider,
   type ShipmentRequest,
-  type ShipmentResult,
 } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 import {
   ConflictError,
   NotFoundError,
-  SahelFlowError,
   ValidationError,
 } from "@/types/errors";
 import {
   COURIER_BOOKING_EFFECT_TYPE,
-  drainDueCourierBookings as drainLegacyCourierBookings,
+  drainDueCourierBookings as drainReviewedCourierBookings,
   getCanonicalCourierPosition,
   ingestCanonicalCourierTrackingEvent,
-  reconcileCanonicalCourierBooking,
+  queueCanonicalCourierBooking as queueReviewedCanonicalCourierBooking,
   synchronizeCanonicalCourierTracking,
   type CourierBookingResult,
   type CourierBookingSender,
   type CourierPosition,
   type CourierTrackingFetcher,
-} from "./canonical-courier-legacy";
+} from "./canonical-courier-reviewed-base";
 
 export {
   COURIER_BOOKING_EFFECT_TYPE,
   getCanonicalCourierPosition,
   ingestCanonicalCourierTrackingEvent,
-  reconcileCanonicalCourierBooking,
   synchronizeCanonicalCourierTracking,
 };
 export type {
@@ -60,15 +54,53 @@ export type {
 };
 
 const LEASE_MS = 120_000;
-
 const providerSchema = z.enum(DELIVERY_PROVIDERS);
-const bookingSchema = z.object({
-  orderId: z.string().trim().min(1),
-  provider: providerSchema,
-  expectedVersion: z.number().int().positive().safe(),
-  idempotencyKey: z.string().trim().min(8).max(200),
-  correlationId: z.string().trim().min(1).max(200).optional(),
-});
+
+const reconciliationSchema = z
+  .object({
+    deliveryId: z.string().trim().min(1),
+    action: z.enum(["confirm_created", "confirm_not_created"]),
+    expectedVersion: z.number().int().positive().safe(),
+    trackingNumber: z.string().trim().min(1).max(240).optional(),
+    labelUrl: z.string().url().max(2000).nullable().optional(),
+    cost: z.number().int().nonnegative().safe().optional(),
+    estimatedDelivery: z.coerce.date().nullable().optional(),
+    reasonCode: z
+      .string()
+      .trim()
+      .min(2)
+      .max(80)
+      .regex(/^[a-z0-9][a-z0-9._-]*$/i)
+      .transform((value) => value.toLowerCase()),
+    idempotencyKey: z.string().trim().min(8).max(200),
+    correlationId: z.string().trim().min(1).max(200).optional(),
+  })
+  .superRefine((input, context) => {
+    if (input.action === "confirm_created" && !input.trackingNumber) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["trackingNumber"],
+        message:
+          "A manually confirmed provider shipment requires tracking identity",
+      });
+    }
+    if (input.action === "confirm_not_created") {
+      for (const field of [
+        "trackingNumber",
+        "labelUrl",
+        "cost",
+        "estimatedDelivery",
+      ] as const) {
+        if (input[field] !== undefined) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field],
+            message: `${field} is valid only when confirming a created shipment`,
+          });
+        }
+      }
+    }
+  });
 
 const bookingPayloadSchema = z.object({
   deliveryId: z.string().trim().min(1),
@@ -98,13 +130,19 @@ const bookingPayloadSchema = z.object({
   }),
 });
 
-interface ReservationRow {
-  id: string;
-  orderItemId: string | null;
-  productId: string;
-  productVariantId: string | null;
-  quantity: number | bigint;
-  state: string;
+interface StoredCommandAggregateRow {
+  commandType: string;
+  aggregateType: string;
+  aggregateId: string;
+  expectedVersion: number | bigint;
+}
+
+interface AmbiguousBookingAuthorityRow {
+  commandId: string;
+  outboxId: string;
+  effectKey: string;
+  orderId: string;
+  deliveryId: string;
 }
 
 interface BookingOutboxRow {
@@ -123,13 +161,6 @@ interface BookingOutboxRow {
   outcomeState: string;
 }
 
-interface StoredBookingCommandRow {
-  commandType: string;
-  aggregateType: string;
-  aggregateId: string;
-  expectedVersion: number | bigint;
-}
-
 function safeInteger(value: number | bigint, field: string): number {
   const output = Number(value);
   if (!Number.isSafeInteger(output)) {
@@ -138,107 +169,103 @@ function safeInteger(value: number | bigint, field: string): number {
   return output;
 }
 
-async function reservationRows(
-  tx: BusinessTransaction,
-  orderId: string,
-): Promise<ReservationRow[]> {
-  return tx.$queryRaw<ReservationRow[]>`
-    SELECT "id", "orderItemId", "productId", "productVariantId", "quantity", "state"
-    FROM "InventoryReservation"
-    WHERE "orderId" = ${orderId}
-      AND "state" = 'active'
-    ORDER BY "orderItemId" ASC, "id" ASC
-  `;
-}
-
-function assertReservations(
-  rows: readonly ReservationRow[],
-  items: readonly {
-    id: string;
-    productId: string | null;
-    productVariantId: string | null;
-    quantity: number;
-  }[],
-): void {
-  if (rows.length !== items.length) {
-    throw new ConflictError(
-      `Courier inventory authority requires ${items.length} active reservations, found ${rows.length}`,
-    );
-  }
-
-  const byItem = new Map(rows.map((row) => [row.orderItemId, row]));
-  if (byItem.size !== rows.length) {
-    throw new ConflictError(
-      "Courier inventory authority contains duplicate reservations",
-    );
-  }
-
-  for (const item of items) {
-    if (!item.productId) {
-      throw new ValidationError(
-        `Order item '${item.id}' has no product identity`,
-        "items.productId",
-      );
-    }
-    const reservation = byItem.get(item.id);
-    if (
-      !reservation ||
-      reservation.productId !== item.productId ||
-      reservation.productVariantId !== item.productVariantId ||
-      safeInteger(reservation.quantity, "reservation quantity") !== item.quantity ||
-      reservation.state !== "active"
-    ) {
-      throw new ConflictError(
-        `Reservation authority does not match order item '${item.id}'`,
-      );
-    }
-  }
-}
-
-async function bookingAggregate(
-  context: ServiceContext,
-  data: z.infer<typeof bookingSchema>,
-): Promise<{ id: string; expectedVersion: number }> {
-  const generationId = `${data.orderId}:${data.expectedVersion}`;
-  const stored = await context.prisma.$queryRaw<StoredBookingCommandRow[]>`
-    SELECT "commandType", "aggregateType", "aggregateId", "expectedVersion"
-    FROM "BusinessCommand"
-    WHERE "idempotencyKey" = ${data.idempotencyKey}
-    LIMIT 1
-  `;
-  const replay = stored[0];
-
-  if (
-    replay?.commandType === "courier.booking.queue.v1" &&
-    replay.aggregateType === "canonical-courier-booking" &&
-    (replay.aggregateId === data.orderId || replay.aggregateId === generationId)
-  ) {
-    return {
-      id: replay.aggregateId,
-      expectedVersion: safeInteger(
-        replay.expectedVersion,
-        "stored courier aggregate version",
-      ),
-    };
-  }
-
-  return { id: generationId, expectedVersion: 0 };
+async function assertCourierCommandAuthority(
+  context: BusinessPrincipalContext,
+): Promise<void> {
+  assertBusinessCommandShopAuthority(context);
+  await resolveTrustedBusinessPrincipal(context);
 }
 
 export async function queueCanonicalCourierBooking(
   context: BusinessPrincipalContext,
   input: unknown,
 ): Promise<BusinessCommandResult<CourierBookingResult>> {
-  const data = bookingSchema.parse(input);
-  const aggregate = await bookingAggregate(context, data);
+  await assertCourierCommandAuthority(context);
+  return queueReviewedCanonicalCourierBooking(context, input);
+}
+
+async function ambiguousBookingAuthority(
+  tx: BusinessTransaction,
+  deliveryId: string,
+): Promise<AmbiguousBookingAuthorityRow | null> {
+  const rows = await tx.$queryRaw<AmbiguousBookingAuthorityRow[]>`
+    SELECT
+      event."createdByCommandId" AS "commandId",
+      outbox."id" AS "outboxId",
+      outbox."effectKey" AS "effectKey",
+      event."orderId" AS "orderId",
+      event."deliveryId" AS "deliveryId"
+    FROM "CanonicalDeliveryEvent" AS event
+    INNER JOIN "OutboxIntent" AS outbox
+      ON outbox."commandId" = event."createdByCommandId"
+    WHERE event."deliveryId" = ${deliveryId}
+      AND event."eventType" = 'courier_booking_requested'
+      AND outbox."effectType" = ${COURIER_BOOKING_EFFECT_TYPE}
+      AND outbox."outcomeState" = 'ambiguous'
+    ORDER BY outbox."createdAt" DESC, outbox."id" DESC
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+async function reconciliationAggregate(
+  context: BusinessPrincipalContext,
+  data: z.infer<typeof reconciliationSchema>,
+): Promise<{ id: string; expectedVersion: number }> {
+  const commandType = `courier.booking.reconcile.${data.action}.v1`;
+  const stored = await context.prisma.$queryRaw<StoredCommandAggregateRow[]>`
+    SELECT "commandType", "aggregateType", "aggregateId", "expectedVersion"
+    FROM "BusinessCommand"
+    WHERE "idempotencyKey" = ${data.idempotencyKey}
+    LIMIT 1
+  `;
+  const replay = stored[0];
+  const legacyId = `${data.deliveryId}:${data.action}`;
+  const generationPrefix = `${legacyId}:`;
+
+  if (
+    replay?.commandType === commandType &&
+    replay.aggregateType === "courier-booking-reconciliation" &&
+    (replay.aggregateId === legacyId ||
+      replay.aggregateId.startsWith(generationPrefix))
+  ) {
+    return {
+      id: replay.aggregateId,
+      expectedVersion: safeInteger(
+        replay.expectedVersion,
+        "stored courier reconciliation aggregate version",
+      ),
+    };
+  }
+
+  const authority = await ambiguousBookingAuthority(
+    context.prisma as unknown as BusinessTransaction,
+    data.deliveryId,
+  );
+  if (!authority) {
+    throw new ConflictError("Courier booking is not awaiting reconciliation");
+  }
+  return {
+    id: `${legacyId}:${authority.commandId}`,
+    expectedVersion: 0,
+  };
+}
+
+export async function reconcileCanonicalCourierBooking(
+  context: BusinessPrincipalContext,
+  input: unknown,
+): Promise<BusinessCommandResult<Record<string, unknown>>> {
+  const data = reconciliationSchema.parse(input);
+  await assertCourierCommandAuthority(context);
+  const aggregate = await reconciliationAggregate(context, data);
 
   return executeBusinessCommand(
     context,
     {
       idempotencyKey: data.idempotencyKey,
-      commandType: "courier.booking.queue.v1",
+      commandType: `courier.booking.reconcile.${data.action}.v1`,
       aggregate: {
-        type: "canonical-courier-booking",
+        type: "courier-booking-reconciliation",
         id: aggregate.id,
         expectedVersion: aggregate.expectedVersion,
       },
@@ -247,179 +274,220 @@ export async function queueCanonicalCourierBooking(
       payload: data,
     },
     async ({ tx, commandId, principal }) => {
-      const order = await tx.order.findFirst({
-        where: { id: data.orderId, deletedAt: null },
-        include: { customer: true, items: true, delivery: true },
+      const delivery = await tx.delivery.findFirst({
+        where: { id: data.deliveryId, deletedAt: null },
+        include: { order: true },
       });
-      if (!order) throw new NotFoundError("Order", data.orderId);
-      if (!isCanonicalOrderAuthority(order.source, order.sourceMetadata)) {
+      if (!delivery) throw new NotFoundError("Delivery", data.deliveryId);
+      if (
+        !isCanonicalOrderAuthority(
+          delivery.order.source,
+          delivery.order.sourceMetadata,
+        )
+      ) {
         throw new ValidationError(
-          "Courier booking requires canonical order authority",
+          "Courier reconciliation requires canonical order authority",
           "order.authority",
         );
       }
-      if (order.version !== data.expectedVersion) {
+      if (delivery.order.version !== data.expectedVersion) {
         throw new ConflictError(
-          `Order ${order.id} version conflict: expected ${data.expectedVersion}, current ${order.version}`,
+          `Order ${delivery.orderId} version conflict: expected ${data.expectedVersion}, current ${delivery.order.version}`,
         );
       }
+      if (delivery.status !== "reconciliation_required") {
+        throw new ConflictError("Courier booking is not awaiting reconciliation");
+      }
+
+      const authority = await ambiguousBookingAuthority(tx, delivery.id);
+      if (!authority || authority.orderId !== delivery.orderId) {
+        throw new ConflictError(
+          "Ambiguous courier booking authority is missing or stale",
+        );
+      }
+      const expectedGenerationId = `${delivery.id}:${data.action}:${authority.commandId}`;
       if (
-        order.status !== "confirmed" ||
-        order.fulfillmentState !== "ready" ||
-        order.inventoryState !== "reserved" ||
-        order.deliveryState !== "not_created"
+        aggregate.id !== `${delivery.id}:${data.action}` &&
+        aggregate.id !== expectedGenerationId
       ) {
         throw new ConflictError(
-          `Courier booking requires confirmed/ready/reserved/not_created; current state is ${order.status}/${order.fulfillmentState}/${order.inventoryState}/${order.deliveryState}`,
+          "Courier reconciliation generation changed before commit",
         );
       }
 
-      assertReservations(await reservationRows(tx, order.id), order.items);
+      const outbox = await tx.outboxIntent.findFirst({
+        where: {
+          id: authority.outboxId,
+          commandId: authority.commandId,
+          effectKey: authority.effectKey,
+          effectType: COURIER_BOOKING_EFFECT_TYPE,
+          status: "failed",
+          outcomeState: "ambiguous",
+        },
+      });
+      if (!outbox) {
+        throw new ConflictError(
+          "Only an ambiguous courier effect can be reconciled manually",
+        );
+      }
 
-      let deliveryId: string;
-      if (order.delivery) {
-        if (
-          order.delivery.trackingNumber ||
-          !["booking_failed", "not_created"].includes(order.delivery.status)
-        ) {
-          throw new ConflictError(
-            "Existing courier authority requires reconciliation before rebooking",
-          );
-        }
-        deliveryId = order.delivery.id;
-        const reused = await tx.delivery.updateMany({
+      let nextVersion = delivery.order.version;
+      if (data.action === "confirm_created") {
+        const trackingNumber = data.trackingNumber!;
+        const deliveryUpdated = await tx.delivery.updateMany({
           where: {
-            id: deliveryId,
+            id: delivery.id,
+            status: "reconciliation_required",
             trackingNumber: null,
-            status: { in: ["booking_failed", "not_created"] },
             deletedAt: null,
           },
           data: {
-            provider: data.provider,
-            status: "booking_queued",
-            labelUrl: null,
-            cost: null,
-            estimatedDelivery: null,
+            trackingNumber,
+            labelUrl: data.labelUrl ?? null,
+            cost: data.cost ?? null,
+            estimatedDelivery: data.estimatedDelivery ?? null,
+            status: "created",
           },
         });
-        if (reused.count !== 1) {
-          throw new ConflictError("Courier delivery changed before rebooking");
+        if (deliveryUpdated.count !== 1) {
+          throw new ConflictError(
+            "Delivery changed during courier reconciliation",
+          );
+        }
+        const outboxUpdated = await tx.outboxIntent.updateMany({
+          where: {
+            id: outbox.id,
+            status: "failed",
+            outcomeState: "ambiguous",
+          },
+          data: {
+            status: "succeeded",
+            outcomeState: "manual_success",
+            receiptJson: JSON.stringify({
+              trackingNumber,
+              provider: delivery.provider,
+              manuallyReconciled: true,
+            }),
+            succeededAt: new Date(),
+            lastErrorCode: null,
+          },
+        });
+        if (outboxUpdated.count !== 1) {
+          throw new ConflictError(
+            "Courier booking effect changed during reconciliation",
+          );
         }
       } else {
-        deliveryId = randomUUID();
-        await tx.delivery.create({
+        nextVersion += 1;
+        const orderUpdated = await tx.order.updateMany({
+          where: {
+            id: delivery.orderId,
+            version: delivery.order.version,
+            status: "confirmed",
+            fulfillmentState: "ready",
+            inventoryState: "reserved",
+            deliveryState: "pending",
+            deletedAt: null,
+          },
+          data: { version: nextVersion, deliveryState: "not_created" },
+        });
+        if (orderUpdated.count !== 1) {
+          throw new ConflictError(
+            "Order changed during courier reconciliation",
+          );
+        }
+        const deliveryUpdated = await tx.delivery.updateMany({
+          where: {
+            id: delivery.id,
+            status: "reconciliation_required",
+            trackingNumber: null,
+            deletedAt: null,
+          },
+          data: { status: "booking_failed" },
+        });
+        if (deliveryUpdated.count !== 1) {
+          throw new ConflictError(
+            "Delivery changed during courier reconciliation",
+          );
+        }
+        const outboxUpdated = await tx.outboxIntent.updateMany({
+          where: {
+            id: outbox.id,
+            status: "failed",
+            outcomeState: "ambiguous",
+          },
           data: {
-            id: deliveryId,
-            orderId: order.id,
-            provider: data.provider,
-            status: "booking_queued",
+            status: "dead_letter",
+            outcomeState: "manual_not_created",
+            deadLetteredAt: new Date(),
+            lastErrorCode: "COURIER_CONFIRMED_NOT_CREATED",
           },
         });
-      }
-
-      const nextVersion = order.version + 1;
-      const updated = await tx.order.updateMany({
-        where: {
-          id: order.id,
-          version: order.version,
-          status: "confirmed",
-          deletedAt: null,
-        },
-        data: { version: nextVersion, deliveryState: "pending" },
-      });
-      if (updated.count !== 1) {
-        throw new ConflictError("Order changed while courier booking was queued");
+        if (outboxUpdated.count !== 1) {
+          throw new ConflictError(
+            "Courier booking effect changed during reconciliation",
+          );
+        }
       }
 
       await tx.canonicalDeliveryEvent.create({
         data: {
           id: randomUUID(),
-          eventKey: `${commandId}:booking-requested`,
-          orderId: order.id,
-          deliveryId,
-          eventType: "courier_booking_requested",
-          provider: data.provider,
-          reasonCode: "seller_booking_request",
+          eventKey: `${commandId}:reconciliation`,
+          orderId: delivery.orderId,
+          deliveryId: delivery.id,
+          eventType:
+            data.action === "confirm_created"
+              ? "courier_booking_manually_confirmed"
+              : "courier_booking_manually_rejected",
+          provider: delivery.provider,
+          providerEventId:
+            data.action === "confirm_created"
+              ? `manual-booking:${data.trackingNumber}`
+              : undefined,
+          reasonCode: data.reasonCode,
           occurredAt: new Date(),
           createdByCommandId: commandId,
         },
       });
 
-      const effectKey = `${commandId}:courier-booking`;
-      const request: ShipmentRequest = {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customer: {
-          name: order.customer.name,
-          phone: order.customer.phone,
-          wilaya: order.wilaya,
-          commune: order.commune,
-          address: order.address,
-        },
-        items: order.items.map((item) => ({
-          name: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-        totalPrice: order.totalPrice,
-        weight: Math.max(
-          1,
-          order.items.reduce((sum, item) => sum + item.quantity, 0),
-        ),
-        notes: order.notes ?? undefined,
-      };
-      const result: CourierBookingResult = {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
+      const result = {
+        orderId: delivery.orderId,
         orderVersion: nextVersion,
-        deliveryId,
-        provider: data.provider,
-        bookingState: "queued",
-        effectKey,
+        deliveryId: delivery.id,
+        bookingCommandId: authority.commandId,
+        action: data.action,
+        trackingNumber: data.trackingNumber ?? null,
       };
-
       return {
         result,
         audit: {
-          action: "courier.booking.queued.v1",
+          action: `courier.booking.reconcile.${data.action}.v1`,
           entity: "delivery",
-          entityId: deliveryId,
+          entityId: delivery.id,
           before: {
-            orderVersion: order.version,
-            deliveryState: order.deliveryState,
+            status: delivery.status,
+            outcomeState: outbox.outcomeState,
           },
-          after: {
-            orderVersion: nextVersion,
-            deliveryState: "pending",
-            provider: data.provider,
-            bookingGeneration: aggregate.id,
+          after: result,
+          metadata: {
+            reasonCode: data.reasonCode,
+            bookingCommandId: authority.commandId,
+            principal: principal.auditActor,
           },
-          metadata: { principal: principal.auditActor },
         },
         events: [
           {
             key: `${commandId}:event`,
-            type: "courier.booking.queued.v1",
+            type: `courier.booking.reconcile.${data.action}.v1`,
             payload: result,
-          },
-        ],
-        outbox: [
-          {
-            effectKey,
-            effectType: COURIER_BOOKING_EFFECT_TYPE,
-            payload: {
-              deliveryId,
-              orderId: order.id,
-              provider: data.provider,
-              request,
-            },
           },
         ],
         projectionInvalidations: [
           "orders:list",
-          `orders:${order.id}`,
+          `orders:${delivery.orderId}`,
           "deliveries:list",
-          `deliveries:${deliveryId}`,
+          `deliveries:${delivery.id}`,
         ],
       };
     },
@@ -445,7 +513,7 @@ async function openBookingPayload(
   );
 }
 
-async function bookingRequest(
+async function bookingRequestByCommand(
   tx: BusinessTransaction,
   commandId: string,
 ): Promise<{ orderId: string; deliveryId: string | null } | null> {
@@ -459,72 +527,49 @@ async function bookingRequest(
   });
 }
 
-async function deadLetterInvalidPayload(
+async function recoverUnreadablePostEffectLeases(
   context: ServiceContext,
-  row: BookingOutboxRow,
-): Promise<boolean> {
-  const commandContext: BusinessPrincipalContext = {
-    ...context,
-    businessPrincipal: systemBusinessPrincipal("reconciliation"),
-  };
+  limit: number,
+): Promise<void> {
+  if (limit <= 0) return;
+  const cutoff = new Date(Date.now() - LEASE_MS);
+  const rows = (await context.prisma.outboxIntent.findMany({
+    where: {
+      effectType: COURIER_BOOKING_EFFECT_TYPE,
+      status: "processing",
+      effectStartedAt: { not: null },
+      lockedAt: { lte: cutoff },
+    },
+    orderBy: [{ lockedAt: "asc" }, { createdAt: "asc" }],
+    take: Math.min(20, limit),
+  })) as BookingOutboxRow[];
 
-  try {
-    await executeBusinessCommand(
-      commandContext,
-      {
-        idempotencyKey: `courier-booking-outcome:terminal_failure:${row.effectKey}`,
-        commandType: "courier.booking.outcome.terminal_failure.v1",
-        aggregate: {
-          type: "courier-booking-outcome",
-          id: `${row.effectKey}:terminal_failure`,
-          expectedVersion: 0,
-        },
-        actor: "system",
-        correlationId: row.effectKey,
-        payload: {
-          outboxId: row.id,
-          effectKey: row.effectKey,
-          errorCode: "COURIER_INVALID_OUTBOX_PAYLOAD",
-        },
-      },
-      async ({ tx, commandId, principal }) => {
-        const current = await tx.outboxIntent.findFirst({
+  for (const row of rows) {
+    try {
+      await openBookingPayload(context, row);
+      continue;
+    } catch {
+      await context.prisma.$transaction(async (tx) => {
+        const marked = await tx.outboxIntent.updateMany({
           where: {
             id: row.id,
-            effectKey: row.effectKey,
-            effectType: COURIER_BOOKING_EFFECT_TYPE,
-          },
-        });
-        if (!current) {
-          throw new NotFoundError("Courier booking outbox", row.id);
-        }
-
-        const updated = await tx.outboxIntent.updateMany({
-          where: {
-            id: current.id,
-            status: current.status,
-            attemptCount: current.attemptCount,
-            leaseToken: current.leaseToken,
-            effectStartedAt: null,
+            status: "processing",
+            leaseToken: row.leaseToken,
+            effectStartedAt: row.effectStartedAt,
           },
           data: {
-            status: "dead_letter",
-            outcomeState: "known_failure",
-            lastErrorCode: "COURIER_INVALID_OUTBOX_PAYLOAD",
+            status: "failed",
+            outcomeState: "ambiguous",
+            lastErrorCode:
+              "COURIER_EFFECT_LEASE_EXPIRED_AFTER_START_PAYLOAD_UNREADABLE",
             nextAttemptAt: null,
             lockedAt: null,
             leaseToken: null,
-            deadLetteredAt: new Date(),
           },
         });
-        if (updated.count !== 1) {
-          throw new ConflictError(
-            "Courier booking outbox changed before invalid-payload dead letter",
-          );
-        }
+        if (marked.count !== 1) return;
 
-        const request = await bookingRequest(tx, row.commandId);
-        let orderVersion: number | null = null;
+        const request = await bookingRequestByCommand(tx, row.commandId);
         if (request?.deliveryId) {
           await tx.delivery.updateMany({
             where: {
@@ -532,256 +577,27 @@ async function deadLetterInvalidPayload(
               trackingNumber: null,
               deletedAt: null,
             },
-            data: { status: "booking_failed" },
+            data: { status: "reconciliation_required" },
           });
         }
-        if (request) {
-          const order = await tx.order.findFirst({
-            where: { id: request.orderId, deletedAt: null },
-          });
-          if (
-            order &&
-            order.status === "confirmed" &&
-            order.fulfillmentState === "ready" &&
-            order.inventoryState === "reserved" &&
-            order.deliveryState === "pending"
-          ) {
-            const nextVersion = order.version + 1;
-            const orderUpdated = await tx.order.updateMany({
-              where: {
-                id: order.id,
-                version: order.version,
-                status: "confirmed",
-                fulfillmentState: "ready",
-                inventoryState: "reserved",
-                deliveryState: "pending",
-                deletedAt: null,
-              },
-              data: {
-                version: nextVersion,
-                deliveryState: "not_created",
-              },
-            });
-            if (orderUpdated.count !== 1) {
-              throw new ConflictError(
-                "Order changed before invalid courier payload recovery",
-              );
-            }
-            orderVersion = nextVersion;
-          }
-        }
-
-        const result: Record<string, unknown> = {
-          effectKey: row.effectKey,
-          outboxId: row.id,
-          outcome: "terminal_failure",
-          errorCode: "COURIER_INVALID_OUTBOX_PAYLOAD",
-          orderId: request?.orderId ?? null,
-          orderVersion,
-          deliveryId: request?.deliveryId ?? null,
-        };
-        return {
-          result,
-          audit: {
-            action: "courier.booking.outcome.terminal_failure.v1",
+        await tx.auditLog.create({
+          data: {
+            action: "courier.booking.outcome_ambiguous",
             entity: "outbox-intent",
             entityId: row.id,
-            before: {
-              status: current.status,
-              outcomeState: current.outcomeState,
-              attemptCount: current.attemptCount,
-            },
-            after: result,
-            metadata: { principal: principal.auditActor },
+            actor: "system:courier-booking",
+            metadata: JSON.stringify({
+              effectKey: row.effectKey,
+              errorCode:
+                "COURIER_EFFECT_LEASE_EXPIRED_AFTER_START_PAYLOAD_UNREADABLE",
+              orderId: request?.orderId ?? null,
+              deliveryId: request?.deliveryId ?? null,
+            }),
           },
-          events: [
-            {
-              key: `${commandId}:event`,
-              type: "courier.booking.outcome.terminal_failure.v1",
-              payload: result,
-            },
-          ],
-          projectionInvalidations: [
-            "orders:list",
-            ...(request ? [`orders:${request.orderId}`] : []),
-            "deliveries:list",
-            ...(request?.deliveryId
-              ? [`deliveries:${request.deliveryId}`]
-              : []),
-          ],
-        };
-      },
-    );
-    return true;
-  } catch (error) {
-    if (error instanceof ConflictError) return false;
-    throw error;
-  }
-}
-
-async function preflightInvalidPayloads(
-  context: ServiceContext,
-  limit: number,
-): Promise<number> {
-  if (limit <= 0) return 0;
-  const now = new Date();
-  const expiredBeforeEffect = new Date(now.getTime() - LEASE_MS);
-  const rows = (await context.prisma.outboxIntent.findMany({
-    where: {
-      effectType: COURIER_BOOKING_EFFECT_TYPE,
-      OR: [
-        {
-          status: { in: ["queued", "retrying"] },
-          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-        },
-        {
-          status: "processing",
-          effectStartedAt: null,
-          lockedAt: { lte: expiredBeforeEffect },
-        },
-      ],
-    },
-    orderBy: [{ nextAttemptAt: "asc" }, { createdAt: "asc" }],
-    take: limit,
-  })) as BookingOutboxRow[];
-
-  let processed = 0;
-  for (const row of rows) {
-    try {
-      await openBookingPayload(context, row);
-    } catch {
-      if (await deadLetterInvalidPayload(context, row)) processed += 1;
+        });
+      });
     }
   }
-  return processed;
-}
-
-async function restoreTerminalKnownFailures(
-  context: ServiceContext,
-): Promise<void> {
-  const rows = (await context.prisma.outboxIntent.findMany({
-    where: {
-      effectType: COURIER_BOOKING_EFFECT_TYPE,
-      status: "dead_letter",
-      outcomeState: "known_failure",
-      lastErrorCode: "COURIER_PROVIDER_REJECTED_BOOKING",
-    },
-    orderBy: { createdAt: "asc" },
-    take: 20,
-  })) as BookingOutboxRow[];
-
-  for (const row of rows) {
-    const request = await bookingRequest(context.prisma as never, row.commandId);
-    if (!request) continue;
-    const order = await context.prisma.order.findFirst({
-      where: { id: request.orderId, deletedAt: null },
-    });
-    if (
-      !order ||
-      order.status !== "confirmed" ||
-      order.fulfillmentState !== "ready" ||
-      order.inventoryState !== "reserved" ||
-      order.deliveryState !== "pending"
-    ) {
-      continue;
-    }
-
-    const commandContext: BusinessPrincipalContext = {
-      ...context,
-      businessPrincipal: systemBusinessPrincipal("reconciliation"),
-    };
-    await executeBusinessCommand(
-      commandContext,
-      {
-        idempotencyKey: `courier-booking-terminal-recovery:${row.effectKey}`,
-        commandType: "courier.booking.terminal_recovery.v1",
-        aggregate: {
-          type: "courier-booking-terminal-recovery",
-          id: row.effectKey,
-          expectedVersion: 0,
-        },
-        actor: "system",
-        correlationId: row.effectKey,
-        payload: { effectKey: row.effectKey, orderId: request.orderId },
-      },
-      async ({ tx, commandId, principal }) => {
-        const current = await tx.order.findFirst({
-          where: { id: request.orderId, deletedAt: null },
-        });
-        if (!current) throw new NotFoundError("Order", request.orderId);
-        if (
-          current.status !== "confirmed" ||
-          current.fulfillmentState !== "ready" ||
-          current.inventoryState !== "reserved" ||
-          current.deliveryState !== "pending"
-        ) {
-          throw new ConflictError(
-            "Courier terminal recovery requires confirmed/ready/reserved/pending",
-          );
-        }
-        const nextVersion = current.version + 1;
-        const updated = await tx.order.updateMany({
-          where: {
-            id: current.id,
-            version: current.version,
-            status: "confirmed",
-            fulfillmentState: "ready",
-            inventoryState: "reserved",
-            deliveryState: "pending",
-            deletedAt: null,
-          },
-          data: { version: nextVersion, deliveryState: "not_created" },
-        });
-        if (updated.count !== 1) {
-          throw new ConflictError(
-            "Order changed during courier terminal recovery",
-          );
-        }
-
-        const result = {
-          effectKey: row.effectKey,
-          orderId: current.id,
-          orderVersion: nextVersion,
-          deliveryState: "not_created",
-        };
-        return {
-          result,
-          audit: {
-            action: "courier.booking.terminal_recovery.v1",
-            entity: "order",
-            entityId: current.id,
-            before: {
-              version: current.version,
-              deliveryState: current.deliveryState,
-            },
-            after: result,
-            metadata: { principal: principal.auditActor },
-          },
-          events: [
-            {
-              key: `${commandId}:event`,
-              type: "courier.booking.terminal_recovery.v1",
-              payload: result,
-            },
-          ],
-          projectionInvalidations: [
-            "orders:list",
-            `orders:${current.id}`,
-          ],
-        };
-      },
-    );
-  }
-}
-
-async function defaultBookingSender(
-  context: ServiceContext,
-  provider: DeliveryProvider,
-  request: ShipmentRequest,
-): Promise<ShipmentResult> {
-  const adapter = getDeliveryAdapter(provider);
-  const credentials = await loadDeliveryCredentials(context, provider);
-  return adapter.createShipment(request, credentials);
 }
 
 export async function drainDueCourierBookings(
@@ -789,27 +605,6 @@ export async function drainDueCourierBookings(
   limit = 10,
   sender?: CourierBookingSender,
 ): Promise<number> {
-  const preflightProcessed = await preflightInvalidPayloads(context, limit);
-  const remaining = Math.max(0, limit - preflightProcessed);
-
-  const guardedSender: CourierBookingSender = async (provider, request) => {
-    const receipt = sender
-      ? await sender(provider, request)
-      : await defaultBookingSender(context, provider, request);
-    if (receipt.success && !receipt.trackingId.trim()) {
-      throw new SahelFlowError(
-        "Courier provider reported success without tracking identity",
-        "COURIER_MISSING_TRACKING_RECEIPT",
-        502,
-      );
-    }
-    return receipt;
-  };
-
-  const drained =
-    remaining > 0
-      ? await drainLegacyCourierBookings(context, remaining, guardedSender)
-      : 0;
-  await restoreTerminalKnownFailures(context);
-  return preflightProcessed + drained;
+  await recoverUnreadablePostEffectLeases(context, limit);
+  return drainReviewedCourierBookings(context, limit, sender);
 }
