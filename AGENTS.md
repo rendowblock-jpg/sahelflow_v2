@@ -1,12 +1,12 @@
 # SahelFlow agent entry point
 
 SahelFlow currently uses one coding agent—the ChatGPT Web Agentic Coding Agent—and
-GitHub as durable truth. The Desktop checkout is Founder-owned local evidence and
-may be used again only when the Founder explicitly activates it as a separate
-agent surface.
+GitHub as durable truth. The Founder-owned Windows checkout is local evidence and
+must not be modified, reset or deleted merely to simplify branch work.
 
-GitHub Actions is clean-checkout and artifact infrastructure, not a coding agent.
-GLM, Codex Cloud, MAWS and legacy handoff systems are not active authority.
+GitHub Actions is clean-checkout validation and artifact infrastructure, not a
+coding agent. GLM, Codex Cloud, MAWS and legacy handoff systems are not active
+authority.
 
 ## Start here
 
@@ -18,10 +18,11 @@ GLM, Codex Cloud, MAWS and legacy handoff systems are not active authority.
 4. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
 5. Read
    [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-6. Inspect PR #195, its exact head and checks, protected `main`, and issue #164.
+6. Inspect PR #195, its exact head/checks, protected `main`, and issue #164.
 7. Inspect governing PRODUCT, EXPERIENCE, ARCHITECTURE, CURRENT_STATE and RESEARCH
    sections.
-8. Inspect exact source, migrations and tests before trusting implementation claims.
+8. Inspect exact source, migrations and tests before trusting implementation
+   claims.
 
 Chat history and archived reports are context only. They never replace current
 GitHub authority.
@@ -49,7 +50,7 @@ FD-028 defines one final Phase 0–9 program:
 2. identity, authorization, licensing and multi-shop;
 3. durable providers, inbox, AI and automations;
 4. data protection, recovery, migrations and security;
-5. whole-product AAA UI/UX and frontend redesign;
+5. whole-product AAA UI/UX;
 6. Arabic, RTL and accessibility parity;
 7. performance and reliability;
 8. connected SahelFlow platform;
@@ -59,78 +60,36 @@ Valid FD-027 rules remain: bounded WIP, coherent outcome packages, P0/P1 blockin
 milestone releases, exact-source evidence and continuous Arabic/RTL,
 accessibility, recovery and performance.
 
-No agent may replace this program with another permanent plan, wave or session
-map without a new Founder decision.
-
 ## Founder execution-granularity decision
 
-The Founder-approved operating mode is:
-
-- use the one long-lived integration branch
-  `agent/phases1-4-completion-program` under draft PR #195;
-- complete coherent outcomes across schema, migration, domain, API, UI, recovery
-  and evidence boundaries;
-- use targeted checks while assembling a package and one exact-head full source
-  checkpoint when coherent;
-- defer the full Windows/Rust/MSI suite until the declared multi-phase source is
-  frozen unless a package specifically requires a bounded platform fixture;
-- P0/P1 block the affected outcome; P2/P3 become owned follow-ups;
-- keep CI read-only and never write protected branches from workflows;
-- preserve unrelated local work, AppData, databases, registry and keys.
+- Use the long-lived integration branch `agent/phases1-4-completion-program`
+  under draft PR #195.
+- Complete coherent outcomes across authority, schema, API, UI, recovery and
+  evidence boundaries.
+- Use targeted reasoning while assembling and one exact-head full source
+  checkpoint at a coherent boundary.
+- Defer the full Windows/Rust/MSI suite until the declared multi-phase source is
+  frozen unless a package requires a bounded platform fixture.
+- P0/P1 block the affected outcome; P2/P3 become owned follow-ups.
+- Keep CI read-only and never write protected branches from workflows.
+- Preserve unrelated local work, canonical AppData, databases, registry and keys.
 
 ### Sole-agent review rule
 
-The Founder confirmed on 2026-07-31 that only one coding agent is active. Therefore:
+Only one coding agent is active. Therefore:
 
 - do not block progress waiting for a fictional second agent;
-- use a separated adversarial review pass on a frozen exact head before closing a
+- use a separated adversarial pass on a frozen exact head before closing a
   high-risk package;
-- make no edits during that review pass;
-- record findings first, then apply at most one consolidated blocker repair;
-- never describe this as independent review;
+- make no edits during that pass;
+- record findings, then apply at most one consolidated blocker repair;
+- never describe the pass as independent review;
 - external independent security/privacy/legal/provider review remains mandatory
   where the roadmap requires real external evidence.
 
-## Professional cross-session execution protocol
-
-### Reconstruct before writing
-
-- Verify protected `main`, PR #195, exact branch head and latest checks.
-- Read Working Memory and the PR body before deciding what remains.
-- Inspect exact source and tests for the active package.
-- Never infer another active agent from branch movement.
-- Preserve all unrelated user work, local worktrees and canonical AppData.
-
-### Build coherent outcomes
-
-- Keep one active core-authority package at a time.
-- Finish applicable schema, migration, service, API, UI, recovery, AR/FR/EN and
-  invariant-test boundaries.
-- Do not weaken production authority to satisfy a stale test.
-- Do not create status/review/CI loops after every small edit.
-- Do not add another permanent masterplan or handoff document.
-
-### Validation cadence
-
-- Use local/static reasoning while assembling the package.
-- Run one exact-head source checkpoint when coherent.
-- Repair only concrete diagnostics from that head.
-- Source-complete requires Prisma generation, authority/docs, TypeScript, ESLint,
-  full unit/integration suite and migration status.
-- Evidence claims stop at the layer actually executed.
-
-### Session close and resume
-
-1. stop at a coherent repository state;
-2. remove temporary workflows, broad permissions and repair scaffolding;
-3. update Working Memory;
-4. update PR #195 and issue #164 with exact evidence and one next package;
-5. keep the PR draft unless the declared program reaches its merge gate;
-6. keep the application version unchanged for ordinary source packages.
-
 ## Research-first gate
 
-Before every major phase, durable contract or material implementation:
+Before every material contract or implementation:
 
 - state the exact decision;
 - inspect current SahelFlow source and tests;
@@ -144,91 +103,128 @@ Before every major phase, durable contract or material implementation:
 Generic AI recommendations, visual trends, screenshots, mocks and adapter
 existence are not authority.
 
-## Current baseline
+## Current protected truth
 
 - Protected `main`: `522ab1642545803c7a9b6c320fe72cceb320e558`.
 - Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Published release: `1.0.0-internal.13`, run `30366866703`.
 - Internal.13 is Founder-installed but not Founder-accepted.
 - Internal.5 remains the Founder-accepted baseline.
-- Phase 0 is complete.
-- Phase 1 is source-closed on PR #195 at
-  `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`.
-- Phase 2A.1 session/setup authority is closed at
-  `ad3987e934c1e42706cf7f29010cd96dc534f290`.
-- Phase 2A.2 durable owner identity is closed at
-  `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`.
-- PR #184 contains the protected installation root and rotation package.
-- Draft PR #195 contains the unmerged Phase 1–4 integration program.
+- Draft PR #195 is unmerged proposed source and remains version-neutral.
 
-## Phase 1 source closure
+## Closed source packages
 
-Phase 1 closure repair finished on exact head
-`3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with normal CI `30652282305` and
-Integration source checkpoint `30652282191` successful.
+### Phase 1 — Golden COD core
 
-A separated sole-agent adversarial review found and closed repeated reconciliation,
-unreadable post-effect recovery and pre-query authority-ordering P1s. It was not
-an independent review. Do not reopen Phase 1 without new concrete P0/P1 evidence.
+Closed at `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with CI
+`30652282305` and checkpoint `30652282191` successful. Do not reopen absent new
+concrete P0/P1 evidence.
 
-## Phase 2A closed packages
+### Phase 2A.1 — setup and session authority
 
-### 2A.1 — setup and session authority
+Closed at `ad3987e934c1e42706cf7f29010cd96dc534f290` with CI
+`30656307152` and checkpoint `30656308867` successful.
 
-Closed at `ad3987e934c1e42706cf7f29010cd96dc534f290` with CI `30656307152` and
-checkpoint `30656308867` successful. Setup is onboarding only; sessions enforce
-24-hour overall and one-hour inactivity limits; reauthentication rotates identity;
-PIN change revokes all sessions; recent proof and fail-closed logout are preserved.
+Setup is onboarding only; sessions enforce overall/inactivity limits, database
+revocation, activity persistence, reauthentication rotation, recent-PIN proof,
+all-session PIN-change revocation and fail-closed logout.
 
-### 2A.2 — durable owner identity kernel
+### Phase 2A.2 — durable owner identity kernel
 
-Closed at `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e` with CI `30660637916` and
-checkpoint `30660637617` successful.
+Closed at `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e` with CI
+`30660637916` and checkpoint `30660637617` successful.
 
-The exact installation now owns an HMAC-authenticated Workspace, Installation,
-Person, owner WorkspaceMember, Device and session binding authority. Trusted
-business commands use durable person identity, exact shop grants and policy/
-revocation snapshots. Tamper, restart, concurrency, cross-shop, root rotation,
-missing-authority and anti-reinitialization boundaries are proven. Consequential
-commands resolve authority read-only and cannot bootstrap identity.
+The installation owns HMAC-authenticated Workspace, Installation, Person, owner
+WorkspaceMember, Device and session bindings. Trusted business commands use a
+real person actor, exact shop grants and policy/revocation snapshots. Tamper,
+restart, concurrency, cross-shop, root rotation and anti-reinitialization
+boundaries are proven.
+
+### Phase 2A.3 — revocation and policy freshness
+
+Closed at `56df880bbe2233bf081119fa535e30713d9c6051` with CI
+`30665009016` and checkpoint `30665009255` successful.
+
+Every configured authenticated request validates durable identity. Owners can
+inspect exact-installation sessions/devices and revoke another session after
+recent PIN proof. Control authority denies first; database/audit catch-up is
+transactional and retryable. Current-session protection, duplicate/concurrent
+revoke, database failure and AR/FR/EN security administration are proven.
+Policy-stale bindings are denied everywhere but may enter only the rate-limited
+PIN reauthentication ceremony, which rotates into a fresh binding. Missing,
+revoked, cross-shop or unavailable authority remains blocked.
 
 PIN remains local unlock and reauthentication, never durable person identity.
 
-## Exact next outcome — Phase 2A.3
+## Exact next outcome — Phase 2A.4
 
-Phase 2A remains active. The sole current package is revocation, policy freshness
-and identity administration.
+The sole active package is **durable multi-member roles, invitations and per-shop
+permissions**.
 
-The package must complete:
+The package must:
 
-1. validate durable identity bindings for every configured authenticated request,
-   not only consequential commands;
-2. reject revoked or stale session/member/device/workspace authority before route
-   parsing and effects;
-3. expose an owner-only, exact-installation view of sessions and devices;
-4. revoke another session immediately without permitting accidental removal of
-   the only current owner/device outside a recovery ceremony;
-5. advance policy/revocation snapshots and require successful PIN
-   reauthentication before stale bindings regain authority;
-6. make cross-store ordering fail safe and diagnosable;
-7. prove duplicate/concurrent revoke, restart, database failure, same-shop and
-   cross-shop behavior;
-8. run one exact-head source checkpoint before invitations/team or licensing work.
+1. extend the installation authority from one owner to multiple durable People and
+   WorkspaceMembers without duplicating identity in shop databases;
+2. define invitation identity, expiry, single-use acceptance and replay-safe
+   recovery;
+3. support owner, manager, operator and viewer presets plus deny-by-default custom
+   action permissions bounded by each role ceiling;
+4. attach exact shop grants to each member and reject cross-shop access before
+   parsing or effects;
+5. establish a new member/device/session only after invitation proof and local PIN
+   ceremony, with immediate revocation and stale-policy behavior;
+6. prevent removing or demoting the last active owner outside an explicit recovery
+   ceremony;
+7. expose owner administration and member self-view with complete AR/FR/EN,
+   loading, empty, validation, conflict, expired, revoked and recovery states;
+8. prove duplicate/concurrent invite, accept and revoke, restart, expiry,
+   authorization and cross-shop behavior;
+9. finish with one exact-head source checkpoint and a separated adversarial pass.
 
-## Work rules
+Licensing/entitlements and native multi-shop lifecycle remain later Phase 2
+packages after member authority is stable.
 
-- One owner, branch and PR per outcome.
-- Never push directly to protected `main`.
-- Preserve unrelated user work and canonical AppData.
-- Freeze shared contracts before dependent work.
-- Core authority WIP 1.
-- Remove or disable legacy mutation paths only after canonical parity and recovery
-  proof.
-- No important decision remains only in chat.
+## Professional execution protocol
+
+### Reconstruct before writing
+
+- Verify protected `main`, PR #195, exact branch head and latest checks.
+- Read Working Memory and the PR body.
+- Inspect exact active source and tests.
+- Never infer another active agent from branch movement.
+
+### Build coherent outcomes
+
+- Keep one active core-authority package at a time.
+- Finish applicable authority, schema, API, UI, recovery, AR/FR/EN and invariant
+  tests.
+- Do not weaken production authority to satisfy stale tests.
+- Do not create review/CI loops after every small edit.
+- Do not add another permanent masterplan or handoff document.
+
+### Validation and close
+
+1. run the exact authority/docs gate;
+2. pass Prisma generation and migration status where applicable;
+3. pass TypeScript, ESLint and the full unit/integration suite;
+4. perform the frozen-head sole-agent adversarial pass;
+5. update Working Memory, PR #195 and issue #164 with exact evidence;
+6. keep PR #195 draft and unmerged;
+7. keep the application version unchanged for ordinary source packages.
+
+## Protected local boundaries
+
+- Preserve `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
+- Preserve the unrelated local modification to
+  `src/lib/identity/__tests__/session-authority.test.ts`.
+- Do not delete canonical AppData, registry, databases, migrations or keys.
+- Do not require permanent local `node_modules`, `.next`, Rust `target` or repeated
+  installer caches when Actions can provide source evidence.
+- PR #186 is obsolete/diverged source and must never be merged wholesale.
 
 ## Review severity
 
-- **P0:** active data loss, secret exposure, cross-shop/tenant effect, corrupt
+- **P0:** active data loss, secret exposure, cross-shop effect, corrupt
   update/restore or irreversible stock/money damage.
 - **P1:** required journey or authority failure, duplicate/lost effect, unsafe
   migration, startup/install/recovery failure, incorrect stock/money, or major
@@ -250,34 +246,3 @@ The package must complete:
 10. Representative seller/Beta.
 
 A lower layer cannot claim a higher one.
-
-## Desktop boundaries
-
-The Founder machine is storage constrained.
-
-- Do not run source builds, full automated tests, coverage or dependency
-  installation locally when Actions can prove them.
-- Do not require permanent `node_modules`, `.next`, Rust `target` or repeated
-  installer caches.
-- Do not delete canonical AppData, registry, databases, migrations or keys.
-- Preserve the unrelated local modification to
-  `src/lib/identity/__tests__/session-authority.test.ts`.
-
-## Shared validation commands
-
-```bash
-bun run sf-version
-bun run sf-audit
-bun run sf-inventory
-bun run sf-verify
-bun run sf-verify --fast
-```
-
-These commands prove only what they execute. Linux/source checks cannot prove
-installed Windows, T470, provider, legal or Beta behavior.
-
-## Milestone release truth
-
-Routine Internal candidates remain draft until selected signed post-build gates
-pass. Failed candidates remain drafts. Beta and Stable always require explicit
-Founder promotion.
