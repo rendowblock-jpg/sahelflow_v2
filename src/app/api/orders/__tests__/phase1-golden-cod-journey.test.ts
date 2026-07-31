@@ -10,12 +10,25 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 const harness = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   getCurrentSessionAuthority: vi.fn(),
+  resolveDurableIdentityActor: vi.fn(),
   dispatchTrigger: vi.fn(),
+  identity: {
+    personId: "5".repeat(32),
+    workspaceMemberId: "6".repeat(32),
+    deviceId: "7".repeat(32),
+    role: "owner" as const,
+    policyVersion: 1,
+    revocationEpoch: 0,
+  },
 }));
 
 vi.mock("@/lib/auth/server", () => ({
   requireAuth: harness.requireAuth,
   getCurrentSessionAuthority: harness.getCurrentSessionAuthority,
+}));
+
+vi.mock("@/lib/identity/control-authority", () => ({
+  resolveDurableIdentityActor: harness.resolveDurableIdentityActor,
 }));
 
 vi.mock("@/lib/automations/engine", () => ({
@@ -77,6 +90,9 @@ beforeEach(async () => {
       status: "authenticated",
       sessionId: "phase1-golden-cod-owner",
     });
+  harness.resolveDurableIdentityActor
+    .mockReset()
+    .mockResolvedValue(harness.identity);
   harness.dispatchTrigger.mockReset().mockResolvedValue(undefined);
   await cleanDb();
 });
