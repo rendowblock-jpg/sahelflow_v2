@@ -8,13 +8,14 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency
+> **Active phase:** Phase 1 closure repair — repaired boundary frozen for independent review
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
 > **Merge state:** open, draft, mergeable, unmerged
 > **Previous Phase 1 source-exit candidate:** `bd87dea55e19397349b704b180e9ba03220836a6`
-> **Previous Phase 1 CI:** `30637403344` — success
-> **Previous Phase 1 source checkpoint:** `30637403133` — success
+> **Repaired implementation head:** `063f65f2d5613c03fbeb96b37739bfb506ba99f5`
+> **Repaired implementation CI:** `30648590071` — success
+> **Repaired implementation source checkpoint:** `30648587454` — success
 
 GitHub PR #195 and its exact current head/checks are the live branch authority.
 Never trust a copied head or run number in this file without re-reading GitHub at
@@ -27,44 +28,43 @@ Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
 proposed source only: it is not merged, published, installed, provider-certified,
 independently reviewed or Founder-accepted.
 
-## Phase 1 result — green source-exit candidate reopened for bounded repair
+## Phase 1 closure result
 
-The previous source-exit candidate proved the broad canonical Golden COD source
-boundary across:
+The previous Phase 1 source-exit candidate proved the broad Golden COD boundary,
+but a 2026-07-31 independent source audit found three closure blockers:
 
-- canonical manual, storefront, CSV/XLSX, Shopify/WooCommerce/YouCan, WhatsApp and
-  proposal-bound AI intake with exact source identity, server pricing and replay;
-- optimistic confirmation/rejection, reservations, inventory movements,
-  fulfillment, cancellation, courier effects/receipts/tracking, delivery,
-  failure/refusal and physical-return recovery;
-- immutable DZD COD receivable, collection, remittance, fees, adjustments,
-  discrepancies, unmatched matching and governed corrections;
-- customer returns/exchanges, inspection disposition, stock/loss compensation,
-  refunds and exact reversals;
-- one governed realized-revenue, COGS and profitability definition across
-  accounting, dashboard, analytics, reports and AI;
-- separate-process restart, in-place migration over populated facts and disposable
-  local backup/restore with SQLite integrity, exact hashes/counts and replay;
-- one representative UI/API/domain/database Golden COD journey with duplicate,
-  stale conflict and AR/FR/EN seller controls;
-- removed/read-only scalar COD mutation routes and a durable adopted-source bypass
-  audit, including removal of the legacy order-detail COD controls.
+1. courier booking could not advance to a governed later generation after
+   ambiguous reconciliation or terminal known failure;
+2. corrupt pre-effect courier payloads lacked a durable dead-letter transition and
+   could poison recovery;
+3. active authority documents and `sf-audit` preserved contradictory next actions.
 
-A 2026-07-31 independent source audit found new closure evidence that invalidates
-the earlier “no known Phase 1 P0/P1” statement:
+The repaired implementation head closes that bounded evidence:
 
-1. the courier booking command permanently claims aggregate version `0`, making a
-   governed second booking unreachable after ambiguous reconciliation or terminal
-   known failure;
-2. corrupt or undecryptable courier outbox payloads can escape the effect boundary
-   without a durable dead-letter transition and can repeatedly poison recovery;
-3. active authority documents and `sf-audit` preserve contradictory phase/next-
-   action statements.
+- active authority entry points agree that Phase 1 closure review is current and
+  Phase 2A is next;
+- `sf-audit` checks active-phase agreement instead of obsolete literal wording;
+- each genuinely new courier booking uses an order-version-scoped aggregate while
+  stored idempotency keys retain their original aggregate for exact replay;
+- concurrent distinct keys for the same booking generation cannot both commit;
+- terminal known provider failure restores versioned `not_created` authority;
+- provider success without tracking identity is ambiguous and never retry-safe;
+- corrupt or undecryptable pre-effect payloads become audited dead letters before
+  any provider call, restore booking eligibility and do not block later due work;
+- the request-local outbox kick contains rejection;
+- focused integration tests prove real second booking, original-key replay,
+  concurrent exclusion, terminal recovery, missing-tracking ambiguity and poison
+  isolation;
+- the reviewed tracking and reconciliation implementation remains private behind
+  one governed public façade.
 
-The repair remains bounded to these findings and their required invariant tests.
-Unrelated completed Phase 1 packages stay closed. Production native all-shop
-restore remains Phase 4. Full Windows/Rust/MSI and installed evidence remain
-deferred until the Founder-authorized Phase 1–4 source program is frozen.
+Normal CI `30648590071` and Integration source checkpoint `30648587454` both
+passed on exact implementation head `063f65f2d5613c03fbeb96b37739bfb506ba99f5`.
+Any later source commit requires its own exact-head evidence.
+
+Production native all-shop restore remains Phase 4. Full Windows/Rust/MSI,
+installed, live-provider, legal, Beta and Founder-acceptance evidence remain later
+separate gates.
 
 ## Founder-approved execution method
 
@@ -75,30 +75,26 @@ update existing authorities instead of creating another handoff document.
 
 ## Active package at session close — Phase 1 closure repair
 
-The package owns one coherent outcome:
-
-- all active authority entry points state the same phase and next package;
-- authority CI checks agreement rather than obsolete literal prose;
-- a reconciled or known-failed courier booking can create a later booking
-  generation without replaying or duplicating the original provider effect;
-- corrupt pre-effect payloads become audited dead letters and do not block later
-  due work;
-- real integration tests exercise second booking, concurrent recovery, original-
-  key replay and poisoned-payload isolation.
+Implementation and exact-head source validation are complete. The only remaining
+Phase 1 closure gate is one independent frozen-head P0/P1 review of the repaired
+boundary. Do not add Phase 2 implementation to the frozen review diff.
 
 ### Exact next-session order
 
-1. Re-read GitHub PR #195, this file, the Phase 1 exit gate and protected main.
-2. Confirm the current head descends from the previous source-exit candidate.
-3. Finish authority consistency and `sf-audit` enforcement.
-4. Repair courier booking generation/recovery and poisoned-payload containment.
-5. Run the targeted tests, then one exact-head source checkpoint.
-6. Freeze the repaired head for one independent P0/P1 review.
-7. Activate Phase 2A only after the repaired Phase 1 head has no known P0/P1.
+1. Re-read GitHub PR #195, this file, the Phase 1 exit gate and protected `main`.
+2. Confirm the current PR head descends from repaired implementation head
+   `063f65f2d5613c03fbeb96b37739bfb506ba99f5` and inspect any later docs-only diff.
+3. Independently review the authority repair, courier generation/replay boundary,
+   poisoned-payload handling, terminal recovery, request-local kick and tests for
+   every P0/P1.
+4. If a concrete P0/P1 exists, apply one bounded consolidated repair and rerun the
+   affected exact-head gates.
+5. If no P0/P1 remains, record the frozen-head verdict and activate only Phase 2A.
+6. Keep PR #195 draft, unmerged and version-neutral.
 
 ## Next package after closure — Phase 2A durable identity kernel
 
-After Phase 1 is refrozen, build the first bounded Phase 2 vertical:
+After the repaired Phase 1 boundary is independently cleared:
 
 1. research current primary-source practice for local-first person, workspace,
    member, installation, device and session identity plus immediate revocation;
