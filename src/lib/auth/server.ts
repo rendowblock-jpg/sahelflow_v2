@@ -1,12 +1,17 @@
 import "server-only";
 
+import { existsSync } from "node:fs";
 import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { logAudit } from "@/lib/audit";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { db, shopContext } from "@/lib/db";
-import { bindOwnerIdentitySession } from "@/lib/identity/control-authority";
+import {
+  bindOwnerIdentitySession,
+  identityAuthorityMarkerPath,
+  identityAuthorityPath,
+} from "@/lib/identity/control-authority";
 import {
   resolveSessionAuthority,
   type SessionAuthorityResult,
@@ -37,6 +42,8 @@ const LEGACY_AUTH_SECRET_KEY = "auth_secret";
 const LEGACY_AUTH_PIN_KEY = "auth_pin_hash";
 const DIRECT_ROUTE_TEST_AUTH_ENV = "SF_DIRECT_ROUTE_TEST_AUTHORITY";
 const DIRECT_ROUTE_TEST_AUTH_VALUE = "vitest-business-routes";
+const IDENTITY_AUTHORITY_FOOTPRINT_KEY = "identity_authority_initialized_v1";
+const IDENTITY_AUTHORITY_FOOTPRINT_VERSION = 1 as const;
 const authContext = { prisma: db, shop: shopContext } satisfies ServiceContext;
 
 let migrationDone = false;
@@ -170,6 +177,81 @@ async function setSessionCookie(secret: string, sessionId: string): Promise<void
   });
 }
 
+function expectedIdentityAuthorityFootprint(): string {
+  return JSON.stringify({
+    formatVersion: IDENTITY_AUTHORITY_FOOTPRINT_VERSION,
+    workspaceId: shopContext.workspaceId,
+    installationId: shopContext.installationId,
+  });
+}
+
+function parseIdentityAuthorityFootprint(value: string): {
+  formatVersion: 1;
+  workspaceId: string;
+  installationId: string;
+} {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new SahelFlowError(
+      "The durable identity initialization footprint is malformed",
+      "IDENTITY_AUTHORITY_FOOTPRINT_INVALID",
+      503,
+    );
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    (parsed as { formatVersion?: unknown }).formatVersion !==
+      IDENTITY_AUTHORITY_FOOTPRINT_VERSION ||
+    (parsed as { workspaceId?: unknown }).workspaceId !==
+      shopContext.workspaceId ||
+    (parsed as { installationId?: unknown }).installationId !==
+      shopContext.installationId
+  ) {
+    throw new SahelFlowError(
+      "The durable identity initialization footprint belongs to another authority",
+      "IDENTITY_AUTHORITY_FOOTPRINT_MISMATCH",
+      409,
+    );
+  }
+  return parsed as {
+    formatVersion: 1;
+    workspaceId: string;
+    installationId: string;
+  };
+}
+
+async function assertIdentityAuthorityContinuity(): Promise<void> {
+  const footprint = await authContext.prisma.setting.findUnique({
+    where: { key: IDENTITY_AUTHORITY_FOOTPRINT_KEY },
+    select: { value: true },
+  });
+  if (!footprint) return;
+  parseIdentityAuthorityFootprint(footprint.value);
+
+  if (
+    !existsSync(identityAuthorityPath()) &&
+    !existsSync(identityAuthorityMarkerPath())
+  ) {
+    throw new SahelFlowError(
+      "Durable identity authority is missing after this shop was initialized",
+      "IDENTITY_AUTHORITY_MISSING",
+      503,
+    );
+  }
+}
+
+async function persistIdentityAuthorityFootprint(): Promise<void> {
+  const value = expectedIdentityAuthorityFootprint();
+  await authContext.prisma.setting.upsert({
+    where: { key: IDENTITY_AUTHORITY_FOOTPRINT_KEY },
+    create: { key: IDENTITY_AUTHORITY_FOOTPRINT_KEY, value },
+    update: { value },
+  });
+}
+
 async function revokeUnboundSession(sessionId: string): Promise<void> {
   try {
     await authContext.prisma.session.updateMany({
@@ -187,7 +269,9 @@ async function bindNewSessionIdentity(
   options: Parameters<typeof bindOwnerIdentitySession>[2] = {},
 ): Promise<void> {
   try {
+    await assertIdentityAuthorityContinuity();
     await bindOwnerIdentitySession(sessionId, shopContext, options);
+    await persistIdentityAuthorityFootprint();
   } catch (error) {
     await revokeUnboundSession(sessionId);
     throw error;
