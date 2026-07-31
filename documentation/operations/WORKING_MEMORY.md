@@ -8,7 +8,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 1 closure repair — repaired boundary frozen for independent review
+> **Active phase:** Phase 1 closure repair — courier recovery and authority consistency
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
 > **Merge state:** open, draft, mergeable, unmerged
