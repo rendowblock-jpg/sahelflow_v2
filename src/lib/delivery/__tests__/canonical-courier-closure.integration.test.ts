@@ -42,7 +42,7 @@ afterEach(async () => {
   await disconnectTestPrisma(db);
 });
 
-async function readyOrder(label = randomUUID()) {
+async function readyOrder(label: string = randomUUID()) {
   const category = await db.category.create({
     data: { name: `Courier Closure ${label}` },
   });
@@ -96,7 +96,7 @@ async function readyOrder(label = randomUUID()) {
   };
 }
 
-async function firstBooking(label = randomUUID()) {
+async function firstBooking(label: string = randomUUID()) {
   const order = await readyOrder(label);
   const input = {
     orderId: order.orderId,
