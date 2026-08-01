@@ -5,6 +5,7 @@ import {
   dispatchTrigger,
   type TriggerEvent,
 } from "@/lib/automations/engine";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { orderService } from "@/lib/data/order-service";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
@@ -92,11 +93,18 @@ export async function GET(req: NextRequest) {
 /** POST /api/orders — governed manual intake or compatibility intake. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("orders.create");
+  const businessContext = {
+    ...context,
+    businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
+  };
   const body = await req.json();
   const effectiveSource = body?.source ?? "manual";
   const manualCommand =
     effectiveSource === "manual"
-      ? await createTrustedManualOrder(context, { ...body, source: "manual" })
+      ? await createTrustedManualOrder(businessContext, {
+          ...body,
+          source: "manual",
+        })
       : null;
   const manualResult = manualCommand?.result;
   const order =
