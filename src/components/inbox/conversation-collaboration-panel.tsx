@@ -183,6 +183,17 @@ async function responseBody<T>(response: Response): Promise<T & ErrorBody> {
   return (await response.json()) as T & ErrorBody;
 }
 
+function authorityRequiresReauthentication(
+  response: Response,
+  body: ErrorBody,
+): boolean {
+  return (
+    response.status === 401 ||
+    body.code?.includes("STALE") === true ||
+    body.code?.includes("REVOKED") === true
+  );
+}
+
 export function ConversationCollaborationPanel({
   conversationId,
 }: {
@@ -236,7 +247,10 @@ export function ConversationCollaborationPanel({
         responseBody<CommentsView>(commentsResponse),
         responseBody<RoutingView>(routingResponse),
       ]);
-      if (commentsResponse.status === 401 || routingResponse.status === 401) {
+      if (
+        authorityRequiresReauthentication(commentsResponse, commentsBody) ||
+        authorityRequiresReauthentication(routingResponse, routingBody)
+      ) {
         setMode("stale");
         return;
       }
@@ -296,7 +310,7 @@ export function ConversationCollaborationPanel({
       setNotice(conflict);
       return;
     }
-    if (response.status === 401 || body.code?.includes("STALE")) {
+    if (authorityRequiresReauthentication(response, body)) {
       setNotice("stale");
       return;
     }

@@ -41,6 +41,21 @@ describe("conversation collaboration workspace", () => {
     expect(source).toContain("globalThis.crypto.randomUUID()");
   });
 
+  it("distinguishes stale or revoked authority from an ordinary permission denial", () => {
+    expect(source).toContain('body.code?.includes("STALE") === true');
+    expect(source).toContain('body.code?.includes("REVOKED") === true');
+    expect(source).toContain(
+      "authorityRequiresReauthentication(commentsResponse, commentsBody)",
+    );
+    expect(
+      source.indexOf(
+        "authorityRequiresReauthentication(commentsResponse, commentsBody)",
+      ),
+    ).toBeLessThan(
+      source.indexOf("const commentsDenied = commentsResponse.status === 403"),
+    );
+  });
+
   it("projects only the member fields required for mentions", () => {
     expect(commentsRoute).toContain("memberId: member.memberId");
     expect(commentsRoute).toContain("displayName: member.displayName");
