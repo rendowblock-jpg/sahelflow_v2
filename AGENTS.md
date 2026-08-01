@@ -124,16 +124,18 @@ existence are not authority.
 
 ## Source packages and reopened blocker
 
-### Phase 1 — Golden COD core
+### Phase 1 — Golden COD core source-closed on draft PR #195
 
 Previously closed at `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with CI
 `30652282305` and checkpoint `30652282191` successful. That verdict was valid
 only absent new concrete P0/P1 evidence.
 
-Concrete P1 evidence found on 2026-08-01 reopens the shared Phase 1 replay
-boundary: durable people were not distinguished by the default command-result
-replay rule. Repair same-person replay and affected order authorization on one
-new exact green head before restoring the source-closed claim.
+Concrete P1 evidence found on 2026-08-01 reopened the shared Phase 1 replay
+boundary because durable people were not distinguished by the default
+command-result replay rule. Same-person replay and affected order authorization
+were repaired at `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`; normal CI
+`30714461757` and complete checkpoint `30714461656` succeeded. This remains
+unmerged proposed source.
 
 ### Phase 2A.1 — setup and session authority
 
@@ -186,32 +188,18 @@ PIN remains local unlock and reauthentication, never durable person identity.
 The sole core owner is outside accepted-member removal/demotion APIs; any future
 multi-owner last-owner recovery remains an explicit separate ceremony.
 
-## Exact next outcome — Teams and permissions completion
+## Exact next outcome — PR #195 protected merge decision
 
-The sole active package is **durable collaboration and operational permission
-completion**.
+Teams and permissions is source-closed at implementation head
+`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, normal CI `30714461757`
+and complete integration checkpoint `30714461656`. The separated review found no
+remaining P0/P1 and was not independent review.
 
-The package must:
-
-1. define authoritative assignments, workgroups, queues, internal comments,
-   mentions and handovers;
-2. extend the action vocabulary to Required operational domains and add
-   field-level restrictions where required by PRODUCT/EXPERIENCE;
-3. derive every collaboration mutation from a server-minted trusted member actor
-   and exact shop context;
-4. preserve idempotency, optimistic concurrency, audit attribution, replay safety,
-   revocation and recovery;
-5. keep manager/operator/viewer presets least-privilege and custom policies
-   deny-by-default when new actions are introduced;
-6. provide complete Arabic/French/English loading, empty, permission, conflict,
-   stale, offline and recovery states;
-7. prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
-   handover-recovery behavior;
-8. finish with one exact-head source checkpoint and a separated frozen-head
-   adversarial pass.
-
-Licensing/entitlements and native multi-shop lifecycle remain later Phase 2
-packages after teams and permissions completion is stable.
+Keep PR #195 draft, mergeable, unmerged and version-neutral until explicit
+Founder authorization. Add no licensing, multi-shop or later-phase work. After
+the authorized merge, licensing/entitlements is the next short outcome branch
+from the then-current protected `main`; native multi-shop follows in a separate
+short outcome PR.
 
 ## Professional execution protocol
 
@@ -239,7 +227,7 @@ packages after teams and permissions completion is stable.
 3. pass TypeScript, ESLint and the full unit/integration suite;
 4. perform a separated frozen-head adversarial pass and close every P0/P1;
 5. update Working Memory, PR #195 and issue #164 with exact evidence;
-6. keep PR #195 draft and unmerged;
+6. keep PR #195 draft and unmerged until explicit Founder authorization;
 7. keep the application version unchanged for ordinary source packages.
 
 ## Protected local boundaries

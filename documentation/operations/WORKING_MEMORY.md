@@ -8,8 +8,8 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, FD-029, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 2A — durable local identity and session authority
-> **Active package:** Teams and permissions completion
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active package:** Teams source closure — protected merge decision
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: close Phase 1 and Teams integration`
 > **Merge state:** open, draft, mergeable, unmerged
@@ -27,19 +27,17 @@ externally reviewed or Founder-accepted.
 Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
 remain later separate gates.
 
-## Phase 1 — concrete P1 replay repair active
+## Phase 1 — shared replay repair source-closed on PR #195
 
-- head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`;
-- normal CI `30652282305` — success;
-- checkpoint `30652282191` — success.
+- implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`;
+- normal CI `30714461757` — success;
+- complete checkpoint `30714461656` — success.
 
-The earlier source-closure verdict is reopened by concrete P1 evidence found on
-2026-08-01. Durable people were still minted as `authenticated-owner` principals,
-while the default command replay rule accepted every stored
-`authenticated-owner:*` result. A different authenticated member could therefore
-replay another member's committed command result if the exact idempotency key was
-presented. Phase 1 cannot return to source-closed until replay is bound to the same
-durable person across session rotation and the exact-head checkpoint is green.
+Concrete P1 replay evidence found on 2026-08-01 was repaired: a durable person's
+command result now replays only for that exact person across safe session
+rotation, while cross-person replay is denied before result decryption. Affected
+order authorization and fixture boundaries passed the same complete checkpoint.
+This remains unmerged proposed source until PR #195 is authorized and merged.
 
 ## Phase 2A.1 result — setup and session authority closed
 
@@ -132,74 +130,47 @@ The separated frozen-head pass found and closed read-time row creation, revoked
 member target exposure, list-query amplification and claim-only empty-menu behavior.
 It found no remaining P0/P1 in this vertical and was not an independent review.
 
-## Active package — Teams and permissions completion
+## Teams and permissions completion — source-closed on PR #195
 
-### Current exact frontier
+### Exact source-closure evidence
 
-- pushed implementation head
-  `9f392954959b1d4334df316ac38dcaedb169d143`;
-- normal CI `30705102301` — success;
-- integration source checkpoint `30705102253` — failure;
-- TypeScript and ESLint passed;
-- first executable failure:
-  `src/app/api/__tests__/canonical-manual-order-boundaries.test.ts`,
-  “rejects fulfillment before parsing when no trusted actor is available”;
-  expected 401, received 400.
+- implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`;
+- normal CI `30714461757` — success;
+- complete integration source checkpoint `30714461656` — success;
+- the checkpoint passed authority/docs, frozen install, Prisma generation,
+  TypeScript, ESLint, the full unit/integration suite and migration status.
 
-The branch now includes the replay repair, operational action vocabulary,
-protected-field projections, direct server-page authority, read-pure risk paths,
-phone/risk oracle closure, trusted audit attribution, recent reauthentication for
-high-risk credential writes and a sequence of durable-actor fixture repairs.
-This is unmerged source. Teams is not closed and the current failing boundary is
-not yet diagnosed as production behavior or stale fixture.
+Closed boundaries:
 
-### Intentional planning pause
+- shared per-shop workgroups and queues reusable by operational entities;
+- append-only encrypted internal comments, exact active-member mentions and
+  durable assignment/routing/handover history;
+- operational action vocabulary, least-privilege role ceilings and exact
+  deny-by-default custom policy behavior;
+- protected customer/contact, financial and provider projections plus
+  deny-before-query/write oracle closure;
+- trusted person actor and exact-shop derivation for every collaboration command;
+- same-person replay, idempotency, optimistic concurrency, audit, event, outbox,
+  projection invalidation, revocation, restart and recovery;
+- Arabic/French/English loading, empty, permission, conflict, stale/revoked,
+  offline and safe-retry seller states.
 
-The current session is governance/documentation only. No product implementation,
-test repair, merge, version bump, release or installed-artifact action resumes in
-this session. FD-029 records the uncompromised AAA target and delivery discipline.
-
-### Remaining Teams closure contract
-
-1. Add shared per-shop workgroup and queue authority reusable by conversations,
-   orders and confirmation work.
-2. Add append-only internal comments, explicit member mentions and durable handover
-   history distinct from customer/provider messages.
-3. Extend the action vocabulary and role ceilings to the Required operational
-   domains; custom policies remain exact deny-by-default allowlists.
-4. Add field-level projections for protected customer/contact and financial data
-   where the product contract requires narrower access.
-5. Derive every collaboration mutation from the trusted member actor and exact
-   shop context; UI visibility is never authorization.
-6. Preserve trusted audit attribution, idempotency, optimistic concurrency,
-   replay safety, revocation and recovery for workgroup, queue, comment and
-   handover commands.
-7. Provide complete Arabic/French/English loading, empty, permission, conflict,
-   stale, offline and recovery states.
-8. Prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
-   recovery behavior before licensing begins.
+The separated review closed cross-person replay, malformed-input authorization
+ordering, state-only handover persistence and stale-policy UI classification.
+No P0/P1 remains. This was not independent review and does not prove installed or
+external evidence.
 
 ### Exact execution order
 
-1. Verify live protected `main`, the current PR #195 head and its exact checks.
-2. Complete the short CI feedback package from current protected `main`: make
-   draft validation report the complete actionable failure set through path/risk-
-   aware lanes and an always-reporting aggregator without changing product
-   authority or PR #195 implementation.
-3. Resume PR #195, reconstruct a complete impact map for the trusted-actor/manual-
-   order boundary, deliberately integrate the CI package and diagnose the exact
-   current 400/401 failure without weakening production authority.
-4. Use the complete CI failure set for one consolidated fixture/production repair
-   batch. Do not create a commit/push cycle for each independently predictable
-   stale fixture.
-5. Freeze one exact PR #195 head, run the complete selected checkpoint and perform
-   a separated adversarial pass across replay, revocation, cross-shop scope, field
-   leakage/oracles, high-risk ceremonies, concurrency, recovery and AR/FR/EN.
-6. Close every P0/P1, refreeze only changed risk, update durable evidence and end
-   PR #195. Do not add licensing, multi-shop or later-phase work to it.
-7. In a new research/contract session, freeze licensing, entitlement, native-
-   supervisor, shop-slot and recovery contracts. Then continue through short
-   licensing and native multi-shop outcome PRs.
+1. Verify live protected `main`, PR #195, its current documentation head and exact
+   checks; the immutable implementation evidence remains the head and runs above.
+2. Update PR #195 and issue #164 with the same source-closure evidence.
+3. Keep PR #195 draft, unmerged and version-neutral until the Founder explicitly
+   authorizes its protected merge. Add no licensing or later-phase work.
+4. After merge, start licensing research/contract and implementation on a short
+   dedicated branch from the then-current protected `main`.
+5. Merge the source-complete licensing outcome through its selected gates, then
+   do native multi-shop in a second short outcome PR from protected `main`.
 
 ## Protected local boundaries
 

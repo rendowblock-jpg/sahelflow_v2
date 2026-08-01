@@ -240,7 +240,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 2A.2 — durable owner identity kernel",
       "Phase 2A.3 — revocation and policy freshness",
       "Phase 2A.4 — multi-member roles, invitations and per-shop permissions",
-      "Exact next outcome — Teams and permissions completion",
+      "Exact next outcome — PR #195 protected merge decision",
     ],
   ],
   [
@@ -250,10 +250,10 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
-      "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** Teams and permissions completion",
-      "Phase 1 remains reopened on the integration branch",
-      "the shared replay boundary is reopened",
+      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+      "**Active package:** Teams source closure — protected merge decision",
+      "source-closed proposed source",
+      "Teams and permissions is source-closed",
     ],
   ],
   [
@@ -270,16 +270,16 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** Teams and permissions completion",
+      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+      "**Active package:** Teams source closure — protected merge decision",
       "# Phase 1 — Canonical Golden COD business core",
-      "## Result — reopened on draft PR #195 for concrete P1 replay repair",
+      "## Result — source-closed on draft PR #195; protected merge pending",
       "# Phase 2 — Identity, authorization, licensing and multi-shop",
       "### Package 2A.1 — setup and session authority — closed",
       "### Package 2A.2 — durable owner identity kernel — closed",
       "### Package 2A.3 — revocation and policy freshness — closed",
       "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — closed",
-      "## Teams and permissions completion — active",
+      "## Teams and permissions completion — source-closed on draft PR #195",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -304,16 +304,16 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** Teams and permissions completion",
+      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+      "**Active package:** Teams source closure — protected merge decision",
       "**Active PR:** draft PR #195",
       "Phase 0 remains complete",
-      "Phase 1 — concrete P1 replay repair active",
+      "Phase 1 — shared replay repair source-closed on PR #195",
       "Phase 2A.1 result — setup and session authority closed",
       "Phase 2A.2 result — durable owner identity kernel closed",
       "Phase 2A.3 result — revocation and policy freshness closed",
       "Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed",
-      "Active package — Teams and permissions completion",
+      "Teams and permissions completion — source-closed on PR #195",
       "Exact execution order",
       "**Execution epic:** issue #164",
     ],
@@ -347,8 +347,8 @@ const activePhaseFiles = [
   "documentation/system/ROADMAP.md",
   "documentation/operations/WORKING_MEMORY.md",
 ] as const;
-const expectedPhase = "Phase 2A — durable local identity and session authority";
-const expectedPackage = "Teams and permissions completion";
+const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
+const expectedPackage = "Teams source closure — protected merge decision";
 
 for (const relativePath of activePhaseFiles) {
   const content = contentOf(relativePath);
@@ -441,6 +441,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "PASS: FD-028 authorities, closed Phase 2A.4, active Teams and permissions completion, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, source-closed Teams boundary, protected merge decision, shared scripts and relative links are coherent.",
   );
 }

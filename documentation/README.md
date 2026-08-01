@@ -8,8 +8,8 @@
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 2A — durable local identity and session authority
-> **Active package:** Teams and permissions completion
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active package:** Teams source closure — protected merge decision
 > **Execution epic:** issue #164
 > **Last updated:** 2026-08-01
 
@@ -93,15 +93,17 @@ and the Windows-protected installation root with native rotation and installed-M
 proof (PR #184) are merged supporting packages. These are partial protected phase
 results.
 
-Draft PR #195 assembled the intended Phase 1 source boundary at
-`3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with normal CI `30652282305`
-and checkpoint `30652282191`. Concrete P1 evidence found during later Teams review
-on 2026-08-01 reopened its shared command-replay boundary. Phase 1 remains
-reopened on the integration branch until same-person replay and affected order
-authorization pass a new exact-head checkpoint.
+Draft PR #195 now contains the repaired Phase 1 and Teams source boundary at
+implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, with normal CI
+`30714461757` and the complete integration source checkpoint `30714461656`
+successful. The concrete same-person replay, affected order authorization,
+route-ordering and collaboration-authority findings found during the 2026-08-01
+separated review were repaired and revalidated. This is source-closed proposed
+source, not protected-main truth.
 
 Phase 2A packages 2A.1–2A.4 retain their historical checkpoint evidence on the
-draft integration branch, but the shared replay boundary is reopened.
+draft integration branch, and their shared replay boundary passed again on the
+exact source-closure head above.
 The latest closed package, multi-member roles, invitations and per-shop
 permissions, passed at exact source head
 `3266dc03994ffcb1672256465624ea715f0cf317`, normal CI `30681155150` and
@@ -111,19 +113,23 @@ sessions, exact shop grants, role-bounded custom permissions, member-owned
 reauthentication, control-first member revocation, owner administration and
 member self-view in Arabic, French and English.
 
-The sole-agent frozen adversarial pass found and closed revoked-login disclosure,
-stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
-login false-success. It found no remaining P0/P1 and was not an independent
+The separated sole-agent adversarial passes found and closed revoked-login
+disclosure, stale-owner queue authorization, cross-shop inventory exposure,
+wrong-shop login false-success, cross-person command replay, pre-authorization
+request parsing, state-only handover loss and stale-policy UI misclassification.
+No P0/P1 remains in the source-closed package. These passes were not independent
 review.
 
-The active package is now Teams and permissions completion: authoritative
-assignments, workgroups, queues, comments, mentions, handovers, operational
-action permissions and required field-level restrictions. Licensing and native
-multi-shop remain later Phase 2 dependencies.
+Teams and permissions is source-closed on draft PR #195: authoritative
+assignments, workgroups, queues, comments, exact-member mentions, handovers,
+operational action permissions, protected-field projections and complete
+Arabic/French/English seller states are implemented and checkpointed.
 
-Implementation is intentionally paused at the exact frontier recorded in
-`operations/WORKING_MEMORY.md`. A future coding session resumes from live GitHub
-truth; this planning session is not implementation evidence.
+The active package is the explicit protected-merge decision for PR #195. The PR
+remains draft, mergeable, unmerged and version-neutral. It accepts no licensing,
+multi-shop or later-phase work. After an authorized merge, licensing and native
+multi-shop continue as short dedicated Phase 2 PRs from the then-current
+protected `main`.
 
 ## Final completion model
 

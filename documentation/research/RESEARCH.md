@@ -397,6 +397,30 @@ projection tests. Revalidate when principal encoding, permission vocabulary,
 remote commands, projection transport, provider connection control or
 multi-owner recovery changes.
 
+#### Teams collaboration authority closure — adopted 2026-08-01
+
+**Exact decision.** Shared collaboration state is a server-authorized operational
+aggregate, not inbox UI metadata. Workgroups, queues, comments, mentions and
+handover transitions use exact shop and durable-person authority, command replay,
+optimistic versions and append-only audit/event history. Customer/provider
+messages remain separate from encrypted internal comments. A state-only
+open/closed transition is itself a durable handover and cannot be discarded.
+
+The seller surface reuses server-projected permissions and exact active-member
+mention options. It distinguishes ordinary 403 action denial from stale or
+revoked identity that requires reauthentication, preserves one idempotency key
+across safe network retry, refreshes on version conflict, and exposes complete
+AR/FR/EN loading, empty, permission, stale, offline and recovery states.
+
+**Evidence and revalidation.** Implementation head
+`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, normal CI `30714461757`
+and complete checkpoint `30714461656` passed. The separated review covered
+cross-person replay, cross-shop and revoked targets, permission-before-parsing,
+protected-field leakage/oracles, high-risk ceremonies, state-only transitions,
+concurrency, recovery and localized failure states; no P0/P1 remained. Revalidate
+when entity types, assignment states, member lifecycle, action ceilings,
+projection fields or remote collaboration commands change.
+
 ### Phase 3 — Providers, inbox, AI and automations
 
 Research focus:

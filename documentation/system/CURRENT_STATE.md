@@ -9,7 +9,7 @@
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-07-31
+> **Last assessed:** 2026-08-01
 
 This document states what merged source and named evidence prove now. It does not
 convert target architecture, research, adapter presence, mocks, test counts or
@@ -42,23 +42,21 @@ competing legacy authority, not another architecture reset.
 ## Unmerged execution frontier — not protected current-state authority
 
 Draft PR #195 on `agent/phases1-4-completion-program` contains the unmerged Phase
-1 source and Phase 2A/Teams authority work. Its current pushed head is
-`9f392954959b1d4334df316ac38dcaedb169d143`: normal CI run `30705102301`
-succeeded and integration source checkpoint `30705102253` failed at
-`src/app/api/__tests__/canonical-manual-order-boundaries.test.ts` because the
-unauthenticated fulfillment boundary returned 400 instead of the expected 401.
-TypeScript and ESLint did not fail in that run.
+1 and Phase 2A/Teams source boundary. Its source-closure implementation head is
+`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`: normal CI run
+`30714461757` and complete integration source checkpoint `30714461656`
+succeeded, including authority/docs, frozen dependency installation, Prisma
+generation and migration status, TypeScript, ESLint and the full unit/integration
+suite.
 
-Earlier replay, operational-action, protected-field, risk, audit and high-risk
-credential findings were repaired on the branch, but the package is not closed
-until a frozen exact head passes the complete selected checkpoint and a separated
-adversarial pass has no unresolved P0/P1. These remain unmerged branch
-findings and repairs, not defects or proven behavior in protected `main`.
+Separated sole-agent review repaired concrete replay, operational-action,
+protected-field, risk/oracle, audit, high-risk credential, route-ordering,
+state-only handover and stale/revoked UI findings. No P0/P1 remains in the frozen
+source package; the pass was not independent review.
 
-Implementation is intentionally paused for this planning/documentation checkpoint.
-After Teams closes, PR #195 stops; licensing,
-multi-shop and later outcomes use short dedicated PRs from current protected
-`main`.
+PR #195 now stops and awaits an explicit protected-merge decision. Licensing,
+multi-shop and later outcomes are prohibited on it and use short dedicated PRs
+from the then-current protected `main` after merge.
 
 The exact branch head and green checks belong to PR #195 and
 [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md). This

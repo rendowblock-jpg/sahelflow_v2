@@ -7,8 +7,8 @@
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
-> **Active phase:** Phase 2A — durable local identity and session authority
-> **Active package:** Teams and permissions completion
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active package:** Teams source closure — protected merge decision
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-01
 
@@ -121,7 +121,7 @@ cancellation, return, restart, update and interrupted-command recovery in
 AR/FR/EN. Disposable backup/restore compatibility preserves exact facts.
 Production native all-shop restore remains Phase 4.
 
-## Result — reopened on draft PR #195 for concrete P1 replay repair
+## Result — source-closed on draft PR #195; protected merge pending
 
 - head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`;
 - normal CI `30652282305` — success;
@@ -129,11 +129,12 @@ Production native all-shop restore remains Phase 4.
 
 A separated sole-agent adversarial pass found and closed later courier booking and
 reconciliation generations, unreadable post-effect recovery and pre-query
-authority ordering. It was not independent review. On 2026-08-01, later Teams
-review found concrete P1 evidence: the default command replay rule did not
-distinguish durable people represented inside the legacy authenticated-owner
-principal kind. Phase 1 remains reopened until same-person replay and affected
-route boundaries pass one new exact-head checkpoint.
+authority ordering. Later Teams review found concrete P1 evidence: the default
+command replay rule did not distinguish durable people represented inside the
+legacy authenticated-owner principal kind. That replay boundary and its affected
+order routes were repaired and passed again at implementation head
+`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, normal CI `30714461757`
+and complete checkpoint `30714461656`. The passes were not independent review.
 
 ---
 
@@ -212,7 +213,7 @@ login false-success. It found no remaining P0/P1 and was not an independent
 review. The sole core owner is outside accepted-member removal/demotion APIs; any
 future multi-owner last-owner recovery remains an explicit separate ceremony.
 
-## Teams and permissions completion — active
+## Teams and permissions completion — source-closed on draft PR #195
 
 Complete authoritative assignments, workgroups, queues, internal comments,
 mentions, handovers and field-level permissions where Required. Extend the action
@@ -226,9 +227,22 @@ owner, manager and operator under happy, validation, permission, duplicate,
 concurrent, stale-policy, revoked, cross-shop, restart and recovery behavior in
 Arabic, French and English.
 
-Implementation is intentionally paused for this planning/documentation checkpoint.
-The exact branch head, checks and first failing fixture are recorded only in
-`../operations/WORKING_MEMORY.md`; this pause does not close the package.
+Result at implementation head
+`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`: normal CI `30714461757`
+and complete integration source checkpoint `30714461656` succeeded.
+
+The package adds reusable workgroup and queue authority, append-only encrypted
+internal comments, exact-member mentions, durable routing/handover history,
+operational action ceilings, protected-field projections and an AR/FR/EN
+conversation workspace. Trusted actor and exact-shop derivation, same-person
+replay, idempotency, optimistic concurrency, audit/event/outbox/invalidation,
+revocation, stale policy, route ordering, restart and recovery are covered.
+
+The separated frozen-head review closed request-parsing authority order,
+state-only handover persistence and stale/revoked UI classification findings and
+found no remaining P0/P1. It was not independent review. PR #195 remains draft,
+mergeable, unmerged and version-neutral pending explicit protected-merge
+authorization; it accepts no licensing or later-phase implementation.
 
 ## Licensing and entitlements
 
