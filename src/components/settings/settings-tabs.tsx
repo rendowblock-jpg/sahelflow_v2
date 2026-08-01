@@ -32,6 +32,7 @@ import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
 import { TeamAccessPanel } from "@/components/settings/team-access-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
+import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
 
 type Tab =
   | "profile"
@@ -150,6 +151,7 @@ export function SettingsTabs({
           <div className="space-y-8">
             <TeamAccessPanel />
             <TeamMembersPanel />
+            <CollaborationAdminPanel />
           </div>
         ) : null}
         {active === "license" ? <LicensePanel /> : null}
