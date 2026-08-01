@@ -29,6 +29,7 @@ const harness = vi.hoisted(() => ({
   ensureConversation: vi.fn(),
   findConversation: vi.fn(),
   listMembers: vi.fn(),
+  revocationSnapshot: vi.fn(),
   assignmentVersion: vi.fn(),
   executeAssignment: vi.fn(),
 }));
@@ -44,6 +45,10 @@ vi.mock("@/lib/data/conversation-service", () => ({
 
 vi.mock("@/lib/identity/team-directory", () => ({
   listTeamMembers: harness.listMembers,
+}));
+
+vi.mock("@/lib/identity/team-revocation-authority", () => ({
+  getTeamRevocationSnapshot: harness.revocationSnapshot,
 }));
 
 vi.mock("@/lib/inbox/conversation-assignment", () => ({
@@ -148,12 +153,21 @@ beforeEach(() => {
       displayName: "Other",
       shopIds: ["other-shop"],
     }),
-    member({
-      memberId: "c".repeat(32),
-      displayName: "Revoked",
-      revokedAt: "2026-08-01T01:00:00.000Z",
-    }),
+    member({ memberId: "c".repeat(32), displayName: "Revoked" }),
   ]);
+  harness.revocationSnapshot.mockReset().mockResolvedValue({
+    revision: 2,
+    memberRevocations: [
+      {
+        memberId: "c".repeat(32),
+        personId: "5".repeat(32),
+        deviceId: "7".repeat(32),
+        revokedAt: "2026-08-01T01:00:00.000Z",
+        revokedByMemberId: "6".repeat(32),
+      },
+    ],
+    sessions: [],
+  });
   harness.executeAssignment.mockReset().mockResolvedValue({
     commandId: "command-1",
     aggregateVersion: 1,
@@ -200,6 +214,27 @@ describe("GET /api/conversations/[id]/assign", () => {
     );
     expect(body.assignableMembers).toEqual([]);
     expect(harness.listMembers).not.toHaveBeenCalled();
+    expect(harness.revocationSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unpersisted live JID read-only with version zero", async () => {
+    harness.findConversation.mockResolvedValue(null);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/conversations/raw/assign"),
+      routeContext("213555000000@s.whatsapp.net"),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      assignment: {
+        conversationId: "213555000000@s.whatsapp.net",
+        assigneeId: null,
+        version: 0,
+      },
+    });
+    expect(harness.ensureConversation).not.toHaveBeenCalled();
+    expect(harness.assignmentVersion).not.toHaveBeenCalled();
   });
 
   it("returns only active current-shop manager/operator targets to a manager", async () => {
@@ -230,9 +265,12 @@ describe("GET /api/conversations/[id]/assign", () => {
     expect(harness.listMembers).toHaveBeenCalledWith(
       harness.actorContext.shop,
     );
+    expect(harness.revocationSnapshot).toHaveBeenCalledWith(
+      harness.actorContext.shop,
+    );
   });
 
-  it("establishes read authority before creating a live-JID projection", async () => {
+  it("establishes read authority before any assignment projection query", async () => {
     harness.requireAction.mockRejectedValue(
       Object.assign(new Error("Unauthorized"), {
         code: "IDENTITY_SESSION_BINDING_REQUIRED",
@@ -246,7 +284,6 @@ describe("GET /api/conversations/[id]/assign", () => {
     );
 
     expect(response.status).toBe(401);
-    expect(harness.ensureConversation).not.toHaveBeenCalled();
     expect(harness.findConversation).not.toHaveBeenCalled();
   });
 });
