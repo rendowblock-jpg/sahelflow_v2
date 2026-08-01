@@ -8,6 +8,7 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
 });
 
 import { projectOrderForTrustedActor } from "../order-projection";
+import type { Phase2Action } from "../permissions";
 import type { TrustedActorContext } from "../trusted-actor";
 import type { Order } from "@/types/domain";
 
@@ -64,7 +65,7 @@ const ORDER: Order = {
 
 function context(
   role: "owner" | "manager" | "operator" | "viewer",
-  permissions?: readonly string[],
+  permissions?: readonly Phase2Action[],
 ): TrustedActorContext {
   return {
     version: 1,
@@ -77,7 +78,7 @@ function context(
       role,
       policyVersion: 1,
       revocationEpoch: 0,
-      ...(permissions ? { permissions: JSON.stringify(permissions) } : {}),
+      ...(permissions ? { permissions } : {}),
     },
     shop: SHOP,
   } as TrustedActorContext;
