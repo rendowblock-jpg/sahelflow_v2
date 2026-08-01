@@ -6,6 +6,8 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
   messages: vi.fn(),
+  requireTrustedAction: vi.fn(),
+  assertTrustedAction: vi.fn(),
   actor: {
     version: 1,
     actor: {
@@ -28,6 +30,12 @@ const harness = vi.hoisted(() => ({
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: vi.fn(async () => harness.actor),
+}));
+
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: harness.requireTrustedAction,
+  assertTrustedAction: harness.assertTrustedAction,
+  trustedActionAllowed: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/whatsapp/sidecar-client", () => ({
@@ -71,6 +79,8 @@ function payload(productName = "Phone Case") {
 
 beforeEach(async () => {
   await cleanDb();
+  harness.requireTrustedAction.mockReset().mockResolvedValue(harness.actor);
+  harness.assertTrustedAction.mockReset();
   harness.messages.mockReset().mockResolvedValue({
     jid,
     messages: [providerMessage],

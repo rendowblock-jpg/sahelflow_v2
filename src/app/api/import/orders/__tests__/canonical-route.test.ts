@@ -38,6 +38,10 @@ vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: vi.fn().mockResolvedValue(trustedImportActor.context),
 }));
 
+vi.mock("@/lib/identity/authorization", () => ({
+  assertTrustedAction: vi.fn(),
+}));
+
 vi.mock("@/lib/business-truth/principal", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/lib/business-truth/principal")>();

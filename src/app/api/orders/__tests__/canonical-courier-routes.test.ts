@@ -24,6 +24,8 @@ const harness = vi.hoisted(() => ({
       "authenticated-owner:compatibility_local_owner:courier-owner-session",
   } as unknown,
   requireTrustedActor: vi.fn(),
+  requireTrustedAction: vi.fn(),
+  assertTrustedAction: vi.fn(),
   principalFromActor: vi.fn(),
   queue: vi.fn(),
   position: vi.fn(),
@@ -34,6 +36,12 @@ const harness = vi.hoisted(() => ({
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: harness.requireTrustedActor,
+}));
+
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: harness.requireTrustedAction,
+  assertTrustedAction: harness.assertTrustedAction,
+  trustedActionAllowed: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/business-truth/principal", () => ({
@@ -90,6 +98,8 @@ function request(method: "GET" | "POST" | "PATCH", body?: string): NextRequest {
 
 beforeEach(() => {
   harness.requireTrustedActor.mockReset().mockResolvedValue(harness.actorContext);
+  harness.requireTrustedAction.mockReset().mockResolvedValue(harness.actorContext);
+  harness.assertTrustedAction.mockReset();
   harness.principalFromActor.mockReset().mockReturnValue(harness.principal);
   harness.queue.mockReset().mockResolvedValue({
     commandId: "booking-command",
@@ -117,7 +127,7 @@ beforeEach(() => {
 
 describe("canonical courier trusted route boundaries", () => {
   it("rejects booking before parsing an untrusted request body", async () => {
-    harness.requireTrustedActor.mockRejectedValueOnce({
+    harness.requireTrustedAction.mockRejectedValueOnce({
       message: "Trusted actor required",
       code: "TRUSTED_ACTOR_REQUIRED",
       statusCode: 401,

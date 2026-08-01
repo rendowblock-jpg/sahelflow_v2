@@ -84,7 +84,7 @@ describe("Phase 1 adopted-source bypass audit", () => {
     for (const content of [bulk, orderRoute]) {
       expect(content).toContain("LEGACY_COD_MUTATION_REMOVED");
       expect(content).toContain("status: 410");
-      expect(content).toContain("requireTrustedActor");
+      expect(content).toContain("requireTrustedAction");
       expect(content).not.toMatch(
         /markCodCollected|markCodRemitted|bulkMarkCodRemitted/,
       );

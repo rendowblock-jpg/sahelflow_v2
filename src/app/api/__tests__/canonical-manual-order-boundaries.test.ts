@@ -160,7 +160,7 @@ afterAll(async () => {
 
 describe("canonical manual order API boundary", () => {
   it("rejects fulfillment before parsing when no trusted actor is available", async () => {
-    authority.requireTrustedActor.mockRejectedValueOnce(
+    authority.requireTrustedAction.mockRejectedValueOnce(
       new SahelFlowError(
         "A trusted actor is unavailable before authentication setup completes",
         "TRUSTED_ACTOR_REQUIRED",

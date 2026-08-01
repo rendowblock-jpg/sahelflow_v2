@@ -24,6 +24,8 @@ const harness = vi.hoisted(() => ({
       "authenticated-owner:compatibility_local_owner:return-owner-session",
   } as unknown,
   requireTrustedActor: vi.fn(),
+  requireTrustedAction: vi.fn(),
+  assertTrustedAction: vi.fn(),
   principalFromActor: vi.fn(),
   position: vi.fn(),
   requestReturn: vi.fn(),
@@ -34,6 +36,11 @@ const harness = vi.hoisted(() => ({
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: harness.requireTrustedActor,
+}));
+
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: harness.requireTrustedAction,
+  assertTrustedAction: harness.assertTrustedAction,
 }));
 
 vi.mock("@/lib/business-truth/principal", () => ({
@@ -97,6 +104,8 @@ function request(path: string, body?: string): NextRequest {
 
 beforeEach(() => {
   harness.requireTrustedActor.mockReset().mockResolvedValue(harness.actorContext);
+  harness.requireTrustedAction.mockReset().mockResolvedValue(harness.actorContext);
+  harness.assertTrustedAction.mockReset();
   harness.principalFromActor.mockReset().mockReturnValue(harness.principal);
   harness.position.mockReset().mockResolvedValue({
     orderId: "order-a",
@@ -126,7 +135,7 @@ function expectTrustedContext(call: unknown): void {
 
 describe("canonical customer-return API authority", () => {
   it("rejects a return request before parsing without trusted authority", async () => {
-    harness.requireTrustedActor.mockRejectedValueOnce({
+    harness.requireTrustedAction.mockRejectedValueOnce({
       message: "Trusted actor required",
       code: "TRUSTED_ACTOR_REQUIRED",
       statusCode: 401,

@@ -24,12 +24,19 @@ const harness = vi.hoisted(() => ({
       "authenticated-owner:compatibility_local_owner:legacy-cod-owner-session",
   } as unknown,
   requireTrustedActor: vi.fn(),
+  requireTrustedAction: vi.fn(),
+  assertTrustedAction: vi.fn(),
   principalFromActor: vi.fn(),
   summary: vi.fn(),
 }));
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: harness.requireTrustedActor,
+}));
+
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: harness.requireTrustedAction,
+  assertTrustedAction: harness.assertTrustedAction,
 }));
 
 vi.mock("@/lib/business-truth/principal", () => ({
@@ -78,6 +85,8 @@ function request(path: string, method = "GET", body?: string): NextRequest {
 
 beforeEach(() => {
   harness.requireTrustedActor.mockReset().mockResolvedValue(harness.actorContext);
+  harness.requireTrustedAction.mockReset().mockResolvedValue(harness.actorContext);
+  harness.assertTrustedAction.mockReset();
   harness.principalFromActor.mockReset().mockReturnValue(harness.principal);
   harness.summary.mockReset().mockResolvedValue({
     totals: { expectedReceivable: 5000 },
@@ -168,7 +177,7 @@ describe("legacy COD route containment", () => {
   });
 
   it("authenticates before exposing removed mutation guidance", async () => {
-    harness.requireTrustedActor.mockRejectedValueOnce({
+    harness.requireTrustedAction.mockRejectedValueOnce({
       message: "Trusted actor required",
       code: "TRUSTED_ACTOR_REQUIRED",
       statusCode: 401,

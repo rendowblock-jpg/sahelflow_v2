@@ -24,6 +24,8 @@ const harness = vi.hoisted(() => ({
       "authenticated-owner:compatibility_local_owner:cod-owner-session",
   } as unknown,
   requireTrustedActor: vi.fn(),
+  requireTrustedAction: vi.fn(),
+  assertTrustedAction: vi.fn(),
   principalFromActor: vi.fn(),
   collect: vi.fn(),
   postSettlement: vi.fn(),
@@ -36,6 +38,11 @@ const harness = vi.hoisted(() => ({
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: harness.requireTrustedActor,
+}));
+
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: harness.requireTrustedAction,
+  assertTrustedAction: harness.assertTrustedAction,
 }));
 
 vi.mock("@/lib/business-truth/principal", () => ({
@@ -108,6 +115,8 @@ function command(result: Record<string, unknown>) {
 
 beforeEach(() => {
   harness.requireTrustedActor.mockReset().mockResolvedValue(harness.actorContext);
+  harness.requireTrustedAction.mockReset().mockResolvedValue(harness.actorContext);
+  harness.assertTrustedAction.mockReset();
   harness.principalFromActor.mockReset().mockReturnValue(harness.principal);
   harness.collect.mockReset().mockResolvedValue(command({ orderId: "order-a" }));
   harness.postSettlement.mockReset().mockResolvedValue(command({ settlementId: "settlement-a" }));
@@ -120,7 +129,7 @@ beforeEach(() => {
 
 describe("canonical COD trusted API boundaries", () => {
   it("rejects collection before parsing an untrusted request body", async () => {
-    harness.requireTrustedActor.mockRejectedValueOnce({
+    harness.requireTrustedAction.mockRejectedValueOnce({
       message: "Trusted actor required",
       code: "TRUSTED_ACTOR_REQUIRED",
       statusCode: 401,
@@ -226,7 +235,7 @@ describe("canonical COD trusted API boundaries", () => {
   });
 
   it("requires trusted authority for order-position reads", async () => {
-    harness.requireTrustedActor.mockRejectedValueOnce({
+    harness.requireTrustedAction.mockRejectedValueOnce({
       message: "Trusted actor required",
       code: "TRUSTED_ACTOR_REQUIRED",
       statusCode: 401,

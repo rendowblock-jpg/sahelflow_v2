@@ -36,15 +36,18 @@ import {
   seedProduct,
 } from "@/lib/data/__tests__/helpers";
 
-// ── Mock next/headers — returns/[id] PATCH calls requireAuth() which reads
-//    cookies. With a clean DB (no AuthSecret row), isAuthenticated() returns
-//    true (setup mode) — an empty cookie jar passes requireAuth.
+// The route authorization boundary is covered independently. This integrity
+// fixture focuses on the transactional stock and customer-stat effects.
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: () => undefined,
     set: () => undefined,
     delete: () => undefined,
   })),
+}));
+
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: vi.fn(async () => ({})),
 }));
 
 // Mock the automation dispatcher so orderService.updateStatus's fire-and-forget
