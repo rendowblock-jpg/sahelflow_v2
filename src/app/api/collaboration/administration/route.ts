@@ -106,15 +106,16 @@ export const GET = withErrorHandler(async () => {
           role: member.role,
         })),
     );
+    const personActor =
+      actorContext.actor.kind === "person" ? actorContext.actor : null;
     if (
-      actorContext.actor.kind === "person" &&
-      actorContext.actor.role === "owner" &&
+      personActor?.role === "owner" &&
       !activeMembers.some(
-        (member) => member.memberId === actorContext.actor.workspaceMemberId,
+        (member) => member.memberId === personActor.workspaceMemberId,
       )
     ) {
       activeMembers.unshift({
-        memberId: actorContext.actor.workspaceMemberId,
+        memberId: personActor.workspaceMemberId,
         displayName: null,
         role: "owner",
       });
