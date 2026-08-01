@@ -5,6 +5,11 @@ import { z } from "zod";
 
 import { executeBusinessCommand } from "@/lib/business-truth/command-kernel";
 import type { BusinessCommandResult } from "@/lib/business-truth/contracts";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
+import {
+  collaborationHandoverReasonBinding,
+  sealBusinessPayloadWithKey,
+} from "@/lib/business-truth/payload-codec";
 import {
   businessPrincipalFromTrustedActor,
   type BusinessPrincipalContext,
@@ -159,9 +164,11 @@ export async function getConversationAssignmentVersions(
 /**
  * Govern self-claim, self-release, manager assignment/handover and unassignment.
  *
- * Assignment is one optimistic business aggregate per canonical Conversation row.
- * The transaction updates the projection, appends a structured activity message,
- * records trusted audit, emits a domain event and seals the replay result.
+ * The generic CollaborationAssignment row is current operational authority. The
+ * legacy Conversation.assigneeId column remains an inbox projection and is
+ * updated in the same transaction. Every change also appends an explicit
+ * CollaborationHandover fact, encrypted reason, activity, trusted audit and
+ * domain event.
  */
 export async function executeConversationAssignment(
   context: ConversationAssignmentContext,
@@ -179,12 +186,13 @@ export async function executeConversationAssignment(
   };
   const correlationId = data.correlationId ?? randomUUID();
   const replayPrefix = samePersonAuditPrefix(actor.personId);
+  const envelopeKey = await getBusinessEnvelopeKey(context);
 
   return executeBusinessCommand(
     businessContext,
     {
       idempotencyKey: data.idempotencyKey,
-      commandType: `conversation.assignment.${data.operation}.v1`,
+      commandType: `conversation.assignment.${data.operation}.v2`,
       aggregate: {
         type: "conversation-assignment",
         id: data.conversationId,
@@ -207,8 +215,17 @@ export async function executeConversationAssignment(
       if (!conversation) {
         throw new NotFoundError("Conversation", data.conversationId);
       }
+      const currentAssignment = await tx.collaborationAssignment.findUnique({
+        where: {
+          entityType_entityId: {
+            entityType: "conversation",
+            entityId: conversation.id,
+          },
+        },
+      });
 
-      const previousAssigneeId = conversation.assigneeId;
+      const previousAssigneeId =
+        currentAssignment?.assigneeMemberId ?? conversation.assigneeId;
       const assignee =
         data.operation === "claim"
           ? await resolveConversationAssignee(
@@ -265,17 +282,74 @@ export async function executeConversationAssignment(
                 ? "assignment_assigned"
                 : "assignment_handed_over";
       const activityPayload = Object.freeze({
-        version: 1,
+        version: 2,
         kind: "conversation_assignment",
         activityType,
         fromMemberId: previousAssigneeId,
         toMemberId: nextAssigneeId,
         toDisplayName: assignee?.displayName ?? null,
         toRole: assignee?.role ?? null,
+        queueId: currentAssignment?.queueId ?? null,
+        workgroupId: currentAssignment?.workgroupId ?? null,
         reason: data.reason ?? null,
       });
       const occurredAt = new Date();
+      const handoverId = commandId;
 
+      await tx.collaborationAssignment.upsert({
+        where: {
+          entityType_entityId: {
+            entityType: "conversation",
+            entityId: conversation.id,
+          },
+        },
+        create: {
+          entityType: "conversation",
+          entityId: conversation.id,
+          queueId: currentAssignment?.queueId ?? null,
+          workgroupId: currentAssignment?.workgroupId ?? null,
+          assigneeMemberId: nextAssigneeId,
+          state: "open",
+          generation: aggregateVersion,
+          updatedByMemberId: actor.workspaceMemberId,
+          commandId,
+          createdAt: occurredAt,
+          updatedAt: occurredAt,
+        },
+        update: {
+          assigneeMemberId: nextAssigneeId,
+          generation: aggregateVersion,
+          updatedByMemberId: actor.workspaceMemberId,
+          commandId,
+          updatedAt: occurredAt,
+        },
+      });
+      await tx.collaborationHandover.create({
+        data: {
+          id: handoverId,
+          entityType: "conversation",
+          entityId: conversation.id,
+          fromMemberId: previousAssigneeId,
+          toMemberId: nextAssigneeId,
+          fromQueueId: currentAssignment?.queueId ?? null,
+          toQueueId: currentAssignment?.queueId ?? null,
+          fromWorkgroupId: currentAssignment?.workgroupId ?? null,
+          toWorkgroupId: currentAssignment?.workgroupId ?? null,
+          reasonJson: data.reason
+            ? sealBusinessPayloadWithKey(
+                { reason: data.reason },
+                collaborationHandoverReasonBinding(
+                  commandId,
+                  handoverId,
+                  "conversation",
+                ),
+                envelopeKey,
+              )
+            : null,
+          commandId,
+          occurredAt,
+        },
+      });
       await tx.conversation.update({
         where: { id: conversation.id },
         data: { assigneeId: nextAssigneeId },
@@ -313,12 +387,21 @@ export async function executeConversationAssignment(
           action: "conversation.assignment.changed",
           entity: "conversation",
           entityId: conversation.id,
-          before: { assigneeId: previousAssigneeId },
-          after: { assigneeId: nextAssigneeId },
+          before: {
+            assigneeId: previousAssigneeId,
+            queueId: currentAssignment?.queueId ?? null,
+            workgroupId: currentAssignment?.workgroupId ?? null,
+          },
+          after: {
+            assigneeId: nextAssigneeId,
+            queueId: currentAssignment?.queueId ?? null,
+            workgroupId: currentAssignment?.workgroupId ?? null,
+          },
           metadata: {
             operation: data.operation,
             activityType,
-            reason: data.reason ?? null,
+            handoverId,
+            reasonProvided: Boolean(data.reason),
           },
         },
         events: [
@@ -331,6 +414,7 @@ export async function executeConversationAssignment(
         ],
         projectionInvalidations: [
           `conversation:${conversation.id}`,
+          `collaboration-assignment:conversation:${conversation.id}`,
           "inbox:conversations",
         ],
       };
