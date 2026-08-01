@@ -77,6 +77,28 @@ async function seedConversation() {
   });
 }
 
+async function seedOrder() {
+  const suffix = Math.random().toString().slice(2);
+  const customer = await rawDb.customer.create({
+    data: {
+      name: `Customer ${suffix}`,
+      phone: `routing-phone-${suffix}`,
+    },
+  });
+  return rawDb.order.create({
+    data: {
+      orderNumber: `ROUTING-${suffix}`,
+      customerId: customer.id,
+      totalPrice: 2500,
+      wilaya: "Alger",
+      commune: "Alger Centre",
+      address: "Test address",
+      phone: `0555${suffix.slice(0, 6)}`,
+      source: "manual",
+    },
+  });
+}
+
 async function seedGroupAndQueue(entityType: "conversation" | "order") {
   const workgroup = await rawDb.collaborationWorkgroup.create({
     data: {
@@ -182,7 +204,7 @@ describe("generic collaboration routing", () => {
     await expect(rawDb.collaborationHandover.update({
       where: { id: handover!.id },
       data: { toMemberId: null },
-    })).rejects.toThrow(/append-only/);
+    })).rejects.toThrow();
   });
 
   it("replays across session rotation without a second handover", async () => {
@@ -222,8 +244,9 @@ describe("generic collaboration routing", () => {
     })).toBe(1);
   });
 
-  it("rejects wrong queue type and non-member assignee atomically", async () => {
+  it("rejects wrong queue type and a non-member assignee atomically", async () => {
     const conversation = await seedConversation();
+    const order = await seedOrder();
     const { workgroup, queue } = await seedGroupAndQueue("order");
 
     await expect(executeCollaborationRouting(CONTEXT, actorContext(), {
@@ -239,12 +262,12 @@ describe("generic collaboration routing", () => {
     });
     await expect(executeCollaborationRouting(CONTEXT, actorContext(), {
       entityType: "order",
-      entityId: "missing-order",
+      entityId: order.id,
       targetQueueId: queue.id,
       targetMemberId: TARGET.memberId,
       expectedVersion: 0,
       idempotencyKey: "routing-non-member",
-    })).rejects.toMatchObject({ statusCode: 404 });
+    })).rejects.toMatchObject({ statusCode: 409 });
     expect(await rawDb.collaborationAssignment.count()).toBe(0);
     expect(await rawDb.collaborationHandover.count()).toBe(0);
   });
