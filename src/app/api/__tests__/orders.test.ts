@@ -699,14 +699,10 @@ describe("POST /api/orders/bulk — bulk status transition", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 401 with configured auth and no session", async () => {
-    await rawDb.authSecret.create({
-      data: {
-        id: "default",
-        secret: "test-secret-32-chars-long-aaaa",
-        pinHash: "fake-hash",
-      },
-    });
+  it("returns 401 when trusted action authority rejects the request", async () => {
+    authority.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Authentication required", "UNAUTHORIZED", 401),
+    );
     const { orders } = await seedPendingOrders(1);
     const response = await POSTBulk(
       mockPost("http://localhost/api/orders/bulk", {
