@@ -72,7 +72,6 @@ process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef012345
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import { existsSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { NextRequest } from "next/server";
 
 // ── Mock next/headers ───────────────────────────────────────────────────────
 // The locale cookie is served per-test via a mutable holder (scenario #12
@@ -133,18 +132,6 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
     ),
   };
 });
-
-function actorRequest(
-  url: string,
-  body: unknown,
-  method: "POST" | "PATCH" = "POST",
-): NextRequest {
-  return new NextRequest(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
 
 // ── Mock the delivery adapter so API routes that call createShipment/
 //    syncTracking don't hit a real provider ──────────────────────────────────
@@ -631,7 +618,7 @@ describe("Scenario 3 — Order ship → delivery created + trigger fires", () =>
 
     // POST /api/delivery/create.
     const res = await deliveryCreatePost(
-      actorRequest("http://localhost/api/delivery/create", {
+      mockPost("http://localhost/api/delivery/create", {
         orderId: order.id,
         provider: "yalidine",
       }),
@@ -728,7 +715,7 @@ describe("Scenario 4 — Order deliver (via /api/delivery/sync)", () => {
 
     // POST /api/delivery/sync — exercises the route's tracking-update path.
     const res = await deliverySyncPost(
-      actorRequest("http://localhost/api/delivery/sync", { deliveryId: delivery.id }),
+      mockPost("http://localhost/api/delivery/sync", { deliveryId: delivery.id }),
     );
     expect(res.status).toBe(200);
 
@@ -813,10 +800,9 @@ describe("Scenario 5 — Order deliver (via /api/delivery/[id] PATCH)", () => {
 
     // PATCH the delivery to "delivered" via the manual route.
     const res = await deliveryPatch(
-      actorRequest(
+      mockPost(
         `http://localhost/api/delivery/${delivery.id}`,
         { status: "delivered" },
-        "PATCH",
       ),
       { params: Promise.resolve({ id: delivery.id }) },
     );
