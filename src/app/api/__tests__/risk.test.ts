@@ -390,7 +390,7 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
   beforeEach(async () => { await cleanDb(); });
   afterAll(async () => { await rawDb.$disconnect(); });
 
-  it("GET returns 200 + default rules (seeded on first access) with triggerCount=0", async () => {
+  it("GET returns in-memory default rules without seeding durable state", async () => {
     const res = await GETRules();
     expect(res.status).toBe(200);
     const body = await getJson(res);
@@ -402,13 +402,16 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
     expect(ids).toContain("new_customer_high_value");
     // All default rules start with triggerCount=0
     expect(rules.every((r) => r.triggerCount === 0)).toBe(true);
+    expect(
+      await rawDb.setting.findUnique({ where: { key: "risk_engine_rules" } }),
+    ).toBeNull();
   });
 
   it("PUT replaces all rules + persists to Setting table", async () => {
-    // First, seed defaults (so we know there's something to replace)
+    // Reads stay pure; the first explicit management write creates the row.
     await GETRules();
     const initial = await rawDb.setting.findUnique({ where: { key: "risk_engine_rules" } });
-    expect(initial).toBeTruthy();
+    expect(initial).toBeNull();
 
     // Now PUT a custom ruleset — single rule
     const customRules = [
