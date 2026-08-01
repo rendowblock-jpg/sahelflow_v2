@@ -109,17 +109,7 @@ function Get-SahelFlowProcessTree {
     )
 }
 
-function Get-ProcessIdentityKey {
-    param([Parameter(Mandatory = $true)][object]$Process)
-
-    if ($null -eq $Process.CreationDate) {
-        throw "Windows did not expose a creation time for process $($Process.ProcessId)."
-    }
-    $creationDateUtc = ([DateTime]$Process.CreationDate).ToUniversalTime()
-    return "$([int64]$Process.ProcessId)|$($creationDateUtc.Ticks)"
-}
-
-function Get-DescendantProcessIdentities {
+function Get-DescendantProcessIds {
     param([Parameter(Mandatory = $true)][int64]$RootProcessId)
 
     $snapshot = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
@@ -136,15 +126,7 @@ function Get-DescendantProcessIdentities {
                 $key = [string]$childId
                 if (-not $seen.ContainsKey($key)) {
                     $seen[$key] = $true
-                    $descendants += [pscustomobject]@{
-                        processId = $childId
-                        parentProcessId = [int64]$child.ParentProcessId
-                        name = [string]$child.Name
-                        creationDateUtc = (
-                            ([DateTime]$child.CreationDate).ToUniversalTime().ToString("O")
-                        )
-                        identityKey = Get-ProcessIdentityKey -Process $child
-                    }
+                    $descendants += $childId
                     $next += $childId
                 }
             }
@@ -360,9 +342,7 @@ function Close-SahelFlowNormally {
     # WebView2 descendants run outside the SahelFlow installation directory and
     # may outlive the desktop process briefly. Capture the exact descendant
     # identities before closing so a relaunch cannot race stale WebView teardown.
-    $descendantProcesses = @(
-        Get-DescendantProcessIdentities -RootProcessId $Process.Id
-    )
+    $descendantProcessIds = @(Get-DescendantProcessIds -RootProcessId $Process.Id)
 
     $handles = @(
         [SahelFlowWindowCloser]::FindTopLevelWindows([uint32]$Process.Id)
@@ -404,30 +384,20 @@ function Close-SahelFlowNormally {
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
-        $liveProcessIdentityKeys = @{}
-        foreach ($candidate in $processSnapshot) {
-            $liveProcessIdentityKeys[(Get-ProcessIdentityKey -Process $candidate)] = $true
-        }
-        $remainingDescendants = @(
-            $descendantProcesses |
-                Where-Object { $liveProcessIdentityKeys.ContainsKey($_.identityKey) }
+        $liveProcessIds = @($processSnapshot | ForEach-Object { [int64]$_.ProcessId })
+        $remainingDescendantIds = @(
+            $descendantProcessIds | Where-Object { $liveProcessIds -contains $_ }
         )
         $endpointPresent = Test-Path -LiteralPath $runtimeEndpointPath -PathType Leaf
         if (
             $remaining.Count -eq 0 -and
-            $remainingDescendants.Count -eq 0 -and
+            $remainingDescendantIds.Count -eq 0 -and
             -not $endpointPresent
         ) {
             return [pscustomobject]@{
                 processId = $Process.Id
                 windowHandles = @($posted)
-                descendantProcessIds = @(
-                    $descendantProcesses | ForEach-Object { $_.processId }
-                )
-                descendantProcesses = @(
-                    $descendantProcesses |
-                        Select-Object processId, parentProcessId, name, creationDateUtc
-                )
+                descendantProcessIds = @($descendantProcessIds)
                 descendantTreeStopped = $true
                 processTreeStopped = $true
                 runtimeEndpointRemoved = $true
@@ -441,13 +411,10 @@ function Close-SahelFlowNormally {
     } else {
         ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
     }
-    $descendantSummary = if ($remainingDescendants.Count -eq 0) {
+    $descendantSummary = if ($remainingDescendantIds.Count -eq 0) {
         "none"
     } else {
-        (
-            $remainingDescendants |
-                ForEach-Object { "$($_.name):$($_.processId)@$($_.creationDateUtc)" }
-        ) -join ", "
+        $remainingDescendantIds -join ", "
     }
     throw "Normal close was incomplete; remaining processes: $remainingSummary; remaining captured descendants: $descendantSummary; runtime endpoint present: $endpointPresent"
 }

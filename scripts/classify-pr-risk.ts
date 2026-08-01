@@ -73,7 +73,6 @@ function affectsInstalledMsi(path: string): boolean {
   return (
     path === "sahelflow.version.json" ||
     affectsTauri(path) ||
-    path.startsWith("prisma/") ||
     path.startsWith("src/app/api/internal/runtime-") ||
     path.startsWith("src/components/runtime/") ||
     path === "src/app/layout.tsx" ||

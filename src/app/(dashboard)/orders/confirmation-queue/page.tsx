@@ -12,14 +12,15 @@ import { formatDZD } from "@/lib/utils";
 import { Clock, AlertTriangle, Phone, CheckCircle2, Banknote } from "lucide-react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
-import {
-  isImportPendingOrderAuthority,
-  isTrustedManualOrderAuthority,
-} from "@/lib/orders/manual-order-authority";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  projectConfirmationQueueForTrustedActor,
+  resolveConfirmationQueueFieldAccess,
+} from "@/lib/identity/confirmation-queue-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -30,20 +31,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ConfirmationQueuePage() {
   const { t } = await getI18n();
-  const queue = await getConfirmationQueue();
+  const actorContext = await requireTrustedAction("orders.read");
+  const fieldAccess = resolveConfirmationQueueFieldAccess(actorContext);
+  const rawQueue = await getConfirmationQueue();
+  const queue = projectConfirmationQueueForTrustedActor(rawQueue, fieldAccess);
   const staleCount = queue.filter((o) => o.isStale).length;
   const freshCount = queue.length - staleCount;
-  const queueRows = queue.map((order) => ({
-    ...order,
-    mutationAuthority: isTrustedManualOrderAuthority(
-      order.source,
-      order.sourceMetadata,
-    )
-      ? ("canonical_v1" as const)
-      : isImportPendingOrderAuthority(order.source, order.sourceMetadata)
-        ? ("confirmation_blocked" as const)
-        : ("legacy_compatibility" as const),
-  }));
 
   return (
     <div className="app-content page-sections">
@@ -81,7 +74,9 @@ export default async function ConfirmationQueuePage() {
         />
         <StatCard
           label={t("confirmationQueue.totalValue")}
-          value={formatDZD(queue.reduce((sum, o) => sum + o.totalPrice, 0))}
+          value={fieldAccess.financials
+            ? formatDZD(queue.reduce((sum, o) => sum + (o.totalPrice ?? 0), 0))
+            : "—"}
           icon={<Banknote />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
           accentIcon="text-teal-600 dark:text-teal-400"
@@ -114,7 +109,7 @@ export default async function ConfirmationQueuePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {queueRows.map((o) => (
+                  {queue.map((o) => (
                     <tr
                       key={o.id}
                       className={`transition-colors hover:bg-muted/50 ${o.isStale ? "bg-amber-500/5" : ""}`}
@@ -124,15 +119,19 @@ export default async function ConfirmationQueuePage() {
                           {o.orderNumber}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm">{o.customer.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-sm">{o.customerName ?? "—"}</td>
                       <td className="px-4 py-3 text-sm font-mono">
-                        <a href={`tel:${o.customer.phone ?? o.phone}`} className="hover:underline flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          {o.customer.phone ?? o.phone}
-                        </a>
+                        {o.phone ? (
+                          <a href={`tel:${o.phone}`} className="hover:underline flex items-center gap-1">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            {o.phone}
+                          </a>
+                        ) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-sm">{o.wilaya}</td>
-                      <td className="px-4 py-3 text-end font-medium tabular-nums">{formatDZD(o.totalPrice)}</td>
+                      <td className="px-4 py-3 text-sm">{o.wilaya ?? "—"}</td>
+                      <td className="px-4 py-3 text-end font-medium tabular-nums">
+                        {o.totalPrice === null ? "—" : formatDZD(o.totalPrice)}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`font-medium ${o.isStale ? "text-warning" : "text-muted-foreground"}`}>
                           {o.ageLabel}
@@ -144,11 +143,11 @@ export default async function ConfirmationQueuePage() {
                           orderId={o.id}
                           status="pending"
                           size="sm"
-                          disabled={o.mutationAuthority !== "legacy_compatibility"}
+                          disabled={!o.canUpdate || o.mutationAuthority !== "legacy_compatibility"}
                         />
                       </td>
                       <td className="px-4 py-3 text-end">
-                        {o.mutationAuthority === "legacy_compatibility" ? (
+                        {!o.canUpdate ? null : o.mutationAuthority === "legacy_compatibility" ? (
                           <Button size="sm" variant="outline" asChild>
                             <Link href={`/orders/${o.id}`}>{t("confirmationQueue.confirm")}</Link>
                           </Button>

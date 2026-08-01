@@ -50,6 +50,18 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("keeps Prisma changes on database and Rust parity without rebuilding MSI", () => {
+    expect(
+      classifyPrRisk(["prisma/migrations/20260801053000_example/migration.sql"]),
+    ).toMatchObject({
+      runQuality: true,
+      runTauri: false,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: false,
+    });
+  });
+
   it("forces every release proof when version authority changes", () => {
     expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
       runQuality: true,
