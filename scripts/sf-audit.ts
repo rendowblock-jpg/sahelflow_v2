@@ -48,7 +48,6 @@ for (const relativePath of requiredFiles) {
 function walk(directory: string): string[] {
   if (!existsSync(directory)) return [];
   const output: string[] = [];
-
   for (const name of readdirSync(directory)) {
     if ([".git", "node_modules", ".next", "target"].includes(name)) continue;
     const absolutePath = resolve(directory, name);
@@ -56,12 +55,10 @@ function walk(directory: string): string[] {
       .slice(repoRoot.length + 1)
       .replaceAll("\\", "/");
     if (relativePath.startsWith("documentation/archive/")) continue;
-
     const metadata = statSync(absolutePath);
     if (metadata.isDirectory()) output.push(...walk(absolutePath));
     else if (extname(name).toLowerCase() === ".md") output.push(absolutePath);
   }
-
   return output;
 }
 
@@ -89,8 +86,13 @@ function normalizeLink(rawTarget: string): string | null {
   }
 }
 
-function normalizeSemanticText(value: string): string {
+function normalized(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function contentOf(relativePath: string): string {
+  const absolutePath = resolve(repoRoot, relativePath);
+  return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
 }
 
 const markdownFiles = walk(repoRoot);
@@ -204,11 +206,9 @@ const entrypointChecks: Array<[string, string[]]> = [
 ];
 
 for (const [relativePath, markers] of entrypointChecks) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
+  const content = contentOf(relativePath);
   for (const marker of markers) {
-    if (!content.includes(marker)) {
+    if (content && !content.includes(marker)) {
       findings.push({
         kind: "drift",
         file: relativePath,
@@ -239,7 +239,8 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 2A.1 — setup and session authority",
       "Phase 2A.2 — durable owner identity kernel",
       "Phase 2A.3 — revocation and policy freshness",
-      "Exact next outcome — Phase 2A.4",
+      "Phase 2A.4 — multi-member roles, invitations and per-shop permissions",
+      "Exact next outcome — Teams and permissions completion",
     ],
   ],
   [
@@ -250,7 +251,9 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first rule",
       "1.0.0-internal.13",
       "**Active phase:** Phase 2A — durable local identity and session authority",
+      "**Active package:** Teams and permissions completion",
       "Phase 1 is source-closed",
+      "Phase 2A packages 2A.1–2A.4 are source-closed",
     ],
   ],
   [
@@ -268,14 +271,15 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Phase 0 status:** Complete",
       "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** Phase 2A.4 — multi-member roles, invitations and per-shop permissions",
+      "**Active package:** Teams and permissions completion",
       "# Phase 1 — Canonical Golden COD business core",
       "## Result — source-closed on draft PR #195",
       "# Phase 2 — Identity, authorization, licensing and multi-shop",
       "### Package 2A.1 — setup and session authority — closed",
       "### Package 2A.2 — durable owner identity kernel — closed",
       "### Package 2A.3 — revocation and policy freshness — closed",
-      "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — active",
+      "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — closed",
+      "## Teams and permissions completion — active",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -301,14 +305,15 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/operations/WORKING_MEMORY.md",
     [
       "**Active phase:** Phase 2A — durable local identity and session authority",
-      "**Active package:** 2A.4 — multi-member roles, invitations and per-shop permissions",
+      "**Active package:** Teams and permissions completion",
       "**Active PR:** draft PR #195",
       "Phase 0 remains complete",
       "Phase 1 — source-closed",
       "Phase 2A.1 result — setup and session authority closed",
       "Phase 2A.2 result — durable owner identity kernel closed",
       "Phase 2A.3 result — revocation and policy freshness closed",
-      "Active package — Phase 2A.4 member authority",
+      "Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed",
+      "Active package — Teams and permissions completion",
       "Exact next-session order",
       "**Execution epic:** issue #164",
     ],
@@ -325,13 +330,9 @@ const semanticRequirements: Array<[string, string[]]> = [
 ];
 
 for (const [relativePath, markers] of semanticRequirements) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const normalizedContent = normalizeSemanticText(
-    readFileSync(absolutePath, "utf8"),
-  );
+  const content = normalized(contentOf(relativePath));
   for (const marker of markers) {
-    if (!normalizedContent.includes(normalizeSemanticText(marker))) {
+    if (content && !content.includes(normalized(marker))) {
       findings.push({
         kind: "drift",
         file: relativePath,
@@ -341,27 +342,40 @@ for (const [relativePath, markers] of semanticRequirements) {
   }
 }
 
-const ACTIVE_PHASE_FILES = [
+const activePhaseFiles = [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
   "documentation/operations/WORKING_MEMORY.md",
 ] as const;
 const expectedPhase = "Phase 2A — durable local identity and session authority";
+const expectedPackage = "Teams and permissions completion";
 
-for (const relativePath of ACTIVE_PHASE_FILES) {
-  if (!existsSync(resolve(repoRoot, relativePath))) continue;
-  const content = readFileSync(resolve(repoRoot, relativePath), "utf8");
-  const value = /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
-  if (value !== expectedPhase) {
+for (const relativePath of activePhaseFiles) {
+  const content = contentOf(relativePath);
+  if (!content) continue;
+  const phase = /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  const activePackage = /^> \*\*Active package:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  if (phase !== expectedPhase) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: `active phase must be '${expectedPhase}', found '${value ?? "missing"}'`,
+      detail: `active phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
+    });
+  }
+  if (activePackage !== expectedPackage) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `active package must be '${expectedPackage}', found '${activePackage ?? "missing"}'`,
     });
   }
 }
 
 const staleMarkers: Array<[string, string]> = [
+  ["AGENTS.md", "Exact next outcome — Phase 2A.4"],
+  ["documentation/system/ROADMAP.md", "Package 2A.4 — multi-member roles, invitations and per-shop permissions — active"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.4 member authority"],
+  ["documentation/README.md", "It does not yet claim durable Person"],
   ["documentation/system/ROADMAP.md", "Package 2A.3 — revocation and policy freshness — active"],
   ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.3 revocation and policy freshness"],
   ["AGENTS.md", "Exact next outcome — Phase 2A.3"],
@@ -376,9 +390,7 @@ const staleMarkers: Array<[string, string]> = [
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  if (readFileSync(absolutePath, "utf8").includes(marker)) {
+  if (contentOf(relativePath).includes(marker)) {
     findings.push({
       kind: "drift",
       file: relativePath,
@@ -404,9 +416,7 @@ const obsoleteSessionPatterns = [
 ];
 
 for (const relativePath of currentOwnedDocuments) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
+  const content = contentOf(relativePath);
   for (const pattern of obsoleteSessionPatterns) {
     pattern.lastIndex = 0;
     const match = pattern.exec(content);
@@ -424,15 +434,13 @@ console.log(
   `SahelFlow authority audit: ${activeDocumentationFiles.length} active documentation files; ${markdownFiles.length} active repository Markdown files scanned.`,
 );
 
-if (findings.length === 0) {
+if (findings.length > 0) {
+  for (const finding of findings) {
+    console.error(`${finding.kind.toUpperCase()}: ${finding.file}: ${finding.detail}`);
+  }
+  process.exitCode = 1;
+} else {
   console.log(
-    "PASS: FD-028 authorities, active Phase 2A.4, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, closed Phase 2A.4, active Teams and permissions completion, shared scripts and relative links are coherent.",
   );
-  process.exit(0);
 }
-
-for (const finding of findings) {
-  console.error(`FAIL [${finding.kind}] ${finding.file}: ${finding.detail}`);
-}
-console.error(`${findings.length} audit finding(s).`);
-process.exit(1);
