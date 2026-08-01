@@ -186,10 +186,7 @@ describe("team member administration", () => {
     });
     await expect(
       createActiveTeamLoginSession("amina.ops", "12345678", SHOP),
-    ).rejects.toMatchObject({
-      code: "IDENTITY_MEMBER_REVOKED",
-      statusCode: 401,
-    });
+    ).resolves.toBeNull();
     expect(
       await dbRaw.session.count({
         where: {
