@@ -1,31 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureConversationForJid } from "@/lib/data/conversation-service";
-import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
-import { assignConversation } from "@/lib/data/conversation-service";
 import { z } from "zod";
+
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
+import { ensureConversationForJid } from "@/lib/data/conversation-service";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import { executeConversationAssignment } from "@/lib/inbox/conversation-assignment";
 
 export const dynamic = "force-dynamic";
-type Ctx = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ id: string }> };
 
-// `assignee` may be a user id string or null (to clear assignment).
-const schema = z.object({
-  assignee: z.string().min(1).nullable(),
-});
+const operationSchema = z
+  .object({
+    operation: z.enum(["claim", "release", "assign", "unassign"]),
+  })
+  .passthrough();
 
-export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Ctx) => {
-  await requireAuth();
-  const { id: rawId } = await params;
-    // Session 30 (AUDIT-5 C1): if rawId is a JID (live WhatsApp chat), ensure
-    // a Conversation row exists and use its cuid. Otherwise rawId is already a cuid.
-    const id = await ensureConversationForJid({ prisma: db, shop: shopContext }, rawId);
-  const body = await req.json();
-  const parsed = schema.parse(body);
-  const conv = await assignConversation(
-    { prisma: db, shop: shopContext },
-    id,
-    parsed.assignee,
-  );
-  return NextResponse.json({ conversation: conv });
-}, "PATCH /api/conversations/[id]/assign");
+/**
+ * PATCH /api/conversations/[id]/assign
+ *
+ * Govern self-claim/release and manager assignment/handover through one exact
+ * business command. The trusted actor and process shop are established before
+ * request input can select an operation or create a live-JID conversation row.
+ */
+export const PATCH = withErrorHandler(
+  async (request: NextRequest, { params }: RouteContext) => {
+    const actorContext = await requireTrustedAction("conversations.read");
+    const { id: rawId } = await params;
+    const body = (await request.json()) as unknown;
+    const operation = operationSchema.parse(body).operation;
+    assertTrustedAction(
+      actorContext,
+      operation === "claim" || operation === "release"
+        ? "conversations.claim"
+        : "conversations.assign",
+      { shopId: actorContext.shop.shopId },
+    );
+
+    const context = { prisma: db, shop: shopContext };
+    const conversationId = await ensureConversationForJid(context, rawId);
+    const command = await executeConversationAssignment(
+      context,
+      actorContext,
+      {
+        ...(body as Record<string, unknown>),
+        conversationId,
+      },
+    );
+
+    return NextResponse.json({
+      assignment: command.result,
+      command: {
+        id: command.commandId,
+        aggregateVersion: command.aggregateVersion,
+        replayed: command.replayed,
+      },
+    });
+  },
+  "PATCH /api/conversations/[id]/assign",
+);
