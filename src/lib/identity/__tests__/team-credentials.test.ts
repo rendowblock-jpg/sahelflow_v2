@@ -78,6 +78,18 @@ describe("createActiveTeamLoginSession", () => {
     expect(harness.createSession).not.toHaveBeenCalled();
   });
 
+  it("returns a generic credential miss outside the member shop grant", async () => {
+    harness.listMembers.mockResolvedValue([
+      { ...MEMBER, shopIds: ["other-shop"] },
+    ]);
+
+    await expect(
+      createActiveTeamLoginSession("AMINA.OPS", "12345678", SHOP),
+    ).resolves.toBeNull();
+    expect(harness.assertActive).not.toHaveBeenCalled();
+    expect(harness.createSession).not.toHaveBeenCalled();
+  });
+
   it("returns a generic credential miss for a revoked member", async () => {
     harness.assertActive.mockRejectedValue(
       new SahelFlowError(
@@ -108,7 +120,7 @@ describe("createActiveTeamLoginSession", () => {
     expect(harness.createSession).not.toHaveBeenCalled();
   });
 
-  it("creates a session only after active authority succeeds", async () => {
+  it("creates a session only after exact-shop active authority succeeds", async () => {
     const result = await createActiveTeamLoginSession(
       "AMINA.OPS",
       "12345678",
