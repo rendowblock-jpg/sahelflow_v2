@@ -24,7 +24,7 @@ const updateSchema = z.object({
 
 /** PATCH — Update automation fields (name/trigger/action/conditions/isActive/etc.) */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  const actorContext = await requireAuth("automations.manage");
+  await requireAuth("automations.manage");
   const { id } = await params;
   const body = await req.json();
   const input = updateSchema.parse(body);
@@ -54,7 +54,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 
 /** DELETE — Remove an automation */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth("automations.manage");
+  const actorContext = await requireAuth("automations.manage");
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
   // W2-5: capture before-state for audit.

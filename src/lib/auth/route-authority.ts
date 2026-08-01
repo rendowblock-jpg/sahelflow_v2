@@ -49,5 +49,9 @@ export async function requireRouteAuth(
       // Fall through to the real authority boundary.
     }
   }
+  if (options.actions === undefined) {
+    await requireAuth();
+    return;
+  }
   await requireAuth(options.actions);
 }

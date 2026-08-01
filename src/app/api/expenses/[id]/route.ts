@@ -19,7 +19,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  * is converted to a `Date` before being written to Prisma.
  */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  const actorContext = await requireAuth("accounting.update");
+  await requireAuth("accounting.update");
   const { id } = await params;
   const body = await req.json();
   const data = updateExpenseSchema.parse(body);
@@ -49,7 +49,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
  * doesn't exist (so the UI can react to stale row state after a refresh).
  */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth("accounting.update");
+  const actorContext = await requireAuth("accounting.update");
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
 

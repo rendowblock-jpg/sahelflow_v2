@@ -18,7 +18,7 @@ const updateSchema = z.object({
 });
 
 export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  const actorContext = await requireAuth("conversations.update");
+  await requireAuth("conversations.update");
   const { id } = await params;
   const body = await req.json();
   const parsed = updateSchema.parse(body);
@@ -31,7 +31,7 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
 }, "PUT /api/canned-responses/[id]");
 
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth("conversations.update");
+  const actorContext = await requireAuth("conversations.update");
   const { id } = await params;
   // W2-5: capture before-state for audit (deleteCannedResponse hard-deletes).
   const existing = await db.cannedResponse.findUnique({ where: { id } });

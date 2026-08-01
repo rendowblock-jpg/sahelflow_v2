@@ -14,7 +14,47 @@
  * (Phase 1 bug 1.2) — NOT re-tested here. The [id] route has no GET handler.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { NextRequest } from "next/server";
+import { rawDb, cleanDb, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { SahelFlowError } from "@/types/errors";
+
+const identityHarness = vi.hoisted(() => {
+  const actorContext = Object.freeze({
+    version: 1 as const,
+    actor: Object.freeze({
+      kind: "person" as const,
+      personId: "1".repeat(32),
+      workspaceMemberId: "2".repeat(32),
+      deviceId: "3".repeat(32),
+      sessionId: "delivery-route-session",
+      role: "manager" as const,
+      permissions: Object.freeze([
+        "deliveries.manage",
+        "orders.read",
+        "orders.update",
+        "customers.contact.read",
+        "orders.financials.read",
+      ] as const),
+      policyVersion: 1,
+      revocationEpoch: 0,
+    }),
+    shop: Object.freeze({ shopId: "default" }),
+  });
+  return { actorContext, requireActor: vi.fn() };
+});
+
+vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/trusted-actor")
+  >();
+  return {
+    ...actual,
+    requireTrustedActor: identityHarness.requireActor,
+    isTrustedActorContext: vi.fn(
+      (value: unknown) => value === identityHarness.actorContext,
+    ),
+  };
+});
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -23,6 +63,14 @@ vi.mock("next/headers", () => ({
     delete: () => undefined,
   })),
 }));
+
+function mockPost(url: string, body: unknown): NextRequest {
+  return new NextRequest(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
 // ── Mock the delivery adapter so createShipment/syncTracking don't hit a real provider ──
 const mockAdapter = {
@@ -118,6 +166,9 @@ describe("POST /api/delivery/create — create shipment", () => {
   beforeEach(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_create_shipment_ledger"');
     await cleanDb();
+    identityHarness.requireActor
+      .mockReset()
+      .mockResolvedValue(identityHarness.actorContext);
     mockAdapter.createShipment.mockReset();
     mockAdapter.createShipment.mockResolvedValue({
       success: true,
@@ -418,10 +469,10 @@ describe("POST /api/delivery/create — create shipment", () => {
     expect(await rawDb.orderChange.count({ where: { orderId: order.id } })).toBe(0);
   });
 
-  it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+  it("returns 401 when durable trusted-actor resolution is rejected", async () => {
+    identityHarness.requireActor.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const { order } = await seedOrderAtStatus("confirmed");
     const res = await POSTCreate(
       mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
@@ -434,6 +485,9 @@ describe("POST /api/delivery/sync — sync tracking", () => {
   beforeEach(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_sync_conflict"');
     await cleanDb();
+    identityHarness.requireActor
+      .mockReset()
+      .mockResolvedValue(identityHarness.actorContext);
     mockAdapter.syncTracking.mockReset();
   });
   afterAll(async () => {
@@ -595,10 +649,10 @@ describe("POST /api/delivery/sync — sync tracking", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+  it("returns 401 when durable trusted-actor resolution is rejected", async () => {
+    identityHarness.requireActor.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const { delivery } = await seedShippedOrderWithDelivery();
     mockAdapter.syncTracking.mockResolvedValue({ status: "in_transit", estimatedDelivery: null, events: [] });
     const res = await POSTSync(

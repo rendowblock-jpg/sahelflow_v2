@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db, shopContext } from "@/lib/db";
 import { deliveryService } from "@/lib/data/delivery-service";
 import type { DeliveryStatus } from "@/types/domain";
@@ -43,7 +44,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   // query (avoids an N+1 enrichment pass).
   const include = {
     order: { include: { customer: { select: { name: true, phone: true } } } },
-  };
+  } satisfies Prisma.DeliveryInclude;
+  type DeliveryWithOrder = Prisma.DeliveryGetPayload<{
+    include: typeof include;
+  }>;
 
   const statusFilter =
     status && status !== "all" ? { status: status as DeliveryStatus } : {};
@@ -57,7 +61,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
         ...(status && status !== "all" ? { status: status as DeliveryStatus } : {}),
         include,
       },
-    ),
+    ) as Promise<DeliveryWithOrder[]>,
     db.delivery.count({ where: { deletedAt: null, ...statusFilter } }),
   ]);
 

@@ -20,10 +20,17 @@ import type { StorefrontConfig } from "@/lib/storefront/service";
 
 interface Props {
   configs: StorefrontConfig[];
+  canManage: boolean;
+  canPublish: boolean;
 }
 
-export function StorefrontsListClient({ configs: initial }: Props) {
+export function StorefrontsListClient({
+  configs: initial,
+  canManage,
+  canPublish,
+}: Props) {
   const { t } = useI18n();
+  const canMutate = canManage && canPublish;
   const [configs, setConfigs] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<StorefrontConfig | null>(null);
@@ -111,12 +118,14 @@ export function StorefrontsListClient({ configs: initial }: Props) {
               </div>
 
               <div className="flex items-center gap-1.5 mt-auto pt-2">
-                <Button asChild size="sm" variant="outline" className="flex-1">
-                  <Link href={`/storefronts/${config.id}`}>
-                    <Pencil className="h-3.5 w-3.5 me-1.5" />
-                    {t("storefront.list.edit")}
-                  </Link>
-                </Button>
+                {canMutate && (
+                  <Button asChild size="sm" variant="outline" className="flex-1">
+                    <Link href={`/storefronts/${config.id}`}>
+                      <Pencil className="h-3.5 w-3.5 me-1.5" />
+                      {t("storefront.list.edit")}
+                    </Link>
+                  </Button>
+                )}
                 <Button asChild size="sm" variant="ghost" title={t("storefront.list.publicPreview")} aria-label={t("storefront.list.publicPreview")}>
                   <a
                     href={`/storefront/${config.slug}`}
@@ -126,27 +135,31 @@ export function StorefrontsListClient({ configs: initial }: Props) {
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  title={config.isActive ? t("storefront.list.deactivate") : t("storefront.list.activate")}
-                  onClick={() => toggleActive(config)}
-                >
-                  {config.isActive ? (
-                    <EyeOff className="h-3.5 w-3.5" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  title={t("storefront.list.delete")} aria-label={t("storefront.list.delete")}
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setDeleteTarget(config)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                {canMutate && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title={config.isActive ? t("storefront.list.deactivate") : t("storefront.list.activate")}
+                      onClick={() => toggleActive(config)}
+                    >
+                      {config.isActive ? (
+                        <EyeOff className="h-3.5 w-3.5" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title={t("storefront.list.delete")} aria-label={t("storefront.list.delete")}
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteTarget(config)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -154,7 +167,7 @@ export function StorefrontsListClient({ configs: initial }: Props) {
       </div>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+      <Dialog open={canMutate && deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("storefront.list.deleteTitle")}</DialogTitle>

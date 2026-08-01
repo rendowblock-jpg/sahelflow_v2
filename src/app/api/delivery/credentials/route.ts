@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * Returns which providers are configured (never the values).
  */
 export const GET = withErrorHandler(async () => {
-  const actorContext = await requireAuth("delivery.credentials.manage");
+  await requireAuth("delivery.credentials.manage");
   await requireRecentReauthentication();
   const context = { prisma: db, shop: shopContext };
   const status: Record<string, Record<string, boolean>> = {};
@@ -60,7 +60,7 @@ const saveSchema = z.object({
  * (bug B3 / dive-5). Tests bypass the loader with mocks so CI stays green.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("delivery.credentials.manage");
+  const actorContext = await requireAuth("delivery.credentials.manage");
   const context = { prisma: db, shop: shopContext };
   const body = await req.json();
   const input = saveSchema.parse(body);

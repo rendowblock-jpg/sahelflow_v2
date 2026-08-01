@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  */
 export const GET = withErrorHandler(async () => {
   // W2-4: defense-in-depth — GET was unprotected, leaked "is Gemini configured?" to anyone.
-  const actorContext = await requireAuth("integrations.manage");
+  await requireAuth("integrations.manage");
   await requireRecentReauthentication();
   const configured = await hasSecret({ prisma: db, shop: shopContext }, "gemini_api_key");
   return NextResponse.json({ configured });
@@ -39,7 +39,7 @@ const saveSchema = z.object({
  * Tests the key (optional) then saves it encrypted to the Secret store.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("integrations.manage");
+  const actorContext = await requireAuth("integrations.manage");
   const body = await req.json();
   const input = saveSchema.parse(body);
 

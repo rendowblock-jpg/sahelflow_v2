@@ -7,9 +7,15 @@ import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const BLACKLIST_READ_ACTIONS = [
+  "risk.read",
+  "customers.read",
+  "customers.contact.read",
+] as const;
+
 /** GET /api/risk/blacklist — list blacklisted customers */
 export async function GET() {
-  await requireAuth("risk.read");
+  await requireAuth(BLACKLIST_READ_ACTIONS);
   const customers = await listBlacklistedCustomers({ prisma: db, shop: shopContext });
   return NextResponse.json({ customers });
 }

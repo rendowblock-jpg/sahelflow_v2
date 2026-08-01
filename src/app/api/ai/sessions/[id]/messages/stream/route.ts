@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireLicense } from "@/lib/license/license-server";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { z } from "zod";
@@ -39,7 +39,7 @@ export const POST = withErrorHandler(async (
     false,
   );
   if (!consent) {
-    return new Response(
+    return new NextResponse(
       JSON.stringify({
         error: "consent_required",
         message:
@@ -52,7 +52,7 @@ export const POST = withErrorHandler(async (
   try {
     await requireLicense();
   } catch {
-    return new Response(JSON.stringify({ error: "License required" }), {
+    return new NextResponse(JSON.stringify({ error: "License required" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },
     });
@@ -61,7 +61,7 @@ export const POST = withErrorHandler(async (
   const userKey = await getCurrentUserKey();
   const rateLimit = checkRateLimit(id, userKey);
   if (!rateLimit.allowed) {
-    return new Response(
+    return new NextResponse(
       JSON.stringify({ error: rateLimit.reason ?? "Rate limited" }),
       { status: 429, headers: { "Content-Type": "application/json" } },
     );
@@ -72,12 +72,12 @@ export const POST = withErrorHandler(async (
     input = sendSchema.parse(await req.json());
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return new Response(
+      return new NextResponse(
         JSON.stringify({ error: "Validation failed", details: error.issues }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
-    return new Response(JSON.stringify({ error: "Invalid request" }), {
+    return new NextResponse(JSON.stringify({ error: "Invalid request" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
@@ -88,7 +88,7 @@ export const POST = withErrorHandler(async (
     include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } },
   });
   if (!session) {
-    return new Response(JSON.stringify({ error: "Session not found" }), {
+    return new NextResponse(JSON.stringify({ error: "Session not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });
@@ -218,7 +218,7 @@ export const POST = withErrorHandler(async (
     },
   });
 
-  return new Response(stream, {
+  return new NextResponse(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
