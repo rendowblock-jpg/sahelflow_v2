@@ -7,6 +7,10 @@ import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
 import { ReturnsDataTable } from "@/components/returns/returns-data-table";
 import { RotateCcw, CheckCircle2, Clock, ArrowLeftRight } from "lucide-react";
 import type { Metadata } from "next";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -15,6 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 export default async function ReturnsPage() {
+  const actorContext = await requireTrustedAction("orders.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
 
   const PAGE_SIZE = 25;

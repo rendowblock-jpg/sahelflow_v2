@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +45,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   // A-H1: the seller-management branch (no ?slug=) must require auth — it
   // lists ALL storefronts incl. inactive. The public ?slug= branch above
   // stays public (correct — renders the public storefront page).
-  await requireAuth();
+  await requireTrustedAction("storefront.read");
   const { storefrontService } = await import("@/lib/storefront/service");
   const configs = await storefrontService.list({ prisma: db, shop: shopContext });
   return NextResponse.json({ configs });
@@ -68,7 +73,8 @@ const createConfigSchema = z.object({
 
 /** POST /api/storefront/config — create a new storefront config (seller-only). */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("storefront.manage");
+  assertTrustedAction(actorContext, "storefront.publish");
   const body = await req.json();
   const input = createConfigSchema.parse(body);
 
@@ -83,5 +89,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     isActive: input.isActive,
   });
   void DEFAULT_THEME;
+  await logAudit(
+    { prisma: db, shop: shopContext },
+    {
+      action: "storefront.created",
+      entity: "storefront",
+      entityId: config.id,
+      actor: trustedActorAuditIdentity(actorContext.actor),
+      after: config as unknown as Record<string, unknown>,
+    },
+  );
   return NextResponse.json({ config }, { status: 201 });
 }, "POST /api/storefront/config");

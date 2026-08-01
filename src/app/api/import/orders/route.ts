@@ -17,6 +17,7 @@ import {
 } from "@/lib/import/engine";
 import { ORDER_FIELDS, parseNumber } from "@/lib/import/fields";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { assertTrustedAction } from "@/lib/identity/authorization";
 import {
   canonicalImportRowSchema,
   prepareCanonicalFileImport,
@@ -66,6 +67,16 @@ function normalizedRows(
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const actorContext = await requireTrustedActor();
+  for (const action of [
+    "data.import",
+    "orders.create",
+    "customers.contact.read",
+    "customers.contact.update",
+    "orders.financials.read",
+    "orders.financials.update",
+  ] as const) {
+    assertTrustedAction(actorContext, action);
+  }
   const formData = await request.formData();
   const file = formData.get("file");
   const commit = formData.get("commit") === "true";

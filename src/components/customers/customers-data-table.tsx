@@ -58,7 +58,13 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
     {
       accessorKey: "totalSpent",
       header: () => t("customers.totalSpent"),
-      cell: ({ row }) => <span className="tabular-nums font-medium">{formatDZD(row.original.totalSpent)}</span>,
+      cell: ({ row }) => (
+        <span className="tabular-nums font-medium">
+          {row.original.totalSpent === null
+            ? "—"
+            : formatDZD(row.original.totalSpent)}
+        </span>
+      ),
       meta: { align: "end" },
     },
     {

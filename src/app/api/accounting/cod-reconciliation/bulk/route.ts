@@ -8,12 +8,12 @@
 import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
 export const POST = withErrorHandler(async (_request: Request) => {
-  await requireTrustedActor();
+  await requireTrustedAction("accounting.update");
   return NextResponse.json(
     {
       error: "Legacy bulk COD remittance is no longer supported",

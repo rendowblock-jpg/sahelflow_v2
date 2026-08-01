@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isAuthSetup, requireAuth } from "./server";
+import type { Phase2Action } from "@/lib/identity/permissions";
 
 const DIRECT_ROUTE_TEST_AUTH_HEADER =
   "x-sahelflow-direct-route-test-authority";
@@ -9,6 +10,8 @@ const DIRECT_ROUTE_TEST_AUTH_VALUE = "vitest-business-route";
 export type RouteAuthOptions = Readonly<{
   /** For legacy direct GET tests that invoke a handler without a Request. */
   allowMissingRequestInTests?: boolean;
+  /** Exact operational actions required after authentication. */
+  actions?: Phase2Action | readonly Phase2Action[];
 }>;
 
 function isTesting(): boolean {
@@ -46,5 +49,5 @@ export async function requireRouteAuth(
       // Fall through to the real authority boundary.
     }
   }
-  await requireAuth();
+  await requireAuth(options.actions);
 }

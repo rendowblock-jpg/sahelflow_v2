@@ -7,7 +7,7 @@ import { db, shopContext } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("conversations.read");
   const q = req.nextUrl.searchParams.get("q") ?? "";
   const responses = await searchCannedResponses({ prisma: db, shop: shopContext }, q);
   return NextResponse.json({ responses });

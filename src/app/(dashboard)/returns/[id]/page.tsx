@@ -21,6 +21,10 @@ import { StatCard } from "@/components/shared/stat-card";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import type { Metadata } from "next";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -40,6 +44,9 @@ const RETURN_STATUS_STYLES: Record<string, { bg: string; text: string; border: s
 };
 
 export default async function ReturnDetailPage({ params }: PageProps) {
+  const actorContext = await requireTrustedAction("orders.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
   const { id } = await params;
 

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/assess/[orderId] — assess the risk of a specific order */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
-  await requireAuth();
+  await requireAuth("risk.read");
   const { orderId } = await params;
   const assessment = await assessOrderRisk({ prisma: db, shop: shopContext }, orderId);
   if (!assessment) {
@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
 
 /** POST /api/risk/assess/[orderId] — re-assess (force refresh) */
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) => {
-  await requireAuth();
+  await requireAuth("risk.read");
   const { orderId } = await params;
   const assessment = await assessOrderRisk({ prisma: db, shop: shopContext }, orderId);
   if (!assessment) {

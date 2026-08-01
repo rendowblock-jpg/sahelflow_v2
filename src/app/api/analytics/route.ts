@@ -14,7 +14,7 @@ import { requireAuth } from "@/lib/auth/server";
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth(["analytics.read", "analytics.financials.read"]);
   const daysParam = req.nextUrl.searchParams.get("days");
   const days = Number(daysParam);
   const validDays = [7, 14, 30, 90].includes(days) ? days : 30;

@@ -1,6 +1,6 @@
 /**
- * Risk service — DB-aware layer that loads config + rules, builds the
- * RiskAssessmentInput from real order/customer data, and persists assessments.
+ * Risk service — DB-aware layer that loads config + rules and builds the
+ * RiskAssessmentInput from real order/customer data.
  *
  * This is the integration layer between the pure scoring engine and the
  * Prisma database. It's the only part of the risk engine that touches the DB.
@@ -56,17 +56,18 @@ export async function saveRiskConfig(
 
 // ── Rules persistence ────────────────────────────────────────────────────────
 
-/** Load all risk rules (creates defaults if none exist). */
+/**
+ * Load all risk rules without changing durable state.
+ *
+ * An unconfigured shop receives a fresh in-memory copy of the defaults. Rule
+ * persistence belongs to explicit management/committed mutation paths, never
+ * to a page render, GET handler, preview, or assessment.
+ */
 export async function getRiskRules(context: ServiceContext): Promise<RiskRule[]> {
   const db = context.prisma;
   const row = await db.setting.findUnique({ where: { key: RULES_KEY } });
   if (!row) {
-    // Seed defaults on first access
-    const defaults: RiskRule[] = DEFAULT_RISK_RULES.map((r) => ({ ...r, triggerCount: 0 }));
-    await db.setting.create({
-      data: { key: RULES_KEY, value: JSON.stringify(defaults) },
-    });
-    return defaults;
+    return DEFAULT_RISK_RULES.map((rule) => ({ ...rule, triggerCount: 0 }));
   }
   try {
     const parsed = JSON.parse(row.value) as RiskRule[];
@@ -87,10 +88,14 @@ export async function saveRiskRules(context: ServiceContext, rules: RiskRule[]):
 }
 
 /**
- * Increment the trigger count for rules that fired (for analytics).
+ * Explicitly increment the trigger count for rules that fired in a committed
+ * business operation.
+ *
+ * Read/evaluation helpers must never call this function: previewing or
+ * rendering a risk assessment is not a committed rule-trigger fact.
  *
  * SV-M7: the previous read-all → map → save-all was non-atomic — two
- * concurrent risk assessments that triggered the same rule would both read
+ * concurrent committed trigger records for the same rule would both read
  * triggerCount=5, both increment to 6, both save → second save overwrites
  * the first → one increment is lost.
  *
@@ -127,7 +132,8 @@ export async function incrementRuleTriggers(
     const row = await tx.setting.findUnique({ where: { key: RULES_KEY } });
     let rules: RiskRule[];
     if (!row) {
-      // Seed defaults on first access (mirrors getRiskRules seeding).
+      // This is an explicit mutation, so initializing the durable rule blob is
+      // appropriate when the first committed trigger fact is recorded.
       rules = DEFAULT_RISK_RULES.map((r) => ({ ...r, triggerCount: 0 }));
     } else {
       try {
@@ -244,8 +250,8 @@ export async function buildAssessmentInputFromOrder(
 
 /**
  * Assess the risk of an order by ID.
- * Loads config + rules, builds the input, runs the engine, and persists
- * the trigger counts for analytics.
+ * Loads config + rules, builds the input, and runs the engine without changing
+ * durable state.
  */
 export async function assessOrderRisk(
   context: ServiceContext,
@@ -259,12 +265,7 @@ export async function assessOrderRisk(
     getRiskRules(context),
   ]);
 
-  const assessment = assessRisk(input, config, rules);
-
-  // Persist rule trigger counts (fire-and-forget — don't block the response)
-  void incrementRuleTriggers(context, assessment.triggeredRules);
-
-  return assessment;
+  return assessRisk(input, config, rules);
 }
 
 // ── Pre-create assessment (W3-4, task 2-g) ───────────────────────────────────
@@ -412,10 +413,8 @@ export async function buildAssessmentInputFromOrderData(
  * Unlike `assessOrderRisk`, this function does NOT need an order ID — it
  * operates entirely on the submitted data + the customer's existing history.
  *
- * Rule trigger counts ARE persisted (fire-and-forget) — the rule genuinely
- * fired during a risk evaluation, even if the seller abandons the order
- * after seeing the warning. This keeps analytics consistent with the
- * post-create path.
+ * This preview is read-only. Trigger counts represent committed business
+ * operations and must not change when a seller previews or abandons an order.
  */
 export async function assessOrderRiskPreCreate(
   context: ServiceContext,
@@ -426,12 +425,7 @@ export async function assessOrderRiskPreCreate(
     getRiskConfig(context),
     getRiskRules(context),
   ]);
-  const assessment = assessRisk(input, config, rules);
-
-  // Persist rule trigger counts (fire-and-forget — matches assessOrderRisk).
-  void incrementRuleTriggers(context, assessment.triggeredRules);
-
-  return assessment;
+  return assessRisk(input, config, rules);
 }
 
 /**
@@ -477,17 +471,10 @@ export async function batchAssessOrders(
     })),
   );
 
-  let allTriggered: string[] = [];
   for (const { id, input } of inputs) {
     if (!input) continue;
     const assessment = assessRisk(input, config, rules);
     results.set(id, assessment);
-    allTriggered = allTriggered.concat(assessment.triggeredRules);
-  }
-
-  // Persist rule trigger counts once (batched)
-  if (allTriggered.length > 0) {
-    void incrementRuleTriggers(context, allTriggered);
   }
 
   return results;

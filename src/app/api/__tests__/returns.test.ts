@@ -21,6 +21,17 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
+vi.mock("@/lib/identity/authorization", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/authorization")
+  >();
+  return {
+    ...actual,
+    requireTrustedAction: vi.fn(async () => ({ actor: {}, shop: {} })),
+    assertTrustedAction: vi.fn(),
+  };
+});
+
 
 // Mock the automation dispatcher so orderService.create/updateStatus's
 // fire-and-forget dispatchTrigger('order.created'/'order.{status}') is a no-op.

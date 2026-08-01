@@ -1,5 +1,6 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumTable } from "@/components/shared/premium-table";
@@ -32,6 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 export default async function AccountingPage() {
+  await requireTrustedAction("accounting.read");
   const { t, locale } = await getI18n();
   const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
 

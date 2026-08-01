@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
 import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +23,9 @@ const RESET_TRANSACTION_OPTIONS = {
 } as const;
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("settings.manage");
+  assertTrustedAction(actorContext, "approvals.approve");
+  await requireRecentReauthentication();
 
   const body = await req.json();
   const input = resetSchema.parse(body);
@@ -118,7 +125,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     entity: "system",
     entityId: "database",
     action: "reset",
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
     before: { confirm: input.confirm },
     after: { wiped: "all business data and operational configuration" },
   });

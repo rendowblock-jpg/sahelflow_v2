@@ -6,7 +6,7 @@ import { getReturnRateByWilaya, getReturnRateByProduct, getLastNDays } from "@/l
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("analytics.read");
   const days = parseInt(req.nextUrl.searchParams.get("days") ?? "30", 10);
   const groupBy = req.nextUrl.searchParams.get("groupBy") ?? "wilaya";
   const range = getLastNDays(days);

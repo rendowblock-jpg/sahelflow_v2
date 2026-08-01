@@ -157,10 +157,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   return handleReport("cron");
 }, "POST /api/reports/daily");
 
-/** GET variant for cron services that only support GET (less secure). */
-export const GET = withErrorHandler(async (req: NextRequest) => {
-  if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return handleReport("cron");
-}, "GET /api/reports/daily");
+/** GET is deliberately non-mutating; report delivery is POST-only. */
+export const GET = withErrorHandler(async () =>
+  NextResponse.json(
+    { error: "Daily report delivery requires POST" },
+    { status: 405, headers: { Allow: "POST" } },
+  ),
+"GET /api/reports/daily");

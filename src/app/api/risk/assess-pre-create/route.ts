@@ -59,7 +59,7 @@ const preCreateSchema = z.object({
  * endpoint is for the in-app order form only.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("risk.read");
   const body = await req.json();
   const input = preCreateSchema.parse(body);
 

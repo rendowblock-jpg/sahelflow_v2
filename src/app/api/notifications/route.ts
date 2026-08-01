@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireRouteAuth } from "@/lib/auth/route-authority";
 import { db } from "@/lib/db";
+import { trustedActionAllowed } from "@/lib/identity/authorization";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import type { Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
 
@@ -46,13 +47,28 @@ function intlLocale(locale: Locale): string {
 
 /** GET /api/notifications — compute real-time operational notifications. */
 export const GET = withErrorHandler(async (request?: NextRequest) => {
-  await requireRouteAuth(request, { allowMissingRequestInTests: true });
+  void request;
+  const actorContext = await requireTrustedActor();
+  const canReadOrders = trustedActionAllowed(actorContext, "orders.read");
+  const canReadContacts = trustedActionAllowed(
+    actorContext,
+    "customers.contact.read",
+  );
+  const canReadFinancials = trustedActionAllowed(
+    actorContext,
+    "orders.financials.read",
+  );
+  const canReadDeliveries = trustedActionAllowed(
+    actorContext,
+    "deliveries.read",
+  );
+  const canReadProducts = trustedActionAllowed(actorContext, "products.read");
   const { t, locale } = await getI18n();
   const numLocale = intlLocale(locale);
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const recentOrders = await db.order.findMany({
+  const recentOrders = canReadOrders ? await db.order.findMany({
     where: {
       createdAt: { gte: oneDayAgo },
       status: { in: ["pending", "draft"] },
@@ -69,9 +85,9 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       wilaya: true,
       customer: { select: { name: true } },
     },
-  });
+  }) : [];
 
-  const recentDeliveries = await db.delivery.findMany({
+  const recentDeliveries = canReadDeliveries ? await db.delivery.findMany({
     where: { updatedAt: { gte: oneDayAgo }, deletedAt: null },
     orderBy: { updatedAt: "desc" },
     take: 5,
@@ -83,9 +99,9 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       provider: true,
       order: { select: { id: true, orderNumber: true } },
     },
-  });
+  }) : [];
 
-  const lowStockProducts = await db.product.findMany({
+  const lowStockProducts = canReadProducts ? await db.product.findMany({
     where: {
       stock: { lte: db.product.fields.lowStockThreshold },
       isActive: true,
@@ -98,9 +114,9 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       stock: true,
       lowStockThreshold: true,
     },
-  });
+  }) : [];
 
-  const recentReturns = await db.return.findMany({
+  const recentReturns = canReadOrders ? await db.return.findMany({
     where: { createdAt: { gte: oneDayAgo }, deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: 3,
@@ -111,16 +127,16 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       createdAt: true,
       order: { select: { id: true, orderNumber: true } },
     },
-  });
+  }) : [];
 
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const staleOrders = await db.order.count({
+  const staleOrders = canReadOrders ? await db.order.count({
     where: {
       status: "pending",
       createdAt: { lt: staleThreshold },
       deletedAt: null,
     },
-  });
+  }) : 0;
 
   const notifications: Array<{
     id: string;
@@ -152,11 +168,18 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       id: `order-${order.id}`,
       type: "order",
       title: t("notif.newOrder.title", { orderNumber: order.orderNumber }),
-      body: t("notif.newOrder.body", {
-        customer: order.customer?.name ?? t("common.unknown"),
-        wilaya: order.wilaya,
-        total: order.totalPrice.toLocaleString(numLocale),
-      }),
+      body:
+        canReadContacts && canReadFinancials
+          ? t("notif.newOrder.body", {
+              customer: order.customer?.name ?? t("common.unknown"),
+              wilaya: order.wilaya,
+              total: order.totalPrice.toLocaleString(numLocale),
+            })
+          : canReadContacts
+            ? `${order.customer?.name ?? t("common.unknown")} · ${order.wilaya}`
+            : canReadFinancials
+              ? `${order.wilaya} · ${order.totalPrice.toLocaleString(numLocale)}`
+              : order.wilaya,
       time: formatRelativeTime(minutesAgo, t),
       read: minutesAgo > 60,
       link: `/orders/${order.id}`,
@@ -217,8 +240,9 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       title: t("notif.return.title", { type: typeLabel }),
       body: t("notif.return.body", {
         orderNumber: item.order?.orderNumber ?? "—",
-        reason:
-          item.reason.slice(0, 60) + (item.reason.length > 60 ? "…" : ""),
+        reason: canReadContacts
+          ? item.reason.slice(0, 60) + (item.reason.length > 60 ? "…" : "")
+          : t("common.unknown"),
       }),
       time: formatRelativeTime(minutesAgo, t),
       read: minutesAgo > 120,

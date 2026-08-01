@@ -13,7 +13,8 @@ import {
   resolveAiSourceProposalContext,
   runWithAiSourceProposal,
 } from "@/lib/ai/chat/source-proposal";
-import { isAuthenticated, getCurrentUserKey } from "@/lib/auth/server";
+import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { redactPii } from "@/lib/redact-pii";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 
@@ -23,19 +24,14 @@ const sendSchema = z.object({
   message: z.string().min(1).max(4000),
 });
 
-export async function POST(
+export const POST = withErrorHandler(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
 
-  if (!(await isAuthenticated())) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  await requireAuth("ai.use");
 
   const consent = await getBool(
     context,
@@ -230,4 +226,4 @@ export async function POST(
       "X-Accel-Buffering": "no",
     },
   });
-}
+}, "POST /api/ai/sessions/[id]/messages/stream");

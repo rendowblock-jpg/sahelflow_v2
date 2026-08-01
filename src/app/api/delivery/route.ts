@@ -4,6 +4,7 @@ import { deliveryService } from "@/lib/data/delivery-service";
 import type { DeliveryStatus } from "@/types/domain";
 import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { trustedActionAllowed } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,15 @@ export const dynamic = "force-dynamic";
  * truth (was previously duplicated in this route as a direct `db.delivery.findMany`).
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireAuth("deliveries.read");
+  const contact = trustedActionAllowed(
+    actorContext,
+    "customers.contact.read",
+  );
+  const financials = trustedActionAllowed(
+    actorContext,
+    "orders.financials.read",
+  );
   const sp = req.nextUrl.searchParams;
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
   const pageSize = Math.min(parseInt(sp.get("pageSize") ?? "25", 10) || 25, 100);
@@ -53,5 +62,34 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   ]);
 
   const hasNextPage = offset + deliveries.length < total;
-  return NextResponse.json({ deliveries, total, hasNextPage, page, pageSize });
+  const projectedDeliveries = deliveries.map((delivery) => ({
+    ...delivery,
+    cost: financials ? delivery.cost : null,
+    order: delivery.order
+      ? {
+          ...delivery.order,
+          phone: contact ? delivery.order.phone : null,
+          address: contact ? delivery.order.address : null,
+          notes: contact ? delivery.order.notes : null,
+          sourceMetadata: contact ? delivery.order.sourceMetadata : null,
+          totalPrice: financials ? delivery.order.totalPrice : null,
+          deliveryCost: financials ? delivery.order.deliveryCost : null,
+          customer: delivery.order.customer
+            ? {
+                ...delivery.order.customer,
+                name: contact ? delivery.order.customer.name : null,
+                phone: contact ? delivery.order.customer.phone : null,
+              }
+            : null,
+        }
+      : null,
+    fieldAccess: { contact, financials },
+  }));
+  return NextResponse.json({
+    deliveries: projectedDeliveries,
+    total,
+    hasNextPage,
+    page,
+    pageSize,
+  });
 }, "GET /api/delivery");

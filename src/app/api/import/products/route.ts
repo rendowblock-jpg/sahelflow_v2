@@ -33,7 +33,12 @@ const productImportSchema = z.object({
  * If commit=true: insert the validated rows.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth([
+    "data.import",
+    "products.manage",
+    "products.cost.read",
+    "products.cost.update",
+  ]);
   const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

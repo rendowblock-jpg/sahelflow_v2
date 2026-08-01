@@ -7,6 +7,8 @@ import { cookies } from "next/headers";
 import { logAudit } from "@/lib/audit";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { db, shopContext } from "@/lib/db";
+import type { Phase2Action } from "@/lib/identity/permissions";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import {
   bindOwnerIdentitySession,
   identityAuthorityMarkerPath,
@@ -490,7 +492,35 @@ function directBusinessRouteTestCompatibilityEnabled(): boolean {
   );
 }
 
-export async function requireAuth(): Promise<void> {
+/**
+ * Authenticate legacy/self-service boundaries, or enforce one exact Phase 2
+ * action set for operational routes. The action-aware form dynamically enters
+ * the trusted actor layer to avoid an auth/trusted-actor module cycle.
+ */
+export async function requireAuth(): Promise<void>;
+export async function requireAuth(
+  requiredActions: Phase2Action | readonly Phase2Action[],
+): Promise<TrustedActorContext>;
+export async function requireAuth(
+  requiredActions?: Phase2Action | readonly Phase2Action[],
+): Promise<void | TrustedActorContext> {
+  if (requiredActions !== undefined) {
+    const [{ requireTrustedActor }, { assertTrustedAction }] = await Promise.all([
+      import("@/lib/identity/trusted-actor"),
+      import("@/lib/identity/authorization"),
+    ]);
+    const actorContext = await requireTrustedActor();
+    const actions =
+      typeof requiredActions === "string"
+        ? [requiredActions]
+        : requiredActions;
+    for (const action of actions) {
+      assertTrustedAction(actorContext, action, {
+        shopId: actorContext.shop.shopId,
+      });
+    }
+    return actorContext;
+  }
   if (directBusinessRouteTestCompatibilityEnabled()) {
     // Legacy direct route tests use a clean disposable DB. They may bypass only
     // before authentication is configured; configured-auth negative tests still

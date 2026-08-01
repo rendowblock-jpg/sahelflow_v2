@@ -20,6 +20,10 @@ import type { Metadata } from "next";
 import type { ChartConfig } from "@/components/ui/chart";
 import type { RiskLevel } from "@/lib/risk-engine";
 import { db, shopContext } from "@/lib/db";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -47,6 +51,8 @@ export default async function RiskPage({
 }: {
   searchParams: Promise<{ days?: string; tab?: string }>;
 }) {
+  const actorContext = await requireTrustedAction("risk.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
   const { t, locale } = await getI18n();
   const { days: daysParam, tab: tabParam } = await searchParams;
   const days = Number(daysParam);

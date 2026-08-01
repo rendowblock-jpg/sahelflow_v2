@@ -16,6 +16,10 @@ import {
   Banknote,
 } from "lucide-react";
 import type { Metadata } from "next";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -39,6 +43,9 @@ export default async function DeliveriesPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  const actorContext = await requireTrustedAction("deliveries.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
   const { status: statusFilter } = await searchParams;
   const status = statusFilter ?? "all";

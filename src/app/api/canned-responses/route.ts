@@ -8,7 +8,7 @@ import { db, shopContext } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (_req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("conversations.read");
   const responses = await listCannedResponses({ prisma: db, shop: shopContext });
   return NextResponse.json({ responses });
 }, "GET /api/canned-responses");
@@ -20,7 +20,7 @@ const createSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("conversations.update");
   const body = await req.json();
   const parsed = createSchema.parse(body);
   const response = await createCannedResponse({ prisma: db, shop: shopContext }, parsed);

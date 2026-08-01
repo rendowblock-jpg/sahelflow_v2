@@ -26,7 +26,9 @@ const syncSchema = z
 
 /** POST /api/delivery/sync — sync tracking for a shipment. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireRouteAuth(req);
+  await requireRouteAuth(req, {
+    actions: ["deliveries.manage", "orders.read", "orders.update"],
+  });
   const body = await req.json();
   const input = syncSchema.parse(body);
   const context = { prisma: db, shop: shopContext };
@@ -220,7 +222,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
 /** GET /api/delivery/sync?deliveryId=... — read-only provider tracking. */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireRouteAuth(req);
+  await requireRouteAuth(req, { actions: ["deliveries.read", "orders.read"] });
   const deliveryId = req.nextUrl.searchParams.get("deliveryId");
   if (!deliveryId) {
     return NextResponse.json({ error: "deliveryId required" }, { status: 400 });

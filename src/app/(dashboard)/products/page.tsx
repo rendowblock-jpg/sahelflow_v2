@@ -8,14 +8,60 @@ import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { ProductsDataTable } from "@/components/products/products-data-table";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  requireTrustedAction,
+  trustedActionAllowed,
+} from "@/lib/identity/authorization";
+import { projectProductsForTrustedActor } from "@/lib/identity/product-projection";
 
 // Always fetch fresh data (local-first app, no ISR)
 export const dynamic = "force-dynamic";
 
-export default async function ProductsPage() {
+type ProductsPageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const { t } = await getI18n();
+  const actorContext = await requireTrustedAction("products.read");
+  const resource = { shopId: actorContext.shop.shopId };
+  const canManage = trustedActionAllowed(
+    actorContext,
+    "products.manage",
+    resource,
+  );
+  const canReadCost = trustedActionAllowed(
+    actorContext,
+    "products.cost.read",
+    resource,
+  );
+  const canExport = canReadCost && trustedActionAllowed(
+    actorContext,
+    "data.export",
+    resource,
+  );
+  const canImport = canManage && trustedActionAllowed(
+    actorContext,
+    "data.import",
+    resource,
+  );
 
   const PAGE_SIZE = 25;
+  const requestedPage = parseInt((await searchParams).page ?? "1", 10);
+  const currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0
+    ? requestedPage
+    : 1;
+  const offset = (currentPage - 1) * PAGE_SIZE;
 
   // Page-1 fallback for the DataTable (SWR takes over on navigation).
   // Aggregates (active count, low-stock count, inventory value) are computed
@@ -33,7 +79,7 @@ export default async function ProductsPage() {
   // rows (perf win) and only the columns it needs; the inventory query
   // fetches price+stock across everything.
   const [products, categories, totalProducts, activeCount, lowStockRows, inventoryRows] = await Promise.all([
-    productService.list({ prisma: db, shop: shopContext }, { limit: PAGE_SIZE, offset: 0 }),
+    productService.list({ prisma: db, shop: shopContext }, { limit: PAGE_SIZE, offset }),
     productService.listCategories({ prisma: db, shop: shopContext }),
     db.product.count({ where: { deletedAt: null } }),
     db.product.count({ where: { isActive: true, deletedAt: null } }),
@@ -49,6 +95,11 @@ export default async function ProductsPage() {
 
   const lowStockCount = lowStockRows.filter((p) => p.stock <= p.lowStockThreshold).length;
   const inventoryValue = inventoryRows.reduce((sum, p) => sum + p.price * Math.max(0, p.stock), 0);
+  const projectedProducts = projectProductsForTrustedActor(
+    actorContext,
+    products,
+  );
+  const hasNextPage = offset + products.length < totalProducts;
 
   return (
     <div className="app-content page-sections">
@@ -75,12 +126,17 @@ export default async function ProductsPage() {
       <PageHeader
         title={t("products.title")}
         description={`${t("products.totalStock")}: ${totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(inventoryValue)}`}
-        actions={
+        actions={canExport || canManage ? (
           <div className="flex items-center gap-2">
-            <ImportExportButtons exportRoute="/api/export/products" importRoute="/api/import/products" />
-            <ProductFormDialog categories={categories} />
+            {canExport && (
+              <ImportExportButtons
+                exportRoute="/api/export/products"
+                importRoute={canImport ? "/api/import/products" : undefined}
+              />
+            )}
+            {canManage && <ProductFormDialog categories={categories} />}
           </div>
-        }
+        ) : undefined}
       />
 
       {/* Stat strip */}
@@ -124,9 +180,10 @@ export default async function ProductsPage() {
 
       {/* Products table (DataTable v2: paginated, skeleton loading, density toggle) */}
       <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <ProductsDataTable
+        {canManage ? (
+          <ProductsDataTable
           fallback={{
-            products: products.map((p) => ({
+            products: projectedProducts.map((p) => ({
               id: p.id,
               name: p.name,
               sku: p.sku,
@@ -139,12 +196,81 @@ export default async function ProductsPage() {
               createdAt: p.createdAt.toISOString(),
             })),
             total: totalProducts,
-            hasNextPage: totalProducts > PAGE_SIZE,
-            page: 1,
+            hasNextPage,
+            page: currentPage,
             pageSize: PAGE_SIZE,
           }}
           categories={categories}
-        />
+          />
+        ) : (
+          <>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("products.productName")}</TableHead>
+                  <TableHead>{t("products.sku")}</TableHead>
+                  <TableHead className="text-end">{t("orders.price")}</TableHead>
+                  <TableHead className="text-end">{t("products.stock")}</TableHead>
+                  <TableHead>{t("common.status")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projectedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                      {t("products.noProductsTitle")}
+                    </TableCell>
+                  </TableRow>
+                ) : projectedProducts.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <Link
+                        href={`/products/${product.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {product.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-mono text-muted-foreground">
+                      {product.sku ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">
+                      {formatDZD(product.price)}
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">
+                      {product.stock}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.isActive ? "secondary" : "outline"}>
+                        {product.isActive ? t("common.active") : t("common.inactive")}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            {currentPage > 1 && (
+              <Link
+                href={`/products?page=${currentPage - 1}`}
+                className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+              >
+                {t("common.back")}
+              </Link>
+            )}
+            {hasNextPage && (
+              <Link
+                href={`/products?page=${currentPage + 1}`}
+                className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+              >
+                {t("common.next")}
+              </Link>
+            )}
+          </div>
+          </>
+        )}
       </div>
     </div>
   );

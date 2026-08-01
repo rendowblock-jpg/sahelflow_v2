@@ -42,7 +42,7 @@ const ConnectSchema = z
   );
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  await requireAuth("integrations.manage");
   const body = await req.json();
   const parsed = ConnectSchema.safeParse(body);
   if (!parsed.success) {

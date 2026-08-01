@@ -16,7 +16,7 @@ import { requireAuth } from "@/lib/auth/server";
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  await requireAuth(["analytics.read", "analytics.financials.read"]);
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

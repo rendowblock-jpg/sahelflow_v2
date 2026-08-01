@@ -27,7 +27,7 @@ const testSchema = z.object({
  * display a useful message rather than 404'ing).
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("delivery.credentials.manage");
   const body = await req.json();
   const input = testSchema.parse(body);
 

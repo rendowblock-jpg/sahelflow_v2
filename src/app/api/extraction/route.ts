@@ -18,10 +18,6 @@ const extractionSchema = z.object({
   body: z.string().min(1),
   channel: z.string().optional(),
   knownPhone: z.string().optional(),
-  /** Optional client override; if absent, the server loads the stored key. */
-  geminiApiKey: z.string().optional(),
-  /** Force Gemini even if regex is confident (for testing). */
-  forceGemini: z.boolean().optional(),
   /** AI-M14: optional messageId so the ExtractionMetric row can be linked
    *  back to the WhatsApp/TikTok Message that was extracted. Previously
    *  metrics were always recorded with messageId=null, making the
@@ -39,7 +35,7 @@ const extractionSchema = z.object({
  * The key never needs to be present on the client in normal use.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth(["ai.use", "customers.contact.read"]);
 
   // fix-B6: Informed-consent gate. The extraction pipeline sends raw WhatsApp
   // message bodies (containing customer phone, name, address) to Google
@@ -89,17 +85,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // Resolve the Gemini key: explicit override > stored secret > none
-  let geminiApiKey = input.geminiApiKey;
-  if (!geminiApiKey) {
-    geminiApiKey =
-      (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ?? undefined;
-  }
+  // Provider selection and credentials remain server authority. Request bodies
+  // cannot redirect customer data to an arbitrary external account or force a
+  // provider path.
+  const geminiApiKey =
+    (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ??
+    undefined;
 
   const start = Date.now();
   const result = await extractOrder(
     { body: input.body, channel: input.channel, knownPhone: input.knownPhone },
-    { geminiApiKey, forceGemini: input.forceGemini },
+    { geminiApiKey },
   );
 
   // Fire-and-forget — never blocks the response. recordExtractionMetric

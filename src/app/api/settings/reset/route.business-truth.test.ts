@@ -2,8 +2,20 @@ process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef012345
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+const requireRecentReauthenticationMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
+
 vi.mock("@/lib/auth/server", () => ({
-  requireAuth: vi.fn().mockResolvedValue({ userId: "reset-test" }),
+  requireRecentReauthentication: requireRecentReauthenticationMock,
+}));
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: vi.fn().mockResolvedValue({
+    actor: { kind: "person", personId: "reset-test" },
+    shop: { shopId: "default" },
+  }),
+  assertTrustedAction: vi.fn(),
+  trustedActorAuditIdentity: vi.fn(() => "person:reset-test"),
 }));
 vi.mock("@/lib/audit", () => ({
   logAudit: vi.fn().mockResolvedValue(undefined),
@@ -33,6 +45,7 @@ async function clearBusinessTruth(): Promise<void> {
 }
 
 beforeEach(async () => {
+  requireRecentReauthenticationMock.mockClear();
   await clearBusinessTruth();
 });
 
@@ -158,6 +171,7 @@ describe("POST /api/settings/reset business-truth authority", () => {
     );
     expect(response.status).toBe(200);
     await expect(getJson(response)).resolves.toMatchObject({ ok: true });
+    expect(requireRecentReauthenticationMock).toHaveBeenCalledOnce();
 
     await expect(
       Promise.all([

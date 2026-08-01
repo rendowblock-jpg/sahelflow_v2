@@ -19,7 +19,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export const GET = withErrorHandler(
   async (_req: NextRequest, { params }: RouteContext) => {
-    await requireAuth();
+    await requireAuth("ai.use");
     const { id } = await params;
     const session = await db.aiChatSession.findUnique({
       where: { id },
@@ -39,7 +39,7 @@ const sendSchema = z.object({
 
 export const POST = withErrorHandler(
   async (req: NextRequest, { params }: RouteContext) => {
-    await requireAuth();
+    await requireAuth("ai.use");
     const context = { prisma: db, shop: shopContext };
     const consent = await getBool(
       context,

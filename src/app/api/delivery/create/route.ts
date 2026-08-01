@@ -42,7 +42,15 @@ function isUniqueConstraintError(error: unknown): boolean {
  * that cannot complete the order transition remain marked for reconciliation.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireRouteAuth(req);
+  await requireRouteAuth(req, {
+    actions: [
+      "deliveries.manage",
+      "orders.read",
+      "orders.update",
+      "customers.contact.read",
+      "orders.financials.read",
+    ],
+  });
   const body = await req.json();
   const input = createSchema.parse(body);
   const context = { prisma: db, shop: shopContext };

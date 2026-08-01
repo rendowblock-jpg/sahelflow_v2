@@ -24,6 +24,10 @@ import { deliveryProviderConfig } from "@/lib/shared";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import type { Metadata } from "next";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -35,6 +39,9 @@ export const dynamic = "force-dynamic";
 type PageProps = { params: Promise<{ id: string }> };
 
 export default async function DeliveryDetailPage({ params }: PageProps) {
+  const actorContext = await requireTrustedAction("deliveries.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
   const { id } = await params;
 

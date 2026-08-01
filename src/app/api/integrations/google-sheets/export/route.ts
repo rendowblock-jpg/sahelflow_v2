@@ -23,7 +23,13 @@ const DB_BATCH_SIZE = 500;
 const MAX_BATCHES = 200;
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  await requireAuth([
+    "integrations.manage",
+    "data.export",
+    "orders.read",
+    "customers.contact.read",
+    "orders.financials.read",
+  ]);
   const body = await req.json();
   const parsed = ExportSchema.safeParse(body);
   if (!parsed.success) {

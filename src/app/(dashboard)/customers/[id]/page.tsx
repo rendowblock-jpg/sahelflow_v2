@@ -27,12 +27,18 @@ import {
 import { SahelFlowError } from "@/types/errors";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
-import type { OrderStatus } from "@/types/domain";
+import type { Order, OrderStatus } from "@/types/domain";
 import { PageHeader } from "@/components/shared/page-header";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { StatCard } from "@/components/shared/stat-card";
 import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
 import { Ban } from "lucide-react";
+import {
+  requireTrustedAction,
+  trustedActionAllowed,
+} from "@/lib/identity/authorization";
+import { projectCustomerForTrustedActor } from "@/lib/identity/customer-projection";
+import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +52,37 @@ function getRiskLevel(score: number): "low" | "medium" | "high" {
 
 export default async function CustomerDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
+  const actorContext = await requireTrustedAction("customers.read");
+  const resource = { shopId: actorContext.shop.shopId };
+  const canReadOrders = trustedActionAllowed(
+    actorContext,
+    "orders.read",
+    resource,
+  );
+  const canReadOrderFinancials = canReadOrders && trustedActionAllowed(
+    actorContext,
+    "orders.financials.read",
+    resource,
+  );
+  const canReadRisk = trustedActionAllowed(
+    actorContext,
+    "risk.read",
+    resource,
+  );
+  const canManageRisk = trustedActionAllowed(
+    actorContext,
+    "risk.manage",
+    resource,
+  );
   const { id } = await params;
 
   let customer;
   try {
-    customer = await customerService.getById({ prisma: db, shop: shopContext }, id);
+    const source = await customerService.getById(
+      { prisma: db, shop: shopContext },
+      id,
+    );
+    customer = projectCustomerForTrustedActor(actorContext, source);
   } catch (err) {
     if (err instanceof SahelFlowError && err.statusCode === 404) {
       notFound();
@@ -59,10 +91,22 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   }
 
   // Use the new stats service for accurate aggregation
-  const [stats, orders] = await Promise.all([
-    customerServiceExtensions.getStats({ prisma: db, shop: shopContext }, id),
-    customerServiceExtensions.getOrderHistory({ prisma: db, shop: shopContext }, id, { limit: 50 }),
-  ]);
+  const [stats, sourceOrders] = canReadOrders
+    ? await Promise.all([
+        customerServiceExtensions.getStats(
+          { prisma: db, shop: shopContext },
+          id,
+        ),
+        customerServiceExtensions.getOrderHistory(
+          { prisma: db, shop: shopContext },
+          id,
+          { limit: 50 },
+        ),
+      ])
+    : [null, []];
+  const orders = sourceOrders.map((order) =>
+    projectOrderForTrustedActor(actorContext, order as unknown as Order),
+  );
 
   const riskLevel = getRiskLevel(customer.riskScore);
   const riskBadge: Record<typeof riskLevel, { variant: "secondary" | "outline" | "destructive"; label: string }> = {
@@ -72,36 +116,42 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   };
 
   // Spending sparkline (last 20 orders by date)
-  const spendingSeries = orders
-    .slice(0, 20)
-    .reverse()
-    .map((o) => ({ value: o.totalPrice }));
+  const spendingSeries = canReadOrderFinancials
+    ? orders
+        .slice(0, 20)
+        .reverse()
+        .map((o) => ({ value: o.totalPrice ?? 0 }))
+    : [];
+
+  const customerLabel = customer.name ?? t("inbox.restrictedContact");
 
   return (
     <div className="app-content page-sections">
       <Breadcrumbs
         items={[
           { label: t("customers.title"), href: "/customers" },
-          { label: customer.name },
+          { label: customerLabel },
         ]}
         className="mb-4"
       />
 
       <PageHeader
-        title={customer.name}
+        title={customerLabel}
         description={
           <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className="inline-flex items-center gap-1">
-              <Phone className="h-3.5 w-3.5" />
-              <span className="font-mono">{customer.phone}</span>
-            </span>
-            {customer.phone2 && (
+            {customer.fieldAccess.contact && customer.phone && (
+              <span className="inline-flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5" />
+                <span className="font-mono">{customer.phone}</span>
+              </span>
+            )}
+            {customer.fieldAccess.contact && customer.phone2 && (
               <span className="inline-flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
                 <span className="font-mono">{customer.phone2}</span>
               </span>
             )}
-            {customer.wilaya && (
+            {customer.fieldAccess.contact && customer.wilaya && (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
                 {customer.wilaya}{customer.commune ? ` · ${customer.commune}` : ""}
@@ -113,23 +163,25 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </span>
           </span>
         }
-        actions={
+        actions={canReadRisk ? (
           <div className="flex items-center gap-2">
             <Badge variant={riskBadge[riskLevel].variant}>
               <AlertTriangle className="h-3.5 w-3.5" />
               {riskBadge[riskLevel].label} · {customer.riskScore}
             </Badge>
-            <BlacklistToggle
-              customerId={customer.id}
-              isBlacklisted={customer.isBlacklisted}
-              variant="button"
-            />
+            {canManageRisk && (
+              <BlacklistToggle
+                customerId={customer.id}
+                isBlacklisted={customer.isBlacklisted}
+                variant="button"
+              />
+            )}
           </div>
-        }
+        ) : undefined}
       />
 
       {/* Blacklist warning banner */}
-      {customer.isBlacklisted && (
+      {canReadRisk && customer.isBlacklisted && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <Ban className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
           <div className="flex-1">
@@ -149,17 +201,20 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       )}
 
       {/* Customer 360 stat cards */}
-      <div className="card-grid-4 stagger-grid">
-        <StatCard
-          label={t("customers.lifetimeValue")}
-          value={formatDZD(stats.totalSpent)}
-          icon={<TrendingUp />}
-          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-success"
-          spark={spendingSeries}
-          sparkColor="var(--color-chart-2)"
-          style={{ animationDelay: "60ms" }}
-        />
+      {stats && (
+        <div className="card-grid-4 stagger-grid">
+        {canReadOrderFinancials && (
+          <StatCard
+            label={t("customers.lifetimeValue")}
+            value={formatDZD(stats.totalSpent)}
+            icon={<TrendingUp />}
+            accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
+            accentIcon="text-success"
+            spark={spendingSeries}
+            sparkColor="var(--color-chart-2)"
+            style={{ animationDelay: "60ms" }}
+          />
+        )}
         <StatCard
           label={t("customers.totalOrders")}
           value={stats.totalOrders}
@@ -176,18 +231,23 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           accentIcon="text-violet-600 dark:text-violet-400"
           style={{ animationDelay: "180ms" }}
         />
-        <StatCard
-          label={t("customers.avgOrderValue")}
-          value={formatDZD(stats.avgOrderValue)}
-          icon={<TrendingUp />}
-          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-warning"
-          style={{ animationDelay: "240ms" }}
-        />
-      </div>
+        {canReadOrderFinancials && (
+          <StatCard
+            label={t("customers.avgOrderValue")}
+            value={formatDZD(stats.avgOrderValue)}
+            icon={<TrendingUp />}
+            accentBg="bg-amber-500/10 dark:bg-amber-500/15"
+            accentIcon="text-warning"
+            style={{ animationDelay: "240ms" }}
+          />
+        )}
+        </div>
+      )}
 
       {/* Delivery breakdown + Notes */}
-      <div className="card-grid-3">
+      {(stats || customer.fieldAccess.contact) && (
+        <div className="card-grid-3">
+        {stats && (
         <Card className="lg:col-span-1 animate-fade-up">
           <CardHeader>
             <CardTitle className="text-base">{t("customers.deliveryRate")}</CardTitle>
@@ -211,8 +271,9 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             )}
           </CardContent>
         </Card>
+        )}
 
-        {customer.notes && (
+        {customer.fieldAccess.contact && customer.notes && (
           <Card className="lg:col-span-2 animate-fade-up">
             <CardHeader>
               <CardTitle className="text-base">{t("publicForm.notes")}</CardTitle>
@@ -222,7 +283,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
         )}
-        {!customer.notes && (
+        {customer.fieldAccess.contact && !customer.notes && (
           <Card className="lg:col-span-2 animate-fade-up">
             <CardHeader>
               <CardTitle className="text-base">{t("customers.address")}</CardTitle>
@@ -232,10 +293,12 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Order history */}
-      <Card className="animate-fade-up">
+      {canReadOrders && (
+        <Card className="animate-fade-up">
         <CardHeader>
           <CardTitle className="text-base">{t("customers.orderHistory")}</CardTitle>
         </CardHeader>
@@ -278,7 +341,9 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                         )}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
-                        {formatDZD(order.totalPrice)}
+                        {order.totalPrice !== null
+                          ? formatDZD(order.totalPrice)
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDate(order.createdAt, locale)}
@@ -291,7 +356,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

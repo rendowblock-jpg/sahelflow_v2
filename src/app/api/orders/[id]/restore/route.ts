@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
-import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  requireTrustedAction,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -39,11 +42,11 @@ export const POST = withErrorHandler(async (_req: NextRequest, { params }: Route
     data: { deletedAt: null },
   });
 
-  void logAudit(context, {
+  await logAudit(context, {
     action: "order.restored",
     entity: "order",
     entityId: id,
-    actor: `person:${actorContext.actor.kind === "person" ? actorContext.actor.personId : "unknown"}`,
+    actor: trustedActorAuditIdentity(actorContext.actor),
   });
 
   return NextResponse.json({ success: true });

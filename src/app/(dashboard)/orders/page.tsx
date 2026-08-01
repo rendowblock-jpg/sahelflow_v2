@@ -18,6 +18,10 @@ import { orderStatusSchema } from "@/lib/validation";
 import { computeActiveOrderCount } from "./active-orders";
 import type { Metadata } from "next";
 import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
@@ -42,6 +46,9 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<{ status?: string; risk?: string }>;
 }) {
+  const actorContext = await requireTrustedAction("orders.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
   const { status: statusFilterRaw, risk: riskFilter } = await searchParams;
 

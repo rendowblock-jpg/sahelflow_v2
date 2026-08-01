@@ -4,6 +4,7 @@ import { getAllSettings, setSetting } from "@/lib/settings";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { db, shopContext, type DbClient } from "@/lib/db";
 import {
   assertDemoAllowsDailyReportSettings,
@@ -27,7 +28,7 @@ const SETTINGS_TRANSACTION_OPTIONS = {
  * to enforce auth.
  */
 export async function GET(): Promise<NextResponse> {
-  await requireAuth();
+  await requireAuth("settings.read");
   const settings = await getAllSettings({ prisma: db, shop: shopContext });
   return NextResponse.json({ settings });
 }
@@ -42,7 +43,7 @@ const updateSchema = z.object({
  * Values are coerced to strings (booleans → "true"/"false", numbers → "123").
  */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireAuth("settings.manage");
   const body = await req.json();
   const input = updateSchema.parse(body);
 
@@ -84,12 +85,12 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
 
   // Fire-and-forget audit log — settings mutations are security-sensitive
   // (daily_report_phone, profile PII and other operational preferences).
-  void logAudit(
+  await logAudit(
     { prisma: db, shop: shopContext },
     {
       action: "settings.updated",
       entity: "settings",
-      actor: "user",
+      actor: trustedActorAuditIdentity(actorContext.actor),
       before: before as Record<string, unknown>,
       after: settings as Record<string, unknown>,
       metadata: { updatedKeys: Object.keys(input.settings) },

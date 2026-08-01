@@ -7,9 +7,10 @@ import {
 } from "@/lib/secrets";
 import { deliverySecretKey, deliverySecretKeys, DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
 import { db, shopContext } from "@/lib/db";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,8 @@ export const dynamic = "force-dynamic";
  * Returns which providers are configured (never the values).
  */
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  const actorContext = await requireAuth("delivery.credentials.manage");
+  await requireRecentReauthentication();
   const context = { prisma: db, shop: shopContext };
   const status: Record<string, Record<string, boolean>> = {};
   for (const provider of DELIVERY_PROVIDERS) {
@@ -58,7 +60,7 @@ const saveSchema = z.object({
  * (bug B3 / dive-5). Tests bypass the loader with mocks so CI stays green.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("delivery.credentials.manage");
   const context = { prisma: db, shop: shopContext };
   const body = await req.json();
   const input = saveSchema.parse(body);
@@ -68,6 +70,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const key = deliverySecretKey(input.provider, field);
     await setSecret(context, key, value);
   }
+  await logAudit(context, {
+    action: "delivery.credentials.updated",
+    entity: "delivery_credentials",
+    entityId: input.provider,
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    metadata: { provider: input.provider, fields: Object.keys(input.credentials) },
+  });
 
   return NextResponse.json({
     ok: true,
@@ -84,7 +93,8 @@ const deleteSchema = z.object({
  * for a provider.
  */
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireAuth("delivery.credentials.manage");
+  await requireRecentReauthentication();
   const context = { prisma: db, shop: shopContext };
   const provider = req.nextUrl.searchParams.get("provider");
   const input = deleteSchema.parse({ provider });
@@ -98,11 +108,11 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   }
 
   // W2-5: audit credential deletion (security-relevant — strips delivery integration access).
-  void logAudit({ prisma: db, shop: shopContext }, {
+  await logAudit({ prisma: db, shop: shopContext }, {
     action: "delivery.credentials.deleted",
     entity: "delivery_credentials",
     entityId: input.provider,
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
     before: before as unknown as Record<string, unknown>,
     metadata: { provider: input.provider, keys },
   });

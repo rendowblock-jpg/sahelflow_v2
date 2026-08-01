@@ -29,7 +29,7 @@ const ALLOWED_TYPES = new Set([
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  await requireAuth("products.manage");
   const formData = await req.formData();
   const file = formData.get("file");
 

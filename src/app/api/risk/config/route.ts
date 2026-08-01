@@ -9,14 +9,14 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/config — load the risk engine configuration */
 export async function GET() {
-  await requireAuth();
+  await requireAuth("risk.read");
   const config = await getRiskConfig({ prisma: db, shop: shopContext });
   return NextResponse.json({ config });
 }
 
 /** PUT /api/risk/config — update the risk engine configuration */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("risk.manage");
   const body = await req.json() as Partial<RiskEngineConfig>;
   const context = { prisma: db, shop: shopContext };
   const current = await getRiskConfig(context);

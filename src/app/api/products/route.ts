@@ -3,7 +3,14 @@ import { db, shopContext } from "@/lib/db";
 import { productService } from "@/lib/data";
 import { createProductSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import {
+  projectProductForTrustedActor,
+  projectProductsForTrustedActor,
+} from "@/lib/identity/product-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +23,7 @@ export const dynamic = "force-dynamic";
  * DataTable v2 pagination contract.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("products.read");
   const searchParams = req.nextUrl.searchParams;
   const activeOnly = searchParams.get("activeOnly") === "true";
 
@@ -35,7 +42,13 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     ]);
 
     const hasNextPage = offset + products.length < total;
-    return NextResponse.json({ products, total, hasNextPage, page, pageSize });
+    return NextResponse.json({
+      products: projectProductsForTrustedActor(actorContext, products),
+      total,
+      hasNextPage,
+      page,
+      pageSize,
+    });
   }
 
   // Legacy contract (?limit=&offset=) — returns { products } only
@@ -50,16 +63,30 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     },
   );
 
-  return NextResponse.json({ products });
+  return NextResponse.json({
+    products: projectProductsForTrustedActor(actorContext, products),
+  });
 }, "GET /api/products");
 
 /** POST /api/products — create a new product */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("products.manage");
+  assertTrustedAction(actorContext, "products.read", {
+    shopId: actorContext.shop.shopId,
+  });
+  assertTrustedAction(actorContext, "products.cost.read", {
+    shopId: actorContext.shop.shopId,
+  });
+  assertTrustedAction(actorContext, "products.cost.update", {
+    shopId: actorContext.shop.shopId,
+  });
   const body = await req.json();
   const data = createProductSchema.parse(body);
 
   const product = await productService.create({ prisma: db, shop: shopContext }, data);
 
-  return NextResponse.json({ product }, { status: 201 });
+  return NextResponse.json(
+    { product: projectProductForTrustedActor(actorContext, product) },
+    { status: 201 },
+  );
 }, "POST /api/products");

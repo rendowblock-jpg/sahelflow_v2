@@ -42,6 +42,21 @@ describe("Phase 2 permission policy", () => {
         "customers.contact.update",
         "orders.financials.read",
         "orders.financials.update",
+        "products.manage",
+        "products.cost.update",
+        "customers.manage",
+        "accounting.update",
+        "analytics.financials.read",
+        "delivery.credentials.manage",
+        "automations.manage",
+        "backups.restore",
+        "data.import",
+        "integrations.manage",
+        "risk.manage",
+        "settings.manage",
+        "storefront.manage",
+        "storefront.publish",
+        "license.manage",
         "approvals.approve",
       ]),
     );
@@ -58,10 +73,28 @@ describe("Phase 2 permission policy", () => {
         "customers.contact.update",
         "orders.financials.read",
         "orders.financials.update",
+        "products.manage",
+        "products.cost.read",
+        "products.cost.update",
+        "customers.manage",
+        "accounting.update",
+        "analytics.financials.read",
+        "deliveries.manage",
+        "automations.manage",
+        "data.export",
+        "data.import",
+        "risk.manage",
+        "settings.manage",
+        "storefront.manage",
       ]),
     );
     expect(manager).not.toContain("shops.delete");
     expect(manager).not.toContain("approvals.approve");
+    expect(manager).not.toContain("delivery.credentials.manage");
+    expect(manager).not.toContain("backups.restore");
+    expect(manager).not.toContain("integrations.manage");
+    expect(manager).not.toContain("license.manage");
+    expect(manager).not.toContain("storefront.publish");
     expect(operator).toEqual(
       expect.arrayContaining([
         "workgroups.read",
@@ -74,6 +107,12 @@ describe("Phase 2 permission policy", () => {
         "orders.read",
         "customers.contact.read",
         "customers.contact.update",
+        "products.read",
+        "customers.manage",
+        "deliveries.manage",
+        "automations.read",
+        "ai.use",
+        "risk.read",
       ]),
     );
     expect(operator).not.toContain("conversations.assign");
@@ -82,6 +121,9 @@ describe("Phase 2 permission policy", () => {
     expect(operator).not.toContain("orders.assign");
     expect(operator).not.toContain("orders.financials.read");
     expect(operator).not.toContain("orders.financials.update");
+    expect(operator).not.toContain("products.manage");
+    expect(operator).not.toContain("accounting.read");
+    expect(operator).not.toContain("data.export");
     expect(viewer).toEqual(
       expect.arrayContaining([
         "shops.read",
@@ -90,6 +132,11 @@ describe("Phase 2 permission policy", () => {
         "comments.read",
         "conversations.read",
         "orders.read",
+        "products.read",
+        "customers.read",
+        "deliveries.read",
+        "analytics.read",
+        "risk.read",
       ]),
     );
     expect(viewer).not.toContain("comments.write");
@@ -99,6 +146,9 @@ describe("Phase 2 permission policy", () => {
     expect(viewer).not.toContain("customers.contact.update");
     expect(viewer).not.toContain("orders.financials.read");
     expect(viewer).not.toContain("orders.financials.update");
+    expect(viewer).not.toContain("customers.contact.read");
+    expect(viewer).not.toContain("products.cost.read");
+    expect(viewer).not.toContain("analytics.financials.read");
   });
 
   it("keeps the compatibility owner read-only until durable authority exists", () => {

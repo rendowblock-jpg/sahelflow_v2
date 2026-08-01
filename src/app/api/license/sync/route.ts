@@ -13,8 +13,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { setCachedLicenseResult, validateLicense } from "@/lib/license/license-server";
 // getMachineId no longer imported — server uses client-supplied machineId (AUDIT-3 S1 fix)
 import { env } from "@/lib/env";
@@ -46,7 +47,8 @@ const syncSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  const actorContext = await requireAuth("license.manage");
+  await requireRecentReauthentication();
   const body = await req.json();
   const input = syncSchema.parse(body);
   const license = input.license as SignedLicense;
@@ -99,11 +101,11 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   // W2-5: audit license sync — security-relevant (license status changes gate app features).
   // Don't log the full license blob (contains machine IDs); log the validation result.
-  void logAudit(context, {
+  await logAudit(context, {
     action: "license.synced",
     entity: "license",
     entityId: license.payload.id,
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
     after: { status: result.status, message: result.message ?? null, type: license.payload.type },
     metadata: {
       machineId: input.machineId,

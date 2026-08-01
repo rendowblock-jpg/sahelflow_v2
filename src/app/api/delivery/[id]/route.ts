@@ -38,7 +38,9 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export const PATCH = withErrorHandler(
   async (req: NextRequest, { params }: RouteContext) => {
-    await requireRouteAuth(req);
+    await requireRouteAuth(req, {
+      actions: ["deliveries.manage", "orders.read", "orders.update"],
+    });
     const { id } = await params;
     const { status } = updateSchema.parse(await req.json());
     const context = { prisma: db, shop: shopContext };

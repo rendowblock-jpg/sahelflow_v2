@@ -15,6 +15,7 @@ import {
   incrementRuleTriggers as incrementRuleTriggersForShop,
   buildAssessmentInputFromOrder as buildAssessmentInputFromOrderForShop,
   assessOrderRisk as assessOrderRiskForShop,
+  assessOrderRiskPreCreate as assessOrderRiskPreCreateForShop,
   assessRiskFromInput as assessRiskFromInputForShop,
   batchAssessOrders as batchAssessOrdersForShop,
   blacklistCustomer as blacklistCustomerForShop,
@@ -53,6 +54,9 @@ const incrementRuleTriggers = (ruleIds: string[]) =>
 const buildAssessmentInputFromOrder = (orderId: string) =>
   buildAssessmentInputFromOrderForShop(context, orderId);
 const assessOrderRisk = (orderId: string) => assessOrderRiskForShop(context, orderId);
+const assessOrderRiskPreCreate = (
+  orderData: Parameters<typeof assessOrderRiskPreCreateForShop>[1],
+) => assessOrderRiskPreCreateForShop(context, orderData);
 const assessRiskFromInput = (input: RiskAssessmentInput) =>
   assessRiskFromInputForShop(context, input);
 const batchAssessOrders = (orderIds: string[]) => batchAssessOrdersForShop(context, orderIds);
@@ -69,11 +73,37 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // Wait for fire-and-forget `incrementRuleTriggers` calls to settle so they
-  // don't race with the next test's cleanDb.
-  await new Promise((r) => setTimeout(r, 30));
+  // Blacklist mutations still dispatch committed automation effects in the
+  // background. Keep those explicit writes from racing the next clean DB.
+  await allowDeferredWritesToSettle();
   await disconnectTestPrisma(db);
 });
+
+async function snapshotRiskReadState() {
+  const [settings, customers, orders, wilayaRiskProfiles] = await Promise.all([
+    db.setting.findMany({ orderBy: { key: "asc" } }),
+    db.customer.findMany({
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        updatedAt: true,
+        isBlacklisted: true,
+        blacklistReason: true,
+        blacklistedAt: true,
+      },
+    }),
+    db.order.findMany({
+      orderBy: { id: "asc" },
+      select: { id: true, updatedAt: true, status: true },
+    }),
+    db.wilayaRiskProfile.findMany({ orderBy: { id: "asc" } }),
+  ]);
+  return { settings, customers, orders, wilayaRiskProfiles };
+}
+
+async function allowDeferredWritesToSettle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
 
 async function seedWilayaRisk(
   wilaya = "Alger",
@@ -162,7 +192,7 @@ describe("getRiskConfig / saveRiskConfig", () => {
 // ── Rules persistence ───────────────────────────────────────────────────────
 
 describe("getRiskRules / saveRiskRules", () => {
-  it("seeds DEFAULT_RISK_RULES on first access (with triggerCount=0)", async () => {
+  it("returns DEFAULT_RISK_RULES in memory without seeding durable state", async () => {
     const rules = await getRiskRules();
     expect(rules).toHaveLength(DEFAULT_RISK_RULES.length);
     for (const r of rules) {
@@ -170,19 +200,20 @@ describe("getRiskRules / saveRiskRules", () => {
       expect(r.id).toBeTruthy();
       expect(r.enabled).toBe(true);
     }
-    // Verify the Setting row was created
     const row = await db.setting.findUnique({ where: { key: "risk_engine_rules" } });
-    expect(row).not.toBeNull();
+    expect(row).toBeNull();
   });
 
-  it("returns the saved rules on subsequent calls (no re-seed)", async () => {
-    await getRiskRules(); // seeds defaults
-    const rules = await getRiskRules();
-    expect(rules).toHaveLength(DEFAULT_RISK_RULES.length);
+  it("repeated default reads remain durable-state pure", async () => {
+    const first = await getRiskRules();
+    const second = await getRiskRules();
+    expect(second).toEqual(first);
+    await expect(
+      db.setting.findUnique({ where: { key: "risk_engine_rules" } }),
+    ).resolves.toBeNull();
   });
 
   it("saveRiskRules replaces the entire set", async () => {
-    await getRiskRules();
     await saveRiskRules([]);
     const reloaded = await getRiskRules();
     expect(reloaded).toEqual([]);
@@ -194,23 +225,26 @@ describe("getRiskRules / saveRiskRules", () => {
     });
     const rules = await getRiskRules();
     expect(rules).toHaveLength(DEFAULT_RISK_RULES.length);
+    await expect(
+      db.setting.findUnique({ where: { key: "risk_engine_rules" } }),
+    ).resolves.toMatchObject({ value: "{broken" });
   });
 });
 
 // ── incrementRuleTriggers ───────────────────────────────────────────────────
 
 describe("incrementRuleTriggers", () => {
-  it("no-ops on empty array", async () => {
-    await getRiskRules(); // seed
+  it("no-ops on empty array without initializing durable rules", async () => {
     await incrementRuleTriggers([]);
     const rules = await getRiskRules();
     for (const r of rules) expect(r.triggerCount).toBe(0);
+    await expect(
+      db.setting.findUnique({ where: { key: "risk_engine_rules" } }),
+    ).resolves.toBeNull();
   });
 
   it("increments the trigger count for the named rules only", async () => {
-    await getRiskRules(); // seed
     await incrementRuleTriggers(["blacklist_hold", "very_high_value_order"]);
-    await new Promise((r) => setTimeout(r, 30));
     const rules = await getRiskRules();
     const bl = rules.find((r) => r.id === "blacklist_hold")!;
     const vhv = rules.find((r) => r.id === "very_high_value_order")!;
@@ -221,10 +255,8 @@ describe("incrementRuleTriggers", () => {
   });
 
   it("accumulates across multiple calls", async () => {
-    await getRiskRules();
     await incrementRuleTriggers(["blacklist_hold"]);
     await incrementRuleTriggers(["blacklist_hold"]);
-    await new Promise((r) => setTimeout(r, 30));
     const rules = await getRiskRules();
     const bl = rules.find((r) => r.id === "blacklist_hold")!;
     expect(bl.triggerCount).toBe(2);
@@ -329,6 +361,47 @@ describe("assessOrderRisk", () => {
     const wilayaFactor = assessment!.factors.find((f) => f.id === "wilaya_risk");
     expect(wilayaFactor).toBeDefined();
   });
+
+  it("does not mutate durable state when persisted rules trigger", async () => {
+    await saveRiskRules(
+      DEFAULT_RISK_RULES.map((rule) => ({ ...rule, triggerCount: 0 })),
+    );
+    const customer = await seedTestCustomer(db);
+    await db.customer.update({
+      where: { id: customer.id },
+      data: { isBlacklisted: true, blacklistReason: "read-purity" },
+    });
+    const order = await seedOrderForCustomer(customer.id);
+    const before = await snapshotRiskReadState();
+
+    const assessment = await assessOrderRisk(order.id);
+    expect(assessment?.triggeredRules).toContain("blacklist_hold");
+    await allowDeferredWritesToSettle();
+
+    await expect(snapshotRiskReadState()).resolves.toEqual(before);
+  });
+});
+
+describe("assessOrderRiskPreCreate", () => {
+  it("does not persist rule triggers for an abandoned preview", async () => {
+    await saveRiskRules(
+      DEFAULT_RISK_RULES.map((rule) => ({ ...rule, triggerCount: 0 })),
+    );
+    const before = await snapshotRiskReadState();
+
+    const assessment = await assessOrderRiskPreCreate({
+      phone: uniquePhone(),
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue Didouche",
+      totalPrice: 50_000,
+      source: "manual",
+    });
+    expect(assessment.triggeredRules.length).toBeGreaterThan(0);
+    await allowDeferredWritesToSettle();
+
+    await expect(snapshotRiskReadState()).resolves.toEqual(before);
+  });
 });
 
 // ── assessRiskFromInput ─────────────────────────────────────────────────────
@@ -350,6 +423,27 @@ describe("assessRiskFromInput", () => {
     const assessment = await assessRiskFromInput(input);
     expect(assessment.score).toBeGreaterThanOrEqual(0);
     expect(assessment.factors.find((f) => f.id === "new_customer")).toBeDefined();
+  });
+
+  it("uses in-memory defaults without initializing risk settings", async () => {
+    const input: RiskAssessmentInput = {
+      order: {
+        totalPrice: 50_000,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123 Rue Didouche",
+        phone: uniquePhone(),
+        source: "manual",
+        createdAt: new Date(),
+      },
+    };
+    const before = await snapshotRiskReadState();
+
+    const assessment = await assessRiskFromInput(input);
+    expect(assessment.triggeredRules.length).toBeGreaterThan(0);
+    await allowDeferredWritesToSettle();
+
+    await expect(snapshotRiskReadState()).resolves.toEqual(before);
   });
 });
 
@@ -383,6 +477,25 @@ describe("batchAssessOrders", () => {
     expect(result.size).toBe(1);
     expect(result.get(o1.id)).toBeDefined();
     expect(result.has("nonexistent999999999999")).toBe(false);
+  });
+
+  it("does not persist trigger counts while rendering an order batch", async () => {
+    await saveRiskRules(
+      DEFAULT_RISK_RULES.map((rule) => ({ ...rule, triggerCount: 0 })),
+    );
+    const customer = await seedTestCustomer(db);
+    await db.customer.update({
+      where: { id: customer.id },
+      data: { isBlacklisted: true, blacklistReason: "batch-read-purity" },
+    });
+    const order = await seedOrderForCustomer(customer.id);
+    const before = await snapshotRiskReadState();
+
+    const result = await batchAssessOrders([order.id]);
+    expect(result.get(order.id)?.triggeredRules).toContain("blacklist_hold");
+    await allowDeferredWritesToSettle();
+
+    await expect(snapshotRiskReadState()).resolves.toEqual(before);
   });
 });
 

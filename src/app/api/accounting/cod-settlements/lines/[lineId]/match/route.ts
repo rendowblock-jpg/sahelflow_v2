@@ -4,6 +4,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { matchCanonicalCodSettlementLine } from "@/lib/accounting/canonical-cod";
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
+import { assertTrustedAction } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export const POST = withErrorHandler(
     { params }: { params: Promise<{ lineId: string }> },
   ) => {
     const actorContext = await requireTrustedActor();
+    assertTrustedAction(actorContext, "accounting.update");
     const { lineId } = await params;
     const command = await matchCanonicalCodSettlementLine(
       {
