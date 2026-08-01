@@ -11,6 +11,9 @@ export const PHASE2_ACTIONS = Object.freeze([
   "devices.manage",
   "sessions.read",
   "sessions.revoke",
+  "conversations.read",
+  "conversations.claim",
+  "conversations.assign",
 ] as const);
 
 export type Phase2Action = (typeof PHASE2_ACTIONS)[number];
@@ -20,7 +23,7 @@ export type Phase2Role = "owner" | "manager" | "operator" | "viewer";
  * A PIN-unlocked compatibility owner is authenticated but is not yet a durable
  * workspace member. Until the protected installation control cache exists it
  * can read only the exact process shop and cannot administer workspace shops,
- * members, devices, or sessions.
+ * members, devices, sessions, or collaboration work.
  */
 export const COMPATIBILITY_LOCAL_OWNER_ACTIONS = Object.freeze([
   "shops.read",
@@ -35,9 +38,20 @@ const PRESET_PERMISSIONS: Readonly<Record<Phase2Role, readonly Phase2Action[]>> 
     "members.read",
     "devices.read",
     "sessions.read",
+    "conversations.read",
+    "conversations.claim",
+    "conversations.assign",
   ]),
-  operator: Object.freeze(["shops.read", "shops.switch"]),
-  viewer: Object.freeze(["shops.read"]),
+  operator: Object.freeze([
+    "shops.read",
+    "shops.switch",
+    "conversations.read",
+    "conversations.claim",
+  ]),
+  viewer: Object.freeze([
+    "shops.read",
+    "conversations.read",
+  ]),
 };
 
 function invalidPolicy(): never {
