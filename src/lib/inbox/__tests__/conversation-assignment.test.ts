@@ -142,7 +142,7 @@ describe("conversation assignment command", () => {
     expect(
       await rawDb.conversation.findUnique({ where: { id: conversation.id } }),
     ).toMatchObject({ assigneeId: SELF.memberId });
-    const activity = await rawDb.message.findFirst({
+    const activity = await db.message.findFirst({
       where: { conversationId: conversation.id },
     });
     expect(activity).toMatchObject({
