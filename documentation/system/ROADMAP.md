@@ -8,9 +8,9 @@
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
 > **Active phase:** Phase 2A — durable local identity and session authority
-> **Active package:** Phase 2A.4 — multi-member roles, invitations and per-shop permissions
+> **Active package:** Teams and permissions completion
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-07-31
+> **Last consolidated:** 2026-08-01
 
 This document owns Phase 0–9 dependency order, outcomes and exit gates. Product
 detail remains owned by `../product/PRODUCT.md` and
@@ -177,32 +177,47 @@ Evidence: head `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`, CI
 Evidence: head `56df880bbe2233bf081119fa535e30713d9c6051`, CI
 `30665009016`, checkpoint `30665009255`.
 
-### Package 2A.4 — multi-member roles, invitations and per-shop permissions — active
+### Package 2A.4 — multi-member roles, invitations and per-shop permissions — closed
 
-Required contract:
+- authenticated, expiring and single-use invitations with replay-safe recovery;
+- exactly one accepted Person, WorkspaceMember, Device and session per valid
+  invitation and local PIN ceremony;
+- individual member login and member-owned reauthentication without owner-PIN
+  fallback;
+- owner, manager, operator and viewer presets plus deny-by-default custom
+  allowlists bounded by role ceilings;
+- exact shop grants enforced on protected access, credential creation and
+  non-owner member inventory;
+- control-first member revocation immediately invalidating every indexed session;
+- transactional, retryable SQLite/audit catch-up without restoring access;
+- owner administration and member self-view in AR/FR/EN;
+- installation-root rotation across owner, invitation, member and revocation
+  authorities;
+- duplicate/concurrent invitation, acceptance and revocation, restart, expiry,
+  replay, stale-policy, recovery and cross-shop proof.
 
-1. Extend installation authority from one owner to multiple durable People and
-   WorkspaceMembers without duplicating identity in each shop DB.
-2. Invitations have authenticated identity, expiry, single-use acceptance,
-   exact workspace/shop scope and replay-safe recovery.
-3. Acceptance creates exactly one person/member/device/session only after valid
-   invitation proof and local PIN ceremony.
-4. Owner, manager, operator and viewer presets plus custom action permissions are
-   deny-by-default and cannot exceed the role ceiling.
-5. Exact shop grants are enforced before request parsing or effects.
-6. Member revocation invalidates all associated sessions immediately.
-7. The last active owner cannot be removed or demoted outside an explicit
-   recovery ceremony.
-8. Owner administration and member self-view include complete AR/FR/EN loading,
-   empty, validation, expired, revoked, conflict and recovery states.
-9. Duplicate/concurrent invite, accept and revoke; restart, expiry, replay,
-   stale-policy and cross-shop behavior are proven.
+Evidence: head `3266dc03994ffcb1672256465624ea715f0cf317`, CI
+`30681155150`, checkpoint `30681155099`.
 
-## Teams and permissions completion
+The frozen sole-agent adversarial pass found and closed revoked-login disclosure,
+stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
+login false-success. It found no remaining P0/P1 and was not an independent
+review. The sole core owner is outside accepted-member removal/demotion APIs; any
+future multi-owner last-owner recovery remains an explicit separate ceremony.
 
-After the member kernel, complete assignments, workgroups, queues, comments,
-mentions, handovers and field-level permissions where Required. UI visibility is
-never authorization.
+## Teams and permissions completion — active
+
+Complete authoritative assignments, workgroups, queues, internal comments,
+mentions, handovers and field-level permissions where Required. Extend the action
+vocabulary to operational domains while preserving exact shop scope,
+least-privilege role ceilings, custom deny-by-default behavior, trusted actor
+audit attribution, idempotency, concurrency, revocation and recovery. UI
+visibility is never authorization.
+
+The representative first vertical must prove one assignment/handover lifecycle for
+owner, manager and operator under happy, validation, permission, duplicate,
+concurrent, stale-policy, revoked, cross-shop, restart and recovery behavior in
+Arabic, French and English.
 
 ## Licensing and entitlements
 
