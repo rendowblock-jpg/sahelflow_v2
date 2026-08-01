@@ -20,6 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CodReconciliationPage() {
   const actorContext = await requireTrustedAction("accounting.read");
   assertTrustedAction(actorContext, "orders.financials.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
   const { t } = await getI18n();
   const summary = await getCanonicalCodWorkspaceSummary({
     prisma: db,

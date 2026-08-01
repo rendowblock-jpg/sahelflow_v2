@@ -24,6 +24,8 @@ const compatibilityHeaders = {
 export const GET = withErrorHandler(async () => {
   const actorContext = await requireTrustedActor();
   assertTrustedAction(actorContext, "accounting.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
   const summary = await getCanonicalCodWorkspaceSummary({
     prisma: db,
     shop: actorContext.shop,

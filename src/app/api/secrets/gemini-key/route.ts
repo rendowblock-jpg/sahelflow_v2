@@ -40,6 +40,7 @@ const saveSchema = z.object({
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireAuth("integrations.manage");
+  await requireRecentReauthentication();
   const body = await req.json();
   const input = saveSchema.parse(body);
 

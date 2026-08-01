@@ -73,4 +73,44 @@ describe("operational route action inventory", () => {
       "projectCustomerReturnPosition",
     );
   });
+
+  it("proves recent reauthentication before credential request parsing", () => {
+    for (const path of [
+      "src/app/api/delivery/credentials/route.ts",
+      "src/app/api/integrations/connect/route.ts",
+      "src/app/api/secrets/gemini-key/route.ts",
+    ]) {
+      const route = source(path);
+      const post = route.indexOf("export const POST");
+      const authority = route.indexOf("requireAuth(", post);
+      const reauthentication = route.indexOf(
+        "requireRecentReauthentication()",
+        authority,
+      );
+      const body = route.indexOf("req.json()", reauthentication);
+
+      expect(authority, path).toBeGreaterThan(post);
+      expect(reauthentication, path).toBeGreaterThan(authority);
+      expect(body, path).toBeGreaterThan(reauthentication);
+    }
+  });
+
+  it("guards COD contact and financial fields before summary queries", () => {
+    for (const path of [
+      "src/app/(dashboard)/accounting/cod-reconciliation/page.tsx",
+      "src/app/api/accounting/cod-reconciliation/route.ts",
+      "src/app/api/accounting/cod-settlements/route.ts",
+    ]) {
+      const route = source(path);
+      const accounting = route.indexOf('"accounting.read"');
+      const financials = route.indexOf('"orders.financials.read"', accounting);
+      const contact = route.indexOf('"customers.contact.read"', financials);
+      const query = route.indexOf("getCanonicalCodWorkspaceSummary(", contact);
+
+      expect(accounting, path).toBeGreaterThanOrEqual(0);
+      expect(financials, path).toBeGreaterThan(accounting);
+      expect(contact, path).toBeGreaterThan(financials);
+      expect(query, path).toBeGreaterThan(contact);
+    }
+  });
 });

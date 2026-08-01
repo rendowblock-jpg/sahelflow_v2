@@ -61,6 +61,7 @@ const saveSchema = z.object({
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireAuth("delivery.credentials.manage");
+  await requireRecentReauthentication();
   const context = { prisma: db, shop: shopContext };
   const body = await req.json();
   const input = saveSchema.parse(body);

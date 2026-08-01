@@ -6,8 +6,14 @@ import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const PHONE_REPUTATION_READ_ACTIONS = [
+  "risk.read",
+  "customers.read",
+  "customers.contact.read",
+] as const;
+
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("risk.read");
+  await requireAuth(PHONE_REPUTATION_READ_ACTIONS);
   const phone = req.nextUrl.searchParams.get("phone") ?? "";
   const result = await checkPhoneReputation({ prisma: db, shop: shopContext }, phone);
   return NextResponse.json(result);

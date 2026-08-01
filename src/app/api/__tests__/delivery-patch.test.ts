@@ -15,47 +15,11 @@
  * transaction, then dispatch automations after commit.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { NextRequest } from "next/server";
-import { rawDb, cleanDb, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
 
-const identityHarness = vi.hoisted(() => {
-  const actorContext = Object.freeze({
-    version: 1 as const,
-    actor: Object.freeze({
-      kind: "person" as const,
-      personId: "1".repeat(32),
-      workspaceMemberId: "2".repeat(32),
-      deviceId: "3".repeat(32),
-      sessionId: "delivery-patch-session",
-      role: "manager" as const,
-      permissions: Object.freeze([
-        "deliveries.manage",
-        "orders.read",
-        "orders.update",
-      ] as const),
-      policyVersion: 1,
-      revocationEpoch: 0,
-    }),
-    shop: Object.freeze({ shopId: "default" }),
-  });
-  return { actorContext, requireActor: vi.fn() };
-});
-
-vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("@/lib/identity/trusted-actor")
-  >();
-  return {
-    ...actual,
-    requireTrustedActor: identityHarness.requireActor,
-    isTrustedActorContext: vi.fn(
-      (value: unknown) => value === identityHarness.actorContext,
-    ),
-  };
-});
-
-// Cookie access remains isolated; route authority comes from the explicit
-// durable actor fixture above and exercises the real action policy.
+// ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
+//    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
+//    cookie jar passes requireAuth.
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: () => undefined,
@@ -63,14 +27,6 @@ vi.mock("next/headers", () => ({
     delete: () => undefined,
   })),
 }));
-
-function mockPost(url: string, body: unknown): NextRequest {
-  return new NextRequest(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
 
 import { PATCH } from "@/app/api/delivery/[id]/route";
 
@@ -133,9 +89,6 @@ describe("PATCH /api/delivery/[id] — order side effects (Phase 1 bug 1.2)", ()
   beforeEach(async () => {
     await rawDb.$executeRawUnsafe('DROP TRIGGER IF EXISTS "fail_delivery_status_ledger"');
     await cleanDb();
-    identityHarness.requireActor
-      .mockReset()
-      .mockResolvedValue(identityHarness.actorContext);
   });
 
   afterAll(async () => {
