@@ -17,9 +17,14 @@ import {
   type PersonActor,
   type TrustedActorContext,
 } from "@/lib/identity/trusted-actor";
+import type { ShopContext } from "@/lib/shops/context";
 import { ConflictError, NotFoundError, SahelFlowError } from "@/types/errors";
 
 const exactMemberId = z.string().regex(/^[0-9a-f]{32}$/i);
+
+type ConversationAssignmentContext = ServiceContext & Readonly<{
+  shop: ShopContext;
+}>;
 
 export const conversationAssignmentSchema = z
   .object({
@@ -75,7 +80,7 @@ export type ConversationAssignmentResult = Readonly<{
 }>;
 
 function assertExecutionContext(
-  context: ServiceContext,
+  context: ConversationAssignmentContext,
   actorContext: TrustedActorContext,
 ): PersonActor {
   if (!isTrustedActorContext(actorContext)) {
@@ -121,7 +126,7 @@ function samePersonAuditPrefix(personId: string): string {
 }
 
 export async function getConversationAssignmentVersion(
-  context: ServiceContext,
+  context: ConversationAssignmentContext,
   conversationId: string,
 ): Promise<number> {
   const rows = await context.prisma.$queryRaw<Array<{ version: number | bigint }>>`
@@ -135,15 +140,18 @@ export async function getConversationAssignmentVersion(
 }
 
 export async function getConversationAssignmentVersions(
-  context: ServiceContext,
+  context: ConversationAssignmentContext,
   conversationIds: readonly string[],
 ): Promise<ReadonlyMap<string, number>> {
   const unique = [...new Set(conversationIds)];
   const entries = await Promise.all(
-    unique.map(async (conversationId) => [
-      conversationId,
-      await getConversationAssignmentVersion(context, conversationId),
-    ] as const),
+    unique.map(
+      async (conversationId) =>
+        [
+          conversationId,
+          await getConversationAssignmentVersion(context, conversationId),
+        ] as const,
+    ),
   );
   return new Map(entries);
 }
@@ -156,7 +164,7 @@ export async function getConversationAssignmentVersions(
  * records trusted audit, emits a domain event and seals the replay result.
  */
 export async function executeConversationAssignment(
-  context: ServiceContext,
+  context: ConversationAssignmentContext,
   actorContext: TrustedActorContext,
   input: unknown,
 ): Promise<BusinessCommandResult<ConversationAssignmentResult>> {
