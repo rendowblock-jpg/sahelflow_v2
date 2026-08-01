@@ -94,8 +94,8 @@ results.
 
 Draft PR #195 contains the complete Phase 1 source boundary, closed at
 `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with normal CI `30652282305`
-and checkpoint `30652282191`. Phase 1 must not be reopened absent new concrete
-P0/P1 evidence.
+and checkpoint `30652282191`. Phase 1 is source-closed on the integration branch
+and must not be reopened absent new concrete P0/P1 evidence.
 
 Phase 2A packages 2A.1–2A.4 are source-closed on the draft integration branch.
 The latest closed package, multi-member roles, invitations and per-shop
