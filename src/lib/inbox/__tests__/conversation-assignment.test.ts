@@ -5,6 +5,7 @@ process.env.SF_MASTER_KEY =
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cleanDb, rawDb } from "@/app/api/__tests__/helpers";
+import { db } from "@/lib/db";
 import type { ShopContext } from "@/lib/shops/context";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
@@ -37,6 +38,7 @@ const SHOP: ShopContext = Object.freeze({
   databaseFileId: "default.db",
   migrationSetSha256: "4".repeat(64),
 });
+const SERVICE_CONTEXT = Object.freeze({ prisma: db, shop: SHOP });
 
 function actorContext(options?: {
   personId?: string;
@@ -115,7 +117,7 @@ describe("conversation assignment command", () => {
     const actor = actorContext();
 
     const command = await executeConversationAssignment(
-      { prisma: rawDb, shop: SHOP },
+      SERVICE_CONTEXT,
       actor,
       {
         conversationId: conversation.id,
@@ -179,7 +181,7 @@ describe("conversation assignment command", () => {
     };
 
     const first = await executeConversationAssignment(
-      { prisma: rawDb, shop: SHOP },
+      SERVICE_CONTEXT,
       actorContext({ sessionId: "session-old" }),
       input,
     );
@@ -187,7 +189,7 @@ describe("conversation assignment command", () => {
       new Error("Replay must not re-resolve the target"),
     );
     const replay = await executeConversationAssignment(
-      { prisma: rawDb, shop: SHOP },
+      SERVICE_CONTEXT,
       actorContext({ sessionId: "session-new" }),
       input,
     );
@@ -216,7 +218,7 @@ describe("conversation assignment command", () => {
     });
 
     const command = await executeConversationAssignment(
-      { prisma: rawDb, shop: SHOP },
+      SERVICE_CONTEXT,
       manager,
       {
         conversationId: conversation.id,
@@ -243,7 +245,7 @@ describe("conversation assignment command", () => {
     const conversation = await seedConversation(SELF.memberId);
 
     const released = await executeConversationAssignment(
-      { prisma: rawDb, shop: SHOP },
+      SERVICE_CONTEXT,
       actorContext(),
       {
         conversationId: conversation.id,
@@ -260,7 +262,7 @@ describe("conversation assignment command", () => {
     const another = await seedConversation(TARGET.memberId);
     await expect(
       executeConversationAssignment(
-        { prisma: rawDb, shop: SHOP },
+        SERVICE_CONTEXT,
         actorContext(),
         {
           conversationId: another.id,
@@ -280,7 +282,7 @@ describe("conversation assignment command", () => {
 
     await expect(
       executeConversationAssignment(
-        { prisma: rawDb, shop: SHOP },
+        SERVICE_CONTEXT,
         actorContext(),
         {
           conversationId: conversation.id,
@@ -303,7 +305,7 @@ describe("conversation assignment command", () => {
 
     const outcomes = await Promise.allSettled([
       executeConversationAssignment(
-        { prisma: rawDb, shop: SHOP },
+        SERVICE_CONTEXT,
         manager,
         {
           conversationId: conversation.id,
@@ -314,7 +316,7 @@ describe("conversation assignment command", () => {
         },
       ),
       executeConversationAssignment(
-        { prisma: rawDb, shop: SHOP },
+        SERVICE_CONTEXT,
         manager,
         {
           conversationId: conversation.id,
@@ -325,8 +327,12 @@ describe("conversation assignment command", () => {
       ),
     ]);
 
-    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
-    expect(outcomes.filter((outcome) => outcome.status === "rejected")).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "rejected"),
+    ).toHaveLength(1);
     expect(
       await rawDb.message.count({ where: { conversationId: conversation.id } }),
     ).toBe(1);
