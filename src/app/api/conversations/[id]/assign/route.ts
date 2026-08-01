@@ -10,6 +10,7 @@ import {
 } from "@/lib/identity/authorization";
 import { resolvePhase2Permissions } from "@/lib/identity/permissions";
 import { listTeamMembers } from "@/lib/identity/team-directory";
+import { getTeamRevocationSnapshot } from "@/lib/identity/team-revocation-authority";
 import {
   executeConversationAssignment,
   getConversationAssignmentVersion,
@@ -49,18 +50,32 @@ function actorProjection(
   };
 }
 
-/** GET /api/conversations/[id]/assign — lightweight assignment authority state. */
+async function readAssignmentProjection(rawId: string) {
+  if (rawId.includes("@")) {
+    return db.conversation.findUnique({
+      where: {
+        channel_sourceId: {
+          channel: "whatsapp",
+          sourceId: rawId,
+        },
+      },
+      select: { id: true, assigneeId: true },
+    });
+  }
+  return db.conversation.findUnique({
+    where: { id: rawId },
+    select: { id: true, assigneeId: true },
+  });
+}
+
+/** GET /api/conversations/[id]/assign — read-only assignment authority state. */
 export const GET = withErrorHandler(
   async (_request: NextRequest, { params }: RouteContext) => {
     const actorContext = await requireTrustedAction("conversations.read");
     const { id: rawId } = await params;
     const context = { prisma: db, shop: shopContext };
-    const conversationId = await ensureConversationForJid(context, rawId);
-    const conversation = await db.conversation.findUnique({
-      where: { id: conversationId },
-      select: { id: true, assigneeId: true },
-    });
-    if (!conversation) {
+    const conversation = await readAssignmentProjection(rawId);
+    if (!conversation && !rawId.includes("@")) {
       return NextResponse.json(
         { error: "Conversation not found" },
         { status: 404 },
@@ -71,21 +86,28 @@ export const GET = withErrorHandler(
     const canAssign = currentActor.allowedActions.includes(
       "conversations.assign",
     );
-    const acceptedMembers = canAssign
-      ? (await listTeamMembers(actorContext.shop))
-          .filter(
-            (member) =>
-              member.revokedAt === null &&
-              member.role !== "viewer" &&
-              member.shopIds.includes(actorContext.shop.shopId),
-          )
-          .map((member) => ({
-            memberId: member.memberId,
-            displayName: member.displayName,
-            role: member.role,
-          }))
-      : [];
-    const assignableMembers = [...acceptedMembers];
+    const [acceptedMembers, revocation] = canAssign
+      ? await Promise.all([
+          listTeamMembers(actorContext.shop),
+          getTeamRevocationSnapshot(actorContext.shop),
+        ])
+      : [[], { memberRevocations: [] }];
+    const revokedMembers = new Set(
+      revocation.memberRevocations.map((entry) => entry.memberId),
+    );
+    const assignableMembers = acceptedMembers
+      .filter(
+        (member) =>
+          member.revokedAt === null &&
+          !revokedMembers.has(member.memberId) &&
+          member.role !== "viewer" &&
+          member.shopIds.includes(actorContext.shop.shopId),
+      )
+      .map((member) => ({
+        memberId: member.memberId,
+        displayName: member.displayName,
+        role: member.role,
+      }));
     if (
       canAssign &&
       currentActor.role === "owner" &&
@@ -104,12 +126,11 @@ export const GET = withErrorHandler(
     return NextResponse.json(
       {
         assignment: {
-          conversationId: conversation.id,
-          assigneeId: conversation.assigneeId,
-          version: await getConversationAssignmentVersion(
-            context,
-            conversation.id,
-          ),
+          conversationId: conversation?.id ?? rawId,
+          assigneeId: conversation?.assigneeId ?? null,
+          version: conversation
+            ? await getConversationAssignmentVersion(context, conversation.id)
+            : 0,
         },
         currentActor,
         assignableMembers,
