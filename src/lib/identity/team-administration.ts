@@ -7,10 +7,8 @@ import {
   listTeamMembers,
   type TeamDirectoryMemberView,
 } from "./team-directory";
-import {
-  getTeamRevocationSnapshot,
-  revokeTeamMemberAuthority,
-} from "./team-revocation-authority";
+import { revokeFreshOwnerTeamMemberAuthority } from "./team-revocation-command";
+import { getTeamRevocationSnapshot } from "./team-revocation-authority";
 
 export type AdministrativeTeamSession = Readonly<{
   sessionId: string;
@@ -164,7 +162,7 @@ export async function revokeAdministrativeTeamMember(input: {
   shop: ShopContext;
   auditActor: string;
 }): Promise<RevokeAdministrativeTeamMemberResult> {
-  const control = await revokeTeamMemberAuthority({
+  const control = await revokeFreshOwnerTeamMemberAuthority({
     currentOwnerSessionId: input.currentOwnerSessionId,
     targetMemberId: input.targetMemberId,
     shop: input.shop,
