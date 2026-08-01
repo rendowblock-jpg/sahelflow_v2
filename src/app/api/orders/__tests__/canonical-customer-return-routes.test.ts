@@ -52,10 +52,16 @@ vi.mock("@/lib/db", () => ({
   db: { marker: "exact-process-db" },
 }));
 
-vi.mock("@/lib/orders/canonical-customer-return", () => ({
-  requestCanonicalCustomerReturn: harness.requestReturn,
-  transitionCanonicalCustomerReturn: harness.transitionReturn,
-}));
+vi.mock("@/lib/orders/canonical-customer-return", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/orders/canonical-customer-return")
+  >();
+  return {
+    ...actual,
+    requestCanonicalCustomerReturn: harness.requestReturn,
+    transitionCanonicalCustomerReturn: harness.transitionReturn,
+  };
+});
 
 vi.mock("@/lib/orders/canonical-customer-return-projections", () => ({
   getCanonicalCustomerReturnPosition: harness.position,
