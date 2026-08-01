@@ -149,12 +149,6 @@ export async function executeInternalComment(
 ): Promise<BusinessCommandResult<InternalCommentResult>> {
   const actor = assertExecutionContext(context, actorContext);
   const data = internalCommentSchema.parse(input);
-  const mentions = await resolveCollaborationMembers(
-    actor,
-    data.mentionMemberIds,
-    context.shop,
-    { allowViewer: true },
-  );
   const commentId = deterministicCommentId(context, data.idempotencyKey);
   const correlationId = data.correlationId ?? randomUUID();
   const envelopeKey = await getBusinessEnvelopeKey(context);
@@ -179,11 +173,17 @@ export async function executeInternalComment(
         entityType: data.entityType,
         entityId: data.entityId,
         body: data.body,
-        mentionMemberIds: mentions.map((member) => member.memberId),
+        mentionMemberIds: data.mentionMemberIds,
       },
     },
     async ({ tx, commandId, aggregateVersion }) => {
       await assertEntityExists(tx, data.entityType, data.entityId);
+      const mentions = await resolveCollaborationMembers(
+        actor,
+        data.mentionMemberIds,
+        context.shop,
+        { allowViewer: true },
+      );
       const createdAt = new Date();
       const mentionIds = mentions.map((member) => member.memberId).sort();
       await tx.collaborationComment.create({
