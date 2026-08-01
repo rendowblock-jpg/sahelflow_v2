@@ -23,10 +23,22 @@ const trustedImportActor = vi.hoisted(() => ({
   context: {
     version: 1,
     actor: {
-      kind: "compatibility_local_owner",
-      role: "owner",
+      kind: "person",
+      personId: "1".repeat(32),
+      workspaceMemberId: "2".repeat(32),
+      deviceId: "3".repeat(32),
       sessionId: "creation-path-test-session",
-      compatibilityOnly: true,
+      role: "manager",
+      permissions: [
+        "data.import",
+        "orders.create",
+        "customers.contact.read",
+        "customers.contact.update",
+        "orders.financials.read",
+        "orders.financials.update",
+      ],
+      policyVersion: 1,
+      revocationEpoch: 0,
     },
     shop: {
       workspaceId: "a".repeat(32),
