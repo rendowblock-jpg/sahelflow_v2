@@ -19,6 +19,8 @@ describe("dashboard page authority", () => {
     expect(query).toBeGreaterThan(fieldAccess);
     expect(projection).toBeGreaterThan(query);
     expect(page).not.toContain("order.customer.name");
-    expect(page).not.toContain("formatDZD(order.totalPrice)");
+    expect(page).toContain(
+      'order.totalPrice === null ? "—" : formatDZD(order.totalPrice)',
+    );
   });
 });
