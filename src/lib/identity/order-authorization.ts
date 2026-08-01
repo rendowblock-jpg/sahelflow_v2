@@ -8,6 +8,21 @@ import type { TrustedActorContext } from "./trusted-actor";
 
 type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
 
+/**
+ * Manual/source order intake always writes customer contact and price-bearing
+ * order state. Both field domains must be explicitly granted; `orders.create`
+ * alone cannot become a side door around field permissions.
+ */
+export function assertOrderCreateFieldAuthority(
+  actorContext: TrustedActorContext,
+): void {
+  const resource = { shopId: actorContext.shop.shopId };
+  assertTrustedAction(actorContext, "customers.contact.read", resource);
+  assertTrustedAction(actorContext, "customers.contact.update", resource);
+  assertTrustedAction(actorContext, "orders.financials.read", resource);
+  assertTrustedAction(actorContext, "orders.financials.update", resource);
+}
+
 const CONTACT_FIELDS = new Set<keyof UpdateOrderInput>([
   "notes",
   "address",

@@ -1,7 +1,7 @@
 # SahelFlow — Research and adopted findings
 
 > **Status:** Research reference and adopted-evidence index; not product, current-state or roadmap authority
-> **Last consolidated:** 2026-07-29
+> **Last consolidated:** 2026-08-01
 > **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 
 Research is mandatory before every major phase and material implementation.
@@ -367,12 +367,35 @@ their responses use the same permission-filtered projection as reads. Custom
 allowlists inherit no new actions. Tests execute denial before persistence and
 verify redacted responses; source-string presence is not completion evidence.
 
+The same standard applies across operational HTTP boundaries. Conversation read,
+workflow update, reply and WhatsApp connection management are separate actions.
+Conversation/message access does not imply contact-name, phone or provider-JID
+access. A GET cannot create a live-JID conversation or clear unread state; mark
+read is an explicit update. Order lifecycle mutations require `orders.update`,
+order search additionally requires contact read, money operations require both
+financial read and write, and recovery additionally requires approval authority.
+Courier and customer-return projections redact monetary fields when financial
+read is absent. Order intake writes contact and price-bearing state, so it
+requires both protected field domains; the standard operator preset therefore
+does not grant `orders.create`, while manager and owner presets do.
+
+Role ceilings remain deliberately bounded: viewers receive permitted read-only
+projections; operators may update/reply/claim assigned operational work without
+financial or provider-connection administration; managers add broad workflow,
+financial, assignment and WhatsApp connection authority without owner-only
+destructive, approval or licence authority; owners retain the fixed recovery
+ceiling. UI controls consume the server-resolved action set and do not invent a
+parallel role matrix.
+
 **Acceptance and revalidation.** Same-person replay succeeds after session
 rotation; cross-person replay is denied before result decryption; denied create
 or update leaves no mutation; protected field writes require exact actions;
 responses redact ungranted fields; AR/FR/EN permission labels are complete; the
-full exact-head checkpoint passes. Revalidate when principal encoding, permission
-vocabulary, remote commands, projection transport or multi-owner recovery changes.
+full exact-head checkpoint passes. Operational route inventory is supporting
+coverage only and is paired with executable deny-before-write/read-purity and
+projection tests. Revalidate when principal encoding, permission vocabulary,
+remote commands, projection transport, provider connection control or
+multi-owner recovery changes.
 
 ### Phase 3 — Providers, inbox, AI and automations
 

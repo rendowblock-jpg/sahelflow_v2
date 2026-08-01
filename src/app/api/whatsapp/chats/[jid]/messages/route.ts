@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 import {
   sidecar,
   SidecarUnavailableError,
@@ -14,7 +17,10 @@ type RouteContext = { params: Promise<{ jid: string }> };
 
 export const GET = withErrorHandler(
   async (request: NextRequest, { params }: RouteContext) => {
-    await requireTrustedActor();
+    const actorContext = await requireTrustedAction("conversations.read");
+    assertTrustedAction(actorContext, "customers.contact.read", {
+      shopId: actorContext.shop.shopId,
+    });
     const { jid: rawJid } = await params;
     const jid = decodeURIComponent(rawJid);
     const requested = Number.parseInt(

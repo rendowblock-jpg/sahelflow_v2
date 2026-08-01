@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureConversationForJid } from "@/lib/data/conversation-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
 import { setConversationPriority } from "@/lib/data/conversation-service";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
@@ -14,7 +15,7 @@ const schema = z.object({
 });
 
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Ctx) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("conversations.update");
   const { id: rawId } = await params;
     // Session 30 (AUDIT-5 C1): if rawId is a JID (live WhatsApp chat), ensure
     // a Conversation row exists and use its cuid. Otherwise rawId is already a cuid.
@@ -26,5 +27,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Ctx) 
     id,
     parsed.priority,
   );
-  return NextResponse.json({ conversation: conv });
+  return NextResponse.json({
+    conversation: projectConversationForTrustedActor(conv, actorContext),
+  });
 }, "PATCH /api/conversations/[id]/priority");

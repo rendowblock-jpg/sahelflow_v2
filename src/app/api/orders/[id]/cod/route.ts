@@ -8,13 +8,13 @@
 import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export const PATCH = withErrorHandler(async (_request: Request, { params }: Ctx) => {
-  await requireTrustedActor();
+  await requireTrustedAction("orders.update");
   const { id } = await params;
   return NextResponse.json(
     {

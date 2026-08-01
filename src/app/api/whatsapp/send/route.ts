@@ -4,7 +4,10 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 import {
   processWhatsAppEffect,
   queueWhatsAppText,
@@ -27,7 +30,10 @@ const sendSchema = z.object({
  * reconciliation instead of being repeated automatically.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("conversations.reply");
+  assertTrustedAction(actorContext, "customers.contact.read", {
+    shopId: actorContext.shop.shopId,
+  });
   const input = sendSchema.parse(await req.json());
   const context = {
     prisma: db,

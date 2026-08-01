@@ -4,7 +4,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import {
   findWhatsAppEffectByMessageId,
   getWhatsAppEffectStatus,
@@ -21,7 +21,7 @@ const retrySchema = z.object({
 });
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("conversations.read");
   const context = { prisma: db, shop: actorContext.shop };
   const rawEffectKey = request.nextUrl.searchParams.get("effectKey");
   const rawMessageId = request.nextUrl.searchParams.get("messageId");
@@ -35,7 +35,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 }, "GET /api/whatsapp/outbox");
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("conversations.reply");
   const input = retrySchema.parse(await request.json());
   const effect = await retryWhatsAppEffect(
     {

@@ -7,7 +7,11 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 import { resolveCanonicalNamedItems } from "@/lib/orders/canonical-named-items";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
@@ -46,7 +50,12 @@ function digest(...parts: string[]): string {
 }
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("orders.create");
+  assertTrustedAction(actorContext, "orders.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
+  assertTrustedAction(actorContext, "customers.contact.update");
+  assertTrustedAction(actorContext, "orders.financials.read");
+  assertTrustedAction(actorContext, "orders.financials.update");
   const input = schema.parse(await request.json());
 
   // The browser cannot mint WhatsApp source authority. Re-read the exact
@@ -119,7 +128,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return NextResponse.json(
     {
-      order: command.result.order,
+      order: projectOrderForTrustedActor(actorContext, command.result.order),
       command: {
         id: command.commandId,
         aggregateVersion: command.aggregateVersion,

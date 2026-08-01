@@ -12,6 +12,7 @@ import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
+import { assertOrderCreateFieldAuthority } from "@/lib/identity/order-authorization";
 import {
   projectOrderForTrustedActor,
   projectOrdersForTrustedActor,
@@ -99,6 +100,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertTrustedAction(actorContext, "orders.read", {
     shopId: actorContext.shop.shopId,
   });
+  assertOrderCreateFieldAuthority(actorContext);
   const businessContext = {
     ...context,
     businessPrincipal: businessPrincipalFromTrustedActor(actorContext),

@@ -4,7 +4,7 @@ import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import {
   sidecar,
   SidecarUnavailableError,
@@ -13,7 +13,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export const DELETE = withErrorHandler(async () => {
-  const actor = await requireTrustedActor();
+  const actor = await requireTrustedAction("whatsapp.connection.manage");
   try {
     const result = await sidecar.logout();
     await logAudit({ prisma: db, shop: actor.shop }, {

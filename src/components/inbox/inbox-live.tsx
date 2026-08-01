@@ -44,7 +44,7 @@ import { CannedResponsePicker } from "@/components/inbox/canned-response-picker"
 interface SeededConversation {
   id: string;
   channel: string;
-  contactName: string;
+  contactName: string | null;
   contactPhone: string | null;
   lastMessageAt: string | null;
   unreadCount: number;
@@ -104,6 +104,12 @@ export function InboxLive() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [qrKey, setQrKey] = useState(0);
+  const [allowedActions, setAllowedActions] = useState<string[]>([]);
+  const canUpdateConversation = allowedActions.includes("conversations.update");
+  const canReply = allowedActions.includes("conversations.reply");
+  const canManageWhatsApp = allowedActions.includes(
+    "whatsapp.connection.manage",
+  );
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
@@ -123,7 +129,11 @@ export function InboxLive() {
       try {
         const res = await fetch("/api/whatsapp/chats?limit=50");
         if (res.ok) {
-          const data = (await res.json()) as { chats: SidecarChat[] };
+          const data = (await res.json()) as {
+            chats: SidecarChat[];
+            authority?: { allowedActions: string[] };
+          };
+          setAllowedActions(data.authority?.allowedActions ?? []);
           setChats(
             data.chats.map((c) => ({
               id: c.jid,
@@ -145,11 +155,15 @@ export function InboxLive() {
     // Seeded fallback
     try {
       const res = await fetch("/api/conversations");
-      const data = (await res.json()) as { conversations: SeededConversation[] };
+      const data = (await res.json()) as {
+        conversations: SeededConversation[];
+        authority?: { allowedActions: string[] };
+      };
+      setAllowedActions(data.authority?.allowedActions ?? []);
       setChats(
         data.conversations.map((c) => ({
           id: c.id,
-          name: c.contactName,
+          name: c.contactName ?? t("inbox.restrictedContact"),
           phone: c.contactPhone ?? undefined,
           channel: "seeded" as const,
           lastMessageAt: c.lastMessageAt ? new Date(c.lastMessageAt).getTime() : undefined,
@@ -170,7 +184,7 @@ export function InboxLive() {
       setChats([]);
       setMode("seeded");
     }
-  }, []);
+  }, [t]);
 
   // ── Load messages for a specific chat (called from the select handler) ─
   const loadMessages = useCallback(
@@ -209,6 +223,18 @@ export function InboxLive() {
                 messageType: m.messageType,
               })),
             );
+            if (canUpdateConversation) {
+              void fetch(`/api/conversations/${chatId}/read`, {
+                method: "PATCH",
+              }).then((readResponse) => {
+                if (!readResponse.ok) return;
+                setChats((current) =>
+                  current.map((chat) =>
+                    chat.id === chatId ? { ...chat, unread: 0 } : chat,
+                  ),
+                );
+              });
+            }
             return;
           }
         }
@@ -218,7 +244,7 @@ export function InboxLive() {
         setLoadingMessages(false);
       }
     },
-    [],
+    [canUpdateConversation],
   );
 
   // ── WS event callbacks (event-driven, not effects) ────────────────────
@@ -577,9 +603,10 @@ export function InboxLive() {
         onConnect={handleConnect}
         onLogout={handleLogout}
         onRetry={reconnect}
+        canManage={canManageWhatsApp}
       />
 
-      {status === "qr" && (
+      {status === "qr" && canManageWhatsApp && (
         <QrPairingCard qrKey={qrKey} onRefresh={() => setQrKey((k) => k + 1)} />
       )}
 
@@ -706,6 +733,7 @@ export function InboxLive() {
                 <ConversationControls
                   conversationId={activeChat.id}
                   initial={activeChat.workflow ?? {}}
+                  canUpdate={canUpdateConversation}
                 />
               </div>
 
@@ -771,7 +799,7 @@ export function InboxLive() {
               </ScrollArea>
 
               <div className="p-3 border-t bg-background">
-                {activeChat.channel === "whatsapp" && status === "connected" ? (
+                {activeChat.channel === "whatsapp" && status === "connected" && canReply ? (
                   <div className="flex items-center gap-2">
                     <CannedResponsePicker
                       disabled={sending}
@@ -866,6 +894,7 @@ function StatusBar({
   onConnect,
   onLogout,
   onRetry,
+  canManage,
 }: {
   status: WhatsAppStatus | null;
   user: WhatsAppUser | null;
@@ -874,6 +903,7 @@ function StatusBar({
   onConnect: () => void;
   onLogout: () => void;
   onRetry: () => void;
+  canManage: boolean;
 }) {
   const { t } = useI18n();
   if (status === null) {
@@ -912,10 +942,12 @@ function StatusBar({
           {user?.id && <span className="font-mono text-xs">· {user.id.split("@")[0]}</span>}
           {!wsOpen && <span className="text-xs">{t("inbox.reconnecting")}</span>}
         </span>
-        <Button variant="outline" size="sm" onClick={onLogout} className="text-destructive">
-          <LogOut className="h-3 w-3 me-1" />
-          {t("inbox.disconnect")}
-        </Button>
+        {canManage ? (
+          <Button variant="outline" size="sm" onClick={onLogout} className="text-destructive">
+            <LogOut className="h-3 w-3 me-1" />
+            {t("inbox.disconnect")}
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -941,10 +973,12 @@ function StatusBar({
         <Plug className="h-4 w-4" />
         {t("inbox.disconnected")}
       </span>
-      <Button variant="outline" size="sm" onClick={onConnect}>
-        <Smartphone className="h-3 w-3 me-1" />
-        {t("inbox.connect")}
-      </Button>
+      {canManage ? (
+        <Button variant="outline" size="sm" onClick={onConnect}>
+          <Smartphone className="h-3 w-3 me-1" />
+          {t("inbox.connect")}
+        </Button>
+      ) : null}
     </div>
   );
 }

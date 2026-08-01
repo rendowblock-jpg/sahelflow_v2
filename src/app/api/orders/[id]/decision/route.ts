@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import {
   dispatchTrigger,
   type TriggerEvent,
@@ -15,7 +15,7 @@ const context = { prisma: db, shop: shopContext };
 
 export const POST = withErrorHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    await requireAuth();
+    await requireTrustedAction("orders.update");
     const { id } = await params;
     const body = await req.json();
     const command = await executeManualOrderDecision(context, {

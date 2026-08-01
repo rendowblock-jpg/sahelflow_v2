@@ -28,6 +28,7 @@ describe("governed conversation assignment UI contract", () => {
     expect(source).toContain('includes("conversations.assign")');
     expect(source).toContain("assignableMembers");
     expect(source).toContain("member.memberId");
+    expect(source).toContain("canUpdate");
   });
 
   it("contains Arabic, French and English assignment/recovery states", () => {

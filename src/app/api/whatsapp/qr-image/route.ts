@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { env } from "@/lib/env";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async () => {
-  await requireTrustedActor();
+  await requireTrustedAction("whatsapp.connection.manage");
   try {
     const token = sidecar.restToken();
     const response = await fetch(

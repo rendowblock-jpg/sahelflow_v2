@@ -3,9 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
-import { requestCanonicalCustomerReturn } from "@/lib/orders/canonical-customer-return";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import {
+  canonicalCustomerReturnRequestSchema,
+  requestCanonicalCustomerReturn,
+} from "@/lib/orders/canonical-customer-return";
 import { getCanonicalCustomerReturnPosition } from "@/lib/orders/canonical-customer-return-projections";
+import {
+  projectCustomerReturnPosition,
+  projectCustomerReturnResult,
+} from "@/lib/identity/return-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +23,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export const GET = withErrorHandler(
   async (_request: NextRequest, { params }: RouteContext) => {
-    const actorContext = await requireTrustedActor();
+    const actorContext = await requireTrustedAction("orders.read");
     const { id } = await params;
     const position = await getCanonicalCustomerReturnPosition(
       {
@@ -23,25 +33,35 @@ export const GET = withErrorHandler(
       },
       id,
     );
-    return NextResponse.json({ position });
+    return NextResponse.json({
+      position: projectCustomerReturnPosition(actorContext, position),
+    });
   },
   "GET /api/orders/[id]/customer-return",
 );
 
 export const POST = withErrorHandler(
   async (request: NextRequest, { params }: RouteContext) => {
-    const actorContext = await requireTrustedActor();
+    const actorContext = await requireTrustedAction("orders.update");
     const { id } = await params;
+    const input = canonicalCustomerReturnRequestSchema.parse({
+      ...(await request.json()),
+      orderId: id,
+    });
+    if (input.exchangeDeliveryCost > 0) {
+      assertTrustedAction(actorContext, "orders.financials.read");
+      assertTrustedAction(actorContext, "orders.financials.update");
+    }
     const command = await requestCanonicalCustomerReturn(
       {
         prisma: db,
         shop: actorContext.shop,
         businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
       },
-      { ...(await request.json()), orderId: id },
+      input,
     );
     return NextResponse.json({
-      returnCase: command.result,
+      returnCase: projectCustomerReturnResult(actorContext, command.result),
       command: {
         id: command.commandId,
         aggregateVersion: command.aggregateVersion,

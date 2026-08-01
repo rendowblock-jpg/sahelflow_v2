@@ -7,7 +7,10 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
   return { ...actual, isTrustedActorContext: vi.fn(() => true) };
 });
 
-import { assertOrderUpdateFieldAuthority } from "../order-authorization";
+import {
+  assertOrderCreateFieldAuthority,
+  assertOrderUpdateFieldAuthority,
+} from "../order-authorization";
 import type { Phase2Action } from "../permissions";
 import type { TrustedActorContext } from "../trusted-actor";
 
@@ -40,6 +43,38 @@ function context(permissions: readonly Phase2Action[]): TrustedActorContext {
 }
 
 describe("order update field authorization", () => {
+  it("requires both protected field domains for order intake", () => {
+    expect(() =>
+      assertOrderCreateFieldAuthority(
+        context(["orders.read", "orders.create"]),
+      ),
+    ).toThrow(/customers\.contact\.read/);
+
+    expect(() =>
+      assertOrderCreateFieldAuthority(
+        context([
+          "orders.read",
+          "orders.create",
+          "customers.contact.read",
+          "customers.contact.update",
+        ]),
+      ),
+    ).toThrow(/orders\.financials\.read/);
+
+    expect(() =>
+      assertOrderCreateFieldAuthority(
+        context([
+          "orders.read",
+          "orders.create",
+          "customers.contact.read",
+          "customers.contact.update",
+          "orders.financials.read",
+          "orders.financials.update",
+        ]),
+      ),
+    ).not.toThrow();
+  });
+
   it("requires contact read and write authority before contact mutation", () => {
     expect(() =>
       assertOrderUpdateFieldAuthority(

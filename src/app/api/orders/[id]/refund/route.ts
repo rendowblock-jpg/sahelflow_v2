@@ -1,7 +1,10 @@
 /** POST /api/orders/[id]/refund — create a refund (Phase 4). */
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 import { createRefund } from "@/lib/data/refund-service";
 import { db, shopContext } from "@/lib/db";
 import { SahelFlowError } from "@/types/errors";
@@ -24,7 +27,9 @@ const refundSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: NextRequest, { params }: Ctx) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.update");
+  assertTrustedAction(actorContext, "orders.financials.read");
+  assertTrustedAction(actorContext, "orders.financials.update");
   const { id } = await params;
   const body = await req.json();
   const parsed = refundSchema.parse(body);

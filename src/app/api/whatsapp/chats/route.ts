@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import { projectTrustedActorActions } from "@/lib/identity/conversation-projection";
 import {
   sidecar,
   SidecarUnavailableError,
@@ -21,7 +25,10 @@ function latestMessage(
 }
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
-  await requireTrustedActor();
+  const actorContext = await requireTrustedAction("conversations.read");
+  assertTrustedAction(actorContext, "customers.contact.read", {
+    shopId: actorContext.shop.shopId,
+  });
   const requested = Number.parseInt(
     request.nextUrl.searchParams.get("limit") ?? "50",
     10,
@@ -106,5 +113,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     )
     .slice(0, limit);
 
-  return NextResponse.json({ chats, sidecarReachable });
+  return NextResponse.json({
+    chats,
+    sidecarReachable,
+    authority: { allowedActions: projectTrustedActorActions(actorContext) },
+  });
 }, "GET /api/whatsapp/chats");

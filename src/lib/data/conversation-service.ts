@@ -190,3 +190,26 @@ export async function ensureConversationForJid(
   });
   return conversation.id;
 }
+
+/**
+ * Resolve an existing live WhatsApp JID without creating durable state.
+ * Read routes must use this function so read authority can never authorize an
+ * implicit conversation write.
+ */
+export async function resolveConversationIdForRead(
+  context: ServiceContext,
+  jidOrId: string,
+): Promise<string | null> {
+  if (!jidOrId.includes("@")) return jidOrId;
+
+  const conversation = await context.prisma.conversation.findUnique({
+    where: {
+      channel_sourceId: {
+        channel: "whatsapp",
+        sourceId: jidOrId,
+      },
+    },
+    select: { id: true },
+  });
+  return conversation?.id ?? null;
+}

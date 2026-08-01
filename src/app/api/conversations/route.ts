@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  projectConversationForTrustedActor,
+  projectTrustedActorActions,
+} from "@/lib/identity/conversation-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +15,7 @@ export const dynamic = "force-dynamic";
  * the seeded/offline inbox fallback.
  */
 export const GET = withErrorHandler(async () => {
-  await requireTrustedAction("conversations.read");
+  const actorContext = await requireTrustedAction("conversations.read");
   const conversations = await db.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     take: 100,
@@ -33,7 +37,10 @@ export const GET = withErrorHandler(async () => {
   });
 
   return NextResponse.json({
-    conversations,
+    conversations: conversations.map((conversation) =>
+      projectConversationForTrustedActor(conversation, actorContext),
+    ),
+    authority: { allowedActions: projectTrustedActorActions(actorContext) },
     source: "seeded",
   });
 }, "GET /api/conversations");

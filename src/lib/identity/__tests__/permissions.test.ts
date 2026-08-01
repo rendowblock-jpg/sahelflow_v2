@@ -33,7 +33,10 @@ describe("Phase 2 permission policy", () => {
         "workgroups.manage",
         "queues.manage",
         "comments.write",
+        "conversations.update",
+        "conversations.reply",
         "conversations.assign",
+        "whatsapp.connection.manage",
         "orders.assign",
         "customers.contact.read",
         "customers.contact.update",
@@ -47,7 +50,10 @@ describe("Phase 2 permission policy", () => {
         "workgroups.manage",
         "queues.manage",
         "comments.write",
+        "conversations.update",
+        "conversations.reply",
         "conversations.assign",
+        "whatsapp.connection.manage",
         "orders.assign",
         "customers.contact.update",
         "orders.financials.read",
@@ -62,6 +68,8 @@ describe("Phase 2 permission policy", () => {
         "queues.read",
         "comments.write",
         "conversations.read",
+        "conversations.update",
+        "conversations.reply",
         "conversations.claim",
         "orders.read",
         "customers.contact.read",
@@ -69,6 +77,8 @@ describe("Phase 2 permission policy", () => {
       ]),
     );
     expect(operator).not.toContain("conversations.assign");
+    expect(operator).not.toContain("whatsapp.connection.manage");
+    expect(operator).not.toContain("orders.create");
     expect(operator).not.toContain("orders.assign");
     expect(operator).not.toContain("orders.financials.read");
     expect(operator).not.toContain("orders.financials.update");
@@ -83,6 +93,8 @@ describe("Phase 2 permission policy", () => {
       ]),
     );
     expect(viewer).not.toContain("comments.write");
+    expect(viewer).not.toContain("conversations.update");
+    expect(viewer).not.toContain("conversations.reply");
     expect(viewer).not.toContain("customers.contact.read");
     expect(viewer).not.toContain("customers.contact.update");
     expect(viewer).not.toContain("orders.financials.read");

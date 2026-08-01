@@ -3,7 +3,10 @@ import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { NotFoundError } from "@/types/errors";
-import { requireAuth } from "@/lib/auth/server";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +26,8 @@ const createReturnSchema = z.object({
  * includes its order + customer name for the table.
  */
 export async function GET(req: NextRequest) {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.read");
+  assertTrustedAction(actorContext, "customers.contact.read");
   const sp = req.nextUrl.searchParams;
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
   const pageSize = Math.min(parseInt(sp.get("pageSize") ?? "25", 10) || 25, 100);
@@ -33,7 +37,14 @@ export async function GET(req: NextRequest) {
   const [returns, total] = await Promise.all([
     db.return.findMany({
       where,
-      include: { order: { include: { customer: { select: { name: true } } } } },
+      include: {
+        order: {
+          select: {
+            orderNumber: true,
+            customer: { select: { name: true } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: pageSize,
       skip: offset,
@@ -53,7 +64,8 @@ export async function GET(req: NextRequest) {
  * (approved → inspected → refunded/exchanged → completed).
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.update");
+  assertTrustedAction(actorContext, "customers.contact.read");
   const body = await req.json();
   const input = createReturnSchema.parse(body);
   const context = { prisma: db, shop: shopContext };

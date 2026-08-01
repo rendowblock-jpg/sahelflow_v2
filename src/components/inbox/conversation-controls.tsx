@@ -810,33 +810,41 @@ export function ActivityMessage({
 export function ConversationControls({
   conversationId,
   initial,
+  canUpdate,
 }: {
   conversationId: string;
   initial: Partial<ConversationWorkflowState>;
+  canUpdate: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <StatusControl
-        key={`status:${conversationId}`}
-        conversationId={conversationId}
-        initialStatus={initial.status ?? "open"}
-      />
-      <PriorityControl
-        key={`priority:${conversationId}`}
-        conversationId={conversationId}
-        initialPriority={initial.priority ?? null}
-      />
+      {canUpdate ? (
+        <>
+          <StatusControl
+            key={`status:${conversationId}`}
+            conversationId={conversationId}
+            initialStatus={initial.status ?? "open"}
+          />
+          <PriorityControl
+            key={`priority:${conversationId}`}
+            conversationId={conversationId}
+            initialPriority={initial.priority ?? null}
+          />
+        </>
+      ) : null}
       <AssigneeControl
         key={`assignee:${conversationId}`}
         conversationId={conversationId}
         initialAssignee={initial.assigneeId ?? null}
         initialVersion={initial.assignmentVersion ?? 0}
       />
-      <LabelsControl
-        key={`labels:${conversationId}`}
-        conversationId={conversationId}
-        initialLabels={initial.labels ?? null}
-      />
+      {canUpdate ? (
+        <LabelsControl
+          key={`labels:${conversationId}`}
+          conversationId={conversationId}
+          initialLabels={initial.labels ?? null}
+        />
+      ) : null}
     </div>
   );
 }

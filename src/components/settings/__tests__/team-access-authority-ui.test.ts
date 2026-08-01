@@ -26,6 +26,9 @@ describe("authority-driven team access UI", () => {
       "orders.create",
       "orders.update",
       "orders.delete",
+      "conversations.update",
+      "conversations.reply",
+      "whatsapp.connection.manage",
       "customers.contact.update",
       "orders.financials.update",
     ]) {

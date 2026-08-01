@@ -10,12 +10,19 @@ import { db, shopContext } from "@/lib/db";
 import { orderServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import type { OrderStatus } from "@/types/domain";
-import { requireAuth } from "@/lib/auth/server";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import { projectOrdersForTrustedActor } from "@/lib/identity/order-projection";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.read");
+  assertTrustedAction(actorContext, "customers.contact.read", {
+    shopId: actorContext.shop.shopId,
+  });
   const q = req.nextUrl.searchParams.get("q") ?? "";
   const status = req.nextUrl.searchParams.get("status") as OrderStatus | null;
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10), 100);
@@ -26,5 +33,9 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     orderServiceExtensions.countSearch({ prisma: db, shop: shopContext }, q, { status: status ?? undefined }),
   ]);
 
-  return NextResponse.json({ orders: results, total, query: q });
+  return NextResponse.json({
+    orders: projectOrdersForTrustedActor(actorContext, results),
+    total,
+    query: q,
+  });
 }, "GET /api/orders/search");

@@ -9,18 +9,45 @@ import {
   queueCanonicalCourierBooking,
   reconcileCanonicalCourierBooking,
 } from "@/lib/delivery/canonical-courier";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+  trustedActionAllowed,
+} from "@/lib/identity/authorization";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
+import type { CourierPosition } from "@/lib/delivery/canonical-courier";
 
 export const dynamic = "force-dynamic";
 
 const serviceContext = { prisma: db, shop: shopContext };
 
+function projectCourierPosition(
+  actorContext: TrustedActorContext,
+  position: CourierPosition,
+) {
+  const financials = trustedActionAllowed(
+    actorContext,
+    "orders.financials.read",
+  );
+  return {
+    ...position,
+    delivery: position.delivery
+      ? { ...position.delivery, cost: financials ? position.delivery.cost : null }
+      : null,
+    fieldAccess: { financials },
+  };
+}
+
 export const GET = withErrorHandler(
   async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    await requireTrustedActor();
+    const actorContext = await requireTrustedAction("orders.read");
+    assertTrustedAction(actorContext, "customers.contact.read");
     const { id } = await params;
     return NextResponse.json({
-      position: await getCanonicalCourierPosition(serviceContext, id),
+      position: projectCourierPosition(
+        actorContext,
+        await getCanonicalCourierPosition(serviceContext, id),
+      ),
     });
   },
   "GET /api/orders/[id]/courier",
@@ -28,7 +55,8 @@ export const GET = withErrorHandler(
 
 export const POST = withErrorHandler(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    const actor = await requireTrustedActor();
+    const actor = await requireTrustedAction("orders.update");
+    assertTrustedAction(actor, "customers.contact.read");
     const { id } = await params;
     const body = await request.json();
     const command = await queueCanonicalCourierBooking(
@@ -61,7 +89,8 @@ export const POST = withErrorHandler(
 
 export const PATCH = withErrorHandler(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    const actor = await requireTrustedActor();
+    const actor = await requireTrustedAction("orders.update");
+    assertTrustedAction(actor, "customers.contact.read");
     const { id } = await params;
     const body = await request.json();
     const position = await getCanonicalCourierPosition(serviceContext, id);

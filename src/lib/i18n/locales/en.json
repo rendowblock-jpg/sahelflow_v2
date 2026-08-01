@@ -1112,6 +1112,7 @@
   "inbox.scanQrHint": "Scan the QR code below with WhatsApp (Settings → Linked Devices)",
   "inbox.searchConversations": "Search conversations...",
   "inbox.searchPlaceholder": "Search conversations...",
+  "inbox.restrictedContact": "Restricted contact",
   "inbox.seededReplyPlaceholder": "Demo conversation — connect WhatsApp to reply",
   "inbox.selectConversation": "Select a conversation",
   "inbox.selectConversationHint": "Choose a conversation from the list to start chatting.",
