@@ -187,11 +187,6 @@ export async function executeCollaborationRouting(
 ): Promise<BusinessCommandResult<CollaborationRoutingResult>> {
   const data = collaborationRoutingSchema.parse(input);
   const actor = assertContext(context, actorContext, data.entityType);
-  const targetMember = data.targetMemberId
-    ? await resolveCollaborationMember(actor, data.targetMemberId, context.shop, {
-        allowViewer: false,
-      })
-    : null;
   const envelopeKey = await getBusinessEnvelopeKey(context);
   const correlationId = data.correlationId ?? randomUUID();
   const businessContext: BusinessPrincipalContext = {
@@ -228,6 +223,14 @@ export async function executeCollaborationRouting(
         data.entityType,
         data.entityId,
       );
+      const targetMember = data.targetMemberId
+        ? await resolveCollaborationMember(
+            actor,
+            data.targetMemberId,
+            context.shop,
+            { allowViewer: false },
+          )
+        : null;
       const current = await tx.collaborationAssignment.findUnique({
         where: {
           entityType_entityId: {
