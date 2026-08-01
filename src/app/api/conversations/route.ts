@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db, shopContext } from "@/lib/db";
+import { db } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
-import { getConversationAssignmentVersions } from "@/lib/inbox/conversation-assignment";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +11,7 @@ export const dynamic = "force-dynamic";
  * the seeded/offline inbox fallback.
  */
 export const GET = withErrorHandler(async () => {
-  const actorContext = await requireTrustedAction("conversations.read");
-  const context = { prisma: db, shop: shopContext };
+  await requireTrustedAction("conversations.read");
   const conversations = await db.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     take: 100,
@@ -33,25 +31,9 @@ export const GET = withErrorHandler(async () => {
       firstReplyAt: true,
     },
   });
-  const versions = await getConversationAssignmentVersions(
-    context,
-    conversations.map((conversation) => conversation.id),
-  );
-  const personActor =
-    actorContext.actor.kind === "person" ? actorContext.actor : null;
 
   return NextResponse.json({
-    conversations: conversations.map((conversation) => ({
-      ...conversation,
-      assignmentVersion: versions.get(conversation.id) ?? 0,
-    })),
-    currentActor: {
-      personId: personActor?.personId ?? null,
-      memberId: personActor?.workspaceMemberId ?? null,
-      role:
-        actorContext.actor.kind === "system" ? null : actorContext.actor.role,
-      permissions: personActor?.permissions ?? null,
-    },
+    conversations,
     source: "seeded",
   });
 }, "GET /api/conversations");
