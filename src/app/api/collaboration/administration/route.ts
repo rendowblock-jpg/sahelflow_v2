@@ -46,10 +46,39 @@ export const GET = withErrorHandler(async () => {
   const queuesManage = trustedActionAllowed(actorContext, "queues.manage", {
     shopId: actorContext.shop.shopId,
   });
-  const view = await getCollaborationAdministrationView({
-    prisma: db,
-    shop: shopContext,
-  });
+  const [view, aggregateVersions] = await Promise.all([
+    getCollaborationAdministrationView({ prisma: db, shop: shopContext }),
+    db.$queryRaw<Array<{
+      aggregateType: string;
+      aggregateId: string;
+      version: number | bigint;
+    }>>`
+      SELECT "aggregateType", "aggregateId", "version"
+      FROM "BusinessAggregateVersion"
+      WHERE "aggregateType" IN ('collaboration-workgroup', 'collaboration-queue')
+    `,
+  ]);
+  const versionByAggregate = new Map(
+    aggregateVersions.map((entry) => [
+      `${entry.aggregateType}:${entry.aggregateId}`,
+      Number(entry.version),
+    ]),
+  );
+  const workgroups = (view.workgroups as Array<Record<string, unknown>>).map(
+    (workgroup) => ({
+      ...workgroup,
+      version:
+        versionByAggregate.get(
+          `collaboration-workgroup:${String(workgroup.id)}`,
+        ) ?? 0,
+    }),
+  );
+  const queues = (view.queues as Array<Record<string, unknown>>).map((queue) => ({
+    ...queue,
+    version:
+      versionByAggregate.get(`collaboration-queue:${String(queue.id)}`) ?? 0,
+  }));
+
   const activeMembers: Array<{
     memberId: string;
     displayName: string | null;
@@ -94,8 +123,8 @@ export const GET = withErrorHandler(async () => {
 
   return NextResponse.json(
     {
-      workgroups: canReadWorkgroups ? view.workgroups : [],
-      queues: canReadQueues ? view.queues : [],
+      workgroups: canReadWorkgroups ? workgroups : [],
+      queues: canReadQueues ? queues : [],
       activeMembers,
       permissions: {
         workgroupsRead: canReadWorkgroups,
