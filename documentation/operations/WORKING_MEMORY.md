@@ -8,7 +8,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active phase:** Phase 2A — durable local identity and session authority
 > **Active package:** Teams and permissions completion
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
