@@ -10,15 +10,17 @@ import {
 import { assertTeamMemberActive } from "./team-revocation-authority";
 
 /**
- * Validate a member's active control authority before generating a session.
+ * Validate a member's exact-shop and active control authority before generating
+ * a session.
  *
  * Session registration still performs the final race-safe check. This preflight
- * prevents an already-revoked public credential from repeatedly creating orphan
+ * prevents a revoked or wrong-shop public credential from creating orphan
  * directory sessions while never granting database/cookie authority.
  *
- * A revoked member is deliberately indistinguishable from invalid credentials
- * to the public login flow. Authentication failures caused by corrupt,
- * mismatched or unavailable authority remain hard failures and are never hidden.
+ * Unknown, revoked and wrong-shop members are deliberately indistinguishable
+ * from invalid credentials to the public login flow. Authentication failures
+ * caused by corrupt, mismatched or unavailable authority remain hard failures
+ * and are never hidden.
  */
 export async function createActiveTeamLoginSession(
   loginId: string,
@@ -28,7 +30,7 @@ export async function createActiveTeamLoginSession(
   const member = (await listTeamMembers(shop)).find(
     (candidate) => candidate.loginId === loginId.trim().toLowerCase(),
   );
-  if (!member) return null;
+  if (!member || !member.shopIds.includes(shop.shopId)) return null;
 
   try {
     await assertTeamMemberActive(member.memberId, shop);
