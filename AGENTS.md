@@ -82,7 +82,7 @@ Only one coding agent is active. Therefore:
 - use a separated adversarial pass on a frozen exact head before closing a
   high-risk package;
 - make no edits during that pass;
-- record findings, then apply at most one consolidated blocker repair;
+- record findings and apply bounded blocker repairs before refreezing;
 - never describe the pass as independent review;
 - external independent security/privacy/legal/provider review remains mandatory
   where the roadmap requires real external evidence.
@@ -145,44 +145,58 @@ boundaries are proven.
 Closed at `56df880bbe2233bf081119fa535e30713d9c6051` with CI
 `30665009016` and checkpoint `30665009255` successful.
 
-Every configured authenticated request validates durable identity. Owners can
-inspect exact-installation sessions/devices and revoke another session after
-recent PIN proof. Control authority denies first; database/audit catch-up is
-transactional and retryable. Current-session protection, duplicate/concurrent
-revoke, database failure and AR/FR/EN security administration are proven.
-Policy-stale bindings are denied everywhere but may enter only the rate-limited
-PIN reauthentication ceremony, which rotates into a fresh binding. Missing,
-revoked, cross-shop or unavailable authority remains blocked.
+Every configured authenticated request validates durable identity. Owner session
+administration is control-first, database/audit catch-up is transactional and
+retryable, and policy-stale bindings are denied outside the bounded PIN
+reauthentication ceremony.
+
+### Phase 2A.4 — multi-member roles, invitations and per-shop permissions
+
+Closed at `3266dc03994ffcb1672256465624ea715f0cf317` with CI
+`30681155150` and checkpoint `30681155099` successful.
+
+The installation now owns authenticated invitation, accepted-member and member
+revocation authorities outside shop databases. The package includes individual
+member login/PIN/device/session identity, role-bounded custom allowlists, exact
+shop grants, member-owned reauthentication, owner-only owner PIN administration,
+control-first member revocation with retryable database/audit catch-up,
+installation-root rotation, owner administration and member self-view in
+Arabic/French/English.
+
+The frozen sole-agent adversarial pass found and closed revoked-login disclosure,
+stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
+login false-success. No P0/P1 remains. It was not an independent review.
 
 PIN remains local unlock and reauthentication, never durable person identity.
+The sole core owner is outside accepted-member removal/demotion APIs; any future
+multi-owner last-owner recovery remains an explicit separate ceremony.
 
-## Exact next outcome — Phase 2A.4
+## Exact next outcome — Teams and permissions completion
 
-The sole active package is **durable multi-member roles, invitations and per-shop
-permissions**.
+The sole active package is **durable collaboration and operational permission
+completion**.
 
 The package must:
 
-1. extend the installation authority from one owner to multiple durable People and
-   WorkspaceMembers without duplicating identity in shop databases;
-2. define invitation identity, expiry, single-use acceptance and replay-safe
-   recovery;
-3. support owner, manager, operator and viewer presets plus deny-by-default custom
-   action permissions bounded by each role ceiling;
-4. attach exact shop grants to each member and reject cross-shop access before
-   parsing or effects;
-5. establish a new member/device/session only after invitation proof and local PIN
-   ceremony, with immediate revocation and stale-policy behavior;
-6. prevent removing or demoting the last active owner outside an explicit recovery
-   ceremony;
-7. expose owner administration and member self-view with complete AR/FR/EN,
-   loading, empty, validation, conflict, expired, revoked and recovery states;
-8. prove duplicate/concurrent invite, accept and revoke, restart, expiry,
-   authorization and cross-shop behavior;
-9. finish with one exact-head source checkpoint and a separated adversarial pass.
+1. define authoritative assignments, workgroups, queues, internal comments,
+   mentions and handovers;
+2. extend the action vocabulary to Required operational domains and add
+   field-level restrictions where required by PRODUCT/EXPERIENCE;
+3. derive every collaboration mutation from a server-minted trusted member actor
+   and exact shop context;
+4. preserve idempotency, optimistic concurrency, audit attribution, replay safety,
+   revocation and recovery;
+5. keep manager/operator/viewer presets least-privilege and custom policies
+   deny-by-default when new actions are introduced;
+6. provide complete Arabic/French/English loading, empty, permission, conflict,
+   stale, offline and recovery states;
+7. prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
+   handover-recovery behavior;
+8. finish with one exact-head source checkpoint and a separated frozen
+   adversarial pass.
 
 Licensing/entitlements and native multi-shop lifecycle remain later Phase 2
-packages after member authority is stable.
+packages after teams and permissions completion is stable.
 
 ## Professional execution protocol
 
