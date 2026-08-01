@@ -25,7 +25,6 @@ jobs:
       SF_DATA_DIR: /tmp/sahelflow-integration-source/data
       DATABASE_URL: file:/tmp/sahelflow-integration-source/data/shops/test.db
       SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-      SF_TEST_FAIL_FAST: '1'
     steps:
       - name: Checkout exact integration head
         uses: actions/checkout@v4
@@ -78,6 +77,7 @@ jobs:
           path: |
             .sf-integration-source.log
             .sf-vitest-first-failure.txt
+            .sf-vitest-failures.txt
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 2
