@@ -1,8 +1,8 @@
 # SahelFlow agent entry point
 
-SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent as two
-concurrent peers, plus GitHub as durable truth. Each outcome still has one
-integration owner, branch, worktree and PR. The
+SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent with one
+active implementation owner at a time, plus GitHub as durable truth. Each outcome
+still has one owner, branch, worktree and PR. The
 Founder-owned Windows checkout is local evidence and must not be modified, reset
 or deleted merely to simplify branch work.
 
@@ -66,10 +66,9 @@ Valid FD-027 rules remain: bounded WIP, coherent outcome packages, P0/P1 blockin
 milestone releases, exact-source evidence and continuous Arabic/RTL,
 accessibility, recovery and performance.
 
-## FD-029 dual-agent execution decision
+## FD-029 execution decision
 
-FD-029 supersedes the former **Founder execution-granularity decision** and
-**Sole-agent review rule**. The existing
+FD-029 supersedes the former **Founder execution-granularity decision**. The existing
 `agent/phases1-4-completion-program` branch remains only to close Teams and PR
 #195; it is not authority for another long-lived multi-phase PR.
 
@@ -77,15 +76,9 @@ FD-029 supersedes the former **Founder execution-granularity decision** and
   product, business, data, security, recovery, Windows, provider, UI/UX,
   localization, accessibility, performance, test and evidence layer.
 - Freeze shared schema, migration, identity, permission, command, event,
-  provider and design-system contracts before dependent parallel work.
-- Web and Desktop agents use separate mutable worktrees and branches. They never
-  concurrently edit one worktree or infer ownership from chat.
-- One agent integrates each outcome. The other may implement a dependency-
-  independent outcome, prepare bounded research/impact maps/fixtures or review
-  the frozen head.
-- The non-authoring agent reviews material frozen work. External independent
-  security/privacy/legal/provider review remains separately mandatory where the
-  roadmap requires it.
+  provider and design-system contracts before dependent implementation.
+- The Founder selects the active coding agent. Web and Desktop are not assigned
+  simultaneous SahelFlow implementation lanes.
 - Before production edits, inventory all callers, direct tests, mocks, dynamic
   imports, migrations, protected fields, UI states, recovery, performance,
   evidence and legacy removal affected by the package.
@@ -96,6 +89,13 @@ FD-029 supersedes the former **Founder execution-granularity decision** and
   use short dedicated PRs from current protected `main`.
 - Keep CI read-only; preserve unrelated work, canonical AppData, databases,
   registry and keys.
+
+### Sole-agent review rule
+
+Only one coding agent is active at a time. Material frozen work receives a
+separated adversarial pass; it is not called independent review. External
+independent security/privacy/legal/provider review remains mandatory where the
+roadmap requires it.
 
 ## Research-first gate
 
@@ -207,8 +207,8 @@ The package must:
    stale, offline and recovery states;
 7. prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
    handover-recovery behavior;
-8. finish with one exact-head source checkpoint and non-authoring frozen-head
-   review.
+8. finish with one exact-head source checkpoint and a separated frozen-head
+   adversarial pass.
 
 Licensing/entitlements and native multi-shop lifecycle remain later Phase 2
 packages after teams and permissions completion is stable.
@@ -220,14 +220,12 @@ packages after teams and permissions completion is stable.
 - Verify protected `main`, PR #195, exact branch head and latest checks.
 - Read Working Memory and the PR body.
 - Inspect exact active source and tests.
-- Resolve explicit lane ownership, worktree, dependencies and integration order.
-- Never infer another agent's intent from branch movement or chat context.
+- Resolve the current owner, branch, worktree, dependencies and exact checks.
+- Never infer another active agent from branch movement or chat context.
 
 ### Build coherent outcomes
 
 - Keep one active core-authority package at a time.
-- Allow at most two dependency-independent seller outcomes after shared contract
-  freeze; reserve remaining capacity for integration and verification.
 - Finish applicable authority, schema, API, UI, recovery, AR/FR/EN and invariant
   tests.
 - Do not weaken production authority to satisfy stale tests.
@@ -239,7 +237,7 @@ packages after teams and permissions completion is stable.
 1. run the exact authority/docs gate;
 2. pass Prisma generation and migration status where applicable;
 3. pass TypeScript, ESLint and the full unit/integration suite;
-4. obtain non-authoring frozen-head review and close every P0/P1;
+4. perform a separated frozen-head adversarial pass and close every P0/P1;
 5. update Working Memory, PR #195 and issue #164 with exact evidence;
 6. keep PR #195 draft and unmerged;
 7. keep the application version unchanged for ordinary source packages.

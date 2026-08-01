@@ -157,8 +157,7 @@ not yet diagnosed as production behavior or stale fixture.
 
 The current session is governance/documentation only. No product implementation,
 test repair, merge, version bump, release or installed-artifact action resumes in
-this session. FD-029 records the uncompromised AAA target and dual-agent delivery
-model.
+this session. FD-029 records the uncompromised AAA target and delivery discipline.
 
 ### Remaining Teams closure contract
 
@@ -180,30 +179,27 @@ model.
 8. Prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
    recovery behavior before licensing begins.
 
-### Exact execution order — new-session allocation
+### Exact execution order
 
-1. **Web Agent — CI feedback package:** from current protected `main`, own a short
-   separate worktree/branch/PR that makes draft validation report the complete
-   actionable failure set through path/risk-aware lanes and an always-reporting
-   aggregator. It may not change product authority or PR #195 implementation.
-2. **Desktop Agent — Teams integration owner:** retain exclusive ownership of PR
-   #195 in its isolated worktree. Reconstruct a complete impact map for the
-   trusted-actor/manual-order boundary, wait for or deliberately integrate the CI
-   package, then diagnose and repair the exact current 400/401 failure without
-   weakening production authority.
-3. Both agents verify live protected `main`, exact heads, PRs and checks at start.
-   They do not share a mutable worktree or depend on chat handoff.
+1. Verify live protected `main`, the current PR #195 head and its exact checks.
+2. Complete the short CI feedback package from current protected `main`: make
+   draft validation report the complete actionable failure set through path/risk-
+   aware lanes and an always-reporting aggregator without changing product
+   authority or PR #195 implementation.
+3. Resume PR #195, reconstruct a complete impact map for the trusted-actor/manual-
+   order boundary, deliberately integrate the CI package and diagnose the exact
+   current 400/401 failure without weakening production authority.
 4. Use the complete CI failure set for one consolidated fixture/production repair
    batch. Do not create a commit/push cycle for each independently predictable
    stale fixture.
-5. Freeze one exact PR #195 head, run the complete selected checkpoint and obtain
-   non-authoring review across replay, revocation, cross-shop scope, field
+5. Freeze one exact PR #195 head, run the complete selected checkpoint and perform
+   a separated adversarial pass across replay, revocation, cross-shop scope, field
    leakage/oracles, high-risk ceremonies, concurrency, recovery and AR/FR/EN.
 6. Close every P0/P1, refreeze only changed risk, update durable evidence and end
    PR #195. Do not add licensing, multi-shop or later-phase work to it.
-7. In a new research/contract session, Web and Desktop jointly freeze licensing,
-   entitlement, native-supervisor, shop-slot and recovery contracts. Only then
-   fan out short licensing and native multi-shop outcome PRs.
+7. In a new research/contract session, freeze licensing, entitlement, native-
+   supervisor, shop-slot and recovery contracts. Then continue through short
+   licensing and native multi-shop outcome PRs.
 
 ## Protected local boundaries
 

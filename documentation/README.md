@@ -1,7 +1,7 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and dual-agent parallel delivery
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
@@ -30,8 +30,8 @@ adopted by an active owner.
 2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — capabilities, journeys,
    operational states, page completion and AAA experience standard.
 3. [`product/DECISIONS.md`](product/DECISIONS.md) — numbered Founder decisions;
-   FD-028 governs final completion and FD-029 governs the dual-agent delivery
-   model without weakening the program.
+   FD-028 governs final completion and FD-029 governs uncompromised AAA delivery
+   without weakening the program.
 4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — target system, data
    authority, protocols, invariants, security and recovery.
 5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged implementation,
@@ -122,9 +122,8 @@ action permissions and required field-level restrictions. Licensing and native
 multi-shop remain later Phase 2 dependencies.
 
 Implementation is intentionally paused at the exact frontier recorded in
-`operations/WORKING_MEMORY.md` while the new FD-029 workflow is consolidated.
-New coding sessions resume from live GitHub truth under separate package
-ownership; this planning session is not implementation evidence.
+`operations/WORKING_MEMORY.md`. A future coding session resumes from live GitHub
+truth; this planning session is not implementation evidence.
 
 ## Final completion model
 

@@ -51,12 +51,12 @@ TypeScript and ESLint did not fail in that run.
 
 Earlier replay, operational-action, protected-field, risk, audit and high-risk
 credential findings were repaired on the branch, but the package is not closed
-until a frozen exact head passes the complete selected checkpoint and
-non-authoring review has no unresolved P0/P1. These remain unmerged branch
+until a frozen exact head passes the complete selected checkpoint and a separated
+adversarial pass has no unresolved P0/P1. These remain unmerged branch
 findings and repairs, not defects or proven behavior in protected `main`.
 
-Implementation is intentionally paused while FD-029 and the dual-agent delivery
-workflow are consolidated. After Teams closes, PR #195 stops; licensing,
+Implementation is intentionally paused for this planning/documentation checkpoint.
+After Teams closes, PR #195 stops; licensing,
 multi-shop and later outcomes use short dedicated PRs from current protected
 `main`.
 

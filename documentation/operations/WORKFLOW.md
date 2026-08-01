@@ -1,14 +1,14 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and dual-agent parallel delivery
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** protected `main`, branches, PRs, Actions, releases, issue #164 and the ten active documentation authorities
 > **Last consolidated:** 2026-08-01
 
 This workflow is the fastest professional path to a complete class-AAA SahelFlow
-candidate. Speed comes from current research, dependency-correct parallelism,
-complete vertical outcomes, short coherent branches, independent review,
+candidate. Speed comes from current research, dependency-correct sequencing,
+complete vertical outcomes, short coherent branches, separated frozen review,
 risk-selected evidence and immediate removal of superseded paths after proof.
 
 Speed never comes from weakening business integrity, AppData preservation,
@@ -37,7 +37,6 @@ The Web Agent:
 - implements complete outcome packages;
 - uses environment-valid checks and records their limits;
 - opens branches and PRs through GitHub;
-- reviews Desktop Agent work;
 - never claims installed Windows evidence it did not observe.
 
 ### Desktop Agent
@@ -61,69 +60,31 @@ The Desktop Agent:
 - Releases bind exact source, version, signature, artifacts and evidence.
 - GitHub is infrastructure and durable truth, not a third coding agent.
 
-### Dual-agent coordination contract
-
-The two agents are concurrent peers with different environment strengths, not a
-primary agent plus an informal helper.
-
-1. Every package names one integration owner before implementation.
-2. Each agent uses a separate worktree, branch and PR. They never concurrently
-   edit the same branch or mutable worktree.
-3. Both agents inspect and challenge a shared contract before dependent work
-   fans out. The integration owner records the adopted contract on GitHub.
-4. Shared schema, migrations, identity, permissions, commands, event formats,
-   design tokens and public provider contracts freeze in one serialized commit.
-5. After freeze, the agents may implement independent packages simultaneously.
-   File separation alone is insufficient when mutation or migration authority
-   overlaps.
-6. If only one implementation package is ready, the other agent performs bounded
-   next-package research, impact mapping, reusable-fixture preparation or
-   frozen-head review. It does not create speculative foundations.
-7. The non-authoring agent reviews each material frozen head. The author applies
-   one consolidated blocker batch; re-review covers only changed/unresolved risk.
-8. GitHub PR bodies, review comments, issue #164 and the ten active documents are
-   the handoff. Private chat summaries and local-only handoff files are not
-   execution authority.
-9. Desktop alone may claim local Windows, installed artifact, AppData and T470
-   evidence it directly observed. Web/Actions evidence remains labelled by its
-   actual environment.
-10. If a frozen shared contract must change, dependent lanes pause. The
-    integration owner publishes the replacement contract commit, records the
-    migration/compatibility impact, and each dependent branch deliberately
-    rebases or merges it before resuming.
-11. Each coherent checkpoint records owner, exact head, completed outcome,
-    changed authority/files, checks and next blocker in the PR. Agents do not
-    exchange hidden task packets or require chat replay.
-12. Dependency PRs merge in declared order. A dependent PR cannot use another
-    unmerged branch as invisible authority; its dependency is linked and frozen.
-
 ## 2. Core anti-drift rules
 
 1. One work package has one owner, one branch and one PR.
 2. No direct changes to protected `main`.
-3. The non-authoring agent reviews material work.
+3. Material frozen work receives a separated adversarial pass; do not describe
+   it as independent review.
 4. Shared schema, migration, domain, identity and design-system contracts are
-   serialized before dependent parallel work.
-5. Parallelize only independent contracts and files.
-6. No important decision or intended work remains only in chat or an unpushed
+   serialized before dependent implementation.
+5. No important decision or intended work remains only in chat or an unpushed
    checkout.
-7. `CURRENT_STATE.md` describes merged source and evidence; `WORKING_MEMORY.md`
+6. `CURRENT_STATE.md` describes merged source and evidence; `WORKING_MEMORY.md`
    describes only the execution frontier.
-8. A page, model, route, adapter, screenshot, mock or passing unit test does not
+7. A page, model, route, adapter, screenshot, mock or passing unit test does not
    complete a capability.
-9. Arabic/RTL, accessibility, recovery and performance are continuous blocking
+8. Arabic/RTL, accessibility, recovery and performance are continuous blocking
    requirements.
-10. New abstractions must be adopted by a named production vertical immediately
-    or in the directly following dependency package.
-11. After migration and parity proof, competing legacy mutation paths are removed
-    or made read-only.
-12. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
-    scope.
-13. No roadmap rewrite replaces FD-028 without explicit Founder change control.
-14. Public provider, performance, security or Stable claims never exceed evidence.
-15. Separate agents never use one shared mutable worktree as parallel editing
-    space; integration occurs through commits and reviewed Git history.
-16. After Teams closes, PR #195 accepts no licensing, multi-shop or later-phase
+9. New abstractions must be adopted by a named production vertical immediately
+   or in the directly following dependency package.
+10. After migration and parity proof, competing legacy mutation paths are removed
+   or made read-only.
+11. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
+   scope.
+12. No roadmap rewrite replaces FD-028 without explicit Founder change control.
+13. Public provider, performance, security or Stable claims never exceed evidence.
+14. After Teams closes, PR #195 accepts no licensing, multi-shop or later-phase
     expansion. New outcomes use short PRs from current protected `main`.
 
 ## 3. Research-to-implementation gate
@@ -328,26 +289,6 @@ observation and phase exit recommendation.
 At most one frozen signed candidate is in flight. Publication or Founder
 observation does not freeze independent development.
 
-### Concurrent allocation protocol
-
-For each dependency position, the integration owner publishes a compact lane
-table in the owning PR or issue #164:
-
-| Field | Required value |
-|---|---|
-| Outcome | one observable seller/Founder result |
-| Owner | Web Agent or Desktop Agent |
-| Branch / PR | unique, current and linked |
-| Baseline | exact protected-main SHA |
-| Dependencies | frozen contract commits and predecessor PRs |
-| File/authority scope | production and test ownership boundaries |
-| Evidence | selected source, artifact, installed and external gates |
-| State | research, contract, implementation, review, repair, proven or blocked |
-
-At most two independent seller outcomes implement concurrently. Core authority
-remains WIP 1. The other available capacity is reserved for integration and
-independent validation so parallelism does not remove review.
-
 ## 6. Start and resume protocol
 
 Before changing anything:
@@ -362,11 +303,10 @@ Before changing anything:
 4. Read the governing Product, Experience, Architecture and Current State sections.
 5. Synchronize with protected `main` and inspect status.
 6. Preserve unrelated user work.
-7. Resolve active branches/PRs, exact heads, checks, dependencies and lane ownership.
-8. Refuse overlapping mutable worktrees or unowned shared contracts.
-9. Complete the research-to-implementation gate and impact map.
-10. Freeze required shared contracts.
-11. State the exact outcome and its exit evidence.
+7. Resolve active branches/PRs, exact heads, checks, dependencies and current ownership.
+8. Complete the research-to-implementation gate and impact map.
+9. Freeze required shared contracts.
+10. State the exact outcome and its exit evidence.
 
 Chat history is context, never current authority.
 
@@ -374,8 +314,6 @@ Chat history is context, never current authority.
 
 - Branch from current protected `main`.
 - Branch naming: `agent/<outcome>`.
-- Use one dedicated worktree per active agent/package and record its branch on
-  issue #164. Do not use a second agent to edit an existing owner's worktree.
 - Open a draft PR early for material work.
 - Push coherent batches rather than every tiny edit.
 - Keep one PR reviewable as one outcome.
