@@ -30,7 +30,7 @@ import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
-import { TeamAccessPanel } from "@/components/settings/team-access-panel";
+import { TeamAccessAuthorityPanel } from "@/components/settings/team-access-authority-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
 import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
 
@@ -149,7 +149,7 @@ export function SettingsTabs({
         {active === "security" ? <SecurityAuthorityPanel /> : null}
         {active === "team" ? (
           <div className="space-y-8">
-            <TeamAccessPanel />
+            <TeamAccessAuthorityPanel />
             <TeamMembersPanel />
             <CollaborationAdminPanel />
           </div>
