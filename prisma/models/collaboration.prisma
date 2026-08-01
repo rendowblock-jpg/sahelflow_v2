@@ -1,0 +1,131 @@
+// Phase 2 collaboration authority.
+//
+// Member IDs reference the installation-level authenticated team authority and
+// are revalidated at every command boundary. They intentionally have no local
+// database foreign key. Workgroups, queues, assignments, comments, mentions and
+// handovers are shop-operational state and therefore live in the exact shop DB.
+
+model CollaborationWorkgroup {
+  id                 String   @id
+  name               String
+  description        String?
+  state              String   @default("active")
+  createdByMemberId  String
+  archivedByMemberId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+  archivedAt         DateTime?
+
+  memberships CollaborationWorkgroupMember[]
+  queues      CollaborationQueue[]
+  assignments CollaborationAssignment[]
+
+  @@unique([name])
+  @@index([state, name])
+  @@index([createdByMemberId, createdAt])
+}
+
+model CollaborationWorkgroupMember {
+  workgroupId      String
+  memberId         String
+  role             String   @default("member")
+  addedByMemberId  String
+  removedByMemberId String?
+  createdAt        DateTime @default(now())
+  removedAt        DateTime?
+
+  workgroup CollaborationWorkgroup @relation(fields: [workgroupId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([workgroupId, memberId])
+  @@index([memberId, removedAt])
+  @@index([workgroupId, removedAt])
+}
+
+model CollaborationQueue {
+  id                 String   @id
+  key                String   @unique
+  name               String
+  description        String?
+  entityType         String
+  workgroupId        String?
+  state              String   @default("active")
+  createdByMemberId  String
+  archivedByMemberId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+  archivedAt         DateTime?
+
+  workgroup  CollaborationWorkgroup? @relation(fields: [workgroupId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  assignments CollaborationAssignment[]
+
+  @@index([entityType, state, name])
+  @@index([workgroupId, state])
+}
+
+model CollaborationAssignment {
+  entityType        String
+  entityId          String
+  queueId           String?
+  workgroupId       String?
+  assigneeMemberId  String?
+  state             String   @default("open")
+  generation        Int      @default(0)
+  updatedByMemberId String
+  commandId         String   @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  queue     CollaborationQueue?     @relation(fields: [queueId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  workgroup CollaborationWorkgroup? @relation(fields: [workgroupId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([entityType, entityId])
+  @@index([queueId, state, updatedAt])
+  @@index([workgroupId, state, updatedAt])
+  @@index([assigneeMemberId, state, updatedAt])
+}
+
+model CollaborationComment {
+  id             String   @id
+  entityType     String
+  entityId       String
+  authorMemberId String
+  bodyJson       String
+  commandId      String   @unique
+  createdAt      DateTime @default(now())
+
+  mentions CollaborationMention[]
+
+  @@index([entityType, entityId, createdAt])
+  @@index([authorMemberId, createdAt])
+}
+
+model CollaborationMention {
+  commentId String
+  memberId  String
+  createdAt DateTime @default(now())
+
+  comment CollaborationComment @relation(fields: [commentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([commentId, memberId])
+  @@index([memberId, createdAt])
+}
+
+model CollaborationHandover {
+  id              String   @id
+  entityType      String
+  entityId        String
+  fromMemberId    String?
+  toMemberId      String?
+  fromQueueId     String?
+  toQueueId       String?
+  fromWorkgroupId String?
+  toWorkgroupId   String?
+  reasonJson      String?
+  commandId       String   @unique
+  occurredAt      DateTime @default(now())
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([fromMemberId, occurredAt])
+  @@index([toMemberId, occurredAt])
+  @@index([toQueueId, occurredAt])
+}
