@@ -9,7 +9,20 @@ export const dynamic = "force-dynamic";
 /** GET /api/auth/members — permission-filtered accepted-member inventory. */
 export const GET = withErrorHandler(async () => {
   const context = await requireTrustedAction("members.read");
-  const authority = await getTeamAdministrationView(context.shop);
+  const completeAuthority = await getTeamAdministrationView(context.shop);
+  const owner =
+    context.actor.kind === "person" && context.actor.role === "owner";
+  const authority = owner
+    ? completeAuthority
+    : Object.freeze({
+        revision: completeAuthority.revision,
+        members: Object.freeze(
+          completeAuthority.members.filter((member) =>
+            member.shopIds.includes(context.shop.shopId),
+          ),
+        ),
+      });
+
   return NextResponse.json(
     {
       authority,
