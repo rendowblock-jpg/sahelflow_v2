@@ -42,6 +42,9 @@ const trustedImportActor = vi.hoisted(() => ({
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   requireTrustedActor: vi.fn().mockResolvedValue(trustedImportActor.context),
+  isTrustedActorContext: vi.fn(
+    (value: unknown) => value === trustedImportActor.context,
+  ),
 }));
 
 vi.mock("@/lib/business-truth/principal", async (importOriginal) => {
