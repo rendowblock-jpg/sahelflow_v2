@@ -40,6 +40,13 @@ const SHOP: ShopContext = Object.freeze({
 });
 const SERVICE_CONTEXT = Object.freeze({ prisma: db, shop: SHOP });
 
+type DecryptedActivityMessage = Readonly<{
+  body: string;
+  messageType: string;
+  activityType: string | null;
+  direction: string;
+}>;
+
 function actorContext(options?: {
   personId?: string;
   memberId?: string;
@@ -142,9 +149,9 @@ describe("conversation assignment command", () => {
     expect(
       await rawDb.conversation.findUnique({ where: { id: conversation.id } }),
     ).toMatchObject({ assigneeId: SELF.memberId });
-    const activity = await db.message.findFirst({
+    const activity = (await db.message.findFirst({
       where: { conversationId: conversation.id },
-    });
+    })) as unknown as DecryptedActivityMessage | null;
     expect(activity).toMatchObject({
       messageType: "activity",
       activityType: "assignment_claimed",
