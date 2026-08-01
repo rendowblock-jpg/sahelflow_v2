@@ -40,6 +40,13 @@ export async function cleanDb(): Promise<void> {
   await rawDb.$executeRawUnsafe('DELETE FROM "CodSettlement"');
   await rawDb.$executeRawUnsafe('DELETE FROM "CodCollectionCorrection"');
   await rawDb.$executeRawUnsafe('DELETE FROM "CodCollection"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationMention"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationComment"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationHandover"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationAssignment"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationQueue"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationWorkgroupMember"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationWorkgroup"');
   await rawDb.$executeRawUnsafe('DELETE FROM "CompensationFact"');
   await rawDb.$executeRawUnsafe('DELETE FROM "ProjectionInvalidation"');
   await rawDb.$executeRawUnsafe('DELETE FROM "FinancialMovement"');
