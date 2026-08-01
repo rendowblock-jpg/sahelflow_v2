@@ -36,6 +36,7 @@ const repoDir = process.env.SF_REPO_DIR || process.cwd();
 const failFastTests = process.env.SF_TEST_FAIL_FAST === "1";
 const vitestResultsPath = resolve(repoDir, ".sf-vitest-results.json");
 const vitestFailurePath = resolve(repoDir, ".sf-vitest-first-failure.txt");
+const vitestFailuresPath = resolve(repoDir, ".sf-vitest-failures.txt");
 const stepTimeoutMs = Number.parseInt(
   process.env.SF_VERIFY_STEP_TIMEOUT_MS ?? String(20 * 60 * 1000),
   10,
@@ -87,6 +88,7 @@ if (!Number.isSafeInteger(stepTimeoutMs) || stepTimeoutMs < 1) {
 
 rmSync(vitestResultsPath, { force: true });
 rmSync(vitestFailurePath, { force: true });
+rmSync(vitestFailuresPath, { force: true });
 
 if (!skipTests) {
   assertTestSandbox("sf-verify");
@@ -116,15 +118,13 @@ const steps: Step[] = [
   {
     name: "Vitest",
     command: "bunx",
-    args: failFastTests
-      ? [
-          "vitest",
-          "run",
-          "--bail=1",
-          "--reporter=json",
-          `--outputFile=${vitestResultsPath}`,
-        ]
-      : ["vitest", "run"],
+    args: [
+      "vitest",
+      "run",
+      ...(failFastTests ? ["--bail=1"] : []),
+      "--reporter=json",
+      `--outputFile=${vitestResultsPath}`,
+    ],
     skipInFast: true,
     skipWhenTestsSkipped: true,
   },
@@ -163,11 +163,29 @@ function persistVitestFailure(lines: string[]): void {
   writeFileSync(vitestFailurePath, `${lines.join("\n").trim()}\n`, "utf8");
 }
 
-function printFirstVitestFailure(): boolean {
+function persistVitestFailures(sections: string[][]): string {
+  const firstFailure = sections[0];
+  if (!firstFailure) {
+    throw new Error("at least one Vitest failure is required");
+  }
+
+  const rendered = sections
+    .map(
+      (lines, index) =>
+        `failure ${index + 1} of ${sections.length}\n${lines.join("\n").trim()}`,
+    )
+    .join("\n\n");
+  writeFileSync(vitestFailuresPath, `${rendered}\n`, "utf8");
+  persistVitestFailure(firstFailure);
+  return rendered;
+}
+
+function printVitestFailures(): boolean {
   if (!existsSync(vitestResultsPath)) return false;
 
   try {
     const report = JSON.parse(readFileSync(vitestResultsPath, "utf8")) as VitestJsonResult;
+    const failures: string[][] = [];
     for (const file of report.testResults ?? []) {
       for (const assertion of file.assertionResults ?? []) {
         if (assertion.status !== "failed") continue;
@@ -175,19 +193,24 @@ function printFirstVitestFailure(): boolean {
         const title = [...(assertion.ancestorTitles ?? []), assertion.title]
           .filter(Boolean)
           .join(" > ");
-        const lines = [
+        failures.push([
           `test file: ${file.name ?? "unknown"}`,
           `test: ${title || "unknown"}`,
           ...(assertion.failureMessages ?? []),
-        ];
-        persistVitestFailure(lines);
-        printOutput(lines.join("\n"));
-        return true;
+        ]);
       }
     }
+
+    if (failures.length === 0) return false;
+
+    const rendered = persistVitestFailures(failures);
+    console.error(`    Vitest reported ${failures.length} failed assertion(s).`);
+    printOutput(rendered);
+    return true;
   } catch (error) {
     const message = `unable to parse Vitest JSON report: ${error instanceof Error ? error.message : String(error)}`;
     persistVitestFailure([message]);
+    writeFileSync(vitestFailuresPath, `${message}\n`, "utf8");
     console.error(`    ${message}`);
   } finally {
     rmSync(vitestResultsPath, { force: true });
@@ -227,10 +250,12 @@ for (const step of steps) {
   console.error(`FAIL ${step.name} (${elapsed} ms)`);
   const combinedOutput = `${result.stdout || ""}\n${result.stderr || ""}`;
   const printedStructuredFailure =
-    step.name === "Vitest" && failFastTests && printFirstVitestFailure();
+    step.name === "Vitest" && printVitestFailures();
   if (!printedStructuredFailure) {
-    if (step.name === "Vitest" && failFastTests && !existsSync(vitestFailurePath)) {
-      persistVitestFailure(combinedOutput.trim().split("\n").slice(-120));
+    if (step.name === "Vitest" && !existsSync(vitestFailurePath)) {
+      const fallback = combinedOutput.trim().split("\n").slice(-120);
+      persistVitestFailure(fallback);
+      writeFileSync(vitestFailuresPath, `${fallback.join("\n").trim()}\n`, "utf8");
     }
     printOutput(combinedOutput);
   }
