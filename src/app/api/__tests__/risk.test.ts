@@ -100,6 +100,12 @@ import { GET as GETAssess, POST as POSTAssess } from "@/app/api/risk/assess/[ord
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
+beforeEach(() => {
+  identityHarness.requireAction
+    .mockReset()
+    .mockResolvedValue(identityHarness.actorContext);
+});
+
 /** Build a mock PUT Request with JSON body (helpers.ts only exports mockPost/mockGet). */
 function mockPut(url: string, body: unknown): NextRequest {
   return new NextRequest(url, {
@@ -164,14 +170,6 @@ async function seedOrderForAssessment(opts?: { totalPrice?: number }) {
     },
   });
   return { order, customer, product };
-}
-
-/** Seed an AuthSecret row so the remaining legacy requireAuth() routes reject
- * requests without a valid sf_session cookie. */
-async function seedAuthSecret() {
-  await rawDb.authSecret.create({
-    data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-  });
 }
 
 // ─── GET /api/risk/blacklist ─────────────────────────────────────────────────
@@ -374,8 +372,10 @@ describe("GET / PUT /api/risk/config — risk engine config", () => {
     expect(persisted.thresholds.low).toBe(30);
   });
 
-  it("PUT returns 401 when auth is set up but no session cookie is present", async () => {
-    await seedAuthSecret();
+  it("PUT returns 401 when action authority is rejected", async () => {
+    identityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const res = await PUTConfig(
       mockPut("http://localhost/api/risk/config", { thresholds: { low: 30 } }),
     );
@@ -445,8 +445,10 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
     expect(res.status).toBe(400);
   });
 
-  it("PUT returns 401 when auth is set up but no session cookie is present", async () => {
-    await seedAuthSecret();
+  it("PUT returns 401 when action authority is rejected", async () => {
+    identityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const res = await PUTRules(
       mockPut("http://localhost/api/risk/rules", { rules: [] }),
     );
