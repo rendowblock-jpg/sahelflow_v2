@@ -18,6 +18,11 @@ import {
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
+type AssignableMemberProjection = Readonly<{
+  memberId: string;
+  displayName: string | null;
+  role: "owner" | "manager" | "operator";
+}>;
 
 const operationSchema = z
   .object({
@@ -86,28 +91,37 @@ export const GET = withErrorHandler(
     const canAssign = currentActor.allowedActions.includes(
       "conversations.assign",
     );
-    const [acceptedMembers, revocation] = canAssign
-      ? await Promise.all([
-          listTeamMembers(actorContext.shop),
-          getTeamRevocationSnapshot(actorContext.shop),
-        ])
-      : [[], { memberRevocations: [] }];
-    const revokedMembers = new Set(
-      revocation.memberRevocations.map((entry) => entry.memberId),
-    );
-    const assignableMembers = acceptedMembers
-      .filter(
-        (member) =>
-          member.revokedAt === null &&
-          !revokedMembers.has(member.memberId) &&
-          member.role !== "viewer" &&
-          member.shopIds.includes(actorContext.shop.shopId),
-      )
-      .map((member) => ({
-        memberId: member.memberId,
-        displayName: member.displayName,
-        role: member.role,
-      }));
+    let acceptedMembers: Awaited<ReturnType<typeof listTeamMembers>> = [];
+    let revokedMembers = new Set<string>();
+    if (canAssign) {
+      const [members, revocation] = await Promise.all([
+        listTeamMembers(actorContext.shop),
+        getTeamRevocationSnapshot(actorContext.shop),
+      ]);
+      acceptedMembers = members;
+      revokedMembers = new Set(
+        revocation.memberRevocations.map((entry) => entry.memberId),
+      );
+    }
+
+    const assignableMembers: AssignableMemberProjection[] =
+      acceptedMembers.flatMap((member) => {
+        if (
+          member.revokedAt !== null ||
+          revokedMembers.has(member.memberId) ||
+          member.role === "viewer" ||
+          !member.shopIds.includes(actorContext.shop.shopId)
+        ) {
+          return [];
+        }
+        return [
+          {
+            memberId: member.memberId,
+            displayName: member.displayName,
+            role: member.role,
+          },
+        ];
+      });
     if (
       canAssign &&
       currentActor.role === "owner" &&
