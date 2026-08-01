@@ -96,6 +96,13 @@ function invalidPolicy(): never {
   );
 }
 
+/** Return one immutable preset ceiling for server projections and invitation UI. */
+export function getPhase2PresetPermissions(
+  role: Phase2Role,
+): readonly Phase2Action[] {
+  return PRESET_PERMISSIONS[role];
+}
+
 /**
  * Resolve a role preset or an exact custom allowlist.
  *
