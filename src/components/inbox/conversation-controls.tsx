@@ -360,8 +360,12 @@ export function AssigneeControl({
   const copy = ASSIGNMENT_COPY[locale];
   const [assigneeId, setAssigneeId] = useState<string | null>(initialAssignee);
   const [version, setVersion] = useState(initialVersion);
-  const [authority, setAuthority] = useState<AssignmentAuthority["currentActor"] | null>(null);
-  const [members, setMembers] = useState<AssignmentAuthority["assignableMembers"]>([]);
+  const [authority, setAuthority] = useState<
+    AssignmentAuthority["currentActor"] | null
+  >(null);
+  const [members, setMembers] = useState<
+    AssignmentAuthority["assignableMembers"]
+  >([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -391,7 +395,12 @@ export function AssigneeControl({
 
   useEffect(() => {
     requestRef.current = null;
-    void hydrate();
+    const timeoutId = globalThis.setTimeout(() => {
+      void hydrate();
+    }, 0);
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
   }, [hydrate]);
 
   const memberById = useMemo(
@@ -418,6 +427,9 @@ export function AssigneeControl({
   const isSelf = Boolean(
     assigneeId && authority?.memberId && assigneeId === authority.memberId,
   );
+  const canClaimNow = canClaim && !assigneeId;
+  const canReleaseNow = canClaim && isSelf;
+  const hasAvailableAction = canAssign || canClaimNow || canReleaseNow;
 
   const idempotencyKey = (fingerprint: string): string => {
     if (requestRef.current?.fingerprint === fingerprint) {
@@ -483,7 +495,7 @@ export function AssigneeControl({
     }
   };
 
-  if (!loading && !canClaim && !canAssign) {
+  if (!loading && !error && !hasAvailableAction) {
     return (
       <span className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground">
         <UserPlus className="h-3 w-3 opacity-50" />
@@ -525,7 +537,7 @@ export function AssigneeControl({
           </div>
         ) : null}
 
-        {canClaim && !assigneeId ? (
+        {canClaimNow ? (
           <Button
             type="button"
             size="sm"
@@ -538,7 +550,7 @@ export function AssigneeControl({
             {copy.claim}
           </Button>
         ) : null}
-        {canClaim && isSelf ? (
+        {canReleaseNow ? (
           <Button
             type="button"
             size="sm"
