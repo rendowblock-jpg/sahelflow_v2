@@ -77,6 +77,27 @@ export function assertTrustedAction(
   }
 }
 
+/**
+ * Probe an action without weakening fail-closed behavior. Only the ordinary
+ * ACTION_FORBIDDEN result becomes false; malformed policy, untrusted context and
+ * authority failures still throw.
+ */
+export function trustedActionAllowed(
+  context: TrustedActorContext,
+  action: Phase2Action,
+  resource: AuthorizationResource = {},
+): boolean {
+  try {
+    assertTrustedAction(context, action, resource);
+    return true;
+  } catch (error) {
+    if (error instanceof SahelFlowError && error.code === "ACTION_FORBIDDEN") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export async function requireTrustedAction(
   action: Phase2Action,
   resource: AuthorizationResource = {},
