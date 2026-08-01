@@ -92,12 +92,15 @@ and the Windows-protected installation root with native rotation and installed-M
 proof (PR #184) are merged supporting packages. These are partial protected phase
 results.
 
-Draft PR #195 contains the complete Phase 1 source boundary, closed at
+Draft PR #195 assembled the intended Phase 1 source boundary at
 `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with normal CI `30652282305`
-and checkpoint `30652282191`. Phase 1 is source-closed on the integration branch
-and must not be reopened absent new concrete P0/P1 evidence.
+and checkpoint `30652282191`. Concrete P1 evidence found during later Teams review
+on 2026-08-01 reopened its shared command-replay boundary. Phase 1 remains
+reopened on the integration branch until same-person replay and affected order
+authorization pass a new exact-head checkpoint.
 
-Phase 2A packages 2A.1–2A.4 are source-closed on the draft integration branch.
+Phase 2A packages 2A.1–2A.4 retain their historical checkpoint evidence on the
+draft integration branch, but the shared replay boundary is reopened.
 The latest closed package, multi-member roles, invitations and per-shop
 permissions, passed at exact source head
 `3266dc03994ffcb1672256465624ea715f0cf317`, normal CI `30681155150` and

@@ -326,6 +326,54 @@ Research focus:
 - Windows-protected secret storage;
 - high-risk and two-person approval.
 
+#### Teams operational authorization repair — adopted 2026-08-01
+
+**Exact question.** How must central order mutations and idempotent command replay
+behave after SahelFlow introduces multiple durable people and custom field/action
+allowlists?
+
+**Current source.** PR #195 represented every durable person inside the legacy
+`authenticated-owner` business-principal kind. Its default replay rule accepted
+any stored actor with that prefix. Central order create/update also allowed a
+mutation to commit before read/projection denial, and compatibility update could
+write and return contact or financial fields without explicit field-write
+authority. Static source-string tests did not exercise those failures.
+
+**Primary evidence reviewed.** OWASP's current Authorization Cheat Sheet requires
+least privilege, deny by default, permission validation on every request, safe
+failure and unit/integration authorization tests. OWASP's Business Logic Security
+guidance requires server-side re-derivation of permissions and prices and treats
+every request field as untrusted. NIST SP 800-162 defines access decisions from
+subject, object, operation and environment attributes rather than role name
+alone. Sources reviewed 2026-08-01:
+
+- `https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html`;
+- `https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html`;
+- `https://csrc.nist.gov/pubs/sp/800/162/upd2/final`.
+
+**Alternatives.** Keeping the broad owner-prefix replay rule was rejected because
+role compatibility is not person identity. Requiring exact session equality was
+rejected because safe session rotation would break retry recovery. Returning raw
+mutation rows and relying on UI masking was rejected by Architecture INV-027.
+Blind field writes under read-only field actions were rejected because they make
+custom permission intent ambiguous and unsafe.
+
+**Adopted decision.** Default replay for a durable person is limited to that exact
+person across session rotation; cross-person or legacy-to-person replay requires
+an explicit command authorizer. Order create/update must prove read authority
+before mutation. Compatibility updates require distinct contact/financial write
+actions plus their corresponding read actions before touching those fields, and
+their responses use the same permission-filtered projection as reads. Custom
+allowlists inherit no new actions. Tests execute denial before persistence and
+verify redacted responses; source-string presence is not completion evidence.
+
+**Acceptance and revalidation.** Same-person replay succeeds after session
+rotation; cross-person replay is denied before result decryption; denied create
+or update leaves no mutation; protected field writes require exact actions;
+responses redact ungranted fields; AR/FR/EN permission labels are complete; the
+full exact-head checkpoint passes. Revalidate when principal encoding, permission
+vocabulary, remote commands, projection transport or multi-owner recovery changes.
+
 ### Phase 3 — Providers, inbox, AI and automations
 
 Research focus:

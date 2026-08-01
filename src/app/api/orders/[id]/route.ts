@@ -9,11 +9,14 @@ import { logAudit } from "@/lib/audit";
 import { orderService } from "@/lib/data/order-service";
 import { db, shopContext } from "@/lib/db";
 import {
+  assertTrustedAction,
   requireTrustedAction,
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
+import { assertOrderUpdateFieldAuthority } from "@/lib/identity/order-authorization";
 import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { updateOrderSchema } from "@/lib/validation";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -108,15 +111,21 @@ export const DELETE = withErrorHandler(
  */
 export const PATCH = withErrorHandler(
   async (req: NextRequest, { params }: RouteContext) => {
-    await requireTrustedAction("orders.update");
+    const actorContext = await requireTrustedAction("orders.update");
+    assertTrustedAction(actorContext, "orders.read", {
+      shopId: actorContext.shop.shopId,
+    });
     const { id } = await params;
-    const body = await req.json();
+    const body = updateOrderSchema.parse(await req.json());
+    assertOrderUpdateFieldAuthority(actorContext, body);
     const order = await orderService.update(
       { prisma: db, shop: shopContext },
       id,
       body,
     );
-    return NextResponse.json({ order });
+    return NextResponse.json({
+      order: projectOrderForTrustedActor(actorContext, order),
+    });
   },
   "PATCH /api/orders/[id]",
 );

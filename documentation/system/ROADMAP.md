@@ -117,7 +117,7 @@ cancellation, return, restart, update and interrupted-command recovery in
 AR/FR/EN. Disposable backup/restore compatibility preserves exact facts.
 Production native all-shop restore remains Phase 4.
 
-## Result — source-closed on draft PR #195
+## Result — reopened on draft PR #195 for concrete P1 replay repair
 
 - head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`;
 - normal CI `30652282305` — success;
@@ -125,8 +125,11 @@ Production native all-shop restore remains Phase 4.
 
 A separated sole-agent adversarial pass found and closed later courier booking and
 reconciliation generations, unreadable post-effect recovery and pre-query
-authority ordering. It was not independent review. Do not reopen Phase 1 absent
-new concrete P0/P1 evidence.
+authority ordering. It was not independent review. On 2026-08-01, later Teams
+review found concrete P1 evidence: the default command replay rule did not
+distinguish durable people represented inside the legacy authenticated-owner
+principal kind. Phase 1 remains reopened until same-person replay and affected
+route boundaries pass one new exact-head checkpoint.
 
 ---
 

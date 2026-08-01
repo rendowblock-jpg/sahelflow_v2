@@ -7,8 +7,10 @@ import type { BusinessCommandEnvelope } from "../contracts";
 import { executeBusinessCommand } from "../command-kernel";
 import { BUSINESS_ENVELOPE_SECRET_KEY } from "../envelope-key";
 import {
+  hasDefaultBusinessReplayAuthority,
   systemBusinessPrincipal,
   testAuthenticatedOwnerBusinessPrincipal,
+  testAuthenticatedPersonBusinessPrincipal,
 } from "../principal";
 
 const db = new PrismaClient();
@@ -72,6 +74,120 @@ afterAll(async () => {
 });
 
 describe("trusted business principals", () => {
+  it("binds durable-person replay to the same person across session rotation", () => {
+    const current = testAuthenticatedPersonBusinessPrincipal(
+      "person-a",
+      "session-new",
+    );
+
+    expect(
+      hasDefaultBusinessReplayAuthority(
+        "authenticated-owner:person:person-a:session:session-old",
+        current,
+      ),
+    ).toBe(true);
+    expect(
+      hasDefaultBusinessReplayAuthority(
+        "authenticated-owner:person:person-b:session:session-other",
+        current,
+      ),
+    ).toBe(false);
+    expect(
+      hasDefaultBusinessReplayAuthority(
+        "authenticated-owner:legacy-owner-session",
+        current,
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps legacy owner replay separate from durable person results", () => {
+    const legacy = testAuthenticatedOwnerBusinessPrincipal("session-new");
+
+    expect(
+      hasDefaultBusinessReplayAuthority(
+        "authenticated-owner:session-old",
+        legacy,
+      ),
+    ).toBe(true);
+    expect(
+      hasDefaultBusinessReplayAuthority(
+        "authenticated-owner:person:person-a:session:session-old",
+        legacy,
+      ),
+    ).toBe(false);
+  });
+
+  it("denies a durable person's replay to a different person before result exposure", async () => {
+    const command = probeCommand(
+      "durable-person-replay-denied",
+      "durable-person-aggregate",
+    );
+    await executeBusinessCommand(
+      {
+        prisma: db as never,
+        businessPrincipal: testAuthenticatedPersonBusinessPrincipal(
+          "person-a",
+          "session-a",
+        ),
+      },
+      command,
+      async () => probeOutcome(command.aggregate.id),
+    );
+
+    const replayHandler = vi.fn(async () => probeOutcome(command.aggregate.id));
+    await expect(
+      executeBusinessCommand(
+        {
+          prisma: db as never,
+          businessPrincipal: testAuthenticatedPersonBusinessPrincipal(
+            "person-b",
+            "session-b",
+          ),
+        },
+        command,
+        replayHandler,
+      ),
+    ).rejects.toMatchObject({
+      code: "BUSINESS_COMMAND_REPLAY_FORBIDDEN",
+      statusCode: 403,
+    });
+    expect(replayHandler).not.toHaveBeenCalled();
+  });
+
+  it("permits durable same-person replay after session rotation", async () => {
+    const command = probeCommand(
+      "durable-person-session-replay",
+      "durable-person-session-aggregate",
+    );
+    const first = await executeBusinessCommand(
+      {
+        prisma: db as never,
+        businessPrincipal: testAuthenticatedPersonBusinessPrincipal(
+          "person-a",
+          "session-old",
+        ),
+      },
+      command,
+      async () => probeOutcome(command.aggregate.id),
+    );
+
+    const replayHandler = vi.fn(async () => probeOutcome(command.aggregate.id));
+    const replay = await executeBusinessCommand(
+      {
+        prisma: db as never,
+        businessPrincipal: testAuthenticatedPersonBusinessPrincipal(
+          "person-a",
+          "session-new",
+        ),
+      },
+      command,
+      replayHandler,
+    );
+
+    expect(replay).toEqual({ ...first, replayed: true });
+    expect(replayHandler).not.toHaveBeenCalled();
+  });
+
   it("persists trusted execution authorship and records the caller claim only as metadata", async () => {
     await executeBusinessCommand(
       context,

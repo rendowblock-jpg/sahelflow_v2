@@ -8,7 +8,10 @@ import {
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { orderService } from "@/lib/data/order-service";
 import { db, shopContext } from "@/lib/db";
-import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 import {
   projectOrderForTrustedActor,
   projectOrdersForTrustedActor,
@@ -93,6 +96,9 @@ export async function GET(req: NextRequest) {
 /** POST /api/orders — governed manual intake or compatibility intake. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("orders.create");
+  assertTrustedAction(actorContext, "orders.read", {
+    shopId: actorContext.shop.shopId,
+  });
   const businessContext = {
     ...context,
     businessPrincipal: businessPrincipalFromTrustedActor(actorContext),

@@ -7,8 +7,8 @@ function source(path: string): string {
   return readFileSync(resolve(process.cwd(), path), "utf8");
 }
 
-describe("central order permission boundary", () => {
-  it("requires granular trusted actions and permission-filtered responses", () => {
+describe("central order permission wiring inventory", () => {
+  it("keeps every central handler on named trusted actions", () => {
     const collection = source("src/app/api/orders/route.ts");
     const item = source("src/app/api/orders/[id]/route.ts");
 
@@ -21,7 +21,8 @@ describe("central order permission boundary", () => {
     expect(item).toContain('requireTrustedAction("orders.read")');
     expect(item).toContain('requireTrustedAction("orders.update")');
     expect(item).toContain('requireTrustedAction("orders.delete")');
-    expect(item).toContain("projectOrderForTrustedActor");
+    expect(item).toContain("assertOrderUpdateFieldAuthority");
+    expect(item).toContain("order: projectOrderForTrustedActor");
     expect(item).not.toContain("requireAuth()");
   });
 });

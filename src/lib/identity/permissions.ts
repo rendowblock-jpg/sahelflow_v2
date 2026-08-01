@@ -26,7 +26,9 @@ export const PHASE2_ACTIONS = Object.freeze([
   "orders.delete",
   "orders.assign",
   "customers.contact.read",
+  "customers.contact.update",
   "orders.financials.read",
+  "orders.financials.update",
   "approvals.request",
   "approvals.approve",
 ] as const);
@@ -67,7 +69,9 @@ const PRESET_PERMISSIONS: Readonly<Record<Phase2Role, readonly Phase2Action[]>> 
     "orders.update",
     "orders.assign",
     "customers.contact.read",
+    "customers.contact.update",
     "orders.financials.read",
+    "orders.financials.update",
     "approvals.request",
   ]),
   operator: Object.freeze([
@@ -83,6 +87,7 @@ const PRESET_PERMISSIONS: Readonly<Record<Phase2Role, readonly Phase2Action[]>> 
     "orders.create",
     "orders.update",
     "customers.contact.read",
+    "customers.contact.update",
     "approvals.request",
   ]),
   viewer: Object.freeze([

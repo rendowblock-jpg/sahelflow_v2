@@ -118,6 +118,23 @@ export function mockPost(
   });
 }
 
+/** Build a mock Request for a PATCH with JSON body. */
+export function mockPatch(
+  url: string,
+  body: unknown,
+  headers?: Record<string, string>,
+): NextRequest {
+  return new NextRequest(url, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-forwarded-for": uniqueIp(),
+      ...directRouteHeaders(headers),
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 /** Build a mock Request for a GET. */
 export function mockGet(
   url: string,

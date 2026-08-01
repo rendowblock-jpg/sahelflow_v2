@@ -22,6 +22,15 @@ describe("authority-driven team access UI", () => {
     expect(source).toContain("inventory?.permissionCatalog.actions");
     expect(source).not.toMatch(/export const ACTIONS\s*=\s*\[/);
     expect(source).not.toMatch(/const ROLE_CEILINGS\s*:/);
+    for (const action of [
+      "orders.create",
+      "orders.update",
+      "orders.delete",
+      "customers.contact.update",
+      "orders.financials.update",
+    ]) {
+      expect(source.match(new RegExp(`"${action}":`, "g"))).toHaveLength(3);
+    }
     expect(settings).toContain("<TeamAccessAuthorityPanel />");
     expect(settings).not.toContain("<TeamAccessPanel />");
   });

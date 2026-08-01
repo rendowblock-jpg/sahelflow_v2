@@ -131,14 +131,30 @@ export function testAuthenticatedOwnerBusinessPrincipal(
   return createPrincipal("authenticated-owner", sessionId);
 }
 
+/** Test-only durable-person principal for replay-boundary integration tests. */
+export function testAuthenticatedPersonBusinessPrincipal(
+  personId: string,
+  sessionId: string,
+): TrustedBusinessPrincipal {
+  if (process.env.NODE_ENV !== "test" && process.env.VITEST !== "true") {
+    throw principalError(
+      "The authenticated-person test principal is unavailable outside tests",
+    );
+  }
+  return createPrincipal(
+    "authenticated-owner",
+    `person:${personId}:session:${sessionId}`,
+  );
+}
+
 /**
  * Determine whether a stored command actor and the current principal represent
  * the same default replay authority.
  *
- * Authenticated owner sessions are ephemeral audit identities, but this is a
- * single-owner, process-bound shop. Any currently authenticated owner session
- * therefore retains replay access to commands authored by an earlier owner
- * session in the same validated shop. Other principal kinds remain
+ * Session IDs are ephemeral audit attributes. Durable person principals retain
+ * replay access only to commands authored by the same person across session
+ * rotation. Legacy single-owner/test principals remain mutually compatible but
+ * cannot read a durable person's result. Other principal kinds remain
  * subject-specific unless an explicit replay authorizer grants access.
  */
 export function hasDefaultBusinessReplayAuthority(
@@ -146,7 +162,43 @@ export function hasDefaultBusinessReplayAuthority(
   principal: TrustedBusinessPrincipal,
 ): boolean {
   if (principal.kind === "authenticated-owner") {
-    return storedAuditActor.startsWith("authenticated-owner:");
+    const personPrefix = "authenticated-owner:person:";
+    const sessionMarker = ":session:";
+    const currentAuditActor = principal.auditActor;
+
+    if (currentAuditActor.startsWith(personPrefix)) {
+      const currentSessionMarker = currentAuditActor.indexOf(
+        sessionMarker,
+        personPrefix.length,
+      );
+      if (currentSessionMarker < 0) return false;
+
+      const currentPerson = currentAuditActor.slice(
+        personPrefix.length,
+        currentSessionMarker,
+      );
+      if (!currentPerson || !storedAuditActor.startsWith(personPrefix)) {
+        return false;
+      }
+
+      const storedSessionMarker = storedAuditActor.indexOf(
+        sessionMarker,
+        personPrefix.length,
+      );
+      return (
+        storedSessionMarker >= 0 &&
+        storedAuditActor.slice(personPrefix.length, storedSessionMarker) ===
+          currentPerson
+      );
+    }
+
+    // Pre-durable-identity owner/test principals retain session-rotation replay
+    // only among other legacy owner principals. They can never read a durable
+    // person's committed result.
+    return (
+      storedAuditActor.startsWith("authenticated-owner:") &&
+      !storedAuditActor.startsWith(personPrefix)
+    );
   }
   return storedAuditActor === principal.auditActor;
 }

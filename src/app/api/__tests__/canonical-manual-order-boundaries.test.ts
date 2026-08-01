@@ -4,7 +4,32 @@ process.env.SF_MASTER_KEY =
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const requireTrustedActorMock = vi.hoisted(() => vi.fn());
+const authority = vi.hoisted(() => ({
+  requireTrustedActor: vi.fn(),
+  requireTrustedAction: vi.fn(),
+  ownerContext: {
+    version: 1,
+    actor: {
+      kind: "person" as const,
+      personId: "5".repeat(32),
+      workspaceMemberId: "6".repeat(32),
+      deviceId: "7".repeat(32),
+      sessionId: "canonical-boundary-session",
+      role: "owner" as const,
+      policyVersion: 1,
+      revocationEpoch: 0,
+    },
+    shop: {
+      workspaceId: "1".repeat(32),
+      installationId: "2".repeat(32),
+      shopId: "default",
+      shopIncarnationId: "3".repeat(32),
+      registryRevision: 1,
+      databaseFileId: "default.db",
+      migrationSetSha256: "4".repeat(64),
+    },
+  },
+}));
 
 import {
   cleanDb,
@@ -32,9 +57,41 @@ vi.mock("@/lib/automations/engine", () => ({
   detectLowStock: vi.fn(async () => null),
 }));
 
-vi.mock("@/lib/identity/trusted-actor", () => ({
-  requireTrustedActor: requireTrustedActorMock,
-}));
+vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/trusted-actor")
+  >();
+  return {
+    ...actual,
+    requireTrustedActor: authority.requireTrustedActor,
+    isTrustedActorContext: vi.fn(() => true),
+  };
+});
+
+vi.mock("@/lib/identity/authorization", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/authorization")
+  >();
+  return {
+    ...actual,
+    requireTrustedAction: authority.requireTrustedAction,
+  };
+});
+
+vi.mock("@/lib/business-truth/principal", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/business-truth/principal")
+  >();
+  return {
+    ...actual,
+    businessPrincipalFromTrustedActor: vi.fn(() =>
+      actual.testAuthenticatedPersonBusinessPrincipal(
+        authority.ownerContext.actor.personId,
+        "canonical-boundary-test",
+      ),
+    ),
+  };
+});
 
 import { PATCH as PATCHOrder } from "@/app/api/orders/[id]/route";
 import { POST as POSTDecision } from "@/app/api/orders/[id]/decision/route";
@@ -86,8 +143,12 @@ function manualBody(customerId: string, productId: string) {
 }
 
 beforeEach(async () => {
-  requireTrustedActorMock.mockReset();
-  requireTrustedActorMock.mockResolvedValue(undefined);
+  authority.requireTrustedActor
+    .mockReset()
+    .mockResolvedValue(authority.ownerContext);
+  authority.requireTrustedAction
+    .mockReset()
+    .mockResolvedValue(authority.ownerContext);
   await cleanCanonical();
   await cleanDb();
 });
@@ -99,7 +160,7 @@ afterAll(async () => {
 
 describe("canonical manual order API boundary", () => {
   it("rejects fulfillment before parsing when no trusted actor is available", async () => {
-    requireTrustedActorMock.mockRejectedValueOnce(
+    authority.requireTrustedActor.mockRejectedValueOnce(
       new SahelFlowError(
         "A trusted actor is unavailable before authentication setup completes",
         "TRUSTED_ACTOR_REQUIRED",

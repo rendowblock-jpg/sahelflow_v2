@@ -16,6 +16,7 @@ import {
 import {
   cleanDb,
   getJson,
+  mockPatch,
   mockPost,
   rawDb,
   seedProduct,
@@ -56,6 +57,13 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
+vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/trusted-actor")
+  >();
+  return { ...actual, isTrustedActorContext: vi.fn(() => true) };
+});
+
 vi.mock("@/lib/identity/authorization", async (importOriginal) => {
   const actual = await importOriginal<
     typeof import("@/lib/identity/authorization")
@@ -70,25 +78,13 @@ vi.mock("@/lib/business-truth/principal", async (importOriginal) => {
   return {
     ...actual,
     businessPrincipalFromTrustedActor: vi.fn(() =>
-      actual.testAuthenticatedOwnerBusinessPrincipal("orders-route-test"),
+      actual.testAuthenticatedPersonBusinessPrincipal(
+        authority.ownerContext.actor.personId,
+        "orders-route-test",
+      ),
     ),
   };
 });
-
-vi.mock("@/lib/identity/order-projection", () => ({
-  projectOrderForTrustedActor: (_context: unknown, order: Record<string, unknown>) => ({
-    ...order,
-    fieldAccess: { contact: true, financials: true },
-  }),
-  projectOrdersForTrustedActor: (
-    _context: unknown,
-    orders: Array<Record<string, unknown>>,
-  ) =>
-    orders.map((order) => ({
-      ...order,
-      fieldAccess: { contact: true, financials: true },
-    })),
-}));
 
 vi.mock("@/lib/automations/engine", () => ({
   dispatchTrigger: vi.fn(async () => {}),
@@ -97,6 +93,7 @@ vi.mock("@/lib/automations/engine", () => ({
 }));
 
 import { POST as POSTOrder } from "@/app/api/orders/route";
+import { PATCH as PATCHOrder } from "@/app/api/orders/[id]/route";
 import { PATCH as PATCHStatus } from "@/app/api/orders/[id]/status/route";
 import { POST as POSTBulk } from "@/app/api/orders/bulk/route";
 
@@ -144,6 +141,17 @@ function orderBody(
     phone: "0555000001",
     source: options?.source ?? "manual",
     deliveryCost: options?.deliveryCost ?? 600,
+  };
+}
+
+function customOperatorContext(permissions: readonly string[]) {
+  return {
+    ...authority.ownerContext,
+    actor: {
+      ...authority.ownerContext.actor,
+      role: "operator" as const,
+      permissions,
+    },
   };
 }
 
@@ -242,6 +250,142 @@ describe("POST /api/orders — create order", () => {
     );
     expect(response.status).toBe(401);
     expect(await rawDb.order.count()).toBe(0);
+  });
+
+  it("denies create without read authority before committing an order", async () => {
+    authority.requireAction.mockResolvedValue(
+      customOperatorContext(["orders.create"]),
+    );
+    const product = await seedProduct();
+    const customer = await seedCustomer();
+
+    const response = await POSTOrder(
+      mockPost(
+        "http://localhost/api/orders",
+        orderBody(customer.id, product.id),
+      ),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await rawDb.order.count()).toBe(0);
+    expect(await rawDb.businessCommand.count()).toBe(0);
+  });
+});
+
+describe("PATCH /api/orders/[id] — governed compatibility edit", () => {
+  beforeEach(async () => {
+    await cleanDb();
+    authority.requireAction
+      .mockReset()
+      .mockResolvedValue(authority.ownerContext);
+  });
+
+  async function seedCompatibilityOrder() {
+    const product = await seedProduct({ price: 2_500, stock: 100 });
+    const customer = await seedCustomer();
+    const order = await rawDb.order.create({
+      data: {
+        orderNumber: `ORD-EDIT-${customerCounter}`,
+        status: "draft",
+        customerId: customer.id,
+        totalPrice: 3_000,
+        deliveryCost: 500,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "Original address",
+        phone: "0555000001",
+        source: "manual",
+        items: {
+          create: [{
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: product.price,
+            total: product.price,
+          }],
+        },
+      },
+    });
+    return order;
+  }
+
+  it("denies an edit without read authority before changing the order", async () => {
+    const order = await seedCompatibilityOrder();
+    authority.requireAction.mockResolvedValue(
+      customOperatorContext([
+        "orders.update",
+        "customers.contact.read",
+        "customers.contact.update",
+      ]),
+    );
+
+    const response = await PATCHOrder(
+      mockPatch(`http://localhost/api/orders/${order.id}`, {
+        address: "Denied address",
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
+      address: "Original address",
+    });
+  });
+
+  it("denies a protected contact edit without contact write authority", async () => {
+    const order = await seedCompatibilityOrder();
+    authority.requireAction.mockResolvedValue(
+      customOperatorContext([
+        "orders.read",
+        "orders.update",
+        "customers.contact.read",
+      ]),
+    );
+
+    const response = await PATCHOrder(
+      mockPatch(`http://localhost/api/orders/${order.id}`, {
+        phone: "0555111111",
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
+      phone: "0555000001",
+    });
+  });
+
+  it("projects the mutation response through the actor's field permissions", async () => {
+    const order = await seedCompatibilityOrder();
+    authority.requireAction.mockResolvedValue(
+      customOperatorContext([
+        "orders.read",
+        "orders.update",
+        "customers.contact.read",
+        "customers.contact.update",
+      ]),
+    );
+
+    const response = await PATCHOrder(
+      mockPatch(`http://localhost/api/orders/${order.id}`, {
+        notes: "Call before delivery",
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+    const body = await getJson(response);
+
+    expect(response.status).toBe(200);
+    expect(authority.requireAction).toHaveBeenCalledWith("orders.update");
+    expect(body.order).toMatchObject({
+      notes: "Call before delivery",
+      phone: "0555000001",
+      totalPrice: null,
+      deliveryCost: null,
+      fieldAccess: { contact: true, financials: false },
+    });
+    expect(
+      (body.order as { items: Array<{ unitPrice: number | null }> }).items[0],
+    ).toMatchObject({ unitPrice: null });
   });
 });
 

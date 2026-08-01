@@ -27,13 +27,19 @@ externally reviewed or Founder-accepted.
 Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
 remain later separate gates.
 
-## Phase 1 — source-closed
+## Phase 1 — concrete P1 replay repair active
 
 - head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f`;
 - normal CI `30652282305` — success;
 - checkpoint `30652282191` — success.
 
-Do not reopen absent new concrete P0/P1 evidence.
+The earlier source-closure verdict is reopened by concrete P1 evidence found on
+2026-08-01. Durable people were still minted as `authenticated-owner` principals,
+while the default command replay rule accepted every stored
+`authenticated-owner:*` result. A different authenticated member could therefore
+replay another member's committed command result if the exact idempotency key was
+presented. Phase 1 cannot return to source-closed until replay is bound to the same
+durable person across session rotation and the exact-head checkpoint is green.
 
 ## Phase 2A.1 result — setup and session authority closed
 
@@ -91,10 +97,10 @@ Closed boundaries:
 - duplicate/concurrent invitation, acceptance and revocation, restart, expiry,
   replay, recovery and cross-shop proofs.
 
-The frozen sole-agent adversarial pass found and closed revoked-login disclosure,
+The earlier frozen sole-agent adversarial pass found and closed revoked-login disclosure,
 stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
-login false-success. It found no remaining P0/P1. It was not an independent
-review.
+login false-success. Its no-P0/P1 verdict is superseded for the shared replay
+boundary by the concrete finding above. It was not an independent review.
 
 PIN remains local unlock and reauthentication, never durable person identity.
 The sole core owner cannot be removed or demoted by the accepted-member APIs;
@@ -128,6 +134,23 @@ It found no remaining P0/P1 in this vertical and was not an independent review.
 
 ## Active package — Teams and permissions completion
 
+### Current exact frontier
+
+- shared collaboration head `32566dd35759a8fc080538e58f802940dce05535`:
+  normal CI `30686712674` and checkpoint `30686712592` succeeded;
+- permission implementation head
+  `34410a177ee98e320e7f922b89cc33a67c106a7b`: normal CI `30687975946`
+  succeeded and checkpoint `30687975865` failed at the first stale durable-actor
+  fixture;
+- documentation head `b053170cafc4cf1452d5ffbaab5cb75e369c5b9f`
+  added an eleventh active handoff document and therefore fails `sf-audit` before
+  the source checkpoint can reach Vitest.
+
+The repair package removes the duplicate handoff authority, binds replay to the
+same durable person, prevents create/update commit-then-deny behavior, enforces
+protected order-field writes before mutation, projects mutation responses and
+replaces static boundary assertions with executable authorization evidence.
+
 ### Remaining required contract
 
 1. Add shared per-shop workgroup and queue authority reusable by conversations,
@@ -148,21 +171,20 @@ It found no remaining P0/P1 in this vertical and was not an independent review.
 8. Prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
    recovery behavior before licensing begins.
 
-### Exact next-session order
+### Exact execution order
 
-1. Re-read PR #195, this file and the Phase 2 exit gate.
-2. Add one generic collaboration persistence contract for workgroups, queues,
-   assignments, comments and mentions without duplicating installation identity.
-3. Implement owner/manager workgroup and queue administration with exact member
-   validation and archive-safe recovery.
-4. Adopt the collaboration authority in inbox and one order/confirmation queue
-   path; legacy scalar fields become projections only.
-5. Implement internal comments and mentions with encrypted content and append-only
-   history.
-6. Complete operational action/field permission coverage and custom-role UI.
-7. Run one exact-head source checkpoint and separated frozen adversarial pass.
-8. Continue to signed licensing/entitlements only after Teams and permissions is
-   green.
+1. Complete the concrete replay, order authorization, field projection and stale
+   fixture repairs without weakening production authority.
+2. Pass the exact authority/docs gate, TypeScript, ESLint and full unit/integration
+   checkpoint on one exact branch head.
+3. Adopt generic routing and internal comments in inbox and order detail.
+4. Replace generic authentication on remaining conversation and order mutations
+   with explicit operational actions.
+5. Verify protected customer/contact and financial projections across remaining
+   material APIs and UI surfaces.
+6. Run one frozen exact-head adversarial pass across replay, revocation,
+   cross-shop scope, field leakage, concurrency, recovery and AR/FR/EN states.
+7. Close Teams and permissions only when no P0/P1 remains; then begin licensing.
 
 ## Protected local boundaries
 

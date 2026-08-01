@@ -36,7 +36,9 @@ describe("Phase 2 permission policy", () => {
         "conversations.assign",
         "orders.assign",
         "customers.contact.read",
+        "customers.contact.update",
         "orders.financials.read",
+        "orders.financials.update",
         "approvals.approve",
       ]),
     );
@@ -47,7 +49,9 @@ describe("Phase 2 permission policy", () => {
         "comments.write",
         "conversations.assign",
         "orders.assign",
+        "customers.contact.update",
         "orders.financials.read",
+        "orders.financials.update",
       ]),
     );
     expect(manager).not.toContain("shops.delete");
@@ -61,11 +65,13 @@ describe("Phase 2 permission policy", () => {
         "conversations.claim",
         "orders.read",
         "customers.contact.read",
+        "customers.contact.update",
       ]),
     );
     expect(operator).not.toContain("conversations.assign");
     expect(operator).not.toContain("orders.assign");
     expect(operator).not.toContain("orders.financials.read");
+    expect(operator).not.toContain("orders.financials.update");
     expect(viewer).toEqual(
       expect.arrayContaining([
         "shops.read",
@@ -78,7 +84,9 @@ describe("Phase 2 permission policy", () => {
     );
     expect(viewer).not.toContain("comments.write");
     expect(viewer).not.toContain("customers.contact.read");
+    expect(viewer).not.toContain("customers.contact.update");
     expect(viewer).not.toContain("orders.financials.read");
+    expect(viewer).not.toContain("orders.financials.update");
   });
 
   it("keeps the compatibility owner read-only until durable authority exists", () => {

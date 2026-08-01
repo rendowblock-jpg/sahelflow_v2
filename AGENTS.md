@@ -1,8 +1,9 @@
 # SahelFlow agent entry point
 
-SahelFlow currently uses one coding agent—the ChatGPT Web Agentic Coding Agent—and
-GitHub as durable truth. The Founder-owned Windows checkout is local evidence and
-must not be modified, reset or deleted merely to simplify branch work.
+SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent with one
+active implementation owner at a time, plus GitHub as durable truth. The
+Founder-owned Windows checkout is local evidence and must not be modified, reset
+or deleted merely to simplify branch work.
 
 GitHub Actions is clean-checkout validation and artifact infrastructure, not a
 coding agent. GLM, Codex Cloud, MAWS and legacy handoff systems are not active
@@ -112,13 +113,18 @@ existence are not authority.
 - Internal.5 remains the Founder-accepted baseline.
 - Draft PR #195 is unmerged proposed source and remains version-neutral.
 
-## Closed source packages
+## Source packages and reopened blocker
 
 ### Phase 1 — Golden COD core
 
-Closed at `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with CI
-`30652282305` and checkpoint `30652282191` successful. Do not reopen absent new
-concrete P0/P1 evidence.
+Previously closed at `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with CI
+`30652282305` and checkpoint `30652282191` successful. That verdict was valid
+only absent new concrete P0/P1 evidence.
+
+Concrete P1 evidence found on 2026-08-01 reopens the shared Phase 1 replay
+boundary: durable people were not distinguished by the default command-result
+replay rule. Repair same-person replay and affected order authorization on one
+new exact green head before restoring the source-closed claim.
 
 ### Phase 2A.1 — setup and session authority
 
