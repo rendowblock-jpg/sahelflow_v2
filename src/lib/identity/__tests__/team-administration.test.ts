@@ -177,7 +177,9 @@ describe("team member administration", () => {
       databaseState: "revoked",
       changedSessions: 2,
     });
-    expect(result.sessionIds).toEqual(expect.arrayContaining(created.sessionIds));
+    expect(result.sessionIds).toEqual(
+      expect.arrayContaining([...created.sessionIds]),
+    );
     await expect(
       resolveDurableIdentityActor(created.sessionIds[0], SHOP),
     ).rejects.toMatchObject({
