@@ -8,7 +8,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 2A — durable local identity and session authority
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
 > **Active package:** Teams and permissions completion
 > **Active branch:** `agent/phases1-4-completion-program`
 > **Active PR:** draft PR #195 — `program: complete phases 1–4`
@@ -101,39 +101,68 @@ The sole core owner cannot be removed or demoted by the accepted-member APIs;
 last-owner recovery remains a separate explicit ceremony if multi-owner support is
 introduced later.
 
+## Teams vertical 1 result — governed conversation assignment and handover closed
+
+- head `c72bf67afd954de3b51d473036adc47223b73d3e`;
+- normal CI `30683805165` — success;
+- checkpoint `30683805097` — success.
+
+Closed boundaries:
+
+- exact `WorkspaceMember` assignment targets; no free-text assignee authority;
+- self-claim and self-release for operators;
+- owner/manager assignment, unassignment and handover;
+- exact-shop and current revocation checks before target exposure or mutation;
+- command-kernel idempotency, optimistic aggregate versions and same-person replay
+  across session rotation;
+- atomic assignment projection, encrypted activity, trusted audit, domain event
+  and projection invalidation;
+- read-only live-JID hydration and atomic write-time JID upsert;
+- no assignment-version N+1 on inbox list reads;
+- Arabic/French/English loading, conflict, error and activity states;
+- permission, duplicate, concurrent, restart, replay and route-ordering proof.
+
+The separated frozen-head pass found and closed read-time row creation, revoked
+member target exposure, list-query amplification and claim-only empty-menu behavior.
+It found no remaining P0/P1 in this vertical and was not an independent review.
+
 ## Active package — Teams and permissions completion
 
-### Required contract
+### Remaining required contract
 
-1. Define durable assignments, workgroups, queues, internal comments, mentions
-   and handovers on the authoritative desktop.
-2. Extend the action vocabulary beyond identity administration to the Required
-   operational domains and add field-level restrictions where the product contract
-   requires them.
-3. Derive every assignment, comment, queue and handover mutation from the trusted
-   member actor and exact shop context; UI visibility is never authorization.
-4. Preserve audit attribution, idempotency, optimistic concurrency, replay safety
-   and revocation behavior across every collaboration command.
-5. Keep manager/operator/viewer presets least-privilege and custom policies
-   deny-by-default when new actions are introduced.
-6. Provide complete Arabic/French/English loading, empty, permission, conflict,
+1. Add shared per-shop workgroup and queue authority reusable by conversations,
+   orders and confirmation work.
+2. Add append-only internal comments, explicit member mentions and durable handover
+   history distinct from customer/provider messages.
+3. Extend the action vocabulary and role ceilings to the Required operational
+   domains; custom policies remain exact deny-by-default allowlists.
+4. Add field-level projections for protected customer/contact and financial data
+   where the product contract requires narrower access.
+5. Derive every collaboration mutation from the trusted member actor and exact
+   shop context; UI visibility is never authorization.
+6. Preserve trusted audit attribution, idempotency, optimistic concurrency,
+   replay safety, revocation and recovery for workgroup, queue, comment and
+   handover commands.
+7. Provide complete Arabic/French/English loading, empty, permission, conflict,
    stale, offline and recovery states.
-7. Prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
-   handover-recovery behavior before continuing to licensing.
+8. Prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
+   recovery behavior before licensing begins.
 
 ### Exact next-session order
 
 1. Re-read PR #195, this file and the Phase 2 exit gate.
-2. Inventory existing assignment, queue, note/comment, mention and audit models,
-   routes and UI; do not assume old tables are authoritative.
-3. Freeze the collaboration aggregate and permission-action contracts.
-4. Implement one representative owner/manager/operator assignment and handover
-   vertical with trusted actor, exact shop, audit and recovery.
-5. Expand only after the representative vertical passes permission, concurrency,
-   restart and Arabic/French/English states.
-6. Run one exact-head source checkpoint and a separated frozen adversarial pass.
-7. Continue to licensing/entitlements only after teams and permissions completion
-   is green.
+2. Add one generic collaboration persistence contract for workgroups, queues,
+   assignments, comments and mentions without duplicating installation identity.
+3. Implement owner/manager workgroup and queue administration with exact member
+   validation and archive-safe recovery.
+4. Adopt the collaboration authority in inbox and one order/confirmation queue
+   path; legacy scalar fields become projections only.
+5. Implement internal comments and mentions with encrypted content and append-only
+   history.
+6. Complete operational action/field permission coverage and custom-role UI.
+7. Run one exact-head source checkpoint and separated frozen adversarial pass.
+8. Continue to signed licensing/entitlements only after Teams and permissions is
+   green.
 
 ## Protected local boundaries
 
