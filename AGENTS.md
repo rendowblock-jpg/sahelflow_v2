@@ -1,7 +1,8 @@
 # SahelFlow agent entry point
 
-SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent with one
-active implementation owner at a time, plus GitHub as durable truth. The
+SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent as two
+concurrent peers, plus GitHub as durable truth. Each outcome still has one
+integration owner, branch, worktree and PR. The
 Founder-owned Windows checkout is local evidence and must not be modified, reset
 or deleted merely to simplify branch work.
 
@@ -12,7 +13,7 @@ authority.
 ## Start here
 
 1. Read [`documentation/README.md`](documentation/README.md).
-2. Read FD-028 in
+2. Read FD-028 and FD-029 in
    [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
 3. Read the active phase and exit gate in
    [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
@@ -24,6 +25,10 @@ authority.
    sections.
 8. Inspect exact source, migrations and tests before trusting implementation
    claims.
+
+Before work, declare the session type: governance/planning, research/contract,
+implementation, frozen review/closure or installed evidence. Governance/planning
+sessions perform no product implementation.
 
 Chat history and archived reports are context only. They never replace current
 GitHub authority.
@@ -61,32 +66,36 @@ Valid FD-027 rules remain: bounded WIP, coherent outcome packages, P0/P1 blockin
 milestone releases, exact-source evidence and continuous Arabic/RTL,
 accessibility, recovery and performance.
 
-## Founder execution-granularity decision
+## FD-029 dual-agent execution decision
 
-- Use the long-lived integration branch `agent/phases1-4-completion-program`
-  under draft PR #195.
-- Complete coherent outcomes across authority, schema, API, UI, recovery and
-  evidence boundaries.
-- Use targeted reasoning while assembling and one exact-head full source
-  checkpoint at a coherent boundary.
-- Defer the full Windows/Rust/MSI suite until the declared multi-phase source is
-  frozen unless a package requires a bounded platform fixture.
-- P0/P1 block the affected outcome; P2/P3 become owned follow-ups.
-- Keep CI read-only and never write protected branches from workflows.
-- Preserve unrelated local work, canonical AppData, databases, registry and keys.
+FD-029 supersedes the former **Founder execution-granularity decision** and
+**Sole-agent review rule**. The existing
+`agent/phases1-4-completion-program` branch remains only to close Teams and PR
+#195; it is not authority for another long-lived multi-phase PR.
 
-### Sole-agent review rule
-
-Only one coding agent is active. Therefore:
-
-- do not block progress waiting for a fictional second agent;
-- use a separated adversarial pass on a frozen exact head before closing a
-  high-risk package;
-- make no edits during that pass;
-- record findings and apply bounded blocker repairs before refreezing;
-- never describe the pass as independent review;
-- external independent security/privacy/legal/provider review remains mandatory
-  where the roadmap requires real external evidence.
+- Target uncompromised top-tier class-AAA quality across every applicable
+  product, business, data, security, recovery, Windows, provider, UI/UX,
+  localization, accessibility, performance, test and evidence layer.
+- Freeze shared schema, migration, identity, permission, command, event,
+  provider and design-system contracts before dependent parallel work.
+- Web and Desktop agents use separate mutable worktrees and branches. They never
+  concurrently edit one worktree or infer ownership from chat.
+- One agent integrates each outcome. The other may implement a dependency-
+  independent outcome, prepare bounded research/impact maps/fixtures or review
+  the frozen head.
+- The non-authoring agent reviews material frozen work. External independent
+  security/privacy/legal/provider review remains separately mandatory where the
+  roadmap requires it.
+- Before production edits, inventory all callers, direct tests, mocks, dynamic
+  imports, migrations, protected fields, UI states, recovery, performance,
+  evidence and legacy removal affected by the package.
+- Draft CI reports complete actionable failures through path/risk-aware parallel
+  lanes and an always-reporting aggregator. Frozen full checkpoints remain
+  blocking.
+- After Teams closes, PR #195 stops. Licensing, multi-shop and later outcomes
+  use short dedicated PRs from current protected `main`.
+- Keep CI read-only; preserve unrelated work, canonical AppData, databases,
+  registry and keys.
 
 ## Research-first gate
 
@@ -198,8 +207,8 @@ The package must:
    stale, offline and recovery states;
 7. prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
    handover-recovery behavior;
-8. finish with one exact-head source checkpoint and a separated frozen
-   adversarial pass.
+8. finish with one exact-head source checkpoint and non-authoring frozen-head
+   review.
 
 Licensing/entitlements and native multi-shop lifecycle remain later Phase 2
 packages after teams and permissions completion is stable.
@@ -211,11 +220,14 @@ packages after teams and permissions completion is stable.
 - Verify protected `main`, PR #195, exact branch head and latest checks.
 - Read Working Memory and the PR body.
 - Inspect exact active source and tests.
-- Never infer another active agent from branch movement.
+- Resolve explicit lane ownership, worktree, dependencies and integration order.
+- Never infer another agent's intent from branch movement or chat context.
 
 ### Build coherent outcomes
 
 - Keep one active core-authority package at a time.
+- Allow at most two dependency-independent seller outcomes after shared contract
+  freeze; reserve remaining capacity for integration and verification.
 - Finish applicable authority, schema, API, UI, recovery, AR/FR/EN and invariant
   tests.
 - Do not weaken production authority to satisfy stale tests.
@@ -227,7 +239,7 @@ packages after teams and permissions completion is stable.
 1. run the exact authority/docs gate;
 2. pass Prisma generation and migration status where applicable;
 3. pass TypeScript, ESLint and the full unit/integration suite;
-4. perform the frozen-head sole-agent adversarial pass;
+4. obtain non-authoring frozen-head review and close every P0/P1;
 5. update Working Memory, PR #195 and issue #164 with exact evidence;
 6. keep PR #195 draft and unmerged;
 7. keep the application version unchanged for ordinary source packages.

@@ -6,12 +6,12 @@
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
-> **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
+> **Operating authority:** FD-028, FD-029, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
 > **Active phase:** Phase 2A — durable local identity and session authority
 > **Active package:** Teams and permissions completion
 > **Active branch:** `agent/phases1-4-completion-program`
-> **Active PR:** draft PR #195 — `program: complete phases 1–4`
+> **Active PR:** draft PR #195 — `program: close Phase 1 and Teams integration`
 > **Merge state:** open, draft, mergeable, unmerged
 
 GitHub PR #195 and its exact current head/checks are live branch authority. Never
@@ -136,22 +136,31 @@ It found no remaining P0/P1 in this vertical and was not an independent review.
 
 ### Current exact frontier
 
-- shared collaboration head `32566dd35759a8fc080538e58f802940dce05535`:
-  normal CI `30686712674` and checkpoint `30686712592` succeeded;
-- permission implementation head
-  `34410a177ee98e320e7f922b89cc33a67c106a7b`: normal CI `30687975946`
-  succeeded and checkpoint `30687975865` failed at the first stale durable-actor
-  fixture;
-- documentation head `b053170cafc4cf1452d5ffbaab5cb75e369c5b9f`
-  added an eleventh active handoff document and therefore fails `sf-audit` before
-  the source checkpoint can reach Vitest.
+- pushed implementation head
+  `9f392954959b1d4334df316ac38dcaedb169d143`;
+- normal CI `30705102301` — success;
+- integration source checkpoint `30705102253` — failure;
+- TypeScript and ESLint passed;
+- first executable failure:
+  `src/app/api/__tests__/canonical-manual-order-boundaries.test.ts`,
+  “rejects fulfillment before parsing when no trusted actor is available”;
+  expected 401, received 400.
 
-The repair package removes the duplicate handoff authority, binds replay to the
-same durable person, prevents create/update commit-then-deny behavior, enforces
-protected order-field writes before mutation, projects mutation responses and
-replaces static boundary assertions with executable authorization evidence.
+The branch now includes the replay repair, operational action vocabulary,
+protected-field projections, direct server-page authority, read-pure risk paths,
+phone/risk oracle closure, trusted audit attribution, recent reauthentication for
+high-risk credential writes and a sequence of durable-actor fixture repairs.
+This is unmerged source. Teams is not closed and the current failing boundary is
+not yet diagnosed as production behavior or stale fixture.
 
-### Remaining required contract
+### Intentional planning pause
+
+The current session is governance/documentation only. No product implementation,
+test repair, merge, version bump, release or installed-artifact action resumes in
+this session. FD-029 records the uncompromised AAA target and dual-agent delivery
+model.
+
+### Remaining Teams closure contract
 
 1. Add shared per-shop workgroup and queue authority reusable by conversations,
    orders and confirmation work.
@@ -171,20 +180,30 @@ replaces static boundary assertions with executable authorization evidence.
 8. Prove cross-shop, revoked, stale-policy, duplicate, concurrent, restart and
    recovery behavior before licensing begins.
 
-### Exact execution order
+### Exact execution order — new-session allocation
 
-1. Complete the concrete replay, order authorization, field projection and stale
-   fixture repairs without weakening production authority.
-2. Pass the exact authority/docs gate, TypeScript, ESLint and full unit/integration
-   checkpoint on one exact branch head.
-3. Adopt generic routing and internal comments in inbox and order detail.
-4. Replace generic authentication on remaining conversation and order mutations
-   with explicit operational actions.
-5. Verify protected customer/contact and financial projections across remaining
-   material APIs and UI surfaces.
-6. Run one frozen exact-head adversarial pass across replay, revocation,
-   cross-shop scope, field leakage, concurrency, recovery and AR/FR/EN states.
-7. Close Teams and permissions only when no P0/P1 remains; then begin licensing.
+1. **Web Agent — CI feedback package:** from current protected `main`, own a short
+   separate worktree/branch/PR that makes draft validation report the complete
+   actionable failure set through path/risk-aware lanes and an always-reporting
+   aggregator. It may not change product authority or PR #195 implementation.
+2. **Desktop Agent — Teams integration owner:** retain exclusive ownership of PR
+   #195 in its isolated worktree. Reconstruct a complete impact map for the
+   trusted-actor/manual-order boundary, wait for or deliberately integrate the CI
+   package, then diagnose and repair the exact current 400/401 failure without
+   weakening production authority.
+3. Both agents verify live protected `main`, exact heads, PRs and checks at start.
+   They do not share a mutable worktree or depend on chat handoff.
+4. Use the complete CI failure set for one consolidated fixture/production repair
+   batch. Do not create a commit/push cycle for each independently predictable
+   stale fixture.
+5. Freeze one exact PR #195 head, run the complete selected checkpoint and obtain
+   non-authoring review across replay, revocation, cross-shop scope, field
+   leakage/oracles, high-risk ceremonies, concurrency, recovery and AR/FR/EN.
+6. Close every P0/P1, refreeze only changed risk, update durable evidence and end
+   PR #195. Do not add licensing, multi-shop or later-phase work to it.
+7. In a new research/contract session, Web and Desktop jointly freeze licensing,
+   entitlement, native-supervisor, shop-slot and recovery contracts. Only then
+   fan out short licensing and native multi-shop outcome PRs.
 
 ## Protected local boundaries
 

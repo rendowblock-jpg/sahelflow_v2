@@ -1,10 +1,10 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and dual-agent parallel delivery
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** protected `main`, branches, PRs, Actions, releases, issue #164 and the ten active documentation authorities
-> **Last consolidated:** 2026-07-29
+> **Last consolidated:** 2026-08-01
 
 This workflow is the fastest professional path to a complete class-AAA SahelFlow
 candidate. Speed comes from current research, dependency-correct parallelism,
@@ -61,6 +61,42 @@ The Desktop Agent:
 - Releases bind exact source, version, signature, artifacts and evidence.
 - GitHub is infrastructure and durable truth, not a third coding agent.
 
+### Dual-agent coordination contract
+
+The two agents are concurrent peers with different environment strengths, not a
+primary agent plus an informal helper.
+
+1. Every package names one integration owner before implementation.
+2. Each agent uses a separate worktree, branch and PR. They never concurrently
+   edit the same branch or mutable worktree.
+3. Both agents inspect and challenge a shared contract before dependent work
+   fans out. The integration owner records the adopted contract on GitHub.
+4. Shared schema, migrations, identity, permissions, commands, event formats,
+   design tokens and public provider contracts freeze in one serialized commit.
+5. After freeze, the agents may implement independent packages simultaneously.
+   File separation alone is insufficient when mutation or migration authority
+   overlaps.
+6. If only one implementation package is ready, the other agent performs bounded
+   next-package research, impact mapping, reusable-fixture preparation or
+   frozen-head review. It does not create speculative foundations.
+7. The non-authoring agent reviews each material frozen head. The author applies
+   one consolidated blocker batch; re-review covers only changed/unresolved risk.
+8. GitHub PR bodies, review comments, issue #164 and the ten active documents are
+   the handoff. Private chat summaries and local-only handoff files are not
+   execution authority.
+9. Desktop alone may claim local Windows, installed artifact, AppData and T470
+   evidence it directly observed. Web/Actions evidence remains labelled by its
+   actual environment.
+10. If a frozen shared contract must change, dependent lanes pause. The
+    integration owner publishes the replacement contract commit, records the
+    migration/compatibility impact, and each dependent branch deliberately
+    rebases or merges it before resuming.
+11. Each coherent checkpoint records owner, exact head, completed outcome,
+    changed authority/files, checks and next blocker in the PR. Agents do not
+    exchange hidden task packets or require chat replay.
+12. Dependency PRs merge in declared order. A dependent PR cannot use another
+    unmerged branch as invisible authority; its dependency is linked and frozen.
+
 ## 2. Core anti-drift rules
 
 1. One work package has one owner, one branch and one PR.
@@ -85,6 +121,10 @@ The Desktop Agent:
     scope.
 13. No roadmap rewrite replaces FD-028 without explicit Founder change control.
 14. Public provider, performance, security or Stable claims never exceed evidence.
+15. Separate agents never use one shared mutable worktree as parallel editing
+    space; integration occurs through commits and reviewed Git history.
+16. After Teams closes, PR #195 accepts no licensing, multi-shop or later-phase
+    expansion. New outcomes use short PRs from current protected `main`.
 
 ## 3. Research-to-implementation gate
 
@@ -190,8 +230,24 @@ Before implementation, the branch/PR and Working Memory identify:
 - required automated, installed, provider and Founder evidence;
 - exact legacy path removed after adoption.
 
-A package should normally fit one or two working days, but it is split by usable
-observable outcomes—not by arbitrary backend/frontend files.
+The package also includes a source impact map before the first production edit:
+
+- every production caller, route, page, command and background consumer;
+- direct tests, mocks, fixtures, dynamic imports and compatibility markers;
+- affected models, migrations, existing databases and forward-repair behavior;
+- protected actions, fields, projections, search/inference oracles and audit;
+- provider effects, secrets, high-risk ceremonies and failure recovery;
+- AR/FR/EN, RTL, accessibility, responsive and installed UI states;
+- performance budgets, diagnostics, evidence lanes and superseded paths.
+
+Every AAA layer is marked `applicable` with acceptance/evidence or `not
+applicable` with a concrete reason. “Later” is not valid for a blocking layer.
+
+A package should normally fit one focused implementation session plus one review
+cycle. If its impact map cannot be understood, implemented and frozen coherently
+at that size, split it by usable observable outcomes—not by arbitrary
+backend/frontend files. Time is a sizing signal, never permission to cut a
+blocking layer.
 
 Disallowed package framing:
 
@@ -211,6 +267,14 @@ Valid framing:
 
 Do not mix drive-by refactors, unrelated dependency upgrades, broad formatting or
 general cleanup into a product outcome.
+
+### Package sizing
+
+A normal package is the smallest independently usable seller/Founder outcome that
+can be reviewed and closed without carrying an unrelated phase. If one package
+requires several unrelated permission domains, migrations, pages or providers,
+split it before implementation. Package duration is a planning signal, never a
+reason to cut an end-to-end journey or defer a blocking layer.
 
 ## 5. Execution lanes and WIP
 
@@ -264,21 +328,45 @@ observation and phase exit recommendation.
 At most one frozen signed candidate is in flight. Publication or Founder
 observation does not freeze independent development.
 
+### Concurrent allocation protocol
+
+For each dependency position, the integration owner publishes a compact lane
+table in the owning PR or issue #164:
+
+| Field | Required value |
+|---|---|
+| Outcome | one observable seller/Founder result |
+| Owner | Web Agent or Desktop Agent |
+| Branch / PR | unique, current and linked |
+| Baseline | exact protected-main SHA |
+| Dependencies | frozen contract commits and predecessor PRs |
+| File/authority scope | production and test ownership boundaries |
+| Evidence | selected source, artifact, installed and external gates |
+| State | research, contract, implementation, review, repair, proven or blocked |
+
+At most two independent seller outcomes implement concurrently. Core authority
+remains WIP 1. The other available capacity is reserved for integration and
+independent validation so parallelism does not remove review.
+
 ## 6. Start and resume protocol
 
 Before changing anything:
 
-1. Declare the actual environment: Web checkout, Desktop local Windows, Actions
+1. Declare the session purpose: governance/planning, research/contract,
+   implementation, frozen review/closure or installed evidence. A governance or
+   planning session performs no product implementation.
+2. Declare the actual environment: Web checkout, Desktop local Windows, Actions
    Linux/Windows or installed artifact.
-2. Read `AGENTS.md`, `../README.md`, FD-028, this workflow, the active
+3. Read `AGENTS.md`, `../README.md`, FD-028, FD-029, this workflow, the active
    roadmap phase and Working Memory.
-3. Read the governing Product, Experience, Architecture and Current State sections.
-4. Synchronize with protected `main` and inspect status.
-5. Preserve unrelated user work.
-6. Resolve active branches/PRs and lane ownership.
-7. Complete the research-to-implementation gate.
-8. Freeze required shared contracts.
-9. State the exact outcome and its exit evidence.
+4. Read the governing Product, Experience, Architecture and Current State sections.
+5. Synchronize with protected `main` and inspect status.
+6. Preserve unrelated user work.
+7. Resolve active branches/PRs, exact heads, checks, dependencies and lane ownership.
+8. Refuse overlapping mutable worktrees or unowned shared contracts.
+9. Complete the research-to-implementation gate and impact map.
+10. Freeze required shared contracts.
+11. State the exact outcome and its exit evidence.
 
 Chat history is context, never current authority.
 
@@ -286,6 +374,8 @@ Chat history is context, never current authority.
 
 - Branch from current protected `main`.
 - Branch naming: `agent/<outcome>`.
+- Use one dedicated worktree per active agent/package and record its branch on
+  issue #164. Do not use a second agent to edit an existing owner's worktree.
 - Open a draft PR early for material work.
 - Push coherent batches rather than every tiny edit.
 - Keep one PR reviewable as one outcome.
@@ -353,6 +443,16 @@ Run selected complete lanes once:
 - Diagnose slow stages before repeating pipelines.
 - Documentation-only work runs authority/audit and creates no MSI unless
   executable release authority changed.
+- Draft feedback reports the complete actionable failure set for each lane; do
+  not intentionally stop after the first stale fixture when a full diagnostic
+  run is affordable.
+- Type, lint, unit, database/integration and path-risk lanes run in parallel and
+  feed one always-reporting required-check aggregator.
+- Maintain shared trusted-actor, revoked/stale/cross-shop and marked disposable
+  route fixtures. A shared authority change updates its consumer inventory and
+  fixtures in the same package.
+- Full frozen-head checkpoints remain blocking for the named outcome even when
+  draft feedback is path-selected.
 
 ### Evidence ladder
 
@@ -458,8 +558,14 @@ hardware floor to improve a number.
 
 - **Research-complete decision:** current sources and alternatives are evaluated
   and a measurable SahelFlow decision is adopted.
+- **Implemented package:** coherent source exists on a branch but clean-checkout
+  proof or integration is still open.
+- **Source-proven package:** the frozen exact head passes selected complete
+  clean-checkout source gates and review; it is not merged source truth yet.
 - **Source-complete package:** coherent PR merged to protected `main` and legacy
   authority removed as specified.
+- **Artifact-proven milestone:** an exact-source signed candidate passes selected
+  build/signature/runtime gates; it is not automatically Founder-accepted.
 - **Release-complete milestone:** exact-source signed candidate passed every
   selected artifact/installed gate and published.
 - **Founder-accepted milestone:** installed update preserved data, reopened and

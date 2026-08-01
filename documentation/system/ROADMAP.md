@@ -1,7 +1,7 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency and completion order
-> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and dual-agent parallel delivery
 > **Protected main:** `522ab1642545803c7a9b6c320fe72cceb320e558`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
@@ -39,10 +39,14 @@ alone complete a capability.
 3. Use current primary standards and official platform/provider documentation.
 4. P0/P1 block the affected outcome; P2/P3 receive owned follow-up.
 5. Routine source packages remain version-neutral.
-6. With one coding agent, use a separated frozen-head adversarial pass but never
-   call it independent review.
+6. Material packages receive non-authoring frozen-head review; external
+   independent review remains mandatory where the exit gate requires it.
 7. Protected merge, release, Beta, Stable and Founder acceptance remain explicit
    decisions.
+
+FD-029 changes execution mechanics, not this dependency order: shared contracts
+freeze before fan-out, Web/Desktop agents use separate outcome worktrees and PRs,
+and PR #195 stops after Teams rather than accumulating licensing or later phases.
 
 ## Critical path
 
@@ -221,6 +225,10 @@ The representative first vertical must prove one assignment/handover lifecycle f
 owner, manager and operator under happy, validation, permission, duplicate,
 concurrent, stale-policy, revoked, cross-shop, restart and recovery behavior in
 Arabic, French and English.
+
+Implementation is intentionally paused for the FD-029 planning/documentation
+checkpoint. The exact branch head, checks and first failing fixture are recorded
+only in `../operations/WORKING_MEMORY.md`; this pause does not close the package.
 
 ## Licensing and entitlements
 

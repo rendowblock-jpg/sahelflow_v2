@@ -41,18 +41,24 @@ competing legacy authority, not another architecture reset.
 
 ## Unmerged execution frontier — not protected current-state authority
 
-Draft PR #195 on `agent/phases1-4-completion-program` has assembled the complete
-Phase 1 source and its named source-exit evidence: canonical adopted intake,
-fulfillment/courier/COD/return/refund/profitability authority, separate-process
-restart and in-place migration preservation, disposable local backup/restore
-compatibility, a representative UI/API/domain/database Golden COD journey with
-AR/FR/EN controls, and a final adopted-source bypass audit.
+Draft PR #195 on `agent/phases1-4-completion-program` contains the unmerged Phase
+1 source and Phase 2A/Teams authority work. Its current pushed head is
+`9f392954959b1d4334df316ac38dcaedb169d143`: normal CI run `30705102301`
+succeeded and integration source checkpoint `30705102253` failed at
+`src/app/api/__tests__/canonical-manual-order-boundaries.test.ts` because the
+unauthenticated fulfillment boundary returned 400 instead of the expected 401.
+TypeScript and ESLint did not fail in that run.
 
-That earlier source-closure verdict is currently reopened. Review on 2026-08-01
-found a concrete cross-member command-replay authorization defect plus central
-order mutation field-authorization and response-projection gaps. These are
-unmerged branch findings, not defects in protected `main`; PR #195 cannot claim a
-new source-closed boundary until the repairs and exact-head checkpoint succeed.
+Earlier replay, operational-action, protected-field, risk, audit and high-risk
+credential findings were repaired on the branch, but the package is not closed
+until a frozen exact head passes the complete selected checkpoint and
+non-authoring review has no unresolved P0/P1. These remain unmerged branch
+findings and repairs, not defects or proven behavior in protected `main`.
+
+Implementation is intentionally paused while FD-029 and the dual-agent delivery
+workflow are consolidated. After Teams closes, PR #195 stops; licensing,
+multi-shop and later outcomes use short dedicated PRs from current protected
+`main`.
 
 The exact branch head and green checks belong to PR #195 and
 [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md). This

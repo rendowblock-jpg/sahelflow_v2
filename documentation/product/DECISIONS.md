@@ -503,6 +503,64 @@ restore/incident drills, compatibility evidence, rollout readiness and explicit
 Founder promotion. These external results cannot be fabricated by accelerated
 implementation.
 
+## FD-029 — Uncompromised AAA completion and dual-agent parallel delivery
+
+This decision clarifies how FD-028 is executed. It does not replace the Phase
+0–9 program, remove Required scope or weaken any completion/evidence gate.
+
+### Uncompromised target
+
+- The final application targets top-tier class-AAA quality across product,
+  Algerian COD correctness, data and money authority, security/privacy,
+  recovery, Windows runtime, providers, UI/UX, AR/FR/EN, RTL, accessibility,
+  performance, reliability, testing, diagnostics, documentation and evidence.
+- Deadline or agent throughput never authorizes incomplete journeys, hidden
+  legacy authority, deferred P0/P1, fabricated evidence or a lower quality bar.
+- Speed comes from smaller observable packages, complete impact mapping,
+  frozen shared contracts, dependency-correct parallelism, reusable fixtures,
+  complete CI diagnostics and prompt closure of proven work.
+
+### Two-agent operating model
+
+- The ChatGPT Web Agent and Desktop Agent work concurrently whenever packages
+  are independent after shared contracts are frozen.
+- Each active outcome has exactly one integration owner, branch, worktree and
+  draft PR. Agents never concurrently edit the same branch or mutable worktree.
+- The Web Agent normally leads current primary research, GitHub-native source
+  work and clean-checkout evidence. The Desktop Agent normally leads local
+  Windows, Tauri/MSI, installed UI, AppData preservation and reference-hardware
+  evidence. Either may implement any package when its environment is the best
+  authority.
+- Before fan-out, both agents inspect the governing source and challenge the
+  proposed contract. One adopted contract commit freezes shared schema, types,
+  commands, permissions, migrations and experience rules.
+- After fan-out, independent packages may proceed simultaneously. If only one
+  implementation package is dependency-ready, the other agent performs bounded
+  research, impact mapping, fixture preparation or frozen-head review rather
+  than duplicating edits.
+- Material work is reviewed by the non-authoring agent on an exact frozen head.
+  A review handoff never transfers hidden chat state; GitHub and the active
+  documentation authorities contain the complete durable state.
+
+### Package, CI and session discipline
+
+- After the current Teams package, PR #195 stops accumulating new phases.
+  Licensing, native multi-shop and later outcomes use short outcome PRs from
+  current protected `main`.
+- Before implementation, every package inventories production consumers, direct
+  tests and mocks, data/migration effects, protected fields, UI states, Arabic,
+  accessibility, recovery, performance, legacy removal and required evidence.
+- Draft CI reports the complete failure set with path/risk-aware parallel lanes;
+  it does not force serial one-fixture-at-a-time repair. Frozen heads still pass
+  the selected full checkpoint before merge.
+- Sessions have one declared purpose: governance/planning, research/contract,
+  implementation, frozen review/closure or installed evidence. A planning
+  session performs no product implementation.
+- Progress is measured by closed observable packages and evidence levels, not
+  commit count, changed files, agent activity or elapsed sessions.
+- The truth levels remain distinct: implemented, source-proven, artifact-proven,
+  Founder-accepted and phase-closed. A lower level cannot claim a higher one.
+
 ---
 
 ## Change control
