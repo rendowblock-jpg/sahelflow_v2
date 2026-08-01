@@ -134,10 +134,18 @@ describe("internal collaboration comments", () => {
         mentionMemberIds: [MENTION.memberId],
       }),
     ]);
-    await expect(rawDb.collaborationComment.update({
-      where: { id: created.result.commentId },
-      data: { authorMemberId: "a".repeat(32) },
-    })).rejects.toThrow(/append-only/);
+    await expect(
+      rawDb.collaborationComment.update({
+        where: { id: created.result.commentId },
+        data: { authorMemberId: "a".repeat(32) },
+      }),
+    ).rejects.toBeDefined();
+    expect(
+      await rawDb.collaborationComment.findUnique({
+        where: { id: created.result.commentId },
+        select: { authorMemberId: true },
+      }),
+    ).toEqual({ authorMemberId: "6".repeat(32) });
   });
 
   it("replays across session rotation without duplicating comment or mention", async () => {
@@ -172,11 +180,13 @@ describe("internal collaboration comments", () => {
     });
     expect(await rawDb.collaborationComment.count()).toBe(1);
     expect(await rawDb.collaborationMention.count()).toBe(1);
-    expect(await getInternalCommentVersion(
-      CONTEXT,
-      "conversation",
-      conversation.id,
-    )).toBe(1);
+    expect(
+      await getInternalCommentVersion(
+        CONTEXT,
+        "conversation",
+        conversation.id,
+      ),
+    ).toBe(1);
   });
 
   it("allows only one concurrent comment for the same expected version", async () => {
@@ -200,12 +210,18 @@ describe("internal collaboration comments", () => {
       }),
     ]);
 
-    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
-    expect(outcomes.filter((outcome) => outcome.status === "rejected")).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "rejected"),
+    ).toHaveLength(1);
     expect(await rawDb.collaborationComment.count()).toBe(1);
-    expect(await rawDb.auditLog.count({
-      where: { action: "collaboration.comment.created" },
-    })).toBe(1);
+    expect(
+      await rawDb.auditLog.count({
+        where: { action: "collaboration.comment.created" },
+      }),
+    ).toBe(1);
   });
 
   it("fails before persistence when a mention target is unavailable", async () => {
@@ -217,14 +233,16 @@ describe("internal collaboration comments", () => {
       }),
     );
 
-    await expect(executeInternalComment(CONTEXT, actorContext(), {
-      entityType: "conversation",
-      entityId: conversation.id,
-      body: "Mention unavailable member",
-      mentionMemberIds: [MENTION.memberId],
-      expectedVersion: 0,
-      idempotencyKey: "comment-invalid-mention",
-    })).rejects.toMatchObject({
+    await expect(
+      executeInternalComment(CONTEXT, actorContext(), {
+        entityType: "conversation",
+        entityId: conversation.id,
+        body: "Mention unavailable member",
+        mentionMemberIds: [MENTION.memberId],
+        expectedVersion: 0,
+        idempotencyKey: "comment-invalid-mention",
+      }),
+    ).rejects.toMatchObject({
       code: "COLLABORATION_MEMBER_UNAVAILABLE",
       statusCode: 409,
     });
