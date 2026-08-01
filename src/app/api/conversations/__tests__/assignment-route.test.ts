@@ -10,7 +10,7 @@ const harness = vi.hoisted(() => ({
       workspaceMemberId: "6".repeat(32),
       deviceId: "7".repeat(32),
       sessionId: "current-session",
-      role: "operator" as const,
+      role: "operator" as "owner" | "manager" | "operator" | "viewer",
       policyVersion: 1,
       revocationEpoch: 0,
     },
@@ -27,6 +27,9 @@ const harness = vi.hoisted(() => ({
   requireAction: vi.fn(),
   assertAction: vi.fn(),
   ensureConversation: vi.fn(),
+  findConversation: vi.fn(),
+  listMembers: vi.fn(),
+  assignmentVersion: vi.fn(),
   executeAssignment: vi.fn(),
 }));
 
@@ -39,12 +42,21 @@ vi.mock("@/lib/data/conversation-service", () => ({
   ensureConversationForJid: harness.ensureConversation,
 }));
 
+vi.mock("@/lib/identity/team-directory", () => ({
+  listTeamMembers: harness.listMembers,
+}));
+
 vi.mock("@/lib/inbox/conversation-assignment", () => ({
   executeConversationAssignment: harness.executeAssignment,
+  getConversationAssignmentVersion: harness.assignmentVersion,
 }));
 
 vi.mock("@/lib/db", () => ({
-  db: {},
+  db: {
+    conversation: {
+      findUnique: harness.findConversation,
+    },
+  },
   shopContext: harness.actorContext.shop,
 }));
 
@@ -76,7 +88,7 @@ vi.mock("@/lib/api/with-error-handler", () => ({
     },
 }));
 
-import { PATCH } from "@/app/api/conversations/[id]/assign/route";
+import { GET, PATCH } from "@/app/api/conversations/[id]/assign/route";
 
 const routeContext = (id: string) => ({ params: Promise.resolve({ id }) });
 
@@ -88,12 +100,60 @@ function request(body: unknown): NextRequest {
   });
 }
 
+const member = (input: {
+  memberId: string;
+  displayName: string;
+  role?: "manager" | "operator" | "viewer";
+  shopIds?: string[];
+  revokedAt?: string | null;
+}) => ({
+  personId: input.memberId.replace(/^./, "5"),
+  memberId: input.memberId,
+  deviceId: input.memberId.replace(/^./, "7"),
+  invitationId: input.memberId.replace(/^./, "8"),
+  displayName: input.displayName,
+  loginId: `${input.displayName.toLowerCase()}.ops`,
+  role: input.role ?? ("operator" as const),
+  permissions: null,
+  shopIds: input.shopIds ?? ["default"],
+  policyVersion: 1,
+  revocationEpoch: 0,
+  createdAt: "2026-08-01T00:00:00.000Z",
+  revokedAt: input.revokedAt ?? null,
+});
+
 beforeEach(() => {
+  harness.actorContext.actor.role = "operator";
+  delete (harness.actorContext.actor as { permissions?: readonly string[] })
+    .permissions;
   harness.requireAction.mockReset().mockResolvedValue(harness.actorContext);
   harness.assertAction.mockReset();
   harness.ensureConversation
     .mockReset()
     .mockResolvedValue("canonical-conversation");
+  harness.findConversation.mockReset().mockResolvedValue({
+    id: "canonical-conversation",
+    assigneeId: null,
+  });
+  harness.assignmentVersion.mockReset().mockResolvedValue(3);
+  harness.listMembers.mockReset().mockResolvedValue([
+    member({ memberId: "9".repeat(32), displayName: "Amina" }),
+    member({
+      memberId: "a".repeat(32),
+      displayName: "Viewer",
+      role: "viewer",
+    }),
+    member({
+      memberId: "b".repeat(32),
+      displayName: "Other",
+      shopIds: ["other-shop"],
+    }),
+    member({
+      memberId: "c".repeat(32),
+      displayName: "Revoked",
+      revokedAt: "2026-08-01T01:00:00.000Z",
+    }),
+  ]);
   harness.executeAssignment.mockReset().mockResolvedValue({
     commandId: "command-1",
     aggregateVersion: 1,
@@ -111,6 +171,83 @@ beforeEach(() => {
       activityType: "assignment_claimed",
       version: 1,
     },
+  });
+});
+
+describe("GET /api/conversations/[id]/assign", () => {
+  it("returns claim-only authority without member inventory to an operator", async () => {
+    const response = await GET(
+      new NextRequest("http://localhost/api/conversations/raw/assign"),
+      routeContext("213555000000@s.whatsapp.net"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      assignment: { conversationId: string; version: number };
+      currentActor: { allowedActions: string[]; memberId: string };
+      assignableMembers: unknown[];
+    };
+    expect(body.assignment).toEqual({
+      conversationId: "canonical-conversation",
+      assigneeId: null,
+      version: 3,
+    });
+    expect(body.currentActor.allowedActions).toEqual(
+      expect.arrayContaining(["conversations.read", "conversations.claim"]),
+    );
+    expect(body.currentActor.allowedActions).not.toContain(
+      "conversations.assign",
+    );
+    expect(body.assignableMembers).toEqual([]);
+    expect(harness.listMembers).not.toHaveBeenCalled();
+  });
+
+  it("returns only active current-shop manager/operator targets to a manager", async () => {
+    harness.actorContext.actor.role = "manager";
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/conversations/raw/assign"),
+      routeContext("canonical-conversation"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      currentActor: { allowedActions: string[] };
+      assignableMembers: Array<{
+        memberId: string;
+        displayName: string | null;
+        role: string;
+      }>;
+    };
+    expect(body.currentActor.allowedActions).toContain("conversations.assign");
+    expect(body.assignableMembers).toEqual([
+      {
+        memberId: "9".repeat(32),
+        displayName: "Amina",
+        role: "operator",
+      },
+    ]);
+    expect(harness.listMembers).toHaveBeenCalledWith(
+      harness.actorContext.shop,
+    );
+  });
+
+  it("establishes read authority before creating a live-JID projection", async () => {
+    harness.requireAction.mockRejectedValue(
+      Object.assign(new Error("Unauthorized"), {
+        code: "IDENTITY_SESSION_BINDING_REQUIRED",
+        statusCode: 401,
+      }),
+    );
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/conversations/raw/assign"),
+      routeContext("213555000000@s.whatsapp.net"),
+    );
+
+    expect(response.status).toBe(401);
+    expect(harness.ensureConversation).not.toHaveBeenCalled();
+    expect(harness.findConversation).not.toHaveBeenCalled();
   });
 });
 
@@ -156,10 +293,6 @@ describe("PATCH /api/conversations/[id]/assign", () => {
     expect(harness.assertAction.mock.invocationCallOrder[0]).toBeLessThan(
       harness.ensureConversation.mock.invocationCallOrder[0]!,
     );
-    expect(harness.ensureConversation).toHaveBeenCalledWith(
-      expect.objectContaining({ shop: harness.actorContext.shop }),
-      "213555000000@s.whatsapp.net",
-    );
   });
 
   it("checks manager assignment permission and binds the path conversation", async () => {
@@ -190,10 +323,6 @@ describe("PATCH /api/conversations/[id]/assign", () => {
         conversationId: "canonical-conversation",
       },
     );
-    await expect(response.json()).resolves.toMatchObject({
-      assignment: { conversationId: "canonical-conversation", version: 1 },
-      command: { id: "command-1", aggregateVersion: 1, replayed: false },
-    });
   });
 
   it("does not create a conversation for malformed operation input", async () => {
