@@ -8,7 +8,10 @@ import {
   createMemberInvitation,
   listMemberInvitations,
 } from "@/lib/identity/member-authority";
-import { PHASE2_ACTIONS } from "@/lib/identity/permissions";
+import {
+  getPhase2PresetPermissions,
+  PHASE2_ACTIONS,
+} from "@/lib/identity/permissions";
 import { acceptedInvitationIds } from "@/lib/identity/team-directory";
 import { SahelFlowError } from "@/types/errors";
 
@@ -54,6 +57,14 @@ export const GET = withErrorHandler(async () => {
     {
       authority: { ...authority, invitations },
       shopOptions: [{ id: context.shop.shopId, current: true }],
+      permissionCatalog: {
+        actions: PHASE2_ACTIONS,
+        ceilings: {
+          manager: getPhase2PresetPermissions("manager"),
+          operator: getPhase2PresetPermissions("operator"),
+          viewer: getPhase2PresetPermissions("viewer"),
+        },
+      },
     },
     { headers: { "Cache-Control": "no-store" } },
   );
