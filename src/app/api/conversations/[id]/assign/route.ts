@@ -8,7 +8,11 @@ import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
-import { executeConversationAssignment } from "@/lib/inbox/conversation-assignment";
+import { resolvePhase2Permissions } from "@/lib/identity/permissions";
+import {
+  executeConversationAssignment,
+  getConversationAssignmentVersion,
+} from "@/lib/inbox/conversation-assignment";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -18,6 +22,67 @@ const operationSchema = z
     operation: z.enum(["claim", "release", "assign", "unassign"]),
   })
   .passthrough();
+
+function actorProjection(
+  context: Awaited<ReturnType<typeof requireTrustedAction>>,
+) {
+  if (context.actor.kind !== "person") {
+    return {
+      personId: null,
+      memberId: null,
+      role: null,
+      allowedActions: [] as string[],
+      shopId: context.shop.shopId,
+    };
+  }
+  const actor = context.actor;
+  return {
+    personId: actor.personId,
+    memberId: actor.workspaceMemberId,
+    role: actor.role,
+    allowedActions: resolvePhase2Permissions(
+      actor.role,
+      actor.permissions ? JSON.stringify(actor.permissions) : null,
+    ),
+    shopId: context.shop.shopId,
+  };
+}
+
+/** GET /api/conversations/[id]/assign — lightweight assignment authority state. */
+export const GET = withErrorHandler(
+  async (_request: NextRequest, { params }: RouteContext) => {
+    const actorContext = await requireTrustedAction("conversations.read");
+    const { id: rawId } = await params;
+    const context = { prisma: db, shop: shopContext };
+    const conversationId = await ensureConversationForJid(context, rawId);
+    const conversation = await db.conversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, assigneeId: true },
+    });
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Conversation not found" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        assignment: {
+          conversationId: conversation.id,
+          assigneeId: conversation.assigneeId,
+          version: await getConversationAssignmentVersion(
+            context,
+            conversation.id,
+          ),
+        },
+        currentActor: actorProjection(actorContext),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  },
+  "GET /api/conversations/[id]/assign",
+);
 
 /**
  * PATCH /api/conversations/[id]/assign
