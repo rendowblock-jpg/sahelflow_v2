@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
@@ -51,12 +52,12 @@ vi.mock("@/lib/api/with-error-handler", () => ({
   withErrorHandler:
     (
       handler: (
-        request: Request,
+        request: NextRequest,
         context: { params: Promise<{ id: string }> },
       ) => Promise<Response>,
     ) =>
     async (
-      request: Request,
+      request: NextRequest,
       context: { params: Promise<{ id: string }> },
     ): Promise<Response> => {
       try {
@@ -79,8 +80,8 @@ import { PATCH } from "@/app/api/conversations/[id]/assign/route";
 
 const routeContext = (id: string) => ({ params: Promise.resolve({ id }) });
 
-function request(body: unknown): Request {
-  return new Request("http://localhost/api/conversations/raw/assign", {
+function request(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/conversations/raw/assign", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -124,7 +125,7 @@ describe("PATCH /api/conversations/[id]/assign", () => {
     const json = vi.fn();
 
     const response = await PATCH(
-      { json } as unknown as Request,
+      { json } as unknown as NextRequest,
       routeContext("213555000000@s.whatsapp.net"),
     );
 
