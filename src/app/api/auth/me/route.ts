@@ -17,9 +17,10 @@ export const GET = withErrorHandler(async () => {
       401,
     );
   }
+  const actor = context.actor;
 
   const member = (await listTeamMembers(context.shop)).find(
-    (candidate) => candidate.memberId === context.actor.workspaceMemberId,
+    (candidate) => candidate.memberId === actor.workspaceMemberId,
   );
 
   return NextResponse.json(
@@ -40,14 +41,14 @@ export const GET = withErrorHandler(async () => {
           }
         : {
             kind: "owner",
-            personId: context.actor.personId,
-            memberId: context.actor.workspaceMemberId,
-            deviceId: context.actor.deviceId,
-            role: context.actor.role,
-            permissions: context.actor.permissions ?? null,
+            personId: actor.personId,
+            memberId: actor.workspaceMemberId,
+            deviceId: actor.deviceId,
+            role: actor.role,
+            permissions: actor.permissions ?? null,
             shopIds: [context.shop.shopId],
-            policyVersion: context.actor.policyVersion,
-            revocationEpoch: context.actor.revocationEpoch,
+            policyVersion: actor.policyVersion,
+            revocationEpoch: actor.revocationEpoch,
           },
     },
     { headers: { "Cache-Control": "no-store" } },
