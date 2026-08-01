@@ -9,9 +9,10 @@ import {
 import { db, shopContext } from "@/lib/db";
 import {
   assertTrustedAction,
+  requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ const entitySchema = z.object({
 });
 
 function assertEntityRead(
-  actorContext: Awaited<ReturnType<typeof requireTrustedActor>>,
+  actorContext: TrustedActorContext,
   entityType: "conversation" | "order" | "confirmation",
 ): void {
   assertTrustedAction(
@@ -32,16 +33,12 @@ function assertEntityRead(
 }
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("queues.read");
   const entity = entitySchema.parse({
     entityType: request.nextUrl.searchParams.get("entityType"),
     entityId: request.nextUrl.searchParams.get("entityId"),
   });
   assertEntityRead(actorContext, entity.entityType);
-  assertTrustedAction(actorContext, "queues.read", {
-    shopId: actorContext.shop.shopId,
-  });
-
   const [assignment, queues, version] = await Promise.all([
     db.collaborationAssignment.findUnique({
       where: {
@@ -96,7 +93,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 }, "GET /api/collaboration/routing");
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("queues.read");
   const body = (await request.json()) as Record<string, unknown>;
   const entity = entitySchema.parse(body);
   assertEntityRead(actorContext, entity.entityType);

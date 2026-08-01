@@ -169,16 +169,24 @@ CREATE TABLE "CollaborationHandover" (
   "toQueueId" TEXT,
   "fromWorkgroupId" TEXT,
   "toWorkgroupId" TEXT,
+  "fromState" TEXT NOT NULL,
+  "toState" TEXT NOT NULL,
   "reasonJson" TEXT,
   "commandId" TEXT NOT NULL,
   "occurredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "CollaborationHandover_entityType_check"
     CHECK ("entityType" IN ('conversation', 'order', 'confirmation')),
+  CONSTRAINT "CollaborationHandover_state_check"
+    CHECK (
+      "fromState" IN ('open', 'closed')
+      AND "toState" IN ('open', 'closed')
+    ),
   CONSTRAINT "CollaborationHandover_change_check"
     CHECK (
       "fromMemberId" IS NOT "toMemberId"
       OR "fromQueueId" IS NOT "toQueueId"
       OR "fromWorkgroupId" IS NOT "toWorkgroupId"
+      OR "fromState" IS NOT "toState"
     )
 );
 

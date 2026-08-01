@@ -120,6 +120,8 @@ model CollaborationHandover {
   toQueueId       String?
   fromWorkgroupId String?
   toWorkgroupId   String?
+  fromState       String
+  toState         String
   reasonJson      String?
   commandId       String   @unique
   occurredAt      DateTime @default(now())

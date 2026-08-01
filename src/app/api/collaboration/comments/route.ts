@@ -8,8 +8,11 @@ import {
   listInternalComments,
 } from "@/lib/collaboration/comments";
 import { db, shopContext } from "@/lib/db";
-import { assertTrustedAction } from "@/lib/identity/authorization";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +22,7 @@ const entityQuerySchema = z.object({
 });
 
 function assertEntityRead(
-  actorContext: Awaited<ReturnType<typeof requireTrustedActor>>,
+  actorContext: TrustedActorContext,
   entityType: "conversation" | "order" | "confirmation",
 ): void {
   assertTrustedAction(
@@ -30,16 +33,12 @@ function assertEntityRead(
 }
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("comments.read");
   const query = entityQuerySchema.parse({
     entityType: request.nextUrl.searchParams.get("entityType"),
     entityId: request.nextUrl.searchParams.get("entityId"),
   });
   assertEntityRead(actorContext, query.entityType);
-  assertTrustedAction(actorContext, "comments.read", {
-    shopId: actorContext.shop.shopId,
-  });
-
   const context = { prisma: db, shop: shopContext };
   const [comments, version] = await Promise.all([
     listInternalComments(context, query.entityType, query.entityId),
@@ -52,13 +51,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 }, "GET /api/collaboration/comments");
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const actorContext = await requireTrustedActor();
+  const actorContext = await requireTrustedAction("comments.write");
   const body = (await request.json()) as Record<string, unknown>;
   const query = entityQuerySchema.parse(body);
   assertEntityRead(actorContext, query.entityType);
-  assertTrustedAction(actorContext, "comments.write", {
-    shopId: actorContext.shop.shopId,
-  });
 
   const command = await executeInternalComment(
     { prisma: db, shop: shopContext },

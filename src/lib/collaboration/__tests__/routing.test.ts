@@ -199,6 +199,8 @@ describe("generic collaboration routing", () => {
       toMemberId: TARGET.memberId,
       toQueueId: queue.id,
       toWorkgroupId: workgroup.id,
+      fromState: "open",
+      toState: "open",
     });
     expect(handover?.reasonJson).not.toContain("Evening shift");
     await expect(rawDb.collaborationHandover.update({
@@ -304,5 +306,41 @@ describe("generic collaboration routing", () => {
       "conversation",
       conversation.id,
     )).toBe(1);
+  });
+
+  it("persists a state-only transition as durable handover history", async () => {
+    const order = await seedOrder();
+
+    const command = await executeCollaborationRouting(
+      CONTEXT,
+      actorContext(),
+      {
+        entityType: "order",
+        entityId: order.id,
+        targetState: "closed",
+        expectedVersion: 0,
+        idempotencyKey: "routing-state-only-close",
+        reason: "Operational work completed",
+      },
+    );
+
+    expect(command.result).toMatchObject({
+      entityType: "order",
+      entityId: order.id,
+      state: "closed",
+      version: 1,
+    });
+    expect(
+      await rawDb.collaborationHandover.findFirst({
+        where: { entityType: "order", entityId: order.id },
+      }),
+    ).toMatchObject({
+      fromState: "open",
+      toState: "closed",
+      fromMemberId: null,
+      toMemberId: null,
+      fromQueueId: null,
+      toQueueId: null,
+    });
   });
 });

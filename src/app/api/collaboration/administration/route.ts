@@ -15,12 +15,26 @@ import {
 import { listTeamMembers } from "@/lib/identity/team-directory";
 import { getTeamRevocationSnapshot } from "@/lib/identity/team-revocation-authority";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
 const mutationKindSchema = z.object({
   kind: z.enum(["workgroup", "queue"]),
 }).passthrough();
+
+function assertAdministrationMutationAuthority(
+  actorContext: TrustedActorContext,
+): void {
+  const options = { shopId: actorContext.shop.shopId } as const;
+  if (
+    trustedActionAllowed(actorContext, "workgroups.manage", options) ||
+    trustedActionAllowed(actorContext, "queues.manage", options)
+  ) {
+    return;
+  }
+  assertTrustedAction(actorContext, "workgroups.manage", options);
+}
 
 export const GET = withErrorHandler(async () => {
   const actorContext = await requireTrustedActor();
@@ -140,6 +154,7 @@ export const GET = withErrorHandler(async () => {
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const actorContext = await requireTrustedActor();
+  assertAdministrationMutationAuthority(actorContext);
   const body = (await request.json()) as unknown;
   const { kind } = mutationKindSchema.parse(body);
   assertTrustedAction(

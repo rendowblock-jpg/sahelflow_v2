@@ -335,6 +335,8 @@ export async function executeConversationAssignment(
           toQueueId: currentAssignment?.queueId ?? null,
           fromWorkgroupId: currentAssignment?.workgroupId ?? null,
           toWorkgroupId: currentAssignment?.workgroupId ?? null,
+          fromState: currentAssignment?.state ?? "open",
+          toState: currentAssignment?.state ?? "open",
           reasonJson: data.reason
             ? sealBusinessPayloadWithKey(
                 { reason: data.reason },

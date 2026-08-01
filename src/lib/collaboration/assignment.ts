@@ -339,6 +339,8 @@ export async function executeCollaborationRouting(
           toQueueId: nextQueueId,
           fromWorkgroupId: previousWorkgroupId,
           toWorkgroupId: nextWorkgroupId,
+          fromState: previousState,
+          toState: nextState,
           reasonJson: data.reason
             ? sealBusinessPayloadWithKey(
                 { reason: data.reason },
