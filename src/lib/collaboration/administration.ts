@@ -174,10 +174,6 @@ export async function executeWorkgroupMutation(
   const workgroupId = data.operation === "create"
     ? deterministicId("workgroup", context.shop, data.idempotencyKey)
     : data.workgroupId!;
-  const members =
-    data.operation === "create" || data.operation === "add_members"
-      ? await resolveCollaborationMembers(actor, data.memberIds, context.shop, { allowViewer: true })
-      : [];
   const correlationId = data.correlationId ?? randomUUID();
   const businessContext: BusinessPrincipalContext = {
     ...context,
@@ -205,6 +201,15 @@ export async function executeWorkgroupMutation(
       },
     },
     async ({ tx, aggregateVersion }) => {
+      const members =
+        data.operation === "create" || data.operation === "add_members"
+          ? await resolveCollaborationMembers(
+              actor,
+              data.memberIds,
+              context.shop,
+              { allowViewer: true },
+            )
+          : [];
       const now = new Date();
       if (data.operation === "create") {
         const duplicate = await tx.collaborationWorkgroup.findUnique({
