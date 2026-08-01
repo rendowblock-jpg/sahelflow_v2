@@ -392,6 +392,9 @@ describe("PATCH /api/orders/[id] — governed compatibility edit", () => {
 describe("PATCH /api/orders/[id]/status — transition status", () => {
   beforeEach(async () => {
     await cleanDb();
+    authority.requireAction
+      .mockReset()
+      .mockResolvedValue(authority.ownerContext);
   });
 
   async function seedOrderAtStatus(
@@ -506,7 +509,10 @@ describe("PATCH /api/orders/[id]/status — transition status", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 401 with configured auth and no session", async () => {
+  it("returns 401 when trusted action authority rejects the request", async () => {
+    authority.requireAction.mockRejectedValue(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     await rawDb.authSecret.create({
       data: {
         id: "default",
@@ -528,6 +534,9 @@ describe("PATCH /api/orders/[id]/status — transition status", () => {
 describe("POST /api/orders/bulk — bulk status transition", () => {
   beforeEach(async () => {
     await cleanDb();
+    authority.requireAction
+      .mockReset()
+      .mockResolvedValue(authority.ownerContext);
   });
 
   async function seedPendingOrders(count: number) {

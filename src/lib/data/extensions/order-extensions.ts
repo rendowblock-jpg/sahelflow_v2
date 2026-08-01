@@ -7,7 +7,7 @@
  */
 import "server-only";
 import type { ServiceContext } from "../service-base";
-import type { OrderStatus } from "@/types/domain";
+import type { Order, OrderStatus } from "@/types/domain";
 import { orderService } from "../order-service";
 import { logger } from "@/lib/logger";
 import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
@@ -18,6 +18,10 @@ export interface BulkResult {
   failed: Array<{ id: string; error: string }>;
 }
 
+export type OrderSearchResult = Order & {
+  customer: { name: string; phone: string };
+};
+
 export const orderServiceExtensions = {
   /**
    * Search orders by order number, customer name, or phone.
@@ -27,7 +31,7 @@ export const orderServiceExtensions = {
     ctx: ServiceContext,
     query: string,
     opts?: { limit?: number; offset?: number; status?: OrderStatus },
-  ) {
+  ): Promise<OrderSearchResult[]> {
     const q = query.trim();
     if (!q) return [];
 
@@ -68,7 +72,7 @@ export const orderServiceExtensions = {
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
     });
-    return rows;
+    return rows as unknown as OrderSearchResult[];
   },
 
   /**
