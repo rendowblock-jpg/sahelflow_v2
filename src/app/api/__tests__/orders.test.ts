@@ -20,6 +20,7 @@ import {
   rawDb,
   seedProduct,
 } from "@/app/api/__tests__/helpers";
+import { SahelFlowError } from "@/types/errors";
 
 const authority = vi.hoisted(() => ({
   requireAction: vi.fn(),
@@ -146,13 +147,6 @@ function orderBody(
   };
 }
 
-function unauthorized(): Error & { code: string; statusCode: number } {
-  return Object.assign(new Error("Unauthorized"), {
-    code: "UNAUTHORIZED",
-    statusCode: 401,
-  });
-}
-
 describe("POST /api/orders — create order", () => {
   beforeEach(async () => {
     await cleanDb();
@@ -234,7 +228,9 @@ describe("POST /api/orders — create order", () => {
   });
 
   it("returns 401 when trusted member authority is unavailable", async () => {
-    authority.requireAction.mockRejectedValue(unauthorized());
+    authority.requireAction.mockRejectedValue(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const product = await seedProduct();
     const customer = await seedCustomer();
 
