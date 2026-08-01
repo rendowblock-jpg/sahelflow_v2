@@ -3,7 +3,10 @@ import "server-only";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 import { listTeamMembers } from "./team-directory";
-import { assertTeamMemberActive } from "./team-revocation-authority";
+import {
+  assertTeamMemberActive,
+  getTeamRevocationSnapshot,
+} from "./team-revocation-authority";
 import type { PersonActor } from "./trusted-actor";
 
 const MEMBER_ID = /^[0-9a-f]{32}$/i;
@@ -14,6 +17,52 @@ export type CollaborationMember = Readonly<{
   displayName: string | null;
   role: "owner" | "manager" | "operator" | "viewer";
 }>;
+
+export async function listCollaborationMembers(
+  currentActor: PersonActor,
+  shop: ShopContext,
+  options: Readonly<{ allowViewer: boolean }> = { allowViewer: true },
+): Promise<readonly CollaborationMember[]> {
+  const [members, revocation] = await Promise.all([
+    listTeamMembers(shop),
+    getTeamRevocationSnapshot(shop),
+  ]);
+  const revoked = new Set(
+    revocation.memberRevocations.map((entry) => entry.memberId),
+  );
+  const active: CollaborationMember[] = members.flatMap((member) => {
+    if (
+      member.revokedAt !== null ||
+      revoked.has(member.memberId) ||
+      (!options.allowViewer && member.role === "viewer") ||
+      !member.shopIds.includes(shop.shopId)
+    ) {
+      return [];
+    }
+    return [
+      Object.freeze({
+        personId: member.personId,
+        memberId: member.memberId,
+        displayName: member.displayName,
+        role: member.role,
+      }),
+    ];
+  });
+  if (
+    currentActor.role === "owner" &&
+    !active.some((member) => member.memberId === currentActor.workspaceMemberId)
+  ) {
+    active.unshift(
+      Object.freeze({
+        personId: currentActor.personId,
+        memberId: currentActor.workspaceMemberId,
+        displayName: null,
+        role: "owner" as const,
+      }),
+    );
+  }
+  return Object.freeze(active);
+}
 
 function unavailable(): SahelFlowError {
   return new SahelFlowError(

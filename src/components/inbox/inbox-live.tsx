@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { ConversationControls, ActivityMessage } from "@/components/inbox/conversation-controls";
+import { ConversationCollaborationPanel } from "@/components/inbox/conversation-collaboration-panel";
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
 
@@ -705,7 +706,7 @@ export function InboxLive() {
         <div className={`${isMobile && !activeChatId ? "hidden" : "flex"} flex-1 flex flex-col`}>
           {activeChat ? (
             <>
-              <div className="p-3 border-b bg-background flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background p-3">
                 <div className="flex items-center gap-3">
                   {isMobile && (
                     <button
@@ -725,16 +726,17 @@ export function InboxLive() {
                     <p className="text-xs text-muted-foreground font-mono">{activeChat.phone}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <Badge variant="outline">
                     {activeChat.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
                   </Badge>
+                  <ConversationControls
+                    conversationId={activeChat.id}
+                    initial={activeChat.workflow ?? {}}
+                    canUpdate={canUpdateConversation}
+                  />
+                  <ConversationCollaborationPanel conversationId={activeChat.id} />
                 </div>
-                <ConversationControls
-                  conversationId={activeChat.id}
-                  initial={activeChat.workflow ?? {}}
-                  canUpdate={canUpdateConversation}
-                />
               </div>
 
               <ScrollArea className="flex-1 p-4">
