@@ -9,8 +9,9 @@
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Active phase:** Phase 2A — durable local identity and session authority
+> **Active package:** Teams and permissions completion
 > **Execution epic:** issue #164
-> **Last updated:** 2026-07-31
+> **Last updated:** 2026-08-01
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, the required experience and engineering invariants, what merged source
@@ -91,19 +92,30 @@ and the Windows-protected installation root with native rotation and installed-M
 proof (PR #184) are merged supporting packages. These are partial protected phase
 results.
 
-Draft PR #195 now contains the complete Phase 1 source boundary and its bounded
-courier closure repairs. Because the Founder is working with one coding agent, a
-fresh separated adversarial review pass was performed without claiming
-independence. It found and closed additional reconciliation-generation,
-unreadable post-effect recovery and pre-query authority-ordering defects. Exact
-closure head `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` passed normal CI
-`30652282305` and Integration source checkpoint `30652282191`.
+Draft PR #195 contains the complete Phase 1 source boundary, closed at
+`3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with normal CI `30652282305`
+and checkpoint `30652282191`. Phase 1 must not be reopened absent new concrete
+P0/P1 evidence.
 
-Phase 1 is source-closed on the integration branch and must not be reopened absent
-new concrete P0/P1 evidence. Phase 2A is active. Its first package contains setup
-mode, exact public auth routes, overall/inactivity freshness, throttled activity,
-reauthentication rotation and PIN-change revocation. It does not yet claim durable
-Person, WorkspaceMember, Device, licensing or native multi-shop completion.
+Phase 2A packages 2A.1–2A.4 are source-closed on the draft integration branch.
+The latest closed package, multi-member roles, invitations and per-shop
+permissions, passed at exact source head
+`3266dc03994ffcb1672256465624ea715f0cf317`, normal CI `30681155150` and
+checkpoint `30681155099`. It establishes installation-level invitation,
+accepted-member and revocation authority, individual member credentials and
+sessions, exact shop grants, role-bounded custom permissions, member-owned
+reauthentication, control-first member revocation, owner administration and
+member self-view in Arabic, French and English.
+
+The sole-agent frozen adversarial pass found and closed revoked-login disclosure,
+stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
+login false-success. It found no remaining P0/P1 and was not an independent
+review.
+
+The active package is now Teams and permissions completion: authoritative
+assignments, workgroups, queues, comments, mentions, handovers, operational
+action permissions and required field-level restrictions. Licensing and native
+multi-shop remain later Phase 2 dependencies.
 
 ## Final completion model
 
