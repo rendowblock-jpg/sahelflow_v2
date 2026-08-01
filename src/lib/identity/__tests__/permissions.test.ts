@@ -21,7 +21,7 @@ describe("Phase 2 permission policy", () => {
     });
   }
 
-  it("uses least-privilege identity and collaboration presets", () => {
+  it("uses least-privilege identity, collaboration and field presets", () => {
     const owner = resolvePhase2Permissions("owner", null);
     const manager = resolvePhase2Permissions("manager", null);
     const operator = resolvePhase2Permissions("operator", null);
@@ -30,18 +30,55 @@ describe("Phase 2 permission policy", () => {
     expect(owner).toEqual(
       expect.arrayContaining([
         "shops.delete",
-        "conversations.read",
-        "conversations.claim",
+        "workgroups.manage",
+        "queues.manage",
+        "comments.write",
         "conversations.assign",
+        "orders.assign",
+        "customers.contact.read",
+        "orders.financials.read",
+        "approvals.approve",
       ]),
     );
-    expect(manager).toContain("conversations.assign");
+    expect(manager).toEqual(
+      expect.arrayContaining([
+        "workgroups.manage",
+        "queues.manage",
+        "comments.write",
+        "conversations.assign",
+        "orders.assign",
+        "orders.financials.read",
+      ]),
+    );
     expect(manager).not.toContain("shops.delete");
+    expect(manager).not.toContain("approvals.approve");
     expect(operator).toEqual(
-      expect.arrayContaining(["conversations.read", "conversations.claim"]),
+      expect.arrayContaining([
+        "workgroups.read",
+        "queues.read",
+        "comments.write",
+        "conversations.read",
+        "conversations.claim",
+        "orders.read",
+        "customers.contact.read",
+      ]),
     );
     expect(operator).not.toContain("conversations.assign");
-    expect(viewer).toEqual(["shops.read", "conversations.read"]);
+    expect(operator).not.toContain("orders.assign");
+    expect(operator).not.toContain("orders.financials.read");
+    expect(viewer).toEqual(
+      expect.arrayContaining([
+        "shops.read",
+        "workgroups.read",
+        "queues.read",
+        "comments.read",
+        "conversations.read",
+        "orders.read",
+      ]),
+    );
+    expect(viewer).not.toContain("comments.write");
+    expect(viewer).not.toContain("customers.contact.read");
+    expect(viewer).not.toContain("orders.financials.read");
   });
 
   it("keeps the compatibility owner read-only until durable authority exists", () => {
@@ -62,6 +99,7 @@ describe("Phase 2 permission policy", () => {
     expect(hasPhase2Permission(permissions, "conversations.read")).toBe(true);
     expect(hasPhase2Permission(permissions, "conversations.claim")).toBe(false);
     expect(hasPhase2Permission(permissions, "conversations.assign")).toBe(false);
+    expect(hasPhase2Permission(permissions, "queues.manage")).toBe(false);
   });
 
   it("keeps custom permissions inside role ceilings", () => {
@@ -71,12 +109,18 @@ describe("Phase 2 permission policy", () => {
         JSON.stringify(["conversations.assign"]),
       ),
     );
+    expectInvalidPolicy(() =>
+      resolvePhase2Permissions(
+        "viewer",
+        JSON.stringify(["comments.write"]),
+      ),
+    );
     expect(
       resolvePhase2Permissions(
         "operator",
-        JSON.stringify(["conversations.claim"]),
+        JSON.stringify(["comments.write", "conversations.claim"]),
       ),
-    ).toEqual(["conversations.claim"]);
+    ).toEqual(["comments.write", "conversations.claim"]);
   });
 
   it("fails closed for malformed or unknown permissions", () => {
@@ -96,6 +140,8 @@ describe("Phase 2 permission policy", () => {
         "devices.manage",
         "sessions.revoke",
         "conversations.assign",
+        "orders.assign",
+        "approvals.approve",
       ]),
     );
   });
