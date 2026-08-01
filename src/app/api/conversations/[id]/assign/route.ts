@@ -9,6 +9,7 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { resolvePhase2Permissions } from "@/lib/identity/permissions";
+import { listTeamMembers } from "@/lib/identity/team-directory";
 import {
   executeConversationAssignment,
   getConversationAssignmentVersion,
@@ -66,6 +67,40 @@ export const GET = withErrorHandler(
       );
     }
 
+    const currentActor = actorProjection(actorContext);
+    const canAssign = currentActor.allowedActions.includes(
+      "conversations.assign",
+    );
+    const acceptedMembers = canAssign
+      ? (await listTeamMembers(actorContext.shop))
+          .filter(
+            (member) =>
+              member.revokedAt === null &&
+              member.role !== "viewer" &&
+              member.shopIds.includes(actorContext.shop.shopId),
+          )
+          .map((member) => ({
+            memberId: member.memberId,
+            displayName: member.displayName,
+            role: member.role,
+          }))
+      : [];
+    const assignableMembers = [...acceptedMembers];
+    if (
+      canAssign &&
+      currentActor.role === "owner" &&
+      currentActor.memberId &&
+      !assignableMembers.some(
+        (member) => member.memberId === currentActor.memberId,
+      )
+    ) {
+      assignableMembers.unshift({
+        memberId: currentActor.memberId,
+        displayName: null,
+        role: "owner",
+      });
+    }
+
     return NextResponse.json(
       {
         assignment: {
@@ -76,7 +111,8 @@ export const GET = withErrorHandler(
             conversation.id,
           ),
         },
-        currentActor: actorProjection(actorContext),
+        currentActor,
+        assignableMembers,
       },
       { headers: { "Cache-Control": "no-store" } },
     );
