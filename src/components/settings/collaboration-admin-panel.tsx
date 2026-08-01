@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Archive, Loader2, Plus, RefreshCw, UsersRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,7 @@ import { toast } from "@/lib/toast";
 const COPY = {
   en: {
     title: "Workgroups and queues",
-    description:
-      "Organize current-shop work without creating shared accounts. Every change is versioned, audited and permission checked.",
+    description: "Organize current-shop work with versioned, audited member authority.",
     loading: "Loading collaboration authority…",
     loadError: "Collaboration authority could not be loaded.",
     refresh: "Refresh",
@@ -22,8 +21,8 @@ const COPY = {
     workgroupName: "Workgroup name",
     descriptionLabel: "Description (optional)",
     members: "Members",
-    addSelected: "Add selected members",
-    removeSelected: "Remove selected members",
+    add: "Add selected",
+    remove: "Remove selected",
     archive: "Archive",
     createQueue: "Create queue",
     queueKey: "Stable queue key",
@@ -47,8 +46,7 @@ const COPY = {
   },
   fr: {
     title: "Groupes de travail et files",
-    description:
-      "Organisez le travail de la boutique actuelle sans comptes partagés. Chaque changement est versionné, audité et soumis aux permissions.",
+    description: "Organisez le travail de la boutique avec une autorité versionnée et auditée.",
     loading: "Chargement de l’autorité de collaboration…",
     loadError: "Impossible de charger l’autorité de collaboration.",
     refresh: "Actualiser",
@@ -58,8 +56,8 @@ const COPY = {
     workgroupName: "Nom du groupe",
     descriptionLabel: "Description (facultative)",
     members: "Membres",
-    addSelected: "Ajouter les membres sélectionnés",
-    removeSelected: "Retirer les membres sélectionnés",
+    add: "Ajouter la sélection",
+    remove: "Retirer la sélection",
     archive: "Archiver",
     createQueue: "Créer une file",
     queueKey: "Clé stable de la file",
@@ -83,8 +81,7 @@ const COPY = {
   },
   ar: {
     title: "مجموعات العمل وقوائم الانتظار",
-    description:
-      "نظّم عمل المتجر الحالي من دون حسابات مشتركة. كل تغيير مضبوط بالإصدار والتدقيق والصلاحيات.",
+    description: "نظّم عمل المتجر بصلاحيات مضبوطة بالإصدار والتدقيق.",
     loading: "جارٍ تحميل صلاحيات التعاون…",
     loadError: "تعذر تحميل صلاحيات التعاون.",
     refresh: "تحديث",
@@ -94,8 +91,8 @@ const COPY = {
     workgroupName: "اسم مجموعة العمل",
     descriptionLabel: "الوصف (اختياري)",
     members: "الأعضاء",
-    addSelected: "إضافة الأعضاء المحددين",
-    removeSelected: "إزالة الأعضاء المحددين",
+    add: "إضافة المحددين",
+    remove: "إزالة المحددين",
     archive: "أرشفة",
     createQueue: "إنشاء قائمة انتظار",
     queueKey: "المفتاح الثابت للقائمة",
@@ -119,10 +116,13 @@ const COPY = {
   },
 } as const;
 
+type Role = "owner" | "manager" | "operator" | "viewer";
+type EntityType = "conversation" | "order" | "confirmation";
+
 type Member = {
   memberId: string;
   displayName: string | null;
-  role: "owner" | "manager" | "operator" | "viewer";
+  role: Role;
 };
 
 type Workgroup = {
@@ -139,7 +139,7 @@ type Queue = {
   key: string;
   name: string;
   description: string | null;
-  entityType: "conversation" | "order" | "confirmation";
+  entityType: EntityType;
   workgroupId: string | null;
   state: "active" | "archived";
   version: number;
@@ -173,15 +173,15 @@ export function CollaborationAdminPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [workgroupName, setWorkgroupName] = useState("");
-  const [workgroupDescription, setWorkgroupDescription] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [newGroupMembers, setNewGroupMembers] = useState<string[]>([]);
+  const [selectedByGroup, setSelectedByGroup] = useState<Record<string, string[]>>({});
   const [queueKey, setQueueKey] = useState("");
   const [queueName, setQueueName] = useState("");
   const [queueDescription, setQueueDescription] = useState("");
-  const [queueEntityType, setQueueEntityType] = useState<Queue["entityType"]>("conversation");
-  const [queueWorkgroupId, setQueueWorkgroupId] = useState("");
-  const [selectionByWorkgroup, setSelectionByWorkgroup] = useState<Record<string, string[]>>({});
+  const [queueType, setQueueType] = useState<EntityType>("conversation");
+  const [queueGroupId, setQueueGroupId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -205,13 +205,9 @@ export function CollaborationAdminPanel() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const memberById = useMemo(
-    () => new Map((view?.activeMembers ?? []).map((member) => [member.memberId, member] as const)),
-    [view?.activeMembers],
-  );
-
-  const mutate = async (payload: Record<string, unknown>) => {
+  const mutate = async (payload: Record<string, unknown>): Promise<boolean> => {
     setSaving(true);
+    setError(null);
     try {
       const response = await fetch("/api/collaboration/administration", {
         method: "POST",
@@ -220,13 +216,19 @@ export function CollaborationAdminPanel() {
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
-        throw new Error(response.status === 409 ? copy.conflict : body.error ?? copy.saveError);
+        throw new Error(
+          response.status === 409
+            ? copy.conflict
+            : body.error ?? copy.saveError,
+        );
       }
       await load();
+      return true;
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : copy.saveError;
       setError(message);
       toast.error(message);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -243,7 +245,7 @@ export function CollaborationAdminPanel() {
     );
   }
 
-  if (!view || error) {
+  if (!view) {
     return (
       <section className="rounded-xl border p-5">
         <p className="text-sm text-destructive">{error ?? copy.loadError}</p>
@@ -255,6 +257,9 @@ export function CollaborationAdminPanel() {
     );
   }
 
+  const memberLabel = (member: Member): string =>
+    `${member.displayName ?? copy.owner} · ${copy[member.role]}`;
+
   return (
     <section className="space-y-6 rounded-xl border p-5">
       <div>
@@ -263,6 +268,7 @@ export function CollaborationAdminPanel() {
           <h3 className="text-base font-semibold">{copy.title}</h3>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">{copy.description}</p>
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
       </div>
 
       {view.permissions.workgroupsRead ? (
@@ -270,56 +276,44 @@ export function CollaborationAdminPanel() {
           <h4 className="text-sm font-semibold">{copy.workgroups}</h4>
           {view.permissions.workgroupsManage ? (
             <div className="grid gap-3 rounded-lg bg-muted/30 p-3 md:grid-cols-2">
-              <Input
-                value={workgroupName}
-                onChange={(event) => setWorkgroupName(event.target.value)}
-                placeholder={copy.workgroupName}
-              />
-              <Input
-                value={workgroupDescription}
-                onChange={(event) => setWorkgroupDescription(event.target.value)}
-                placeholder={copy.descriptionLabel}
-              />
-              <div className="space-y-1 md:col-span-2">
-                <p className="text-xs font-medium text-muted-foreground">{copy.members}</p>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {view.activeMembers.map((member) => (
-                    <label key={member.memberId} className="flex items-center gap-2 rounded-md border bg-background p-2 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={selectedMembers.includes(member.memberId)}
-                        onChange={(event) =>
-                          setSelectedMembers((current) =>
-                            event.target.checked
-                              ? [...current, member.memberId]
-                              : current.filter((id) => id !== member.memberId),
-                          )
-                        }
-                      />
-                      <span className="truncate">
-                        {member.displayName ?? copy.owner} · {copy[member.role]}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+              <Input value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder={copy.workgroupName} />
+              <Input value={groupDescription} onChange={(event) => setGroupDescription(event.target.value)} placeholder={copy.descriptionLabel} />
+              <div className="grid gap-2 md:col-span-2 sm:grid-cols-2 lg:grid-cols-3">
+                {view.activeMembers.map((member) => (
+                  <label key={member.memberId} className="flex items-center gap-2 rounded-md border bg-background p-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={newGroupMembers.includes(member.memberId)}
+                      onChange={(event) =>
+                        setNewGroupMembers((current) =>
+                          event.target.checked
+                            ? [...current, member.memberId]
+                            : current.filter((id) => id !== member.memberId),
+                        )
+                      }
+                    />
+                    <span className="truncate">{memberLabel(member)}</span>
+                  </label>
+                ))}
               </div>
               <Button
-                disabled={saving || !workgroupName.trim()}
-                onClick={() =>
-                  void mutate({
+                disabled={saving || !groupName.trim()}
+                onClick={async () => {
+                  const saved = await mutate({
                     kind: "workgroup",
                     operation: "create",
-                    name: workgroupName.trim(),
-                    description: workgroupDescription.trim() || null,
-                    memberIds: selectedMembers,
+                    name: groupName.trim(),
+                    description: groupDescription.trim() || null,
+                    memberIds: newGroupMembers,
                     expectedVersion: 0,
                     idempotencyKey: requestId(),
-                  }).then(() => {
-                    setWorkgroupName("");
-                    setWorkgroupDescription("");
-                    setSelectedMembers([]);
-                  })
-                }
+                  });
+                  if (saved) {
+                    setGroupName("");
+                    setGroupDescription("");
+                    setNewGroupMembers([]);
+                  }
+                }}
               >
                 <Plus className="me-2 h-4 w-4" />
                 {copy.createWorkgroup}
@@ -331,44 +325,39 @@ export function CollaborationAdminPanel() {
             <p className="text-sm text-muted-foreground">{copy.emptyWorkgroups}</p>
           ) : (
             <div className="space-y-2">
-              {view.workgroups.map((workgroup) => {
-                const activeIds = workgroup.memberships.map((entry) => entry.memberId);
-                const selected = selectionByWorkgroup[workgroup.id] ?? [];
+              {view.workgroups.map((group) => {
+                const activeIds = group.memberships.map((entry) => entry.memberId);
+                const selected = selectedByGroup[group.id] ?? [];
                 return (
-                  <div key={workgroup.id} className="rounded-lg border p-3">
+                  <div key={group.id} className="rounded-lg border p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-medium">{workgroup.name}</p>
-                        {workgroup.description ? (
-                          <p className="text-xs text-muted-foreground">{workgroup.description}</p>
-                        ) : null}
+                        <p className="font-medium">{group.name}</p>
+                        {group.description ? <p className="text-xs text-muted-foreground">{group.description}</p> : null}
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {workgroup.state === "active" ? copy.active : copy.archived} · {activeIds.length} {copy.members.toLowerCase()}
+                          {group.state === "active" ? copy.active : copy.archived} · {activeIds.length} {copy.members.toLowerCase()}
                         </p>
                       </div>
-                      {view.permissions.workgroupsManage && workgroup.state === "active" ? (
+                      {view.permissions.workgroupsManage && group.state === "active" ? (
                         <Button
                           size="sm"
                           variant="outline"
                           disabled={saving}
-                          onClick={() =>
-                            void mutate({
-                              kind: "workgroup",
-                              operation: "archive",
-                              workgroupId: workgroup.id,
-                              memberIds: [],
-                              expectedVersion: workgroup.version,
-                              idempotencyKey: requestId(),
-                            })
-                          }
+                          onClick={() => void mutate({
+                            kind: "workgroup",
+                            operation: "archive",
+                            workgroupId: group.id,
+                            memberIds: [],
+                            expectedVersion: group.version,
+                            idempotencyKey: requestId(),
+                          })}
                         >
                           <Archive className="me-2 h-4 w-4" />
                           {copy.archive}
                         </Button>
                       ) : null}
                     </div>
-
-                    {view.permissions.workgroupsManage && workgroup.state === "active" ? (
+                    {view.permissions.workgroupsManage && group.state === "active" ? (
                       <div className="mt-3 space-y-2">
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                           {view.activeMembers.map((member) => (
@@ -377,17 +366,16 @@ export function CollaborationAdminPanel() {
                                 type="checkbox"
                                 checked={selected.includes(member.memberId)}
                                 onChange={(event) =>
-                                  setSelectionByWorkgroup((current) => ({
+                                  setSelectedByGroup((current) => ({
                                     ...current,
-                                    [workgroup.id]: event.target.checked
+                                    [group.id]: event.target.checked
                                       ? [...selected, member.memberId]
                                       : selected.filter((id) => id !== member.memberId),
                                   }))
                                 }
                               />
                               <span className="truncate">
-                                {member.displayName ?? copy.owner}
-                                {activeIds.includes(member.memberId) ? " ✓" : ""}
+                                {member.displayName ?? copy.owner}{activeIds.includes(member.memberId) ? " ✓" : ""}
                               </span>
                             </label>
                           ))}
@@ -396,36 +384,32 @@ export function CollaborationAdminPanel() {
                           <Button
                             size="sm"
                             variant="secondary"
-                            disabled={saving || selected.filter((id) => !activeIds.includes(id)).length === 0}
-                            onClick={() =>
-                              void mutate({
-                                kind: "workgroup",
-                                operation: "add_members",
-                                workgroupId: workgroup.id,
-                                memberIds: selected.filter((id) => !activeIds.includes(id)),
-                                expectedVersion: workgroup.version,
-                                idempotencyKey: requestId(),
-                              })
-                            }
+                            disabled={saving || selected.every((id) => activeIds.includes(id))}
+                            onClick={() => void mutate({
+                              kind: "workgroup",
+                              operation: "add_members",
+                              workgroupId: group.id,
+                              memberIds: selected.filter((id) => !activeIds.includes(id)),
+                              expectedVersion: group.version,
+                              idempotencyKey: requestId(),
+                            })}
                           >
-                            {copy.addSelected}
+                            {copy.add}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={saving || selected.filter((id) => activeIds.includes(id)).length === 0}
-                            onClick={() =>
-                              void mutate({
-                                kind: "workgroup",
-                                operation: "remove_members",
-                                workgroupId: workgroup.id,
-                                memberIds: selected.filter((id) => activeIds.includes(id)),
-                                expectedVersion: workgroup.version,
-                                idempotencyKey: requestId(),
-                              })
-                            }
+                            disabled={saving || selected.every((id) => !activeIds.includes(id))}
+                            onClick={() => void mutate({
+                              kind: "workgroup",
+                              operation: "remove_members",
+                              workgroupId: group.id,
+                              memberIds: selected.filter((id) => activeIds.includes(id)),
+                              expectedVersion: group.version,
+                              idempotencyKey: requestId(),
+                            })}
                           >
-                            {copy.removeSelected}
+                            {copy.remove}
                           </Button>
                         </div>
                       </div>
@@ -446,37 +430,38 @@ export function CollaborationAdminPanel() {
               <Input value={queueKey} onChange={(event) => setQueueKey(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))} placeholder={copy.queueKey} />
               <Input value={queueName} onChange={(event) => setQueueName(event.target.value)} placeholder={copy.queueName} />
               <Input value={queueDescription} onChange={(event) => setQueueDescription(event.target.value)} placeholder={copy.descriptionLabel} />
-              <select className="h-10 rounded-md border bg-background px-3 text-sm" value={queueEntityType} onChange={(event) => setQueueEntityType(event.target.value as Queue["entityType"])}>
+              <select className="h-10 rounded-md border bg-background px-3 text-sm" value={queueType} onChange={(event) => setQueueType(event.target.value as EntityType)}>
                 <option value="conversation">{copy.conversation}</option>
                 <option value="order">{copy.order}</option>
                 <option value="confirmation">{copy.confirmation}</option>
               </select>
-              <select className="h-10 rounded-md border bg-background px-3 text-sm" value={queueWorkgroupId} onChange={(event) => setQueueWorkgroupId(event.target.value)}>
+              <select className="h-10 rounded-md border bg-background px-3 text-sm" value={queueGroupId} onChange={(event) => setQueueGroupId(event.target.value)}>
                 <option value="">{copy.none}</option>
-                {view.workgroups.filter((workgroup) => workgroup.state === "active").map((workgroup) => (
-                  <option key={workgroup.id} value={workgroup.id}>{workgroup.name}</option>
+                {view.workgroups.filter((group) => group.state === "active").map((group) => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
                 ))}
               </select>
               <Button
                 disabled={saving || !queueKey || !queueName.trim()}
-                onClick={() =>
-                  void mutate({
+                onClick={async () => {
+                  const saved = await mutate({
                     kind: "queue",
                     operation: "create",
                     key: queueKey,
                     name: queueName.trim(),
                     description: queueDescription.trim() || null,
-                    entityType: queueEntityType,
-                    workgroupId: queueWorkgroupId || null,
+                    entityType: queueType,
+                    workgroupId: queueGroupId || null,
                     expectedVersion: 0,
                     idempotencyKey: requestId(),
-                  }).then(() => {
+                  });
+                  if (saved) {
                     setQueueKey("");
                     setQueueName("");
                     setQueueDescription("");
-                    setQueueWorkgroupId("");
-                  })
-                }
+                    setQueueGroupId("");
+                  }
+                }}
               >
                 <Plus className="me-2 h-4 w-4" />
                 {copy.createQueue}
@@ -507,15 +492,13 @@ export function CollaborationAdminPanel() {
                         size="sm"
                         variant="outline"
                         disabled={saving}
-                        onClick={() =>
-                          void mutate({
-                            kind: "queue",
-                            operation: "archive",
-                            queueId: queue.id,
-                            expectedVersion: queue.version,
-                            idempotencyKey: requestId(),
-                          })
-                        }
+                        onClick={() => void mutate({
+                          kind: "queue",
+                          operation: "archive",
+                          queueId: queue.id,
+                          expectedVersion: queue.version,
+                          idempotencyKey: requestId(),
+                        })}
                       >
                         <Archive className="h-4 w-4" />
                       </Button>
