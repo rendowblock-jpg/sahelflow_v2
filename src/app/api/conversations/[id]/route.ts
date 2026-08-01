@@ -4,7 +4,6 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
 import { ensureConversationForJid } from "@/lib/data/conversation-service";
 import { requireTrustedAction } from "@/lib/identity/authorization";
-import { getConversationAssignmentVersion } from "@/lib/inbox/conversation-assignment";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -16,7 +15,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  */
 export const GET = withErrorHandler(
   async (_request: NextRequest, { params }: RouteContext) => {
-    const actorContext = await requireTrustedAction("conversations.read");
+    await requireTrustedAction("conversations.read");
     const { id: rawId } = await params;
     const context = { prisma: db, shop: shopContext };
     const conversationId = await ensureConversationForJid(context, rawId);
@@ -37,25 +36,11 @@ export const GET = withErrorHandler(
         data: { unreadCount: 0 },
       });
     }
-    const assignmentVersion = await getConversationAssignmentVersion(
-      context,
-      conversation.id,
-    );
-    const personActor =
-      actorContext.actor.kind === "person" ? actorContext.actor : null;
 
     return NextResponse.json({
       conversation: {
         ...conversation,
         unreadCount: 0,
-        assignmentVersion,
-      },
-      currentActor: {
-        personId: personActor?.personId ?? null,
-        memberId: personActor?.workspaceMemberId ?? null,
-        role:
-          actorContext.actor.kind === "system" ? null : actorContext.actor.role,
-        permissions: personActor?.permissions ?? null,
       },
       source: "seeded",
     });
