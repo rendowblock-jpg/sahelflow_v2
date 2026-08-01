@@ -12,6 +12,11 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { SahelFlowError } from "@/types/errors";
+
+const authorityHarness = vi.hoisted(() => ({
+  requireAction: vi.fn(),
+}));
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -27,7 +32,7 @@ vi.mock("@/lib/identity/authorization", async (importOriginal) => {
   >();
   return {
     ...actual,
-    requireTrustedAction: vi.fn(async () => ({ actor: {}, shop: {} })),
+    requireTrustedAction: authorityHarness.requireAction,
     assertTrustedAction: vi.fn(),
   };
 });
@@ -50,6 +55,12 @@ import { PATCH as PATCHReturn } from "@/app/api/returns/[id]/route";
 import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+beforeEach(() => {
+  authorityHarness.requireAction
+    .mockReset()
+    .mockResolvedValue({ actor: {}, shop: {} });
+});
 
 let _custCounter = 0;
 async function seedCustomer() {
@@ -195,10 +206,10 @@ describe("POST /api/returns — create return request", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+  it("returns 401 when action authority is rejected", async () => {
+    authorityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const { order } = await seedOrderAtStatus("delivered");
     const res = await POSTReturn(
       mockPost("http://localhost/api/returns", { orderId: order.id, reason: "x" }),
@@ -349,10 +360,10 @@ describe("PATCH /api/returns/[id] — update return status", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
+  it("returns 401 when action authority is rejected", async () => {
+    authorityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const { ret } = await seedReturnAtStatus("requested");
     const res = await PATCHReturn(
       mockPost(`http://localhost/api/returns/${ret.id}`, { status: "approved" }),
