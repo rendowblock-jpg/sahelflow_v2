@@ -34,7 +34,7 @@ export type NativeShopLifecycleRequest = Readonly<{
   actorPersonId: string;
   actorMemberId: string;
   actorDeviceId: string;
-  actorSessionId: string;
+  actorSessionBinding: string;
   policyVersion: number;
   revocationEpoch: number;
   entitlementId: string;
@@ -188,13 +188,7 @@ function validateRequest(request: NativeShopLifecycleRequest): void {
   assertHex(request.actorPersonId, 16, "actorPersonId");
   assertHex(request.actorMemberId, 16, "actorMemberId");
   assertHex(request.actorDeviceId, 16, "actorDeviceId");
-  if (
-    request.actorSessionId.length === 0 ||
-    request.actorSessionId.length > 256 ||
-    request.actorSessionId !== request.actorSessionId.trim()
-  ) {
-    throw new TypeError("actorSessionId is invalid");
-  }
+  assertLowerHex(request.actorSessionBinding, 32, "actorSessionBinding");
   assertPositiveSafeInteger(request.policyVersion, "policyVersion");
   assertUnsignedSafeInteger(request.revocationEpoch, "revocationEpoch");
   if (
@@ -205,7 +199,11 @@ function validateRequest(request: NativeShopLifecycleRequest): void {
     throw new TypeError("entitlementId is invalid");
   }
   assertPositiveSafeInteger(request.entitlementRevision, "entitlementRevision");
-  if (!Number.isSafeInteger(request.shopSlots) || request.shopSlots < 1 || request.shopSlots > 10) {
+  if (
+    !Number.isSafeInteger(request.shopSlots) ||
+    request.shopSlots < 1 ||
+    request.shopSlots > 10
+  ) {
     throw new TypeError("shopSlots is outside the signed launch range");
   }
   assertHex(request.migrationSetSha256, 32, "migrationSetSha256");
@@ -259,7 +257,8 @@ function validatePayload(
       assertExactText(payload.name, "shop name", 50);
       if (
         payload.icon !== null &&
-        (Buffer.byteLength(payload.icon, "utf8") > 32 || /\p{Cc}/u.test(payload.icon))
+        (Buffer.byteLength(payload.icon, "utf8") > 32 ||
+          /\p{Cc}/u.test(payload.icon))
       ) {
         throw new TypeError("shop icon is invalid");
       }
@@ -325,7 +324,7 @@ function frameRequest(
   writer.string(request.actorPersonId);
   writer.string(request.actorMemberId);
   writer.string(request.actorDeviceId);
-  writer.string(request.actorSessionId);
+  writer.string(request.actorSessionBinding);
   writer.u64(request.policyVersion);
   writer.u64(request.revocationEpoch);
   writer.string(request.entitlementId);
