@@ -1,6 +1,6 @@
 use crate::migration_coordinator::{self, ActiveShopAuthority};
-use crate::shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleStage};
-use crate::shop_lifecycle_command::{
+use super::shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleStage};
+use super::shop_lifecycle_command::{
     AuthenticatedShopLifecycleJournal, ShopLifecycleCommand, ShopLifecycleCommandError,
     ShopLifecyclePayload,
 };
@@ -353,7 +353,7 @@ pub fn accept_switch(
 
 fn validate_request_authority(
     registry: &ShopRegistry,
-    request: &crate::shop_lifecycle::ShopLifecycleRequest,
+    request: &super::shop_lifecycle::ShopLifecycleRequest,
     current: &ActiveShopAuthority,
     target: &ShopRecord,
 ) -> Result<(), SwitchAuthorityError> {
