@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getRegistry } from "@/lib/shops";
 import {
   enqueueAuthorizedNativeLifecycle,
@@ -18,6 +19,7 @@ const setActiveSchema = z
 
 /** PUT /api/shops/active — authorize and enqueue an exact native switch. */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
+  await requireTrustedAction("shops.switch");
   const input = setActiveSchema.parse(await req.json());
   const registry = getRegistry();
   const target = registryLifecycleTarget(input.shopId, registry.shops);
