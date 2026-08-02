@@ -324,10 +324,16 @@ fn validate_failure_code(
 fn transition_allowed(from: ShopLifecycleStage, to: ShopLifecycleStage) -> bool {
     match from {
         ShopLifecycleStage::Requested => {
-            matches!(to, ShopLifecycleStage::Authorized | ShopLifecycleStage::Blocked)
+            matches!(
+                to,
+                ShopLifecycleStage::Authorized | ShopLifecycleStage::Blocked
+            )
         }
         ShopLifecycleStage::Authorized => {
-            matches!(to, ShopLifecycleStage::Quiescing | ShopLifecycleStage::Blocked)
+            matches!(
+                to,
+                ShopLifecycleStage::Quiescing | ShopLifecycleStage::Blocked
+            )
         }
         ShopLifecycleStage::Quiescing => matches!(
             to,
@@ -365,7 +371,10 @@ fn transition_allowed(from: ShopLifecycleStage, to: ShopLifecycleStage) -> bool 
         ),
         ShopLifecycleStage::Ready => matches!(to, ShopLifecycleStage::Completed),
         ShopLifecycleStage::Compensating => {
-            matches!(to, ShopLifecycleStage::Recovered | ShopLifecycleStage::Blocked)
+            matches!(
+                to,
+                ShopLifecycleStage::Recovered | ShopLifecycleStage::Blocked
+            )
         }
         ShopLifecycleStage::Blocked => {
             matches!(to, ShopLifecycleStage::ManualRecoveryRequired)
