@@ -6,6 +6,7 @@ on:
       - agent/native-multi-shop-authority
     paths:
       - scripts/apply-native-lifecycle-host-integration.mjs
+      - scripts/apply-native-lifecycle-compile-repair.mjs
       - scripts/apply-native-lifecycle-host-integration.trigger
 
 permissions:
@@ -35,6 +36,9 @@ jobs:
             node scripts/apply-native-lifecycle-host-integration.mjs
           fi
 
+      - name: Apply consolidated compile repair
+        run: node scripts/apply-native-lifecycle-compile-repair.mjs
+
       - name: Format complete Rust package
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -49,11 +53,11 @@ jobs:
       - name: Commit native integration batch
         run: |
           if git diff --quiet; then
-            echo "Native integration and formatting already applied"
+            echo "Native integration and compile repair already applied"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src-tauri/src src-tauri/tests
-          git commit -m "style(phase2): format complete native lifecycle authority"
+          git commit -m "fix(phase2): close native lifecycle compile boundary"
           git push origin HEAD:agent/native-multi-shop-authority
