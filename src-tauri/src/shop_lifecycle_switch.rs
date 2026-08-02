@@ -1,9 +1,9 @@
-use crate::migration_coordinator::{self, ActiveShopAuthority};
 use super::shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleStage};
 use super::shop_lifecycle_command::{
     AuthenticatedShopLifecycleJournal, ShopLifecycleCommand, ShopLifecycleCommandError,
     ShopLifecyclePayload,
 };
+use crate::migration_coordinator::{self, ActiveShopAuthority};
 use fs2::FileExt;
 use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -125,27 +125,20 @@ impl AcceptedSwitch {
         ) {
             Ok(authority) => authority,
             Err(error) => {
-                let restore = write_bytes_atomic(&registry_path, &previous_bytes).and_then(|_| {
-                    migration_coordinator::active_authority(
-                        &self.app_data_dir,
-                        &self.migration_set_sha256,
-                    )
-                    .map(|_| ())
-                    .map_err(|restore_error| IoError::other(restore_error.to_string()))
-                });
-                return match restore {
-                    Ok(()) => Err(SwitchAuthorityError::InvalidRegistry(format!(
-                        "canonical target authority rejected the committed registry and the prior generation was restored: {error}"
-                    ))),
-                    Err(restore_error) => Err(SwitchAuthorityError::ManualRecoveryRequired(
-                        format!(
-                            "canonical target authority rejected the committed registry ({error}); prior registry restoration also failed ({restore_error})"
-                        ),
-                    )),
-                };
+                return self.restore_after_commit_failure(
+                    &registry_path,
+                    &previous_bytes,
+                    format!("canonical target authority rejected the committed registry: {error}"),
+                )
             }
         };
-        verify_target_authority(&target_authority, &registry, &self.target)?;
+        if let Err(error) = verify_target_authority(&target_authority, &registry, &self.target) {
+            return self.restore_after_commit_failure(
+                &registry_path,
+                &previous_bytes,
+                error.to_string(),
+            );
+        }
 
         self.transition(ShopLifecycleStage::Committed, now_unix_ms.saturating_add(2))?;
         let committed = SwitchCommit {
@@ -197,25 +190,31 @@ impl AcceptedSwitch {
             migration_coordinator::active_authority(&self.app_data_dir, &self.migration_set_sha256)
                 .map_err(|error| {
                     SwitchAuthorityError::ManualRecoveryRequired(format!(
-                "the compensated registry did not produce canonical prior authority: {error}"
-            ))
+                        "the compensated registry did not produce canonical prior authority: {error}"
+                    ))
                 })?;
         if recovered.shop_id != committed.previous_authority.shop_id
             || recovered.shop_incarnation_id != committed.previous_authority.shop_incarnation_id
+            || recovered.workspace_id != committed.previous_authority.workspace_id
+            || recovered.installation_id != committed.previous_authority.installation_id
+            || recovered.database_file_id != committed.previous_authority.database_file_id
             || recovered.registry_revision != registry.revision
         {
             return Err(SwitchAuthorityError::ManualRecoveryRequired(
                 "the compensated registry produced unexpected prior authority".to_string(),
             ));
         }
+        Ok(recovered)
+    }
+
+    pub fn complete_recovery(&mut self, now_unix_ms: u64) -> Result<(), SwitchAuthorityError> {
         self.journal.transition(
             &self.installation_root,
             ShopLifecycleStage::Recovered,
-            now_unix_ms.saturating_add(1),
+            now_unix_ms,
             None,
         )?;
-        self.persist_terminal_journal()?;
-        Ok(recovered)
+        self.persist_terminal_journal()
     }
 
     pub fn complete(&mut self, now_unix_ms: u64) -> Result<(), SwitchAuthorityError> {
@@ -252,6 +251,28 @@ impl AcceptedSwitch {
             self.persist_terminal_journal()?;
         }
         Ok(())
+    }
+
+    fn restore_after_commit_failure<T>(
+        &self,
+        registry_path: &Path,
+        previous_bytes: &[u8],
+        failure: String,
+    ) -> Result<T, SwitchAuthorityError> {
+        match restore_previous_registry(
+            registry_path,
+            previous_bytes,
+            &self.app_data_dir,
+            &self.migration_set_sha256,
+            &self.previous_authority,
+        ) {
+            Ok(()) => Err(SwitchAuthorityError::InvalidRegistry(format!(
+                "{failure}; the prior registry authority was restored"
+            ))),
+            Err(restore_error) => Err(SwitchAuthorityError::ManualRecoveryRequired(format!(
+                "{failure}; prior registry restoration also failed ({restore_error})"
+            ))),
+        }
     }
 
     fn persist_journal(&self) -> Result<(), SwitchAuthorityError> {
@@ -394,6 +415,30 @@ fn verify_target_authority(
     {
         return Err(SwitchAuthorityError::InvalidRegistry(
             "committed target authority did not match the exact registry transaction".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn restore_previous_registry(
+    registry_path: &Path,
+    previous_bytes: &[u8],
+    app_data_dir: &Path,
+    migration_set_sha256: &str,
+    previous: &ActiveShopAuthority,
+) -> Result<(), IoError> {
+    write_bytes_atomic(registry_path, previous_bytes)?;
+    let restored = migration_coordinator::active_authority(app_data_dir, migration_set_sha256)
+        .map_err(|error| IoError::other(error.to_string()))?;
+    if restored.workspace_id != previous.workspace_id
+        || restored.installation_id != previous.installation_id
+        || restored.shop_id != previous.shop_id
+        || restored.shop_incarnation_id != previous.shop_incarnation_id
+        || restored.database_file_id != previous.database_file_id
+        || restored.registry_revision != previous.registry_revision
+    {
+        return Err(IoError::other(
+            "restored registry did not reproduce exact prior authority",
         ));
     }
     Ok(())
@@ -597,7 +642,7 @@ fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), IoError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let temp = path.with_extension(format!("{}.tmp", random_hex(8)));
+    let temp = path.with_extension(format!("{}.tmp", random_hex(8)?));
     let mut file = OpenOptions::new()
         .create_new(true)
         .write(true)
@@ -673,16 +718,17 @@ fn replace_file_durable(staged: &Path, target: &Path) -> Result<(), IoError> {
     Ok(())
 }
 
-fn random_hex(byte_count: usize) -> String {
+fn random_hex(byte_count: usize) -> Result<String, IoError> {
     let mut bytes = vec![0_u8; byte_count];
-    getrandom::getrandom(&mut bytes).expect("secure OS randomness is required");
+    getrandom::getrandom(&mut bytes)
+        .map_err(|error| IoError::other(format!("secure OS randomness failed: {error}")))?;
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut output = String::with_capacity(byte_count * 2);
     for byte in bytes {
         output.push(HEX[(byte >> 4) as usize] as char);
         output.push(HEX[(byte & 0x0f) as usize] as char);
     }
-    output
+    Ok(output)
 }
 
 struct FileLock {
