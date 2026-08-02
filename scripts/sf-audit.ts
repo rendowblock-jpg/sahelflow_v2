@@ -277,7 +277,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Latest protected source closures",
       "Signed licensing — PR #197",
       "single-agent governance reset",
-      "Native multi-shop remains the final Phase 2 implementation outcome",
+      "This is the final Phase 2 implementation outcome",
       "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
     ],
   ],
