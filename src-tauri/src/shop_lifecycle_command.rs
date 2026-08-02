@@ -164,7 +164,7 @@ impl ShopLifecycleAuthorization {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq,PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShopLifecycleCommand {
     pub authorization: ShopLifecycleAuthorization,
