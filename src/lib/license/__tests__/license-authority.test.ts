@@ -7,7 +7,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ShopContext } from "@/lib/shops/context";
-import { advanceNativeRevocationFloor } from "../native-commercial-authority";
 import {
   LICENSE_ENTITLEMENT_DOMAIN,
   LICENSE_ENTITLEMENT_FORMAT,
@@ -20,15 +19,6 @@ import {
   licenseAuthorityPath,
   requiresAuthenticatedEntitlementActivation,
 } from "../license-authority";
-
-vi.mock("../native-commercial-authority", () => ({
-  advanceNativeRevocationFloor: vi.fn(async (minimumRevocationEpoch: number) => {
-    if (process.env.NODE_ENV !== "production") return;
-    process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = "ready";
-    process.env.SF_LICENSE_CLOCK_ANCHOR_MS = String(Date.now());
-    process.env.SF_LICENSE_REVOCATION_FLOOR = String(minimumRevocationEpoch);
-  }),
-}));
 
 const PRIVATE_KEY = new Uint8Array(
   Buffer.from("883e9345ecd41c7cc2d2761720aabada5fd6e1316d6799206cd2707537ea968b", "hex"),
@@ -76,7 +66,6 @@ async function signedClaims(overrides: Partial<EntitlementClaims> = {}) {
 }
 
 beforeEach(async () => {
-  vi.clearAllMocks();
   rmSync(dataDirectory, { recursive: true, force: true });
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("SF_DATA_DIR", dataDirectory);
@@ -168,7 +157,7 @@ describe("installation license authority", () => {
     ).resolves.toMatchObject({ status: "clock_rollback" });
   });
 
-  it("keeps missing-anchor trials locked while allowing signed permanent recovery", async () => {
+  it("keeps missing-anchor claims locked until authoritative reconciliation", async () => {
     const trial = await signedClaims();
     await activateSignedEntitlement(trial, shop, new Date("2026-08-03T00:00:00.000Z"));
     vi.stubEnv("NODE_ENV", "production");
@@ -189,8 +178,7 @@ describe("installation license authority", () => {
     });
     await expect(
       activateSignedEntitlement(recovery, shop, new Date("2026-08-04T00:00:00.000Z")),
-    ).resolves.toMatchObject({ status: "valid", type: "permanent" });
-    expect(advanceNativeRevocationFloor).toHaveBeenCalledWith(0);
+    ).rejects.toMatchObject({ code: "LICENSE_AUTHORITY_UNAVAILABLE" });
   });
 
   it("recovers corrupt local state only with an exact offline recovery claim", async () => {

@@ -277,7 +277,7 @@ function nativeClockAnchor(allowMissing: boolean): string | null {
   const value = process.env.SF_LICENSE_CLOCK_ANCHOR_MS;
   if (status === "missing" && allowMissing) return null;
   if (status === "missing") {
-    throw authorityError("Protected license clock authority requires signed recovery");
+    throw authorityError("Protected license clock authority requires current reconciliation");
   }
   if (status !== "ready" || !value) {
     if (process.env.NODE_ENV === "production") {
@@ -300,7 +300,7 @@ function nativeRevocationFloor(allowMissing: boolean): number {
   const value = process.env.SF_LICENSE_REVOCATION_FLOOR;
   if (status === "missing" && allowMissing) return 0;
   if (status === "missing") {
-    throw authorityError("Protected commercial revocation authority requires signed recovery");
+    throw authorityError("Protected commercial revocation authority requires current reconciliation");
   }
   if (status !== "ready" || !value) {
     if (process.env.NODE_ENV === "production") {
@@ -318,19 +318,14 @@ function nativeRevocationFloor(allowMissing: boolean): number {
   return epoch;
 }
 
-function permitsNativeAuthorityRecovery(
+function permitsMissingNativeAuthority(
   entitlement: SignedEntitlement,
   allowOnlineTrialInitialization = false,
 ): boolean {
   return (
-    (allowOnlineTrialInitialization &&
-      entitlement.claims.type === "trial" &&
-      entitlement.claims.issuer === "trial-service") ||
-    (entitlement.claims.type === "permanent" &&
-      entitlement.claims.issuer === "founder-offline" &&
-      (entitlement.claims.recoveryEpoch > 0 ||
-        (entitlement.claims.transferState === "revoked" &&
-          entitlement.claims.revocationEpoch > 0)))
+    allowOnlineTrialInitialization &&
+    entitlement.claims.type === "trial" &&
+    entitlement.claims.issuer === "trial-service"
   );
 }
 
@@ -342,7 +337,7 @@ function effectiveMinimumRevocationEpoch(
   return Math.max(
     localMinimumRevocationEpoch,
     nativeRevocationFloor(
-      permitsNativeAuthorityRecovery(entitlement, allowOnlineTrialInitialization),
+      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization),
     ),
   );
 }
@@ -362,7 +357,7 @@ async function validate(
   now: Date,
   allowOnlineTrialInitialization = false,
 ) {
-  const permitsClockRecovery = permitsNativeAuthorityRecovery(
+  const permitsClockRecovery = permitsMissingNativeAuthority(
     entitlement,
     allowOnlineTrialInitialization,
   );
@@ -504,7 +499,7 @@ export async function activateSignedEntitlement(
       entitlement.claims.revocationEpoch > minimumEpoch ||
       (process.env.NODE_ENV === "production" &&
         process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
-        permitsNativeAuthorityRecovery(entitlement, allowOnlineTrialInitialization))
+        permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization))
     ) {
       await advanceNativeRevocationFloor(entitlement.claims.revocationEpoch);
     }

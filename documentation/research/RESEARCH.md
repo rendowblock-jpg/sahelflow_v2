@@ -378,7 +378,11 @@ recovery and revocation epochs. The local authority is atomic, locked,
 installation-root authenticated and outside every shop DB. Clock high-water is
 also anchored outside replayable AppData in a device-bound, DPAPI-protected
 HKCU registry value; a missing anchor beside an existing entitlement fails
-closed. Cloudflare D1 has one unique trial record per opaque device and re-signs
+closed. Historical offline permanent recovery claims cannot recreate a missing
+native anchor because no deleted local store can prove that claim is still the
+latest; that condition requires canonical replacement-install recovery or a
+future current-authority reconciliation service. Cloudflare D1 has one unique
+trial record per opaque device and re-signs
 the original dates for reinstall recovery. Expiry or any invalid authority
 blocks server rendering, client UI, background provider effects and every
 non-allowlisted API while preserving data; only authentication,
