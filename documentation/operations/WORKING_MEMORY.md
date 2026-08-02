@@ -11,7 +11,7 @@
 > **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
 > **Active package:** Signed licensing and entitlement authority
 > **Active branch:** `agent/license-entitlement-authority`
-> **Active PR:** pending first durable licensing push
+> **Active PR:** draft PR #197 — `Phase 2: establish signed licensing authority`
 > **Merge state:** PR #195 merged; licensing package in implementation
 
 Protected `main`, the active licensing branch and issue #164 are live authority.
