@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getNativeShopArchive } from "@/lib/shops/native-lifecycle-archives";
 import { enqueueAuthorizedNativeLifecycle } from "@/lib/shops/native-lifecycle-authority";
 import { SahelFlowError } from "@/types/errors";
@@ -13,6 +14,7 @@ export const POST = withErrorHandler(
     _req: NextRequest,
     { params }: { params: Promise<{ archiveId: string }> },
   ) => {
+    await requireTrustedAction("shops.create");
     const { archiveId } = await params;
     const archive = getNativeShopArchive(archiveId);
     if (archive.status !== "archived") {
