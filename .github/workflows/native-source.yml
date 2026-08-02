@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   native-source:
-    name: Native source contract
+    name: Native source contract (Rust 1.77)
     if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -28,8 +28,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup minimum supported Rust
+        uses: dtolnay/rust-toolchain@1.77.2
         with:
           components: rustfmt, clippy
 
@@ -45,8 +45,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-native-source-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-native-source-
+          key: ${{ runner.os }}-cargo-native-source-rust177-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-native-source-rust177-
 
       - name: Create Linux sidecar stub
         run: |
@@ -55,7 +55,10 @@ jobs:
           chmod +x src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
 
       - name: Verify canonical Rust formatting
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+        run: |
+          set -o pipefail
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check 2>&1 |
+            tee .sf-native-fmt.log
 
       - name: Run native integration contracts
         run: |
@@ -74,7 +77,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-source-diagnostics-${{ github.run_id }}
-          path: .sf-native-source-test.log
+          path: |
+            .sf-native-fmt.log
+            .sf-native-source-test.log
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 2
