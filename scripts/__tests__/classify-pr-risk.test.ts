@@ -28,10 +28,15 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("defers Windows artifact proof for an ordinary native source package", () => {
-    expect(classifyPrRisk(["src-tauri/src/lib.rs"])).toMatchObject({
+  it("compiles and tests ordinary native source without forcing Windows artifacts", () => {
+    expect(
+      classifyPrRisk([
+        "src-tauri/src/shop_lifecycle.rs",
+        "src-tauri/tests/shop_lifecycle_contract.rs",
+      ]),
+    ).toMatchObject({
       runQuality: true,
-      runTauri: false,
+      runTauri: true,
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
