@@ -13,12 +13,46 @@ mod child_containment;
 mod device_binding;
 mod installation_root_key;
 mod installation_root_rotation;
+mod license_clock;
 mod migration_coordinator;
 mod packaged_auth;
 mod packaged_runtime;
 mod process_authority;
 mod runtime_protocol;
 mod runtime_supervisor;
+
+#[cfg(not(debug_assertions))]
+fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
+    [
+        ("SF_LICENSE_SERVICE_URL", env!("SF_LICENSE_SERVICE_URL")),
+        (
+            "SF_LICENSE_TRIAL_PUBLIC_KEYS",
+            env!("SF_LICENSE_TRIAL_PUBLIC_KEYS"),
+        ),
+        (
+            "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
+            env!("SF_LICENSE_PERMANENT_PUBLIC_KEYS"),
+        ),
+    ]
+}
+
+#[cfg(debug_assertions)]
+fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
+    [
+        (
+            "SF_LICENSE_SERVICE_URL",
+            option_env!("SF_LICENSE_SERVICE_URL").unwrap_or(""),
+        ),
+        (
+            "SF_LICENSE_TRIAL_PUBLIC_KEYS",
+            option_env!("SF_LICENSE_TRIAL_PUBLIC_KEYS").unwrap_or(""),
+        ),
+        (
+            "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
+            option_env!("SF_LICENSE_PERMANENT_PUBLIC_KEYS").unwrap_or(""),
+        ),
+    ]
+}
 mod startup_recovery;
 
 use runtime_protocol::RuntimeProtocol;
@@ -552,6 +586,12 @@ fn server_env(
     let token_file = app_data_dir.join("sidecar-token");
     let resource_dir = app.path().resource_dir()?;
     let device_binding = device_binding::current_device_binding().map_err(IoError::other)?;
+    let license_authority_exists = app_data_dir
+        .join("system")
+        .join("license-authority.json")
+        .is_file();
+    let license_clock_anchor = license_clock::observe(&device_binding, license_authority_exists)
+        .map_err(IoError::other)?;
 
     let mut environment = vec![
         (
@@ -617,6 +657,10 @@ fn server_env(
             authority.installation_id.clone(),
         ),
         ("SF_DEVICE_BINDING".to_string(), device_binding),
+        (
+            "SF_LICENSE_CLOCK_ANCHOR_MS".to_string(),
+            license_clock_anchor.to_string(),
+        ),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
         (
             "SF_SHOP_INCARNATION_ID".to_string(),
@@ -657,21 +701,8 @@ fn server_env(
     if let Some(secret) = auth.secret() {
         environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
     }
-    for (name, value) in [
-        (
-            "SF_LICENSE_SERVICE_URL",
-            option_env!("SF_LICENSE_SERVICE_URL"),
-        ),
-        (
-            "SF_LICENSE_TRIAL_PUBLIC_KEYS",
-            option_env!("SF_LICENSE_TRIAL_PUBLIC_KEYS"),
-        ),
-        (
-            "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
-            option_env!("SF_LICENSE_PERMANENT_PUBLIC_KEYS"),
-        ),
-    ] {
-        if let Some(value) = value.filter(|candidate| !candidate.is_empty()) {
+    for (name, value) in compiled_license_configuration() {
+        if !value.is_empty() {
             environment.push((name.to_string(), value.to_string()));
         }
     }

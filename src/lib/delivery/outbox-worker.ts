@@ -31,10 +31,16 @@ export function startCourierOutboxWorker(): void {
     }
     state.running = true;
     try {
-      const [{ db, shopContext }, { drainDueCourierBookings }] = await Promise.all([
+      const [
+        { db, shopContext },
+        { drainDueCourierBookings },
+        { requireLicenseEntitlement },
+      ] = await Promise.all([
         import("@/lib/db"),
         import("@/lib/delivery/canonical-courier"),
+        import("@/lib/license/license-authority"),
       ]);
+      await requireLicenseEntitlement(undefined, shopContext);
       await drainDueCourierBookings({ prisma: db, shop: shopContext }, 10);
     } catch {
       // Durable queued/retrying/ambiguous state remains authority. The next

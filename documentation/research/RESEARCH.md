@@ -375,17 +375,22 @@ private key never enters the app, repository or cloud control plane. Claims bind
 license, workspace, installation, opaque device, product major, exact dates,
 support horizon, shops, members, devices, resources, features, transfer,
 recovery and revocation epochs. The local authority is atomic, locked,
-installation-root authenticated, outside every shop DB and maintains protected
-clock high-water state. Cloudflare D1 has one unique trial record per opaque
-device and re-signs the original dates for reinstall recovery. Expiry or any
-invalid authority blocks UI and every non-allowlisted API while preserving data;
-only authentication, licensing/payment/support and minimal runtime diagnostics
-remain.
+installation-root authenticated and outside every shop DB. Clock high-water is
+also anchored outside replayable AppData in a device-bound, DPAPI-protected
+HKCU registry value; a missing anchor beside an existing entitlement fails
+closed. Cloudflare D1 has one unique trial record per opaque device and re-signs
+the original dates for reinstall recovery. Expiry or any invalid authority
+blocks server rendering, client UI, background provider effects and every
+non-allowlisted API while preserving data; only authentication,
+licensing/payment/support and minimal runtime diagnostics remain. Every release
+build also fails before packaging unless the HTTPS trial-service URL and both
+non-empty public verification keyrings are supplied at compile time.
 
 **Acceptance and revalidation.** Source evidence must cover signature mutation,
 wrong key class, workspace/installation/device/product mismatch, duplicate and
 concurrent trial issuance, reinstall date recovery, missing/corrupt local state,
-clock rollback, expiry, revocation, transfer, activation replacement, route
+AppData snapshot rollback, clock rollback, expiry, revocation, transfer,
+activation replacement, route
 allowlisting, AR/FR/EN lockout and legacy-path removal. Phase 2 exit adds exact
 Windows SMBIOS, packaged environment, signed MSI, close/reopen and preserved-data
 proof. Revalidate on Windows/SMBIOS API change, Ed25519/provider runtime change,

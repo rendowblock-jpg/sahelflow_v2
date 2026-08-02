@@ -271,6 +271,31 @@ function deviceBinding(): string {
   return value;
 }
 
+function nativeClockAnchor(): string | null {
+  const value = process.env.SF_LICENSE_CLOCK_ANCHOR_MS;
+  if (!value) {
+    if (process.env.NODE_ENV === "production") {
+      throw authorityError("Native license clock authority is unavailable");
+    }
+    return null;
+  }
+  if (!/^\d{13}$/.test(value)) {
+    throw authorityError("Native license clock authority is invalid");
+  }
+  const timestamp = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(timestamp)) {
+    throw authorityError("Native license clock authority is out of range");
+  }
+  return new Date(timestamp).toISOString();
+}
+
+function highestObservedAt(local: string | null): string | null {
+  const native = nativeClockAnchor();
+  if (!local) return native;
+  if (!native) return local;
+  return new Date(local).getTime() >= new Date(native).getTime() ? local : native;
+}
+
 async function validate(
   entitlement: SignedEntitlement,
   shop: ShopContext,
@@ -286,7 +311,7 @@ async function validate(
       deviceBinding: deviceBinding(),
       appVersion: process.env.APP_VERSION ?? "1.0.0-internal.13",
       minimumRevocationEpoch,
-      lastObservedAt,
+      lastObservedAt: highestObservedAt(lastObservedAt),
       now,
     },
     licenseVerificationKeyring(),

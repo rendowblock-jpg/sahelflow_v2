@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { LicenseBoundary } from "@/components/license/license-boundary";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { SpeculationRules } from "@/components/shared/speculation-rules";
 import { getDirection, type Locale } from "@/lib/i18n";
 import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
+import { getLicenseAuthorityProjection } from "@/lib/license/license-authority";
 import { redirect } from "next/navigation";
 
 const VALID_LOCALES: readonly string[] = ["ar", "fr", "en"];
@@ -28,6 +30,17 @@ export default async function DashboardRouteLayout({
 }) {
   if (!(await isAuthSetup())) redirect("/setup");
   if (!(await isAuthenticated())) redirect("/login");
+  const licenseValid = await getLicenseAuthorityProjection()
+    .then((projection) => projection.status === "valid")
+    .catch(() => false);
+  if (!licenseValid) {
+    return (
+      <>
+        <RuntimeUiReadyBeacon />
+        <LicenseBoundary>{null}</LicenseBoundary>
+      </>
+    );
+  }
 
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get("sahelflow-locale")?.value;
@@ -38,15 +51,17 @@ export default async function DashboardRouteLayout({
   const dir = getDirection(locale);
 
   return (
-    <DashboardLayout locale={locale} dir={dir}>
-      {/*
-        Authentication and setup authority have resolved above. Signal the
-        hydrated workspace shell before slower page aggregates finish behind
-        their route loading surface.
-      */}
-      <RuntimeUiReadyBeacon />
-      <SpeculationRules />
-      {children}
-    </DashboardLayout>
+    <LicenseBoundary>
+      <DashboardLayout locale={locale} dir={dir}>
+        {/*
+          Authentication, setup and entitlement authority have resolved above.
+          Signal the hydrated workspace shell before slower page aggregates
+          finish behind their route loading surface.
+        */}
+        <RuntimeUiReadyBeacon />
+        <SpeculationRules />
+        {children}
+      </DashboardLayout>
+    </LicenseBoundary>
   );
 }

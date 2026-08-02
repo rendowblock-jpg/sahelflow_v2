@@ -86,9 +86,8 @@ fn raw_smbios() -> Result<Vec<u8>, String> {
         ));
     }
     let mut raw = vec![0_u8; required as usize];
-    let written = unsafe {
-        GetSystemFirmwareTable(RSMB_PROVIDER, 0, raw.as_mut_ptr().cast(), required)
-    };
+    let written =
+        unsafe { GetSystemFirmwareTable(RSMB_PROVIDER, 0, raw.as_mut_ptr().cast(), required) };
     if written != required {
         raw.fill(0);
         return Err("GetSystemFirmwareTable returned an incomplete table".to_owned());
@@ -131,7 +130,10 @@ mod tests {
         let binding = binding_from_raw_smbios(&raw).expect("device binding");
         assert_eq!(binding.len(), 70);
         assert!(binding.starts_with("sfdb1_"));
-        assert_eq!(binding, binding_from_raw_smbios(&raw).expect("stable binding"));
+        assert_eq!(
+            binding,
+            binding_from_raw_smbios(&raw).expect("stable binding")
+        );
         assert!(!binding.contains("01020304"));
     }
 

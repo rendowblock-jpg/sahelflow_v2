@@ -36,4 +36,52 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain("TRIAL_PRIVATE_KEY_PKCS8");
     expect(worker).not.toContain("PERMANENT_PRIVATE");
   });
+
+  it("fails every release build closed when licensing configuration is absent", () => {
+    const build = read("src-tauri/build.rs");
+    const tauri = read("src-tauri/src/lib.rs");
+    for (const name of [
+      "SF_LICENSE_SERVICE_URL",
+      "SF_LICENSE_TRIAL_PUBLIC_KEYS",
+      "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
+    ]) {
+      expect(build).toContain(`"${name}"`);
+      expect(tauri).toContain(`env!("${name}")`);
+    }
+    expect(build).toContain("required_release_value(name)");
+    expect(build).toContain('starts_with("https://")');
+    expect(build).toContain("validate_keyring");
+  });
+
+  it("anchors trial time outside replayable AppData before starting the server", () => {
+    const anchor = read("src-tauri/src/license_clock.rs");
+    const tauri = read("src-tauri/src/lib.rs");
+    const authority = read("src/lib/license/license-authority.ts");
+
+    expect(anchor).toContain("HKEY_CURRENT_USER");
+    expect(anchor).toContain("CryptProtectData");
+    expect(anchor).toContain("CryptUnprotectData");
+    expect(anchor).toContain("authority_file_exists");
+    expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_MS"');
+    expect(authority).toContain("highestObservedAt(lastObservedAt)");
+  });
+
+  it("gates protected server rendering and background provider effects", () => {
+    const rootLayout = read("src/app/layout.tsx");
+    const dashboardLayout = read("src/app/(dashboard)/layout.tsx");
+    const whatsAppWorker = read("src/lib/whatsapp/outbox-worker.ts");
+    const courierWorker = read("src/lib/delivery/outbox-worker.ts");
+
+    expect(rootLayout).not.toContain("<LicenseBoundary>");
+    expect(dashboardLayout).toContain("getLicenseAuthorityProjection");
+    expect(dashboardLayout.indexOf("if (!licenseValid)")).toBeLessThan(
+      dashboardLayout.indexOf("{children}"),
+    );
+    expect(whatsAppWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(
+      whatsAppWorker.indexOf("drainDueWhatsAppEffects({"),
+    );
+    expect(courierWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(
+      courierWorker.indexOf("drainDueCourierBookings({"),
+    );
+  });
 });

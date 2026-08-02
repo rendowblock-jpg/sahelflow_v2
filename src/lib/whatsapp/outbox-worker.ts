@@ -31,10 +31,16 @@ export function startWhatsAppOutboxWorker(): void {
     }
     state.running = true;
     try {
-      const [{ db, shopContext }, { drainDueWhatsAppEffects }] = await Promise.all([
+      const [
+        { db, shopContext },
+        { drainDueWhatsAppEffects },
+        { requireLicenseEntitlement },
+      ] = await Promise.all([
         import("@/lib/db"),
         import("@/lib/whatsapp/durable-send"),
+        import("@/lib/license/license-authority"),
       ]);
+      await requireLicenseEntitlement(undefined, shopContext);
       await drainDueWhatsAppEffects({ prisma: db, shop: shopContext }, 10);
     } catch {
       // Durable queued/retrying/ambiguous state remains authoritative. The next

@@ -11,7 +11,6 @@ import { getDirection, type Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
-import { LicenseBoundary } from "@/components/license/license-boundary";
 
 // CSS variable renamed from --font-geist-sans to --font-inter to match the
 // actual font being loaded (Inter, not Geist Sans). The `geist` package is
@@ -95,7 +94,7 @@ export default async function RootLayout({
           <ServerLocaleProvider locale={locale}>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
               <TooltipProvider delayDuration={300}>
-                <LicenseBoundary>{children}</LicenseBoundary>
+                {children}
                 <ServiceWorkerRegister />
                 <UpdateChecker />
                 <Toaster

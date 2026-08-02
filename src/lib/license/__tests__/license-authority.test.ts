@@ -70,6 +70,7 @@ beforeEach(async () => {
   vi.stubEnv("SF_DATA_DIR", dataDirectory);
   vi.stubEnv("SF_DEVICE_BINDING", `sfdb1_${"a".repeat(64)}`);
   vi.stubEnv("APP_VERSION", "1.0.0-internal.13");
+  vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
   const publicKey = await getPublicKeyAsync(PRIVATE_KEY);
   vi.stubEnv(
     "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -116,6 +117,18 @@ describe("installation license authority", () => {
     await activateSignedEntitlement(entitlement, shop, new Date("2026-08-03T00:00:00.000Z"));
     await expect(
       getLicenseAuthorityProjection(shop, new Date("2026-08-02T00:00:00.000Z")),
+    ).resolves.toMatchObject({ status: "clock_rollback" });
+  });
+
+  it("rejects an authentic AppData snapshot behind the protected native clock", async () => {
+    const entitlement = await signedClaims();
+    await activateSignedEntitlement(entitlement, shop, new Date("2026-08-03T00:00:00.000Z"));
+    vi.stubEnv(
+      "SF_LICENSE_CLOCK_ANCHOR_MS",
+      String(new Date("2026-08-08T00:00:00.000Z").getTime()),
+    );
+    await expect(
+      getLicenseAuthorityProjection(shop, new Date("2026-08-04T00:00:00.000Z")),
     ).resolves.toMatchObject({ status: "clock_rollback" });
   });
 
