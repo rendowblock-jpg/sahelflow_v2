@@ -1,9 +1,9 @@
 /**
  * Shop store — multi-shop management state.
  *
- * Backed by /api/shops (which reads/writes data/app-meta.json + manages the
- * per-shop SQLite files). The store loads the shop list on mount and syncs
- * mutations back to the API.
+ * Backed by /api/shops and the native lifecycle authority. The browser may
+ * request a switch, but only the packaged native host can quiesce processes,
+ * commit registry authority, and start the target runtime.
  */
 import { create } from "zustand";
 import { mutate } from "swr";
@@ -33,7 +33,7 @@ interface ShopState {
   createShop: (input: { name: string; icon?: string | null }) => Promise<Shop>;
   /** Delete a shop (calls DELETE /api/shops/[id]). */
   removeShop: (shopId: string) => Promise<void>;
-  /** Set the active shop (calls PUT /api/shops/active). */
+  /** Request an exact native active-shop transition. */
   setActiveShop: (shopId: string) => Promise<void>;
   /** Get the active shop (synchronous, from store state). */
   getActiveShop: () => Shop | null;
@@ -108,23 +108,39 @@ export const useShopStore = create<ShopState>((set, get) => ({
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
-        status?: string;
+        status?: "pending" | "completed";
+        operationId?: string;
+        targetShopId?: string;
       };
       if (!res.ok) {
         throw new Error(data.error || "Échec du changement de boutique");
       }
-      if (data.status !== "pending") {
-        throw new Error("Le changement de boutique n'a pas été confirmé comme en attente");
+
+      if (data.status === "pending") {
+        if (!isTauriEnv()) {
+          throw new Error("L'autorité native de changement de boutique est indisponible");
+        }
+        // The current runtime remains authoritative until the native host
+        // quiesces it. Successful readiness replaces this WebView navigation;
+        // failures are surfaced by the native recovery screen.
+        return;
       }
 
-      if (isTauriEnv()) {
-        const { relaunch } = await import("@tauri-apps/plugin-process");
-        await relaunch();
-      } else if (typeof window !== "undefined") {
-        window.location.assign("/login");
-      } else {
-        throw new Error("Le redémarrage de SahelFlow n'est pas disponible");
+      if (data.status === "completed") {
+        set({
+          activeShopId: data.targetShopId ?? shopId,
+          switchStatus: "idle",
+          switchTargetId: null,
+          switchError: null,
+        });
+        await mutate(() => true, undefined, { revalidate: false });
+        if (typeof window !== "undefined") {
+          window.location.assign("/login");
+        }
+        return;
       }
+
+      throw new Error("Le changement de boutique n'a pas reçu un état natif valide");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Échec du changement de boutique";
