@@ -14,8 +14,8 @@
 > **Active PR:** none until the native multi-shop package opens
 > **Merge state:** PR #195 and PR #197 merged; native multi-shop is next
 
-Protected `main`, the next native multi-shop branch and issue #164 are live
-authority.
+Protected `main` and issue #164 are live authority. The named native multi-shop
+branch becomes authority only after it is created from the exact protected head.
 Never trust copied head or run numbers without re-reading GitHub.
 
 ## Protected truth
