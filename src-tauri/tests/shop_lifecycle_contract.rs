@@ -32,7 +32,7 @@ fn node_golden_command() -> ShopLifecycleCommand {
                 actor_person_id: identity('4'),
                 actor_member_id: identity('5'),
                 actor_device_id: identity('6'),
-                actor_session_id: "session-exact".to_owned(),
+                actor_session_binding: "b".repeat(64),
                 policy_version: 3,
                 revocation_epoch: 1,
                 entitlement_id: "license_001".to_owned(),
@@ -47,7 +47,7 @@ fn node_golden_command() -> ShopLifecycleCommand {
             },
             payload: ShopLifecyclePayload::Switch,
         },
-        mac: "68abd891f99707bf0ce89bc506db3f23dd72a9ad245cd1a1b86085af5588997b".to_owned(),
+        mac: "511273bd842a6c5d5265c78e3f74c3f4b7d8f2ee12e37774129add287c640630".to_owned(),
     }
 }
 
