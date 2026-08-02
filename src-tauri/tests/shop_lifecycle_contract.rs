@@ -47,8 +47,7 @@ fn rust_accepts_the_node_golden_lifecycle_ticket() {
             },
             payload: ShopLifecyclePayload::Switch,
         },
-        mac: "68abd891f99707bf0ce89bc506db3f23dd72a9ad245cd1a1b86085af5588997b"
-            .to_owned(),
+        mac: "68abd891f99707bf0ce89bc506db3f23dd72a9ad245cd1a1b86085af5588997b".to_owned(),
     };
 
     assert_eq!(command.verify(&[9_u8; 32], 1_001_000), Ok(()));
