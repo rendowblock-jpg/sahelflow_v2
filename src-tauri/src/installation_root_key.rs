@@ -1448,7 +1448,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 }
 
 fn hex_decode(value: &str) -> Result<Vec<u8>, InstallationRootError> {
-    if value.len() % 2 != 0 {
+    if value.len() & 1 != 0 {
         return Err(InstallationRootError::InvalidState(
             "protected payload hex has an odd length".to_owned(),
         ));
