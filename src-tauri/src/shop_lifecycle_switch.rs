@@ -109,7 +109,7 @@ impl AcceptedSwitch {
         validate_registry_shape(&registry)?;
         validate_request_authority(
             &registry,
-            &self.journal,
+            &self.journal.journal.request,
             &self.previous_authority,
             &self.target,
         )?;
