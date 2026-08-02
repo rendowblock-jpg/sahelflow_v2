@@ -1,0 +1,80 @@
+name: Native source contract
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/native-source.yml"
+
+concurrency:
+  group: native-source-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  native-source:
+    name: Native source contract
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-native-source-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-native-source-
+
+      - name: Create Linux sidecar stub
+        run: |
+          mkdir -p src-tauri/binaries
+          touch src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
+
+      - name: Verify canonical Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: Run native integration contracts
+        run: |
+          set -o pipefail
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- --nocapture 2>&1 |
+            tee .sf-native-source-test.log
+
+      - name: Lint native integration contracts
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- -D warnings
+
+      - name: Verify Tauri release compilation
+        run: cargo check --manifest-path src-tauri/Cargo.toml --release --locked
+
+      - name: Upload native diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-source-diagnostics-${{ github.run_id }}
+          path: .sf-native-source-test.log
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 2
