@@ -213,7 +213,13 @@ fn incomplete_authenticated_journal_blocks_a_second_switch() {
         .expect("accept first switch");
     drop(accepted);
 
-    let error = match accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000) {
+    let error = match accept_switch(
+        &root,
+        MIGRATION_SET,
+        &golden_command(),
+        &ROOT,
+        1_001_000,
+    ) {
         Ok(_) => panic!("incomplete journal must block a second switch"),
         Err(error) => error,
     };
@@ -227,7 +233,13 @@ fn incomplete_authenticated_journal_blocks_a_second_switch() {
 #[test]
 fn stale_registry_revision_is_rejected_before_runtime_quiescence() {
     let root = prepare_installation("switch-stale", 8);
-    let error = match accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000) {
+    let error = match accept_switch(
+        &root,
+        MIGRATION_SET,
+        &golden_command(),
+        &ROOT,
+        1_001_000,
+    ) {
         Ok(_) => panic!("stale registry authority must be rejected"),
         Err(error) => error,
     };
