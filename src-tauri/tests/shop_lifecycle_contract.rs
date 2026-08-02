@@ -6,12 +6,10 @@ mod shop_lifecycle;
 #[path = "../src/shop_lifecycle_command.rs"]
 mod shop_lifecycle_command;
 
-use crate::{
-    shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleRequest},
-    shop_lifecycle_command::{
-        lifecycle_command_key, ShopLifecycleAuthorization, ShopLifecycleCommand,
-        ShopLifecyclePayload,
-    },
+use crate::shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleRequest};
+use crate::shop_lifecycle_command::{
+    lifecycle_command_key, ShopLifecycleAuthorization, ShopLifecycleCommand,
+    ShopLifecyclePayload,
 };
 
 fn identity(character: char) -> String {
