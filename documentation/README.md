@@ -2,26 +2,30 @@
 
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
+> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
+> **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Native multi-shop authority
+> **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
+> **Next implementation outcome:** native multi-shop after governance closure
 > **Execution epic:** issue #164
 > **Last updated:** 2026-08-02
 
+Live protected `main` must be re-read directly from GitHub before every session.
+The governance base above records the exact source inspected to create this
+package; it is not a permanent substitute for live repository state.
+
 This directory is the durable shared brain for SahelFlow. It defines the finished
-product, the required experience and engineering invariants, what merged source
-actually proves, the final dependency order, the research and delivery process,
-and the exact current execution frontier.
+product, required experience, engineering invariants, merged-source truth, final
+dependency order, research/delivery process and exact execution frontier.
 
 The active authority remains intentionally limited to ten Markdown documents.
-Issue #164 tracks execution but is not an eleventh documentation authority.
-Historical reports under `archive/` are context only until revalidated and
-adopted by an active owner.
+Issue #164 tracks execution but is not an eleventh product or architecture
+authority. Historical reports under `archive/` are context only until revalidated
+and adopted by an active owner.
 
 ## Read order
 
@@ -30,27 +34,26 @@ adopted by an active owner.
 2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — capabilities, journeys,
    operational states, page completion and AAA experience standard.
 3. [`product/DECISIONS.md`](product/DECISIONS.md) — numbered Founder decisions;
-   FD-028 governs final completion and FD-029 governs uncompromised AAA delivery
-   without weakening the program.
+   FD-028 owns the final program and FD-029 owns uncompromised AAA delivery.
 4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — target system, data
    authority, protocols, invariants, security and recovery.
 5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged implementation,
-   named evidence and exact known discontinuities.
-6. [`system/ROADMAP.md`](system/ROADMAP.md) — final Phase 0–9 dependency order,
-   research requirements and objective exit gates.
-7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — research gate, work
-   packages, lanes, review, CI, release, evidence and anti-drift rules.
-8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact
-   current frontier and exact next outcome.
+   named evidence and current discontinuities.
+6. [`system/ROADMAP.md`](system/ROADMAP.md) — Phase 0–9 dependency order and exit
+   gates.
+7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — single-agent execution,
+   audit-first planning, Problem Register, tiered CI, review, release and evidence.
+8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact live
+   execution frontier and exact next outcome.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — research protocol, adopted
-   findings, phase questions and source index.
+   findings and revalidation triggers.
 10. This file — documentation map and authority rules.
 
-## Authority and precedence
+## Authority precedence
 
 When statements overlap, use this order:
 
-1. newer numbered Founder decision for the choice it explicitly changes;
+1. newer numbered Founder decision for the exact choice it changes;
 2. `PRODUCT.md` for public promise, scope, price, entitlements and Stable;
 3. `EXPERIENCE.md` for capability, journey, state and user-quality requirements;
 4. `ARCHITECTURE.md` for technical authority, invariants and safety;
@@ -60,9 +63,9 @@ When statements overlap, use this order:
 8. `WORKING_MEMORY.md` for the current frontier;
 9. `RESEARCH.md` and archive for evidence and context.
 
-A lower layer cannot silently weaken a higher layer. Code, tests, external
-research, issues and agent preference do not override Founder/product authority.
-Reconcile contradictions in the owning document before dependent work continues.
+A lower layer cannot silently weaken a higher layer. Code, tests, issues, external
+research and agent preference do not override Founder/product authority.
+Contradictions are reconciled in the owning document before dependent work.
 
 ## Truth model
 
@@ -70,7 +73,8 @@ SahelFlow separates these realities:
 
 | Reality | Authority |
 |---|---|
-| Integrated source | protected `main` and exact commit |
+| Integrated source | live protected `main` and exact commit |
+| Latest application-changing source | exact protected merge that changed product behavior |
 | Signed distributable | exact-source signed Internal/Beta/Stable artifact |
 | Founder-observed app | exact installed version and recorded machine result |
 | Founder AAA Candidate | all Required internal implementation/evidence gates |
@@ -78,60 +82,41 @@ SahelFlow separates these realities:
 
 A lower reality cannot claim a higher one.
 
-Internal.13 is published, Founder-installed and exact-version confirmed on the
-T470. The preserved AppData identity/database snapshot and authenticated Arabic
-UI were observed, but startup remains over budget. Arabic chart visual behavior
-and explicit Founder acceptance remain open. Neither publication nor installation
-proves the full Golden COD Journey, whole-route AAA quality, provider
-certification or Stable readiness.
+## Current protected truth
 
-Protected `main` contains the first production canonical Golden COD path: trusted
-manual intake and confirmation/rejection through reservation and inventory
-movement (PR #190), followed by packing, shipment, delivery and COD receivable
-creation (PR #192). A narrow exact-process-shop authorization boundary (PR #191)
-and the Windows-protected installation root with native rotation and installed-MSI
-proof (PR #184) are merged supporting packages. These are partial protected phase
-results.
+- PR #195 merged the repaired Phase 1 Golden COD boundary and Phase 2A
+  identity/Teams source at
+  `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
+- PR #197 merged signed licensing authority at
+  `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
+- Licensing implementation head
+  `25abbedd176429cf25e657217726d833e3c62a10` passed CI `30744598944`; all review
+  threads were resolved.
+- PR #198 merged the previous documentation frontier at
+  `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
+- No version bump, signed Phase 2 candidate or new installed claim accompanied
+  those source merges.
+- Native multi-shop remains the final Phase 2 implementation outcome.
+- Complete Windows/Rust/signed-MSI/install/reopen/preserved-data proof remains the
+  Phase 2 exit checkpoint.
 
-Protected `main` now includes the repaired Phase 1 and Teams boundary through PR
-#195 at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. Its exact proposed head
-`ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI `30734100436`, including
-authority, TypeScript, ESLint, unit/integration, database, coverage, dependency,
-migration and required PR gates. Every review thread was resolved before merge.
+## Current execution model
 
-Phase 2A packages 2A.1–2A.4 retain their historical checkpoint evidence, and
-their shared replay boundary passed again on the merged exact source above.
-The latest closed package, multi-member roles, invitations and per-shop
-permissions, passed at exact source head
-`3266dc03994ffcb1672256465624ea715f0cf317`, normal CI `30681155150` and
-checkpoint `30681155099`. It establishes installation-level invitation,
-accepted-member and revocation authority, individual member credentials and
-sessions, exact shop grants, role-bounded custom permissions, member-owned
-reauthentication, control-first member revocation, owner administration and
-member self-view in Arabic, French and English.
+The Founder selected the following permanent operating pattern:
 
-The separated sole-agent adversarial passes found and closed revoked-login
-disclosure, stale-owner queue authorization, cross-shop inventory exposure,
-wrong-shop login false-success, cross-person command replay, pre-authorization
-request parsing, state-only handover loss and stale-policy UI misclassification.
-No P0/P1 remains in the source-closed package. These passes were not independent
-review.
+- one active implementation agent at a time;
+- complete phase/package audit before production edits;
+- one consolidated Problem Register grouped by root cause;
+- coherent batch remediation rather than drip-fed one-problem loops;
+- Level 1 Task Gate after every coherent completed task;
+- Level 2 Phase Checkpoint before phase closure;
+- Level 3 Major Full Checkpoint after every two phases by default, or earlier for
+  high-risk native/security/data/recovery/provider authority;
+- complete full-app AAA frontend transformation as a Stable requirement.
 
-Teams and permissions is protected source through PR #195: authoritative
-assignments, workgroups, queues, comments, exact-member mentions, handovers,
-operational action permissions, protected-field projections and complete
-Arabic/French/English seller states are implemented and checkpointed.
-
-Signed licensing is protected source through PR #197 at
-`04d4c51831c6e043ab39a614a7e947e6b27d01e6`; exact-head CI `30744598944`
-passed and every review thread was resolved. Native multi-shop is now the active
-package and follows on `agent/native-multi-shop-authority`. Version and release
-remain unchanged; Windows/Rust/MSI proof runs once on the complete Phase 2
-candidate.
+This executes FD-028 and FD-029 without reducing Required scope.
 
 ## Final completion model
-
-The obsolete four-session overlay is replaced by the final roadmap:
 
 0. authority freeze and execution reset;
 1. canonical Golden COD business core;
@@ -144,22 +129,40 @@ The obsolete four-session overlay is replaced by the final roadmap:
 8. connected SahelFlow platform;
 9. certification, representative beta and Stable.
 
-Experience, Arabic/RTL, accessibility, performance, security, migration,
-recovery and evidence are continuous tracks across the functional phases.
+Experience, Arabic/RTL, accessibility, performance, security, migration, recovery
+and evidence travel continuously across functional phases.
+
+## AAA frontend rule
+
+Every Required route and journey must converge on one SahelFlow-owned design
+system and one governed chart foundation, with:
+
+- professional information architecture and operational density;
+- complete loading, empty, validation, permission, offline, pending, stale,
+  conflict, error, retry, recovery, history and bulk states;
+- Arabic, French and English parity;
+- real RTL and mixed-direction handling;
+- keyboard, focus, screen-reader, contrast, zoom and reduced motion;
+- 1366×768 and responsive containment;
+- low-end rendering and interaction budgets;
+- visual regression and Founder visual acceptance.
+
+Existing library presence or a screenshot does not prove AAA completion.
 
 ## Research-first rule
 
 Every major phase and material implementation begins by:
 
-- inspecting exact current SahelFlow source and tests;
+- inspecting exact current SahelFlow source, tests and migrations;
 - researching current primary standards and official documentation;
-- evaluating production implementations and relevant best-in-class products;
-- considering Algerian COD, Windows, Arabic/French and constrained-network reality;
+- evaluating mature implementations and relevant best-in-class operational
+  products;
+- considering Algerian COD, Windows, Arabic/French and constrained-network
+  reality;
 - comparing alternatives;
-- adopting a SahelFlow-specific measurable standard.
+- adopting one measurable SahelFlow-specific standard with a revalidation trigger.
 
-Generic AI advice, visual trends, screenshots, adapter existence and unsourced
-claims are not implementation authority.
+Research is bounded and does not become another roadmap.
 
 ## Completion rule
 
@@ -168,7 +171,9 @@ happy, validation, permission, duplicate, concurrency, loading, empty, offline,
 stale, conflict, failure, retry, recovery, audit, Arabic/RTL, accessibility,
 performance and preservation behavior pass at the required evidence layers.
 
-Public Stable additionally requires real external and representative evidence.
+A phase closes only after its Level 2 checkpoint. High-risk phase groups also pass
+the Level 3 checkpoint. Public Stable additionally requires real external and
+representative evidence.
 
 ## Update ownership
 
@@ -181,7 +186,7 @@ Public Stable additionally requires real external and representative evidence.
 - Research procedure/findings → `research/RESEARCH.md`.
 - Delivery process → `operations/WORKFLOW.md`.
 - Current frontier → `operations/WORKING_MEMORY.md`.
-- Execution status → issue #164.
+- Execution links/status → issue #164.
 
 Update an existing owner. Do not create another permanent masterplan, gap report,
 wave, prompt, status or handoff document.
@@ -191,7 +196,7 @@ wave, prompt, status or handoff document.
 Archived material:
 
 - is never active authority;
-- may contain stale versions, provider claims and implementation judgments;
+- may contain stale versions, claims and implementation judgments;
 - must be revalidated before adoption;
 - need not be copied into Working Memory;
 - may be removed when Git history is sufficient.

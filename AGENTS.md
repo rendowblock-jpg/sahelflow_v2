@@ -1,266 +1,273 @@
 # SahelFlow agent entry point
 
-SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent with one
-active implementation owner at a time, plus GitHub as durable truth. Each outcome
-still has one owner, branch, worktree and PR. The
-Founder-owned Windows checkout is local evidence and must not be modified, reset
-or deleted merely to simplify branch work.
+SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent with
+**one active implementation agent at a time**. GitHub is durable truth. GitHub
+Actions is clean-checkout validation and artifact infrastructure, not a coding
+agent.
 
-GitHub Actions is clean-checkout validation and artifact infrastructure, not a
-coding agent. GLM, Codex Cloud, MAWS and legacy handoff systems are not active
-authority.
+The Founder-owned Windows checkout is evidence-bearing local state. Never reset,
+delete or overwrite unrelated work, canonical AppData, shop databases, registry,
+keys or retained evidence merely to simplify development.
 
 ## Start here
 
 1. Read [`documentation/README.md`](documentation/README.md).
 2. Read FD-028 and FD-029 in
    [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
-3. Read the active phase and exit gate in
+3. Read [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md).
+4. Read the active phase in
    [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
-4. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
-5. Read
+5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
+6. Read
    [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-6. Inspect PR #195, its exact head/checks, protected `main`, and issue #164.
-7. Inspect governing PRODUCT, EXPERIENCE, ARCHITECTURE, CURRENT_STATE and RESEARCH
-   sections.
-8. Inspect exact source, migrations and tests before trusting implementation
-   claims.
+7. Verify protected `main`, active branches, open PRs, exact heads, review threads,
+   CI and issue #164 directly on GitHub.
+8. Inspect exact source, migrations, tests and production callers before trusting
+   implementation claims.
 
-Before work, declare the session type: governance/planning, research/contract,
-implementation, frozen review/closure or installed evidence. Governance/planning
-sessions perform no product implementation.
+Chat history, screenshots and archived reports are context only. They never
+replace current GitHub authority.
 
-Chat history and archived reports are context only. They never replace current
-GitHub authority.
+## Current verified frontier
+
+- Governance reset package: PR #199 from exact base
+  `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
+- Latest application-changing protected merge:
+  `04d4c51831c6e043ab39a614a7e947e6b27d01e6` (PR #197 licensing).
+- Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Published release: `1.0.0-internal.13` / MSI `1.0.0.13`.
+- Founder-installed release: Internal.13; acceptance remains open.
+- Founder-accepted baseline: Internal.5.
+- Active product phase: Phase 2 — identity, authorization, licensing and
+  multi-shop.
+- Product implementation remains paused while PR #199 is open.
+- Next implementation package after protected governance closure: native
+  multi-shop.
+- Its branch must be created from the then-current protected `main`; a copied or
+  merely planned branch name is not authority.
+
+Always re-read live protected `main`; the package base above is historical
+reconstruction evidence, not a promise that `main` has not moved.
 
 ## Authority precedence
 
 1. Newer explicit Founder decision for the choice it changes.
 2. Product contract.
-3. Experience/capability/journey contract.
+3. Experience and journey contract.
 4. Architecture and invariants.
 5. Source-grounded current state.
 6. Final roadmap.
 7. Workflow.
 8. Working Memory.
-9. Research/archive.
+9. Research and archive.
 
 A lower layer cannot silently weaken a higher one.
 
-## Governing completion program
+## Completion program
 
-FD-028 defines one final Phase 0–9 program:
+FD-028 defines the final Phase 0–9 program:
 
 0. authority freeze and execution reset;
 1. canonical Golden COD business core;
 2. identity, authorization, licensing and multi-shop;
 3. durable providers, inbox, AI and automations;
 4. data protection, recovery, migrations and security;
-5. whole-product AAA UI/UX;
+5. whole-product AAA UI/UX and frontend transformation;
 6. Arabic, RTL and accessibility parity;
 7. performance and reliability;
 8. connected SahelFlow platform;
 9. certification, representative beta and Stable.
 
-Valid FD-027 rules remain: bounded WIP, coherent outcome packages, P0/P1 blocking,
-milestone releases, exact-source evidence and continuous Arabic/RTL,
-accessibility, recovery and performance.
+FD-029 requires uncompromised top-tier class-AAA completion across product,
+business truth, data, security, recovery, Windows, providers, UI/UX,
+localization, accessibility, performance, testing, diagnostics, documentation and
+evidence. It does not authorize an MVP, hidden deferral or fabricated readiness.
 
-## FD-029 execution decision
+## Single-agent rule
 
-FD-029 supersedes the former **Founder execution-granularity decision**. The existing
-`agent/phases1-4-completion-program` branch remains only to close Teams and PR
-#195; it is not authority for another long-lived multi-phase PR.
+- The Founder selects either the Web Agent or Desktop Agent as active.
+- Only that agent may implement SahelFlow at that time.
+- The inactive agent does not create a competing branch, modify shared files or
+  begin later-phase work.
+- One outcome has one owner, one branch and one PR.
+- A frozen-head adversarial review may occur only after implementation stops.
+- With one agent, that review is a **separated adversarial pass**, not independent
+  review.
+- Required external security, privacy, legal, accessibility and provider reviews
+  remain genuinely independent later.
 
-- Target uncompromised top-tier class-AAA quality across every applicable
-  product, business, data, security, recovery, Windows, provider, UI/UX,
-  localization, accessibility, performance, test and evidence layer.
-- Freeze shared schema, migration, identity, permission, command, event,
-  provider and design-system contracts before dependent implementation.
-- The Founder selects the active coding agent. Web and Desktop are not assigned
-  simultaneous SahelFlow implementation lanes.
-- Before production edits, inventory all callers, direct tests, mocks, dynamic
-  imports, migrations, protected fields, UI states, recovery, performance,
-  evidence and legacy removal affected by the package.
-- Draft CI reports complete actionable failures through path/risk-aware parallel
-  lanes and an always-reporting aggregator. Frozen full checkpoints remain
-  blocking.
-- After Teams closes, PR #195 stops. Licensing, multi-shop and later outcomes
-  use short dedicated PRs from current protected `main`.
-- Keep CI read-only; preserve unrelated work, canonical AppData, databases,
-  registry and keys.
+## Session types
 
-### Sole-agent review rule
+Declare exactly one purpose before work:
 
-Only one coding agent is active at a time. Material frozen work receives a
-separated adversarial pass; it is not called independent review. External
-independent security/privacy/legal/provider review remains mandatory where the
-roadmap requires it.
+- governance/planning;
+- research/contract;
+- implementation;
+- frozen review/closure;
+- installed evidence.
 
-## Research-first gate
+A governance/planning or frozen-review session does not perform unrelated product
+implementation.
 
-Before every material contract or implementation:
+## Audit-first rule
 
-- state the exact decision;
-- inspect current SahelFlow source and tests;
-- research current primary standards and official documentation;
-- compare correctness, migration, security, privacy, accessibility, RTL,
-  performance, recovery and economics;
-- account for Algerian COD, Windows, Arabic/French and constrained networks;
-- adopt one measurable SahelFlow-specific decision;
-- record evidence and a revalidation trigger.
+Before the first production edit of a phase or material package, inspect the
+complete affected surface and create one Problem Register covering every
+applicable layer:
 
-Generic AI recommendations, visual trends, screenshots, mocks and adapter
-existence are not authority.
+- production callers, routes, pages, commands and background workers;
+- models, migrations, existing databases and compatibility projections;
+- tests, fixtures, mocks, dynamic imports and failure diagnostics;
+- business invariants, idempotency, concurrency and restart behavior;
+- trusted actor, exact shop, permissions and protected-field oracles;
+- provider effects, receipts, ambiguity, retry and recovery;
+- AR/FR/EN, RTL, accessibility, responsive and installed UI states;
+- performance, resource use, diagnostics and evidence;
+- legacy paths that must be removed or made read-only.
 
-## Current protected truth
+Group findings by root cause. Do not patch one visible symptom while a shared
+competing authority remains.
 
-- Protected `main`: `522ab1642545803c7a9b6c320fe72cceb320e558`.
-- Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
-- Published release: `1.0.0-internal.13`, run `30366866703`.
-- Internal.13 is Founder-installed but not Founder-accepted.
-- Internal.5 remains the Founder-accepted baseline.
-- Draft PR #195 is unmerged proposed source and remains version-neutral.
+## Batch remediation rule
 
-## Source packages and reopened blocker
+The normal cycle is:
 
-### Phase 1 — Golden COD core source-closed on draft PR #195
+```text
+complete audit
+→ consolidated Problem Register
+→ root-cause packages
+→ task gate after each coherent task
+→ frozen exact head
+→ complete adversarial review
+→ one consolidated repair batch
+→ final checkpoint
+```
 
-Previously closed at `3783028396f3b0c4afa43f33fdd3c1c6cc51789f` with CI
-`30652282305` and checkpoint `30652282191` successful. That verdict was valid
-only absent new concrete P0/P1 evidence.
+Do not drip-feed review findings while the same frozen head is still being
+inspected. New concrete P0/P1 evidence always reopens the affected gate, but
+avoidable one-finding-at-a-time loops are prohibited.
 
-Concrete P1 evidence found on 2026-08-01 reopened the shared Phase 1 replay
-boundary because durable people were not distinguished by the default
-command-result replay rule. Same-person replay and affected order authorization
-were repaired at `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`; normal CI
-`30714461757` and complete checkpoint `30714461656` succeeded. This remains
-unmerged proposed source.
+## Three validation levels
 
-### Phase 2A.1 — setup and session authority
+### Level 1 — Task Gate
 
-Closed at `ad3987e934c1e42706cf7f29010cd96dc534f290` with CI
-`30656307152` and checkpoint `30656308867` successful.
+Run after each coherent completed task, not after every tiny edit:
 
-Setup is onboarding only; sessions enforce overall/inactivity limits, database
-revocation, activity persistence, reauthentication rotation, recent-PIN proof,
-all-session PIN-change revocation and fail-closed logout.
+- `bun run sf-version`;
+- `bun run sf-audit`;
+- Prisma generation/validation and migration checks when applicable;
+- TypeScript;
+- ESLint;
+- full Vitest;
+- targeted Playwright, provider, Rust or native checks selected by risk.
 
-### Phase 2A.2 — durable owner identity kernel
+Focused tests may be used during coding, but the completed task must pass the
+full ordinary source gate.
 
-Closed at `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e` with CI
-`30660637916` and checkpoint `30660637617` successful.
+### Level 2 — Phase Checkpoint
 
-The installation owns HMAC-authenticated Workspace, Installation, Person, owner
-WorkspaceMember, Device and session bindings. Trusted business commands use a
-real person actor, exact shop grants and policy/revocation snapshots. Tamper,
-restart, concurrency, cross-shop, root rotation and anti-reinitialization
-boundaries are proven.
+Before a phase closes, run the frozen complete phase checkpoint:
 
-### Phase 2A.3 — revocation and policy freshness
+- clean frozen dependency install;
+- complete source, database, integration and migration suites;
+- production build;
+- affected seller journeys and permission/shop-isolation matrices;
+- AR/FR/EN, RTL, accessibility and representative UI states;
+- phase performance and resource evidence;
+- applicable Rust, Windows, packaging and recovery lanes;
+- complete unresolved-problem and documentation audit.
 
-Closed at `56df880bbe2233bf081119fa535e30713d9c6051` with CI
-`30665009016` and checkpoint `30665009255` successful.
+A phase does not close because its PRs merged.
 
-Every configured authenticated request validates durable identity. Owner session
-administration is control-first, database/audit catch-up is transactional and
-retryable, and policy-stale bindings are denied outside the bounded PIN
-reauthentication ceremony.
+### Level 3 — Major Full Checkpoint
 
-### Phase 2A.4 — multi-member roles, invitations and per-shop permissions
+Run after every two completed phases by default. Three phases may share one only
+when dependency and risk analysis explicitly justify it. Run earlier whenever
+licensing, identity, cryptography, installer/updater, migrations, backup/restore,
+provider money/effects or destructive data authority changes.
 
-Closed at `3266dc03994ffcb1672256465624ea715f0cf317` with CI
-`30681155150` and checkpoint `30681155099` successful.
+The major checkpoint includes exact-source Windows release compilation, signed
+MSI, clean install, upgrade, reopen, process cleanup, preserved AppData,
+backup/restore, recovery, complete browser journeys, visual regression, security,
+performance, stability and an evidence bundle.
 
-The installation now owns authenticated invitation, accepted-member and member
-revocation authorities outside shop databases. The package includes individual
-member login/PIN/device/session identity, role-bounded custom allowlists, exact
-shop grants, member-owned reauthentication, owner-only owner PIN administration,
-control-first member revocation with retryable database/audit catch-up,
-installation-root rotation, owner administration and member self-view in
-Arabic/French/English.
+Phase 2 requires this major checkpoint because licensing and native multi-shop
+are both high-risk native authority.
 
-The frozen sole-agent adversarial pass found and closed revoked-login disclosure,
-stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
-login false-success. No P0/P1 remains. It was not an independent review.
+## AAA frontend rule
 
-PIN remains local unlock and reauthentication, never durable person identity.
-The sole core owner is outside accepted-member removal/demotion APIs; any future
-multi-owner last-owner recovery remains an explicit separate ceremony.
+Whole-product frontend transformation is a Stable 1.0 requirement, not optional
+polish. Every Required route and component must use one SahelFlow-owned design
+system and one governed chart foundation, with:
 
-## Exact next outcome — PR #195 protected merge decision
+- professional information architecture and operational density;
+- complete happy, loading, empty, validation, permission, offline, pending,
+  stale, conflict, error, retry, recovery and history states;
+- Arabic, French and English parity;
+- real RTL and mixed-direction handling;
+- keyboard, focus, screen-reader, contrast, zoom and reduced-motion behavior;
+- 1366×768 containment and responsive behavior;
+- low-end rendering and interaction budgets;
+- visual-regression and Founder visual acceptance evidence.
 
-Teams and permissions is source-closed at implementation head
-`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, normal CI `30714461757`
-and complete integration checkpoint `30714461656`. The separated review found no
-remaining P0/P1 and was not independent review.
+Do not mix random library defaults page by page. Existing Radix, TanStack Table,
+Tailwind, Framer Motion and Recharts are inputs to a benchmark, not automatic
+final choices. Any replacement must show measurable accessibility, RTL,
+performance, charting and maintainability benefit.
 
-Keep PR #195 draft, mergeable, unmerged and version-neutral until explicit
-Founder authorization. Add no licensing, multi-shop or later-phase work. After
-the authorized merge, licensing/entitlements is the next short outcome branch
-from the then-current protected `main`; native multi-shop follows in a separate
-short outcome PR.
+## Branch and PR rules
 
-## Professional execution protocol
+- Branch from verified current protected `main`.
+- Use `agent/<observable-outcome>`.
+- Open a draft PR early for material work.
+- Keep one PR reviewable as one outcome.
+- No direct protected-main edits.
+- No unrelated refactors or dependency upgrades.
+- No application version bump for ordinary source packages.
+- Rebase or merge current `main` deliberately before final review.
+- Freeze the exact head before consolidated review.
+- Merge only after selected gates pass and all P0/P1 threads close.
+- Delete merged branches and close superseded PRs promptly.
 
-### Reconstruct before writing
+## Evidence language
 
-- Verify protected `main`, PR #195, exact branch head and latest checks.
-- Read Working Memory and the PR body.
-- Inspect exact active source and tests.
-- Resolve the current owner, branch, worktree, dependencies and exact checks.
-- Never infer another active agent from branch movement or chat context.
+1. static/source;
+2. unit/domain;
+3. integration/API/database;
+4. development UI;
+5. clean GitHub Actions;
+6. signed artifact;
+7. installed Windows;
+8. T470/floor hardware;
+9. external provider/security/accessibility/legal;
+10. representative seller/Beta.
 
-### Build coherent outcomes
-
-- Keep one active core-authority package at a time.
-- Finish applicable authority, schema, API, UI, recovery, AR/FR/EN and invariant
-  tests.
-- Do not weaken production authority to satisfy stale tests.
-- Do not create review/CI loops after every small edit.
-- Do not add another permanent masterplan or handoff document.
-
-### Validation and close
-
-1. run the exact authority/docs gate;
-2. pass Prisma generation and migration status where applicable;
-3. pass TypeScript, ESLint and the full unit/integration suite;
-4. perform a separated frozen-head adversarial pass and close every P0/P1;
-5. update Working Memory, PR #195 and issue #164 with exact evidence;
-6. keep PR #195 draft and unmerged until explicit Founder authorization;
-7. keep the application version unchanged for ordinary source packages.
-
-## Protected local boundaries
-
-- Preserve `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
-- Preserve the unrelated local modification to
-  `src/lib/identity/__tests__/session-authority.test.ts`.
-- Do not delete canonical AppData, registry, databases, migrations or keys.
-- Do not require permanent local `node_modules`, `.next`, Rust `target` or repeated
-  installer caches when Actions can provide source evidence.
-- PR #186 is obsolete/diverged source and must never be merged wholesale.
+A lower level cannot claim a higher one. Implemented, source-proven,
+artifact-proven, installed, Founder-accepted, phase-closed and Stable are distinct.
 
 ## Review severity
 
 - **P0:** active data loss, secret exposure, cross-shop effect, corrupt
   update/restore or irreversible stock/money damage.
 - **P1:** required journey or authority failure, duplicate/lost effect, unsafe
-  migration, startup/install/recovery failure, incorrect stock/money, or major
-  unusable Arabic/UX/accessibility defect.
-- **P2:** bounded material hardening with a safe workaround.
+  migration, startup/install/recovery failure, incorrect stock/money or major
+  unusable Arabic/UX/accessibility behavior.
+- **P2:** bounded material hardening with a safe workaround and assigned owner.
 - **P3:** low-impact polish.
 
-## Evidence ladder
+P0 stops work. P1 blocks the affected merge or checkpoint. P2/P3 do not create an
+unbounded review loop; they receive explicit ownership and dependency position.
 
-1. Static/source.
-2. Unit/domain.
-3. Integration/API/database.
-4. Development UI.
-5. Clean GitHub Actions.
-6. Signed artifact.
-7. Installed Windows.
-8. T470/floor hardware.
-9. External provider/security/accessibility.
-10. Representative seller/Beta.
+## Protected local boundaries
 
-A lower layer cannot claim a higher one.
+- Preserve
+  `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
+- Preserve the unrelated local modification to
+  `src/lib/identity/__tests__/session-authority.test.ts`.
+- Do not delete canonical AppData, registry, databases, migrations or keys.
+- Do not require permanent local `node_modules`, `.next`, Rust `target` or
+  repeated installer caches when Actions can provide evidence.
+- PR #186 is obsolete/diverged source and must never be merged wholesale.
+- PR #196 contains a useful CI-diagnostics intention but remains stale and has an
+  unresolved file-level Vitest diagnostic defect; repair or supersede it before
+  closure.

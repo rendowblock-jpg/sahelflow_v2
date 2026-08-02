@@ -2,205 +2,188 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-02
-> **Protected main:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
+> **Live protected main:** re-read GitHub before every session
+> **Governance package base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
+> **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
-> **Operating authority:** FD-028, FD-029, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Native multi-shop authority
-> **Next branch:** `agent/native-multi-shop-authority`
-> **Active PR:** none until the native multi-shop package opens
-> **Merge state:** PR #195 and PR #197 merged; native multi-shop is next
+> **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Governance transition:** PR #199; verify its live state and exact head on GitHub
+> **Next implementation package:** Native multi-shop authority
+> **Next implementation branch:** create only from protected `main` after PR #199 closes
+> **Product implementation gate:** may begin only after PR #199 closes
 
-Protected `main` and issue #164 are live authority. The named native multi-shop
-branch becomes authority only after it is created from the exact protected head.
-Never trust copied head or run numbers without re-reading GitHub.
+Live GitHub is authority. The SHAs above describe the verified starting frontier;
+they do not replace a fresh protected-main, PR, branch and CI check.
 
-## Protected truth
+## Founder execution instruction
 
-Phase 0 remains complete. PR #195 merged Phase 1 and Phase 2A/Teams source at
-`a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. PR #197 merged signed licensing
-source at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Published release, installed
-Internal.13 evidence and Founder acceptance are unchanged.
+The Founder approved the governance reset on 2026-08-02:
 
-Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
-remain later separate gates.
+- only one implementation agent works at a time;
+- a complete phase/package audit precedes implementation;
+- one consolidated Problem Register groups findings by root cause;
+- problems are repaired in coherent batches rather than drip-fed one at a time;
+- Level 1 Task Gate runs after each coherent completed task;
+- Level 2 Phase Checkpoint runs before every phase closes;
+- Level 3 Major Full Checkpoint runs after every two phases by default, with
+  immediate risk-triggered execution for native/security/data/recovery/provider
+  authority;
+- whole-product class-AAA UI/frontend transformation, charting, AR/FR/EN, RTL,
+  accessibility, visual regression and performance remain mandatory Stable 1.0
+  requirements;
+- the complete Phase 0–9 scope is preserved; this is not an MVP reduction.
 
-## Phase 1 — protected-source closed through PR #195
+This clarification executes FD-028 and FD-029. It does not change product scope,
+price, entitlements, Stable gates or evidence honesty.
 
-- implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443`;
-- CI `30734100436` — success;
-- protected merge `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
+## Verified protected closures
 
-Concrete P1 replay evidence found on 2026-08-01 was repaired: a durable person's
-command result now replays only for that exact person across safe session
-rotation, while cross-person replay is denied before result decryption. Affected
-order authorization and fixture boundaries passed the same complete checkpoint.
-The repaired boundary is protected source; artifact/installed claims remain at
-their separately named evidence level.
+### Phase 1 and Teams/permissions
 
-## Phase 2A.1 result — setup and session authority closed
+PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
+Implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI
+`30734100436`. This is protected-source closure, not current installed-product or
+Stable proof.
 
-- head `ad3987e934c1e42706cf7f29010cd96dc534f290`;
-- normal CI `30656307152` — success;
-- checkpoint `30656308867` — success.
+### Signed licensing
 
-Setup is onboarding only. Database sessions enforce 24-hour overall and one-hour
-inactivity limits, throttled activity persistence, revocation, reauthentication
-rotation, recent proof, PIN-change revocation and fail-closed logout.
+PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
+Implementation head `25abbedd176429cf25e657217726d833e3c62a10` passed CI
+`30744598944`; every review thread was resolved.
 
-## Phase 2A.2 result — durable owner identity kernel closed
+Source-closed boundaries include signed machine-bound trial/permanent claims,
+offline Founder signing, one-device trial recovery, DPAPI-protected clock and
+commercial floors, transfer/recovery/revocation, release fail-closed
+configuration, complete data-preserving lockout and AR/FR/EN recovery states.
+Windows artifact and installed behavior remain unclaimed until Phase 2 exit.
 
-- head `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`;
-- normal CI `30660637916` — success;
-- checkpoint `30660637617` — success.
+### Documentation frontier
 
-The installation owns HMAC-authenticated Workspace, Installation, Person, owner
-WorkspaceMember, Device and session bindings with exact shop, policy and
-revocation snapshots. Real person actors, cross-shop denial, tamper, restart,
-concurrency, root rotation and anti-reinitialization are proven.
+PR #198 merged documentation at
+`d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`. Its CI run
+`30745607118` passed.
 
-## Phase 2A.3 result — revocation and policy freshness closed
+## Governance discrepancies corrected by PR #199
 
-- head `56df880bbe2233bf081119fa535e30713d9c6051`;
-- normal CI `30665009016` — success;
-- checkpoint `30665009255` — success.
+The governance package exists because the merged authority still contained
+contradictions:
 
-Every configured authenticated request validates durable identity. Owner session
-administration is control-first, database/audit catch-up is transactional and
-retryable, stale policy is denied outside the bounded reauthentication ceremony,
-and missing, revoked, cross-shop or unavailable authority remains blocked.
+- root `AGENTS.md` retained the old PR #195 merge-decision frontier;
+- issue #164 body retained protected main `522ab...` and described PR #195 as
+  open;
+- Current State later sections contradicted its correct licensing/identity
+  introduction;
+- documents confused live integrated `main` with the latest application-changing
+  merge;
+- workflow retained simultaneous-WIP language despite the Founder single-agent
+  rule;
+- `sf-audit.ts` required stale markers and could pass while preserving drift;
+- PR #186 remained obsolete/open;
+- PR #196 remained stale with an unresolved file-level Vitest diagnostic gap;
+- the planned native multi-shop branch was not present on remote GitHub at
+  verification time.
 
-## Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed
+## Governance package scope
 
-- head `3266dc03994ffcb1672256465624ea715f0cf317`;
-- normal CI `30681155150` — success;
-- checkpoint `30681155099` — success.
+PR #199 updates only execution authority and truth:
 
-Closed boundaries:
+1. root agent protocol;
+2. delivery workflow;
+3. Working Memory;
+4. documentation entry point;
+5. source-grounded Current State;
+6. final Roadmap and checkpoint cadence;
+7. documentation drift audit;
+8. issue #164 execution body.
 
-- authenticated, expiring and single-use invitations with replay-safe recovery;
-- individual member identity, login ID, PIN credential, device and session;
-- owner, manager, operator and viewer presets plus exact role-bounded custom
-  allowlists, including deny-all policy;
-- exact shop grant enforcement for protected access, public credentials and
-  non-owner member inventory;
-- member-owned reauthentication with no owner-PIN fallback;
-- owner-only owner-PIN administration;
-- control-first member revocation invalidating every indexed session;
-- retryable SQLite/audit catch-up without restoring access;
-- installation-root rotation across owner, invitation, member and revocation
-  authorities;
-- owner administration and member self-view in Arabic, French and English;
-- duplicate/concurrent invitation, acceptance and revocation, restart, expiry,
-  replay, recovery and cross-shop proofs.
+No product behavior, application version, release, database, registry, AppData or
+installed artifact changes are authorized in this package.
 
-The earlier frozen sole-agent adversarial pass found and closed revoked-login disclosure,
-stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
-login false-success. Its no-P0/P1 verdict is superseded for the shared replay
-boundary by the concrete finding above. It was not an independent review.
+## Governance package exit gate
 
-PIN remains local unlock and reauthentication, never durable person identity.
-The sole core owner cannot be removed or demoted by the accepted-member APIs;
-last-owner recovery remains a separate explicit ceremony if multi-owner support is
-introduced later.
+Before merge:
 
-## Teams vertical 1 result — governed conversation assignment and handover closed
+- all updated documents use one active-agent rule;
+- audit-first Problem Register and batch remediation are explicit;
+- Level 1/2/3 validation is explicit and non-contradictory;
+- whole-product AAA frontend transformation is enforceable;
+- stale PR #195/licensing/frontier wording is rejected by `sf-audit`;
+- documentation distinguishes package base, application baseline and live main;
+- issue #164 points to this package and the exact next implementation outcome;
+- authority/docs CI passes on the exact head;
+- frozen review finds no unresolved P0/P1 governance contradiction.
 
-- head `c72bf67afd954de3b51d473036adc47223b73d3e`;
-- normal CI `30683805165` — success;
-- checkpoint `30683805097` — success.
+## Exact next execution order after governance merge
 
-Closed boundaries:
+1. Re-read the governance merge and live protected `main`.
+2. Close PR #186 as obsolete.
+3. Repair the current-main CI diagnostics gap or supersede and close PR #196.
+   Do not merge its stale branch wholesale.
+4. Confirm the Desktop Agent is the sole active implementation agent.
+5. Create and push `agent/native-multi-shop-authority` from the then-current
+   protected `main`.
+6. Perform complete Phase 2/native multi-shop reconnaissance before production
+   edits.
+7. Publish one consolidated Phase 2 Problem Register grouped by root cause.
+8. Freeze the native multi-shop contract and package plan.
+9. Implement coherent tasks; run the Level 1 Task Gate after each task.
+10. Freeze the exact head and perform one complete separated adversarial review.
+11. Repair one consolidated findings batch.
+12. Merge native multi-shop only after selected source/native gates pass.
+13. Freeze complete Phase 2 source and run the Level 2 phase checkpoint plus the
+    Level 3 Windows/Rust/signed-MSI/install/reopen/preserved-data exit checkpoint.
+14. Close Phase 2 only after objective evidence and zero known P0/P1.
 
-- exact `WorkspaceMember` assignment targets; no free-text assignee authority;
-- self-claim and self-release for operators;
-- owner/manager assignment, unassignment and handover;
-- exact-shop and current revocation checks before target exposure or mutation;
-- command-kernel idempotency, optimistic aggregate versions and same-person replay
-  across session rotation;
-- atomic assignment projection, encrypted activity, trusted audit, domain event
-  and projection invalidation;
-- read-only live-JID hydration and atomic write-time JID upsert;
-- no assignment-version N+1 on inbox list reads;
-- Arabic/French/English loading, conflict, error and activity states;
-- permission, duplicate, concurrent, restart, replay and route-ordering proof.
+## Native multi-shop required outcome
 
-The separated frozen-head pass found and closed read-time row creation, revoked
-member target exposure, list-query amplification and claim-only empty-menu behavior.
-It found no remaining P0/P1 in this vertical and was not an independent review.
+The native supervisor must own:
 
-## Teams and permissions completion — protected-source closed through PR #195
+- create, rename, switch, archive, recover and delete;
+- atomic registry revision and shop-incarnation authority;
+- workspace, installation, license-slot and membership validation;
+- exact database-file and migration identity;
+- safe quiesce, target validation, process relaunch and authenticated readiness;
+- restart/interruption/partial-failure recovery;
+- owner reauthentication for destructive deletion;
+- data preservation and recoverable archive behavior;
+- complete AR/FR/EN, RTL, loading, processing, conflict, offline, error and
+  recovery states;
+- applicable low-end performance and installed evidence.
 
-### Exact source-closure evidence
+No browser preference, request field or mutable shop database becomes native shop
+lifecycle authority.
 
-- implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443`;
-- CI `30734100436` — success;
-- protected merge `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`;
-- authority/docs, TypeScript, ESLint, unit/integration, database, coverage,
-  dependency audit, migration and required PR gates passed.
+## Validation cadence
 
-Closed boundaries:
+### Level 1 — after each coherent task
 
-- shared per-shop workgroups and queues reusable by operational entities;
-- append-only encrypted internal comments, exact active-member mentions and
-  durable assignment/routing/handover history;
-- operational action vocabulary, least-privilege role ceilings and exact
-  deny-by-default custom policy behavior;
-- protected customer/contact, financial and provider projections plus
-  deny-before-query/write oracle closure;
-- trusted person actor and exact-shop derivation for every collaboration command;
-- same-person replay, idempotency, optimistic concurrency, audit, event, outbox,
-  projection invalidation, revocation, restart and recovery;
-- Arabic/French/English loading, empty, permission, conflict, stale/revoked,
-  offline and safe-retry seller states.
+Authority/docs, Prisma where applicable, TypeScript, ESLint, full Vitest and the
+risk-selected targeted browser/provider/Rust/native checks.
 
-The separated review closed cross-person replay, malformed-input authorization
-ordering, state-only handover persistence and stale-policy UI classification.
-No P0/P1 remains. This was not independent review and does not prove installed or
-external evidence.
+### Level 2 — Phase 2 closure
 
-## Phase 2 licensing result — protected-source closed through PR #197
+Clean complete source/database/integration/migration suites, production build,
+affected journeys, permissions/shop isolation, AR/FR/EN/RTL/accessibility,
+performance, native/Windows lanes and unresolved-problem audit.
 
-- implementation head `25abbedd176429cf25e657217726d833e3c62a10`;
-- CI `30744598944` — success;
-- protected merge `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
+### Level 3 — Phase 2 exit
 
-Signed machine-bound trial/permanent claims, offline Founder signing, one-device
-trial recovery, DPAPI-protected clock/revocation/recovery authority, exact
-transfer and recovery, release fail-closed configuration, complete
-data-preserving lockout and AR/FR/EN recovery states are source-closed. All review
-threads were resolved. Windows artifact and installed behavior are not yet
-claimed.
-
-### Exact execution order
-
-1. Create `agent/native-multi-shop-authority` from current protected `main`.
-2. Complete native create, rename, switch, archive, recover and
-   owner-reauthenticated delete with atomic registry revision, licence-slot and
-   membership authority, safe database transitions, process relaunch and
-   AR/FR/EN seller states.
-3. Pass the ordinary source gates and merge without a version bump or release.
-4. Freeze the complete Phase 2 source and run Windows standalone, Rust parity,
-   signed MSI, install/reopen, preserved-data and AR/RTL exit proof once.
+Exact-source Windows release, Rust parity, signed MSI, clean install, in-place
+upgrade, authenticated readiness, close/reopen, process cleanup, preserved
+AppData/registry/databases/keys, licensing expiry/activation/recovery, native shop
+lifecycle, migration interruption, recovery and deterministic evidence.
 
 ## Protected local boundaries
 
-- Do not modify, reset or delete the original checkout merely to make branch work
-  easier.
-- Preserve `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
+- Do not modify, reset or delete the original checkout merely to simplify branch
+  work.
+- Preserve
+  `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
 - Preserve the unrelated modified
-  `src/lib/identity/__tests__/session-authority.test.ts` in the original checkout.
-- PR #186 is obsolete/conflicting proposed source; never merge it wholesale.
-- Do not bump the application version or create a release during ordinary Phase
-  2 packages.
-
-## Validation model
-
-Ordinary Phase 2 packages run complete source authority, type, lint,
-unit/integration, database, coverage, dependency and migration gates. Windows
-standalone, Rust parity and installed-MSI run once at Phase 2 exit. Source checks
-cannot prove live-provider, independent security/privacy/Law 18-07 or Founder
-acceptance.
+  `src/lib/identity/__tests__/session-authority.test.ts`.
+- Preserve canonical AppData, registry, shop databases, migrations and keys.
+- No version bump, release or premature Windows/Stable claim belongs to ordinary
+  governance or native multi-shop source packages.

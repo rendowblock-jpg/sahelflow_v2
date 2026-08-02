@@ -1,423 +1,372 @@
 # SahelFlow — Current state
 
-> **Authority:** merged protected `main` and named evidence only
-> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
+> **Authority:** merged protected source and named evidence only
+> **Live protected main:** resolve directly from GitHub before every session
+> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
+> **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
+> **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
 > **Last assessed:** 2026-08-02
 
 This document states what merged source and named evidence prove now. It does not
 convert target architecture, research, adapter presence, mocks, test counts or
-planned scope into readiness. The current execution frontier belongs in
+planned scope into readiness. The exact execution frontier belongs in
 [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
 
 ## Executive truth
 
 SahelFlow is a broad, real internal Windows application. It is not an empty
 prototype, generic dashboard template or desktop shell around a cloud database.
-It contains substantial catalog, customer, order, delivery, returns, accounting,
+It contains substantial catalog, customer, order, delivery, return, accounting,
 inbox, automation, analytics, AI, storefront and integration behavior; per-shop
 SQLite; Tauri runtime supervision; field-level PII encryption; signed updating;
-and unusually strong migration/release evidence.
+and strong migration/release infrastructure.
 
 It is not yet a commercially complete or class-AAA SahelFlow 1.0 product.
 
-The strongest new architecture—trusted business principals, exact shop context,
-optimistic aggregate versions, encrypted idempotent command replay, atomic audit,
-domain events, outbox intents, reservations, inventory movements, financial
-movements, projection invalidations and compensation facts—is merged. Trusted
-manual intake, confirmation/rejection and fulfillment through delivered COD
-receivable now use that foundation. Other intake sources, delivery exceptions,
-COD settlement, returns/refunds, providers, automations and most connected paths
-still mainly use legacy services and fields.
+Its strongest architecture is serious and protected source:
 
-The central completion task is therefore production adoption and removal of
-competing legacy authority, not another architecture reset.
+- trusted person/member and exact-shop authority;
+- optimistic aggregate versions;
+- encrypted request-bound idempotent command replay;
+- atomic audit, domain events and outbox intents;
+- inventory reservations and movements;
+- financial movements and compensation facts;
+- projection invalidation;
+- durable Teams/permissions authority;
+- signed installation-level licensing authority.
 
-## Latest protected source closure
+The central completion task is production adoption and removal of competing legacy
+authority, followed by complete recovery, provider, UI, accessibility,
+performance, connected-platform and certification evidence. Another broad
+architecture reset is not required.
 
-PR #195 merged the repaired Phase 1 and Phase 2A/Teams source boundary at
-protected commit `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. Its exact proposed head
+## Latest protected source closures
+
+### Phase 1 plus identity/Teams — PR #195
+
+PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
+Its exact implementation head
 `ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI `30734100436`, including
 authority/docs, Prisma generation and migration status, TypeScript, ESLint,
-unit/integration, database, coverage, dependency audit and the required PR gate.
+unit/integration, database, coverage, dependency audit and the Required PR gate.
 
-Separated sole-agent review repaired concrete replay, operational-action,
-protected-field, risk/oracle, audit, high-risk credential, route-ordering,
-state-only handover and stale/revoked UI findings. No P0/P1 remains in the frozen
-source package; the pass was not independent review.
+Protected-source outcomes include:
 
-PR #197 then merged signed licensing authority at protected commit
-`04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Exact head
+- trusted manual order intake and confirmation/rejection;
+- stock reservation, packing, shipment, delivery and COD receivable creation;
+- canonical settlement, return/refund/compensation boundaries and shared replay
+  repairs included in the integration package;
+- durable Workspace, Installation, Person, Member, Device and session authority;
+- invitations, roles, custom permissions, exact shop grants and revocation;
+- workgroups, queues, assignments, comments, mentions and handovers;
+- protected-field projections and AR/FR/EN seller states.
+
+Separated sole-agent review repaired concrete replay, route-ordering,
+authorization, protected-field, risk/oracle, high-risk ceremony, handover and
+stale/revoked UI findings. The pass was not independent review.
+
+### Signed licensing — PR #197
+
+PR #197 merged at
+`04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Exact implementation head
 `25abbedd176429cf25e657217726d833e3c62a10` passed CI `30744598944`, including
 authority/docs, TypeScript, ESLint, complete Vitest, Prisma, coverage, dependency
-audit, migration status and the required PR gate. It establishes signed
-machine-bound trial/permanent entitlements, protected native clock, revocation
-and recovery authority, transfer/recovery, complete data-preserving lockout and
-AR/FR/EN recovery states. All review threads were resolved.
+audit, migration status and the Required PR gate. Every review thread was
+resolved.
 
-These merges are protected source truth only. They are not a version bump,
-release, installed Phase 2 candidate, Founder acceptance or Stable evidence.
-Native multi-shop remains the final Phase 2 implementation outcome.
+Protected-source licensing now includes:
+
+- native opaque Windows device binding;
+- separate online-trial and offline-permanent Ed25519 authorities;
+- one canonical trial record per device binding and reinstall reissue;
+- atomic installation-root-authenticated local authority;
+- DPAPI/HKCU protected clock, revocation and recovery floors;
+- periodic native clock advancement during runtime;
+- signed transfer, revocation and recovery ceremonies;
+- complete data-preserving lockout across server-rendered pages, APIs and provider
+  workers;
+- exact recovery/login licensing allowlist;
+- AR/FR/EN activation and recovery states;
+- release-build failure when service URL or public keyrings are absent.
+
+This is source closure. It does not prove a current Windows release artifact,
+signed MSI, installed expiry/activation/recovery or preserved-data lifecycle.
+Those remain at Phase 2 exit.
+
+### Documentation frontier — PR #198
+
+PR #198 merged the previous documentation frontier at
+`d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`. CI `30745607118` passed.
+The current operating contract reconciles the contradictions that remained after
+that merge through single-agent execution, audit-first planning, batch remediation
+and tiered checkpoints.
 
 ## Release and installed truth
 
 ### Internal.5
 
-Internal.5 remains the latest Founder-accepted installed baseline. That acceptance
-proved the exact historical install/update/reopen attempt only.
-
-### Internal.11
-
-Internal.11 exact-head and signed workflows passed selected source, Rust, Windows
-runtime, installed MSI, authenticated hydrated UI, deterministic evidence and
-updater-manifest gates. The Founder reported installing it through the in-app
-updater and that the application opened and was usable.
-
-Internal.11 was not accepted because first and subsequent launches remained
-materially slow, and exact post-install version, AppData identity, timing and full
-lifecycle evidence were not recorded.
+Internal.5 remains the latest explicit Founder-accepted installed baseline. That
+acceptance proves only the exact historical artifact and observation.
 
 ### Internal.13
 
-PR #174 froze executable source
-`fb32faedc5ecfc1718e395824f437b805cbb9ef2`. PR #177 merged release-authority
-correction `b2776bd3ea8d879a475c26af9d0c720d666671a9` after GitHub draft-release tag
-semantics exposed the final publication gap.
+Internal.13 is the latest published release. Protected run `30366866703` proved,
+for its exact historical source:
 
-Protected run `30366866703` passed:
-
-- exact source and protected-main reachability;
-- reviewed-tree and required-gate authority;
+- source and reviewed-tree binding;
 - signed build;
 - staged packaged authenticated readiness;
 - MSI and signature verification;
 - installed launch and reopen;
-- authenticated hydrated WebView UI twice;
-- deterministic build/evidence checks;
-- byte equality of retained release assets;
-- exact draft target and source-bound release tag;
-- automatic publication.
+- authenticated hydrated WebView UI;
+- deterministic evidence;
+- retained asset equality;
+- release tag and automatic publication.
 
-Internal.13 is non-draft, non-prerelease and GitHub latest. Public `latest.json`
-is verified updater metadata containing the signature for the signed MSI; the JSON
-document itself is not independently cryptographically signed.
-
-The Founder reports Internal.13 installed. Desktop observation on 2026-07-29
-confirmed uninstall version `1.0.0.13`, executable product version
-`1.0.0-internal.13` and executable SHA-256
+The Founder reports Internal.13 installed. Desktop observation confirmed uninstall
+version `1.0.0.13`, executable product version `1.0.0-internal.13` and executable
+SHA-256
 `30C49C3E0C38A228D8939622C4B57EC5CC7DFF346B11A642CCF131148F6643A8`.
-No AppData, registry, database, migration or key deletion occurred during this
+No AppData, registry, database, migration or key deletion occurred during that
 observation.
 
-The retained identity snapshot was captured locally without publishing raw
-identifiers. The Windows-profile fingerprint is SHA-256 over the UTF-8 bytes of
-the current Windows SID, a literal `|`, and the normalized lowercase roaming
-AppData path; the raw SID and profile path remain local:
+The first observed current-session launch reached authenticated Arabic UI-ready in
+68.863 seconds (92.014 seconds wall). Immediate reopen reached the same marker in
+31.834 seconds (41.092 seconds wall). Both exceed the eight-second T470 target.
+One reopen observation left host/runtime processes alive for more than 50 seconds
+before later exit. Arabic chart visual correctness and explicit Founder acceptance
+remain open.
 
-| Identity/evidence | Captured result |
-|---|---|
-| Windows profile fingerprint SHA-256 | `D2C70CF5394020289F4E5C4FC8506897DE7975502E37550AC5E5FA3A09EBC008` |
-| workspace ID SHA-256 | `1DAEEBBCB6D23E142106E718D7F66B5AA03CA7B030336EB22F68C3B416282F8F` |
-| installation ID SHA-256 | `A0E8D1E34B8E131A6525E2D9F4752576CFDCDA3221F7CDD31B92300895B0D2DE` |
-| active shop ID SHA-256 | `37A8EEC1CE19687D132FE29051DCA629D164E2C4958BA141D5F4133A33F0688F` |
-| shop-incarnation ID SHA-256 | `9F4DCA0B7DE6990F468A01D03607FB939A626E8CA2A0A79699AE42F8711FF594` |
-| registry SHA-256 | `305A3922C326BB4680C34E94340A0C8F188373C70A99F3FBF6B5D9A9DA5D712E` |
-| retained previous-registry SHA-256 | `1395C61C1809836F78615A5A4932D38466A761AC55E54082B396C5BEBE11A81C` |
-| shop database path and SHA-256 | `shops/dev.db`; `5C0DDBE3A10A66D87D6482DE5853F71D8E2E5F044A817E542AE2377DBCCFF77C` |
-| migration authority | format v2/revision 2; 9 packaged, 9 applied, 0 pending |
-
-The first current-session launch from stopped SahelFlow processes reached the
-authenticated Arabic UI-ready marker in 68.863 seconds (92.014 seconds wall
-observation). Immediate reopen reached the same marker in 31.834 seconds (41.092
-seconds wall). Both exceed the eight-second cold-launch product contract. The
-first normal close exited the host and packaged runtime. During immediate-reopen
-observation, the window closed but the host and packaged runtime remained alive
-for more than 50 seconds; after the Founder closed the app, both exited and the
-database hash remained unchanged.
-
-Authenticated Arabic locale and UI-ready behavior are confirmed. Visual Arabic
-chart correctness was not captured without exposing private seller data, so that
-Founder observation remains open. Founder acceptance is not inferred from
-installation and remains an explicit open decision.
+Internal.13 predates the protected Phase 1/Teams/licensing source closures. It
+cannot prove current Phase 2 behavior.
 
 ## Current implementation shape
 
 ```text
 Tauri Windows host
-├── all-shop migration and authority coordinator
+├── installation and shop registry/migration coordination
 ├── packaged Node/Next.js standalone runtime
 │   ├── App Router UI and API routes
 │   ├── Prisma services and one SQLite database per shop
-│   ├── local PIN/session and runtime authentication
-│   ├── field-level PII encryption and blind indexes
-│   ├── legacy business services and provider callbacks
-│   ├── additive canonical business command foundation
+│   ├── durable identity, permissions and signed licensing source
+│   ├── canonical business command foundation
+│   ├── legacy business services still serving non-adopted paths
 │   ├── local PWA shell
 │   └── local storefront prototype
 └── contained Bun/Baileys WhatsApp sidecar
 ```
 
-The Tauri host owns migration before startup, exact runtime resources, contained
-child processes, authenticated readiness, per-launch loopback credentials,
-mandatory-server supervision, degradable sidecar startup, crash-loop handling and
-process cleanup.
+The host owns migration before startup, contained runtime resources,
+authenticated readiness, per-launch loopback credentials, process supervision,
+crash-loop handling and cleanup.
 
-## Repository scale
+## Exact-head inventory
 
-The latest generated inventory reports approximately:
+The repository inventory produced on the signed-licensing head reported:
 
-- 790 tracked files;
-- 31 application pages;
-- 118 API routes;
-- 128 components;
-- 40 Prisma models;
-- 140 test/spec files;
-- 35 provider/integration files.
+- 1,026 tracked files;
+- 32 pages/routes;
+- 152 API routes;
+- 145 components;
+- 65 Prisma models;
+- 18 migration files;
+- 234 test/spec files;
+- 35 provider/integration files;
+- 27 sidecar/desktop resources;
+- 12 Playwright E2E scenarios.
 
-These counts prove breadth, not completeness.
+All 32 routes were flagged for physical-geometry/logical RTL review. Fourteen
+chart routes were flagged for Arabic chart-geometry review. These counts prove
+breadth and risk surface, not completeness.
 
 ## Proven strengths
 
-### Windows runtime and release
+### Business command kernel
 
-- exact-source signed updater path;
-- protected automatic Internal publication;
-- clean-runner staged and installed runtime proof;
-- authenticated readiness and UI verification;
-- process containment and crash-loop handling;
-- Windows-protected installation-root current/candidate/backup authority;
-- resumable native installation-wide root rotation and recovery journaling;
-- in-place release model and deterministic evidence.
+The canonical kernel provides:
 
-### Local data and migration
+- trusted person and exact shop derivation;
+- canonical request hashes;
+- request-bound idempotency and encrypted committed-result replay;
+- optimistic aggregate versions;
+- one database transaction;
+- audit, events and outbox intents;
+- reservations and inventory movements;
+- financial movements;
+- compensation facts;
+- projection invalidations.
 
-- per-shop SQLite files;
-- atomic versioned registry with workspace, installation and shop-incarnation
-  identity;
-- fail-closed process ShopContext;
-- all-shop migration preflight;
-- disk-space calculation;
-- verified snapshots;
-- migration journal and interrupted-run recovery;
-- schema fingerprint/compatibility checks.
+This is a strong foundation for operational truth.
 
-### Canonical business foundation
+### Identity and authorization
 
-- independent order, confirmation, fulfillment, delivery, inventory, COD,
-  return and refund contracts;
-- aggregate optimistic versions;
-- exact idempotency and request binding;
-- trusted principals and actor attribution;
-- encrypted result/event/outbox/movement payloads;
-- atomic audit, events, outbox, reservation, movement and compensation persistence;
-- same-key process serialization and replay authorization.
+Merged source provides installation-owned Workspace, Installation, Person,
+WorkspaceMember, Device and session bindings, exact shop grants, role-bounded
+custom policies, invitations, revocation, policy freshness, reauthentication and
+Teams/collaboration authority. Mutable browser state is not intended identity
+authority.
 
-### Security foundations
+### Security and crypto
 
-- field-level customer/order/conversation/message encryption;
-- phone/name blind indexes;
-- secure cookies and session revocation;
-- shop-context validation before production writes;
-- bearer-protected loopback sidecar;
-- signed license/updater concepts and redaction helpers.
+- AES-256-GCM field encryption and HMAC blind indexes;
+- native DPAPI path for production installation keys;
+- signed licensing and updater concepts;
+- authenticated loopback/sidecar boundaries;
+- exact protected-field projections and deny-before-query repairs.
 
-These foundations do not yet prove the complete target security, identity,
-licensing, recovery or legal model.
+These foundations do not replace complete threat modeling, independent review,
+privacy/legal mapping or installed attack-path evidence.
 
-## Source-grounded blocking discontinuities
+### Windows/release engineering
 
-### 1. Canonical production adoption remains incomplete
+The release workflow binds exact protected source, required checks, clean source,
+frozen dependencies, signed MSI, staged/installed runtime, authenticated UI,
+updater signature and evidence artifacts. It is unusually rigorous for an
+internal product.
 
-The trusted manual-order path now uses canonical intake, confirmation/rejection,
-packing, shipment and delivery commands. Its direct-stock and unsafe follow-up
-legacy paths fail closed, and delivered orders create a COD receivable movement.
-Imports, storefront, WhatsApp, commerce and AI intake plus cancellation,
-exceptions, settlement, return/refund and compensation are not yet migrated end
-to end.
+### Backup creation
 
-### 2. Stock concurrency and authority
+Local backup creation performs WAL checkpoint where applicable, staged copy,
+SQLite integrity/foreign-key checks, hash, installation/shop/schema-bound manifest
+and atomic manifest write.
 
-Canonical trusted manual confirmation now selects exact active variant-or-parent
-authority, opens reservations atomically and consumes them into outbound
-inventory on shipment. Non-adopted order sources and legacy services still use
-scalar stock behavior; their migration and reconciliation remain blocking before
-the inventory contract can be called complete.
+Production restore remains intentionally unavailable until the native supervisor
+owns it.
 
-### 3. Commerce checkpoint safety
+## Blocking discontinuities
 
-Commerce sync catches individual order failures and records them in the returned
-result, then still writes the provider’s next watermark. A failed order can
-therefore be skipped permanently. The checkpoint must remain behind uncommitted
-work or the failed event must first enter durable governed retry/dead-letter.
+### 1. Native multi-shop is incomplete
 
-### 4. Automations and external effects
+Licensing and durable membership exist, but production create, rename, switch,
+archive, recover and delete are not yet fully owned and proven by the native
+supervisor with exact registry, license-slot, membership, process-relaunch and
+data-preservation authority.
 
-Automations are fire-and-forget, external effects execute directly and multi-step
-execution can report overall success while individual steps failed. Durable
-outbox, effect identity, receipts, partial-failure state, approval and operator
-recovery remain incomplete.
+This is the final Phase 2 implementation outcome.
 
-### 5. Provider durability
+### 2. Canonical and legacy business authority coexist
 
-WhatsApp chat/message operation depends substantially on in-memory sidecar state;
-delivery-status persistence back to the app is best-effort. Courier, commerce and
-Sheets adapters contain useful knowledge and tests but no public provider is fully
-live-certified with durable ingress/effect/reconciliation proof.
+Trusted manual order paths use the canonical architecture. Other intake sources,
+delivery exceptions, provider callbacks, some COD/return/refund paths,
+automations and connected paths still rely substantially on legacy services or
+fields.
 
-### 6. Identity and commercial authority
+The strongest architecture does not protect a journey that bypasses it. Each
+phase must migrate callers, prove parity/recovery and remove or make the old write
+path read-only.
 
-Local PIN/session is a useful local baseline, not person/workspace/member/device
-authority. The compatibility actor is now restricted to read-only access to the
-exact process shop; create, switch, delete and cross-shop access fail closed.
-Durable people, memberships, teams, permissions, invitations, devices,
-revocation and high-risk approval remain incomplete.
+### 3. Provider durability is inconsistent
 
-Licensing still contains self-issued trial behavior, production Stronghold-to-
-localStorage fallback, weak password derivation and a legacy status-only trust
-path. It does not satisfy the signed online-trial/offline-permanent-entitlement
-contract.
+The durable WhatsApp and courier patterns include encrypted payloads, outbox
+leases, retries, receipts, ambiguity and dead letter. Adoption is incomplete:
+legacy and automation paths can still execute effects differently, and no public
+provider is fully live-certified across authentication, duplicate, timeout,
+reconciliation, degraded UI and recovery.
 
-### 7. Backup and recovery
+### 4. Automations are not production-safe for destructive work
 
-The packaged Windows runtime now owns a DPAPI-protected installation root and a
-resumable native rotation/recovery journal proven through installed-MSI rotation,
-launch and reopen. Local backup creation verifies SQLite integrity and hashes.
-Production live restore remains intentionally blocked until the native supervisor
-owns replacement. All-shop encrypted recovery, independent recovery kit,
-replacement install, zero-knowledge cloud retention and drills remain incomplete.
+The current automation engine is fire-and-forget in important paths. Multi-step
+execution may continue after failed steps and can report overall success despite
+individual failure. Some actions execute provider effects directly or mutate
+legacy-compatible order state.
 
-### 8. Storefront, PWA and cloud
+Destructive automations require durable intents, truthful per-step status,
+idempotency, retries, ambiguity, approval, dead letter and operator recovery.
 
-The local storefront route has server-authoritative pricing, transactional
-customer/order creation and basic abuse protection, but it is not the shared
-multi-tenant durable hosted plane. Its Tauri-request detection is spoofable if
-exposed without a trusted gateway.
+### 5. AI approval is not consistently proposal-bound
 
-Remote PWA, encrypted projections/commands, shared control plane, hosted releases,
-zero-knowledge backup and Founder Console remain prototype, target-only or
-missing.
+Some AI tools require confirmation, but destructive behavior is inconsistent and
+generic current-message confirmation is not durably bound to exact tool,
+arguments, record, expected version, actor, shop and expiry.
 
-### 9. AI approval and privacy
+Reads, extraction, summaries and drafts are useful. Destructive AI should remain
+disabled until a persisted one-time proposal/approval record exists.
 
-AI has typed tools, redaction and a structural confirmation check. Confirmation is
-not yet bound to an exact persisted proposal, arguments, shop, actor, aggregate
-version and expiry; a generic confirmation word can authorize the model’s current
-destructive choice. Central allowlisted data policy, proposal receipts and corpus
-certification remain incomplete.
+### 6. Backup restore and replacement recovery are incomplete
 
-### 10. Whole-product experience
+Backup creation is strong partial source. Production restore currently requires
+native supervisor ownership and is intentionally blocked. Full all-shop encrypted
+backup, independent recovery kit, replacement-install restore, failed-restore
+rollback and drills remain Phase 4 work.
 
-The application has a coherent shell, server-derived direction, responsive
-navigation, keyboard shortcuts and useful operational pages. It is not yet
-whole-product AAA.
+### 7. Storefront, PWA and cloud are incomplete
 
-The route inventory found physical left/right geometry requiring review across
-all 31 routes and Arabic chart validation across 15 chart routes. Complete
-loading, empty, permission, offline, stale, conflict, recovery, accessibility,
-zoom and installed evidence are inconsistent.
+The local storefront and PWA contain useful product behavior but are not yet the
+complete shared multi-tenant control/relay/storefront/zero-knowledge recovery
+platform. Desktop canonical authority, encrypted protocols, outage behavior,
+cross-tenant isolation, quotas and cost controls remain to be completed and
+certified.
 
-### 11. Performance
+### 8. Whole-product UI is not AAA
 
-Clean-runner Internal.13 evidence showed large progress—roughly 10.5 seconds to
-first authenticated UI readiness and roughly 3.1 seconds on the second launch,
-with runtime preparation around tens of milliseconds—but runner timing is not
-T470 proof. The first clean-runner launch also remains above the eight-second
-T470 target.
+The application has a coherent shell and useful operational pages, but route
+quality, complete states, design-system consistency, chart geometry, Arabic/RTL,
+accessibility, zoom, responsive behavior, visual regression and installed
+performance are inconsistent.
+
+The current dependencies include Radix primitives, TanStack Table, Tailwind,
+Framer Motion and Recharts. Their presence does not prove a finished design
+system. A benchmark must select one governed chart foundation and every visible
+primitive must pass through SahelFlow-owned components/tokens.
+
+### 9. Performance remains outside contract
+
+Historical clean-runner behavior improved substantially, but the recorded T470
+launch/reopen results are far over target. Startup stages, process shutdown,
+query/render performance, memory, low-resource scheduling and eight-hour stability
+remain blocking Phase 7 evidence and continuous package requirements.
+
+### 10. CI and governance reconciliation
+
+The active operating contract now corrects the previously observed drift:
+
+- stale PR #195 and `522ab...` execution-frontier language;
+- contradictions about identity, Teams and signed licensing;
+- simultaneous-WIP wording that conflicted with the single-agent rule;
+- documentation audit markers that protected stale text;
+- incomplete Vitest diagnostics for import, collection, setup and file-hook
+  failures.
+
+Product runtime behavior is unchanged by this governance package.
 
 ## Capability status
 
-| Area | Current status | Principal closure |
+| Area | Current evidence | Principal closure |
 |---|---|---|
-| Signed Windows runtime/update | Strong internal proof | Founder Internal.13 install, T470 lifecycle/performance, wider compatibility |
-| Local database/migrations | Strong partial | full restore/replacement drills and every prior-version matrix |
-| Workspace/shop authority | Partial, exact current-shop read boundary | production native create/switch/archive/recover/delete and membership/device authority |
-| Local PIN/session | Implemented baseline | person/member/device identity and fail-closed recovery |
-| Teams and permissions | Missing/fragmentary | complete identity, roles, fields, assignments, approval and revocation |
-| Licensing/entitlements | Unsafe partial | online signed trial, offline permanent issuance, protected storage, transfer/recovery |
-| Catalog/customers/risk | Broad partial | canonical authority, duplicate/permission/data-rights and scale proof |
-| Orders/confirmation | Canonical trusted-manual vertical | remaining intake sources, cancellation/edit policy and complete Golden COD proof |
-| Inventory | Canonical manual reservation/dispatch partial | remaining sources, return/compensation and reconciliation across every journey |
-| Delivery/couriers | Canonical manual fulfillment partial | booking/tracking, exceptions, returns, durable provider protocol and live certification |
-| Returns/refunds | Partial foundation | canonical compensation and end-to-end money/stock proof |
-| COD/accounting | Canonical delivered receivable partial | collection/remittance/fee/discrepancy ledger adoption |
-| Audit/outbox | Strong foundation | production adoption and durable effect workers |
-| Imports/exports | Implemented/partial | preview, mapping, resumability and scale consistency |
-| Backup/recovery | Partial/unsafe | native all-shop encrypted restore and recovery ceremonies |
-| WhatsApp/inbox | Partial/unverified | durable encrypted messages/effects, replay and certification |
-| Automations | Partial/unsafe | durable executions, exact effects, receipts, approvals and dead letter |
-| AI/extraction | Partial/unsafe | central data policy, proposal-bound approval, corpus and receipts |
-| Analytics | Partial/unverified | governed financial semantics, scale and complete states |
-| Hosted storefront | Prototype boundary | shared releases, durable receipt, allocation and reconciliation |
-| Remote PWA | Prototype boundary | identity, encrypted projections/commands, offline/conflict/revocation |
-| Shared cloud | Missing | measured isolated control/relay/storefront/backup planes |
-| Founder Console | Missing | bounded strongly authenticated audited control operations |
-| Localization/RTL | Partial foundation | route-level copy, geometry, charts, focus and native review |
-| Accessibility | Partial/unverified | journey-level WCAG, keyboard, screen reader and zoom proof |
-| AAA frontend | Broad partial | research-backed navigation/design system and every page-completion gate |
-| Low-end performance | Unproven/unmet on Founder history | Internal.13 T470 measurement, representative data and eight-hour stability |
-| Security/privacy/legal | Protected Windows root partial | backup/recovery keys, threat models, tenant boundaries, Law 18-07 and independent review |
-| Public Stable | Not ready | all Required implementation plus external evidence and Founder promotion |
+| Signed Windows runtime/update | Strong historical Internal proof | current Phase 2 artifact/install, T470 lifecycle/performance, wider compatibility |
+| Local database/migrations | Strong partial | full restore/replacement and prior-version/interruption matrix |
+| Workspace/person/member/session | Strong protected source | Phase 2 installed and recovery evidence |
+| Teams and permissions | Strong protected source | installed and representative journey evidence |
+| Licensing/entitlements | Strong protected source | Phase 2 Windows/install/expiry/activation/transfer/recovery evidence |
+| Native multi-shop | Partial/targeted source | complete native lifecycle and Phase 2 checkpoint |
+| Golden COD | Strong canonical manual/source boundary | remove remaining legacy intake/exceptions/provider bypasses and installed full journey |
+| Inventory/finance | Strong canonical facts in adopted paths | remaining callers, reconciliation, returns/compensation and installed proof |
+| Providers | Strong patterns, inconsistent adoption | one protocol everywhere and live certification |
+| Automations | Unsafe partial | durable truthful execution and recovery |
+| AI | Useful reads/drafts, unsafe destructive boundary | exact persisted proposal approval and corpus/privacy certification |
+| Backup/recovery | backup creation partial | production restore, replacement install, recovery kit and drills |
+| UI/UX | broad functional internal app | complete design/chart system and every route/state |
+| Arabic/RTL/accessibility | partial | full route/journey parity and external/installed evidence |
+| Performance/reliability | below T470 launch target | stage correction, floor targets and eight-hour stability |
+| Connected platform | prototype/partial | complete encrypted desktop-authoritative platform |
+| Stable | not achieved | Phases 2–9 and explicit Founder promotion |
 
-## Keep and harden
+## Immediate frontier
 
-- Tauri Windows host and contained packaged runtime.
-- Per-shop Prisma/SQLite authority.
-- All-shop migration coordinator.
-- Canonical command, event, outbox, reservation, movement and compensation layer.
-- Field-level PII encryption and blind indexes.
-- Shared multilingual/RTL component foundations.
-- Existing useful seller pages and provider knowledge that survive target
-  invariants.
-- Exact-source updater and evidence infrastructure.
-
-## Migrate or replace
-
-- direct order/status/stock/COD mutation → canonical independent lifecycle and
-  movement commands;
-- mutable active-shop assumptions → complete trusted identity/shop authority;
-- best-effort audit/effects → atomic command plus durable workers/receipts;
-- local PIN identity → unlock plus person/workspace/member/device;
-- self-issued/local trial → online trial-only signing and offline permanent
-  entitlement;
-- direct provider mutation/checkpoints → durable inbox/outbox/reconciliation;
-- in-memory WhatsApp operation → durable encrypted message/effect authority;
-- local storefront submit → hosted durable receipt and canonical import;
-- local-server PWA → authenticated encrypted remote projections/commands;
-- byte-copy backup → verified encrypted all-shop recovery;
-- fragmented page-local UI → research-backed coherent AAA system.
-
-## Current exact boundary
-
-Phase 0 remains complete through PR #179. Protected application source is now
-`731fb11528345354388b2716f3bd94f0fc73eafb`, assembled from these verified
-packages:
-
-- PR #190 -> `f0821fb7885be4eeec7efcc2e5ef5a27254f6ac1`:
-  trusted manual intake and confirmation/rejection, reservation/movement and
-  complete decision states; exact-head CI run `30516059898` passed.
-- PR #191 -> `bcdc4fe5643c407dddcc96d47c421d0417a83563`:
-  narrow current-shop compatibility authorization; exact-head CI run
-  `30520060972` passed.
-- PR #184 -> `deb148de737b7906d899cbb41764faa929823a24`:
-  Windows-protected installation root and native rotation/recovery; exact-head CI
-  run `30520999819` passed through installed MSI, rotation, authenticated launch,
-  close and reopen.
-- PR #192 -> `731fb11528345354388b2716f3bd94f0fc73eafb`:
-  canonical packing, shipment, delivery and COD receivable; exact-head CI run
-  `30522348699` passed all selected source, Windows runtime and installed-MSI
-  gates.
-
-Phase 1 is protected-source closed through PR #195. Signed licensing is
-protected-source closed through PR #197. Phase 2 still requires native
-multi-shop and the frozen Phase 2 artifact/installed exit proof. Phase 4 still
-requires full backup/restore, replacement-install recovery,
-migration/security/privacy/legal and certification gates.
-
-The remaining Internal.13 Arabic-chart and Founder-acceptance observations stay
-independent in the platform lane.
+1. Close PR #186 as obsolete after the governance package is protected.
+2. Close PR #196 as superseded after the replacement file-level Vitest diagnostics
+   are protected; do not merge its stale branch wholesale.
+3. Confirm the Desktop Agent as the sole active implementation agent.
+4. Create native multi-shop from the then-current protected `main`.
+5. Complete the Phase 2 audit and consolidated Problem Register before edits.
+6. Implement native multi-shop with Level 1 gates.
+7. Run frozen review and batch remediation.
+8. Run Phase 2 Level 2 plus risk-triggered Level 3 Windows/Rust/signed-MSI/
+   install/reopen/preserved-data checkpoint.
+9. Close Phase 2 only with zero known P0/P1 and exact evidence.

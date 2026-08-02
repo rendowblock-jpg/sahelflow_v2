@@ -2,17 +2,19 @@
 
 > **Status:** Active operating contract
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
+> **Execution mode:** one active implementation agent; audit-first; batch remediation; tiered CI
 > **Durable truth:** protected `main`, branches, PRs, Actions, releases, issue #164 and the ten active documentation authorities
-> **Last consolidated:** 2026-08-01
+> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
+> **Last consolidated:** 2026-08-02
 
 This workflow is the fastest professional path to a complete class-AAA SahelFlow
-candidate. Speed comes from current research, dependency-correct sequencing,
-complete vertical outcomes, short coherent branches, separated frozen review,
-risk-selected evidence and immediate removal of superseded paths after proof.
+candidate. Speed comes from complete reconnaissance, root-cause grouping, short
+observable outcomes, one active implementation owner, complete failure reporting,
+risk-selected evidence and prompt closure of proven work.
 
 Speed never comes from weakening business integrity, AppData preservation,
-security, privacy, Arabic/RTL, accessibility, low-end performance or evidence.
+security, privacy, Arabic/RTL, accessibility, low-end performance, recovery or
+evidence honesty.
 
 ## 1. Authority and roles
 
@@ -20,104 +22,147 @@ security, privacy, Arabic/RTL, accessibility, low-end performance or evidence.
 
 The Founder:
 
-- sets product, price, entitlement, scope and value judgments;
-- approves consequential money, ownership, privacy, provider and experience choices;
+- chooses the active coding agent;
+- sets product, commercial, entitlement and value judgments;
+- approves consequential money, ownership, privacy, provider and experience
+  choices;
 - installs and observes coherent Internal milestones;
-- controls sensitive signing/payment actions;
-- approves Beta and Stable promotion;
-- changes a Founder decision only through a new numbered decision.
+- controls sensitive signing and payment ceremonies;
+- explicitly promotes Beta and Stable.
 
-### Web Agent
+### Active implementation agent
 
-The Web Agent:
+The selected Web Agent or Desktop Agent:
 
-- reconstructs current GitHub authority and exact source;
-- performs current web and primary-source research;
-- inspects implementation and tests before designing;
-- implements complete outcome packages;
-- uses environment-valid checks and records their limits;
-- opens branches and PRs through GitHub;
-- never claims installed Windows evidence it did not observe.
+- reconstructs live GitHub authority before work;
+- completes the research and impact-map gate;
+- owns one branch and one observable outcome;
+- implements every applicable layer of that outcome;
+- runs the required task gate;
+- stops editing when the exact head is frozen;
+- records evidence without claiming a higher layer than observed.
 
-### Desktop Agent
+### Inactive agent
 
-The Desktop Agent:
+The inactive agent:
 
-- works in the local Windows checkout on a normal branch;
-- preserves unrelated work and canonical AppData;
-- uses GitHub Actions for builds, automated tests, coverage and heavy validation;
-- implements and reviews complete outcome packages;
-- installs exact signed artifacts;
-- owns MSI, updater, WebView, AppData, real UI and reference-hardware evidence;
-- never resets or deletes canonical data merely to make a test pass.
+- does not create a competing implementation branch;
+- does not edit shared contracts or future-phase work;
+- may become active only after Founder handoff and exact state reconstruction.
+
+### Desktop-specific evidence
+
+When Desktop is active, it additionally owns:
+
+- local Windows behavior;
+- MSI, updater, WebView and process lifecycle;
+- AppData and registry preservation;
+- real UI observation;
+- T470 and floor-hardware evidence.
 
 ### GitHub and Actions
 
 - Protected `main` is integrated source truth.
 - Branches and PRs are proposed changes.
-- Issue #164 tracks execution but is not a separate product/architecture authority.
+- Issue #164 tracks execution but is not a product or architecture authority.
 - Actions proves clean-checkout source and artifact behavior.
 - Releases bind exact source, version, signature, artifacts and evidence.
-- GitHub is infrastructure and durable truth, not a third coding agent.
+- CI remains read-only with respect to protected source.
 
 ## 2. Core anti-drift rules
 
-1. One work package has one owner, one branch and one PR.
-2. No direct changes to protected `main`.
-3. Material frozen work receives a separated adversarial pass; do not describe
-   it as independent review.
-4. Shared schema, migration, domain, identity and design-system contracts are
-   serialized before dependent implementation.
-5. No important decision or intended work remains only in chat or an unpushed
-   checkout.
-6. `CURRENT_STATE.md` describes merged source and evidence; `WORKING_MEMORY.md`
-   describes only the execution frontier.
-7. A page, model, route, adapter, screenshot, mock or passing unit test does not
+1. Only one SahelFlow implementation agent is active at a time.
+2. One outcome has one owner, one branch and one PR.
+3. No direct protected-main edits.
+4. No material implementation begins before a complete impact map and Problem
+   Register exist.
+5. Shared schema, migration, identity, permission, command, event, provider and
+   design-system contracts are serialized before dependent implementation.
+6. No important decision remains only in chat or an unpushed checkout.
+7. `CURRENT_STATE.md` describes merged source and named evidence.
+8. `WORKING_MEMORY.md` describes only the current execution frontier.
+9. A page, route, model, adapter, screenshot, mock or passing unit test does not
    complete a capability.
-8. Arabic/RTL, accessibility, recovery and performance are continuous blocking
-   requirements.
-9. New abstractions must be adopted by a named production vertical immediately
-   or in the directly following dependency package.
-10. After migration and parity proof, competing legacy mutation paths are removed
-   or made read-only.
-11. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
-   scope.
-12. No roadmap rewrite replaces FD-028 without explicit Founder change control.
-13. Public provider, performance, security or Stable claims never exceed evidence.
-14. After Teams closes, PR #195 accepts no licensing, multi-shop or later-phase
-    expansion. New outcomes use short PRs from current protected `main`.
+10. Arabic/RTL, accessibility, recovery and performance are continuous blocking
+    requirements.
+11. A new abstraction is adopted by a production vertical immediately or in the
+    directly following dependency package.
+12. After parity and recovery proof, competing legacy mutation paths are removed
+    or made read-only.
+13. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
+    scope.
+14. Public provider, security, performance, AAA or Stable claims never exceed
+    evidence.
+15. Do not create another permanent masterplan, gap report, wave or handoff
+    document. Update the existing owner.
 
-## 3. Research-to-implementation gate
+## 3. Session declaration
 
-Every major phase, durable contract and material work package begins with current
-research. Generic AI-generated recommendations are not sufficient authority.
+Before changing anything, declare exactly one session purpose:
 
-### 3.1 Exact research question
+- **governance/planning** — authority, process, phase or dependency changes; no
+  product implementation;
+- **research/contract** — source inspection, current primary research, alternatives
+  and measurable adoption; no broad implementation;
+- **implementation** — one approved observable outcome;
+- **frozen review/closure** — exact-head adversarial review, consolidated findings,
+  repair verification and closure;
+- **installed evidence** — artifact, install, upgrade, reopen, recovery,
+  performance and Founder observation.
 
-State one decision whose answer changes implementation, for example:
+A session does not silently change purpose. Record an explicit handoff when the
+purpose changes.
 
-- How should confirmation reserve stock atomically in SQLite?
-- How should provider checkpoints behave after a partially failed page?
-- What information architecture best supports Algerian COD confirmation at
-  1366×768?
-- How should proposal-bound AI approval prevent generic-confirmation replay?
+## 4. Start and resume protocol
 
-### 3.2 Inspect SahelFlow first
+Before production edits:
+
+1. Verify live protected `main` and repository permissions.
+2. Resolve all open PRs, exact heads, review threads, checks and dependencies.
+3. Read `AGENTS.md`, documentation entry point, FD-028, FD-029, Current State,
+   Roadmap, this workflow and Working Memory.
+4. Read the governing Product, Experience, Architecture and Research sections.
+5. Declare the selected agent, environment, branch and session purpose.
+6. Preserve unrelated user work and local evidence.
+7. Inspect exact production source, tests, migrations and callers.
+8. Complete the phase/package audit and Problem Register.
+9. Freeze shared contracts and explicit non-goals.
+10. State the exact outcome and required evidence.
+
+Never infer an active agent from branch movement, screenshots or old chat.
+
+## 5. Research-to-implementation gate
+
+Every major phase, durable contract and material package begins with bounded
+current research.
+
+### 5.1 Exact decision
+
+State one decision whose answer changes implementation, such as:
+
+- how native shop switching quiesces and relaunches the contained runtime;
+- how an automation records partial multi-step failure truthfully;
+- which chart engine satisfies Arabic labels, accessibility and low-end rendering;
+- how an AI approval is bound to exact arguments, actor, shop, version and expiry.
+
+### 5.2 Inspect SahelFlow first
 
 Record:
 
-- exact source baseline and production path;
-- current models, routes, services, tests and migrations;
-- existing behavior to preserve;
+- package base and current production path;
+- models, routes, services, UI and tests;
+- current behavior and data to preserve;
 - known discontinuities and failure cases;
-- data compatibility and recovery implications;
-- security/privacy, Arabic/RTL, accessibility and performance implications;
-- current evidence and evidence still required.
+- compatibility, migration and recovery implications;
+- authorization, privacy and threat implications;
+- AR/FR/EN, RTL, accessibility and responsive implications;
+- performance and resource implications;
+- evidence already available and evidence still required.
 
-Research must not recommend rebuilding correct behavior merely because another
-implementation is fashionable.
+Do not rebuild correct behavior merely because another implementation is
+fashionable.
 
-### 3.3 Source hierarchy
+### 5.3 Source hierarchy
 
 Prefer:
 
@@ -130,275 +175,370 @@ Prefer:
 7. representative Algerian COD seller evidence and Founder judgment;
 8. secondary opinion only as supporting context.
 
-Record source date, version, jurisdiction, applicability and limitation.
-Time-sensitive facts are revalidated when implementation or certification begins.
+Record date, version, jurisdiction, applicability and limitation. Revalidate
+unstable facts when implementation or certification begins.
 
-### 3.4 Benchmark and alternatives
-
-For meaningful alternatives record:
-
-- product and seller fit;
-- correctness and invariants;
-- migration and compatibility;
-- security and privacy;
-- Arabic/RTL and accessibility;
-- performance and resource use;
-- operational recovery;
-- implementation complexity;
-- maintainability;
-- one-time-price continuity cost.
-
-Product teardowns evaluate workflow, states, density, keyboard, recovery and
-performance—not just visual style.
-
-### 3.5 Adopted decision
+### 5.4 Adopted decision
 
 Before substantial implementation, record:
 
 - selected approach and rationale;
 - rejected alternatives;
-- existing behavior retained;
-- legacy behavior to remove;
+- behavior retained;
+- legacy behavior removed or made read-only;
 - measurable acceptance criteria;
-- automated, installed, external and Founder evidence required;
+- automated, installed, external and Founder evidence;
 - revalidation trigger.
 
-### 3.6 No-research-drift rule
+Research is bounded. Once enough evidence exists for a safe decision,
+implementation begins.
 
-Research is bounded. Once enough evidence exists to choose safely, implementation
-begins. Do not accumulate a second roadmap, permanent report collection or
-unimplemented recommendation library.
+## 6. Complete phase/package audit
 
-Detailed research belongs in `../research/RESEARCH.md` or archive only when it
-has durable reuse value. Adopted results update the owning authority.
+Before the first production edit, inspect the whole affected surface. The audit
+must cover every applicable category:
 
-## 4. Work-package contract
-
-Before implementation, the branch/PR and Working Memory identify:
-
-- named seller or Founder outcome;
-- roadmap phase and capability/journey;
-- governing Founder, product, experience and architecture clauses;
-- research package and adopted decision;
-- exact source baseline and owner;
-- scope and explicit non-goals;
-- shared contracts and dependencies;
-- current data/behavior to preserve;
-- migration, compatibility and forward-repair strategy;
-- threat, privacy and authorization implications;
-- Arabic/RTL, accessibility and responsive implications;
-- performance and resource budget;
-- required automated, installed, provider and Founder evidence;
-- exact legacy path removed after adoption.
-
-The package also includes a source impact map before the first production edit:
+### Authority and behavior
 
 - every production caller, route, page, command and background consumer;
-- direct tests, mocks, fixtures, dynamic imports and compatibility markers;
-- affected models, migrations, existing databases and forward-repair behavior;
-- protected actions, fields, projections, search/inference oracles and audit;
-- provider effects, secrets, high-risk ceremonies and failure recovery;
-- AR/FR/EN, RTL, accessibility, responsive and installed UI states;
-- performance budgets, diagnostics, evidence lanes and superseded paths.
+- current mutation authorities and compatibility projections;
+- business state, stock, money, provider and audit invariants;
+- duplicate, concurrency, stale-version, restart and interruption behavior;
+- all direct and indirect legacy bypasses.
 
-Every AAA layer is marked `applicable` with acceptance/evidence or `not
-applicable` with a concrete reason. “Later” is not valid for a blocking layer.
+### Data and recovery
 
-A package should normally fit one focused implementation session plus one review
-cycle. If its impact map cannot be understood, implemented and frozen coherently
-at that size, split it by usable observable outcomes—not by arbitrary
-backend/frontend files. Time is a sizing signal, never permission to cut a
-blocking layer.
+- models, migrations, indexes, constraints and existing databases;
+- forward migration, interruption, retry, rollback and repair;
+- backup, restore, replacement install and preservation implications;
+- secrets, keys, registry and AppData boundaries.
 
-Disallowed package framing:
+### Security and permissions
 
-- “add models”;
-- “prepare foundation”;
-- “improve types”;
-- “polish pages”;
-- “refactor helpers.”
+- trusted actor, person, member, device, session, installation and exact shop;
+- protected fields and inference/search oracles;
+- high-risk ceremonies and reauthentication;
+- provider credentials, callback authentication and effect authority.
+
+### Product experience
+
+- every affected route and reusable component;
+- happy, loading, empty, validation, permission, offline, pending, stale,
+  conflict, error, retry, recovery, history and bulk states;
+- AR/FR/EN and RTL/mixed-direction behavior;
+- keyboard, focus, semantics, announcements, contrast, zoom and reduced motion;
+- 1366×768 and responsive containment;
+- charts, tables, forms, dialogs and destructive actions.
+
+### Validation and operations
+
+- unit, integration, database, browser, Rust, Windows and installed tests;
+- mocks, fixtures, dynamic imports and collection failures;
+- diagnostics, support bundle and observability;
+- performance budgets and long-session behavior;
+- exact CI lanes and evidence artifacts.
+
+Mark each AAA layer `applicable` with acceptance/evidence or `not applicable` with
+a concrete reason. “Later” is not valid for a blocking layer.
+
+## 7. Phase Problem Register
+
+All reasonably discoverable current problems are collected before remediation.
+Each entry records:
+
+- stable identifier;
+- severity P0–P3;
+- affected journey/capability;
+- root cause;
+- affected callers/files/authorities;
+- dependencies;
+- required correction;
+- tests and evidence;
+- phase-blocking status;
+- owner and closure state.
+
+Group entries by root cause. Prefer one canonical-authority migration that removes
+seven symptoms over seven isolated route patches.
+
+### Remediation waves
+
+1. **Structural blockers** — competing authority, unsafe schema/migration,
+   authorization, build or data-integrity defects.
+2. **Functional completeness** — missing journeys, states, provider behavior,
+   recovery and business correctness.
+3. **Experience completeness** — design-system adoption, UI states, AR/FR/EN,
+   RTL, accessibility and performance.
+4. **Evidence and closure** — tests, installed proof, documentation, review and
+   checkpoints.
+
+A new P0/P1 may interrupt the active package. Other discoveries join the register
+and are handled dependency-correctly rather than creating random side work.
+
+## 8. Work-package contract
+
+A package is the smallest independently usable seller/Founder outcome that can be
+understood, implemented, reviewed and closed coherently.
+
+Before implementation, record:
+
+- named observable outcome;
+- roadmap phase and journeys;
+- governing Founder/product/experience/architecture clauses;
+- research and adopted decision;
+- exact base and active owner;
+- scope and non-goals;
+- complete impact map;
+- data/behavior preservation;
+- migration and forward repair;
+- threat, privacy and authorization implications;
+- AR/FR/EN, RTL, accessibility and responsive behavior;
+- performance/resource budget;
+- required evidence;
+- exact legacy path removed after adoption.
+
+Disallowed framing:
+
+- add models;
+- prepare foundation;
+- improve types;
+- polish pages;
+- refactor helpers;
+- fix the next issue.
 
 Valid framing:
 
-- “Manual confirmation reserves variant stock atomically, rejects conflicts and
-  survives duplicate submission.”
-- “Commerce sync retains a failed event and cannot advance its checkpoint past
-  untracked work.”
-- “Orders page is complete in AR/FR/EN with every applicable operational state.”
+- native switch validates the target shop, atomically advances registry revision,
+  quiesces the old runtime and relaunches into authenticated readiness;
+- automation step failure is durable, never reported as overall success and can
+  be retried safely;
+- orders route family is complete in AR/FR/EN with every operational state and
+  governed chart/table primitives.
 
-Do not mix drive-by refactors, unrelated dependency upgrades, broad formatting or
-general cleanup into a product outcome.
+Do not mix unrelated refactors, dependency upgrades, formatting or cleanup into a
+product outcome.
 
-### Package sizing
+## 9. Implementation and task gates
 
-A normal package is the smallest independently usable seller/Founder outcome that
-can be reviewed and closed without carrying an unrelated phase. If one package
-requires several unrelated permission domains, migrations, pages or providers,
-split it before implementation. Package duration is a planning signal, never a
-reason to cut an end-to-end journey or defer a blocking layer.
+Focused tests and local checks are encouraged during coding. A coherent task is
+not complete until its Level 1 gate passes.
 
-## 5. Execution lanes and WIP
+### Level 1 — Task Gate
 
-### Core authority — WIP 1
+Run after each coherent completed task, not after every small edit:
 
-Owns:
+1. repository cleanliness and diff check;
+2. `bun run sf-version`;
+3. `bun run sf-audit`;
+4. Prisma generation/validation and migration status where applicable;
+5. TypeScript type checking;
+6. ESLint;
+7. complete Vitest suite;
+8. dependency audit where the package changes production dependencies;
+9. targeted Playwright for changed seller journeys;
+10. targeted provider contract tests for provider changes;
+11. Rust format/check/tests for `src-tauri/**` or native changes;
+12. Windows compile/package lane when risk requires immediate proof.
 
-- workspace, identity and trusted context;
-- schema, migrations and compatibility;
-- business lifecycle contracts;
-- stock and financial movements;
-- audit, idempotency, inbox/outbox and compensation;
-- provider and permission invariants.
+The ordinary source gate must return the complete actionable failure set. It must
+not intentionally hide all but the first assertion, import failure, collection
+failure or file-level hook failure.
 
-### Seller verticals — WIP 2 total
+Never rerun an unchanged passing exact head. Retry only evidence-supported
+infrastructure failures.
 
-Each lane delivers one complete journey across UI, API, domain and database after
-shared contracts are frozen. Lanes may not overlap mutation authority.
-
-### Experience, Arabic and accessibility — WIP 1
-
-Owns:
-
-- information and navigation architecture;
-- tokens, typography, density and interaction contracts;
-- Arabic copy, joining and mixed direction;
-- RTL tables, charts, icons, dialogs and forms;
-- keyboard, focus, screen reader, zoom and reduced motion;
-- loading, empty, permission, offline, stale, conflict, error and recovery;
-- responsive and 1366×768 behavior;
-- installed UI quality.
-
-A major unusable Arabic/RTL, accessibility or core UX defect is P1.
-
-### Platform, recovery and performance — WIP 1
-
-Owns:
-
-- Tauri runtime and process containment;
-- shop lifecycle and migrations;
-- installer, updater and release automation;
-- backup/restore and key rotation;
-- startup, low-resource scheduling and long-session stability;
-- diagnostics and CI elapsed time.
-
-### Independent validation
-
-Owns contract review, frozen-head review, source/artifact validation, installed
-observation and phase exit recommendation.
-
-At most one frozen signed candidate is in flight. Publication or Founder
-observation does not freeze independent development.
-
-## 6. Start and resume protocol
-
-Before changing anything:
-
-1. Declare the session purpose: governance/planning, research/contract,
-   implementation, frozen review/closure or installed evidence. A governance or
-   planning session performs no product implementation.
-2. Declare the actual environment: Web checkout, Desktop local Windows, Actions
-   Linux/Windows or installed artifact.
-3. Read `AGENTS.md`, `../README.md`, FD-028, FD-029, this workflow, the active
-   roadmap phase and Working Memory.
-4. Read the governing Product, Experience, Architecture and Current State sections.
-5. Synchronize with protected `main` and inspect status.
-6. Preserve unrelated user work.
-7. Resolve active branches/PRs, exact heads, checks, dependencies and current ownership.
-8. Complete the research-to-implementation gate and impact map.
-9. Freeze required shared contracts.
-10. State the exact outcome and its exit evidence.
-
-Chat history is context, never current authority.
-
-## 7. Branch and PR practice
-
-- Branch from current protected `main`.
-- Branch naming: `agent/<outcome>`.
-- Open a draft PR early for material work.
-- Push coherent batches rather than every tiny edit.
-- Keep one PR reviewable as one outcome.
-- PR body records outcome, research, baseline, changes, preservation, risks,
-  migration, evidence and legacy removal.
-- Move a ready PR back to draft during material repair.
-- Rebase or merge `main` deliberately; never hide conflicts.
-- Merge dependency-correct packages as soon as selected gates and review pass.
-- Ordinary feature PRs do not bump the application version.
-
-## 8. Review model
+## 10. Frozen review and batch repair
 
 Material work receives:
 
-1. research/contract review before dependent implementation;
-2. author self-review;
-3. one independent review of the frozen implementation head;
-4. one consolidated repair batch for actionable blockers;
-5. re-review only of materially changed or unresolved areas.
+1. author self-review;
+2. exact-head freeze;
+3. one complete separated adversarial pass over every affected layer;
+4. one consolidated findings batch;
+5. one dependency-correct repair batch;
+6. re-review of materially changed and previously unresolved areas;
+7. checkpoint recommendation.
+
+The reviewer does not publish the first finding and stop while the same frozen
+head remains uninspected. The review covers the complete impact map before the
+batch is delivered.
+
+With one coding agent this is not independent review. Required external
+independent security, privacy, legal, provider and accessibility review remains a
+later certification gate.
 
 ### Severity
 
 - **P0 — stop immediately:** active data loss, secret exposure, cross-shop or
   cross-tenant effect, corrupt update/restore, irreversible stock or money damage.
-- **P1 — blocks merge/release:** required journey failure, authority bypass,
+- **P1 — blocks merge/checkpoint:** required journey failure, authority bypass,
   negative/double stock, incorrect money, duplicate/lost provider effect, unsafe
-  migration, startup/install failure, broken recovery, major Arabic/UX/accessibility
-  failure in the named outcome.
-- **P2 — scheduled hardening:** material bounded issue with a safe workaround that
-  does not invalidate the outcome.
+  migration, startup/install failure, broken recovery or major Arabic/UX/
+  accessibility failure.
+- **P2 — scheduled hardening:** material bounded issue with a safe workaround and
+  explicit owner/dependency position.
 - **P3 — polish:** low-impact cleanup or optional improvement.
 
-P2/P3 receive an owner and dependency position. They do not create unbounded
-review loops or repeatedly reopen a frozen green candidate.
+P2/P3 do not create an unbounded review loop. P0/P1 always reopen the affected
+gate when supported by concrete evidence.
 
-## 9. Risk-aware validation
+## 11. Level 2 — Phase Checkpoint
 
-### Draft head
+A phase closes only on one frozen integrated source head after all planned
+packages and blocking Problem Register entries are resolved.
 
-Use fast feedback appropriate to changed paths:
+Required checkpoint categories:
 
-- product/version/documentation authority;
-- targeted type/lint;
-- focused unit/domain tests;
-- contract and migration checks;
-- research/acceptance review.
+- clean frozen dependency install;
+- documentation and version authority;
+- complete TypeScript, ESLint, unit, domain, integration and database suites;
+- migration deploy/status and required compatibility matrix;
+- production frontend build;
+- all phase-affected Playwright journeys;
+- permission, revocation, stale-policy and exact-shop matrices;
+- duplicate, concurrency, restart, interruption and recovery tests;
+- AR/FR/EN, RTL and applicable visual-state evidence;
+- accessibility, zoom and reduced-motion checks;
+- phase performance/resource measurements;
+- applicable Rust/native/Windows/package lanes;
+- complete unresolved-problem, stale-document and legacy-removal audit;
+- exact evidence bundle and phase-closure recommendation.
 
-### Frozen review head
+A phase does not close merely because its PRs merged, source compiles or many tests
+exist.
 
-Run selected complete lanes once:
+## 12. Level 3 — Major Full Checkpoint
 
-- full type, lint, unit and domain quality;
-- coverage;
-- database, integration and migration checks;
-- Linux Rust/Tauri where applicable;
-- Windows standalone/Rust/MSI for affected risk;
-- browser/UI evidence where applicable.
+Run after every two completed phases by default. Three phases may share one only
+when explicit risk/dependency analysis shows no high-risk authority was deferred.
 
-### CI economy
+Run immediately at the affected phase exit for:
 
-- Never rerun an unchanged passing exact head.
-- Cancel superseded runs.
-- Retry only evidence-supported infrastructure failures.
-- Do not dispatch duplicate workflows.
-- Diagnose slow stages before repeating pipelines.
-- Documentation-only work runs authority/audit and creates no MSI unless
-  executable release authority changed.
-- Draft feedback reports the complete actionable failure set for each lane; do
-  not intentionally stop after the first stale fixture when a full diagnostic
-  run is affordable.
-- Ordinary outcome PRs run complete type, lint, unit, database/integration and
-  audit evidence through one always-reporting required-check aggregator.
-- Windows standalone, Rust release-parity and installed-MSI lanes run once on
-  the complete phase or milestone candidate. A direct edit to one of those
-  proof harnesses may select its own lane earlier so the harness cannot merge
-  unverified.
-- Maintain shared trusted-actor, revoked/stale/cross-shop and marked disposable
-  route fixtures. A shared authority change updates its consumer inventory and
-  fixtures in the same package.
-- The phase or milestone frozen-head checkpoint remains blocking, but ordinary
-  source packages do not repeatedly rebuild the same accumulated artifact.
+- licensing and commercial authority;
+- identity, authorization and cryptography;
+- installer, updater and process supervisor;
+- schema/migration authority;
+- backup, restore and replacement install;
+- provider effects involving money, inventory or irreversible external action;
+- destructive shop/data lifecycle.
+
+The major checkpoint includes:
+
+1. exact protected source and reviewed-tree binding;
+2. clean Windows release compilation;
+3. complete Rust release parity;
+4. signed MSI and updater contract;
+5. clean install;
+6. in-place upgrade from the previous checkpoint;
+7. first launch, authenticated readiness, close and reopen;
+8. process containment and cleanup;
+9. preserved AppData, registry, databases and keys;
+10. migration interruption and forward repair;
+11. backup, corruption, restore and replacement-install recovery;
+12. complete browser/UI journey suite;
+13. visual regression and AR/RTL review;
+14. security, permission and shop-isolation matrices;
+15. T470/floor performance and long-session stability where scheduled;
+16. deterministic evidence manifest.
+
+Phase 2 receives a Level 3 checkpoint because signed licensing and native
+multi-shop are high-risk native authority.
+
+## 13. Whole-product AAA frontend program
+
+The full frontend transformation is a first-class Stable 1.0 requirement.
+Functionality is not completed first and visually repaired at the end; each
+package carries applicable experience quality, and Phases 5–7 perform complete
+whole-product convergence and certification.
+
+### Governed design system
+
+SahelFlow owns one visible design layer containing:
+
+- typography and numerical formatting;
+- spacing, density, radii, borders and elevation;
+- semantic color and operational states;
+- focus and motion rules;
+- layout and navigation primitives;
+- buttons, inputs, forms and validation;
+- dialogs, sheets, menus, popovers and toasts;
+- tables, lists, filters and bulk actions;
+- loading, empty, permission, offline, stale, conflict, error and recovery
+  surfaces;
+- accessibility and RTL behavior.
+
+Primitive libraries may provide behavior underneath, but pages do not expose a
+mixture of library defaults.
+
+### Governed charts
+
+Choose one primary charting foundation after a technical benchmark of the current
+stack and credible alternatives. It must support:
+
+- Arabic and RTL labels;
+- responsive low-end rendering;
+- accessible text/table summaries;
+- DZD, percentage, date and quantity formatting;
+- tooltips, legends, annotations and filtering;
+- empty/loading/degraded/error states;
+- export/printing where Required;
+- visual-regression stability.
+
+All pages use SahelFlow chart wrappers. Raw page-specific chart configuration is
+not accepted as whole-product AAA.
+
+### Route completion matrix
+
+Every Required route records:
+
+- visual design;
+- interaction states;
+- Arabic, French and English;
+- RTL/mixed direction;
+- keyboard and focus;
+- semantics/screen reader;
+- 100–200% zoom;
+- 1366×768 and responsive behavior;
+- performance;
+- visual regression;
+- Founder acceptance.
+
+No legacy-looking or state-incomplete page is hidden behind functional
+completion.
+
+## 14. Branch and PR practice
+
+- Branch from current verified protected `main`.
+- Name branches `agent/<observable-outcome>`.
+- Open a draft PR early for material work.
+- Push coherent batches rather than every tiny edit.
+- PR body records outcome, research, base, changes, preservation, risks,
+  migration, evidence, Problem Register and legacy removal.
+- Return a ready PR to draft during material repair.
+- Rebase or merge current `main` deliberately; never hide conflicts.
+- Freeze exact head before consolidated review.
+- Merge dependency-correct packages as soon as selected gates and review pass.
+- Ordinary feature PRs do not bump the application version.
+- Delete merged branches and close obsolete/superseded PRs promptly.
+
+## 15. Release train and evidence
+
+1. Merge independently complete source packages without ordinary version bumps.
+2. When merged outcomes form one coherent Founder test, assign one unique Internal
+   version.
+3. Build exact-source signed MSI, signature and updater metadata as a protected
+   draft.
+4. Verify source/review binding, signature, staged runtime, install/reopen,
+   authenticated hydrated UI, deterministic evidence and updater contract.
+5. Publish only after every protected gate succeeds.
+6. Failed candidates remain drafts and never reach the updater.
+7. Install in place without deleting AppData and record exact Founder observation.
+8. Beta and Stable require explicit Founder approval.
+
+`latest.json` is updater metadata containing the signature for the signed MSI; do
+not claim that the JSON document itself is independently cryptographically signed
+unless manifest signing is implemented.
 
 ### Evidence ladder
-
-Use only evidence an environment can prove:
 
 1. static/source;
 2. unit/domain;
@@ -408,140 +548,38 @@ Use only evidence an environment can prove:
 6. signed artifact;
 7. installed Windows;
 8. T470/floor hardware;
-9. external/provider/security/accessibility;
+9. external provider/security/privacy/legal/accessibility;
 10. representative seller/Beta.
 
-A lower layer cannot claim a higher one.
+Implemented, source-proven, artifact-proven, installed, Founder-accepted,
+phase-closed and Stable are distinct realities.
 
-## 10. Milestone release train
+## 16. Documentation and cleanup
 
-1. Merge independently complete source packages without ordinary version bumps.
-2. When merged outcomes form one coherent Founder test, assign one unique Internal
-   version.
-3. Build exact-source signed MSI, signature and updater metadata as a draft.
-4. Verify source/review binding, signature, staged runtime, install/reopen,
-   authenticated hydrated UI, deterministic evidence and updater contract.
-5. Verify or create the exact source-bound tag while the release remains protected.
-6. Publish automatically only after every gate succeeds.
-7. Failed candidates remain drafts and never reach the updater.
-8. Install in place, preserve AppData, observe the named milestone, close/reopen
-   and record Founder result.
+At package closure:
 
-`latest.json` is public updater metadata containing the signature for the signed
-MSI; do not describe the JSON document itself as independently cryptographically
-signed unless manifest signing is added.
+- update the owning active authority only;
+- update Working Memory with the exact next outcome;
+- update Current State only with merged source and named evidence;
+- update issue #164 with PR, exact head, checks, findings and remaining frontier;
+- close superseded PRs;
+- delete merged branches;
+- remove or make read-only the superseded legacy path after parity/recovery proof;
+- ensure `sf-audit` rejects stale authority, not protects it.
 
-Manual MSI is bootstrap/recovery only. Beta and Stable always require explicit
-Founder approval.
+No documentation-only follow-up loop should be required when the merge SHA is not
+needed for product truth. Record merge-specific evidence in issue #164 and the PR
+unless an owning document genuinely depends on it.
 
-## 11. Database and business rules
+## 17. Protected local boundaries
 
-- Production schema uses append-only reviewed migrations; `db push` is development-only.
-- Inventory every affected shop/database and format.
-- Preflight disk, compatibility and required verified snapshot.
-- Never initialize an empty database over an existing failure.
-- Migrations are journaled, restartable and visible.
-- Failed migration or restore leaves current data intact or returns to a verified
-  recoverable state.
-- Derive authority from trusted context, never caller actor/shop fields.
-- Validate lifecycle, permission, expected version and idempotency before effects.
-- Commit domain state, movements, audit, event, outbox and compensation atomically.
-- Execute providers only from committed intents.
-- Persist authenticated inbound events before acknowledgement.
-- Store effect key, attempt, receipt and ambiguous-result state.
-- Checkpoints advance only after prior work commits or enters governed dead letter.
-- Money uses integer smallest units and explicit currency.
-- Stock, money and provider reversal use compensating facts.
-- Provider code remains hidden/conditional until live certification.
-
-## 12. UI and page completion
-
-Every material UI package applies `../product/EXPERIENCE.md` with real content.
-
-Each page must cover, as applicable:
-
-- correct information architecture and real authority;
-- happy, first-use empty, no-data, filtered-empty and caught-up states;
-- loading and honest long progress;
-- validation and permission denial;
-- offline, provider unavailable, stale, pending and conflict;
-- error, retry, recovery and support;
-- normal, bulk, destructive and keyboard behavior;
-- Arabic, French and English with real RTL/LTR parity;
-- Arabic joining and mixed technical values;
-- responsive layout, 1366×768 and 100–200% zoom;
-- screen reader, focus and reduced motion;
-- representative data and low-end responsiveness;
-- trust cues for shop, actor, money, stock, provider and canonical commit.
-
-Attractive screenshots do not replace journey evidence.
-
-## 13. Performance workflow
-
-Measure before changing architecture:
-
-```text
-native process start
-→ registry/migration
-→ runtime preparation
-→ contained Node launch
-→ socket listening
-→ authenticated readiness
-→ route response
-→ WebView hydration
-→ first usable interaction
-```
-
-Record cold and warm attempts separately. Fix the largest measured stage first.
-Do not delete AppData/caches, reinstall, weaken authentication or raise the
-hardware floor to improve a number.
-
-## 14. Completion states
-
-- **Research-complete decision:** current sources and alternatives are evaluated
-  and a measurable SahelFlow decision is adopted.
-- **Implemented package:** coherent source exists on a branch but clean-checkout
-  proof or integration is still open.
-- **Source-proven package:** the frozen exact head passes selected complete
-  clean-checkout source gates and review; it is not merged source truth yet.
-- **Source-complete package:** coherent PR merged to protected `main` and legacy
-  authority removed as specified.
-- **Artifact-proven milestone:** an exact-source signed candidate passes selected
-  build/signature/runtime gates; it is not automatically Founder-accepted.
-- **Release-complete milestone:** exact-source signed candidate passed every
-  selected artifact/installed gate and published.
-- **Founder-accepted milestone:** installed update preserved data, reopened and
-  demonstrated the named outcome on reference hardware.
-- **Founder AAA Candidate:** every Required implementation and internal evidence
-  gate passes with zero known P0/P1.
-- **Stable-complete:** representative beta, providers, security/privacy/legal,
-  restore, compatibility, accessibility, rollout and Founder promotion pass.
-
-## 15. Documentation ownership
-
-- Founder choice → `../product/DECISIONS.md` and affected owner.
-- Scope/public promise → `../product/PRODUCT.md`.
-- Capability/journey/UI standard → `../product/EXPERIENCE.md`.
-- Durable invariant/protocol → `../system/ARCHITECTURE.md`.
-- Merged implementation/evidence → `../system/CURRENT_STATE.md`.
-- Dependency and phase order → `../system/ROADMAP.md`.
-- Research findings → `../research/RESEARCH.md`.
-- Execution process → this file.
-- Exact current frontier → `WORKING_MEMORY.md`.
-- Live tracking → issue #164.
-
-Update the existing owner. Do not create another permanent plan, gap report, wave,
-prompt, status or handoff document.
-
-## 16. Stop conditions
-
-Stop and surface the exact blocker when:
-
-- a consequential Founder choice is missing;
-- current primary evidence contradicts the proposed design;
-- branch/lane ownership overlaps;
-- preservation requires destructive data handling without approved ceremony;
-- signing, secrets or permissions are unavailable;
-- exact source cannot bind to evidence or release;
-- a P0 or unresolved P1 exists;
-- public claims would exceed current proof.
+- Preserve
+  `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
+- Preserve the unrelated local modification to
+  `src/lib/identity/__tests__/session-authority.test.ts`.
+- Preserve canonical AppData, registry, databases, migrations and keys.
+- Do not require permanent local dependency/build caches when Actions can provide
+  evidence.
+- PR #186 is obsolete/diverged and must not be merged wholesale.
+- PR #196 is stale and retains an unresolved file-level Vitest diagnostic gap;
+  repair its intent in a current-main package or close it as superseded.
