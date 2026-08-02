@@ -1,0 +1,25 @@
+name = "sahelflow-licensing"
+main = "worker.ts"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sahelflow-licensing"
+database_id = "replace-with-production-d1-id"
+
+[vars]
+TRIAL_KEY_ID = "trial-2026-01"
+PRODUCT_MAJOR = "1"
+TRIAL_SHOP_SLOTS = "1"
+TRIAL_MEMBER_LIMIT = "25"
+TRIAL_BACKUP_BYTES = "20000000000"
+
+[[ratelimits]]
+name = "TRIAL_RATE_LIMITER"
+namespace_id = "1001"
+
+[ratelimits.simple]
+limit = 10
+period = 60
+
+# Set TRIAL_PRIVATE_KEY_PKCS8 only with `wrangler secret put`.

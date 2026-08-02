@@ -10,6 +10,7 @@
 //     the degradable WhatsApp sidecar.
 
 mod child_containment;
+mod device_binding;
 mod installation_root_key;
 mod installation_root_rotation;
 mod migration_coordinator;
@@ -30,91 +31,6 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
 #[cfg(not(debug_assertions))]
 use tauri::Manager;
-
-#[tauri::command]
-fn get_machine_id() -> String {
-    // Get unique Machine ID (on Windows: Win32_ComputerSystemProduct UUID or MachineGuid registry)
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(output) = std::process::Command::new("powershell")
-            .arg("-NoProfile")
-            .arg("-Command")
-            .arg("(Get-CimInstance Win32_ComputerSystemProduct).UUID")
-            .output()
-        {
-            let uuid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !uuid.is_empty() && uuid != "00000000-0000-0000-0000-000000000000" {
-                return uuid;
-            }
-        }
-        // Registry fallback
-        if let Ok(output) = std::process::Command::new("reg")
-            .args([
-                "query",
-                "HKLM\\SOFTWARE\\Microsoft\\Cryptography",
-                "/v",
-                "MachineGuid",
-            ])
-            .output()
-        {
-            let out = String::from_utf8_lossy(&output.stdout);
-            for line in out.lines() {
-                if line.contains("MachineGuid") {
-                    let parts: Vec<&str> = line.split_whitespace().collect();
-                    if let Some(guid) = parts.last() {
-                        if !guid.is_empty() {
-                            return guid.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(output) = std::process::Command::new("ioreg")
-            .args(["-rd1", "-c", "IOPlatformExpertDevice"])
-            .output()
-        {
-            let out = String::from_utf8_lossy(&output.stdout);
-            for line in out.lines() {
-                if line.contains("IOPlatformUUID") {
-                    let parts: Vec<&str> = line.split('=').collect();
-                    if let Some(uuid) = parts.last() {
-                        let trimmed = uuid.trim().trim_matches('"');
-                        if !trimmed.is_empty() {
-                            return trimmed.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(id) = std::fs::read_to_string("/etc/machine-id") {
-            let trimmed = id.trim().to_string();
-            if !trimmed.is_empty() {
-                return trimmed;
-            }
-        }
-        if let Ok(id) = std::fs::read_to_string("/var/lib/dbus/machine-id") {
-            let trimmed = id.trim().to_string();
-            if !trimmed.is_empty() {
-                return trimmed;
-            }
-        }
-    }
-
-    // In release builds return no synthetic identity, so licensing can fail closed.
-    #[cfg(debug_assertions)]
-    return "DEV-MOCK-MACHINE-ID-FALLBACK".to_string();
-
-    #[cfg(not(debug_assertions))]
-    return String::new();
-}
 
 const SHUTDOWN_IDLE: u8 = 0;
 const SHUTDOWN_RUNNING: u8 = 1;
@@ -364,17 +280,6 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
-            tauri_plugin_stronghold::Builder::new(|password: &str| {
-                use std::collections::hash_map::DefaultHasher;
-                use std::hash::{Hash, Hasher};
-                let mut hasher = DefaultHasher::new();
-                password.hash(&mut hasher);
-                hasher.finish().to_le_bytes().to_vec()
-            })
-            .build(),
-        )
-        .invoke_handler(tauri::generate_handler![get_machine_id])
         .on_window_event(|_window, _event| {
             #[cfg(not(debug_assertions))]
             if _window.label() == "main" {
@@ -646,6 +551,7 @@ fn server_env(
         .join(env!("CARGO_PKG_VERSION"));
     let token_file = app_data_dir.join("sidecar-token");
     let resource_dir = app.path().resource_dir()?;
+    let device_binding = device_binding::current_device_binding().map_err(IoError::other)?;
 
     let mut environment = vec![
         (
@@ -710,6 +616,7 @@ fn server_env(
             "SF_INSTALLATION_ID".to_string(),
             authority.installation_id.clone(),
         ),
+        ("SF_DEVICE_BINDING".to_string(), device_binding),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
         (
             "SF_SHOP_INCARNATION_ID".to_string(),
@@ -749,6 +656,24 @@ fn server_env(
     ];
     if let Some(secret) = auth.secret() {
         environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
+    }
+    for (name, value) in [
+        (
+            "SF_LICENSE_SERVICE_URL",
+            option_env!("SF_LICENSE_SERVICE_URL"),
+        ),
+        (
+            "SF_LICENSE_TRIAL_PUBLIC_KEYS",
+            option_env!("SF_LICENSE_TRIAL_PUBLIC_KEYS"),
+        ),
+        (
+            "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
+            option_env!("SF_LICENSE_PERMANENT_PUBLIC_KEYS"),
+        ),
+    ] {
+        if let Some(value) = value.filter(|candidate| !candidate.is_empty()) {
+            environment.push((name.to_string(), value.to_string()));
+        }
     }
     Ok(environment)
 }

@@ -25,6 +25,7 @@ import { redactError } from "@/lib/redact-pii";
 import { db, shopContext } from "@/lib/db";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { isAlgerianDemoLoaded } from "@/lib/demo/algerian-demo-policy";
+import { requireLicenseEntitlement } from "@/lib/license/license-authority";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
@@ -50,6 +51,15 @@ const DEMO_MUTATION_ALLOWLIST = [
   /^\/api\/updates?(?:\/|$)/,
 ] as const;
 
+const LICENSE_LOCKOUT_ALLOWLIST = [
+  /^\/api\/auth(?:\/|$)/,
+  /^\/api\/health(?:\/|$)/,
+  /^\/api\/internal\/runtime-ready(?:\/|$)/,
+  /^\/api\/license(?:\/|$)/,
+  /^\/api\/payment(?:\/|$)/,
+  /^\/api\/support(?:\/|$)/,
+] as const;
+
 function resolveRequestMethod(req: NextRequest | undefined, label?: string): string {
   return (req?.method ?? label?.trim().split(/\s+/, 1)[0] ?? "GET").toUpperCase();
 }
@@ -62,6 +72,10 @@ function resolveRequestPath(req: NextRequest | undefined, label?: string): strin
 
 function isAllowedDemoMutation(pathname: string): boolean {
   return DEMO_MUTATION_ALLOWLIST.some((pattern) => pattern.test(pathname));
+}
+
+function isAllowedDuringLicenseLockout(pathname: string): boolean {
+  return LICENSE_LOCKOUT_ALLOWLIST.some((pattern) => pattern.test(pathname));
 }
 
 export function withErrorHandler<T extends RouteHandler>(
@@ -78,6 +92,13 @@ export function withErrorHandler<T extends RouteHandler>(
 
       const method = resolveRequestMethod(req, label);
       const pathname = resolveRequestPath(req, label);
+      if (
+        process.env.NODE_ENV === "production" &&
+        pathname.startsWith("/api/") &&
+        !isAllowedDuringLicenseLockout(pathname)
+      ) {
+        await requireLicenseEntitlement();
+      }
       if (
         MUTATING_METHODS.has(method) &&
         pathname.startsWith("/api/") &&

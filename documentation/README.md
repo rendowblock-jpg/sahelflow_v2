@@ -3,13 +3,13 @@
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
+> **Current protected application baseline:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Teams source closure — protected merge decision
+> **Active package:** Signed licensing and entitlement authority
 > **Execution epic:** issue #164
 > **Last updated:** 2026-08-01
 
@@ -93,17 +93,14 @@ and the Windows-protected installation root with native rotation and installed-M
 proof (PR #184) are merged supporting packages. These are partial protected phase
 results.
 
-Draft PR #195 now contains the repaired Phase 1 and Teams source boundary at
-implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, with normal CI
-`30714461757` and the complete integration source checkpoint `30714461656`
-successful. The concrete same-person replay, affected order authorization,
-route-ordering and collaboration-authority findings found during the 2026-08-01
-separated review were repaired and revalidated. This is source-closed proposed
-source, not protected-main truth.
+Protected `main` now includes the repaired Phase 1 and Teams boundary through PR
+#195 at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. Its exact proposed head
+`ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI `30734100436`, including
+authority, TypeScript, ESLint, unit/integration, database, coverage, dependency,
+migration and required PR gates. Every review thread was resolved before merge.
 
-Phase 2A packages 2A.1–2A.4 retain their historical checkpoint evidence on the
-draft integration branch, and their shared replay boundary passed again on the
-exact source-closure head above.
+Phase 2A packages 2A.1–2A.4 retain their historical checkpoint evidence, and
+their shared replay boundary passed again on the merged exact source above.
 The latest closed package, multi-member roles, invitations and per-shop
 permissions, passed at exact source head
 `3266dc03994ffcb1672256465624ea715f0cf317`, normal CI `30681155150` and
@@ -120,16 +117,15 @@ request parsing, state-only handover loss and stale-policy UI misclassification.
 No P0/P1 remains in the source-closed package. These passes were not independent
 review.
 
-Teams and permissions is source-closed on draft PR #195: authoritative
+Teams and permissions is protected source through PR #195: authoritative
 assignments, workgroups, queues, comments, exact-member mentions, handovers,
 operational action permissions, protected-field projections and complete
 Arabic/French/English seller states are implemented and checkpointed.
 
-The active package is the explicit protected-merge decision for PR #195. The PR
-remains draft, mergeable, unmerged and version-neutral. It accepts no licensing,
-multi-shop or later-phase work. After an authorized merge, licensing and native
-multi-shop continue as short dedicated Phase 2 PRs from the then-current
-protected `main`.
+The active package is signed licensing and entitlement authority on
+`agent/license-entitlement-authority` from the exact protected baseline above.
+Native multi-shop follows in its own short Phase 2 PR. Version and release remain
+unchanged; Windows/Rust/MSI proof runs once on the complete Phase 2 candidate.
 
 ## Final completion model
 

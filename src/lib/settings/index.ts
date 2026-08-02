@@ -8,8 +8,8 @@
  * needed. Helpers `getBool`, `getInt`, `getJson` are provided for convenience.
  *
  * SECURITY (SEC-002): `setSetting` rejects reserved keys and prefixes. This
- * prevents the bulk settings API from overwriting auth/license authority or
- * lifecycle markers owned by dedicated authenticated server paths.
+ * prevents the bulk settings API from overwriting auth authority, quarantined
+ * legacy license rows or lifecycle markers owned by dedicated server paths.
  */
 import "server-only";
 
