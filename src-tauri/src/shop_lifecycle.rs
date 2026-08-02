@@ -34,13 +34,6 @@ pub enum ShopLifecycleStage {
 }
 
 impl ShopLifecycleStage {
-    fn is_terminal(self) -> bool {
-        matches!(
-            self,
-            Self::Completed | Self::Recovered | Self::ManualRecoveryRequired
-        )
-    }
-
     fn requires_failure_code(self) -> bool {
         matches!(
             self,
@@ -117,7 +110,9 @@ impl fmt::Display for ShopLifecycleContractError {
             Self::InvalidOperationId => write!(formatter, "invalid shop lifecycle operation ID"),
             Self::InvalidIdentity(label) => write!(formatter, "invalid {label} identity"),
             Self::InvalidSessionId => write!(formatter, "invalid actor session identity"),
-            Self::InvalidRegistryRevision => write!(formatter, "invalid expected registry revision"),
+            Self::InvalidRegistryRevision => {
+                write!(formatter, "invalid expected registry revision")
+            }
             Self::InvalidPolicyVersion => write!(formatter, "invalid policy version"),
             Self::InvalidEntitlementRevision => write!(formatter, "invalid entitlement revision"),
             Self::InvalidShopSlots => write!(formatter, "invalid signed shop-slot limit"),
@@ -131,15 +126,18 @@ impl fmt::Display for ShopLifecycleContractError {
                 write!(formatter, "recent owner reauthentication is required")
             }
             Self::TimeReversal => write!(formatter, "shop lifecycle journal time moved backwards"),
-            Self::FailureCodeRequired => {
-                write!(formatter, "shop lifecycle failure stage requires an exact code")
-            }
-            Self::UnexpectedFailureCode => {
-                write!(formatter, "shop lifecycle success stage cannot carry a failure code")
-            }
-            Self::InvalidTransition { from, to } => {
-                write!(formatter, "invalid shop lifecycle transition {from:?} -> {to:?}")
-            }
+            Self::FailureCodeRequired => write!(
+                formatter,
+                "shop lifecycle failure stage requires an exact code"
+            ),
+            Self::UnexpectedFailureCode => write!(
+                formatter,
+                "shop lifecycle success stage cannot carry a failure code"
+            ),
+            Self::InvalidTransition { from, to } => write!(
+                formatter,
+                "invalid shop lifecycle transition {from:?} -> {to:?}"
+            ),
         }
     }
 }
@@ -324,37 +322,58 @@ fn validate_failure_code(
 }
 
 fn transition_allowed(from: ShopLifecycleStage, to: ShopLifecycleStage) -> bool {
-    if from.is_terminal() {
-        return false;
+    match from {
+        ShopLifecycleStage::Requested => {
+            matches!(to, ShopLifecycleStage::Authorized | ShopLifecycleStage::Blocked)
+        }
+        ShopLifecycleStage::Authorized => {
+            matches!(to, ShopLifecycleStage::Quiescing | ShopLifecycleStage::Blocked)
+        }
+        ShopLifecycleStage::Quiescing => matches!(
+            to,
+            ShopLifecycleStage::RuntimeStopped | ShopLifecycleStage::Blocked
+        ),
+        ShopLifecycleStage::RuntimeStopped => matches!(
+            to,
+            ShopLifecycleStage::Staged
+                | ShopLifecycleStage::Compensating
+                | ShopLifecycleStage::Blocked
+        ),
+        ShopLifecycleStage::Staged => matches!(
+            to,
+            ShopLifecycleStage::RegistryCommitting
+                | ShopLifecycleStage::Compensating
+                | ShopLifecycleStage::Blocked
+        ),
+        ShopLifecycleStage::RegistryCommitting => matches!(
+            to,
+            ShopLifecycleStage::Committed
+                | ShopLifecycleStage::Compensating
+                | ShopLifecycleStage::Blocked
+        ),
+        ShopLifecycleStage::Committed => matches!(
+            to,
+            ShopLifecycleStage::RuntimeStarting
+                | ShopLifecycleStage::Compensating
+                | ShopLifecycleStage::Blocked
+        ),
+        ShopLifecycleStage::RuntimeStarting => matches!(
+            to,
+            ShopLifecycleStage::Ready
+                | ShopLifecycleStage::Compensating
+                | ShopLifecycleStage::Blocked
+        ),
+        ShopLifecycleStage::Ready => matches!(to, ShopLifecycleStage::Completed),
+        ShopLifecycleStage::Compensating => {
+            matches!(to, ShopLifecycleStage::Recovered | ShopLifecycleStage::Blocked)
+        }
+        ShopLifecycleStage::Blocked => {
+            matches!(to, ShopLifecycleStage::ManualRecoveryRequired)
+        }
+        ShopLifecycleStage::Completed
+        | ShopLifecycleStage::Recovered
+        | ShopLifecycleStage::ManualRecoveryRequired => false,
     }
-    matches!(
-        (from, to),
-        (ShopLifecycleStage::Requested, ShopLifecycleStage::Authorized)
-            | (ShopLifecycleStage::Authorized, ShopLifecycleStage::Quiescing)
-            | (ShopLifecycleStage::Quiescing, ShopLifecycleStage::RuntimeStopped)
-            | (ShopLifecycleStage::RuntimeStopped, ShopLifecycleStage::Staged)
-            | (ShopLifecycleStage::Staged, ShopLifecycleStage::RegistryCommitting)
-            | (ShopLifecycleStage::RegistryCommitting, ShopLifecycleStage::Committed)
-            | (ShopLifecycleStage::Committed, ShopLifecycleStage::RuntimeStarting)
-            | (ShopLifecycleStage::RuntimeStarting, ShopLifecycleStage::Ready)
-            | (ShopLifecycleStage::Ready, ShopLifecycleStage::Completed)
-            | (ShopLifecycleStage::RuntimeStopped, ShopLifecycleStage::Compensating)
-            | (ShopLifecycleStage::Staged, ShopLifecycleStage::Compensating)
-            | (ShopLifecycleStage::RegistryCommitting, ShopLifecycleStage::Compensating)
-            | (ShopLifecycleStage::Committed, ShopLifecycleStage::Compensating)
-            | (ShopLifecycleStage::RuntimeStarting, ShopLifecycleStage::Compensating)
-            | (ShopLifecycleStage::Compensating, ShopLifecycleStage::Recovered)
-            | (ShopLifecycleStage::Compensating, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::Blocked, ShopLifecycleStage::ManualRecoveryRequired)
-            | (ShopLifecycleStage::Requested, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::Authorized, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::Quiescing, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::RuntimeStopped, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::Staged, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::RegistryCommitting, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::Committed, ShopLifecycleStage::Blocked)
-            | (ShopLifecycleStage::RuntimeStarting, ShopLifecycleStage::Blocked)
-    )
 }
 
 #[cfg(test)]
@@ -429,9 +448,8 @@ mod tests {
 
     #[test]
     fn permits_happy_path_and_compensation_transitions() {
-        let mut journal =
-            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
-                .expect("complete request");
+        let mut journal = ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+            .expect("complete request");
         for (index, stage) in [
             ShopLifecycleStage::Authorized,
             ShopLifecycleStage::Quiescing,
@@ -463,9 +481,8 @@ mod tests {
 
     #[test]
     fn permits_blocked_escalation_to_manual_recovery() {
-        let mut journal =
-            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
-                .expect("complete request");
+        let mut journal = ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+            .expect("complete request");
         journal
             .transition(
                 ShopLifecycleStage::Blocked,
@@ -480,27 +497,19 @@ mod tests {
                 Some("COMPENSATION_UNAVAILABLE".to_string()),
             )
             .expect("blocked authority may require manual recovery");
-        assert_eq!(
-            journal.stage,
-            ShopLifecycleStage::ManualRecoveryRequired
-        );
+        assert_eq!(journal.stage, ShopLifecycleStage::ManualRecoveryRequired);
     }
 
     #[test]
     fn rejects_skipped_and_terminal_transitions() {
-        let mut journal =
-            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
-                .expect("complete request");
+        let mut journal = ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+            .expect("complete request");
         assert!(matches!(
             journal.transition(ShopLifecycleStage::Committed, 2, None),
             Err(ShopLifecycleContractError::InvalidTransition { .. })
         ));
         journal
-            .transition(
-                ShopLifecycleStage::Blocked,
-                3,
-                Some("DENIED".to_string()),
-            )
+            .transition(ShopLifecycleStage::Blocked, 3, Some("DENIED".to_string()))
             .expect("request may fail closed");
         assert!(matches!(
             journal.transition(ShopLifecycleStage::Authorized, 4, None),
@@ -510,9 +519,8 @@ mod tests {
 
     #[test]
     fn requires_failure_code_for_failure_stages() {
-        let mut journal =
-            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
-                .expect("complete request");
+        let mut journal = ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+            .expect("complete request");
         assert_eq!(
             journal.transition(ShopLifecycleStage::Blocked, 2, None),
             Err(ShopLifecycleContractError::FailureCodeRequired)
@@ -521,9 +529,8 @@ mod tests {
 
     #[test]
     fn rejects_journal_time_reversal() {
-        let mut journal =
-            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 10)
-                .expect("complete request");
+        let mut journal = ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 10)
+            .expect("complete request");
         assert_eq!(
             journal.transition(ShopLifecycleStage::Authorized, 9, None),
             Err(ShopLifecycleContractError::TimeReversal)
