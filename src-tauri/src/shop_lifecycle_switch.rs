@@ -147,10 +147,7 @@ impl AcceptedSwitch {
         };
         verify_target_authority(&target_authority, &registry, &self.target)?;
 
-        self.transition(
-            ShopLifecycleStage::Committed,
-            now_unix_ms.saturating_add(2),
-        )?;
+        self.transition(ShopLifecycleStage::Committed, now_unix_ms.saturating_add(2))?;
         let committed = SwitchCommit {
             previous_authority: self.previous_authority.clone(),
             target_authority,
@@ -196,18 +193,15 @@ impl AcceptedSwitch {
             SwitchAuthorityError::InvalidRegistry("registry revision overflow".into())
         })?;
         write_json_atomic(&registry_path, &registry)?;
-        let recovered = migration_coordinator::active_authority(
-            &self.app_data_dir,
-            &self.migration_set_sha256,
-        )
-        .map_err(|error| {
-            SwitchAuthorityError::ManualRecoveryRequired(format!(
+        let recovered =
+            migration_coordinator::active_authority(&self.app_data_dir, &self.migration_set_sha256)
+                .map_err(|error| {
+                    SwitchAuthorityError::ManualRecoveryRequired(format!(
                 "the compensated registry did not produce canonical prior authority: {error}"
             ))
-        })?;
+                })?;
         if recovered.shop_id != committed.previous_authority.shop_id
-            || recovered.shop_incarnation_id
-                != committed.previous_authority.shop_incarnation_id
+            || recovered.shop_incarnation_id != committed.previous_authority.shop_incarnation_id
             || recovered.registry_revision != registry.revision
         {
             return Err(SwitchAuthorityError::ManualRecoveryRequired(
@@ -304,12 +298,16 @@ pub fn accept_switch(
             "migration-set authority changed".to_string(),
         ));
     }
-    let target_id = request.target_shop_id.as_deref().ok_or_else(|| {
-        SwitchAuthorityError::AuthorityMismatch("target shop is missing".into())
-    })?;
-    let target_incarnation = request.target_shop_incarnation_id.as_deref().ok_or_else(|| {
-        SwitchAuthorityError::AuthorityMismatch("target incarnation is missing".into())
-    })?;
+    let target_id = request
+        .target_shop_id
+        .as_deref()
+        .ok_or_else(|| SwitchAuthorityError::AuthorityMismatch("target shop is missing".into()))?;
+    let target_incarnation = request
+        .target_shop_incarnation_id
+        .as_deref()
+        .ok_or_else(|| {
+            SwitchAuthorityError::AuthorityMismatch("target incarnation is missing".into())
+        })?;
     let target = registry
         .shops
         .iter()
@@ -328,11 +326,8 @@ pub fn accept_switch(
     )?;
     preflight_target_database(app_data_dir, &target)?;
 
-    let mut journal = AuthenticatedShopLifecycleJournal::accept(
-        command,
-        installation_root,
-        now_unix_ms,
-    )?;
+    let mut journal =
+        AuthenticatedShopLifecycleJournal::accept(command, installation_root, now_unix_ms)?;
     let current = journal_current_path(app_data_dir);
     write_json_atomic(&current, &journal)?;
     journal.transition(
@@ -457,11 +452,9 @@ fn preflight_target_database(
     reject_hard_links(&resolved)?;
     let connection = Connection::open_with_flags(
         &resolved,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
-            | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
-    let integrity: String =
-        connection.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+    let integrity: String = connection.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
     if integrity != "ok" {
         return Err(SwitchAuthorityError::InvalidRegistry(format!(
             "target database integrity check failed: {integrity}"
@@ -742,7 +735,10 @@ impl fmt::Display for SwitchAuthorityError {
                 write!(formatter, "shop lifecycle SQLite preflight failed: {error}")
             }
             Self::UnsupportedOperation => {
-                write!(formatter, "only native switch is accepted by this authority")
+                write!(
+                    formatter,
+                    "only native switch is accepted by this authority"
+                )
             }
             Self::AuthorityMismatch(message) => {
                 write!(formatter, "shop lifecycle authority mismatch: {message}")
