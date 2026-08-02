@@ -20,12 +20,16 @@ pub struct RuntimeSupervisor {
     runtime_ready: bool,
     shutting_down: bool,
     safe_mode: bool,
+    planned_transition_origin: Option<u64>,
 }
 
 impl RuntimeSupervisor {
     pub fn begin_generation(&mut self) -> Result<u64, &'static str> {
         if self.pending_restart_attempt.is_some() {
             return Err("an automatic runtime restart is pending");
+        }
+        if self.planned_transition_origin.is_some() {
+            return Err("a planned runtime transition is in progress");
         }
         self.start_generation()
     }
@@ -40,6 +44,83 @@ impl RuntimeSupervisor {
         }
         self.pending_restart_attempt = None;
         self.start_generation()
+    }
+
+    pub fn begin_planned_transition(
+        &mut self,
+        expected_generation: u64,
+    ) -> Result<(), &'static str> {
+        if self.shutting_down {
+            return Err("runtime shutdown is already in progress");
+        }
+        if self.safe_mode {
+            return Err("runtime supervisor is in crash-loop safe mode");
+        }
+        if self.pending_restart_attempt.is_some() {
+            return Err("an automatic runtime restart is pending");
+        }
+        if self.planned_transition_origin.is_some() {
+            return Err("a planned runtime transition is already in progress");
+        }
+        if expected_generation != self.generation
+            || !self.runtime_ready
+            || self.generation_starting
+            || self.generation_failure_recorded
+        {
+            return Err("planned runtime transition authority is stale or unavailable");
+        }
+        self.planned_transition_origin = Some(expected_generation);
+        Ok(())
+    }
+
+    pub fn cancel_planned_transition(&mut self, expected_origin: u64) -> bool {
+        if self.planned_transition_origin != Some(expected_origin)
+            || self.generation != expected_origin
+            || !self.runtime_ready
+            || self.generation_starting
+            || self.generation_failure_recorded
+        {
+            return false;
+        }
+        self.planned_transition_origin = None;
+        true
+    }
+
+    pub fn begin_planned_generation(
+        &mut self,
+        expected_previous_generation: u64,
+    ) -> Result<u64, &'static str> {
+        if self.planned_transition_origin.is_none() {
+            return Err("planned runtime transition permit is unavailable");
+        }
+        if expected_previous_generation != self.generation
+            || self.runtime_ready
+            || self.generation_starting
+        {
+            return Err("planned runtime generation authority is stale or unavailable");
+        }
+        self.pending_restart_attempt = None;
+        self.start_generation()
+    }
+
+    pub fn finish_planned_transition(
+        &mut self,
+        expected_generation: u64,
+    ) -> Result<(), &'static str> {
+        if self.planned_transition_origin.is_none() {
+            return Err("planned runtime transition permit is unavailable");
+        }
+        if expected_generation != self.generation
+            || !self.runtime_ready
+            || self.generation_starting
+            || self.generation_failure_recorded
+        {
+            return Err("planned runtime transition completion is stale or unavailable");
+        }
+        self.planned_transition_origin = None;
+        self.restart_attempts = 0;
+        self.pending_restart_attempt = None;
+        Ok(())
     }
 
     fn start_generation(&mut self) -> Result<u64, &'static str> {
@@ -94,6 +175,10 @@ impl RuntimeSupervisor {
         self.generation_starting = false;
         self.generation_failure_recorded = true;
         self.runtime_ready = false;
+        if self.planned_transition_origin.is_some() {
+            self.pending_restart_attempt = None;
+            return RestartDecision::Ignore;
+        }
         if self.shutting_down || self.safe_mode {
             return RestartDecision::Ignore;
         }
@@ -110,6 +195,10 @@ impl RuntimeSupervisor {
         self.generation_starting = false;
         self.generation_failure_recorded = true;
         self.runtime_ready = false;
+        if self.planned_transition_origin.is_some() {
+            self.pending_restart_attempt = None;
+            return RestartDecision::Ignore;
+        }
         if self.shutting_down || self.safe_mode {
             return RestartDecision::Ignore;
         }
@@ -121,6 +210,7 @@ impl RuntimeSupervisor {
         self.generation_starting = false;
         self.pending_restart_attempt = None;
         self.runtime_ready = false;
+        self.planned_transition_origin = None;
     }
 
     pub fn enter_safe_mode(&mut self, generation: u64) -> bool {
@@ -132,6 +222,7 @@ impl RuntimeSupervisor {
         self.pending_restart_attempt = None;
         self.runtime_ready = false;
         self.safe_mode = true;
+        self.planned_transition_origin = None;
         true
     }
 
@@ -140,7 +231,11 @@ impl RuntimeSupervisor {
     }
 
     pub fn allows_restart(&self) -> bool {
-        !self.shutting_down && !self.safe_mode
+        !self.shutting_down && !self.safe_mode && self.planned_transition_origin.is_none()
+    }
+
+    pub fn planned_transition_origin(&self) -> Option<u64> {
+        self.planned_transition_origin
     }
 
     pub fn in_safe_mode(&self) -> bool {
@@ -231,6 +326,95 @@ mod tests {
         assert!(!supervisor.allows_restart());
         assert!(supervisor.begin_generation().is_err());
         assert!(supervisor.begin_restart_generation(fourth, 3).is_err());
+    }
+
+    #[test]
+    fn planned_transition_suppresses_crash_recovery_and_finishes_at_ready() {
+        let mut supervisor = RuntimeSupervisor::default();
+        let current = supervisor.begin_generation().expect("begin current runtime");
+        supervisor
+            .register_ready(current)
+            .expect("register current runtime");
+        supervisor
+            .begin_planned_transition(current)
+            .expect("reserve planned transition");
+
+        assert_eq!(
+            supervisor.record_termination(current, Duration::from_secs(5)),
+            RestartDecision::Ignore
+        );
+        assert_eq!(supervisor.planned_transition_origin(), Some(current));
+        assert!(!supervisor.allows_restart());
+        assert!(!supervisor.generation_can_restart(current, 1));
+
+        let target = supervisor
+            .begin_planned_generation(current)
+            .expect("begin target runtime");
+        supervisor
+            .register_ready(target)
+            .expect("register target runtime");
+        supervisor
+            .finish_planned_transition(target)
+            .expect("complete transition");
+
+        assert_eq!(supervisor.planned_transition_origin(), None);
+        assert!(supervisor.runtime_ready());
+        assert!(supervisor.allows_restart());
+    }
+
+    #[test]
+    fn planned_target_failure_can_start_compensation_generation() {
+        let mut supervisor = RuntimeSupervisor::default();
+        let current = supervisor.begin_generation().expect("begin current runtime");
+        supervisor
+            .register_ready(current)
+            .expect("register current runtime");
+        supervisor
+            .begin_planned_transition(current)
+            .expect("reserve planned transition");
+        assert_eq!(
+            supervisor.record_termination(current, Duration::from_secs(1)),
+            RestartDecision::Ignore
+        );
+
+        let target = supervisor
+            .begin_planned_generation(current)
+            .expect("begin target runtime");
+        assert_eq!(
+            supervisor.record_restart_failure(target),
+            RestartDecision::Ignore
+        );
+        let compensation = supervisor
+            .begin_planned_generation(target)
+            .expect("begin compensation runtime");
+        supervisor
+            .register_ready(compensation)
+            .expect("register compensation runtime");
+        supervisor
+            .finish_planned_transition(compensation)
+            .expect("complete compensated transition");
+
+        assert!(supervisor.runtime_ready());
+        assert_eq!(supervisor.planned_transition_origin(), None);
+    }
+
+    #[test]
+    fn planned_transition_authority_is_exact_and_cancellable_before_stop() {
+        let mut supervisor = RuntimeSupervisor::default();
+        let current = supervisor.begin_generation().expect("begin runtime");
+        supervisor
+            .register_ready(current)
+            .expect("register runtime");
+
+        assert!(supervisor.begin_planned_transition(current + 1).is_err());
+        supervisor
+            .begin_planned_transition(current)
+            .expect("reserve transition");
+        assert!(supervisor.begin_planned_transition(current).is_err());
+        assert!(!supervisor.cancel_planned_transition(current + 1));
+        assert!(supervisor.cancel_planned_transition(current));
+        assert_eq!(supervisor.planned_transition_origin(), None);
+        assert!(supervisor.runtime_ready());
     }
 
     #[test]
