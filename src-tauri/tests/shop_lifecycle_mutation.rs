@@ -348,7 +348,9 @@ fn committed_archive_recovery_removes_a_leftover_unregistered_database() {
     assert!(!live_database.exists());
     assert!(archive_database.is_file());
     let journal = current_journal(&root);
-    journal.validate(&ROOT).expect("authenticate recovered journal");
+    journal
+        .validate(&ROOT)
+        .expect("authenticate recovered journal");
     assert_eq!(journal.journal.stage, ShopLifecycleStage::Completed);
 
     fs::remove_dir_all(root).expect("remove test installation");
@@ -415,7 +417,9 @@ fn committed_recover_finishes_after_archive_cleanup_precedes_terminal_journal() 
     assert_eq!(authority.shop_id, "current-shop");
     assert_eq!(authority.registry_revision, 9);
     let journal = current_journal(&root);
-    journal.validate(&ROOT).expect("authenticate completed journal");
+    journal
+        .validate(&ROOT)
+        .expect("authenticate completed journal");
     assert_eq!(journal.journal.stage, ShopLifecycleStage::Completed);
 
     fs::remove_dir_all(root).expect("remove test installation");
