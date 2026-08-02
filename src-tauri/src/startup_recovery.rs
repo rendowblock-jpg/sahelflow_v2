@@ -8,6 +8,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};
 use tauri::Manager;
 
+#[cfg(not(debug_assertions))]
+mod shop_lifecycle_host;
+
 const RUNTIME_BOOTSTRAP_PATH: &str = "/api/internal/runtime-bootstrap";
 const RUNTIME_COOKIE: &str = "sf_runtime";
 const RUNTIME_ENDPOINT_FILE: &str = "runtime-endpoint.json";
@@ -107,6 +110,9 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
         window.set_focus()?;
         return Ok(());
     };
+
+    #[cfg(not(debug_assertions))]
+    shop_lifecycle_host::ensure_started(app)?;
 
     let app_data_dir = app.path().app_data_dir()?;
     clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
