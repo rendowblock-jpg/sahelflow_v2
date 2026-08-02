@@ -1,0 +1,67 @@
+name: Phase 2 license clock lint repair
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/phase2-license-clock-lint-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2-license-clock-lint-repair-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact lifecycle head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Apply exact path-slice repair
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src-tauri/src/license_clock.rs")
+          source = path.read_text(encoding="utf-8")
+          replacements = (
+              ("use std::path::PathBuf;", "use std::path::{Path, PathBuf};"),
+              ("system_directory: &PathBuf,", "system_directory: &Path,"),
+              (
+                  "fn write_json_atomic(path: &PathBuf, value: &impl Serialize)",
+                  "fn write_json_atomic(path: &Path, value: &impl Serialize)",
+              ),
+          )
+          for before, after in replacements:
+              if source.count(before) != 1:
+                  raise SystemExit(f"license-clock lint anchor changed: {before}")
+              source = source.replace(before, after)
+          path.write_text(source, encoding="utf-8")
+
+      - name: Setup Rust formatter
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format and verify repair
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          git diff --check
+
+      - name: Commit exact repair and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/phase2-license-clock-lint-repair.yml
+          git add src-tauri/src/license_clock.rs
+          git commit -m "style(phase2): use path slices for license clock"
+          git push origin HEAD:agent/native-multi-shop-authority
