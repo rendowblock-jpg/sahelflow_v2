@@ -164,7 +164,7 @@ impl ShopLifecycleAuthorization {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq,PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShopLifecycleCommand {
     pub authorization: ShopLifecycleAuthorization,
@@ -437,7 +437,7 @@ fn frame_request(output: &mut Vec<u8>, request: &ShopLifecycleRequest) {
     push_string(output, &request.actor_person_id);
     push_string(output, &request.actor_member_id);
     push_string(output, &request.actor_device_id);
-    push_string(output, &request.actor_session_id);
+    push_string(output, &request.actor_session_binding);
     push_u64(output, request.policy_version);
     push_u64(output, request.revocation_epoch);
     push_string(output, &request.entitlement_id);
@@ -579,7 +579,7 @@ mod tests {
             actor_person_id: identity('4'),
             actor_member_id: identity('5'),
             actor_device_id: identity('6'),
-            actor_session_id: "session-exact".to_owned(),
+            actor_session_binding: "b".repeat(64),
             policy_version: 3,
             revocation_epoch: 1,
             entitlement_id: "license_001".to_owned(),
@@ -697,7 +697,7 @@ mod tests {
         assert_eq!(journal.journal.stage, ShopLifecycleStage::Requested);
 
         let mut tampered = command;
-        tampered.authorization.request.actor_person_id = identity('b');
+        tampered.authorization.request.actor_person_id = identity('c');
         assert_eq!(
             AuthenticatedShopLifecycleJournal::accept(&tampered, &ROOT, 1_001_000),
             Err(ShopLifecycleCommandError::InvalidMac)
