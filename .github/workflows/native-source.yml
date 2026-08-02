@@ -60,14 +60,18 @@ jobs:
           cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check 2>&1 |
             tee .sf-native-fmt.log
 
-      - name: Run native integration contracts
+      - name: Run native lifecycle contracts
         run: |
           set -o pipefail
           cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- --nocapture 2>&1 |
             tee .sf-native-source-test.log
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- --nocapture 2>&1 |
+            tee -a .sf-native-source-test.log
 
-      - name: Lint native integration contracts
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- -D warnings
+      - name: Lint native lifecycle contracts
+        run: |
+          cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- -D warnings
+          cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- -D warnings
 
       - name: Verify Tauri release compilation
         run: cargo check --manifest-path src-tauri/Cargo.toml --release --locked
