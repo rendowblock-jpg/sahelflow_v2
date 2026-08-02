@@ -180,4 +180,59 @@ describe("installation license authority", () => {
       expect.stringContaining("license-authority.json.recovered."),
     );
   });
+
+  it("persists a signed monotonic transfer revocation on the old installation", async () => {
+    const active = await signedClaims({
+      licenseId: "license_transfer_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+    });
+    await activateSignedEntitlement(active, shop, new Date("2026-08-03T00:00:00.000Z"));
+
+    const revoked = await signedClaims({
+      licenseId: "license_transfer_001",
+      type: "permanent",
+      expiresAt: null,
+      transferState: "revoked",
+      transferEpoch: 1,
+      revocationEpoch: 1,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+    });
+    await expect(
+      activateSignedEntitlement(revoked, shop, new Date("2026-08-03T01:00:00.000Z")),
+    ).resolves.toMatchObject({ status: "revoked", licenseId: "license_transfer_001" });
+    await expect(
+      getLicenseAuthorityProjection(shop, new Date("2026-08-03T02:00:00.000Z")),
+    ).resolves.toMatchObject({ status: "revoked" });
+    await expect(
+      activateSignedEntitlement(active, shop, new Date("2026-08-03T03:00:00.000Z")),
+    ).rejects.toMatchObject({ code: "LICENSE_REVOKED" });
+  });
+
+  it("rejects a revocation that does not advance the installed license lineage", async () => {
+    const active = await signedClaims({
+      licenseId: "license_transfer_002",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+    });
+    await activateSignedEntitlement(active, shop, new Date("2026-08-03T00:00:00.000Z"));
+    const unrelated = await signedClaims({
+      licenseId: "license_unrelated_001",
+      type: "permanent",
+      expiresAt: null,
+      transferState: "revoked",
+      transferEpoch: 1,
+      revocationEpoch: 1,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+    });
+    await expect(
+      activateSignedEntitlement(unrelated, shop, new Date("2026-08-03T01:00:00.000Z")),
+    ).rejects.toMatchObject({ code: "LICENSE_REVOCATION_ROLLBACK" });
+  });
 });

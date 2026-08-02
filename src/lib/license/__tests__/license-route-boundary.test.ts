@@ -39,6 +39,8 @@ describe("global production license lockout", () => {
     );
     expect(boundary).toContain("requireLicenseEntitlement");
     expect(boundary).toContain("LICENSE_LOCKOUT_ALLOWLIST");
+    expect(boundary).toContain("(?:login|logout|reauthenticate|setup|status)");
+    expect(boundary).not.toContain("/^\\/api\\/auth(?:\\/|$)/");
     expect(boundary).not.toContain("active_license_status");
   });
 });

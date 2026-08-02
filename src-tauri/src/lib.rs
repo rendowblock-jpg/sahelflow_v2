@@ -343,6 +343,14 @@ pub fn run() {
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
+                let license_authority_file = app_data_dir
+                    .join("system")
+                    .join("license-authority.json");
+                license_clock::start_runtime_observer(
+                    device_binding::current_device_binding().map_err(IoError::other)?,
+                    license_authority_file,
+                )
+                .map_err(IoError::other)?;
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(

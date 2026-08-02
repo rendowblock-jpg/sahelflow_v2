@@ -343,6 +343,35 @@ function projection(result: EntitlementValidationResult): LicenseAuthorityProjec
   });
 }
 
+function isOfflineRevocationClaim(entitlement: SignedEntitlement): boolean {
+  const { claims } = entitlement;
+  return (
+    claims.type === "permanent" &&
+    claims.issuer === "founder-offline" &&
+    claims.transferState === "revoked" &&
+    claims.transferEpoch >= 1 &&
+    claims.revocationEpoch >= 1
+  );
+}
+
+function isPersistableRevocationTombstone(
+  entitlement: SignedEntitlement,
+  current: LicenseAuthorityEnvelope | null,
+  minimumRevocationEpoch: number,
+): boolean {
+  const { claims } = entitlement;
+  if (!isOfflineRevocationClaim(entitlement) || claims.revocationEpoch <= minimumRevocationEpoch) {
+    return false;
+  }
+  if (!current) return true;
+  const installed = current.state.entitlement.claims;
+  return (
+    claims.licenseId === installed.licenseId &&
+    claims.transferEpoch > installed.transferEpoch &&
+    claims.recoveryEpoch >= installed.recoveryEpoch
+  );
+}
+
 export async function activateSignedEntitlement(
   input: unknown,
   shop: ShopContext = shopContext,
@@ -357,16 +386,27 @@ export async function activateSignedEntitlement(
     } catch {
       unreadable = true;
       if (
-        entitlement.claims.type !== "permanent" ||
-        entitlement.claims.issuer !== "founder-offline" ||
-        entitlement.claims.recoveryEpoch < 1
+        !isOfflineRevocationClaim(entitlement) &&
+        (entitlement.claims.type !== "permanent" ||
+          entitlement.claims.issuer !== "founder-offline" ||
+          entitlement.claims.recoveryEpoch < 1)
       ) {
         throw authorityError("License authority recovery requires a signed offline recovery claim");
       }
     }
     const minimumEpoch = current?.state.minimumRevocationEpoch ?? 0;
     const result = await validate(entitlement, shop, minimumEpoch, current?.state.lastObservedAt ?? null, now);
-    if (result.status !== "valid") {
+    const persistRevocation =
+      result.status === "revoked" &&
+      isPersistableRevocationTombstone(entitlement, current, minimumEpoch);
+    if (result.status === "revoked" && entitlement.claims.transferState === "revoked" && !persistRevocation) {
+      throw authorityError(
+        "Signed transfer revocation does not advance the installed commercial authority",
+        "LICENSE_REVOCATION_ROLLBACK",
+        409,
+      );
+    }
+    if (result.status !== "valid" && !persistRevocation) {
       throw authorityError(result.message, `LICENSE_${result.status.toUpperCase()}`, 403);
     }
     if (

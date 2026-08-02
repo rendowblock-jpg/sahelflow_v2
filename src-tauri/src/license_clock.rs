@@ -1,9 +1,12 @@
 use sha2::{Digest, Sha256};
+use std::path::PathBuf;
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const DEVICE_BINDING_PREFIX: &str = "sfdb1_";
 const CLOCK_PAYLOAD_PREFIX: &[u8; 8] = b"SFLC0001";
 const DPAPI_ENTROPY_DOMAIN: &[u8] = b"sahelflow.license-clock-anchor.dpapi.v1\0";
+const RUNTIME_OBSERVE_INTERVAL: Duration = Duration::from_secs(60);
 
 fn now_unix_ms() -> Result<u64, String> {
     let elapsed = SystemTime::now()
@@ -52,6 +55,23 @@ pub(crate) fn observe(
     let digest = validate_device_binding(device_binding)?;
     let now = now_unix_ms()?;
     observe_platform(device_binding, digest, authority_file_exists, now)
+}
+
+pub(crate) fn start_runtime_observer(
+    device_binding: String,
+    authority_file: PathBuf,
+) -> Result<(), String> {
+    validate_device_binding(&device_binding)?;
+    std::thread::Builder::new()
+        .name("sahelflow-license-clock".to_owned())
+        .spawn(move || loop {
+            std::thread::sleep(RUNTIME_OBSERVE_INTERVAL);
+            if let Err(error) = observe(&device_binding, authority_file.is_file()) {
+                eprintln!("[sahelflow] protected license clock observation failed: {error}");
+            }
+        })
+        .map(|_| ())
+        .map_err(|error| format!("could not start protected license clock observation: {error}"))
 }
 
 #[cfg(not(windows))]

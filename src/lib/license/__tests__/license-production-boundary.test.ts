@@ -62,6 +62,9 @@ describe("production licensing authority inventory", () => {
     expect(anchor).toContain("CryptProtectData");
     expect(anchor).toContain("CryptUnprotectData");
     expect(anchor).toContain("authority_file_exists");
+    expect(anchor).toContain("start_runtime_observer");
+    expect(anchor).toContain("RUNTIME_OBSERVE_INTERVAL");
+    expect(tauri).toContain("license_clock::start_runtime_observer");
     expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_MS"');
     expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_STATUS"');
     expect(authority).toContain("highestObservedAt(lastObservedAt, permitsClockRecovery)");

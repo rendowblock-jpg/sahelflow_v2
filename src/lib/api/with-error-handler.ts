@@ -52,7 +52,7 @@ const DEMO_MUTATION_ALLOWLIST = [
 ] as const;
 
 const LICENSE_LOCKOUT_ALLOWLIST = [
-  /^\/api\/auth(?:\/|$)/,
+  /^\/api\/auth\/(?:login|logout|reauthenticate|setup|status)$/,
   /^\/api\/health(?:\/|$)/,
   /^\/api\/internal\/runtime-ready(?:\/|$)/,
   /^\/api\/license(?:\/|$)/,
