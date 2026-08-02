@@ -1,9 +1,9 @@
 name: Phase 2 MSRV lint repair
 
 on:
-  push:
-    branches:
-      - agent/native-multi-shop-authority
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
     paths:
       - .github/workflows/phase2-msrv-lint-repair.yml
 
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: phase2-msrv-lint-repair
+  group: phase2-msrv-lint-repair-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
