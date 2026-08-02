@@ -1,0 +1,88 @@
+name: Phase 2 MSRV lint repair
+
+on:
+  push:
+    branches:
+      - agent/native-multi-shop-authority
+    paths:
+      - .github/workflows/phase2-msrv-lint-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2-msrv-lint-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact lifecycle branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/native-multi-shop-authority
+          fetch-depth: 0
+
+      - name: Apply exact MSRV-safe lint repairs
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root_path = Path("src-tauri/src/installation_root_key.rs")
+          root_source = root_path.read_text(encoding="utf-8")
+          before_root = "if value.len() % 2 != 0 {"
+          after_root = "if value.len() & 1 != 0 {"
+          if root_source.count(before_root) != 1:
+              raise SystemExit("installation-root odd-length anchor changed")
+          root_path.write_text(root_source.replace(before_root, after_root), encoding="utf-8")
+
+          mutation_path = Path("src-tauri/src/shop_lifecycle_mutation_06.inc.rs")
+          mutation_source = mutation_path.read_text(encoding="utf-8")
+          before_mutation = '''        ShopLifecyclePayload::Recover { archive_id } => {
+              if let Ok((_, archive)) = read_archive(app_data_dir, archive_id, installation_root) {
+                  if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) {
+                      remove_sqlite_file_set(
+                          &app_data_dir.join("shops").join(&archive.shop.database_file),
+                      )?;
+                  }
+              }
+          }'''
+          after_mutation = '''        ShopLifecyclePayload::Recover { archive_id } => {
+              match read_archive(app_data_dir, archive_id, installation_root) {
+                  Ok((_, archive))
+                      if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) =>
+                  {
+                      remove_sqlite_file_set(
+                          &app_data_dir.join("shops").join(&archive.shop.database_file),
+                      )?;
+                  }
+                  Ok(_) | Err(_) => {}
+              }
+          }'''
+          if mutation_source.count(before_mutation) != 1:
+              raise SystemExit("mutation cleanup anchor changed")
+          mutation_path.write_text(
+              mutation_source.replace(before_mutation, after_mutation),
+              encoding="utf-8",
+          )
+
+      - name: Setup Rust formatter
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format and verify repair
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          git diff --check
+
+      - name: Commit exact repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src-tauri/src/installation_root_key.rs src-tauri/src/shop_lifecycle_mutation_06.inc.rs
+          git commit -m "style(phase2): satisfy strict Windows lifecycle lint"
+          git push origin HEAD:agent/native-multi-shop-authority
