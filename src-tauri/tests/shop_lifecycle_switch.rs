@@ -225,6 +225,40 @@ fn failed_target_finishes_recovery_only_after_prior_runtime_is_ready() {
 }
 
 #[test]
+fn ordinary_blocked_operation_is_terminal_and_retryable() {
+    let root = prepare_installation("switch-blocked", 7);
+    let mut first = accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000)
+        .expect("accept first switch");
+    first
+        .block(1_001_002, "RUNTIME_TRANSITION_UNAVAILABLE", false)
+        .expect("persist terminal blocked journal");
+    drop(first);
+
+    let second = accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_003)
+        .expect("ordinary blocked operation must allow retry");
+    drop(second);
+    fs::remove_dir_all(root).expect("remove test installation");
+}
+
+#[test]
+fn manual_recovery_journal_blocks_future_operations() {
+    let root = prepare_installation("switch-manual-recovery", 7);
+    let mut accepted = accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000)
+        .expect("accept switch");
+    accepted
+        .block(1_001_002, "REGISTRY_COMMIT_RECOVERY_FAILED", true)
+        .expect("persist manual recovery journal");
+    drop(accepted);
+
+    let error = match accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_003) {
+        Ok(_) => panic!("manual recovery must block a later switch"),
+        Err(error) => error,
+    };
+    assert!(matches!(error, SwitchAuthorityError::IncompleteJournal(_)));
+    fs::remove_dir_all(root).expect("remove test installation");
+}
+
+#[test]
 fn incomplete_authenticated_journal_blocks_a_second_switch() {
     let root = prepare_installation("switch-incomplete", 7);
     let accepted = accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000)
