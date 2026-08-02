@@ -1227,6 +1227,8 @@
   "license.premiumFeature": "Fonctionnalité Premium",
   "license.premiumFeatureDescription": "Cette fonctionnalité nécessite une licence payante.",
   "license.protectedBindingHelp": "Le droit signé est lié à cette installation protégée. Les identifiants matériels bruts ne sont jamais affichés ni stockés dans le navigateur.",
+  "license.permanentRecoveryEpoch": "Époque minimale de récupération permanente",
+  "license.permanentRecoveryEpochHelp": "Envoyez cette époque au support SahelFlow. Tout nouveau droit permanent signé par le fondateur pour cette installation doit contenir exactement cette valeur ; les anciennes clés ne peuvent pas la récupérer.",
   "license.status.activationLimit": "Limite d'activation",
   "license.status.expired": "Expirée",
   "license.status.clockRollback": "Récupération de l’horloge requise",

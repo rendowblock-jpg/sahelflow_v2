@@ -724,6 +724,12 @@ fn server_env(
                 .map(|anchor| anchor.minimum_revocation_epoch.to_string())
                 .unwrap_or_default(),
         ),
+        (
+            "SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH".to_string(),
+            license_clock_anchor
+                .map(|anchor| anchor.minimum_permanent_recovery_epoch.to_string())
+                .unwrap_or_default(),
+        ),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
         (
             "SF_SHOP_INCARNATION_ID".to_string(),

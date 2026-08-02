@@ -73,6 +73,7 @@ export type LicenseAuthorityProjection = Readonly<{
   memberLimit: number;
   deviceLimit: number;
   features: readonly string[];
+  minimumPermanentRecoveryEpoch: number | null;
 }>;
 
 let processQueue: Promise<void> = Promise.resolve();
@@ -318,6 +319,29 @@ function nativeRevocationFloor(allowMissing: boolean): number {
   return epoch;
 }
 
+function nativeMinimumPermanentRecoveryEpoch(allowMissing: boolean): number {
+  const status = process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS;
+  const value = process.env.SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH;
+  if (status === "missing" && allowMissing) return 0;
+  if (status === "missing") {
+    throw authorityError("Protected permanent recovery authority requires current reconciliation");
+  }
+  if (status !== "ready" || !value) {
+    if (process.env.NODE_ENV === "production") {
+      throw authorityError("Native permanent recovery authority is unavailable");
+    }
+    return 0;
+  }
+  if (!/^\d{1,16}$/.test(value)) {
+    throw authorityError("Native permanent recovery authority is invalid");
+  }
+  const epoch = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(epoch) || epoch < 0) {
+    throw authorityError("Native permanent recovery authority is out of range");
+  }
+  return epoch;
+}
+
 function permitsMissingNativeAuthority(
   entitlement: SignedEntitlement,
   allowOnlineTrialInitialization = false,
@@ -393,6 +417,7 @@ function projection(result: EntitlementValidationResult): LicenseAuthorityProjec
     memberLimit: claims?.memberLimit ?? 0,
     deviceLimit: claims?.deviceLimit ?? 0,
     features: Object.freeze([...(claims?.features ?? [])]),
+    minimumPermanentRecoveryEpoch: nativeMinimumPermanentRecoveryEpoch(false) || null,
   });
 }
 
@@ -474,6 +499,20 @@ export async function activateSignedEntitlement(
       now,
       allowOnlineTrialInitialization,
     );
+    const minimumPermanentRecoveryEpoch = nativeMinimumPermanentRecoveryEpoch(
+      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization),
+    );
+    if (
+      minimumPermanentRecoveryEpoch > 0 &&
+      entitlement.claims.type === "permanent" &&
+      entitlement.claims.recoveryEpoch !== minimumPermanentRecoveryEpoch
+    ) {
+      throw authorityError(
+        "Permanent activation requires the current native recovery epoch",
+        "LICENSE_RECOVERY_CHALLENGE_REQUIRED",
+        409,
+      );
+    }
     const persistRevocation =
       result.status === "revoked" &&
       isPersistableRevocationTombstone(entitlement, current, minimumEpoch);
@@ -495,13 +534,17 @@ export async function activateSignedEntitlement(
     ) {
       throw authorityError("Entitlement would roll back protected commercial state", "LICENSE_ROLLBACK", 409);
     }
+    const initializePermanentRecovery =
+      process.env.NODE_ENV === "production" &&
+      process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
+      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization);
     if (
       entitlement.claims.revocationEpoch > minimumEpoch ||
-      (process.env.NODE_ENV === "production" &&
-        process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
-        permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization))
+      initializePermanentRecovery
     ) {
-      await advanceNativeRevocationFloor(entitlement.claims.revocationEpoch);
+      await advanceNativeRevocationFloor(entitlement.claims.revocationEpoch, {
+        initializePermanentRecovery,
+      });
     }
     if (unreadable && existsSync(licenseAuthorityPath())) {
       renameSync(
@@ -557,6 +600,7 @@ export async function getLicenseAuthorityProjection(
       memberLimit: 25,
       deviceLimit: 1,
       features: Object.freeze(["sahelflow.complete"]),
+      minimumPermanentRecoveryEpoch: null,
     });
   }
   const current = readAuthority();
@@ -572,6 +616,7 @@ export async function getLicenseAuthorityProjection(
       memberLimit: 0,
       deviceLimit: 0,
       features: Object.freeze([]),
+      minimumPermanentRecoveryEpoch: nativeMinimumPermanentRecoveryEpoch(true) || null,
     });
   }
   const result = await validate(

@@ -74,6 +74,7 @@ beforeEach(async () => {
   vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
   vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "");
   vi.stubEnv("SF_LICENSE_REVOCATION_FLOOR", "");
+  vi.stubEnv("SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH", "");
   const publicKey = await getPublicKeyAsync(PRIVATE_KEY);
   vi.stubEnv(
     "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -179,6 +180,54 @@ describe("installation license authority", () => {
     await expect(
       activateSignedEntitlement(recovery, shop, new Date("2026-08-04T00:00:00.000Z")),
     ).rejects.toMatchObject({ code: "LICENSE_AUTHORITY_UNAVAILABLE" });
+  });
+
+  it("rejects historical permanent claims below the native recovery epoch", async () => {
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "ready");
+    vi.stubEnv(
+      "SF_LICENSE_CLOCK_ANCHOR_MS",
+      String(new Date("2026-08-03T00:00:00.000Z").getTime()),
+    );
+    vi.stubEnv("SF_LICENSE_REVOCATION_FLOOR", "0");
+    vi.stubEnv("SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH", "5481516234200000");
+    const historical = await signedClaims({
+      licenseId: "license_historical_recovery_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+      recoveryEpoch: 1,
+    });
+    await expect(
+      activateSignedEntitlement(historical, shop, new Date("2026-08-04T00:00:00.000Z")),
+    ).rejects.toMatchObject({ code: "LICENSE_RECOVERY_CHALLENGE_REQUIRED" });
+
+    const differentEpoch = await signedClaims({
+      licenseId: "license_different_recovery_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+      recoveryEpoch: 5_481_516_234_200_001,
+    });
+    await expect(
+      activateSignedEntitlement(differentEpoch, shop, new Date("2026-08-04T00:00:30.000Z")),
+    ).rejects.toMatchObject({ code: "LICENSE_RECOVERY_CHALLENGE_REQUIRED" });
+
+    const reconciled = await signedClaims({
+      licenseId: "license_current_recovery_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+      recoveryEpoch: 5_481_516_234_200_000,
+    });
+    await expect(
+      activateSignedEntitlement(reconciled, shop, new Date("2026-08-04T00:01:00.000Z")),
+    ).resolves.toMatchObject({
+      status: "valid",
+      minimumPermanentRecoveryEpoch: 5_481_516_234_200_000,
+    });
   });
 
   it("recovers corrupt local state only with an exact offline recovery claim", async () => {

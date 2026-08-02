@@ -1227,6 +1227,8 @@
   "license.premiumFeature": "ميزة مدفوعة",
   "license.premiumFeatureDescription": "تتطلب هذه الميزة ترخيصًا مدفوعًا.",
   "license.protectedBindingHelp": "الاستحقاق الموقّع مرتبط بهذا التثبيت المحمي. لا تُعرض معرّفات العتاد الخام ولا تُخزّن في المتصفح.",
+  "license.permanentRecoveryEpoch": "الحد الأدنى لحقبة استرداد الترخيص الدائم",
+  "license.permanentRecoveryEpochHelp": "أرسل هذه الحقبة إلى دعم SahelFlow. يجب أن يتضمن كل استحقاق دائم جديد يوقّعه المؤسس لهذا التثبيت هذه القيمة نفسها تمامًا؛ ولا يمكن للمفاتيح القديمة استرداده.",
   "license.status.activationLimit": "حد التفعيل",
   "license.status.expired": "منتهية الصلاحية",
   "license.status.clockRollback": "يلزم تصحيح الساعة",

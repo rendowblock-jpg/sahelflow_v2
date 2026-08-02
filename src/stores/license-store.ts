@@ -25,6 +25,7 @@ export type LicenseClientProjection = Readonly<{
   memberLimit: number;
   deviceLimit: number;
   features: readonly string[];
+  minimumPermanentRecoveryEpoch: number | null;
 }>;
 
 type LicenseState = {

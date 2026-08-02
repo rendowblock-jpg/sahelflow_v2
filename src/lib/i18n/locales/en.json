@@ -1227,6 +1227,8 @@
   "license.premiumFeature": "Premium Feature",
   "license.premiumFeatureDescription": "This feature requires a paid license.",
   "license.protectedBindingHelp": "The signed entitlement is bound to this protected installation. Raw hardware identifiers are never displayed or stored in the browser.",
+  "license.permanentRecoveryEpoch": "Minimum permanent recovery epoch",
+  "license.permanentRecoveryEpochHelp": "Send this epoch to SahelFlow support. Every newly Founder-signed permanent entitlement for this installation must contain this exact value; historical keys cannot recover it.",
   "license.status.activationLimit": "Activation limit",
   "license.status.expired": "Expired",
   "license.status.clockRollback": "Clock recovery required",

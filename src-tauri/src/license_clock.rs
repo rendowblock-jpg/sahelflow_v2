@@ -7,19 +7,21 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const DEVICE_BINDING_PREFIX: &str = "sfdb1_";
 const LEGACY_CLOCK_PAYLOAD_PREFIX: &[u8; 8] = b"SFLC0001";
-const COMMERCIAL_PAYLOAD_PREFIX: &[u8; 8] = b"SFLC0002";
+const LEGACY_COMMERCIAL_PAYLOAD_PREFIX: &[u8; 8] = b"SFLC0002";
+const COMMERCIAL_PAYLOAD_PREFIX: &[u8; 8] = b"SFLC0003";
 const DPAPI_ENTROPY_DOMAIN: &[u8] = b"sahelflow.license-clock-anchor.dpapi.v1\0";
 const COMMAND_KEY_DOMAIN: &[u8] = b"sahelflow.license-native-command.key.v1";
-const REQUEST_MAC_DOMAIN: &str = "sahelflow.license-native-revocation.request.v1";
-const ACK_MAC_DOMAIN: &str = "sahelflow.license-native-revocation.ack.v1";
+const REQUEST_MAC_DOMAIN: &str = "sahelflow.license-native-revocation.request.v2";
+const ACK_MAC_DOMAIN: &str = "sahelflow.license-native-revocation.ack.v2";
 const RUNTIME_OBSERVE_INTERVAL: Duration = Duration::from_secs(60);
 const COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(100);
-const COMMAND_FORMAT_VERSION: u8 = 1;
+const COMMAND_FORMAT_VERSION: u8 = 2;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct CommercialAnchor {
     pub(crate) high_water_ms: u64,
     pub(crate) minimum_revocation_epoch: u64,
+    pub(crate) minimum_permanent_recovery_epoch: u64,
 }
 
 #[derive(Deserialize)]
@@ -28,6 +30,7 @@ struct RevocationRequest {
     format_version: u8,
     request_id: String,
     minimum_revocation_epoch: u64,
+    initialize_permanent_recovery: bool,
     mac: String,
 }
 
@@ -38,6 +41,7 @@ struct RevocationAcknowledgement<'a> {
     request_id: &'a str,
     minimum_revocation_epoch: u64,
     high_water_ms: u64,
+    minimum_permanent_recovery_epoch: u64,
     mac: String,
 }
 
@@ -46,6 +50,14 @@ fn now_unix_ms() -> Result<u64, String> {
         .duration_since(UNIX_EPOCH)
         .map_err(|_| "system clock precedes the Unix epoch".to_owned())?;
     u64::try_from(elapsed.as_millis()).map_err(|_| "system clock is out of range".to_owned())
+}
+
+fn permanent_recovery_challenge() -> Result<u64, String> {
+    const RECOVERY_NAMESPACE_BIT: u64 = 1_u64 << 52;
+    let mut bytes = [0_u8; 8];
+    getrandom::getrandom(&mut bytes)
+        .map_err(|error| format!("secure recovery randomness is unavailable: {error}"))?;
+    Ok((u64::from_le_bytes(bytes) & (RECOVERY_NAMESPACE_BIT - 1)) | RECOVERY_NAMESPACE_BIT)
 }
 
 fn validate_device_binding(device_binding: &str) -> Result<&str, String> {
@@ -65,11 +77,12 @@ fn entropy(device_binding: &str) -> [u8; 32] {
     digest.finalize().into()
 }
 
-fn clock_payload(anchor: CommercialAnchor) -> [u8; 24] {
-    let mut payload = [0_u8; 24];
+fn clock_payload(anchor: CommercialAnchor) -> [u8; 32] {
+    let mut payload = [0_u8; 32];
     payload[..8].copy_from_slice(COMMERCIAL_PAYLOAD_PREFIX);
     payload[8..16].copy_from_slice(&anchor.high_water_ms.to_le_bytes());
-    payload[16..].copy_from_slice(&anchor.minimum_revocation_epoch.to_le_bytes());
+    payload[16..24].copy_from_slice(&anchor.minimum_revocation_epoch.to_le_bytes());
+    payload[24..].copy_from_slice(&anchor.minimum_permanent_recovery_epoch.to_le_bytes());
     payload
 }
 
@@ -81,21 +94,39 @@ fn parse_clock_payload(payload: &[u8]) -> Result<(CommercialAnchor, bool), Strin
             CommercialAnchor {
                 high_water_ms: u64::from_le_bytes(encoded),
                 minimum_revocation_epoch: 0,
+                minimum_permanent_recovery_epoch: 0,
             },
             true,
         ));
     }
-    if payload.len() != 24 || &payload[..8] != COMMERCIAL_PAYLOAD_PREFIX {
+    if payload.len() == 24 && &payload[..8] == LEGACY_COMMERCIAL_PAYLOAD_PREFIX {
+        let mut clock = [0_u8; 8];
+        clock.copy_from_slice(&payload[8..16]);
+        let mut epoch = [0_u8; 8];
+        epoch.copy_from_slice(&payload[16..]);
+        return Ok((
+            CommercialAnchor {
+                high_water_ms: u64::from_le_bytes(clock),
+                minimum_revocation_epoch: u64::from_le_bytes(epoch),
+                minimum_permanent_recovery_epoch: 0,
+            },
+            true,
+        ));
+    }
+    if payload.len() != 32 || &payload[..8] != COMMERCIAL_PAYLOAD_PREFIX {
         return Err("protected commercial anchor has an invalid format".to_owned());
     }
     let mut clock = [0_u8; 8];
     clock.copy_from_slice(&payload[8..16]);
     let mut epoch = [0_u8; 8];
-    epoch.copy_from_slice(&payload[16..]);
+    epoch.copy_from_slice(&payload[16..24]);
+    let mut recovery = [0_u8; 8];
+    recovery.copy_from_slice(&payload[24..]);
     Ok((
         CommercialAnchor {
             high_water_ms: u64::from_le_bytes(clock),
             minimum_revocation_epoch: u64::from_le_bytes(epoch),
+            minimum_permanent_recovery_epoch: u64::from_le_bytes(recovery),
         },
         false,
     ))
@@ -195,30 +226,36 @@ fn process_revocation_requests(
         };
         if request.format_version != COMMAND_FORMAT_VERSION
             || !valid_request_id(&request.request_id)
-            || !verify_mac(
+            || !verify_request_mac(
                 command_key,
                 &request.mac,
-                REQUEST_MAC_DOMAIN,
                 &request.request_id,
                 request.minimum_revocation_epoch,
+                request.initialize_permanent_recovery,
             )
         {
             eprintln!("[sahelflow] unauthenticated native license request removed");
             let _ = fs::remove_file(&path);
             continue;
         }
-        let anchor = advance_revocation_floor(device_binding, request.minimum_revocation_epoch)?;
+        let anchor = advance_revocation_floor(
+            device_binding,
+            request.minimum_revocation_epoch,
+            request.initialize_permanent_recovery,
+        )?;
         let acknowledgement_path = directory.join(format!("{}.ack.json", request.request_id));
         let acknowledgement = RevocationAcknowledgement {
             format_version: COMMAND_FORMAT_VERSION,
             request_id: &request.request_id,
             minimum_revocation_epoch: anchor.minimum_revocation_epoch,
             high_water_ms: anchor.high_water_ms,
+            minimum_permanent_recovery_epoch: anchor.minimum_permanent_recovery_epoch,
             mac: acknowledgement_mac_hex(
                 command_key,
                 &request.request_id,
                 anchor.minimum_revocation_epoch,
                 anchor.high_water_ms,
+                anchor.minimum_permanent_recovery_epoch,
             ),
         };
         write_json_atomic(&acknowledgement_path, &acknowledgement)?;
@@ -233,19 +270,43 @@ fn valid_request_id(value: &str) -> bool {
     value.len() == 32 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
-fn mac_message(domain: &str, request_id: &str, epoch: u64) -> Vec<u8> {
-    format!("{domain}\0{request_id}\0{epoch}").into_bytes()
+fn request_mac_message(
+    request_id: &str,
+    epoch: u64,
+    initialize_permanent_recovery: bool,
+) -> Vec<u8> {
+    format!(
+        "{REQUEST_MAC_DOMAIN}\0{request_id}\0{epoch}\0{}",
+        u8::from(initialize_permanent_recovery)
+    )
+    .into_bytes()
 }
 
-fn acknowledgement_mac_message(request_id: &str, epoch: u64, high_water_ms: u64) -> Vec<u8> {
-    format!("{ACK_MAC_DOMAIN}\0{request_id}\0{epoch}\0{high_water_ms}").into_bytes()
+fn acknowledgement_mac_message(
+    request_id: &str,
+    epoch: u64,
+    high_water_ms: u64,
+    minimum_permanent_recovery_epoch: u64,
+) -> Vec<u8> {
+    format!(
+        "{ACK_MAC_DOMAIN}\0{request_id}\0{epoch}\0{high_water_ms}\0{minimum_permanent_recovery_epoch}"
+    )
+    .into_bytes()
 }
 
-fn mac_hex(key: &[u8; 32], domain: &str, request_id: &str, epoch: u64) -> String {
-    hmac_sha256(key, &mac_message(domain, request_id, epoch))
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+fn request_mac_hex(
+    key: &[u8; 32],
+    request_id: &str,
+    epoch: u64,
+    initialize_permanent_recovery: bool,
+) -> String {
+    hmac_sha256(
+        key,
+        &request_mac_message(request_id, epoch, initialize_permanent_recovery),
+    )
+    .iter()
+    .map(|byte| format!("{byte:02x}"))
+    .collect()
 }
 
 fn acknowledgement_mac_hex(
@@ -253,18 +314,30 @@ fn acknowledgement_mac_hex(
     request_id: &str,
     epoch: u64,
     high_water_ms: u64,
+    minimum_permanent_recovery_epoch: u64,
 ) -> String {
     hmac_sha256(
         key,
-        &acknowledgement_mac_message(request_id, epoch, high_water_ms),
+        &acknowledgement_mac_message(
+            request_id,
+            epoch,
+            high_water_ms,
+            minimum_permanent_recovery_epoch,
+        ),
     )
     .iter()
     .map(|byte| format!("{byte:02x}"))
     .collect()
 }
 
-fn verify_mac(key: &[u8; 32], supplied: &str, domain: &str, request_id: &str, epoch: u64) -> bool {
-    let expected = mac_hex(key, domain, request_id, epoch);
+fn verify_request_mac(
+    key: &[u8; 32],
+    supplied: &str,
+    request_id: &str,
+    epoch: u64,
+    initialize_permanent_recovery: bool,
+) -> bool {
+    let expected = request_mac_hex(key, request_id, epoch, initialize_permanent_recovery);
     supplied.len() == expected.len()
         && supplied
             .bytes()
@@ -335,6 +408,7 @@ fn observe_platform(
 fn advance_revocation_floor(
     _device_binding: &str,
     _minimum_revocation_epoch: u64,
+    _initialize_permanent_recovery: bool,
 ) -> Result<CommercialAnchor, String> {
     Err("the protected commercial anchor is available only on Windows".to_owned())
 }
@@ -393,10 +467,12 @@ fn observe_platform(
         CommercialAnchor {
             high_water_ms: now,
             minimum_revocation_epoch: 0,
+            minimum_permanent_recovery_epoch: 0,
         },
         |value| CommercialAnchor {
             high_water_ms: value.high_water_ms.max(now),
             minimum_revocation_epoch: value.minimum_revocation_epoch,
+            minimum_permanent_recovery_epoch: value.minimum_permanent_recovery_epoch,
         },
     );
     if legacy || previous != Some(anchor) {
@@ -423,6 +499,7 @@ fn observe_platform(
 fn advance_revocation_floor(
     device_binding: &str,
     minimum_revocation_epoch: u64,
+    initialize_permanent_recovery: bool,
 ) -> Result<CommercialAnchor, String> {
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
@@ -459,14 +536,22 @@ fn advance_revocation_floor(
         Ok(None) => CommercialAnchor {
             high_water_ms: now_unix_ms()?,
             minimum_revocation_epoch: 0,
+            minimum_permanent_recovery_epoch: 0,
         },
         Err(error) => return Err(error),
     };
+    let minimum_permanent_recovery_epoch =
+        if initialize_permanent_recovery && previous.minimum_permanent_recovery_epoch == 0 {
+            permanent_recovery_challenge()?
+        } else {
+            previous.minimum_permanent_recovery_epoch
+        };
     let anchor = CommercialAnchor {
         high_water_ms: previous.high_water_ms.max(now_unix_ms()?),
         minimum_revocation_epoch: previous
             .minimum_revocation_epoch
             .max(minimum_revocation_epoch),
+        minimum_permanent_recovery_epoch,
     };
     let ciphertext = protect(&clock_payload(anchor), device_binding)?;
     let written = unsafe {
@@ -656,8 +741,9 @@ fn unprotect(ciphertext: &[u8], device_binding: &str) -> Result<Vec<u8>, String>
 #[cfg(test)]
 mod tests {
     use super::{
-        clock_payload, hmac_sha256, parse_clock_payload, validate_device_binding, CommercialAnchor,
-        LEGACY_CLOCK_PAYLOAD_PREFIX,
+        clock_payload, hmac_sha256, parse_clock_payload, permanent_recovery_challenge,
+        validate_device_binding, CommercialAnchor, LEGACY_CLOCK_PAYLOAD_PREFIX,
+        LEGACY_COMMERCIAL_PAYLOAD_PREFIX,
     };
 
     #[test]
@@ -672,6 +758,7 @@ mod tests {
         let anchor = CommercialAnchor {
             high_water_ms: 1_754_112_000_000,
             minimum_revocation_epoch: 7,
+            minimum_permanent_recovery_epoch: 42,
         };
         let payload = clock_payload(anchor);
         assert_eq!(parse_clock_payload(&payload), Ok((anchor, false)));
@@ -684,11 +771,33 @@ mod tests {
                 CommercialAnchor {
                     high_water_ms: anchor.high_water_ms,
                     minimum_revocation_epoch: 0,
+                    minimum_permanent_recovery_epoch: 0,
+                },
+                true,
+            ))
+        );
+        let mut legacy_commercial = [0_u8; 24];
+        legacy_commercial[..8].copy_from_slice(LEGACY_COMMERCIAL_PAYLOAD_PREFIX);
+        legacy_commercial[8..16].copy_from_slice(&anchor.high_water_ms.to_le_bytes());
+        legacy_commercial[16..].copy_from_slice(&anchor.minimum_revocation_epoch.to_le_bytes());
+        assert_eq!(
+            parse_clock_payload(&legacy_commercial),
+            Ok((
+                CommercialAnchor {
+                    high_water_ms: anchor.high_water_ms,
+                    minimum_revocation_epoch: anchor.minimum_revocation_epoch,
+                    minimum_permanent_recovery_epoch: 0,
                 },
                 true,
             ))
         );
         assert!(parse_clock_payload(b"invalid").is_err());
+    }
+
+    #[test]
+    fn permanent_recovery_challenge_is_nonzero_and_javascript_safe() {
+        let challenge = permanent_recovery_challenge().expect("secure challenge");
+        assert!(((1_u64 << 52)..=9_007_199_254_740_991).contains(&challenge));
     }
 
     #[test]

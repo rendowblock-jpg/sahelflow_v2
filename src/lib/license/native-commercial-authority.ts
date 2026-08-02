@@ -19,9 +19,9 @@ import { getMasterKey } from "@/lib/crypto/master-key";
 import { dataRoot } from "@/lib/storage/data-root";
 import { SahelFlowError } from "@/types/errors";
 
-const FORMAT_VERSION = 1 as const;
-const REQUEST_MAC_DOMAIN = "sahelflow.license-native-revocation.request.v1";
-const ACK_MAC_DOMAIN = "sahelflow.license-native-revocation.ack.v1";
+const FORMAT_VERSION = 2 as const;
+const REQUEST_MAC_DOMAIN = "sahelflow.license-native-revocation.request.v2";
+const ACK_MAC_DOMAIN = "sahelflow.license-native-revocation.ack.v2";
 const COMMAND_KEY_DOMAIN = "sahelflow.license-native-command.key.v1";
 const REQUEST_TIMEOUT_MS = 5_000;
 
@@ -31,6 +31,7 @@ const acknowledgementSchema = z
     requestId: z.string().regex(/^[0-9a-f]{32}$/),
     minimumRevocationEpoch: z.number().int().nonnegative().safe(),
     highWaterMs: z.number().int().nonnegative().safe(),
+    minimumPermanentRecoveryEpoch: z.number().int().nonnegative().safe(),
     mac: z.string().regex(/^[0-9a-f]{64}$/),
   })
   .strict();
@@ -48,6 +49,7 @@ function requestMacFor(
   key: Buffer,
   requestId: string,
   minimumRevocationEpoch: number,
+  initializePermanentRecovery: boolean,
 ): string {
   return createHmac("sha256", key)
     .update(REQUEST_MAC_DOMAIN, "utf8")
@@ -55,6 +57,8 @@ function requestMacFor(
     .update(requestId, "utf8")
     .update("\0", "utf8")
     .update(String(minimumRevocationEpoch), "utf8")
+    .update("\0", "utf8")
+    .update(initializePermanentRecovery ? "1" : "0", "utf8")
     .digest("hex");
 }
 
@@ -63,6 +67,7 @@ function acknowledgementMacFor(
   requestId: string,
   minimumRevocationEpoch: number,
   highWaterMs: number,
+  minimumPermanentRecoveryEpoch: number,
 ): string {
   return createHmac("sha256", key)
     .update(ACK_MAC_DOMAIN, "utf8")
@@ -72,6 +77,8 @@ function acknowledgementMacFor(
     .update(String(minimumRevocationEpoch), "utf8")
     .update("\0", "utf8")
     .update(String(highWaterMs), "utf8")
+    .update("\0", "utf8")
+    .update(String(minimumPermanentRecoveryEpoch), "utf8")
     .digest("hex");
 }
 
@@ -111,11 +118,15 @@ function removeIfPresent(path: string): void {
 
 export async function advanceNativeRevocationFloor(
   minimumRevocationEpoch: number,
+  options: Readonly<{
+    initializePermanentRecovery?: boolean;
+  }> = {},
 ): Promise<void> {
   if (process.env.NODE_ENV !== "production") return;
   if (!Number.isSafeInteger(minimumRevocationEpoch) || minimumRevocationEpoch < 0) {
     throw new TypeError("Native revocation floor must be a non-negative safe integer");
   }
+  const initializePermanentRecovery = options.initializePermanentRecovery === true;
 
   const requestId = randomUUID().replaceAll("-", "");
   const directory = commandDirectory();
@@ -127,7 +138,13 @@ export async function advanceNativeRevocationFloor(
       formatVersion: FORMAT_VERSION,
       requestId,
       minimumRevocationEpoch,
-      mac: requestMacFor(key, requestId, minimumRevocationEpoch),
+      initializePermanentRecovery,
+      mac: requestMacFor(
+        key,
+        requestId,
+        minimumRevocationEpoch,
+        initializePermanentRecovery,
+      ),
     });
 
     const deadline = Date.now() + REQUEST_TIMEOUT_MS;
@@ -152,6 +169,7 @@ export async function advanceNativeRevocationFloor(
           parsed.requestId,
           parsed.minimumRevocationEpoch,
           parsed.highWaterMs,
+          parsed.minimumPermanentRecoveryEpoch,
         ),
         "hex",
       );
@@ -159,6 +177,7 @@ export async function advanceNativeRevocationFloor(
       if (
         parsed.requestId !== requestId ||
         parsed.minimumRevocationEpoch < minimumRevocationEpoch ||
+        (initializePermanentRecovery && parsed.minimumPermanentRecoveryEpoch < 1) ||
         expected.length !== supplied.length ||
         !timingSafeEqual(expected, supplied)
       ) {
@@ -169,6 +188,9 @@ export async function advanceNativeRevocationFloor(
       process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = "ready";
       process.env.SF_LICENSE_CLOCK_ANCHOR_MS = String(parsed.highWaterMs);
       process.env.SF_LICENSE_REVOCATION_FLOOR = String(parsed.minimumRevocationEpoch);
+      process.env.SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH = String(
+        parsed.minimumPermanentRecoveryEpoch,
+      );
       removeIfPresent(requestPath);
       removeIfPresent(acknowledgementPath);
       return;

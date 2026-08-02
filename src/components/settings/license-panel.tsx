@@ -154,6 +154,20 @@ export function LicensePanel() {
           </div>
         )}
 
+        {projection?.minimumPermanentRecoveryEpoch && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+            <p className="text-xs font-medium text-foreground">
+              {t("license.permanentRecoveryEpoch")}
+            </p>
+            <code className="mt-1 block select-all text-sm font-semibold" dir="ltr">
+              {projection.minimumPermanentRecoveryEpoch}
+            </code>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("license.permanentRecoveryEpochHelp")}
+            </p>
+          </div>
+        )}
+
         {!valid && <p className="text-sm text-muted-foreground">{t("license.lockoutHelp")}</p>}
         {authorityError && <p className="text-sm text-destructive" role="alert">{t("license.status.unavailable")}</p>}
 

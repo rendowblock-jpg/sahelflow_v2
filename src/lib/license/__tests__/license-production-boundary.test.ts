@@ -66,17 +66,25 @@ describe("production licensing authority inventory", () => {
     expect(anchor).toContain("start_runtime_observer");
     expect(anchor).toContain("RUNTIME_OBSERVE_INTERVAL");
     expect(anchor).toContain("minimum_revocation_epoch");
+    expect(anchor).toContain("minimum_permanent_recovery_epoch");
+    expect(anchor).toContain("permanent_recovery_challenge");
     expect(anchor).toContain("process_revocation_requests");
     expect(anchor).toContain("installation_authority_preexists");
     expect(anchor).toContain("observe(&device_binding, true)");
     expect(tauri).toContain("license_clock::start_runtime_observer");
     expect(tauri).toContain('"SF_LICENSE_REVOCATION_FLOOR"');
+    expect(tauri).toContain('"SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH"');
     expect(authority).toContain("advanceNativeRevocationFloor");
     expect(authority).toContain("nativeRevocationFloor");
     expect(nativeAuthority).toContain("timingSafeEqual");
     expect(nativeAuthority).toContain("REQUEST_MAC_DOMAIN");
+    expect(nativeAuthority).toContain("initializePermanentRecovery");
     expect(nativeAuthority).toContain("process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = \"ready\"");
     expect(authority).toContain("LICENSE_ENTITLEMENT_DOWNGRADE");
+    expect(authority).toContain("LICENSE_RECOVERY_CHALLENGE_REQUIRED");
+    expect(read("src/components/settings/license-panel.tsx")).toContain(
+      "minimumPermanentRecoveryEpoch",
+    );
     const trialRoute = read("src/app/api/license/trial/route.ts");
     expect(trialRoute).toContain("nativeAuthorityNeedsOnlineInitialization");
     expect(trialRoute).toContain(

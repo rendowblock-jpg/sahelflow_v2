@@ -380,9 +380,14 @@ also anchored outside replayable AppData in a device-bound, DPAPI-protected
 HKCU registry value; a missing anchor beside an existing entitlement fails
 closed. Historical offline permanent recovery claims cannot recreate a missing
 native anchor because no deleted local store can prove that claim is still the
-latest; that condition requires canonical replacement-install recovery or a
-future current-authority reconciliation service. Cloudflare D1 has one unique
-trial record per opaque device and re-signs
+latest. Only the contained server's direct one-device trial-service reissue may
+initialize that state; the native supervisor then generates and persists a new
+52-bit random minimum permanent-recovery epoch in a dedicated high numeric
+namespace. The UI exposes that epoch for the
+Founder offline signing ceremony, and every later permanent claim must carry at
+exactly that value, so historical claims remain rejected without putting the
+permanent signing key online. Cloudflare D1 has one unique trial record per
+opaque device and re-signs
 the original dates for reinstall recovery. Expiry or any invalid authority
 blocks server rendering, client UI, background provider effects and every
 non-allowlisted API while preserving data; only authentication,
@@ -395,7 +400,8 @@ wrong key class, workspace/installation/device/product mismatch, duplicate and
 concurrent trial issuance, reinstall date recovery, missing/corrupt local state,
 AppData snapshot rollback, clock rollback, expiry, revocation, transfer,
 activation replacement, route
-allowlisting, AR/FR/EN lockout and legacy-path removal. Phase 2 exit adds exact
+allowlisting, missing-anchor trial recovery followed by historical permanent
+replay, AR/FR/EN lockout and legacy-path removal. Phase 2 exit adds exact
 Windows SMBIOS, packaged environment, signed MSI, close/reopen and preserved-data
 proof. Revalidate on Windows/SMBIOS API change, Ed25519/provider runtime change,
 key rotation, product-major change or a new transfer/recovery threat finding.

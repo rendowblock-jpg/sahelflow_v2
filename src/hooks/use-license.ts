@@ -12,7 +12,11 @@ function isProjection(value: unknown): value is LicenseClientProjection {
   return (
     typeof candidate.status === "string" &&
     typeof candidate.message === "string" &&
-    Array.isArray(candidate.features)
+    Array.isArray(candidate.features) &&
+    (candidate.minimumPermanentRecoveryEpoch === null ||
+      (typeof candidate.minimumPermanentRecoveryEpoch === "number" &&
+        Number.isSafeInteger(candidate.minimumPermanentRecoveryEpoch) &&
+        candidate.minimumPermanentRecoveryEpoch > 0))
   );
 }
 
