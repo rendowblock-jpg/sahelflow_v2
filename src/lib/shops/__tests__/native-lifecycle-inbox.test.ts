@@ -1,6 +1,8 @@
-jest.mock("server-only", () => ({}));
+import { describe, expect, it, vi } from "vitest";
 
-jest.mock("@/lib/crypto/master-key", () => ({
+vi.mock("server-only", () => ({}));
+
+vi.mock("@/lib/crypto/master-key", () => ({
   getMasterKey: () => Buffer.alloc(32, 9),
 }));
 
