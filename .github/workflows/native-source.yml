@@ -55,7 +55,7 @@ jobs:
       - name: Setup stable Rust for the real Tauri graph
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt
 
       - name: Install Linux Tauri dependencies
         run: |
@@ -92,11 +92,10 @@ jobs:
           cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- --nocapture 2>&1 |
             tee -a .sf-native-source-test.log
 
-      - name: Lint native lifecycle contracts in the Tauri package
-        run: |
-          cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- -D warnings
-          cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- -D warnings
-
+      # The minimum-Rust crate above owns lifecycle Clippy with `-D warnings`.
+      # These stable-toolchain checks prove the exact modules inside the real
+      # Tauri package and the complete release dependency graph without turning
+      # this package-specific gate into an unrelated repository-wide Clippy gate.
       - name: Verify Tauri release compilation
         env:
           SF_LICENSE_SERVICE_URL: "https://license.invalid"
