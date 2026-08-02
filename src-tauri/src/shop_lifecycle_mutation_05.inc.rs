@@ -108,18 +108,8 @@ pub fn recover_interrupted_lifecycle(
                     .to_string(),
             ));
         }
+        finalize_committed_artifacts(app_data_dir, &journal, installation_root)?;
         advance_committed_journal(&mut journal, installation_root, recovery_time)?;
-        if let ShopLifecyclePayload::Recover { archive_id } = &journal.authorization.payload {
-            let archive_directory = app_data_dir.join(ARCHIVE_DIRECTORY).join(archive_id);
-            if let Err(error) = fs::remove_dir_all(&archive_directory) {
-                if error.kind() != ErrorKind::NotFound {
-                    eprintln!(
-                        "[sahelflow] WARN: recovered archive {} remains retained after startup recovery: {error}",
-                        archive_directory.display()
-                    );
-                }
-            }
-        }
         persist_recovered_journal(app_data_dir, &journal)?;
         return Ok(());
     }
