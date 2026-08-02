@@ -43,6 +43,7 @@ export const GET = withErrorHandler(
 /** PATCH /api/shops/[id] — enqueue stable-identity native rename. */
 export const PATCH = withErrorHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await requireTrustedAction("shops.create");
     const { id } = await params;
     const input = renameSchema.parse(await req.json());
     const registry = getRegistry();
@@ -64,6 +65,7 @@ export const PATCH = withErrorHandler(
 /** DELETE /api/shops/[id] — enqueue owner-reauthenticated native deletion. */
 export const DELETE = withErrorHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await requireTrustedAction("shops.delete");
     const { id } = await params;
     const input = deleteSchema.parse(await req.json());
     if (input.confirmationShopId !== id) {
