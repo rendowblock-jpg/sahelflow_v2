@@ -35,6 +35,10 @@ function isVersionOrReleaseAuthority(path: string): boolean {
   );
 }
 
+function isPhaseCheckpoint(path: string): boolean {
+  return path === ".github/phase-checkpoints/phase2-native-multishop.json";
+}
+
 function changesNativeSource(path: string): boolean {
   return path.startsWith("src-tauri/");
 }
@@ -66,7 +70,9 @@ function changesInstalledMsiProof(path: string): boolean {
 export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
-  const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
+  const forcesFullReleaseProof = paths.some(
+    (path) => isVersionOrReleaseAuthority(path) || isPhaseCheckpoint(path),
+  );
   const changesNative = paths.some(changesNativeSource);
 
   return {
