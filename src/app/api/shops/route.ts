@@ -57,6 +57,7 @@ const createShopSchema = z
 
 /** POST /api/shops — authorize and enqueue native shop provisioning. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  await requireTrustedAction("shops.create");
   const input = createShopSchema.parse(await req.json());
   const operation = await enqueueAuthorizedNativeLifecycle({
     action: "shops.create",
