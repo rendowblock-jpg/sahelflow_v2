@@ -91,6 +91,8 @@ jobs:
             tee .sf-native-source-test.log
           cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- --nocapture 2>&1 |
             tee -a .sf-native-source-test.log
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_switch --locked -- --nocapture 2>&1 |
+            tee -a .sf-native-source-test.log
 
       # The minimum-Rust crate above owns lifecycle Clippy with `-D warnings`.
       # These stable-toolchain checks prove the exact modules inside the real
