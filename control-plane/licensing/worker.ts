@@ -73,9 +73,17 @@ function positiveInteger(value: string, label: string): number {
   return parsed;
 }
 
-function base64Bytes(value: string): Uint8Array {
+function arrayBuffer(value: Uint8Array): ArrayBuffer {
+  const copy = new ArrayBuffer(value.byteLength);
+  new Uint8Array(copy).set(value);
+  return copy;
+}
+
+function base64Bytes(value: string): ArrayBuffer {
   const binary = atob(value);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return arrayBuffer(
+    Uint8Array.from(binary, (character) => character.charCodeAt(0)),
+  );
 }
 
 function bytesBase64(value: ArrayBuffer): string {
@@ -96,7 +104,7 @@ async function signTrial(claims: EntitlementClaims, environment: LicensingWorker
   const signature = await crypto.subtle.sign(
     { name: "Ed25519" },
     privateKey,
-    canonicalEntitlementBytes(claims),
+    arrayBuffer(canonicalEntitlementBytes(claims)),
   );
   return bytesBase64(signature);
 }
