@@ -246,8 +246,8 @@ const semanticRequirements: Array<[string, string[]]> = [
       "single-agent AAA governance reset",
       "Problem Register",
       "Phase 2 — identity, authorization, licensing and multi-shop",
-      "Signed licensing is protected source through PR #197",
-      "whole-product AAA UI/UX and frontend transformation",
+      "PR #197 merged signed licensing authority",
+      "complete full-app AAA frontend transformation",
     ],
   ],
   [
@@ -263,7 +263,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/system/ROADMAP.md",
     [
       "Current session:** governance reset",
-      "one active implementation agent at a time",
+      "One active implementation agent at a time",
       "Level 1 — Task Gate",
       "Level 2 — Phase Checkpoint",
       "Level 3 — Major Full Checkpoint",
@@ -277,7 +277,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Latest protected source closures",
       "Signed licensing — PR #197",
       "single-agent governance reset",
-      "Native multi-shop remains the final Phase 2 implementation package",
+      "Native multi-shop remains the final Phase 2 implementation outcome",
       "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
     ],
   ],
