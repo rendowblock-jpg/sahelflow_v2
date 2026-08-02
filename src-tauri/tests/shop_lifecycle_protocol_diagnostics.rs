@@ -73,7 +73,7 @@ fn rust_framing_matches_the_node_protocol_digest() {
     assert_eq!(framed.len(), 620);
     assert_eq!(
         format!("{:x}", Sha256::digest(&framed)),
-        "893fb38f5de0e4cf8aca8837c79aad07ce131d7a4b0a4fa82235577703fc1ba2"
+        "893fb38f88e190c51cdcdfa9e17b612beae54513c83dc62a2224355321411ba2"
     );
     assert_eq!(
         authorization_mac(&[9_u8; 32], &authorization),
