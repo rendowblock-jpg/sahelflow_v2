@@ -110,6 +110,8 @@ export function LicensePanel() {
   const status: LicenseClientStatus = projection?.status ?? "unavailable";
   const valid = status === "valid";
   const permanent = projection?.type === "permanent";
+  const trialRequestAvailable = !valid && !permanent && status !== "expired";
+  const permanentActivationAvailable = !valid || !permanent;
 
   return (
     <Card>
@@ -173,7 +175,7 @@ export function LicensePanel() {
 
         <Separator />
 
-        {!valid && (
+        {trialRequestAvailable && (
           <Button
             variant="outline"
             size="sm"
@@ -187,7 +189,7 @@ export function LicensePanel() {
           </Button>
         )}
 
-        {!permanent && (
+        {permanentActivationAvailable && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">

@@ -20,6 +20,20 @@ import {
   requiresAuthenticatedEntitlementActivation,
 } from "../license-authority";
 
+vi.mock("../native-commercial-authority", () => ({
+  advanceNativeRevocationFloor: vi.fn(
+    async (_minimumRevocationEpoch: number, options?: { initializePermanentRecovery?: boolean }) => {
+      if (!options?.initializePermanentRecovery) return;
+      process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = "ready";
+      process.env.SF_LICENSE_CLOCK_ANCHOR_MS = String(
+        new Date("2026-08-10T00:00:00.000Z").getTime(),
+      );
+      process.env.SF_LICENSE_REVOCATION_FLOOR = "0";
+      process.env.SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH = "5481516234200000";
+    },
+  ),
+}));
+
 const PRIVATE_KEY = new Uint8Array(
   Buffer.from("883e9345ecd41c7cc2d2761720aabada5fd6e1316d6799206cd2707537ea968b", "hex"),
 );
@@ -122,6 +136,35 @@ describe("installation license authority", () => {
         allowOnlineTrialInitialization: true,
       }),
     ).rejects.toMatchObject({ code: "LICENSE_ENTITLEMENT_DOWNGRADE" });
+  });
+
+  it("uses an expired canonical online trial only to reseal permanent recovery authority", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "missing");
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
+    const expiredTrial = await signedClaims({
+      licenseId: "license_expired_canonical_trial_001",
+      expiresAt: "2026-08-03T00:00:00.000Z",
+    });
+    const now = new Date("2026-08-10T00:00:00.000Z");
+
+    await expect(activateSignedEntitlement(expiredTrial, shop, now)).rejects.toMatchObject({
+      code: "LICENSE_AUTHORITY_UNAVAILABLE",
+    });
+    await expect(
+      activateSignedEntitlement(expiredTrial, shop, now, {
+        allowOnlineTrialInitialization: true,
+      }),
+    ).resolves.toMatchObject({
+      status: "expired",
+      type: "trial",
+      minimumPermanentRecoveryEpoch: 5_481_516_234_200_000,
+    });
+    await expect(getLicenseAuthorityProjection(shop, now)).resolves.toMatchObject({
+      status: "expired",
+      type: "trial",
+      minimumPermanentRecoveryEpoch: 5_481_516_234_200_000,
+    });
   });
 
   it("fails closed when authenticated state is edited or rolled back in time", async () => {

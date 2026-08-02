@@ -82,9 +82,11 @@ describe("production licensing authority inventory", () => {
     expect(nativeAuthority).toContain("process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = \"ready\"");
     expect(authority).toContain("LICENSE_ENTITLEMENT_DOWNGRADE");
     expect(authority).toContain("LICENSE_RECOVERY_CHALLENGE_REQUIRED");
-    expect(read("src/components/settings/license-panel.tsx")).toContain(
-      "minimumPermanentRecoveryEpoch",
-    );
+    expect(authority).toContain('reconcileExpiredOnlineTrial =');
+    const licensePanel = read("src/components/settings/license-panel.tsx");
+    expect(licensePanel).toContain("minimumPermanentRecoveryEpoch");
+    expect(licensePanel).toContain("permanentActivationAvailable = !valid || !permanent");
+    expect(licensePanel).toContain("{permanentActivationAvailable && (");
     const trialRoute = read("src/app/api/license/trial/route.ts");
     expect(trialRoute).toContain("nativeAuthorityNeedsOnlineInitialization");
     expect(trialRoute).toContain(

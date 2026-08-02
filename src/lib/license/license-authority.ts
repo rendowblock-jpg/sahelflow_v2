@@ -502,6 +502,12 @@ export async function activateSignedEntitlement(
     const minimumPermanentRecoveryEpoch = nativeMinimumPermanentRecoveryEpoch(
       permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization),
     );
+    const initializePermanentRecovery =
+      process.env.NODE_ENV === "production" &&
+      process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
+      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization);
+    const reconcileExpiredOnlineTrial =
+      initializePermanentRecovery && result.status === "expired";
     if (
       minimumPermanentRecoveryEpoch > 0 &&
       entitlement.claims.type === "permanent" &&
@@ -523,7 +529,7 @@ export async function activateSignedEntitlement(
         409,
       );
     }
-    if (result.status !== "valid" && !persistRevocation) {
+    if (result.status !== "valid" && !persistRevocation && !reconcileExpiredOnlineTrial) {
       throw authorityError(result.message, `LICENSE_${result.status.toUpperCase()}`, 403);
     }
     if (
@@ -534,10 +540,6 @@ export async function activateSignedEntitlement(
     ) {
       throw authorityError("Entitlement would roll back protected commercial state", "LICENSE_ROLLBACK", 409);
     }
-    const initializePermanentRecovery =
-      process.env.NODE_ENV === "production" &&
-      process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
-      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization);
     if (
       entitlement.claims.revocationEpoch > minimumEpoch ||
       initializePermanentRecovery
