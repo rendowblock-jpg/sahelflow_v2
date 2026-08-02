@@ -28,6 +28,7 @@ import {
   type LicenseVerificationKeyring,
   type SignedEntitlement,
 } from "./entitlement";
+import { advanceNativeRevocationFloor } from "./native-commercial-authority";
 
 const AUTHORITY_FORMAT = 1 as const;
 const AUTHORITY_KEY_ID = "installation-root-license-hmac-v1" as const;
@@ -294,6 +295,58 @@ function nativeClockAnchor(allowMissing: boolean): string | null {
   return new Date(timestamp).toISOString();
 }
 
+function nativeRevocationFloor(allowMissing: boolean): number {
+  const status = process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS;
+  const value = process.env.SF_LICENSE_REVOCATION_FLOOR;
+  if (status === "missing" && allowMissing) return 0;
+  if (status === "missing") {
+    throw authorityError("Protected commercial revocation authority requires signed recovery");
+  }
+  if (status !== "ready" || !value) {
+    if (process.env.NODE_ENV === "production") {
+      throw authorityError("Native commercial revocation authority is unavailable");
+    }
+    return 0;
+  }
+  if (!/^\d{1,16}$/.test(value)) {
+    throw authorityError("Native commercial revocation authority is invalid");
+  }
+  const epoch = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(epoch) || epoch < 0) {
+    throw authorityError("Native commercial revocation authority is out of range");
+  }
+  return epoch;
+}
+
+function permitsNativeAuthorityRecovery(
+  entitlement: SignedEntitlement,
+  allowOnlineTrialInitialization = false,
+): boolean {
+  return (
+    (allowOnlineTrialInitialization &&
+      entitlement.claims.type === "trial" &&
+      entitlement.claims.issuer === "trial-service") ||
+    (entitlement.claims.type === "permanent" &&
+      entitlement.claims.issuer === "founder-offline" &&
+      (entitlement.claims.recoveryEpoch > 0 ||
+        (entitlement.claims.transferState === "revoked" &&
+          entitlement.claims.revocationEpoch > 0)))
+  );
+}
+
+function effectiveMinimumRevocationEpoch(
+  entitlement: SignedEntitlement,
+  localMinimumRevocationEpoch: number,
+  allowOnlineTrialInitialization = false,
+): number {
+  return Math.max(
+    localMinimumRevocationEpoch,
+    nativeRevocationFloor(
+      permitsNativeAuthorityRecovery(entitlement, allowOnlineTrialInitialization),
+    ),
+  );
+}
+
 function highestObservedAt(local: string | null, allowMissing: boolean): string | null {
   const native = nativeClockAnchor(allowMissing);
   if (!local) return native;
@@ -307,11 +360,12 @@ async function validate(
   minimumRevocationEpoch: number,
   lastObservedAt: string | null,
   now: Date,
+  allowOnlineTrialInitialization = false,
 ) {
-  const permitsClockRecovery =
-    entitlement.claims.type === "permanent" &&
-    entitlement.claims.issuer === "founder-offline" &&
-    entitlement.claims.recoveryEpoch > 0;
+  const permitsClockRecovery = permitsNativeAuthorityRecovery(
+    entitlement,
+    allowOnlineTrialInitialization,
+  );
   return validateSignedEntitlement(
     entitlement,
     {
@@ -319,7 +373,11 @@ async function validate(
       installationId: shop.installationId,
       deviceBinding: deviceBinding(),
       appVersion: process.env.APP_VERSION ?? "1.0.0-internal.13",
-      minimumRevocationEpoch,
+      minimumRevocationEpoch: effectiveMinimumRevocationEpoch(
+        entitlement,
+        minimumRevocationEpoch,
+        allowOnlineTrialInitialization,
+      ),
       lastObservedAt: highestObservedAt(lastObservedAt, permitsClockRecovery),
       now,
     },
@@ -376,6 +434,7 @@ export async function activateSignedEntitlement(
   input: unknown,
   shop: ShopContext = shopContext,
   now: Date = new Date(),
+  options: Readonly<{ allowOnlineTrialInitialization?: boolean }> = {},
 ): Promise<LicenseAuthorityProjection> {
   const entitlement = signedEntitlementSchema.parse(input);
   return withLock(async () => {
@@ -394,8 +453,32 @@ export async function activateSignedEntitlement(
         throw authorityError("License authority recovery requires a signed offline recovery claim");
       }
     }
-    const minimumEpoch = current?.state.minimumRevocationEpoch ?? 0;
-    const result = await validate(entitlement, shop, minimumEpoch, current?.state.lastObservedAt ?? null, now);
+    const localMinimumEpoch = current?.state.minimumRevocationEpoch ?? 0;
+    const allowOnlineTrialInitialization = options.allowOnlineTrialInitialization === true;
+    if (
+      allowOnlineTrialInitialization &&
+      entitlement.claims.type === "trial" &&
+      current?.state.entitlement.claims.type === "permanent"
+    ) {
+      throw authorityError(
+        "Online trial initialization cannot replace an installed permanent entitlement",
+        "LICENSE_ENTITLEMENT_DOWNGRADE",
+        409,
+      );
+    }
+    const minimumEpoch = effectiveMinimumRevocationEpoch(
+      entitlement,
+      localMinimumEpoch,
+      allowOnlineTrialInitialization,
+    );
+    const result = await validate(
+      entitlement,
+      shop,
+      minimumEpoch,
+      current?.state.lastObservedAt ?? null,
+      now,
+      allowOnlineTrialInitialization,
+    );
     const persistRevocation =
       result.status === "revoked" &&
       isPersistableRevocationTombstone(entitlement, current, minimumEpoch);
@@ -416,6 +499,14 @@ export async function activateSignedEntitlement(
         entitlement.claims.recoveryEpoch < current.state.entitlement.claims.recoveryEpoch)
     ) {
       throw authorityError("Entitlement would roll back protected commercial state", "LICENSE_ROLLBACK", 409);
+    }
+    if (
+      entitlement.claims.revocationEpoch > minimumEpoch ||
+      (process.env.NODE_ENV === "production" &&
+        process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
+        permitsNativeAuthorityRecovery(entitlement, allowOnlineTrialInitialization))
+    ) {
+      await advanceNativeRevocationFloor(entitlement.claims.revocationEpoch);
     }
     if (unreadable && existsSync(licenseAuthorityPath())) {
       renameSync(

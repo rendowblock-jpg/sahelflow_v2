@@ -73,6 +73,7 @@ beforeEach(async () => {
   vi.stubEnv("APP_VERSION", "1.0.0-internal.13");
   vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
   vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "");
+  vi.stubEnv("SF_LICENSE_REVOCATION_FLOOR", "");
   const publicKey = await getPublicKeyAsync(PRIVATE_KEY);
   vi.stubEnv(
     "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -99,6 +100,27 @@ describe("installation license authority", () => {
     await expect(
       getLicenseAuthorityProjection(shop, new Date("2026-08-03T01:00:00.000Z")),
     ).resolves.toMatchObject({ status: "valid", shopSlots: 1, memberLimit: 25 });
+  });
+
+  it("does not let online trial recovery replace a permanent entitlement", async () => {
+    const permanent = await signedClaims({
+      licenseId: "license_permanent_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+    });
+    await activateSignedEntitlement(
+      permanent,
+      shop,
+      new Date("2026-08-03T00:00:00.000Z"),
+    );
+    const trial = await signedClaims({ licenseId: "license_trial_reissue_001" });
+    await expect(
+      activateSignedEntitlement(trial, shop, new Date("2026-08-03T01:00:00.000Z"), {
+        allowOnlineTrialInitialization: true,
+      }),
+    ).rejects.toMatchObject({ code: "LICENSE_ENTITLEMENT_DOWNGRADE" });
   });
 
   it("fails closed when authenticated state is edited or rolled back in time", async () => {
@@ -209,6 +231,13 @@ describe("installation license authority", () => {
     ).resolves.toMatchObject({ status: "revoked" });
     await expect(
       activateSignedEntitlement(active, shop, new Date("2026-08-03T03:00:00.000Z")),
+    ).rejects.toMatchObject({ code: "LICENSE_REVOKED" });
+
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "ready");
+    vi.stubEnv("SF_LICENSE_REVOCATION_FLOOR", "1");
+    rmSync(licenseAuthorityPath(), { force: true });
+    await expect(
+      activateSignedEntitlement(active, shop, new Date("2026-08-03T04:00:00.000Z")),
     ).rejects.toMatchObject({ code: "LICENSE_REVOKED" });
   });
 

@@ -343,14 +343,6 @@ pub fn run() {
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
-                let license_authority_file = app_data_dir
-                    .join("system")
-                    .join("license-authority.json");
-                license_clock::start_runtime_observer(
-                    device_binding::current_device_binding().map_err(IoError::other)?,
-                    license_authority_file,
-                )
-                .map_err(IoError::other)?;
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(
@@ -419,6 +411,41 @@ pub fn run() {
                         return;
                     }
 
+                    let installation_authority_preexists =
+                        match migration_coordinator::installation_authority_footprint_present(
+                            &app_data_dir,
+                        ) {
+                            Ok(value) => value,
+                            Err(error) => {
+                                let detail = format!(
+                                    "commercial authority footprint could not be inspected: {error}"
+                                );
+                                let _ = startup_recovery::show_blocked(
+                                    &app_handle,
+                                    "SF-LICENSE-AUTHORITY-BLOCKED",
+                                    &detail,
+                                );
+                                return;
+                            }
+                        };
+                    let license_device_binding = match device_binding::current_device_binding() {
+                        Ok(value) => value,
+                        Err(error) => {
+                            let _ = startup_recovery::show_blocked(
+                                &app_handle,
+                                "SF-LICENSE-AUTHORITY-BLOCKED",
+                                &error,
+                            );
+                            return;
+                        }
+                    };
+                    if let Err(error) = license_clock::observe(
+                        &license_device_binding,
+                        installation_authority_preexists,
+                    ) {
+                        eprintln!("[sahelflow] protected commercial anchor unavailable: {error}");
+                    }
+
                     // Validate the registry and migrate every registered shop
                     // before any business server can observe a database.
                     runtime_protocol::remove_manifest(&app_data_dir);
@@ -447,6 +474,8 @@ pub fn run() {
                         authority,
                         installation_root,
                     } = prepared_installation;
+                    let license_command_key =
+                        license_clock::command_key(installation_root.as_bytes());
                     startup_recovery::record_startup_stage(
                         &app_data_dir,
                         "migration-complete",
@@ -467,6 +496,21 @@ pub fn run() {
                             &app_handle,
                             "SF-RUNTIME-STARTUP-BLOCKED",
                             detail,
+                        );
+                        return;
+                    }
+                    if let Err(error) = license_clock::start_runtime_observer(
+                        license_device_binding,
+                        app_data_dir.join("system"),
+                        license_command_key,
+                    ) {
+                        let detail = format!(
+                            "protected commercial authority observer could not start: {error}"
+                        );
+                        let _ = startup_recovery::show_blocked(
+                            &app_handle,
+                            "SF-LICENSE-AUTHORITY-BLOCKED",
+                            &detail,
                         );
                         return;
                     }
@@ -594,18 +638,13 @@ fn server_env(
     let token_file = app_data_dir.join("sidecar-token");
     let resource_dir = app.path().resource_dir()?;
     let device_binding = device_binding::current_device_binding().map_err(IoError::other)?;
-    let license_authority_exists = app_data_dir
-        .join("system")
-        .join("license-authority.json")
-        .is_file();
-    let license_clock_anchor =
-        match license_clock::observe(&device_binding, license_authority_exists) {
-            Ok(anchor) => anchor,
-            Err(error) => {
-                eprintln!("[sahelflow] protected license clock unavailable: {error}");
-                None
-            }
-        };
+    let license_clock_anchor = match license_clock::observe(&device_binding, true) {
+        Ok(anchor) => anchor,
+        Err(error) => {
+            eprintln!("[sahelflow] protected license clock unavailable: {error}");
+            None
+        }
+    };
 
     let mut environment = vec![
         (
@@ -679,6 +718,12 @@ fn server_env(
                 "missing".to_string()
             },
         ),
+        (
+            "SF_LICENSE_REVOCATION_FLOOR".to_string(),
+            license_clock_anchor
+                .map(|anchor| anchor.minimum_revocation_epoch.to_string())
+                .unwrap_or_default(),
+        ),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
         (
             "SF_SHOP_INCARNATION_ID".to_string(),
@@ -717,7 +762,10 @@ fn server_env(
         ("SF_AUTH_MODE".to_string(), auth.mode().as_str().to_string()),
     ];
     if let Some(anchor) = license_clock_anchor {
-        environment.push(("SF_LICENSE_CLOCK_ANCHOR_MS".to_string(), anchor.to_string()));
+        environment.push((
+            "SF_LICENSE_CLOCK_ANCHOR_MS".to_string(),
+            anchor.high_water_ms.to_string(),
+        ));
     }
     if let Some(secret) = auth.secret() {
         environment.push(("AUTH_SECRET".to_string(), secret.to_string()));

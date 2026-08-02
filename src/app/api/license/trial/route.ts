@@ -9,12 +9,19 @@ import {
 import { requestOnlineTrial } from "@/lib/license/trial-client";
 
 export const POST = withErrorHandler(async () => {
-  const current = await getLicenseAuthorityProjection();
-  if (current.status === "valid") {
-    return NextResponse.json(current, { headers: { "Cache-Control": "no-store" } });
+  const nativeAuthorityNeedsOnlineInitialization =
+    process.env.NODE_ENV === "production" &&
+    process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing";
+  if (!nativeAuthorityNeedsOnlineInitialization) {
+    const current = await getLicenseAuthorityProjection();
+    if (current.status === "valid") {
+      return NextResponse.json(current, { headers: { "Cache-Control": "no-store" } });
+    }
   }
   const entitlement = await requestOnlineTrial(shopContext);
-  const activated = await activateSignedEntitlement(entitlement);
+  const activated = await activateSignedEntitlement(entitlement, shopContext, new Date(), {
+    allowOnlineTrialInitialization: true,
+  });
   return NextResponse.json(activated, {
     status: 200,
     headers: { "Cache-Control": "no-store" },

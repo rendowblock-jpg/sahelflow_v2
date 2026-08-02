@@ -57,14 +57,31 @@ describe("production licensing authority inventory", () => {
     const anchor = read("src-tauri/src/license_clock.rs");
     const tauri = read("src-tauri/src/lib.rs");
     const authority = read("src/lib/license/license-authority.ts");
+    const nativeAuthority = read("src/lib/license/native-commercial-authority.ts");
 
     expect(anchor).toContain("HKEY_CURRENT_USER");
     expect(anchor).toContain("CryptProtectData");
     expect(anchor).toContain("CryptUnprotectData");
-    expect(anchor).toContain("authority_file_exists");
+    expect(anchor).not.toContain("authority_file_exists");
     expect(anchor).toContain("start_runtime_observer");
     expect(anchor).toContain("RUNTIME_OBSERVE_INTERVAL");
+    expect(anchor).toContain("minimum_revocation_epoch");
+    expect(anchor).toContain("process_revocation_requests");
+    expect(anchor).toContain("installation_authority_preexists");
+    expect(anchor).toContain("observe(&device_binding, true)");
     expect(tauri).toContain("license_clock::start_runtime_observer");
+    expect(tauri).toContain('"SF_LICENSE_REVOCATION_FLOOR"');
+    expect(authority).toContain("advanceNativeRevocationFloor");
+    expect(authority).toContain("nativeRevocationFloor");
+    expect(nativeAuthority).toContain("timingSafeEqual");
+    expect(nativeAuthority).toContain("REQUEST_MAC_DOMAIN");
+    expect(nativeAuthority).toContain("process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = \"ready\"");
+    expect(authority).toContain("LICENSE_ENTITLEMENT_DOWNGRADE");
+    const trialRoute = read("src/app/api/license/trial/route.ts");
+    expect(trialRoute).toContain("nativeAuthorityNeedsOnlineInitialization");
+    expect(trialRoute).toContain(
+      "allowOnlineTrialInitialization: true",
+    );
     expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_MS"');
     expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_STATUS"');
     expect(authority).toContain("highestObservedAt(lastObservedAt, permitsClockRecovery)");
