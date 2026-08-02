@@ -30,7 +30,8 @@ replace current GitHub authority.
 
 ## Current verified frontier
 
-- Governance package base: `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
+- Governance reset package: PR #199 from exact base
+  `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
 - Latest application-changing protected merge:
   `04d4c51831c6e043ab39a614a7e947e6b27d01e6` (PR #197 licensing).
 - Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
@@ -39,9 +40,11 @@ replace current GitHub authority.
 - Founder-accepted baseline: Internal.5.
 - Active product phase: Phase 2 — identity, authorization, licensing and
   multi-shop.
-- Active governance branch: `agent/single-agent-aaa-operating-model`.
-- Product implementation is paused until this governance package closes.
-- Next implementation outcome after governance closure: native multi-shop.
+- Product implementation remains paused while PR #199 is open.
+- Next implementation package after protected governance closure: native
+  multi-shop.
+- Its branch must be created from the then-current protected `main`; a copied or
+  merely planned branch name is not authority.
 
 Always re-read live protected `main`; the package base above is historical
 reconstruction evidence, not a promise that `main` has not moved.
