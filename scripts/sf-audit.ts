@@ -243,7 +243,8 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/README.md",
     [
-      "single-agent AAA governance reset",
+      "Execution mode:** single-agent, audit-first, batch remediation and tiered CI",
+      "Next implementation outcome:** native multi-shop after governance closure",
       "Problem Register",
       "Phase 2 — identity, authorization, licensing and multi-shop",
       "PR #197 merged signed licensing authority",
@@ -262,7 +263,7 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/system/ROADMAP.md",
     [
-      "Current session:** governance reset",
+      "Next phase outcome:** native multi-shop under the audit-first operating model",
       "One active implementation agent at a time",
       "Level 1 — Task Gate",
       "Level 2 — Phase Checkpoint",
@@ -276,7 +277,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "Latest protected source closures",
       "Signed licensing — PR #197",
-      "single-agent governance reset",
+      "CI and governance reconciliation",
       "This is the final Phase 2 implementation outcome",
       "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
     ],
@@ -386,7 +387,9 @@ const staleMarkers: Array<[string, string]> = [
   ["documentation/operations/WORKING_MEMORY.md", "Active PR:** draft PR #197"],
   ["documentation/operations/WORKING_MEMORY.md", "Protected main:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`"],
   ["documentation/README.md", "Active package:** Signed licensing and entitlement authority"],
+  ["documentation/README.md", "Active session:** single-agent AAA governance reset"],
   ["documentation/system/ROADMAP.md", "Active package:** Signed licensing and entitlement authority"],
+  ["documentation/system/ROADMAP.md", "Current session:** governance reset"],
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
