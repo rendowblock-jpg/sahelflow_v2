@@ -1,6 +1,6 @@
 use crate::shop_lifecycle::{
-    ShopLifecycleContractError, ShopLifecycleJournal, ShopLifecycleOperation,
-    ShopLifecycleRequest, ShopLifecycleStage,
+    ShopLifecycleContractError, ShopLifecycleJournal, ShopLifecycleOperation, ShopLifecycleRequest,
+    ShopLifecycleStage,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -178,8 +178,7 @@ impl ShopLifecycleCommand {
         now_unix_ms: u64,
     ) -> Result<(), ShopLifecycleCommandError> {
         self.authorization.validate()?;
-        if self.authorization.issued_at_unix_ms
-            > now_unix_ms.saturating_add(COMMAND_CLOCK_SKEW_MS)
+        if self.authorization.issued_at_unix_ms > now_unix_ms.saturating_add(COMMAND_CLOCK_SKEW_MS)
         {
             return Err(ShopLifecycleCommandError::CommandNotYetValid);
         }
@@ -189,10 +188,7 @@ impl ShopLifecycleCommand {
         self.verify_mac(installation_root)
     }
 
-    fn verify_mac(
-        &self,
-        installation_root: &[u8; 32],
-    ) -> Result<(), ShopLifecycleCommandError> {
+    fn verify_mac(&self, installation_root: &[u8; 32]) -> Result<(), ShopLifecycleCommandError> {
         let mut command_key = lifecycle_command_key(installation_root);
         let result = verify_hex_mac(
             &self.mac,
@@ -232,10 +228,7 @@ impl AuthenticatedShopLifecycleJournal {
         })
     }
 
-    pub fn validate(
-        &self,
-        installation_root: &[u8; 32],
-    ) -> Result<(), ShopLifecycleCommandError> {
+    pub fn validate(&self, installation_root: &[u8; 32]) -> Result<(), ShopLifecycleCommandError> {
         self.authorization.validate()?;
         ShopLifecycleCommand {
             authorization: self.authorization.clone(),
@@ -305,14 +298,20 @@ impl fmt::Display for ShopLifecycleCommandError {
                 write!(formatter, "invalid shop lifecycle command validity window")
             }
             Self::OperationMismatch => {
-                write!(formatter, "shop lifecycle operation and payload do not match")
+                write!(
+                    formatter,
+                    "shop lifecycle operation and payload do not match"
+                )
             }
             Self::InvalidShopName => write!(formatter, "invalid shop name"),
             Self::InvalidIcon => write!(formatter, "invalid shop icon"),
             Self::InvalidArchiveId => write!(formatter, "invalid shop archive identity"),
             Self::MissingTarget => write!(formatter, "shop lifecycle target is missing"),
             Self::DeleteConfirmationMismatch => {
-                write!(formatter, "shop deletion confirmation does not match the target")
+                write!(
+                    formatter,
+                    "shop deletion confirmation does not match the target"
+                )
             }
             Self::ReauthenticationInFuture => {
                 write!(formatter, "owner reauthentication proof is future-dated")
@@ -681,9 +680,7 @@ mod tests {
             ShopLifecycleOperation::Delete,
             ShopLifecyclePayload::Delete {
                 confirmation_shop_id: "target-shop".to_owned(),
-                reauthenticated_at_unix_ms: 1_000_000
-                    - MAX_REAUTHENTICATION_AGE_MS
-                    - 1,
+                reauthenticated_at_unix_ms: 1_000_000 - MAX_REAUTHENTICATION_AGE_MS - 1,
             },
         );
         assert_eq!(
@@ -695,9 +692,8 @@ mod tests {
     #[test]
     fn journal_accepts_only_authenticated_commands() {
         let command = switch_command();
-        let journal =
-            AuthenticatedShopLifecycleJournal::accept(&command, &ROOT, 1_001_000)
-                .expect("authenticated");
+        let journal = AuthenticatedShopLifecycleJournal::accept(&command, &ROOT, 1_001_000)
+            .expect("authenticated");
         assert_eq!(journal.journal.stage, ShopLifecycleStage::Requested);
 
         let mut tampered = command;
