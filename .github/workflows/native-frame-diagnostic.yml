@@ -1,0 +1,46 @@
+name: Native lifecycle frame diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src-tauri/src/shop_lifecycle*.rs"
+      - "src-tauri/tests/shop_lifecycle_frame_diff.rs"
+      - "src-tauri/contracts/shop-lifecycle/**"
+      - ".github/workflows/native-frame-diagnostic.yml"
+
+concurrency:
+  group: native-frame-diagnostic-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frame-diagnostic:
+    name: Native lifecycle frame diagnostic
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Rust 1.77
+        uses: dtolnay/rust-toolchain@1.77.2
+        with:
+          components: rustfmt
+
+      - name: Verify diagnostic formatting
+        run: rustfmt --edition 2021 --check src-tauri/tests/shop_lifecycle_frame_diff.rs
+
+      - name: Run frame divergence probe
+        run: >-
+          cargo test
+          --manifest-path src-tauri/contracts/shop-lifecycle/Cargo.toml
+          --test shop_lifecycle_frame_diff
+          --locked -- --nocapture
