@@ -1,23 +1,37 @@
 /**
- * Shop store — multi-shop management state.
+ * Shop store — native multi-shop lifecycle projection.
  *
- * Backed by /api/shops and the native lifecycle authority. The browser may
- * request a switch, but only the packaged native host can quiesce processes,
- * commit registry authority, and start the target runtime.
+ * The browser submits lifecycle intent and renders pending/blocked state. It
+ * never mutates the registry, selects a database, or restarts the application.
+ * The packaged Rust host owns quiesce, commit, compensation, restart and exact
+ * authenticated readiness.
  */
 import { create } from "zustand";
-import { mutate } from "swr";
 import { isTauriEnv } from "@/lib/env";
 
 export interface Shop {
   id: string;
+  incarnationId?: string;
   name: string;
-  /** Controlled database file identity within the canonical shops directory. */
   databaseFile: string;
-  /** Emoji icon (nullable). */
   icon: string | null;
   createdAt: string;
 }
+
+export interface ShopArchive {
+  archiveId: string;
+  status: "archived" | "deleted-rescue";
+  shop: Shop & { incarnationId: string };
+  archivedAtUnixMs: number;
+  sourceRegistryRevision: number;
+}
+
+export type NativeLifecycleReceipt = Readonly<{
+  operationId: string;
+  status: "pending";
+  targetShopId?: string;
+  targetShopIncarnationId?: string;
+}>;
 
 interface ShopState {
   shops: Shop[];
@@ -27,16 +41,49 @@ interface ShopState {
   switchTargetId: string | null;
   switchError: string | null;
 
-  /** Load the shop list + active shop ID from the API. Call on app mount. */
   loadShops: () => Promise<void>;
-  /** Create a new shop (calls POST /api/shops). Returns the created shop. */
-  createShop: (input: { name: string; icon?: string | null }) => Promise<Shop>;
-  /** Delete a shop (calls DELETE /api/shops/[id]). */
-  removeShop: (shopId: string) => Promise<void>;
-  /** Request an exact native active-shop transition. */
+  createShop: (input: {
+    name: string;
+    icon?: string | null;
+  }) => Promise<NativeLifecycleReceipt>;
+  renameShop: (shopId: string, name: string) => Promise<NativeLifecycleReceipt>;
+  archiveShop: (shopId: string) => Promise<NativeLifecycleReceipt>;
+  loadArchives: () => Promise<readonly ShopArchive[]>;
+  recoverShop: (archiveId: string) => Promise<NativeLifecycleReceipt>;
+  removeShop: (shopId: string) => Promise<NativeLifecycleReceipt>;
   setActiveShop: (shopId: string) => Promise<void>;
-  /** Get the active shop (synchronous, from store state). */
   getActiveShop: () => Shop | null;
+}
+
+function requireNativeLifecycle(): void {
+  if (!isTauriEnv()) {
+    throw new Error("Native shop lifecycle is available only in the desktop application");
+  }
+}
+
+async function lifecycleRequest(
+  url: string,
+  init: RequestInit,
+): Promise<NativeLifecycleReceipt> {
+  requireNativeLifecycle();
+  const response = await fetch(url, init);
+  const data = (await response.json().catch(() => ({}))) as Partial<
+    NativeLifecycleReceipt & { error: string }
+  >;
+  if (!response.ok) {
+    throw new Error(data.error || "Native shop lifecycle request was rejected");
+  }
+  if (data.status !== "pending" || !data.operationId) {
+    throw new Error("Native shop lifecycle did not return an authenticated pending receipt");
+  }
+  return Object.freeze({
+    operationId: data.operationId,
+    status: "pending" as const,
+    ...(data.targetShopId ? { targetShopId: data.targetShopId } : {}),
+    ...(data.targetShopIncarnationId
+      ? { targetShopIncarnationId: data.targetShopIncarnationId }
+      : {}),
+  });
 }
 
 export const useShopStore = create<ShopState>((set, get) => ({
@@ -49,101 +96,75 @@ export const useShopStore = create<ShopState>((set, get) => ({
 
   loadShops: async () => {
     try {
-      const res = await fetch("/api/shops");
-      if (!res.ok) return;
-      const data = (await res.json()) as { shops: Shop[]; activeShopId: string | null };
+      const response = await fetch("/api/shops");
+      if (!response.ok) return;
+      const data = (await response.json()) as {
+        shops: Shop[];
+        activeShopId: string | null;
+      };
       set({ shops: data.shops, activeShopId: data.activeShopId, loaded: true });
     } catch {
-      // leave the store empty — the UI shows a loading state
+      // The layout retains its loading state while authority is unavailable.
     }
   },
 
-  createShop: async (input) => {
-    const res = await fetch("/api/shops", {
+  createShop: async (input) =>
+    lifecycleRequest("/api/shops", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || "Échec de la création de la boutique");
+    }),
+
+  renameShop: async (shopId, name) =>
+    lifecycleRequest(`/api/shops/${shopId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }),
+
+  archiveShop: async (shopId) =>
+    lifecycleRequest(`/api/shops/${shopId}/archive`, { method: "POST" }),
+
+  loadArchives: async () => {
+    const response = await fetch("/api/shops/archives");
+    const data = (await response.json().catch(() => ({}))) as {
+      archives?: ShopArchive[];
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new Error(data.error || "Shop archives are unavailable");
     }
-    const { shop } = (await res.json()) as { shop: Shop };
-    set((s) => ({ shops: [...s.shops, shop] }));
-    await mutate(() => true, undefined, { revalidate: false });
-    if (isTauriEnv()) {
-      const { relaunch } = await import("@tauri-apps/plugin-process");
-      await relaunch();
-    }
-    return shop;
+    return Object.freeze([...(data.archives ?? [])]);
   },
 
-  removeShop: async (shopId) => {
-    const res = await fetch(`/api/shops/${shopId}`, { method: "DELETE" });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || "Échec de la suppression");
-    }
-    set((s) => {
-      const shops = s.shops.filter((shop) => shop.id !== shopId);
-      const activeShopId =
-        s.activeShopId === shopId ? shops[0]?.id ?? null : s.activeShopId;
-      return { shops, activeShopId };
-    });
-    await mutate(() => true, undefined, { revalidate: false });
-    if (isTauriEnv()) {
-      const { relaunch } = await import("@tauri-apps/plugin-process");
-      await relaunch();
-    }
-  },
+  recoverShop: async (archiveId) =>
+    lifecycleRequest(`/api/shops/archives/${archiveId}/recover`, {
+      method: "POST",
+    }),
+
+  removeShop: async (shopId) =>
+    lifecycleRequest(`/api/shops/${shopId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmationShopId: shopId }),
+    }),
 
   setActiveShop: async (shopId) => {
     if (shopId === get().activeShopId) return;
     set({ switchStatus: "pending", switchTargetId: shopId, switchError: null });
     try {
-      const res = await fetch("/api/shops/active", {
+      await lifecycleRequest("/api/shops/active", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shopId }),
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        status?: "pending" | "completed";
-        operationId?: string;
-        targetShopId?: string;
-      };
-      if (!res.ok) {
-        throw new Error(data.error || "Échec du changement de boutique");
-      }
-
-      if (data.status === "pending") {
-        if (!isTauriEnv()) {
-          throw new Error("L'autorité native de changement de boutique est indisponible");
-        }
-        // The current runtime remains authoritative until the native host
-        // quiesces it. Successful readiness replaces this WebView navigation;
-        // failures are surfaced by the native recovery screen.
-        return;
-      }
-
-      if (data.status === "completed") {
-        set({
-          activeShopId: data.targetShopId ?? shopId,
-          switchStatus: "idle",
-          switchTargetId: null,
-          switchError: null,
-        });
-        await mutate(() => true, undefined, { revalidate: false });
-        if (typeof window !== "undefined") {
-          window.location.assign("/login");
-        }
-        return;
-      }
-
-      throw new Error("Le changement de boutique n'a pas reçu un état natif valide");
+      // The old process remains authoritative until Rust stops it. The native
+      // supervisor replaces this page only after the target runtime is ready.
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Échec du changement de boutique";
+        error instanceof Error
+          ? error.message
+          : "Native shop switching was blocked";
       set({ switchStatus: "blocked", switchTargetId: shopId, switchError: message });
       throw error;
     }
