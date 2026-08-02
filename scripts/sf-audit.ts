@@ -299,9 +299,9 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/operations/WORKING_MEMORY.md",
     [
       "Founder execution instruction",
-      "agent/single-agent-aaa-operating-model",
-      "Single-agent AAA operating model and truth reconciliation",
-      "Governance discrepancies being corrected",
+      "Governance transition:** PR #199",
+      "Next implementation package:** Native multi-shop authority",
+      "Governance discrepancies corrected by PR #199",
       "native multi-shop",
       "the complete Phase 0–9 scope is preserved",
     ],
