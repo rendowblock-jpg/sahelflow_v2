@@ -35,6 +35,10 @@ function isVersionOrReleaseAuthority(path: string): boolean {
   );
 }
 
+function changesNativeSource(path: string): boolean {
+  return path.startsWith("src-tauri/");
+}
+
 function changesWindowsRustProof(path: string): boolean {
   return (
     path === ".github/workflows/windows-rust-release-parity.yml" ||
@@ -63,15 +67,16 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
   const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
+  const changesNative = paths.some(changesNativeSource);
 
   return {
     changedCount: paths.length,
     docsOnly,
     runQuality: !docsOnly && paths.length > 0,
-    // Ordinary packages merge on complete source evidence. Expensive Windows
-    // and installed proof runs once on phase/milestone authority instead of
-    // repeatedly rebuilding every package accumulated into that candidate.
-    runTauri: forcesFullReleaseProof,
+    // Every ordinary native package must at least compile and run its Rust
+    // integration contracts on Linux. Windows release parity and installed MSI
+    // remain risk-selected milestone/phase proof rather than per-edit rebuilds.
+    runTauri: forcesFullReleaseProof || changesNative,
     runWindowsStandalone:
       forcesFullReleaseProof || paths.some(changesWindowsStandaloneProof),
     runWindowsRust:
